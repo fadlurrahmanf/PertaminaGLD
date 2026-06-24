@@ -1,0 +1,52 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Local AI agent/session state
+.codex/
+.claude/
+ActivityAI/*activity.md
+docs/chat/
+docs/resume.md
+archive/
+firmware/versions/backups/
+
+# GLD firmware config (may contain WiFi/MQTT credentials)
+# Commit GldUnifiedConfig.h hanya jika tidak ada credentials produksi di dalamnya
+# config/gld-crypto.env — jangan commit (berisi AES key produksi)
+
+# Logs
+*.log
+logs/
+
+# Node / frontend / Node-RED
+node_modules/
+dist/
+build/
+.next/
+.vite/
+
+# Python caches and local test output
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+
+# PlatformIO / firmware build outputs
+.pio/
+firmware/**/.pio/
+firmware/**/.cache/
+*.elf
+*.bin
+*.hex
+
+# Generated manuals may contain site-specific command examples.
+docs/manual/*.pdf
+
+# Editor and OS noise
+.vscode/
+.idea/
+Thumbs.db
+Desktop.ini

@@ -1,0 +1,4 @@
+interface:
+  display_name: "AI Agent Coordination"
+  short_description: "Pre-action logs for parallel agents"
+  default_prompt: "Use $ai-agent-coordination to read activity logs, write a pre-action claim, and avoid conflicting repo or hardware work."

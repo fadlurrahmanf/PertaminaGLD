@@ -1,0 +1,313 @@
+﻿[
+    {
+        "label":  "GLD Dataset Server",
+        "info":  "Dataset recording: receives sensor records from GLD via MQTT, saves to MySQL + CSV.",
+        "id":  "pgld_ds_tab",
+        "type":  "tab",
+        "disabled":  false
+    },
+    {
+        "db":  "pertamina_gld",
+        "id":  "pgld_ds_mysql_cfg",
+        "tz":  "Asia/Jakarta",
+        "charset":  "UTF8",
+        "name":  "GLD Dataset DB",
+        "type":  "MySQLdatabase",
+        "host":  "localhost",
+        "port":  "3306"
+    },
+    {
+        "id":  "pgld_ds_init_inject",
+        "y":  80,
+        "onceDelay":  "0.5",
+        "repeat":  "",
+        "props":  [
+                      {
+                          "p":  "payload"
+                      }
+                  ],
+        "once":  true,
+        "payload":  "",
+        "name":  "init on boot",
+        "type":  "inject",
+        "z":  "pgld_ds_tab",
+        "x":  160,
+        "wires":  [
+                      "pgld_ds_init_fn"
+                  ],
+        "payloadType":  "date"
+    },
+    {
+        "id":  "pgld_ds_init_fn",
+        "y":  80,
+        "initialize":  "",
+        "name":  "set csv path",
+        "type":  "function",
+        "z":  "pgld_ds_tab",
+        "noerr":  0,
+        "x":  380,
+        "finalize":  "",
+        "wires":  [
+                      "pgld_ds_create_table_fn",
+                      "pgld_ds_csv_header_fn"
+                  ],
+        "timeout":  0,
+        "outputs":  1,
+        "func":  "global.set(\u0027gld_csv_path\u0027,\u0027C:\\\\Users\\\\asus\\\\gld-dataset.csv\u0027); return msg;",
+        "libs":  [
+
+                 ]
+    },
+    {
+        "id":  "pgld_ds_create_table_fn",
+        "y":  60,
+        "initialize":  "",
+        "name":  "CREATE TABLE SQL",
+        "type":  "function",
+        "z":  "pgld_ds_tab",
+        "noerr":  0,
+        "x":  620,
+        "finalize":  "",
+        "wires":  [
+                      "pgld_ds_mysql_init"
+                  ],
+        "timeout":  0,
+        "outputs":  1,
+        "func":  "msg.topic = \u0027CREATE TABLE IF NOT EXISTS gld_dataset (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, node_id VARCHAR(16), seq INT UNSIGNED, ts_ms BIGINT UNSIGNED, label VARCHAR(32), profile_id TINYINT UNSIGNED DEFAULT 0, ch0 FLOAT, ch1 FLOAT, ch2 FLOAT, ch3 FLOAT, ch4 FLOAT, ch5 FLOAT, ch6 FLOAT, ch7 FLOAT, gain0 TINYINT, gain1 TINYINT, gain2 TINYINT, gain3 TINYINT, gain4 TINYINT, gain5 TINYINT, gain6 TINYINT, gain7 TINYINT, ok0 TINYINT, ok1 TINYINT, ok2 TINYINT, ok3 TINYINT, ok4 TINYINT, ok5 TINYINT, ok6 TINYINT, ok7 TINYINT)\u0027; msg.payload = []; return msg;",
+        "libs":  [
+
+                 ]
+    },
+    {
+        "id":  "pgld_ds_mysql_init",
+        "y":  60,
+        "name":  "CREATE TABLE",
+        "type":  "mysql",
+        "z":  "pgld_ds_tab",
+        "x":  860,
+        "mydb":  "pgld_ds_mysql_cfg",
+        "wires":  [
+
+                  ]
+    },
+    {
+        "id":  "pgld_ds_csv_header_fn",
+        "y":  120,
+        "initialize":  "",
+        "name":  "CSV header",
+        "type":  "function",
+        "z":  "pgld_ds_tab",
+        "noerr":  0,
+        "x":  620,
+        "finalize":  "",
+        "wires":  [
+                      "pgld_ds_csv_header_file"
+                  ],
+        "timeout":  0,
+        "outputs":  1,
+        "func":  "msg.payload = \u0027node_id,seq,ts_ms,label,profile_id,ch0,ch1,ch2,ch3,ch4,ch5,ch6,ch7,gain0,gain1,gain2,gain3,gain4,gain5,gain6,gain7,ok0,ok1,ok2,ok3,ok4,ok5,ok6,ok7\\n\u0027; msg.filename = global.get(\u0027gld_csv_path\u0027) || \u0027C:\\\\Users\\\\asus\\\\gld-dataset.csv\u0027; return msg;",
+        "libs":  [
+
+                 ]
+    },
+    {
+        "appendNewline":  false,
+        "filename":  "",
+        "id":  "pgld_ds_csv_header_file",
+        "type":  "file",
+        "wires":  [
+
+                  ],
+        "y":  120,
+        "createDir":  true,
+        "name":  "write CSV header",
+        "filenameType":  "msg",
+        "x":  860,
+        "overwriteFile":  "true",
+        "z":  "pgld_ds_tab"
+    },
+    {
+        "topic":  "gas-leak-detector/+/dataset/data",
+        "id":  "pgld_ds_mqtt_data_in",
+        "y":  260,
+        "nl":  false,
+        "datatype":  "auto",
+        "name":  "dataset/data",
+        "type":  "mqtt in",
+        "z":  "pgld_ds_tab",
+        "inputs":  0,
+        "x":  160,
+        "broker":  "pgl_mqtt_broker",
+        "wires":  [
+                      "pgld_ds_parse_record_fn"
+                  ],
+        "rap":  false,
+        "qos":  "0",
+        "rh":  0
+    },
+    {
+        "id":  "pgld_ds_parse_record_fn",
+        "y":  260,
+        "initialize":  "",
+        "name":  "parse record",
+        "type":  "function",
+        "z":  "pgld_ds_tab",
+        "noerr":  0,
+        "x":  400,
+        "finalize":  "",
+        "wires":  [
+                      "pgld_ds_mysql_insert",
+                      "pgld_ds_csv_row_fn",
+                      "pgld_ds_debug_record"
+                  ],
+        "timeout":  0,
+        "outputs":  1,
+        "func":  "var p = (typeof msg.payload === \u0027string\u0027) ? JSON.parse(msg.payload) : msg.payload; if (!p || p.seq === undefined || !p.ch || p.ch.length !== 8) { node.warn(\u0027invalid record\u0027); return null; } var ch = p.ch, gain = p.gain || [0,0,0,0,0,0,0,0], ok = p.ok || [0,0,0,0,0,0,0,0]; msg.topic = \u0027INSERT INTO gld_dataset (node_id,seq,ts_ms,label,profile_id,ch0,ch1,ch2,ch3,ch4,ch5,ch6,ch7,gain0,gain1,gain2,gain3,gain4,gain5,gain6,gain7,ok0,ok1,ok2,ok3,ok4,ok5,ok6,ok7) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\u0027; msg.payload = [p.nodeId||\u0027\u0027,p.seq,p.ts_ms||0,p.label||\u0027\u0027,p.profileId||0,ch[0],ch[1],ch[2],ch[3],ch[4],ch[5],ch[6],ch[7],gain[0],gain[1],gain[2],gain[3],gain[4],gain[5],gain[6],gain[7],ok[0],ok[1],ok[2],ok[3],ok[4],ok[5],ok[6],ok[7]]; return msg;",
+        "libs":  [
+
+                 ]
+    },
+    {
+        "id":  "pgld_ds_mysql_insert",
+        "y":  220,
+        "name":  "INSERT record",
+        "type":  "mysql",
+        "z":  "pgld_ds_tab",
+        "x":  660,
+        "mydb":  "pgld_ds_mysql_cfg",
+        "wires":  [
+
+                  ]
+    },
+    {
+        "id":  "pgld_ds_csv_row_fn",
+        "y":  280,
+        "initialize":  "",
+        "name":  "format CSV row",
+        "type":  "function",
+        "z":  "pgld_ds_tab",
+        "noerr":  0,
+        "x":  660,
+        "finalize":  "",
+        "wires":  [
+                      "pgld_ds_csv_append_file"
+                  ],
+        "timeout":  0,
+        "outputs":  1,
+        "func":  "var p = (typeof msg.payload === \u0027string\u0027) ? JSON.parse(msg.payload) : msg.payload; if (!p || !p.ch) return null; var ch=p.ch, gain=p.gain||[0,0,0,0,0,0,0,0], ok=p.ok||[0,0,0,0,0,0,0,0]; msg.payload = [p.nodeId||\u0027\u0027,p.seq,p.ts_ms||0,p.label||\u0027\u0027,p.profileId||0].concat(ch).concat(gain).concat(ok).join(\u0027,\u0027) + \u0027\\n\u0027; msg.filename = global.get(\u0027gld_csv_path\u0027) || \u0027C:\\\\Users\\\\asus\\\\gld-dataset.csv\u0027; return msg;",
+        "libs":  [
+
+                 ]
+    },
+    {
+        "appendNewline":  false,
+        "filename":  "",
+        "id":  "pgld_ds_csv_append_file",
+        "type":  "file",
+        "wires":  [
+
+                  ],
+        "y":  280,
+        "createDir":  true,
+        "name":  "append CSV",
+        "filenameType":  "msg",
+        "x":  880,
+        "overwriteFile":  "false",
+        "z":  "pgld_ds_tab"
+    },
+    {
+        "tostatus":  true,
+        "id":  "pgld_ds_debug_record",
+        "complete":  "payload",
+        "console":  false,
+        "statusVal":  "payload.label",
+        "name":  "record",
+        "type":  "debug",
+        "z":  "pgld_ds_tab",
+        "x":  660,
+        "targetType":  "msg",
+        "wires":  [
+
+                  ],
+        "y":  340,
+        "tosidebar":  true,
+        "active":  true,
+        "statusType":  "msg"
+    },
+    {
+        "topic":  "gas-leak-detector/+/dataset/status",
+        "id":  "pgld_ds_mqtt_status_in",
+        "y":  440,
+        "nl":  false,
+        "datatype":  "auto",
+        "name":  "dataset/status",
+        "type":  "mqtt in",
+        "z":  "pgld_ds_tab",
+        "inputs":  0,
+        "x":  160,
+        "broker":  "pgl_mqtt_broker",
+        "wires":  [
+                      "pgld_ds_debug_status"
+                  ],
+        "rap":  false,
+        "qos":  "0",
+        "rh":  0
+    },
+    {
+        "tostatus":  true,
+        "id":  "pgld_ds_debug_status",
+        "complete":  "payload",
+        "console":  false,
+        "statusVal":  "payload.state",
+        "name":  "status",
+        "type":  "debug",
+        "z":  "pgld_ds_tab",
+        "x":  400,
+        "targetType":  "msg",
+        "wires":  [
+
+                  ],
+        "y":  440,
+        "tosidebar":  true,
+        "active":  true,
+        "statusType":  "msg"
+    },
+    {
+        "topic":  "gas-leak-detector/+/nulling/result",
+        "id":  "pgld_ds_mqtt_nulling_in",
+        "y":  520,
+        "nl":  false,
+        "datatype":  "auto",
+        "name":  "nulling/result",
+        "type":  "mqtt in",
+        "z":  "pgld_ds_tab",
+        "inputs":  0,
+        "x":  160,
+        "broker":  "pgl_mqtt_broker",
+        "wires":  [
+                      "pgld_ds_debug_nulling"
+                  ],
+        "rap":  true,
+        "qos":  "0",
+        "rh":  0
+    },
+    {
+        "tostatus":  true,
+        "id":  "pgld_ds_debug_nulling",
+        "complete":  "payload",
+        "console":  false,
+        "statusVal":  "payload.profileId",
+        "name":  "nulling profile",
+        "type":  "debug",
+        "z":  "pgld_ds_tab",
+        "x":  400,
+        "targetType":  "msg",
+        "wires":  [
+
+                  ],
+        "y":  520,
+        "tosidebar":  true,
+        "active":  true,
+        "statusType":  "msg"
+    }
+]

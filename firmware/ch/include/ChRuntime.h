@@ -29,8 +29,13 @@ struct ChRuntimeProcessResult {
     ChUplinkStatus uplinkStatus;
     ChPullStatus pullStatus;
     NodeCacheStatus cacheStatus;
+    ClusterBuildStatus clusterBuildStatus;
+    ClusterDataStatus clusterDataStatus;
     AlarmQueueStatus alarmQueueStatus;
     ChTxQueueStatus txQueueStatus;
+    uint16_t pullRequestId;
+    uint8_t clusterRecordCount;
+    size_t clusterResponseSize;
     bool ackBuilt;
     size_t ackSize;
     bool onwardQueued;

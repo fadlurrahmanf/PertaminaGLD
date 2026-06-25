@@ -54,6 +54,7 @@ const topology = flow.get("pglTopology") || {
   parents: {},
   discovery: {},
   gatewayLinks: {},
+  hellos: {},
   routes: {},
   updatedAt: null
 };
@@ -61,8 +62,8 @@ topology.gatewayIdHex = topology.gatewayIdHex || gatewayIdHex;
 const directGatewayMinRssiDbm = Number(env.get("PGL_GATEWAY_DIRECT_PARENT_MIN_RSSI_DBM") || "-95");
 const directGatewayMinSnrDb = Number(env.get("PGL_GATEWAY_DIRECT_PARENT_MIN_SNR_DB") || "5");
 const topologyParentTtlMs = Number(env.get("PGL_TOPOLOGY_PARENT_TTL_MS") || "900000");
-const topologyDiscoveryTtlMs = Number(env.get("PGL_TOPOLOGY_DISCOVERY_TTL_MS") || "90000");
-const topologyGatewayLinkTtlMs = Number(env.get("PGL_TOPOLOGY_GATEWAY_LINK_TTL_MS") || "90000");
+const topologyDiscoveryTtlMs = Number(env.get("PGL_TOPOLOGY_DISCOVERY_TTL_MS") || "420000");
+const topologyGatewayLinkTtlMs = Number(env.get("PGL_TOPOLOGY_GATEWAY_LINK_TTL_MS") || "420000");
 
 function hasNumber(value) {
   return value !== undefined && value !== null && value !== "" && Number.isFinite(Number(value));
@@ -93,10 +94,12 @@ function newestIso(...values) {
 topology.parents = topology.parents || {};
 topology.discovery = topology.discovery || {};
 topology.gatewayLinks = topology.gatewayLinks || {};
+topology.hellos = topology.hellos || {};
 topology.routes = topology.routes || {};
 pruneMapByTtl(topology.parents, topologyParentTtlMs);
 pruneMapByTtl(topology.discovery, topologyDiscoveryTtlMs);
 pruneMapByTtl(topology.gatewayLinks, topologyGatewayLinkTtlMs);
+pruneMapByTtl(topology.hellos, topologyParentTtlMs);
 for (const clusterIdHex of Object.keys(topology.routes)) {
   if (!topology.parents[clusterIdHex]) {
     delete topology.routes[clusterIdHex];
@@ -135,7 +138,9 @@ for (const [clusterIdHex, entry] of Object.entries(topology.parents || {})) {
   const gatewayLink = (topology.gatewayLinks || {})[clusterIdHex] || null;
   const gatewayRssi = gatewayLink && hasNumber(gatewayLink.rssi) ? Number(gatewayLink.rssi) : undefined;
   const gatewaySnr = gatewayLink && hasNumber(gatewayLink.snr) ? Number(gatewayLink.snr) : undefined;
+  const hello = (topology.hellos || {})[clusterIdHex] || (entry.report === "ch-hello" ? entry : null);
   const lastSeenAgeSec = Math.round(ageMsOf(entry) / 1000);
+  const lastHelloAgeSec = hello ? Math.round(ageMsOf(hello) / 1000) : undefined;
   const gatewayLinkAgeSec = gatewayLink ? Math.round(ageMsOf(gatewayLink) / 1000) : undefined;
   const parentIdHex = entry.parentIdHex || "0x0000";
   const parentAltIdHex = entry.parentAltIdHex || "0x0000";
@@ -187,6 +192,8 @@ for (const [clusterIdHex, entry] of Object.entries(topology.parents || {})) {
     gatewayQualityLabel,
     gatewayLinkUpdatedAt: gatewayLink ? gatewayLink.receivedAt : undefined,
     gatewayLinkAgeSec,
+    lastHelloAgeSec,
+    lastHelloUpdatedAt: hello ? hello.receivedAt : undefined,
     liveUpdatedAt: live ? live.receivedAt : undefined,
     lastSeenAgeSec,
     batteryMv,
@@ -228,7 +235,9 @@ for (const [clusterIdHex, event] of Object.entries(topology.discovery || {})) {
   const gatewayLink = (topology.gatewayLinks || {})[clusterIdHex] || null;
   const gatewayRssi = gatewayLink && hasNumber(gatewayLink.rssi) ? Number(gatewayLink.rssi) : undefined;
   const gatewaySnr = gatewayLink && hasNumber(gatewayLink.snr) ? Number(gatewayLink.snr) : undefined;
+  const hello = (topology.hellos || {})[clusterIdHex] || null;
   const lastSeenAgeSec = Math.round(ageMsOf(event) / 1000);
+  const lastHelloAgeSec = hello ? Math.round(ageMsOf(hello) / 1000) : undefined;
   const gatewayLinkAgeSec = gatewayLink ? Math.round(ageMsOf(gatewayLink) / 1000) : undefined;
   const gatewayQualityLabel = gatewayRssi !== undefined || gatewaySnr !== undefined
     ? "RSSI to Gateway: " + (gatewayRssi ?? "-") + " dBm, SNR " + (gatewaySnr ?? "-") + " dB"
@@ -272,6 +281,8 @@ for (const [clusterIdHex, event] of Object.entries(topology.discovery || {})) {
     gatewayQualityLabel,
     gatewayLinkUpdatedAt: gatewayLink ? gatewayLink.receivedAt : undefined,
     gatewayLinkAgeSec,
+    lastHelloAgeSec,
+    lastHelloUpdatedAt: hello ? hello.receivedAt : undefined,
     liveUpdatedAt: event.receivedAt,
     lastSeenAgeSec,
     batteryMv,
@@ -389,6 +400,7 @@ const topology = {
   parents: {},
   discovery: {},
   gatewayLinks: {},
+  hellos: {},
   routes: {},
   updatedAt: null,
   discoveryUpdatedAt: null,
@@ -428,6 +440,80 @@ msg.payload = {
   gatewayLinks: {}
 };
 return msg;`;
+
+const topologyDeleteFunction = `function idHexValue(value) {
+  const raw = String(value || "").trim();
+  const n = raw.toLowerCase().startsWith("0x") ? parseInt(raw, 16) : Number(raw);
+  if (!Number.isFinite(n)) return null;
+  return "0x" + (n & 0xFFFF).toString(16).toUpperCase().padStart(4, "0");
+}
+
+const clusterIdHex = idHexValue((msg.req && msg.req.query && msg.req.query.ch) || (msg.payload && (msg.payload.ch || msg.payload.clusterId)));
+if (!clusterIdHex) {
+  msg.statusCode = 400;
+  msg.payload = { ok: false, reason: "invalid-ch-id" };
+  return msg;
+}
+
+const topology = flow.get("pglTopology") || {};
+topology.parents = topology.parents || {};
+topology.discovery = topology.discovery || {};
+topology.gatewayLinks = topology.gatewayLinks || {};
+topology.hellos = topology.hellos || {};
+topology.routes = topology.routes || {};
+
+delete topology.parents[clusterIdHex];
+delete topology.discovery[clusterIdHex];
+delete topology.gatewayLinks[clusterIdHex];
+delete topology.hellos[clusterIdHex];
+delete topology.routes[clusterIdHex];
+for (const [key, route] of Object.entries(topology.routes)) {
+  if (Array.isArray(route) && route.includes(clusterIdHex)) {
+    delete topology.routes[key];
+  }
+}
+topology.updatedAt = new Date().toISOString();
+topology.discoveryUpdatedAt = topology.updatedAt;
+flow.set("pglTopology", topology);
+
+msg.headers = { "content-type": "application/json; charset=utf-8" };
+msg.payload = { ok: true, deleted: clusterIdHex, kind: "pgl-topology-delete", updatedAt: topology.updatedAt };
+return msg;`;
+
+const topologyRequestFunction = `function idHexValue(value) {
+  const raw = String(value || "").trim();
+  const n = raw.toLowerCase().startsWith("0x") ? parseInt(raw, 16) : Number(raw);
+  if (!Number.isFinite(n)) return null;
+  return "0x" + (n & 0xFFFF).toString(16).toUpperCase().padStart(4, "0");
+}
+
+const clusterIdHex = idHexValue((msg.req && msg.req.query && msg.req.query.ch) || (msg.payload && (msg.payload.ch || msg.payload.clusterId)));
+if (!clusterIdHex) {
+  msg.statusCode = 400;
+  msg.payload = { ok: false, reason: "invalid-ch-id" };
+  return [null, msg];
+}
+
+const topology = flow.get("pglTopology") || {};
+const route = topology.routes && Array.isArray(topology.routes[clusterIdHex]) ? topology.routes[clusterIdHex] : [];
+if (route.length === 0) {
+  msg.statusCode = 409;
+  msg.payload = { ok: false, reason: "route-not-installed", ch: clusterIdHex };
+  return [null, msg];
+}
+
+const requestId = Date.now() & 0xFFFF;
+const command = {
+  requestId,
+  hopList: route
+};
+const mqttMsg = {
+  topic: "gld/gateway/cmd/pull",
+  payload: command
+};
+msg.headers = { "content-type": "application/json; charset=utf-8" };
+msg.payload = { ok: true, kind: "pgl-topology-request", ch: clusterIdHex, requestId, hopList: route };
+return [mqttMsg, msg];`;
 
 const topologyViewFunction = `msg.headers = { "content-type": "text/html; charset=utf-8" };
 msg.payload = \`<!doctype html>
@@ -488,17 +574,39 @@ msg.payload = \`<!doctype html>
       width: 240px;
       min-height: 210px;
       padding: 12px;
-      border: 1px solid #334155;
+      border: 1px solid var(--node-border, #334155);
+      border-left: 5px solid var(--node-accent, var(--node-border, #334155));
       border-radius: 8px;
-      background: var(--panel);
+      background: linear-gradient(180deg, var(--node-bg, var(--panel)) 0%, var(--panel) 72%);
       box-shadow: 0 10px 26px rgba(0,0,0,.26);
+      cursor: grab;
+      touch-action: none;
+      user-select: none;
+    }
+    .node.dragging {
+      cursor: grabbing;
+      z-index: 5;
+      box-shadow: 0 16px 36px rgba(0,0,0,.42);
     }
     .node.updated {
       animation: chUpdateFlash 1.8s ease-out 1;
     }
-    .node.gateway { border-color: var(--gw); }
-    .node.ch { border-color: var(--ch); }
-    .node.pending { border-color: var(--warn); }
+    .node.gateway {
+      --node-border: var(--gw);
+      --node-accent: var(--gw);
+      --node-bg: #12231f;
+      --layer-pill-bg: rgba(16,185,129,.18);
+    }
+    .node.ch {
+      --node-border: var(--ch);
+      --node-accent: var(--ch);
+      --node-bg: #10202a;
+      --layer-pill-bg: rgba(56,189,248,.16);
+    }
+    .node.pending {
+      outline: 1px solid rgba(245,158,11,.85);
+      outline-offset: 1px;
+    }
     @keyframes chUpdateFlash {
       0% {
         border-color: #fde047;
@@ -511,8 +619,8 @@ msg.payload = \`<!doctype html>
         box-shadow: 0 0 0 8px rgba(253,224,71,.24), 0 16px 34px rgba(0,0,0,.34);
       }
       100% {
-        border-color: var(--ch);
-        background: var(--panel);
+        border-color: var(--node-border, var(--ch));
+        background: linear-gradient(180deg, var(--node-bg, var(--panel)) 0%, var(--panel) 72%);
         box-shadow: 0 0 0 18px rgba(253,224,71,0), 0 10px 26px rgba(0,0,0,.26);
       }
     }
@@ -525,6 +633,7 @@ msg.payload = \`<!doctype html>
       border: 1px solid #475569;
       border-radius: 999px;
       color: #e5e7eb;
+      background: var(--layer-pill-bg, transparent);
       font-size: 11px;
       line-height: 1.35;
     }
@@ -584,6 +693,28 @@ msg.payload = \`<!doctype html>
       color: #fecaca;
     }
     button.danger:hover { background: #4c1d1d; }
+    .table-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: nowrap;
+    }
+    .table-action {
+      width: auto;
+      min-width: 58px;
+      padding: 5px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      line-height: 1;
+    }
+    .table-action.delete {
+      color: #fecaca;
+      border-color: rgba(248,113,113,.55);
+      background: rgba(127,29,29,.18);
+    }
+    .table-action:disabled {
+      opacity: .42;
+      cursor: not-allowed;
+    }
     .actions {
       display: flex;
       align-items: center;
@@ -597,6 +728,61 @@ msg.payload = \`<!doctype html>
       color: var(--muted);
       text-align: center;
     }
+    .pending-section {
+      margin-top: 14px;
+      border: 1px solid #2b3036;
+      background: #11161c;
+      overflow: hidden;
+    }
+    .pending-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border-bottom: 1px solid #2b3036;
+    }
+    .pending-header h2 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 650;
+    }
+    .pending-count {
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .pending-table-wrap {
+      overflow-x: auto;
+    }
+    .pending-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      min-width: 760px;
+    }
+    .pending-table th,
+    .pending-table td {
+      padding: 9px 12px;
+      border-bottom: 1px solid #252b33;
+      text-align: left;
+      vertical-align: top;
+    }
+    .pending-table th {
+      color: #d1d5db;
+      background: #151b22;
+      font-weight: 650;
+    }
+    .pending-table td {
+      color: var(--muted);
+    }
+    .pending-table tr:last-child td {
+      border-bottom: 0;
+    }
+    .pending-empty {
+      padding: 13px 14px;
+      color: var(--muted);
+      font-size: 12px;
+    }
   </style>
 </head>
 <body>
@@ -604,7 +790,7 @@ msg.payload = \`<!doctype html>
     <h1>Pertamina GLD Topology</h1>
     <div class="meta">
       <div id="summary">loading...</div>
-      <div>Auto refresh 3 detik</div>
+      <div>Auto refresh 1 detik</div>
     </div>
   </header>
   <main>
@@ -617,6 +803,7 @@ msg.payload = \`<!doctype html>
       </div>
       <div class="actions">
         <button id="refresh">Refresh</button>
+        <button id="resetLayout">Reset Layout</button>
         <button id="resetRouting" class="danger">Reset Routing</button>
       </div>
     </div>
@@ -624,6 +811,13 @@ msg.payload = \`<!doctype html>
       <svg id="links"></svg>
       <div id="nodes"></div>
     </div>
+    <section class="pending-section">
+      <div class="pending-header">
+        <h2>Status CH</h2>
+        <div class="pending-count" id="pendingCount">0 item</div>
+      </div>
+      <div id="pendingDetails"></div>
+    </section>
   </main>
   <script>
     const canvas = document.getElementById("canvas");
@@ -631,9 +825,284 @@ msg.payload = \`<!doctype html>
     const linksEl = document.getElementById("links");
     const statusEl = document.getElementById("status");
     const summaryEl = document.getElementById("summary");
+    const pendingDetailsEl = document.getElementById("pendingDetails");
+    const pendingCountEl = document.getElementById("pendingCount");
     const resetButton = document.getElementById("resetRouting");
+    const resetLayoutButton = document.getElementById("resetLayout");
     const nodeSignals = new Map();
+    const layoutStorageKey = "pertamina-gld-topology-layout-v1";
+    const nodeW = 240;
+    let currentEdges = [];
+    let currentPositions = {};
+    let dragActive = false;
     let hasRendered = false;
+
+    function loadManualLayout() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(layoutStorageKey) || "{}");
+        return saved && typeof saved === "object" ? saved : {};
+      } catch (err) {
+        return {};
+      }
+    }
+
+    function saveManualLayout(layout) {
+      localStorage.setItem(layoutStorageKey, JSON.stringify(layout));
+    }
+
+    function clamp(value, min, max) {
+      return Math.min(Math.max(value, min), max);
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      }[char]));
+    }
+
+    function pendingExplanation(node) {
+      const reason = String(node.pendingReason || "").toLowerCase();
+      if (reason.includes("waiting installed route via")) {
+        const via = String(node.pendingReason || "").split("via ").pop() || node.parent || "-";
+        return "Menunggu route parent " + via + " terpasang dulu. Biasanya selesai setelah parent mengirim CH_HELLO/topology yang valid ke server.";
+      }
+      if (reason.includes("direct gateway candidate is strong")) {
+        return "Gateway sudah terdengar cukup kuat. Server menunggu CH_HELLO/topology dari CH supaya route resmi bisa dipasang.";
+      }
+      if (reason.includes("below direct threshold")) {
+        return "Link langsung ke Gateway belum memenuhi threshold. CH sedang menunggu response parent/CH lain dari proses CH_CONFIG.";
+      }
+      if (reason.includes("waiting ch_config response")) {
+        return "Menunggu CH_CONFIG_RESPONSE dari Gateway atau parent CH agar kandidat route bisa dipilih.";
+      }
+      if (reason.includes("waiting parent topology")) {
+        return "Menunggu topology parent masuk ke server supaya jalur sampai Gateway bisa dihitung.";
+      }
+      return node.pendingReason || "Menunggu event routing berikutnya dari CH_CONFIG atau CH_HELLO/topology.";
+    }
+
+    function ageLabel(seconds) {
+      if (seconds === undefined || seconds === null || !Number.isFinite(Number(seconds))) return "-";
+      const sec = Math.max(0, Math.round(Number(seconds)));
+      if (sec < 60) return sec + "s ago";
+      const min = Math.floor(sec / 60);
+      const rem = sec % 60;
+      if (min < 60) return min + "m" + (rem ? " " + rem + "s" : "") + " ago";
+      const hour = Math.floor(min / 60);
+      const minRem = min % 60;
+      return hour + "h" + (minRem ? " " + minRem + "m" : "") + " ago";
+    }
+
+    function expectedNextEvent(node) {
+      if (node.status === "installed") {
+        if (node.lastHelloAgeSec !== undefined) {
+          const remaining = Math.max(0, 300 - Math.round(Number(node.lastHelloAgeSec)));
+          return remaining > 0
+            ? "Menunggu CH_HELLO periodik berikutnya sekitar " + remaining + "s lagi."
+            : "CH_HELLO periodik sudah waktunya masuk; menunggu update berikutnya dari CH.";
+        }
+        return "Route sudah installed; menunggu CH_HELLO berikutnya untuk mengisi umur hello.";
+      }
+      const reason = String(node.pendingReason || "").toLowerCase();
+      if (reason.includes("direct gateway candidate is strong")) {
+        return "Menunggu CH_HELLO pertama dari CH supaya route resmi dipasang.";
+      }
+      if (reason.includes("waiting installed route via")) {
+        const via = String(node.pendingReason || "").split("via ").pop() || node.parent || "-";
+        return "Menunggu parent " + via + " installed dulu, lalu CH_HELLO dari CH ini.";
+      }
+      if (reason.includes("below direct threshold")) {
+        return "Menunggu CH_CONFIG_RESPONSE dari parent CH yang lebih layak.";
+      }
+      if (reason.includes("waiting ch_config response")) {
+        return "Menunggu CH_CONFIG_RESPONSE dari GW atau parent CH.";
+      }
+      if (reason.includes("waiting parent topology")) {
+        return "Menunggu topology parent masuk ke server.";
+      }
+      return "Menunggu event CH_CONFIG atau CH_HELLO berikutnya.";
+    }
+
+    function renderPendingTable(nodes) {
+      const chNodes = nodes.filter((node) => node.type === "ch");
+      const pendingNodes = chNodes.filter((node) => node.status !== "installed" || node.pendingReason);
+      pendingCountEl.textContent = pendingNodes.length + " pending / " + chNodes.length + " CH";
+      if (chNodes.length === 0) {
+        pendingDetailsEl.innerHTML = '<div class="pending-empty">Belum ada CH.</div>';
+        return;
+      }
+      pendingDetailsEl.innerHTML =
+        '<div class="pending-table-wrap">' +
+        '<table class="pending-table">' +
+        '<thead><tr>' +
+        '<th>CH</th><th>Status</th><th>Parent</th><th>Route</th><th>Last CH_HELLO</th><th>Expected Next Event</th><th>Aksi</th><th>Update</th>' +
+        '</tr></thead><tbody>' +
+        chNodes.map((node) =>
+          '<tr>' +
+          '<td>' + escapeHtml(node.label || node.id || "-") + '</td>' +
+          '<td>' + escapeHtml(node.status || "-") + '</td>' +
+          '<td>' + escapeHtml(node.parent || "-") + '</td>' +
+          '<td>' + escapeHtml(node.routeText || "-") + '</td>' +
+          '<td>' + escapeHtml(ageLabel(node.lastHelloAgeSec)) + '</td>' +
+          '<td>' + escapeHtml(expectedNextEvent(node)) + '</td>' +
+          '<td><div class="table-actions">' +
+          '<button class="table-action" data-action="request" data-node-id="' + escapeHtml(node.id || "") + '"' + (node.requestPayload ? "" : " disabled") + '>Request</button>' +
+          '<button class="table-action delete" data-action="delete" data-node-id="' + escapeHtml(node.id || "") + '">Hapus</button>' +
+          '</div></td>' +
+          '<td>' + escapeHtml(ageLabel(node.lastSeenAgeSec) !== "-" ? ageLabel(node.lastSeenAgeSec) : (node.updatedAt || "-")) + '</td>' +
+          '</tr>'
+        ).join("") +
+        '</tbody></table></div>';
+    }
+
+    function layerStyleFor(node) {
+      const fallback = { border: "#64748b", bg: "#171b24", pill: "rgba(148,163,184,.16)" };
+      const red = { border: "#ef4444", bg: "#2a1414", pill: "rgba(239,68,68,.18)" };
+      const palette = {
+        0: { border: "#10b981", bg: "#12231f", pill: "rgba(16,185,129,.18)" },
+        1: { border: "#38bdf8", bg: "#10202a", pill: "rgba(56,189,248,.16)" },
+        2: { border: "#a78bfa", bg: "#1b172b", pill: "rgba(167,139,250,.17)" },
+        3: { border: "#f59e0b", bg: "#2a1f10", pill: "rgba(245,158,11,.17)" },
+        4: { border: "#fb7185", bg: "#2a151b", pill: "rgba(251,113,133,.16)" },
+        5: { border: "#22c55e", bg: "#102317", pill: "rgba(34,197,94,.15)" },
+        6: { border: "#06b6d4", bg: "#10232a", pill: "rgba(6,182,212,.16)" },
+        7: { border: "#84cc16", bg: "#1a230f", pill: "rgba(132,204,22,.16)" },
+        8: { border: "#f97316", bg: "#2a1a10", pill: "rgba(249,115,22,.17)" },
+        9: { border: "#6366f1", bg: "#17172b", pill: "rgba(99,102,241,.17)" }
+      };
+      const layer = Number.isFinite(Number(node.layer)) ? Math.trunc(Number(node.layer)) : null;
+      if (layer === null) return fallback;
+      if (layer >= 10) return red;
+      return palette[layer] || fallback;
+    }
+
+    function applyLayerStyle(div, node) {
+      const style = layerStyleFor(node);
+      div.style.setProperty("--node-border", style.border);
+      div.style.setProperty("--node-accent", style.border);
+      div.style.setProperty("--node-bg", style.bg);
+      div.style.setProperty("--layer-pill-bg", style.pill);
+    }
+
+    function updateCanvasHeight() {
+      const maxY = Object.values(currentPositions).reduce((acc, pos) => Math.max(acc, pos.y + (pos.h || 260)), 560);
+      canvas.style.minHeight = Math.max(560, maxY + 24) + "px";
+    }
+
+    function measureNodePositions() {
+      for (const div of nodesEl.querySelectorAll(".node[data-node-id]")) {
+        const nodeId = div.dataset.nodeId;
+        const pos = currentPositions[nodeId];
+        if (!pos) continue;
+        pos.w = div.offsetWidth || nodeW;
+        pos.h = div.offsetHeight || 210;
+        pos.cx = pos.x + pos.w / 2;
+      }
+    }
+
+    function edgeAnchors(a, b) {
+      const aW = a.w || nodeW;
+      const bW = b.w || nodeW;
+      const aH = a.h || 210;
+      const bH = b.h || 210;
+      const aCenterY = a.y + aH / 2;
+      const bCenterY = b.y + bH / 2;
+      if (aCenterY <= bCenterY) {
+        return {
+          x1: a.x + aW / 2,
+          y1: a.y + aH,
+          x2: b.x + bW / 2,
+          y2: b.y
+        };
+      }
+      return {
+        x1: a.x + aW / 2,
+        y1: a.y,
+        x2: b.x + bW / 2,
+        y2: b.y + bH
+      };
+    }
+
+    function renderLinks() {
+      measureNodePositions();
+      linksEl.innerHTML = "";
+      for (const edge of currentEdges) {
+        const a = currentPositions[edge.from];
+        const b = currentPositions[edge.to];
+        if (!a || !b) continue;
+        const anchor = edgeAnchors(a, b);
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", anchor.x1);
+        line.setAttribute("y1", anchor.y1);
+        line.setAttribute("x2", anchor.x2);
+        line.setAttribute("y2", anchor.y2);
+        line.setAttribute("stroke", edge.role === "alternate" ? "#f59e0b" : (edge.role === "pending" ? "#f59e0b" : "#38bdf8"));
+        line.setAttribute("stroke-width", edge.role === "main" ? "3" : "2");
+        if (edge.role === "alternate") {
+          line.setAttribute("stroke-dasharray", "7 7");
+        } else if (edge.role === "pending") {
+          line.setAttribute("stroke-dasharray", "3 7");
+        }
+        linksEl.appendChild(line);
+      }
+    }
+
+    function attachDrag(div, nodeId) {
+      let startX = 0;
+      let startY = 0;
+      let pointerStartX = 0;
+      let pointerStartY = 0;
+      div.addEventListener("pointerdown", (event) => {
+        if (event.button !== undefined && event.button !== 0) return;
+        const pos = currentPositions[nodeId];
+        if (!pos) return;
+        event.preventDefault();
+        dragActive = true;
+        div.classList.add("dragging");
+        div.setPointerCapture(event.pointerId);
+        startX = pos.x;
+        startY = pos.y;
+        pointerStartX = event.clientX;
+        pointerStartY = event.clientY;
+      });
+      div.addEventListener("pointermove", (event) => {
+        if (!div.classList.contains("dragging")) return;
+        const width = Math.max(canvas.clientWidth, 760);
+        const nextX = clamp(startX + event.clientX - pointerStartX, 16, Math.max(16, width - nodeW - 16));
+        const nextY = Math.max(16, startY + event.clientY - pointerStartY);
+        currentPositions[nodeId] = {
+          x: nextX,
+          y: nextY,
+          w: currentPositions[nodeId].w || div.offsetWidth || nodeW,
+          h: currentPositions[nodeId].h || div.offsetHeight || 210,
+          cx: nextX + (currentPositions[nodeId].w || div.offsetWidth || nodeW) / 2
+        };
+        div.style.left = nextX + "px";
+        div.style.top = nextY + "px";
+        updateCanvasHeight();
+        renderLinks();
+      });
+      const finishDrag = (event) => {
+        if (!div.classList.contains("dragging")) return;
+        div.classList.remove("dragging");
+        try {
+          div.releasePointerCapture(event.pointerId);
+        } catch (err) {}
+        const layout = loadManualLayout();
+        const pos = currentPositions[nodeId];
+        if (pos) {
+          layout[nodeId] = { x: Math.round(pos.x), y: Math.round(pos.y) };
+          saveManualLayout(layout);
+        }
+        dragActive = false;
+      };
+      div.addEventListener("pointerup", finishDrag);
+      div.addEventListener("pointercancel", finishDrag);
+    }
 
     function groupByDepth(nodes) {
       const groups = new Map();
@@ -654,6 +1123,9 @@ msg.payload = \`<!doctype html>
       linksEl.innerHTML = "";
       const nodes = data.nodes || [];
       const edges = data.edges || [];
+      const manualLayout = loadManualLayout();
+      currentEdges = edges;
+      currentPositions = {};
       summaryEl.textContent = data.nodeCount + " node, " + (data.mainEdgeCount ?? data.edgeCount) + " main link, " + (data.alternateEdgeCount || 0) + " alt link, " + (data.pendingEdgeCount || 0) + " pending link, " + (data.discoveryCount || 0) + " discovery";
       statusEl.textContent = "Topology: " + (data.topologyUpdatedAt || data.updatedAt || "belum ada topology event") +
         " | Live: " + (data.liveUpdatedAt || "belum ada live event");
@@ -663,11 +1135,10 @@ msg.payload = \`<!doctype html>
       if (nodes.length <= 1) {
         nodesEl.innerHTML = '<div class="empty">Belum ada CH route. Tunggu CH_CONFIG/CH_HELLO masuk dari Gateway.</div>';
       }
+      renderPendingTable(nodes);
 
-      const positions = {};
       const groups = groupByDepth(nodes);
       const width = Math.max(canvas.clientWidth, 760);
-      const nodeW = 240;
       const rowGap = 270;
       const top = 56;
       for (const [layer, items] of groups) {
@@ -675,10 +1146,16 @@ msg.payload = \`<!doctype html>
         const totalW = items.length * nodeW + Math.max(0, items.length - 1) * 44;
         const startX = Math.max(24, (width - totalW) / 2);
         items.forEach((node, index) => {
-          const x = startX + index * (nodeW + 44);
-          const y = top + layer * rowGap;
-          positions[node.id] = { x, y, cx: x + nodeW / 2, cy: y + 47 };
+          const autoX = startX + index * (nodeW + 44);
+          const autoY = top + layer * rowGap;
+          const saved = manualLayout[node.id];
+          const x = saved && Number.isFinite(Number(saved.x))
+            ? clamp(Number(saved.x), 16, Math.max(16, width - nodeW - 16))
+            : autoX;
+          const y = saved && Number.isFinite(Number(saved.y)) ? Math.max(16, Number(saved.y)) : autoY;
+          currentPositions[node.id] = { x, y, w: nodeW, h: 210, cx: x + nodeW / 2 };
           const div = document.createElement("div");
+          div.dataset.nodeId = node.id;
           const signal = [
             node.liveUpdatedAt || "",
             node.updatedAt || "",
@@ -691,6 +1168,7 @@ msg.payload = \`<!doctype html>
           const shouldFlash = hasRendered && node.type === "ch" && previousSignal !== undefined && previousSignal !== signal;
           nodeSignals.set(node.id, signal);
           div.className = "node " + node.type + " " + node.status + (shouldFlash ? " updated" : "");
+          applyLayerStyle(div, node);
           div.style.left = x + "px";
           div.style.top = y + "px";
           const metric = node.type === "gateway"
@@ -712,36 +1190,21 @@ msg.payload = \`<!doctype html>
             '<div class="row" title="' + metric + '">' + metric + '</div>' +
             '<div class="row" title="' + gatewayMetric + '">' + gatewayMetric + '</div>' +
             '<div class="row" title="' + ageMetric + '">' + ageMetric + '</div>' +
-            (node.pendingReason ? '<div class="row" title="' + node.pendingReason + '">' + node.pendingReason + '</div>' : '') +
             '<div class="row">status: ' + node.status + '</div>' +
             '<div class="route">' + (node.routeText || "") + '</div>';
+          attachDrag(div, node.id);
           nodesEl.appendChild(div);
         });
       }
 
       canvas.style.minHeight = Math.max(560, top + (groups.length + 1) * rowGap) + "px";
-      for (const edge of edges) {
-        const a = positions[edge.from];
-        const b = positions[edge.to];
-        if (!a || !b) continue;
-        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-        line.setAttribute("x1", a.cx);
-        line.setAttribute("y1", a.cy + 47);
-        line.setAttribute("x2", b.cx);
-        line.setAttribute("y2", b.cy - 47);
-        line.setAttribute("stroke", edge.role === "alternate" ? "#f59e0b" : (edge.role === "pending" ? "#f59e0b" : "#38bdf8"));
-        line.setAttribute("stroke-width", edge.role === "main" ? "3" : "2");
-        if (edge.role === "alternate") {
-          line.setAttribute("stroke-dasharray", "7 7");
-        } else if (edge.role === "pending") {
-          line.setAttribute("stroke-dasharray", "3 7");
-        }
-        linksEl.appendChild(line);
-      }
+      updateCanvasHeight();
+      renderLinks();
       hasRendered = true;
     }
 
     async function refresh() {
+      if (dragActive) return;
       try {
         const res = await fetch("/pertamina-gld/topology", { cache: "no-store" });
         const data = await res.json();
@@ -764,10 +1227,60 @@ msg.payload = \`<!doctype html>
         resetButton.disabled = false;
       }
     }
+    async function requestNode(nodeId, button) {
+      if (!nodeId) return;
+      try {
+        if (button) button.disabled = true;
+        const res = await fetch("/pertamina-gld/topology/request?ch=" + encodeURIComponent(nodeId), { method: "POST", cache: "no-store" });
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+          statusEl.textContent = "Request gagal: " + (data.reason || res.status);
+          return;
+        }
+        statusEl.textContent = "Request dikirim ke " + nodeId + " via " + (Array.isArray(data.hopList) ? data.hopList.join(" -> ") : "-");
+      } catch (err) {
+        statusEl.textContent = "Request gagal: " + err.message;
+      } finally {
+        if (button) button.disabled = false;
+      }
+    }
+    async function deleteNode(nodeId, button) {
+      if (!nodeId) return;
+      try {
+        if (button) button.disabled = true;
+        const res = await fetch("/pertamina-gld/topology/delete?ch=" + encodeURIComponent(nodeId), { method: "POST", cache: "no-store" });
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+          statusEl.textContent = "Hapus gagal: " + (data.reason || res.status);
+          return;
+        }
+        nodeSignals.delete(nodeId);
+        hasRendered = false;
+        await refresh();
+      } catch (err) {
+        statusEl.textContent = "Hapus gagal: " + err.message;
+      } finally {
+        if (button) button.disabled = false;
+      }
+    }
     document.getElementById("refresh").addEventListener("click", refresh);
+    pendingDetailsEl.addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-action][data-node-id]");
+      if (!button) return;
+      const nodeId = button.dataset.nodeId;
+      if (button.dataset.action === "request") {
+        requestNode(nodeId, button);
+      } else if (button.dataset.action === "delete") {
+        deleteNode(nodeId, button);
+      }
+    });
+    resetLayoutButton.addEventListener("click", () => {
+      localStorage.removeItem(layoutStorageKey);
+      refresh();
+    });
     resetButton.addEventListener("click", resetRouting);
     refresh();
-    setInterval(refresh, 3000);
+    setInterval(refresh, 1000);
   </script>
 </body>
 </html>\`;
@@ -995,6 +1508,52 @@ const nodes = [
     y: 600,
     wires: [[id("http_topology_response")]]
   }),
+  nodeBase("http in", "http_topology_request_in", {
+    name: "POST /pertamina-gld/topology/request",
+    url: "/pertamina-gld/topology/request",
+    method: "post",
+    upload: false,
+    swaggerDoc: "",
+    x: 230,
+    y: 650,
+    wires: [[id("topology_request")]]
+  }),
+  nodeBase("function", "topology_request", {
+    name: "request CH pull route",
+    func: topologyRequestFunction,
+    outputs: 2,
+    timeout: 0,
+    noerr: 0,
+    initialize: "",
+    finalize: "",
+    libs: [],
+    x: 500,
+    y: 650,
+    wires: [[id("mqtt_out_pull_command"), id("debug_mqtt_command")], [id("http_topology_response")]]
+  }),
+  nodeBase("http in", "http_topology_delete_in", {
+    name: "POST /pertamina-gld/topology/delete",
+    url: "/pertamina-gld/topology/delete",
+    method: "post",
+    upload: false,
+    swaggerDoc: "",
+    x: 220,
+    y: 700,
+    wires: [[id("topology_delete")]]
+  }),
+  nodeBase("function", "topology_delete", {
+    name: "delete CH topology state",
+    func: topologyDeleteFunction,
+    outputs: 1,
+    timeout: 0,
+    noerr: 0,
+    initialize: "",
+    finalize: "",
+    libs: [],
+    x: 500,
+    y: 700,
+    wires: [[id("http_topology_response")]]
+  }),
   nodeBase("http in", "http_topology_view_in", {
     name: "GET /pertamina-gld/topology/view",
     url: "/pertamina-gld/topology/view",
@@ -1150,7 +1709,7 @@ const rssiLabel = isConfigRequest ? "RSSI to Gateway" : "RSSI";
 const receivedAtMs = Date.parse(p.receivedAt || "");
 const ageSec = Number.isFinite(receivedAtMs) ? Math.max(0, Math.round((Date.now() - receivedAtMs) / 1000)) : undefined;
 const ttlSec = p.discoveryOnly || isConfigRequest
-  ? Math.round(Number(env.get("PGL_TOPOLOGY_DISCOVERY_TTL_MS") || "90000") / 1000)
+  ? Math.round(Number(env.get("PGL_TOPOLOGY_DISCOVERY_TTL_MS") || "420000") / 1000)
   : Math.round(Number(env.get("PGL_TOPOLOGY_PARENT_TTL_MS") || "900000") / 1000);
 const stale = ageSec !== undefined && ageSec > ttlSec;
 const stateLabel = stale

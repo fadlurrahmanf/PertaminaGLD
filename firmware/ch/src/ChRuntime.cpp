@@ -152,6 +152,7 @@ ChRuntimeStatus enqueueClusterResponseForPull(
     size_t txQueueCapacity,
     ChRuntimeProcessResult& out) {
     out = {};
+    out.pullRequestId = requestId;
     if (!pgl::config::isValidChRuntimeConfig(config)) {
         out.status = ChRuntimeStatus::InvalidConfig;
         return out.status;
@@ -176,6 +177,10 @@ ChRuntimeStatus enqueueClusterResponseForPull(
         selectedIndexes,
         CH_TX_SELECTED_INDEX_MAX,
         buildResult);
+    out.clusterBuildStatus = buildStatus;
+    out.clusterDataStatus = buildResult.dataStatus;
+    out.clusterRecordCount = buildResult.recordCount;
+    out.clusterResponseSize = buildResult.size;
     if (buildStatus != ClusterBuildStatus::Ok) {
         out.status = ChRuntimeStatus::TxBuildFailed;
         return out.status;
@@ -225,6 +230,7 @@ ChRuntimeStatus handleServerPullRequestFrame(
 
     ChPullRequestView request{};
     out.pullStatus = parseServerPullRequestFrame(frame, frameLen, config.chId, request);
+    out.pullRequestId = request.requestId;
     if (out.pullStatus != ChPullStatus::Ok) {
         out.status = ChRuntimeStatus::PullRequestFailed;
         return out.status;

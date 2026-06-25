@@ -218,6 +218,8 @@ static uint32_t lastHousekeepMs   = 0;
 static uint32_t lowPowerEnteredMs = 0;
 static uint32_t joiningStartMs    = 0;
 static uint32_t failoverEnteredMs = 0;
+static bool     bootHelloPending = true;
+static uint32_t lastBootHelloAttemptMs = 0;
 
 // ─── Battery ────────────────────────────────────────────────────────────────
 
@@ -921,8 +923,8 @@ void drainTxQueue() {
 
 // ─── MESH management messages ───────────────────────────────────────────────
 
-void sendHello() {
-    if (!meshReady || meshRadio == nullptr || !txAllowed()) return;
+bool sendHello() {
+    if (!meshReady || meshRadio == nullptr || !txAllowed()) return false;
     static uint8_t helloSeq = 0;
     const uint32_t uptimeSec = millis() / 1000UL;
     uint8_t payload[11]{};
@@ -941,11 +943,13 @@ void sendHello() {
     const pgl::protocol::FrameEncodeResult enc = pgl::protocol::encodeAppFrame(
         pgl::protocol::MSG_CH_HELLO, CH_ID, parentId, helloSeq++,
         payload, sizeof(payload), frame, sizeof(frame), pgl::protocol::MESH_MAX_PAYLOAD);
-    if (enc.status != pgl::protocol::FrameStatus::Ok) return;
-    transmitRadio(meshRadio, MESH_PINS, frame, enc.size, "MESH_HELLO");
+    if (enc.status != pgl::protocol::FrameStatus::Ok) return false;
+    const bool txOk = transmitRadio(meshRadio, MESH_PINS, frame, enc.size, "MESH_HELLO");
     startMeshReceive("after-hello");
-    logPrintf("CH_HELLO_TX parentId=0x%04X parentAlt=0x%04X battMv=%u uptimeSec=%lu depth=%u\n",
-              parentId, parentAlt, batteryMv, static_cast<unsigned long>(uptimeSec), meshDepth);
+    logPrintf("CH_HELLO_TX parentId=0x%04X parentAlt=0x%04X battMv=%u uptimeSec=%lu depth=%u txOk=%u\n",
+              parentId, parentAlt, batteryMv, static_cast<unsigned long>(uptimeSec), meshDepth,
+              txOk ? 1 : 0);
+    return txOk;
 }
 
 void sendConfigRequest() {
@@ -1191,11 +1195,16 @@ void handleMeshPacketReceived() {
             runtimeConfig, frame, packetLen, millis(),
             nodeCache, NODE_CACHE_CAPACITY,
             txQueue, TX_QUEUE_CAPACITY, result);
-        logPrintf("CH_PULL_PROCESS status=%s onwardQueued=%u pullStatus=%u txStatus=%u\n",
+        logPrintf("CH_PULL_PROCESS status=%s onwardQueued=%u pullStatus=%u txStatus=%u requestId=%u dataStatus=%s records=%u responseSize=%u buildStatus=%u\n",
                   pgl::ch::chRuntimeStatusName(status),
                   result.onwardQueued ? 1 : 0,
                   static_cast<unsigned>(result.pullStatus),
-                  static_cast<unsigned>(result.txQueueStatus));
+                  static_cast<unsigned>(result.txQueueStatus),
+                  static_cast<unsigned>(result.pullRequestId),
+                  pgl::ch::clusterDataStatusName(result.clusterDataStatus),
+                  static_cast<unsigned>(result.clusterRecordCount),
+                  static_cast<unsigned>(result.clusterResponseSize),
+                  static_cast<unsigned>(result.clusterBuildStatus));
         reportCache("pull");
         if (chState == ChState::JOINED) drainTxQueue();
         return;
@@ -1340,6 +1349,16 @@ void handleJoined() {
     checkAlarmAckTimeout();
 
     const uint32_t now = millis();
+    if (bootHelloPending && parentId != 0 &&
+        (lastBootHelloAttemptMs == 0 || now - lastBootHelloAttemptMs >= 1000)) {
+        lastBootHelloAttemptMs = now;
+        logPrintf("CH_BOOT_HELLO reason=boot-joined parentId=0x%04X parentAlt=0x%04X\n",
+                  parentId, parentAlt);
+        if (sendHello()) {
+            bootHelloPending = false;
+            lastHelloMs = now;
+        }
+    }
     if (nextRouteVerifyDueMs == 0) {
         scheduleNextRouteVerify(now);
     }
@@ -1379,9 +1398,10 @@ void handleJoined() {
         return;
     }
 
-    if (now - lastHelloMs >= HELLO_INTERVAL_MS) {
-        lastHelloMs = now;
-        sendHello();
+    if (!bootHelloPending && now - lastHelloMs >= HELLO_INTERVAL_MS) {
+        if (sendHello()) {
+            lastHelloMs = now;
+        }
     }
 
     runHousekeeping();

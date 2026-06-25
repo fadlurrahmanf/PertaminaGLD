@@ -114,8 +114,8 @@ function envNumber(name, fallback) {
 }
 
 const TOPOLOGY_PARENT_TTL_MS = envNumber("PGL_TOPOLOGY_PARENT_TTL_MS", 900000);
-const TOPOLOGY_DISCOVERY_TTL_MS = envNumber("PGL_TOPOLOGY_DISCOVERY_TTL_MS", 90000);
-const TOPOLOGY_GATEWAY_LINK_TTL_MS = envNumber("PGL_TOPOLOGY_GATEWAY_LINK_TTL_MS", 90000);
+const TOPOLOGY_DISCOVERY_TTL_MS = envNumber("PGL_TOPOLOGY_DISCOVERY_TTL_MS", 420000);
+const TOPOLOGY_GATEWAY_LINK_TTL_MS = envNumber("PGL_TOPOLOGY_GATEWAY_LINK_TTL_MS", 420000);
 
 function ageMsOf(entry, nowMs = Date.now()) {
     const t = Date.parse(entry && entry.receivedAt);
@@ -126,12 +126,18 @@ function pruneTopology(topology, nowMs = Date.now()) {
     topology.parents = topology.parents || {};
     topology.discovery = topology.discovery || {};
     topology.gatewayLinks = topology.gatewayLinks || {};
+    topology.hellos = topology.hellos || {};
     topology.routes = topology.routes || {};
 
     for (const [clusterIdHex, entry] of Object.entries(topology.parents)) {
         if (ageMsOf(entry, nowMs) > TOPOLOGY_PARENT_TTL_MS) {
             delete topology.parents[clusterIdHex];
             delete topology.routes[clusterIdHex];
+        }
+    }
+    for (const [clusterIdHex, entry] of Object.entries(topology.hellos)) {
+        if (ageMsOf(entry, nowMs) > TOPOLOGY_PARENT_TTL_MS) {
+            delete topology.hellos[clusterIdHex];
         }
     }
     for (const [clusterIdHex, entry] of Object.entries(topology.discovery)) {
@@ -158,6 +164,7 @@ function getTopologyState() {
         parents: {},
         discovery: {},
         gatewayLinks: {},
+        hellos: {},
         routes: {},
         updatedAt: null
     });
@@ -189,9 +196,13 @@ function updateTopology(topologyEvent) {
     topology.gatewayIdHex = idHex(topologyEvent.gatewayId || getGatewayId());
     topology.discovery = topology.discovery || {};
     topology.gatewayLinks = topology.gatewayLinks || {};
+    topology.hellos = topology.hellos || {};
     delete topology.resetAt;
     topology.updatedAt = new Date().toISOString();
     topology.parents[topologyEvent.clusterIdHex] = topologyEvent;
+    if (String(topologyEvent.report || "").toLowerCase() === "ch-hello") {
+        topology.hellos[topologyEvent.clusterIdHex] = topologyEvent;
+    }
     delete topology.discovery[topologyEvent.clusterIdHex];
 
     for (const clusterIdHex of Object.keys(topology.parents)) {

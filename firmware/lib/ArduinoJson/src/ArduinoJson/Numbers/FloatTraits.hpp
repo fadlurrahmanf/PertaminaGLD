@@ -1,5 +1,5 @@
 // ArduinoJson - https://arduinojson.org
-// Copyright © 2014-2024, Benoit BLANCHON
+// Copyright © 2014-2026, Benoit BLANCHON
 // MIT License
 
 #pragma once
@@ -28,6 +28,8 @@ struct FloatTraits<T, 8 /*64bits*/> {
 
   typedef int16_t exponent_type;
   static const exponent_type exponent_max = 308;
+
+  static const size_t binaryPowersOfTen = 9;
 
   static pgm_ptr<T> positiveBinaryPowersOfTen() {
     ARDUINOJSON_DEFINE_PROGMEM_ARRAY(  //
@@ -77,17 +79,17 @@ struct FloatTraits<T, 8 /*64bits*/> {
 
   template <typename TOut>  // int64_t
   static T highest_for(
-      enable_if_t<is_integral<TOut>::value && is_signed<TOut>::value &&
-                      sizeof(TOut) == 8,
-                  signed>* = 0) {
+      typename enable_if<is_integral<TOut>::value && is_signed<TOut>::value &&
+                             sizeof(TOut) == 8,
+                         signed>::type* = 0) {
     return forge(0x43DFFFFFFFFFFFFF);  //  9.2233720368547748e+18
   }
 
   template <typename TOut>  // uint64_t
   static T highest_for(
-      enable_if_t<is_integral<TOut>::value && is_unsigned<TOut>::value &&
-                      sizeof(TOut) == 8,
-                  unsigned>* = 0) {
+      typename enable_if<is_integral<TOut>::value && is_unsigned<TOut>::value &&
+                             sizeof(TOut) == 8,
+                         unsigned>::type* = 0) {
     return forge(0x43EFFFFFFFFFFFFF);  //  1.8446744073709549568e+19
   }
 
@@ -112,6 +114,8 @@ struct FloatTraits<T, 4 /*32bits*/> {
 
   typedef int8_t exponent_type;
   static const exponent_type exponent_max = 38;
+
+  static const size_t binaryPowersOfTen = 6;
 
   static pgm_ptr<T> positiveBinaryPowersOfTen() {
     ARDUINOJSON_DEFINE_PROGMEM_ARRAY(uint32_t, factors,
@@ -157,33 +161,33 @@ struct FloatTraits<T, 4 /*32bits*/> {
 
   template <typename TOut>  // int32_t
   static T highest_for(
-      enable_if_t<is_integral<TOut>::value && is_signed<TOut>::value &&
-                      sizeof(TOut) == 4,
-                  signed>* = 0) {
+      typename enable_if<is_integral<TOut>::value && is_signed<TOut>::value &&
+                             sizeof(TOut) == 4,
+                         signed>::type* = 0) {
     return forge(0x4EFFFFFF);  // 2.14748352E9
   }
 
   template <typename TOut>  // uint32_t
   static T highest_for(
-      enable_if_t<is_integral<TOut>::value && is_unsigned<TOut>::value &&
-                      sizeof(TOut) == 4,
-                  unsigned>* = 0) {
+      typename enable_if<is_integral<TOut>::value && is_unsigned<TOut>::value &&
+                             sizeof(TOut) == 4,
+                         unsigned>::type* = 0) {
     return forge(0x4F7FFFFF);  // 4.29496704E9
   }
 
   template <typename TOut>  // int64_t
   static T highest_for(
-      enable_if_t<is_integral<TOut>::value && is_signed<TOut>::value &&
-                      sizeof(TOut) == 8,
-                  signed>* = 0) {
+      typename enable_if<is_integral<TOut>::value && is_signed<TOut>::value &&
+                             sizeof(TOut) == 8,
+                         signed>::type* = 0) {
     return forge(0x5EFFFFFF);  // 9.22337148709896192E18
   }
 
   template <typename TOut>  // uint64_t
   static T highest_for(
-      enable_if_t<is_integral<TOut>::value && is_unsigned<TOut>::value &&
-                      sizeof(TOut) == 8,
-                  unsigned>* = 0) {
+      typename enable_if<is_integral<TOut>::value && is_unsigned<TOut>::value &&
+                             sizeof(TOut) == 8,
+                         unsigned>::type* = 0) {
     return forge(0x5F7FFFFF);  // 1.844674297419792384E19
   }
 
@@ -198,10 +202,14 @@ inline TFloat make_float(TFloat m, TExponent e) {
 
   auto powersOfTen = e > 0 ? traits::positiveBinaryPowersOfTen()
                            : traits::negativeBinaryPowersOfTen();
+  auto count = traits::binaryPowersOfTen;
+
   if (e <= 0)
     e = TExponent(-e);
 
   for (uint8_t index = 0; e != 0; index++) {
+    if (index >= count)
+      return traits::nan();
     if (e & 1)
       m *= powersOfTen[index];
     e >>= 1;

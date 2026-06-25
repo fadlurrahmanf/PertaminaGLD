@@ -6,24 +6,71 @@
 
 namespace pgl::gld {
 
-bool parseSerialModeCommand(GldMode& outMode) {
-    static char buf[32];
-    static uint8_t pos = 0;
+namespace {
 
-    while (Serial.available()) {
-        const char c = static_cast<char>(Serial.read());
+void resetCommand(GldSerialCommand& command) {
+    command.type = GldSerialCommandType::None;
+    command.mode = GldMode::INFERENCE;
+}
+
+bool decodeLine(const char* line, GldSerialCommand& outCommand) {
+    if (strncmp(line, "SET_MODE ", 9) == 0) {
+        outCommand.type = GldSerialCommandType::SetMode;
+        outCommand.mode = gldModeFromString(line + 9);
+        return true;
+    }
+    if (strcmp(line, "DEBUG_ON") == 0) {
+        outCommand.type = GldSerialCommandType::DebugOn;
+        return true;
+    }
+    if (strcmp(line, "DEBUG_OFF") == 0) {
+        outCommand.type = GldSerialCommandType::DebugOff;
+        return true;
+    }
+    return false;
+}
+
+bool readCommandFrom(Stream& stream, char* buf, uint8_t& pos,
+                     GldSerialCommand& outCommand) {
+    while (stream.available()) {
+        const int value = stream.read();
+        if (value < 0) break;
+        const char c = static_cast<char>(value);
         if (c == '\n' || c == '\r') {
             buf[pos] = '\0';
             pos = 0;
-            if (strncmp(buf, "SET_MODE ", 9) == 0) {
-                outMode = gldModeFromString(buf + 9);
-                return true;
-            }
-        } else if (pos < static_cast<uint8_t>(sizeof(buf) - 1)) {
+            if (decodeLine(buf, outCommand)) return true;
+        } else if (pos < 31) {
             buf[pos++] = c;
         }
     }
     return false;
+}
+
+}  // namespace
+
+bool parseSerialCommand(GldSerialCommand& outCommand) {
+    static char usbBuf[32];
+    static uint8_t usbPos = 0;
+#if defined(ARDUINO_ARCH_ESP32)
+    static char uart0Buf[32];
+    static uint8_t uart0Pos = 0;
+#endif
+    resetCommand(outCommand);
+
+    if (readCommandFrom(Serial, usbBuf, usbPos, outCommand)) return true;
+#if defined(ARDUINO_ARCH_ESP32)
+    if (readCommandFrom(Serial0, uart0Buf, uart0Pos, outCommand)) return true;
+#endif
+    return false;
+}
+
+bool parseSerialModeCommand(GldMode& outMode) {
+    GldSerialCommand command{};
+    if (!parseSerialCommand(command)) return false;
+    if (command.type != GldSerialCommandType::SetMode) return false;
+    outMode = command.mode;
+    return true;
 }
 
 bool parseLoRaDownlinkCmd(const uint8_t* frame, size_t frameLen,

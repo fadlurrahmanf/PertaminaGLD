@@ -9,16 +9,15 @@ Gunakan hanya untuk memahami keputusan diskusi, bukan sebagai kontrak implementa
 1. `docs/chat/summary.md`
 2. `docs/chat/fullchat.md`
 
-## 2. Source Design Baselines
+## 2. Final Current-State Design
 
-File `design.md` adalah import original dan tidak diedit langsung. Untuk implementasi, gunakan file updated draft.
+File `final_design.md` adalah referensi canonical current-state. File `design.md`
+tetap disimpan sebagai import original dan tidak diedit langsung.
 
 1. `docs/design/gld/README.md`
-2. `docs/design/gld/design.md`
-3. `docs/design/gld/design.updated.draft.md`
-4. `docs/design/ch/README.md`
-5. `docs/design/ch/design.md`
-6. `docs/design/ch/design.updated.draft.md`
+2. `docs/design/gld/final_design.md`
+3. `docs/design/ch/README.md`
+4. `docs/design/ch/final_design.md`
 
 ## 3. Integration Contract
 
@@ -30,11 +29,11 @@ Ini sumber kebenaran utama untuk wire protocol GLD-CH-server phase awal.
 
 Gunakan setelah kontrak GLD-CH dibaca.
 
-1. `docs/design/ch-gw/design.md`
-2. `docs/design/gw/design.md`
-3. `docs/design/gw-server/design.md`
-4. `docs/design/server/design.md`
-5. `docs/design/ch-ch/design.md`
+1. `docs/design/ch-gw/final_design.md`
+2. `docs/design/gw/final_design.md`
+3. `docs/design/gw-server/final_design.md`
+4. `docs/design/server/final_design.md`
+5. `docs/design/ch-ch/final_design.md`
 
 Catatan:
 
@@ -51,6 +50,13 @@ Gunakan setelah kontrak integrasi dibaca.
 4. `docs/firmware/04-phase-1-implementation-checklist.draft.md`
 5. `docs/firmware/05-firmware-versioning-backup-policy.draft.md`
 
+## 6. Hardware Wiring
+
+Gunakan saat mencocokkan pin firmware dengan schematic/board fisik.
+
+1. `docs/wiring/README.md`
+2. `docs/wiring/SCH_GasLeakIntegratedVer3_2026-06-25.json`
+
 ## Implementation Priority
 
 Untuk mulai firmware, urutan kerja dokumentasi adalah:
@@ -61,16 +67,17 @@ Untuk mulai firmware, urutan kerja dokumentasi adalah:
 4. Baca `03-phase-1-plan.draft.md`.
 5. Baca `04-phase-1-implementation-checklist.draft.md`.
 6. Baca `05-firmware-versioning-backup-policy.draft.md`.
-7. Baca desain boundary yang relevan:
-   - `docs/design/ch-gw/design.md`
-   - `docs/design/gw/design.md`
-   - `docs/design/gw-server/design.md`
-   - `docs/design/server/design.md`
-   - `docs/design/ch-ch/design.md` untuk multi-hop draft.
-8. Pakai `design.updated.draft.md` GLD/CH sebagai reference detail saat coding.
+7. Baca desain final boundary yang relevan:
+   - `docs/design/ch-gw/final_design.md`
+   - `docs/design/gw/final_design.md`
+   - `docs/design/gw-server/final_design.md`
+   - `docs/design/server/final_design.md`
+   - `docs/design/ch-ch/final_design.md` untuk multi-hop.
+8. Jika perlu audit sejarah, bandingkan dengan `design.md` dan `design.updated.draft.md`.
 
 ## Rules
 
 - Jangan edit `docs/design/gld/design.md` dan `docs/design/ch/design.md`.
-- Jika ada konflik antara original `design.md` dan updated draft/contract, kontrak GLD-CH dan updated draft menang.
+- Jika ada konflik antara original `design.md` dan `final_design.md`, pakai
+  `final_design.md` untuk current implementation dan pakai original hanya untuk audit baseline.
 - Firmware coding hanya dimulai setelah approval eksplisit dari user.

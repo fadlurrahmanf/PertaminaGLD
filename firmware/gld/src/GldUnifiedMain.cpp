@@ -77,6 +77,12 @@ constexpr uint32_t STATUS_INTERVAL_MS = GLD_STATUS_INTERVAL_MS;
 constexpr uint16_t MQTT_BUFFER_SIZE   = GLD_MQTT_BUFFER_SIZE;
 constexpr uint8_t  MIN_PRIMED_COUNT   = pgl::gld::GLD_SENSOR_MOVING_AVERAGE_WINDOW;
 
+#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8
+constexpr const char* BOARD_PROFILE = "WROOM-1U-N16R8";
+#else
+constexpr const char* BOARD_PROFILE = "4D-ESP32S3";
+#endif
+
 // ---------------------------------------------------------------------------
 // Channel remapping: hardware ADS1256 channel → model input index
 // ---------------------------------------------------------------------------
@@ -112,6 +118,7 @@ uint32_t lastStatusMs    = 0;
 bool     lastAlarm       = false;
 uint8_t  nullingProfileId = 0;
 pgl::gld::GldClassifyResult lastResult{pgl::protocol::GLD_GAS_CLEAR, 100};
+bool     debugEnabled    = true;
 
 // Dataset session state
 enum class DatasetState : uint8_t { Idle, Running };
@@ -136,7 +143,15 @@ volatile bool loraRxFlag = false;
 // Logging
 // ---------------------------------------------------------------------------
 
+void rawPrintln(const char* text) {
+    Serial.println(text);
+#if defined(ARDUINO_ARCH_ESP32)
+    Serial0.println(text);
+#endif
+}
+
 void logPrintf(const char* fmt, ...) {
+    if (!debugEnabled) return;
     char buf[256];
     va_list args;
     va_start(args, fmt);
@@ -149,6 +164,7 @@ void logPrintf(const char* fmt, ...) {
 }
 
 void logPrintln(const char* text) {
+    if (!debugEnabled) return;
     Serial.println(text);
 #if defined(ARDUINO_ARCH_ESP32)
     Serial0.println(text);
@@ -166,11 +182,33 @@ void onModeCmd(pgl::gld::GldMode newMode) {
     pgl::gld::switchGldMode(newMode);
 }
 
-// Check Serial every loop tick for SET_MODE commands
+void onDebugCmd(bool enabled) {
+    debugEnabled = enabled;
+    rawPrintln(enabled
+        ? "DEBUG_ON accepted, serial debug enabled"
+        : "DEBUG_OFF accepted, serial debug disabled");
+}
+
+// Check Serial every loop tick for SET_MODE and DEBUG_ON/OFF commands.
 void checkSerial() {
-    pgl::gld::GldMode newMode;
-    if (pgl::gld::parseSerialModeCommand(newMode)) {
-        onModeCmd(newMode);
+    pgl::gld::GldSerialCommand command{};
+    if (!pgl::gld::parseSerialCommand(command)) {
+        return;
+    }
+
+    switch (command.type) {
+        case pgl::gld::GldSerialCommandType::SetMode:
+            onModeCmd(command.mode);
+            break;
+        case pgl::gld::GldSerialCommandType::DebugOn:
+            onDebugCmd(true);
+            break;
+        case pgl::gld::GldSerialCommandType::DebugOff:
+            onDebugCmd(false);
+            break;
+        case pgl::gld::GldSerialCommandType::None:
+        default:
+            break;
     }
 }
 
@@ -178,15 +216,106 @@ void checkSerial() {
 // Common hardware init (all modes)
 // ---------------------------------------------------------------------------
 
+bool isValidBoardPin(int pin) {
+    return pin >= 0;
+}
+
+void optionalPinMode(int pin, uint8_t mode) {
+    if (isValidBoardPin(pin)) {
+        pinMode(static_cast<uint8_t>(pin), mode);
+    }
+}
+
+void optionalDigitalWrite(int pin, uint8_t value) {
+    if (isValidBoardPin(pin)) {
+        digitalWrite(static_cast<uint8_t>(pin), value);
+    }
+}
+
 void setupPins() {
     pinMode(pgl::gld::board::PIN_LORA_CS,    OUTPUT); digitalWrite(pgl::gld::board::PIN_LORA_CS,    HIGH);
     pinMode(pgl::gld::board::PIN_LORA_RST,   OUTPUT); digitalWrite(pgl::gld::board::PIN_LORA_RST,   HIGH);
     pinMode(pgl::gld::board::PIN_LORA_RXEN,  OUTPUT); digitalWrite(pgl::gld::board::PIN_LORA_RXEN,  LOW);
     pinMode(pgl::gld::board::PIN_LORA_TXEN,  OUTPUT); digitalWrite(pgl::gld::board::PIN_LORA_TXEN,  LOW);
-    pinMode(pgl::gld::board::PIN_ALARM_LAMP, OUTPUT); digitalWrite(pgl::gld::board::PIN_ALARM_LAMP, LOW);
-    pinMode(pgl::gld::board::PIN_BUZZER,     OUTPUT); digitalWrite(pgl::gld::board::PIN_BUZZER,     LOW);
-    pinMode(pgl::gld::board::PIN_DC_FAN,     OUTPUT); digitalWrite(pgl::gld::board::PIN_DC_FAN,     LOW);
-    pinMode(pgl::gld::board::PIN_STATUS_LED, OUTPUT); digitalWrite(pgl::gld::board::PIN_STATUS_LED, LOW);
+    optionalPinMode(pgl::gld::board::PIN_ALARM_LAMP, OUTPUT); optionalDigitalWrite(pgl::gld::board::PIN_ALARM_LAMP, LOW);
+    optionalPinMode(pgl::gld::board::PIN_BUZZER,     OUTPUT); optionalDigitalWrite(pgl::gld::board::PIN_BUZZER,     LOW);
+    optionalPinMode(pgl::gld::board::PIN_DC_FAN,     OUTPUT); optionalDigitalWrite(pgl::gld::board::PIN_DC_FAN,     LOW);
+    optionalPinMode(pgl::gld::board::PIN_STATUS_LED, OUTPUT); optionalDigitalWrite(pgl::gld::board::PIN_STATUS_LED, LOW);
+}
+
+const char* passFail(bool ok) {
+    return ok ? "PASS" : "FAIL";
+}
+
+bool i2cAck(uint8_t addr) {
+    Wire.beginTransmission(addr);
+    return Wire.endTransmission() == 0;
+}
+
+bool tcaSelect(uint8_t muxChannel) {
+    if (muxChannel > 7) return false;
+    Wire.beginTransmission(pgl::gld::board::TCA9548A_ADDR);
+    Wire.write(static_cast<uint8_t>(1U << muxChannel));
+    return Wire.endTransmission() == 0;
+}
+
+void tcaDisableAll() {
+    Wire.beginTransmission(pgl::gld::board::TCA9548A_ADDR);
+    Wire.write(static_cast<uint8_t>(0));
+    Wire.endTransmission();
+}
+
+void reportBootPower(const pgl::gld::GldPowerReading& power) {
+    logPrintf("[POWER] sumber daya %s terdeteksi. externalPower=%u batteryMv=%u\n",
+              pgl::gld::gldPowerModeName(power.mode),
+              power.externalPower ? 1 : 0,
+              power.batteryMv);
+}
+
+void reportBootSpi() {
+    logPrintf("[SPI] bus sensor siap. SCK=%d MOSI=%d MISO=%d\n",
+              pgl::gld::board::PIN_SPI_SCK,
+              pgl::gld::board::PIN_SPI_MOSI,
+              pgl::gld::board::PIN_SPI_MISO);
+}
+
+void reportBootAds(bool ok) {
+    const int drdyLevel = digitalRead(pgl::gld::board::PIN_ADS1256_DRDY);
+    const uint8_t status = ok ? ads.readStatusRegister() : 0;
+    logPrintf("[ADS] ADS1256 %s. CS=%d DRDY=%d SYNC=%d drdyLevel=%d status=0x%02X\n",
+              ok ? "siap" : "belum siap",
+              pgl::gld::board::PIN_ADS1256_CS,
+              pgl::gld::board::PIN_ADS1256_DRDY,
+              pgl::gld::board::PIN_ADS1256_SYNC,
+              drdyLevel,
+              status);
+}
+
+uint8_t reportBootI2c() {
+    Wire.begin(pgl::gld::board::PIN_I2C_SDA, pgl::gld::board::PIN_I2C_SCL);
+    logPrintf("[I2C] bus DAC/nulling siap. SDA=%d SCL=%d\n",
+              pgl::gld::board::PIN_I2C_SDA,
+              pgl::gld::board::PIN_I2C_SCL);
+
+    const bool tcaOk = i2cAck(pgl::gld::board::TCA9548A_ADDR);
+    logPrintf("[TCA] TCA9548A alamat 0x%02X %s\n",
+              pgl::gld::board::TCA9548A_ADDR,
+              tcaOk ? "merespon" : "tidak merespon");
+
+    uint8_t mcpOkCount = 0;
+    for (uint8_t sensor = 0; sensor < pgl::gld::board::SENSOR_COUNT; ++sensor) {
+        const uint8_t muxChannel = static_cast<uint8_t>(pgl::gld::board::SENSOR_TO_MUX_CH[sensor]);
+        const bool muxOk = tcaOk && tcaSelect(muxChannel);
+        const bool mcpOk = muxOk && i2cAck(pgl::gld::board::MCP4725_ADDR);
+        if (mcpOk) ++mcpOkCount;
+        logPrintf("[MCP] MCP4725 %s via mux channel %u alamat 0x%02X %s\n",
+                  pgl::gld::board::SENSOR_NAMES[sensor],
+                  muxChannel,
+                  pgl::gld::board::MCP4725_ADDR,
+                  mcpOk ? "merespon" : "tidak merespon");
+    }
+    tcaDisableAll();
+    return mcpOkCount;
 }
 
 // ---------------------------------------------------------------------------
@@ -346,7 +475,7 @@ void handleDatasetTopic(const char* payload, unsigned int length) {
         lastScanMs     = sessionStartMs;
         sampleStep     = SampleStep::None;
         datasetState   = DatasetState::Running;
-        digitalWrite(pgl::gld::board::PIN_STATUS_LED, HIGH);
+        optionalDigitalWrite(pgl::gld::board::PIN_STATUS_LED, HIGH);
         publishCmdAck("START_DATASET", "ok");
         publishDatasetStatus("running", currentLabel);
         logPrintf("DATASET_START label=%s target=%lu interval=%lu\n",
@@ -355,10 +484,10 @@ void handleDatasetTopic(const char* payload, unsigned int length) {
                   static_cast<unsigned long>(sampleIntervalMs));
     } else if (strcmp(cmd, "STOP_DATASET") == 0) {
         if (datasetState == DatasetState::Running)
-            digitalWrite(pgl::gld::board::PIN_DC_FAN, LOW);
+            optionalDigitalWrite(pgl::gld::board::PIN_DC_FAN, LOW);
         datasetState = DatasetState::Idle;
         sampleStep   = SampleStep::None;
-        digitalWrite(pgl::gld::board::PIN_STATUS_LED, LOW);
+        optionalDigitalWrite(pgl::gld::board::PIN_STATUS_LED, LOW);
         publishCmdAck("STOP_DATASET", "ok");
         publishDatasetSummary();
         publishDatasetStatus("idle", "stopped");
@@ -454,9 +583,9 @@ bool nonceProvider(uint8_t nonce[pgl::protocol::GLD_AES_GCM_NONCE_SIZE], void* c
 void updateAlarmOutputs(bool alarm) {
     if (alarm == lastAlarm) return;
     lastAlarm = alarm;
-    digitalWrite(pgl::gld::board::PIN_ALARM_LAMP, alarm ? HIGH : LOW);
-    digitalWrite(pgl::gld::board::PIN_BUZZER,     alarm ? HIGH : LOW);
-    digitalWrite(pgl::gld::board::PIN_STATUS_LED, alarm ? HIGH : LOW);
+    optionalDigitalWrite(pgl::gld::board::PIN_ALARM_LAMP, alarm ? HIGH : LOW);
+    optionalDigitalWrite(pgl::gld::board::PIN_BUZZER,     alarm ? HIGH : LOW);
+    optionalDigitalWrite(pgl::gld::board::PIN_STATUS_LED, alarm ? HIGH : LOW);
     logPrintf("GLD_ALARM_OUTPUT alarm=%u\n", alarm ? 1 : 0);
 }
 
@@ -620,10 +749,10 @@ bool shouldAutoStop() {
 }
 
 void stopDataset() {
-    digitalWrite(pgl::gld::board::PIN_DC_FAN, LOW);
+    optionalDigitalWrite(pgl::gld::board::PIN_DC_FAN, LOW);
     datasetState = DatasetState::Idle;
     sampleStep   = SampleStep::None;
-    digitalWrite(pgl::gld::board::PIN_STATUS_LED, LOW);
+    optionalDigitalWrite(pgl::gld::board::PIN_STATUS_LED, LOW);
     publishDatasetSummary();
     publishDatasetStatus("idle", "completed");
 }
@@ -635,7 +764,7 @@ void runDatasetStateMachine() {
         case SampleStep::None:
             if (now - lastScanMs >= sampleIntervalMs) {
                 if (useFanIntake && fanOnMs > 0) {
-                    digitalWrite(pgl::gld::board::PIN_DC_FAN, HIGH);
+                    optionalDigitalWrite(pgl::gld::board::PIN_DC_FAN, HIGH);
                     stepStartMs = now;
                     sampleStep  = SampleStep::FanOn;
                 } else {
@@ -646,7 +775,7 @@ void runDatasetStateMachine() {
             break;
         case SampleStep::FanOn:
             if (now - stepStartMs >= fanOnMs) {
-                digitalWrite(pgl::gld::board::PIN_DC_FAN, LOW);
+                optionalDigitalWrite(pgl::gld::board::PIN_DC_FAN, LOW);
                 stepStartMs = now;
                 sampleStep  = (postFanSettleMs > 0) ? SampleStep::FanSettle : SampleStep::Scan;
             }
@@ -686,14 +815,23 @@ void setup() {
     logPrintf("Protocol version: %s\n", pgl::firmware::PROTOCOL_VERSION);
     logPrintf("Build date/time: %s %s Asia/Jakarta\n", __DATE__, __TIME__);
     logPrintf("GLD_MODE=%s\n", pgl::gld::gldModeName(currentMode));
+    logPrintln("GLD_DEBUG=ON command=DEBUG_OFF|DEBUG_ON");
+    logPrintf("[BOOT] GLD mulai boot. firmware=%s mode=%s profile=%s\n",
+              pgl::firmware::GLD_FIRMWARE_VERSION,
+              pgl::gld::gldModeName(currentMode),
+              BOARD_PROFILE);
 
     const pgl::gld::GldPowerReading power = pgl::gld::readGldPower();
     logPrintf("GLD_POWER mode=%s externalPower=%u batteryMv=%u\n",
               pgl::gld::gldPowerModeName(power.mode),
               power.externalPower ? 1 : 0, power.batteryMv);
+    reportBootPower(power);
+    reportBootSpi();
 
     adsReady = ads.begin(gldSpi);
     logPrintf("ADS_BEGIN_RESULT=%s\n", adsReady ? "PASS" : "FAIL");
+    reportBootAds(adsReady);
+    const uint8_t bootMcpOkCount = reportBootI2c();
 
     if (currentMode == pgl::gld::GldMode::INFERENCE) {
         // --- INFERENCE mode init ---
@@ -701,10 +839,26 @@ void setup() {
         mlReady = network->isInitialized();
         logPrintf("GLD_ML_INIT initialized=%u outputSize=%d\n",
                   mlReady ? 1 : 0, mlReady ? network->getOutputSize() : -1);
+        logPrintf("[ML] model %s. output=%d\n",
+                  mlReady ? "siap" : "belum siap",
+                  mlReady ? network->getOutputSize() : -1);
 
         radioReady = beginLoraRadio();
+        logPrintf("[LORA] SX1262 %s. NSS=%d DIO1=%d RST=%d BUSY=%d radioState=%s\n",
+                  radioReady ? "siap" : "belum siap",
+                  pgl::gld::board::PIN_LORA_CS,
+                  pgl::gld::board::PIN_LORA_DIO1,
+                  pgl::gld::board::PIN_LORA_RST,
+                  pgl::gld::board::PIN_LORA_BUSY,
+                  passFail(radioReady));
         logPrintf("GLD_INFERENCE_READY adsReady=%u radioReady=%u mlReady=%u\n",
                   adsReady ? 1 : 0, radioReady ? 1 : 0, mlReady ? 1 : 0);
+        logPrintf("[BOOT] fungsi utama siap. mode=inference ads=%s tca/mcp=%u/%u lora=%s ml=%s\n",
+                  passFail(adsReady),
+                  bootMcpOkCount,
+                  pgl::gld::board::SENSOR_COUNT,
+                  passFail(radioReady),
+                  passFail(mlReady));
 
         lastScanMs = millis();
         lastTxMs   = millis();
@@ -713,11 +867,21 @@ void setup() {
         // --- DATASET / NULLING mode init ---
         dacReady = dac.begin(Wire);
         logPrintf("DAC_MUX_BEGIN_RESULT=%s\n", dacReady ? "PASS" : "FAIL");
+        logPrintf("[DAC] TCA/MCP runtime init %s. bootMcp=%u/%u\n",
+                  passFail(dacReady),
+                  bootMcpOkCount,
+                  pgl::gld::board::SENSOR_COUNT);
 
         if (currentMode == pgl::gld::GldMode::DATASET) {
             if (adsReady && dacReady) initNulling();
             logPrintf("DATASET_READY adsReady=%u dacReady=%u nullingProfileId=%u\n",
                       adsReady ? 1 : 0, dacReady ? 1 : 0, nullingProfileId);
+            logPrintf("[BOOT] fungsi utama siap. mode=dataset ads=%s tca/mcp=%u/%u dac=%s nullingProfileId=%u\n",
+                      passFail(adsReady),
+                      bootMcpOkCount,
+                      pgl::gld::board::SENSOR_COUNT,
+                      passFail(dacReady),
+                      nullingProfileId);
             connectWifi();
             mqtt.setBufferSize(MQTT_BUFFER_SIZE);
             mqttConnect();
@@ -728,6 +892,11 @@ void setup() {
             if (!adsReady || !dacReady) {
                 logPrintf("NULLING_BLOCKED adsReady=%u dacReady=%u\n",
                           adsReady ? 1 : 0, dacReady ? 1 : 0);
+                logPrintf("[BOOT] fungsi utama belum siap. mode=nulling ads=%s tca/mcp=%u/%u dac=%s nulling=BLOCKED\n",
+                          passFail(adsReady),
+                          bootMcpOkCount,
+                          pgl::gld::board::SENSOR_COUNT,
+                          passFail(dacReady));
             } else {
                 logPrintln("NULLING_RUN=start");
                 pgl::gld::GldNullingProfile existing{};
@@ -751,12 +920,24 @@ void setup() {
                                ? "NULLING_RUNTIME_RESULT=PASS"
                                : "NULLING_RUNTIME_RESULT=PARTIAL");
                     nullDone = true;
+                    logPrintf("[BOOT] fungsi utama siap. mode=nulling ads=%s tca/mcp=%u/%u dac=%s nulling=%s profileId=%u\n",
+                              passFail(adsReady),
+                              bootMcpOkCount,
+                              pgl::gld::board::SENSOR_COUNT,
+                              passFail(dacReady),
+                              result.status == pgl::gld::GldNullingStatus::Ok ? "PASS" : "PARTIAL",
+                              toSave.profileId);
 
                     connectWifi();
                     mqtt.setBufferSize(640);
                     if (mqttConnect()) publishNullingProfile(toSave);
                 } else {
                     logPrintln("NULLING_RUNTIME_RESULT=FAIL");
+                    logPrintf("[BOOT] fungsi utama belum siap. mode=nulling ads=%s tca/mcp=%u/%u dac=%s nulling=FAIL\n",
+                              passFail(adsReady),
+                              bootMcpOkCount,
+                              pgl::gld::board::SENSOR_COUNT,
+                              passFail(dacReady));
                 }
             }
         }

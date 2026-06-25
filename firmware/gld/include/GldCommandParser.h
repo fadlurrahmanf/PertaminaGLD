@@ -5,6 +5,24 @@
 
 namespace pgl::gld {
 
+enum class GldSerialCommandType : uint8_t {
+    None,
+    SetMode,
+    DebugOn,
+    DebugOff,
+};
+
+struct GldSerialCommand {
+    GldSerialCommandType type = GldSerialCommandType::None;
+    GldMode mode = GldMode::INFERENCE;
+};
+
+// Read USB CDC Serial and UART0 Serial0 for supported GLD runtime commands:
+// - SET_MODE inference|dataset|nulling
+// - DEBUG_ON
+// - DEBUG_OFF
+bool parseSerialCommand(GldSerialCommand& outCommand);
+
 // Read Serial for "SET_MODE inference|dataset|nulling\n".
 // Returns true + sets outMode when a valid SET_MODE line arrives.
 // "GET_MODE\n" prints nothing here — caller should print current mode.

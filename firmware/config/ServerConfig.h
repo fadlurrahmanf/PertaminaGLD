@@ -32,24 +32,24 @@
 #define PGL_SERVER_DATASET_TOPIC_ROOT      "gas-leak-detector"
 
 // SSID WiFi untuk jalur Server Site. Dipakai Gateway MQTT bridge ke dashboard/site.
-#define PGL_SERVER_SITE_WIFI_SSID          "CHANGE_ME"
+#define PGL_SERVER_SITE_WIFI_SSID          "Fshares"
 
 // Password WiFi untuk jalur Server Site. Untuk produksi, pindahkan ke provisioning
 // atau file lokal ignored.
-#define PGL_SERVER_SITE_WIFI_PASSWORD      "CHANGE_ME"
+#define PGL_SERVER_SITE_WIFI_PASSWORD      "kayabiasa"
 
 // Host/IP broker MQTT Server Site. Dipakai Gateway untuk publish frame MESH dan
 // menerima command dari server/site.
-#define PGL_SERVER_SITE_MQTT_HOST          "CHANGE_ME"
+#define PGL_SERVER_SITE_MQTT_HOST          "10.158.198.180"
 
 // Port broker MQTT Server Site. Bench saat ini memakai 1884.
 #define PGL_SERVER_SITE_MQTT_PORT          1884
 
 // Username MQTT Server Site. Sesuaikan dengan broker site.
-#define PGL_SERVER_SITE_MQTT_USER          ""
+#define PGL_SERVER_SITE_MQTT_USER          "deviot"
 
 // Password MQTT Server Site. Jangan commit credential produksi permanen.
-#define PGL_SERVER_SITE_MQTT_PASS          ""
+#define PGL_SERVER_SITE_MQTT_PASS          "deviot"
 
 // Root topic Gateway untuk jalur site. Subtopic command/status/uplink diturunkan
 // oleh GwConfig.h.

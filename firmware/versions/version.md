@@ -10,6 +10,85 @@ YYYY-MM-DD HH:mm:ss Asia/Jakarta
 
 ---
 
+## GLD v0.8.2 / CH v0.7.1 / Gateway v0.1.3 - 2026-06-25 Asia/Jakarta
+
+**Summary:** GLD boot functional report. Every GLD boot now prints a grouped, human-readable hardware health report for power, SPI, ADS1256, I2C, TCA9548A, MCP4725 per sensor/mux channel, LoRa SX1262, and ML readiness.
+
+### Changed Files
+
+- firmware/shared/include/FirmwareVersion.h (GLD 0.8.1 -> 0.8.2)
+- firmware/gld/src/GldUnifiedMain.cpp
+- firmware/versions/version.md
+- docs/design/gld/final_design.md
+
+### Behavior
+
+- Adds `[BOOT]`, `[POWER]`, `[SPI]`, `[ADS]`, `[I2C]`, `[TCA]`, `[MCP]`, `[LORA]`, `[ML]`, and `[DAC]` boot report lines.
+- The TCA/MCP check is lightweight: firmware selects each TCA channel, checks MCP4725 ACK at `0x60`, then disables all TCA channels. It does not run full nulling during normal inference boot.
+- In inference mode the boot summary reports `ads`, `tca/mcp`, `lora`, and `ml`.
+- In dataset/nulling modes the boot summary also reports DAC/nulling readiness.
+
+### Test Result
+
+- Pending upload/bench verification to GLD COM9 in this session.
+
+---
+
+## GLD v0.8.1 / CH v0.7.1 / Gateway v0.1.3 - 2026-06-25 Asia/Jakarta
+
+**Summary:** GLD serial debug toggle. The unified GLD runtime now accepts `DEBUG_OFF` and `DEBUG_ON` over Serial so operator/debug logs can be muted and re-enabled without reflashing.
+
+### Changed Files
+
+- firmware/shared/include/FirmwareVersion.h (GLD 0.8.0 -> 0.8.1)
+- firmware/gld/include/GldCommandParser.h
+- firmware/gld/src/GldCommandParser.cpp
+- firmware/gld/src/GldUnifiedMain.cpp
+- firmware/gld/include/BoardPins.h
+- firmware/platformio.ini
+- firmware/versions/version.md
+
+### Behavior
+
+- `DEBUG_OFF` disables normal GLD `logPrintf`/`logPrintln` output.
+- `DEBUG_ON` re-enables normal GLD debug output.
+- Commands are accepted from both USB CDC `Serial` and UART0/CH340 `Serial0`, matching the mirrored debug output path.
+- The `DEBUG_ON`/`DEBUG_OFF` acknowledgement is always printed directly so the operator can confirm the command even while debug output is muted.
+- Existing `SET_MODE inference|dataset|nulling` Serial commands remain supported through the same parser.
+- Added `gld_unified_wroom_u1_n16r8_esp32s3` for ESP32-S3-WROOM-1U-N16R8 bench hardware. This env uses user-provided LoRa pins: SCK=12, MOSI=11, MISO=13, CS=7, RST=2, BUSY=15, DIO1=1, RXEN=5, TXEN=6.
+- In the WROOM env, alarm lamp and buzzer GPIO outputs are disabled because GPIO1/GPIO2 are used by LoRa DIO1/RST on the current wiring.
+
+### Test Result
+
+- Build succeeded as part of `pio run -d firmware -e gld_unified_esp32s3 -t upload --upload-port COM9`; RAM 32.0%, Flash 14.1%.
+- Upload to COM9 is blocked at bootloader handshake: `Failed to connect to ESP32-S3: Invalid head of packet (0x61)`. Retry after manual BOOT/RESET or after removing serial noise on COM9.
+
+---
+
+## GLD v0.8.0 / CH v0.7.1 / Gateway v0.1.3 - 2026-06-25 Asia/Jakarta
+
+**Summary:** CH boot liveness update. Every CH now sends one `CH_HELLO` immediately after first entering `JOINED` after boot, including when the active parent came from the previous NVS/cache state. Normal 5-minute `CH_HELLO` cadence remains unchanged after the boot hello.
+
+### Changed Files
+
+- firmware/shared/include/FirmwareVersion.h (CH 0.7.0 -> 0.7.1)
+- firmware/ch/src/ChStarMeshRuntimeMain.cpp
+- firmware/versions/version.md
+
+### Behavior
+
+- Adds `bootHelloPending` and a throttled boot hello attempt.
+- On first `JOINED` loop after boot, if `parentId != 0`, CH logs `CH_BOOT_HELLO` and sends `MSG_CH_HELLO` before route verification or the periodic hello timer.
+- The boot hello is marked complete only when `sendHello()` returns TX success. If TX is not ready/allowed, CH retries later instead of silently waiting 5 minutes.
+- `sendHello()` now returns TX success and logs `txOk`.
+
+### Test Result
+
+- Not run in this change. Per repo rule, no PlatformIO build-only command was run without explicit user approval.
+- Pending: upload CH firmware to target CH boards and monitor serial for `CH_BOOT_HELLO` followed by `CH_HELLO_TX`.
+
+---
+
 ## GLD v0.8.0 / CH v0.7.0 / Gateway v0.1.3 - 2026-06-22 Asia/Jakarta
 
 **Summary:** CH reliability upgrade — state machine, battery guard, watchdog, alarm ACK retry, failover parent, NVS persistence, CH_HELLO, parent discovery, TTL downlink, NodeCache expiry.

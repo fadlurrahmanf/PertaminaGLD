@@ -1,0 +1,38 @@
+flowchart TD
+    subgraph RADIO_BLOCK["Radio MESH -- 923.5 MHz"]
+        MESH_RX_GW["Radio B RX\nSX1262 923.5 MHz SF9"]
+        MESH_TX_GW["Radio B TX"]
+    end
+
+    subgraph WIFI_MQTT_BLOCK["WiFi + MQTT"]
+        WIFI_GW["WiFi STA\nSSID: Fshares"]
+        MQTTC_GW["PubSubClient\n10.158.198.180:1884"]
+    end
+
+    subgraph LOGIC["Gateway Logic"]
+        PARSE_GW["AppFrame Parse\n+ RSSI/SNR capture"]
+        PUB_UPLINK["Publish\ngld/gateway/uplink"]
+        PUB_TOPO["Publish\ngld/gateway/topology"]
+        PUB_STATUS["Publish\ngld/gateway/status\ntiap 10s"]
+        CONFIG_RESP["Build CH_CONFIG_RESPONSE\n+ kirim 2x (gap 70ms)"]
+        ALARM_ACK["Build Compact ACK\n(0x50)"]
+        PULL_BUILD["Build MSG_SERVER_PULL_REQUEST\ndari JSON cmd/pull"]
+        NODE_CMD["Build MSG_SERVER_NODE_COMMAND\ndari JSON cmd/node"]
+    end
+
+    MESH_RX_GW --> PARSE_GW
+    PARSE_GW --> PUB_UPLINK
+    PARSE_GW -->|"CH_HELLO/Config"| PUB_TOPO
+    PARSE_GW -->|"CH_CONFIG_REQUEST"| CONFIG_RESP
+    PARSE_GW -->|"MSG_SENSOR_DATA alarm"| ALARM_ACK
+    CONFIG_RESP --> MESH_TX_GW
+    ALARM_ACK --> MESH_TX_GW
+
+    WIFI_GW --> MQTTC_GW
+    PUB_UPLINK --> MQTTC_GW
+    PUB_TOPO --> MQTTC_GW
+    PUB_STATUS --> MQTTC_GW
+    MQTTC_GW -->|"cmd/pull"| PULL_BUILD
+    MQTTC_GW -->|"cmd/node"| NODE_CMD
+    PULL_BUILD --> MESH_TX_GW
+    NODE_CMD --> MESH_TX_GW

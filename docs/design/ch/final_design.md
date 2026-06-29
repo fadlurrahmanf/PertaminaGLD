@@ -1,134 +1,333 @@
-# Pertamina GLD Final Design - Cluster Head
+# Pertamina GLD Current Design - Cluster Head
 
-Status: current-state final design, 2026-06-25. This file describes the CH firmware as it exists now, including source-only changes that still need upload/bench verification.
+Status: current source mirror, 2026-06-29. Dokumen ini mengikuti CH STAR+MESH runtime yang sedang ada di repo. Imported baseline `design.md` tidak diubah.
 
-## Source Of Truth
+## Source Files
 
-- Main runtime env: `ch_star_mesh_runtime_esp32s3`.
-- Bench envs: `ch_layer1_1_esp32s3`, `ch_layer1_2_esp32s3`, `ch_layer2_1_esp32s3`.
-- Current firmware version: CH `0.7.1`, protocol `0.1.0`.
-- Main source path: `firmware/ch/src/ChStarMeshRuntimeMain.cpp`.
-- Config source: `firmware/config/ChConfig.h`, `LoraStarConfig.h`, `LoraMeshConfig.h`.
-- Runtime helpers: `NodeCache`, `AlarmQueue`, `ChTxQueue`, `ChRuntime`, `ClusterResponse`, `ChPullRequest`, `ChUplink`.
-
-## Hardware And Radio Roles
-
-CH has two SX1262 radios:
-
-| Radio | Role | Pins |
-|---|---|---|
-| Radio A | STAR RX/TX with GLD | TXEN GPIO5, RXEN GPIO6, RST GPIO7, BUSY GPIO15, DIO1 GPIO16, CS GPIO17 |
-| Radio B | MESH TX/RX with CH/Gateway | CS GPIO14, BUSY GPIO38, RXEN GPIO39, TXEN GPIO40, RST GPIO41, DIO1 GPIO42 |
-| Shared SPI | SCK/MOSI/MISO | GPIO12/GPIO11/GPIO13 |
-| Battery monitor | ADC | GPIO4 |
-
-STAR uses 920.0 MHz, BW125, SF7, CR 4/5, sync `0x12`. MESH uses 921.0 MHz, BW125, SF9, CR 4/5, sync `0x34`. Both use 17 dBm TX power, preamble 8, SPI 2 MHz.
-
-## Bench Env Mapping
-
-| Env | CH ID | Notes |
-|---|---:|---|
-| `ch_layer1_1_esp32s3` | `0x0064` | layer-1 candidate |
-| `ch_layer1_2_esp32s3` | `0x0065` | layer-1 candidate, battery thresholds overridden to 0 for bench |
-| `ch_layer2_1_esp32s3` | `0x0066` | layer-2 candidate |
-| `ch1_esp32s3`..`ch8_esp32s3` | `0x0001`..`0x0008` | generic bench/test IDs |
-
-Active parent is not hardcoded. `DEFAULT_PARENT_ID=0x0000`; parent and alternate come from CH_CONFIG discovery and stable NVS cache.
-
-## State Machine
-
-Runtime states:
-
-| State | Purpose |
+| Area | Source |
 |---|---|
-| BOOT | initial state, immediately proceeds to WAIT_BATT |
-| WAIT_BATT | waits for battery threshold stability before radio init |
-| RADIO_INIT | initializes STAR and MESH radios |
-| JOINING | sends CH_CONFIG_REQUEST and selects parent/alternate |
-| JOINED | normal receive, cache, uplink, pull, hello, housekeeping |
-| LOW_POWER | blocks or limits TX when battery is critical |
-| PARENT_FAILOVER | scans/reselects parent after ACK/health failure |
-| RECOVERY | restarts after unrecoverable repeated failures |
+| PlatformIO env | `firmware/platformio.ini` |
+| Main runtime | `firmware/ch/src/ChStarMeshRuntimeMain.cpp` |
+| Config | `firmware/config/ChConfig.h`, `LoraStarConfig.h`, `LoraMeshConfig.h` |
+| Pins | `firmware/ch/include/ChBoardPins.h` |
+| STAR parser/ACK | `firmware/ch/include/ChUplink.h`, `firmware/ch/src/ChUplink.cpp` |
+| Node cache | `NodeCache.h`, `NodeCache.cpp` |
+| Alarm queue | `AlarmQueue.h`, `AlarmQueue.cpp` |
+| TX queue | `ChTxQueue.h`, `ChTxQueue.cpp` |
+| Pull parsing | `ChPullRequest.h`, `ChPullRequest.cpp` |
+| Cluster response | `ClusterResponse.h`, `ClusterResponse.cpp` |
+| Runtime logic | `ChRuntime.h`, `ChRuntime.cpp` |
+| Shared protocol | `AppFrame`, `GldRecord`, `ProtocolConstants`, `FirmwareConfig` |
 
-Watchdog is initialized at 60 seconds and reset in the main loop.
+## Active Build Environments
 
-## Routing And Discovery
+| Env | CH ID | Overrides |
+|---|---:|---|
+| `ch1` | default `0x0064` | runtime base/default CH |
+| `ch2` | `0x0065` | `PGL_CH_ID=0x0065`, battery start/run/critical thresholds set to 0 |
+| `ch3` | `0x0066` | `PGL_CH_ID=0x0066` |
 
-CH_CONFIG discovery is broadcast-based:
+The CH runtime env compiles shared `AppFrame`, `FirmwareConfig`, `GldRecord`; CH `AlarmQueue`, `ChPullRequest`, `ChRuntime`, `ChTxQueue`, `ChUplink`, `ClusterResponse`, `NodeCache`, `ChStarMeshRuntimeMain`. It excludes GLD source, `ChStarRxSelfTestMain`, docs, tests, and versions.
 
-- CH requester sends `MSG_CH_CONFIG_REQUEST` to broadcast.
-- Gateway responds as root candidate with depth 0 and reverse RSSI/SNR.
-- Joined CH nodes with route-to-root respond as parent candidates.
-- Candidates are scored by RSSI/SNR/depth and filtered to reject downstream/deeper parents and weak Gateway links.
-- Gateway is prioritized only when direct bidirectional quality passes thresholds.
+Firmware identifiers:
 
-Key timing and thresholds:
+| Field | Value |
+|---|---|
+| firmware name | `PertaminaGLD-CH` |
+| firmware version | `0.7.1` |
+| protocol version | `0.1.0` |
+| config schema version | `0.1.0` |
+
+## Hardware Pins
+
+| Function | Pin/value |
+|---|---|
+| SPI SCK/MOSI/MISO | GPIO12/GPIO11/GPIO13 |
+| Radio A role | STAR with GLD |
+| Radio A TXEN/RXEN/RST/BUSY/DIO1/CS | GPIO5/GPIO6/GPIO7/GPIO15/GPIO16/GPIO17 |
+| Radio B role | MESH with CH/Gateway |
+| Radio B CS/BUSY/RXEN/TXEN/RST/DIO1 | GPIO14/GPIO38/GPIO39/GPIO40/GPIO41/GPIO42 |
+| Battery monitor ADC | GPIO4 |
+
+Radio init:
+
+- Both radio reset pins are held LOW, delayed 50 ms, then HIGH, delayed 500 ms.
+- Both radios try TCXO 1.6 V first and fallback to 0.0 V only on `RADIOLIB_ERR_SPI_CMD_FAILED`.
+- Both radios set RadioLib RF switch pins after successful init.
+
+## Radio Config
+
+| Domain | Frequency | BW | SF | CR | Sync | TX power | Preamble | SPI |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| STAR | 920.0 MHz | 125 kHz | 7 | 4/5 | `0x12` | 17 dBm | 8 | 2 MHz |
+| MESH | 921.0 MHz | 125 kHz | 9 | 4/5 | `0x34` | 17 dBm | 8 | 2 MHz |
+
+## Identity And Capacities
+
+| Config | Value |
+|---|---:|
+| root Gateway ID | `0x006F` |
+| default parent | `0x0000` |
+| broadcast ID | `0xFFFF` |
+| node cache capacity | 32 |
+| alarm queue capacity | 8 |
+| MESH TX queue capacity | 8 |
+| pending downlink store capacity | 16 |
+| parent candidate capacity | 8 |
+| node stale threshold | 300000 ms |
+| node cache expire threshold | 3600000 ms |
+| cache report interval | 10000 ms |
+| pending downlink TTL | 1800000 ms |
+| housekeeping interval | 60000 ms |
+
+Parent ID and alternate parent are runtime values. CH loads them from Preferences namespace `ch-cfg`, keys `parentId` and `parentAlt`, but clears a saved Gateway parent/alternate at boot so Gateway links require fresh RSSI/SNR before reuse.
+
+## Battery And State Machine
+
+Battery read:
+
+- 12-bit ADC.
+- ADC attenuation `ADC_11db`.
+- 16 samples of `analogReadMilliVolts(GPIO4)`.
+- Formula: `(average_adc_mV * 3) + 200`.
+
+Battery thresholds:
+
+| Threshold | Default |
+|---|---:|
+| start | 3500 mV |
+| run minimum | 3150 mV |
+| critical | 3100 mV |
+
+`ch2` overrides all three thresholds to 0.
+
+State machine:
+
+| State | Behavior |
+|---|---|
+| `BOOT` | immediate transition to `WAIT_BATT` |
+| `WAIT_BATT` | read battery every 1000 ms until 8 consecutive readings pass start threshold |
+| `RADIO_INIT` | reset/init radios, clear cache/queues, arm STAR and MESH RX |
+| `JOINING` | send periodic CH_CONFIG_REQUEST, collect candidates, select parent after timeout |
+| `JOINED` | normal STAR RX, MESH RX, TX drain, ACK timeout, hello, route verify, housekeeping |
+| `LOW_POWER` | still handles RX; drains TX only if critical threshold allows |
+| `PARENT_FAILOVER` | discovery loop after parent failure |
+| `RECOVERY` | delay 500 ms and `ESP.restart()` |
+
+Watchdog is initialized with 60 second timeout and reset every loop.
+
+## Discovery And Parent Selection
+
+Discovery request:
+
+| Field | Value |
+|---|---|
+| AppFrame type | `MSG_CH_CONFIG_REQUEST (0x34)` |
+| source | local CH ID |
+| destination | `0xFFFF` |
+| payload | requester CH ID, 2 bytes big-endian |
+| sequence | local static config-request sequence |
+| jitter before TX | `20 + ((CH_ID & 0x000F) * 30) + (millis() % 40)` ms |
+
+Discovery response from CH:
+
+| Offset | Field |
+|---:|---|
+| 0..1 | requester ID |
+| 2..3 | responding CH current parent |
+| 4 | advertised mesh depth |
+| 5..6 | CH battery mV |
+| 7 | route-to-root flag, current value `0x01` |
+
+Gateway responses are described in Gateway docs. CH accepts Gateway reverse-link RSSI/SNR only when Gateway response payload has at least 10 bytes.
+
+Timing:
 
 | Parameter | Value |
 |---|---:|
-| `JOINING_TMO_MS` | 15000 |
-| `CFG_REQUEST_INTERVAL_MS` | 5000 |
-| `CFG_RESPONSE_BASE_DELAY_MS` | 200 |
-| `CFG_RESPONSE_SLOT_GAP_MS` | 280 |
-| `CFG_RESPONSE_SLOT_COUNT` | 16 |
-| `ROUTE_VERIFY_INTERVAL_MS` | 600000 |
-| `ROUTE_VERIFY_JITTER_MS` | 300000 |
-| `ROUTE_VERIFY_WINDOW_MS` | 10000 |
-| `PARENT_HEALTH_TIMEOUT_MS` | 180000 |
-| `PARENT_MIN_DWELL_MS` | 300000 |
-| `PARENT_SWITCH_MARGIN_DB` | 15 |
-| `GATEWAY_DIRECT_PARENT_MIN_RSSI_DBM` | -95 |
-| `GATEWAY_DIRECT_PARENT_MIN_SNR_DB` | 5 |
-| `GATEWAY_PARENT_MIN_RSSI_DBM` | -100 |
-| `GATEWAY_ALT_PARENT_MIN_RSSI_DBM` | -100 |
-| `PARENT_NVS_STABLE_SCANS` | 4 |
+| joining timeout | 15000 ms |
+| config request interval | 5000 ms |
+| config response base delay | 200 ms |
+| config response slot gap | 280 ms |
+| config response slot count | 16 |
+| route verify interval | 600000 ms |
+| route verify jitter max | 300000 ms |
+| route verify window | 10000 ms |
+| parent health timeout | 180000 ms |
+| parent minimum dwell | 300000 ms |
+| parent switch margin | 15 dB |
+| parent NVS stable scans | 4 |
 
-## GLD STAR Processing
+Selection rules implemented in source:
 
-CH listens for GLD `MSG_SENSOR_DATA` frames on STAR. It decodes the AppFrame, stores the latest GLD record in `NodeCache`, builds compact alarm ACKs when required, and queues MESH uplink frames. `NodeCache` capacity is 32 GLDs, stale threshold is 300000 ms, and cache expire threshold is 3600000 ms.
+- Candidate is ignored if ID is 0, local CH ID, broadcast ID, advertised parent is local CH, or depth is `0xFF`.
+- Candidate score is RSSI. Tie-breakers are lower depth, higher SNR, lower ID.
+- Direct Gateway is preferred only when Gateway RSSI is at least `-95 dBm`, SNR at least `5 dB`, reverse link exists, and reverse RSSI is at least `-100 dBm`.
+- Gateway is not allowed as runtime parent if CH-side RSSI or reverse RSSI is below `-100 dBm`, or reverse link is missing.
+- Alternate parent is not used when selected parent is Gateway.
+- Candidates must be upstream for current depth to avoid loops.
+- Background verification keeps current parent until dwell time unless failover is active.
+
+## STAR GLD Processing
+
+CH STAR RX accepts GLD `MSG_SENSOR_DATA` AppFrames. Parser output contains node ID, CH ID, GLD seq, typeFlags, alarm flag, external power flag, encrypted payload pointer, and encrypted payload length.
+
+Valid GLD payload length for current phase is 29 bytes. CH does not decrypt it.
+
+NodeCache entry:
+
+| Field | Meaning |
+|---|---|
+| `used` | slot active |
+| `nodeId` | GLD ID |
+| `currentSeq` | latest GLD seq |
+| `sentSeq` | latest seq marked sent upstream |
+| `flags` | record flags: alarm bit `0x01`, external-power bit `0x10` |
+| `lastSeenMs` | receive timestamp |
+| `lastSentMs` | upstream sent timestamp |
+| `payloadLen` | encrypted payload length |
+| `payload` | opaque encrypted payload |
+
+Duplicate seq with same flags/payload updates `lastSeenMs`. Duplicate seq with different payload is conflict. Inserted/updated alarm can request compact STAR ACK and MESH alarm push.
 
 Alarm behavior:
 
-- Alarm frames are queued in `AlarmQueue` with capacity 8.
-- Parent/Gateway compact ACK clears pending alarm only when ACK is received.
-- ACK timeout is 1500 ms.
-- Max alarm retry is 5.
-- Parent fail threshold is 3 ACK failures; recovery threshold is 5 consecutive no-ACK events.
+- Alarm queue stores alarm records until parent/Gateway compact ACK is received.
+- CH sends compact STAR ACK back to GLD when alarm is accepted or already queued.
+- Alarm MESH push remains in alarm queue until upstream ACK.
+- `ALARM_ACK_TMO_MS=1500`.
+- Current `checkAlarmAckTimeout()` logs timeout, removes alarm queue item, increments parent failure and no-ACK burst counters, and does not retry the same alarm frame.
+- Parent fail threshold is 3.
+- Recovery threshold for no-ACK burst is 5.
+- Failover cooldown is 60000 ms.
 
-## Server Pull And Cluster Response
+Recovery clear:
 
-Server pull uses `MSG_SERVER_PULL_REQUEST` payload `requestId + hopList[]`. CH relays pull requests along the forward hop list until the final CH, then builds `MSG_CLUSTER_DATA_RESPONSE`.
+- If previous cache entry was alarm and new GLD record is non-alarm, CH queues one `RecoveryClear` MESH record.
 
-Cluster response payload:
+## MESH TX Queue
+
+TX queue item kinds:
+
+| Value | Kind |
+|---:|---|
+| 0 | `AlarmPush` |
+| 1 | `RecoveryClear` |
+| 2 | `ClusterDataResponse` |
+| 3 | `RelayFrame` |
+
+Queue capacity is 8. `CH_TX_FRAME_MAX = APPFRAME_OVERHEAD + MESH_MAX_PAYLOAD`.
+
+Queue drain behavior:
+
+- Skips if MESH radio is not ready.
+- Skips if an alarm ACK is pending.
+- Stops if battery critical blocks TX.
+- On success, marks selected cache entries sent or leaves RelayFrame cache untouched.
+- Alarm push activates upstream ACK tracking and stops drain.
+- After any TX attempt, MESH RX is re-armed.
+
+## Pull And Cluster Response
+
+Server pull request:
+
+| Field | Meaning |
+|---|---|
+| AppFrame type | `MSG_SERVER_PULL_REQUEST (0x30)` |
+| payload bytes 0..1 | requestId |
+| payload bytes 2.. | hopList, each hop `uint16BE` |
+
+Intermediate CH relay:
+
+- Finds local CH in hopList.
+- If local index is not final index, rebuilds same payload with `srcId=local CH`, `dstId=next hop`, same AppFrame seq.
+- Enqueues RelayFrame.
+
+Final CH response:
 
 | Offset | Field |
-|---|---|
-| 0..1 | `requestId` |
+|---:|---|
+| 0..1 | requestId |
 | 2 | data status |
 | 3..4 | CH battery mV |
 | 5 | record count |
-| 6.. | repeated GLD records |
+| 6.. | GLD records |
 
-Data statuses are `DataOk`, `DataEmpty`, `DataNotAvail`, `DataStale`, `DataBusy`, `DataInvalid`.
+Data statuses:
 
-Source-only delta: CH pull response telemetry now logs requestId, data status, record count, response size, and build status. This is implemented in source and built once for `ch1_esp32s3`, but is pending upload/bench verification on the deployed CH boards.
+| Value | Name |
+|---:|---|
+| `0x00` | DataOk |
+| `0x01` | DataEmpty |
+| `0x02` | DataNotAvail |
+| `0x03` | DataStale |
+| `0x04` | DataBusy |
+| `0x05` | DataInvalid |
 
-## Downlink To GLD
+Cluster response selection:
 
-`SERVER_NODE_COMMAND` stores a pending GLD downlink. Current CH parser expects payload `nodeId(2) + commandId(2) + commandLen(1) + commandBytes`. If the GLD is external-powered, CH can send `MSG_NODE_DOWNLINK` immediately; otherwise it waits for the GLD RX window after a sensor uplink.
-
-Known integration caveat: current Gateway source builds node command payload as `nodeId + commandId + ttlSec + commandLen + commandBytes`, while CH parser currently expects no `ttlSec`. Treat Gateway-to-CH-to-GLD remote mode switching as needing a focused retest/fix before production reliance.
+- Selects oldest normal unsent, non-stale, valid cache entries.
+- Excludes alarm entries.
+- Fits records within MESH payload max 80 bytes.
+- Current selected index capacity is 2, and a 34-byte phase-1 GLD record means at most 2 records fit with 6-byte response header.
+- Mark selected entries sent only after MESH TX success.
 
 ## CH_HELLO And Topology
 
-CH sends one mandatory boot `MSG_CH_HELLO` immediately after first entering `JOINED` after boot when `parentId != 0`, including when parent state came from the previous NVS/cache state. After that, CH sends `MSG_CH_HELLO` every 300000 ms to its parent. Payload includes CH ID, parent, battery, uptime, mesh depth, and parent alternate when present. Gateway and Node-RED use this for installed topology, route rendering, and liveness display.
+CH_HELLO:
 
-Boot hello logs `CH_BOOT_HELLO` before the send and `CH_HELLO_TX ... txOk=<0|1>` after the transmit attempt. The boot hello is considered complete only if TX succeeds; otherwise it remains pending and is retried with a 1000 ms throttle.
+| Offset | Field |
+|---:|---|
+| 0..1 | CH ID |
+| 2..3 | parent ID |
+| 4..5 | battery mV |
+| 6..7 | uptime seconds low 16 bits |
+| 8 | mesh depth |
+| 9..10 | alternate parent ID |
 
-## Post-12 Work
+Behavior:
 
-- Upload and bench-verify the new pull response telemetry on all active CH boards.
-- Resolve the `SERVER_NODE_COMMAND` TTL mismatch between Gateway and CH.
-- Stress-test discovery with 10+ CH, including collision/backoff and background route verification.
-- Validate field battery thresholds and low-power behavior with real CH power hardware.
-- Add production diagnostics for route churn, ACK retry exhaustion, and stale cache reasons.
+- After first JOINED state with non-zero parent, CH sends boot hello immediately.
+- Boot hello is retried with 1000 ms throttle until transmit succeeds.
+- Periodic hello interval is 300000 ms after boot hello succeeds.
+- `CH_HELLO_TX` logs parent, alternate, battery, uptime, depth, and `txOk`.
+
+## Downlink To GLD
+
+CH stores pending downlink from `MSG_SERVER_NODE_COMMAND`:
+
+| Current CH parser offset | Field |
+|---:|---|
+| 0..1 | target GLD node ID |
+| 2..3 | command ID |
+| 4 | command length |
+| 5.. | command bytes, max accepted length 8 |
+
+If NodeCache says target GLD is external-powered and STAR is ready, CH sends `MSG_NODE_DOWNLINK` immediately. If target GLD is not external-powered, CH waits for the next STAR uplink from that GLD and sends downlink inside the GLD RX window.
+
+Pending downlink store has one active slot per `nodeId` lookup. A new command for the same node reuses the existing slot and overwrites its fields.
+
+Current source caveat: Gateway builds `MSG_SERVER_NODE_COMMAND` with `nodeId + commandId + ttlSec + commandLen + commandBytes`, while CH currently parses `nodeId + commandId + commandLen + commandBytes`. That mismatch is present in current source.
+
+## Serial Logs
+
+Important CH log prefixes:
+
+| Prefix | Meaning |
+|---|---|
+| `CH_WDT_INIT` | watchdog initialized |
+| `CH_IDS` | local/root/default IDs |
+| `CH_NVS_LOAD`, `CH_NVS_SAVE` | parent persistence |
+| `CH_STATE` | state transition |
+| `CH_BATT_MV`, `CH_BATT_LOW`, `CH_LOW_POWER` | battery state |
+| `CH_STAR_BEGIN_*`, `CH_MESH_BEGIN_*` | radio init |
+| `CH_CONFIG_REQUEST_TX` | discovery request |
+| `CH_CONFIG_RESPONSE_RECV`, `CH_CONFIG_RESPONSE_TX` | discovery response |
+| `CH_PARENT_CANDIDATE`, `CH_PARENT_CANDIDATE_REJECT`, `CH_PARENT_SELECT` | routing decision |
+| `CH_STAR_RX`, `CH_STAR_PROCESS` | GLD receive path |
+| `CH_CACHE_SUMMARY`, `CH_CACHE_ENTRY` | cache report |
+| `CH_PULL_PROCESS`, `CH_PULL_RELAY` | pull request path |
+| `CH_MESH_TX_KIND`, `CH_MESH_TX_MARK` | MESH transmit path |
+| `CH_ALARM_ACK_RECV`, `CH_ALARM_ACK_TIMEOUT` | alarm upstream ACK |
+| `CH_DOWNLINK_STORED`, `CH_NODE_DOWNLINK_TX` | downlink path |
+| `CH_HELLO_TX`, `CH_BOOT_HELLO` | topology hello |

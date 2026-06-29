@@ -1,5 +1,9 @@
 # DESAIN CLUSTER HEAD DUAL-LORA
 
+> ARCHIVED/HISTORICAL DRAFT. This file is not the current implementation contract.
+> Use `docs/design/ch/final_design.md` and `docs/design/gld-ch/payload-contract.draft.md`
+> for the firmware that is currently built from this repository.
+
 **Document version:** v1 wiring-aligned  
 **Basis utama arsitektur:** `meshLoRav2/doc/DESIGN.md`  
 **Referensi hardware pin:** `wiring.png`  

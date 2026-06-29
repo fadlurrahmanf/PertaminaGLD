@@ -4,6 +4,6 @@ This folder stores the Gas Leak Detector design baseline for the Pertamina GLD m
 
 - `design.md` is imported from `D:\GasleakDetectorDesign\design.md`.
 - Treat `design.md` as the immutable imported baseline.
-- Use `design.updated.draft.md` plus `docs/design/gld-ch/payload-contract.draft.md` as the current GLD implementation reference.
-- Keep GLD and CH design context separate until an explicit integration contract is extracted.
-- Cross-component contracts derived from this design should later be extracted into `docs/contracts/`.
+- Use `final_design.md` as the current GLD implementation reference generated from the live firmware source.
+- `design.updated.draft.md` is historical draft material and is not the current implementation contract.
+- Use `docs/design/gld-ch/payload-contract.draft.md` for the current GLD-CH payload and crypto contract.

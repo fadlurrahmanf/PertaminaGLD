@@ -53,7 +53,7 @@ baru lalu melakukan restart ESP32.
 
 ### 2.2 PlatformIO Env Final
 
-Main firmware config hanya berisi tiga env final:
+Main firmware config memakai env final pendek:
 
 ```text
 firmware/platformio.ini
@@ -61,20 +61,23 @@ firmware/platformio.ini
 
 | Target | Env |
 |---|---|
-| GLD | `gld_unified_esp32s3` |
-| CH | `ch_star_mesh_runtime_esp32s3` |
-| Gateway | `gateway_mqtt_mesh_esp32s3` |
+| GLD 4D board | `gld` |
+| GLD WROOM bench | `gldw` |
+| CH ID `0x0064` | `ch1` |
+| CH ID `0x0065` | `ch2` |
+| CH ID `0x0066` | `ch3` |
+| Gateway | `gw` |
 
 Build GLD final:
 
 ```powershell
-pio run -d firmware -e gld_unified_esp32s3
+pio run -d firmware -e gld
 ```
 
 Upload GLD final ke COM10:
 
 ```powershell
-pio run -d firmware -e gld_unified_esp32s3 -t upload --upload-port COM10
+pio run -d firmware -e gld -t upload --upload-port COM10
 ```
 
 Env lama per-mode GLD tetap disimpan untuk support/debug di:

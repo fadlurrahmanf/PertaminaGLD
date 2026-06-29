@@ -1,0 +1,37 @@
+flowchart TD
+    subgraph RADIO_A_BLOCK["Radio A -- STAR 920-923 MHz"]
+        STAR_RX["STAR RX\nSX1262 Radio A"]
+        STAR_TX["STAR TX\n(downlink GLD)"]
+    end
+
+    subgraph RADIO_B_BLOCK["Radio B -- MESH 923.5 MHz"]
+        MESH_RX["MESH RX\nSX1262 Radio B"]
+        MESH_TX["MESH TX\n(ke parent/GW)"]
+    end
+
+    subgraph PROCESSING["Processing"]
+        UPLINK["ChUplink\nparse MSG_SENSOR_DATA"]
+        CACHE["NodeCache\n32 slot\nnodeId, seq, flags, payload"]
+        ALQ["AlarmQueue\n8 slot\nalarm pending ACK"]
+        TXQ["ChTxQueue\n8 slot\nAlarmPush/RecoveryClear\nClusterDataResponse/RelayFrame"]
+        PULL["ChPullRequest\nparse MSG_SERVER_PULL_REQUEST"]
+        RESP["ClusterResponse\nbuild response + GLD records"]
+        DWN["PendingDownlink\n16 slot\nTTL 1800s"]
+        RUNTIME["ChRuntime\nstate machine"]
+    end
+
+    STAR_RX --> UPLINK
+    UPLINK --> CACHE
+    CACHE -->|"alarm?"| ALQ
+    ALQ --> TXQ
+    CACHE -->|"RecoveryClear"| TXQ
+    MESH_RX -->|"MSG_SERVER_PULL_REQUEST"| PULL
+    PULL -->|"final hop"| RESP
+    RESP --> TXQ
+    PULL -->|"relay hop"| TXQ
+    MESH_RX -->|"MSG_SERVER_NODE_COMMAND"| DWN
+    DWN -->|"kirim ke GLD"| STAR_TX
+    TXQ --> MESH_TX
+    MESH_RX -->|"ACK, Hello, Config"| RUNTIME
+    RUNTIME --> STAR_TX
+    RUNTIME --> MESH_TX

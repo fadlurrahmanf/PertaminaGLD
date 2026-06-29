@@ -13,7 +13,7 @@ enum class GldNullingStatus : uint8_t {
     AdsNotReady,
     DacNotReady,
     AllChannelsFailed,
-    PartialSuccess,  // some channels failed, profile still saved for good ones
+    PartialSuccess,  // some channels failed; unified runtime must retry, not save as complete profile
 };
 
 struct GldNullingServiceResult {
@@ -22,10 +22,14 @@ struct GldNullingServiceResult {
     uint8_t           successCount;  // out of 8
 };
 
+using GldNullingLogFn = void (*)(const char* line);
+
 // Run the nulling algorithm on all 8 sensor channels.
 // ads and dac must be initialized (begin() called) before calling.
 // The profile dacCodes are applied to the DAC hardware after each channel.
-GldNullingServiceResult runNullingService(GldAds1256Reader& ads, GldDacMux& dac);
+GldNullingServiceResult runNullingService(GldAds1256Reader& ads,
+                                          GldDacMux& dac,
+                                          GldNullingLogFn logFn = nullptr);
 
 // NVS persistence via ESP32 Preferences.
 bool saveNullingProfile(const GldNullingProfile& profile);

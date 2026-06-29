@@ -1,0 +1,33 @@
+sequenceDiagram
+    participant NR as Node-RED/Server
+    participant GW as Gateway (0x006F)
+    participant CH_A as CH 0x0064
+    participant CH_B as CH 0x0066
+
+    Note over NR: Trigger: /topology/request?ch=0x0066\natau inject manual
+
+    NR->>GW: MQTT cmd/pull\n{"requestId":1,"hopList":["0x0064","0x0066"]}
+
+    GW->>GW: Parse hopList: [0x0064, 0x0066]
+    GW->>GW: Build MSG_SERVER_PULL_REQUEST\npayload: requestId(2) + hopList([0x0064,0x0066])
+    GW->>GW: AppFrame: srcId=GW, dstId=0x0064 (first hop)
+
+    GW->>CH_A: LoRa MESH TX\nMSG_SERVER_PULL_REQUEST\ndstId=0x0064
+
+    CH_A->>CH_A: Parse: lokal=0x0064, bukan final hop
+    CH_A->>CH_A: Rebuild frame: srcId=0x0064, dstId=0x0066
+    Note over CH_A: Enqueue RelayFrame
+
+    CH_A->>CH_B: LoRa MESH TX\nMSG_SERVER_PULL_REQUEST\ndstId=0x0066
+
+    CH_B->>CH_B: Parse: lokal=0x0066, final hop
+    CH_B->>CH_B: Build ClusterDataResponse\nrequestId(2) + status(1) + battMv(2) + count(1) + GLDRecords
+
+    Note over CH_B: Kirim ke active parent\n(bukan reverse hopList!)
+    CH_B->>GW: LoRa MESH TX\nMSG_CLUSTER_DATA_RESPONSE
+
+    GW->>GW: Parse response
+    GW->>NR: MQTT gld/gateway/uplink\n{frameHex + parse fields}
+
+    NR->>NR: Decode ClusterDataResponse
+    NR->>NR: Decrypt GLDRecords

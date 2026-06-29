@@ -1,0 +1,24 @@
+flowchart TD
+    subgraph PRE["Persiapan"]
+        P1["✅ Cek COM port: pio device list"]
+        P2["✅ Pastikan env sesuai hardware:\ngld/gldw untuk GLD\nch1/ch2/ch3 untuk CH\ngw untuk Gateway"]
+        P3["✅ Cek credential ServerConfig.h\n(site: Fshares/10.158.198.180\ndataset: CHANGE_ME harus diisi)"]
+    end
+
+    subgraph BUILD["Build & Upload"]
+        B1["Build GLD:\npio run -d firmware -e gldw"]
+        B2["Upload GLD:\npio run -d firmware -e gldw -t upload --upload-port COM<X>"]
+        B3["Build CH1:\npio run -d firmware -e ch1"]
+        B4["Upload CH1:\npio run -d firmware -e ch1 -t upload --upload-port COM<Y>"]
+        B5["Upload GW:\npio run -d firmware -e gw -t upload --upload-port COM<Z>"]
+    end
+
+    subgraph MONITOR["Monitor & Verifikasi"]
+        M1["Serial monitor GLD:\npio device monitor -p COM<X> -b 115200"]
+        M2["Cek log [BOOT_IC_REPORT]"]
+        M3["Cek log CH_STATE, CH_PARENT_SELECT"]
+        M4["Cek MQTT: subscribe gld/gateway/#"]
+        M5["Cek topology Node-RED:\nGET /pertamina-gld/topology/view"]
+    end
+
+    PRE --> BUILD --> MONITOR

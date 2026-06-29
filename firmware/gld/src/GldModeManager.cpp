@@ -41,6 +41,7 @@ GldMode gldModeFromString(const char* str) {
     if (str == nullptr) return GldMode::INFERENCE;
     if (strcmp(str, "dataset")   == 0) return GldMode::DATASET;
     if (strcmp(str, "nulling")   == 0) return GldMode::NULLING;
+    if (strcmp(str, "running")   == 0) return GldMode::INFERENCE;
     if (strcmp(str, "inference") == 0) return GldMode::INFERENCE;
     return GldMode::INFERENCE;
 }

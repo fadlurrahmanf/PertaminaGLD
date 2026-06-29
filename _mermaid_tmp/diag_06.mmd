@@ -1,0 +1,50 @@
+stateDiagram-v2
+    [*] --> NVS_LOAD : Boot
+    NVS_LOAD --> INFERENCE : mode=inference/running\n(default)
+    NVS_LOAD --> DATASET : mode=dataset
+    NVS_LOAD --> NULLING : mode=nulling
+
+    state INFERENCE {
+        [*] --> FAN_INIT : non-battery: FAN ON
+        FAN_INIT --> SCAN
+        SCAN --> FAN_ON_BATT : battery mode: FAN ON
+        FAN_ON_BATT --> AVG : baca 8 ch ADS tiap 1000ms
+        AVG --> ML_PREDICT : >=10 sampel
+        ML_PREDICT --> ALARM_CHECK : gasClass + confidence
+        ALARM_CHECK --> FAN_OFF_BATT : battery mode: FAN OFF
+        FAN_OFF_BATT --> LORA_TX : tiap 10000ms
+        ALARM_CHECK --> LORA_TX : non-battery mode langsung
+        LORA_TX --> RX_WINDOW : 2000ms
+        RX_WINDOW --> SLEEP_BATT : battery mode: deep sleep
+        RX_WINDOW --> SCAN : non-battery mode: loop
+    }
+
+    state DATASET {
+        [*] --> WIFI_CONNECT
+        WIFI_CONNECT --> MQTT_CONNECT
+        MQTT_CONNECT --> IDLE_DATASET
+        IDLE_DATASET --> FAN_ON : START_DATASET
+        FAN_ON --> FAN_SETTLE
+        FAN_SETTLE --> SCAN_DATASET
+        SCAN_DATASET --> PUBLISH_DATA
+        PUBLISH_DATA --> IDLE_DATASET : STOP atau autostop
+    }
+
+    state NULLING {
+        [*] --> CHECK_READY
+        CHECK_READY --> BASELINE_SCAN : ADS+DAC ready
+        CHECK_READY --> RETRY_5S : tidak ready
+        BASELINE_SCAN --> EXP_SEARCH
+        EXP_SEARCH --> BIN_SEARCH
+        BIN_SEARCH --> CONFIRM
+        CONFIRM --> SAVE_PROFILE : semua ch OK
+        SAVE_PROFILE --> SET_MODE_INFERENCE
+        SET_MODE_INFERENCE --> RESTART_ESP
+        CONFIRM --> RETRY_5S : ada ch gagal
+        RETRY_5S --> CHECK_READY : cek ulang readiness
+    }
+
+    INFERENCE --> SET_MODE : command SET_MODE
+    DATASET --> SET_MODE : command SET_MODE
+    NULLING --> SET_MODE : command SET_MODE
+    SET_MODE --> NVS_LOAD : restart

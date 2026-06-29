@@ -1,5 +1,9 @@
 # Gas Leak Detector - Firmware Design Document
 
+> ARCHIVED/HISTORICAL DRAFT. This file is not the current implementation contract.
+> Use `docs/design/gld/final_design.md` and `docs/design/gld-ch/payload-contract.draft.md`
+> for the firmware that is currently built from this repository.
+
 **Document version:** v1.8.19  
 **Project:** Gas Leak Detector Firmware  
 **Target MCU:** ESP32-S3  

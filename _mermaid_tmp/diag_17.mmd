@@ -1,0 +1,46 @@
+flowchart TD
+    subgraph INPUTS["Input Sources"]
+        MQTT_IN["MQTT In\ngld/gateway/uplink\ngld/gateway/topology\ngld/gateway/status"]
+        HTTP_IN["HTTP POST\n/pertamina-gld/decode"]
+        DEBUG_IN["Debug/Compat\ngld/gateway/raw\npertamina/gld/uplink"]
+    end
+
+    subgraph DECODE_BLOCK["Decode & Route"]
+        NORM["Normalizer\n(buffer/hex/JSON/object)"]
+        APP_PARSE["AppFrame Parse\n+ CRC verify"]
+        GLD_DECODE["GLD Decode\nGLDRecord + AES-GCM decrypt"]
+        TOPO_PARSE["Topology Parse\nCH_HELLO/Config"]
+    end
+
+    subgraph OUTPUTS["Output Topics / Endpoints"]
+        OUT_STATUS["gld/gateway/status"]
+        OUT_EVENTS["gld/gateway/events"]
+        OUT_DECODED["gld/server/decoded\n(non-alarm)"]
+        OUT_ALARM["gld/server/alarm"]
+        OUT_TOPO["gld/server/topology"]
+        OUT_ERR["gld/gateway/error"]
+        HTTP_TOPO["GET /pertamina-gld/topology"]
+        HTTP_UI["GET /pertamina-gld/topology/view"]
+        HTTP_PULL["POST /topology/request?ch=<id>"]
+    end
+
+    subgraph STATE["Flow State"]
+        TOPO_STATE["pglTopology\n(flow context)\nparents/routes/hellos\ndiscovery/gatewayLinks"]
+    end
+
+    INPUTS --> NORM
+    DEBUG_IN --> NORM
+    HTTP_IN --> NORM
+    NORM --> APP_PARSE
+    APP_PARSE -->|"MSG_SENSOR_DATA"| GLD_DECODE
+    APP_PARSE -->|"CH_HELLO/Config"| TOPO_PARSE
+    APP_PARSE -->|"gateway-status"| OUT_STATUS
+    GLD_DECODE -->|"alarm=false"| OUT_DECODED
+    GLD_DECODE -->|"alarm=true"| OUT_ALARM
+    GLD_DECODE --> OUT_EVENTS
+    APP_PARSE -->|"error"| OUT_ERR
+    TOPO_PARSE --> TOPO_STATE
+    TOPO_PARSE --> OUT_TOPO
+    TOPO_STATE --> HTTP_TOPO
+    TOPO_STATE --> HTTP_UI
+    TOPO_STATE --> HTTP_PULL

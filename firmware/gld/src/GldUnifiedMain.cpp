@@ -49,8 +49,6 @@ constexpr const char* TOPIC_DATA        = GLD_TOPIC_DATA;
 constexpr const char* TOPIC_STATUS      = GLD_TOPIC_STATUS;
 constexpr const char* TOPIC_SUMMARY     = GLD_TOPIC_SUMMARY;
 constexpr const char* TOPIC_ACK         = GLD_TOPIC_ACK;
-constexpr const char* TOPIC_NULLING     = GLD_TOPIC_NULLING;
-constexpr const char* TOPIC_NULL_STATUS = GLD_TOPIC_NULL_STATUS;
 
 // ---------------------------------------------------------------------------
 // LoRa config (STAR) — harus cocok dengan CH, tidak diubah per-node
@@ -76,6 +74,12 @@ constexpr uint32_t MQTT_RETRY_MS      = GLD_MQTT_RETRY_MS;
 constexpr uint32_t STATUS_INTERVAL_MS = GLD_STATUS_INTERVAL_MS;
 constexpr uint16_t MQTT_BUFFER_SIZE   = GLD_MQTT_BUFFER_SIZE;
 constexpr uint8_t  MIN_PRIMED_COUNT   = pgl::gld::GLD_SENSOR_MOVING_AVERAGE_WINDOW;
+constexpr uint8_t  BOOT_SENSOR_SNAPSHOT_COUNT = 5;
+constexpr uint32_t BOOT_DAC_SETTLE_MS = 5;
+constexpr uint16_t BOOT_MCP_TEST_CODE_LOW = 1;
+constexpr uint16_t BOOT_MCP_TEST_CODE_HIGH = 10;
+constexpr uint32_t NULLING_RETRY_DELAY_MS = 5000;
+constexpr uint32_t NULLING_AUTO_RESTART_DELAY_MS = 800;
 
 #if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8
 constexpr const char* BOARD_PROFILE = "WROOM-1U-N16R8";
@@ -109,16 +113,20 @@ bool dacReady   = false;
 bool radioReady = false;
 bool mlReady    = false;
 bool nullDone   = false;
+bool nullingRetryArmed = false;
 uint8_t  txSeq           = 0;
 uint32_t txCounter       = 0;
 uint32_t lastScanMs      = 0;
 uint32_t lastTxMs        = 0;
 uint32_t lastMqttAttemptMs = 0;
 uint32_t lastStatusMs    = 0;
+uint32_t nextNullingRetryMs = 0;
 bool     lastAlarm       = false;
 uint8_t  nullingProfileId = 0;
+uint8_t  nullingAttemptCount = 0;
 pgl::gld::GldClassifyResult lastResult{pgl::protocol::GLD_GAS_CLEAR, 100};
 bool     debugEnabled    = true;
+int16_t  lastLoraBeginState = 0;
 
 // Dataset session state
 enum class DatasetState : uint8_t { Idle, Running };
@@ -169,6 +177,10 @@ void logPrintln(const char* text) {
 #if defined(ARDUINO_ARCH_ESP32)
     Serial0.println(text);
 #endif
+}
+
+void nullingLogLine(const char* text) {
+    logPrintln(text);
 }
 
 // ---------------------------------------------------------------------------
@@ -247,6 +259,33 @@ const char* passFail(bool ok) {
     return ok ? "PASS" : "FAIL";
 }
 
+const char* okNotOk(bool ok) {
+    return ok ? "OK" : "NOT_OK";
+}
+
+const char* checkedOkNotOk(bool checked, bool ok) {
+    return checked ? okNotOk(ok) : "SKIP";
+}
+
+struct BootAdsReport {
+    bool ok = false;
+    int drdyLevel = -1;
+    uint8_t status = 0;
+};
+
+struct BootI2cReport {
+    bool tcaOk = false;
+    bool mcpOk[pgl::gld::board::SENSOR_COUNT]{};
+    uint8_t mcpOkCount = 0;
+};
+
+struct BootMcpControlReport {
+    bool tested = false;
+    bool dacReady = false;
+    bool writeLow[pgl::gld::board::SENSOR_COUNT]{};
+    bool writeHigh[pgl::gld::board::SENSOR_COUNT]{};
+};
+
 bool i2cAck(uint8_t addr) {
     Wire.beginTransmission(addr);
     return Wire.endTransmission() == 0;
@@ -265,57 +304,139 @@ void tcaDisableAll() {
     Wire.endTransmission();
 }
 
-void reportBootPower(const pgl::gld::GldPowerReading& power) {
-    logPrintf("[POWER] sumber daya %s terdeteksi. externalPower=%u batteryMv=%u\n",
-              pgl::gld::gldPowerModeName(power.mode),
-              power.externalPower ? 1 : 0,
-              power.batteryMv);
+BootAdsReport probeBootAds(bool ok) {
+    BootAdsReport report{};
+    report.ok = ok;
+    report.drdyLevel = digitalRead(pgl::gld::board::PIN_ADS1256_DRDY);
+    report.status = ok ? ads.readStatusRegister() : 0;
+    return report;
 }
 
-void reportBootSpi() {
-    logPrintf("[SPI] bus sensor siap. SCK=%d MOSI=%d MISO=%d\n",
-              pgl::gld::board::PIN_SPI_SCK,
-              pgl::gld::board::PIN_SPI_MOSI,
-              pgl::gld::board::PIN_SPI_MISO);
-}
-
-void reportBootAds(bool ok) {
-    const int drdyLevel = digitalRead(pgl::gld::board::PIN_ADS1256_DRDY);
-    const uint8_t status = ok ? ads.readStatusRegister() : 0;
-    logPrintf("[ADS] ADS1256 %s. CS=%d DRDY=%d SYNC=%d drdyLevel=%d status=0x%02X\n",
-              ok ? "siap" : "belum siap",
-              pgl::gld::board::PIN_ADS1256_CS,
-              pgl::gld::board::PIN_ADS1256_DRDY,
-              pgl::gld::board::PIN_ADS1256_SYNC,
-              drdyLevel,
-              status);
-}
-
-uint8_t reportBootI2c() {
+BootI2cReport probeBootI2c() {
+    BootI2cReport report{};
     Wire.begin(pgl::gld::board::PIN_I2C_SDA, pgl::gld::board::PIN_I2C_SCL);
-    logPrintf("[I2C] bus DAC/nulling siap. SDA=%d SCL=%d\n",
-              pgl::gld::board::PIN_I2C_SDA,
-              pgl::gld::board::PIN_I2C_SCL);
-
-    const bool tcaOk = i2cAck(pgl::gld::board::TCA9548A_ADDR);
-    logPrintf("[TCA] TCA9548A alamat 0x%02X %s\n",
-              pgl::gld::board::TCA9548A_ADDR,
-              tcaOk ? "merespon" : "tidak merespon");
-
-    uint8_t mcpOkCount = 0;
+    report.tcaOk = i2cAck(pgl::gld::board::TCA9548A_ADDR);
     for (uint8_t sensor = 0; sensor < pgl::gld::board::SENSOR_COUNT; ++sensor) {
         const uint8_t muxChannel = static_cast<uint8_t>(pgl::gld::board::SENSOR_TO_MUX_CH[sensor]);
-        const bool muxOk = tcaOk && tcaSelect(muxChannel);
-        const bool mcpOk = muxOk && i2cAck(pgl::gld::board::MCP4725_ADDR);
-        if (mcpOk) ++mcpOkCount;
-        logPrintf("[MCP] MCP4725 %s via mux channel %u alamat 0x%02X %s\n",
-                  pgl::gld::board::SENSOR_NAMES[sensor],
-                  muxChannel,
-                  pgl::gld::board::MCP4725_ADDR,
-                  mcpOk ? "merespon" : "tidak merespon");
+        const bool muxOk = report.tcaOk && tcaSelect(muxChannel);
+        report.mcpOk[sensor] = muxOk && i2cAck(pgl::gld::board::MCP4725_ADDR);
+        if (report.mcpOk[sensor]) ++report.mcpOkCount;
     }
     tcaDisableAll();
-    return mcpOkCount;
+    return report;
+}
+
+BootMcpControlReport testBootMcpControl(bool externalPower) {
+    BootMcpControlReport report{};
+    if (!externalPower) {
+        return report;
+    }
+
+    report.tested = true;
+    if (!dacReady) {
+        (void)dac.begin(Wire);
+        dacReady = dac.ready();
+    }
+    report.dacReady = dacReady;
+    if (!dacReady) {
+        return report;
+    }
+
+    for (uint8_t sensor = 0; sensor < pgl::gld::board::SENSOR_COUNT; ++sensor) {
+        report.writeLow[sensor] = dac.writeDac(sensor, BOOT_MCP_TEST_CODE_LOW);
+        delay(BOOT_DAC_SETTLE_MS);
+        report.writeHigh[sensor] = dac.writeDac(sensor, BOOT_MCP_TEST_CODE_HIGH);
+        delay(BOOT_DAC_SETTLE_MS);
+    }
+    return report;
+}
+
+void bootTableRow(const char* ic, const char* check, const char* status, const char* detail) {
+    logPrintf("| %-15s | %-18s | %-9s | %-40s |\n", ic, check, status, detail);
+}
+
+void printBootIcReport(const pgl::gld::GldPowerReading& power,
+                       const BootAdsReport& adsReport,
+                       const BootI2cReport& i2cReport,
+                       const BootMcpControlReport& mcpControl,
+                       bool radioChecked,
+                       bool radioOk,
+                       bool mlChecked,
+                       bool mlOk,
+                       int mlOutputSize,
+                       bool modeReady,
+                       const char* modeDetail) {
+    char detail[128];
+
+    logPrintln("[BOOT_IC_REPORT]");
+    logPrintln("+-----------------+--------------------+-----------+------------------------------------------+");
+    logPrintln("| IC/Fungsi       | Check              | Status    | Detail                                   |");
+    logPrintln("+-----------------+--------------------+-----------+------------------------------------------+");
+
+    snprintf(detail, sizeof(detail), "mode=%s external=%u batteryMv=%u",
+             pgl::gld::gldPowerModeName(power.mode),
+             power.externalPower ? 1 : 0,
+             power.batteryMv);
+    bootTableRow("POWER", "sense", "OK", detail);
+
+    snprintf(detail, sizeof(detail), "SCK=%d MOSI=%d MISO=%d",
+             pgl::gld::board::PIN_SPI_SCK,
+             pgl::gld::board::PIN_SPI_MOSI,
+             pgl::gld::board::PIN_SPI_MISO);
+    bootTableRow("SPI_BUS", "pins", "OK", detail);
+
+    snprintf(detail, sizeof(detail), "CS=%d DRDY=%d SYNC=%d drdy=%d status=0x%02X",
+             pgl::gld::board::PIN_ADS1256_CS,
+             pgl::gld::board::PIN_ADS1256_DRDY,
+             pgl::gld::board::PIN_ADS1256_SYNC,
+             adsReport.drdyLevel,
+             adsReport.status);
+    bootTableRow("ADS1256", "SPI begin", okNotOk(adsReport.ok), detail);
+
+    snprintf(detail, sizeof(detail), "SDA=%d SCL=%d",
+             pgl::gld::board::PIN_I2C_SDA,
+             pgl::gld::board::PIN_I2C_SCL);
+    bootTableRow("I2C_BUS", "pins", "OK", detail);
+
+    snprintf(detail, sizeof(detail), "addr=0x%02X",
+             pgl::gld::board::TCA9548A_ADDR);
+    bootTableRow("TCA9548A", "I2C ACK", okNotOk(i2cReport.tcaOk), detail);
+
+    for (uint8_t sensor = 0; sensor < pgl::gld::board::SENSOR_COUNT; ++sensor) {
+        char icName[24];
+        snprintf(icName, sizeof(icName), "MCP4725-%s", pgl::gld::board::SENSOR_NAMES[sensor]);
+        const bool testedOk = i2cReport.mcpOk[sensor] &&
+                              mcpControl.dacReady &&
+                              mcpControl.writeLow[sensor] &&
+                              mcpControl.writeHigh[sensor];
+        const char* status = mcpControl.tested
+                                 ? (testedOk ? "OK_TESTED" : "NOT_OK")
+                                 : okNotOk(i2cReport.mcpOk[sensor]);
+        if (mcpControl.tested) {
+            snprintf(detail, sizeof(detail), "mux=%u addr=0x%02X write=1,10",
+                     static_cast<unsigned>(pgl::gld::board::SENSOR_TO_MUX_CH[sensor]),
+                     pgl::gld::board::MCP4725_ADDR);
+        } else {
+            snprintf(detail, sizeof(detail), "mux=%u addr=0x%02X ack only",
+                     static_cast<unsigned>(pgl::gld::board::SENSOR_TO_MUX_CH[sensor]),
+                     pgl::gld::board::MCP4725_ADDR);
+        }
+        bootTableRow(icName, mcpControl.tested ? "I2C+DAC write" : "I2C ACK", status, detail);
+    }
+
+    snprintf(detail, sizeof(detail), "NSS=%d DIO1=%d RST=%d BUSY=%d state=%d",
+             pgl::gld::board::PIN_LORA_CS,
+             pgl::gld::board::PIN_LORA_DIO1,
+             pgl::gld::board::PIN_LORA_RST,
+             pgl::gld::board::PIN_LORA_BUSY,
+             static_cast<int>(lastLoraBeginState));
+    bootTableRow("SX1262", "LoRa begin", checkedOkNotOk(radioChecked, radioOk), detail);
+
+    snprintf(detail, sizeof(detail), "classes=%d model outputs", mlOutputSize);
+    bootTableRow("ML_MODEL", "init/classes", checkedOkNotOk(mlChecked, mlOk), detail);
+
+    bootTableRow("MODE_READY", pgl::gld::gldModeName(currentMode), okNotOk(modeReady), modeDetail);
+    logPrintln("+-----------------+--------------------+-----------+------------------------------------------+");
 }
 
 // ---------------------------------------------------------------------------
@@ -405,27 +526,6 @@ void publishDatasetSummary() {
     char buf[192];
     serializeJson(doc, buf, sizeof(buf));
     mqtt.publish(TOPIC_SUMMARY, buf, false);
-}
-
-void publishNullingProfile(const pgl::gld::GldNullingProfile& profile) {
-    StaticJsonDocument<640> doc;
-    doc["profileId"] = profile.profileId;
-    doc["valid"] = pgl::gld::isNullingProfileValid(profile);
-    JsonArray dacArr   = doc.createNestedArray("dacCode");
-    JsonArray baseArr  = doc.createNestedArray("baselineV");
-    JsonArray afterArr = doc.createNestedArray("afterV");
-    JsonArray okArr    = doc.createNestedArray("channelOk");
-    for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
-        dacArr.add(profile.dacCode[ch]);
-        baseArr.add(profile.baselineV[ch]);
-        afterArr.add(profile.afterV[ch]);
-        okArr.add(profile.channelOk[ch]);
-    }
-    char payload[640];
-    serializeJson(doc, payload, sizeof(payload));
-    mqtt.publish(TOPIC_NULLING, payload, true);
-    logPrintf("MQTT_PUBLISH topic=%s ok=1 len=%u\n",
-              TOPIC_NULLING, static_cast<unsigned>(strlen(payload)));
 }
 
 // ---------------------------------------------------------------------------
@@ -519,10 +619,11 @@ bool initNulling() {
         return true;
     }
     logPrintln("NULLING_NVS_LOAD=empty running_nulling_now");
-    const pgl::gld::GldNullingServiceResult result = pgl::gld::runNullingService(ads, dac);
+    const pgl::gld::GldNullingServiceResult result =
+        pgl::gld::runNullingService(ads, dac, nullingLogLine);
     logPrintf("NULLING_RUN status=%s successCount=%u\n",
               pgl::gld::gldNullingStatusName(result.status), result.successCount);
-    if (result.status == pgl::gld::GldNullingStatus::AllChannelsFailed) return false;
+    if (result.status != pgl::gld::GldNullingStatus::Ok) return false;
     pgl::gld::GldNullingProfile toSave = result.profile;
     toSave.validMagic = pgl::gld::NULLING_PROFILE_VALID_MAGIC;
     toSave.profileId  = 1;
@@ -531,6 +632,193 @@ bool initNulling() {
     for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch)
         dac.writeDac(ch, toSave.dacCode[ch]);
     return true;
+}
+
+const char* nullingRetryReason(pgl::gld::GldNullingStatus status) {
+    switch (status) {
+        case pgl::gld::GldNullingStatus::AdsNotReady:       return "ads_not_ready";
+        case pgl::gld::GldNullingStatus::DacNotReady:       return "dac_not_ready";
+        case pgl::gld::GldNullingStatus::AllChannelsFailed: return "all_channels_failed";
+        case pgl::gld::GldNullingStatus::PartialSuccess:    return "partial_success";
+        case pgl::gld::GldNullingStatus::Ok:                return "none";
+    }
+    return "unknown";
+}
+
+void armNullingRetry(const char* reason) {
+    nullDone = false;
+    nullingRetryArmed = true;
+    nextNullingRetryMs = millis() + NULLING_RETRY_DELAY_MS;
+    logPrintf("NULLING_RETRY_SCHEDULED reason=%s delayMs=%lu\n",
+              reason,
+              static_cast<unsigned long>(NULLING_RETRY_DELAY_MS));
+}
+
+bool ensureNullingHardwareReady() {
+    if (!adsReady) {
+        adsReady = ads.begin(gldSpi);
+        logPrintf("NULLING_ADS_REBEGIN=%s\n", passFail(adsReady));
+    }
+    if (!dacReady) {
+        dacReady = dac.begin(Wire);
+        logPrintf("NULLING_DAC_REBEGIN=%s\n", passFail(dacReady));
+    }
+    return adsReady && dacReady;
+}
+
+bool saveCompleteNullingProfile(const pgl::gld::GldNullingServiceResult& result,
+                                pgl::gld::GldNullingProfile& toSave) {
+    if (result.status != pgl::gld::GldNullingStatus::Ok ||
+        result.successCount != pgl::gld::board::SENSOR_COUNT) {
+        return false;
+    }
+
+    pgl::gld::GldNullingProfile existing{};
+    pgl::gld::loadNullingProfile(existing);
+    toSave = result.profile;
+    toSave.validMagic = pgl::gld::NULLING_PROFILE_VALID_MAGIC;
+    toSave.profileId  = static_cast<uint8_t>(
+        pgl::gld::isNullingProfileValid(existing)
+            ? static_cast<uint8_t>(existing.profileId + 1u) : 1u);
+    const bool saved = pgl::gld::saveNullingProfile(toSave);
+    logPrintf("NULLING_NVS_SAVE=%s profileId=%u\n",
+              saved ? "OK" : "FAIL", toSave.profileId);
+    if (saved) {
+        nullingProfileId = toSave.profileId;
+    }
+    return saved;
+}
+
+void returnToRunningAfterNulling(const pgl::gld::GldNullingProfile& profile) {
+    logPrintf("NULLING_AUTO_MODE_SWITCH target=running mode=inference profileId=%u delayMs=%lu\n",
+              profile.profileId,
+              static_cast<unsigned long>(NULLING_AUTO_RESTART_DELAY_MS));
+    pgl::gld::writeGldMode(pgl::gld::GldMode::INFERENCE);
+    delay(NULLING_AUTO_RESTART_DELAY_MS);
+    Serial.flush();
+#if defined(ARDUINO_ARCH_ESP32)
+    Serial0.flush();
+#endif
+    ESP.restart();
+}
+
+void runNullingRetryAttempt() {
+    nullingRetryArmed = false;
+    ++nullingAttemptCount;
+    logPrintf("NULLING_RETRY_START attempt=%u\n",
+              static_cast<unsigned>(nullingAttemptCount));
+
+    if (!ensureNullingHardwareReady()) {
+        logPrintf("NULLING_RETRY_BLOCKED adsReady=%u dacReady=%u\n",
+                  adsReady ? 1 : 0, dacReady ? 1 : 0);
+        armNullingRetry("hardware_not_ready");
+        return;
+    }
+
+    const pgl::gld::GldNullingServiceResult result =
+        pgl::gld::runNullingService(ads, dac, nullingLogLine);
+    logPrintf("NULLING_RETRY_DONE status=%s successCount=%u\n",
+              pgl::gld::gldNullingStatusName(result.status), result.successCount);
+
+    pgl::gld::GldNullingProfile toSave{};
+    if (saveCompleteNullingProfile(result, toSave)) {
+        logPrintln("NULLING_RUNTIME_RESULT=PASS");
+        nullDone = true;
+        returnToRunningAfterNulling(toSave);
+        return;
+    }
+
+    const bool fullOk = result.status == pgl::gld::GldNullingStatus::Ok &&
+                        result.successCount == pgl::gld::board::SENSOR_COUNT;
+    logPrintln(result.status == pgl::gld::GldNullingStatus::PartialSuccess
+               ? "NULLING_RUNTIME_RESULT=PARTIAL_RETRY"
+               : "NULLING_RUNTIME_RESULT=FAIL_RETRY");
+    armNullingRetry(fullOk ? "nvs_save_failed" : nullingRetryReason(result.status));
+}
+
+bool applySavedNullingProfileOnly() {
+    pgl::gld::GldNullingProfile profile{};
+    if (!pgl::gld::loadNullingProfile(profile)) {
+        if (dacReady) {
+            const bool resetOk = dac.writeAll(0);
+            delay(BOOT_DAC_SETTLE_MS);
+            logPrintf("BOOT_NULLING_PROFILE_APPLY=SKIP reason=no_profile dacReset=%s\n",
+                      resetOk ? "OK" : "FAIL");
+        } else {
+            logPrintln("BOOT_NULLING_PROFILE_APPLY=SKIP reason=no_profile");
+        }
+        return false;
+    }
+
+    if (!dacReady) {
+        dacReady = dac.begin(Wire);
+        logPrintf("BOOT_NULLING_DAC_BEGIN=%s\n", passFail(dacReady));
+    }
+    if (!dacReady) {
+        logPrintf("BOOT_NULLING_PROFILE_APPLY=SKIP profileId=%u reason=dac_not_ready\n",
+                  profile.profileId);
+        return false;
+    }
+
+    bool allApplied = true;
+    for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
+        allApplied = dac.writeDac(ch, profile.dacCode[ch]) && allApplied;
+    }
+    delay(BOOT_DAC_SETTLE_MS);
+    if (allApplied) {
+        nullingProfileId = profile.profileId;
+    }
+    logPrintf("BOOT_NULLING_PROFILE_APPLY=%s profileId=%u\n",
+              allApplied ? "OK" : "FAIL",
+              profile.profileId);
+    return allApplied;
+}
+
+void printBootSensorSnapshotRow(uint8_t rowNumber) {
+    char line[256];
+    size_t used = static_cast<size_t>(
+        snprintf(line, sizeof(line), "%u. ", static_cast<unsigned>(rowNumber)));
+
+    for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT && used < sizeof(line); ++ch) {
+        const pgl::gld::GldAds1256Reading reading = ads.readChannel(ch);
+        const char* sep = (ch + 1U < pgl::gld::board::SENSOR_COUNT) ? " | " : "";
+        int written = 0;
+        if (reading.status == pgl::gld::GldAds1256Status::Ok) {
+            written = snprintf(line + used, sizeof(line) - used,
+                               "%s : %.5fV%s",
+                               pgl::gld::board::SENSOR_NAMES[ch],
+                               reading.voltage,
+                               sep);
+        } else {
+            written = snprintf(line + used, sizeof(line) - used,
+                               "%s : ERR(%s)%s",
+                               pgl::gld::board::SENSOR_NAMES[ch],
+                               pgl::gld::gldAds1256StatusName(reading.status),
+                               sep);
+        }
+        if (written < 0) break;
+        used += static_cast<size_t>(written);
+    }
+
+    logPrintln(line);
+}
+
+void runExternalPowerBootSensorSamples(const pgl::gld::GldPowerReading& power) {
+    if (!power.externalPower) {
+        return;
+    }
+
+    logPrintln("[BOOT_SENSOR_SAMPLES]");
+    applySavedNullingProfileOnly();
+
+    if (!adsReady) {
+        logPrintln("BOOT_SENSOR_SAMPLE_BLOCKED reason=ads_not_ready");
+        return;
+    }
+
+    for (uint8_t sample = 1; sample <= BOOT_SENSOR_SNAPSHOT_COUNT; ++sample) {
+        printBootSensorSnapshotRow(sample);
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -553,6 +841,7 @@ bool beginLoraRadio() {
         state = loraRadio->begin(STAR_FREQ_MHZ, STAR_BW_KHZ, STAR_SF, STAR_CR,
                                  STAR_SYNC_WORD, STAR_TX_POWER, STAR_PREAMBLE, LORA_XTAL_V);
     }
+    lastLoraBeginState = state;
     logPrintf("GLD_STAR_BEGIN_STATE=%d\n", state);
     if (state != RADIOLIB_ERR_NONE) { logPrintln("GLD_STAR_READY=0"); return false; }
     loraRadio->setRfSwitchPins(pgl::gld::board::PIN_LORA_RXEN, pgl::gld::board::PIN_LORA_TXEN);
@@ -825,40 +1114,37 @@ void setup() {
     logPrintf("GLD_POWER mode=%s externalPower=%u batteryMv=%u\n",
               pgl::gld::gldPowerModeName(power.mode),
               power.externalPower ? 1 : 0, power.batteryMv);
-    reportBootPower(power);
-    reportBootSpi();
 
     adsReady = ads.begin(gldSpi);
     logPrintf("ADS_BEGIN_RESULT=%s\n", adsReady ? "PASS" : "FAIL");
-    reportBootAds(adsReady);
-    const uint8_t bootMcpOkCount = reportBootI2c();
+    const BootAdsReport bootAds = probeBootAds(adsReady);
+    const BootI2cReport bootI2c = probeBootI2c();
+    const BootMcpControlReport bootMcpControl = testBootMcpControl(power.externalPower);
 
     if (currentMode == pgl::gld::GldMode::INFERENCE) {
         // --- INFERENCE mode init ---
         network = new NeuralNetwork();
         mlReady = network->isInitialized();
+        const int mlOutputSize = mlReady ? network->getOutputSize() : -1;
         logPrintf("GLD_ML_INIT initialized=%u outputSize=%d\n",
-                  mlReady ? 1 : 0, mlReady ? network->getOutputSize() : -1);
-        logPrintf("[ML] model %s. output=%d\n",
-                  mlReady ? "siap" : "belum siap",
-                  mlReady ? network->getOutputSize() : -1);
+                  mlReady ? 1 : 0, mlOutputSize);
 
         radioReady = beginLoraRadio();
-        logPrintf("[LORA] SX1262 %s. NSS=%d DIO1=%d RST=%d BUSY=%d radioState=%s\n",
-                  radioReady ? "siap" : "belum siap",
-                  pgl::gld::board::PIN_LORA_CS,
-                  pgl::gld::board::PIN_LORA_DIO1,
-                  pgl::gld::board::PIN_LORA_RST,
-                  pgl::gld::board::PIN_LORA_BUSY,
-                  passFail(radioReady));
         logPrintf("GLD_INFERENCE_READY adsReady=%u radioReady=%u mlReady=%u\n",
                   adsReady ? 1 : 0, radioReady ? 1 : 0, mlReady ? 1 : 0);
-        logPrintf("[BOOT] fungsi utama siap. mode=inference ads=%s tca/mcp=%u/%u lora=%s ml=%s\n",
-                  passFail(adsReady),
-                  bootMcpOkCount,
-                  pgl::gld::board::SENSOR_COUNT,
-                  passFail(radioReady),
-                  passFail(mlReady));
+        char modeDetail[96];
+        snprintf(modeDetail, sizeof(modeDetail), "ads=%s mcp=%u/%u lora=%s ml=%s",
+                 passFail(adsReady),
+                 bootI2c.mcpOkCount,
+                 pgl::gld::board::SENSOR_COUNT,
+                 passFail(radioReady),
+                 passFail(mlReady));
+        printBootIcReport(power, bootAds, bootI2c, bootMcpControl,
+                          true, radioReady,
+                          true, mlReady, mlOutputSize,
+                          adsReady && radioReady && mlReady,
+                          modeDetail);
+        runExternalPowerBootSensorSamples(power);
 
         lastScanMs = millis();
         lastTxMs   = millis();
@@ -867,21 +1153,24 @@ void setup() {
         // --- DATASET / NULLING mode init ---
         dacReady = dac.begin(Wire);
         logPrintf("DAC_MUX_BEGIN_RESULT=%s\n", dacReady ? "PASS" : "FAIL");
-        logPrintf("[DAC] TCA/MCP runtime init %s. bootMcp=%u/%u\n",
-                  passFail(dacReady),
-                  bootMcpOkCount,
-                  pgl::gld::board::SENSOR_COUNT);
 
         if (currentMode == pgl::gld::GldMode::DATASET) {
             if (adsReady && dacReady) initNulling();
             logPrintf("DATASET_READY adsReady=%u dacReady=%u nullingProfileId=%u\n",
                       adsReady ? 1 : 0, dacReady ? 1 : 0, nullingProfileId);
-            logPrintf("[BOOT] fungsi utama siap. mode=dataset ads=%s tca/mcp=%u/%u dac=%s nullingProfileId=%u\n",
-                      passFail(adsReady),
-                      bootMcpOkCount,
-                      pgl::gld::board::SENSOR_COUNT,
-                      passFail(dacReady),
-                      nullingProfileId);
+            char modeDetail[96];
+            snprintf(modeDetail, sizeof(modeDetail), "ads=%s mcp=%u/%u dac=%s nullingProfileId=%u",
+                     passFail(adsReady),
+                     bootI2c.mcpOkCount,
+                     pgl::gld::board::SENSOR_COUNT,
+                     passFail(dacReady),
+                     nullingProfileId);
+            printBootIcReport(power, bootAds, bootI2c, bootMcpControl,
+                              false, false,
+                              false, false, -1,
+                              adsReady && dacReady && nullingProfileId > 0,
+                              modeDetail);
+            runExternalPowerBootSensorSamples(power);
             connectWifi();
             mqtt.setBufferSize(MQTT_BUFFER_SIZE);
             mqttConnect();
@@ -892,52 +1181,67 @@ void setup() {
             if (!adsReady || !dacReady) {
                 logPrintf("NULLING_BLOCKED adsReady=%u dacReady=%u\n",
                           adsReady ? 1 : 0, dacReady ? 1 : 0);
-                logPrintf("[BOOT] fungsi utama belum siap. mode=nulling ads=%s tca/mcp=%u/%u dac=%s nulling=BLOCKED\n",
-                          passFail(adsReady),
-                          bootMcpOkCount,
-                          pgl::gld::board::SENSOR_COUNT,
-                          passFail(dacReady));
+                char modeDetail[96];
+                snprintf(modeDetail, sizeof(modeDetail), "ads=%s mcp=%u/%u dac=%s nulling=BLOCKED_RETRY",
+                         passFail(adsReady),
+                         bootI2c.mcpOkCount,
+                         pgl::gld::board::SENSOR_COUNT,
+                         passFail(dacReady));
+                printBootIcReport(power, bootAds, bootI2c, bootMcpControl,
+                                  false, false,
+                                  false, false, -1,
+                                  false,
+                                  modeDetail);
+                runExternalPowerBootSensorSamples(power);
+                armNullingRetry("hardware_not_ready");
             } else {
                 logPrintln("NULLING_RUN=start");
-                pgl::gld::GldNullingProfile existing{};
-                pgl::gld::loadNullingProfile(existing);
 
                 const pgl::gld::GldNullingServiceResult result =
-                    pgl::gld::runNullingService(ads, dac);
+                    pgl::gld::runNullingService(ads, dac, nullingLogLine);
                 logPrintf("NULLING_RUN_DONE status=%s successCount=%u\n",
                           pgl::gld::gldNullingStatusName(result.status), result.successCount);
 
-                if (result.status != pgl::gld::GldNullingStatus::AllChannelsFailed) {
-                    pgl::gld::GldNullingProfile toSave = result.profile;
-                    toSave.validMagic = pgl::gld::NULLING_PROFILE_VALID_MAGIC;
-                    toSave.profileId  = static_cast<uint8_t>(
-                        pgl::gld::isNullingProfileValid(existing)
-                            ? static_cast<uint8_t>(existing.profileId + 1u) : 1u);
-                    const bool saved = pgl::gld::saveNullingProfile(toSave);
-                    logPrintf("NULLING_NVS_SAVE=%s profileId=%u\n",
-                              saved ? "OK" : "FAIL", toSave.profileId);
-                    logPrintln(result.status == pgl::gld::GldNullingStatus::Ok
-                               ? "NULLING_RUNTIME_RESULT=PASS"
-                               : "NULLING_RUNTIME_RESULT=PARTIAL");
+                pgl::gld::GldNullingProfile toSave{};
+                const bool saved = saveCompleteNullingProfile(result, toSave);
+                if (saved) {
+                    logPrintln("NULLING_RUNTIME_RESULT=PASS");
                     nullDone = true;
-                    logPrintf("[BOOT] fungsi utama siap. mode=nulling ads=%s tca/mcp=%u/%u dac=%s nulling=%s profileId=%u\n",
-                              passFail(adsReady),
-                              bootMcpOkCount,
-                              pgl::gld::board::SENSOR_COUNT,
-                              passFail(dacReady),
-                              result.status == pgl::gld::GldNullingStatus::Ok ? "PASS" : "PARTIAL",
-                              toSave.profileId);
-
-                    connectWifi();
-                    mqtt.setBufferSize(640);
-                    if (mqttConnect()) publishNullingProfile(toSave);
+                    char modeDetail[96];
+                    snprintf(modeDetail, sizeof(modeDetail), "ads=%s mcp=%u/%u dac=%s nulling=PASS auto=running profileId=%u",
+                             passFail(adsReady),
+                             bootI2c.mcpOkCount,
+                             pgl::gld::board::SENSOR_COUNT,
+                             passFail(dacReady),
+                             toSave.profileId);
+                    printBootIcReport(power, bootAds, bootI2c, bootMcpControl,
+                                      false, false,
+                                      false, false, -1,
+                                      true,
+                                      modeDetail);
+                    runExternalPowerBootSensorSamples(power);
+                    returnToRunningAfterNulling(toSave);
                 } else {
-                    logPrintln("NULLING_RUNTIME_RESULT=FAIL");
-                    logPrintf("[BOOT] fungsi utama belum siap. mode=nulling ads=%s tca/mcp=%u/%u dac=%s nulling=FAIL\n",
-                              passFail(adsReady),
-                              bootMcpOkCount,
-                              pgl::gld::board::SENSOR_COUNT,
-                              passFail(dacReady));
+                    const bool partial = result.status == pgl::gld::GldNullingStatus::PartialSuccess;
+                    const bool fullOk = result.status == pgl::gld::GldNullingStatus::Ok &&
+                                        result.successCount == pgl::gld::board::SENSOR_COUNT;
+                    logPrintln(partial
+                               ? "NULLING_RUNTIME_RESULT=PARTIAL_RETRY"
+                               : "NULLING_RUNTIME_RESULT=FAIL_RETRY");
+                    char modeDetail[96];
+                    snprintf(modeDetail, sizeof(modeDetail), "ads=%s mcp=%u/%u dac=%s nulling=%s",
+                             passFail(adsReady),
+                             bootI2c.mcpOkCount,
+                             pgl::gld::board::SENSOR_COUNT,
+                             passFail(dacReady),
+                             partial ? "PARTIAL_RETRY" : "FAIL_RETRY");
+                    printBootIcReport(power, bootAds, bootI2c, bootMcpControl,
+                                      false, false,
+                                      false, false, -1,
+                                      false,
+                                      modeDetail);
+                    runExternalPowerBootSensorSamples(power);
+                    armNullingRetry(fullOk ? "nvs_save_failed" : nullingRetryReason(result.status));
                 }
             }
         }
@@ -971,10 +1275,11 @@ void loop() {
         delay(10);
 
     } else {
-        // NULLING mode — calibration done in setup, maintain MQTT
-        if (!nullDone) { delay(1000); return; }
-        maintainWifi();
-        maintainMqtt();
-        delay(500);
+        // NULLING mode: offline calibration; Serial commands are checked at loop start.
+        if (nullingRetryArmed &&
+            static_cast<int32_t>(millis() - nextNullingRetryMs) >= 0) {
+            runNullingRetryAttempt();
+        }
+        delay(100);
     }
 }

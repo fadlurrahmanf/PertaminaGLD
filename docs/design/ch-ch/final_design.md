@@ -1,92 +1,147 @@
-# Pertamina GLD Final Design - CH To CH Multi-Hop
+# Pertamina GLD Current Design - CH To CH Multi-Hop
 
-Status: current-state final design, 2026-06-25. This file describes CH-CH routing as implemented by the current CH firmware and observed bench behavior.
+Status: current source mirror, 2026-06-29.
 
-## Source Of Truth
+## Source Files
 
-- CH runtime: `firmware/ch/src/ChStarMeshRuntimeMain.cpp`.
-- CH config: `firmware/config/ChConfig.h`.
-- Protocol: `firmware/shared/include/ProtocolConstants.h`.
-- Topology visualization: `server/nodered/functions/pertamina-gld-decode.js`.
-
-## Design Goal
-
-CH nodes form an auto-routed MESH backbone toward Gateway `0x006F`. A CH may use Gateway directly or another CH as parent. Parent and alternate are discovered from RF candidates, not statically flashed.
-
-## Discovery
-
-Discovery is based on CH_CONFIG:
-
-1. Requesting CH sends broadcast `MSG_CH_CONFIG_REQUEST`.
-2. Gateway and route-capable CH nodes reply with `MSG_CH_CONFIG_RESPONSE`.
-3. Requester records candidate ID, parent, depth, RSSI/SNR, reverse RSSI/SNR when available, battery, and route-to-root ability.
-4. Candidate selection rejects downstream/deeper nodes and weak Gateway links.
-5. Selected parent/alternate are written to runtime immediately and persisted to NVS only after stable repeated scans.
-
-Anti-collision response timing uses deterministic slots: 200 ms base, 280 ms slot gap, 16 slots, request interval 5000 ms.
-
-## Parent Selection
-
-Selection uses score and policy gates:
-
-- Prefer direct Gateway only when RSSI and SNR pass direct thresholds and reverse link passes Gateway floor.
-- Reject Gateway as parent/alternate when CH-side or reverse RSSI is below -100 dBm.
-- Reject downstream candidates to avoid loops.
-- During background verification, keep current parent until minimum dwell time is met unless failover is required.
-- Require 15 dB RSSI margin before background parent switch.
-
-## Multi-Hop Relay
-
-For pull request downlink:
-
-- Gateway sets `dstId` to first hop in `hopList`.
-- Intermediate CH finds its local hop index and relays to the next hop.
-- Final CH builds `MSG_CLUSTER_DATA_RESPONSE`.
-
-For uplink response or alarm/data push:
-
-- CH sends toward active parent.
-- Parent CH relays upstream.
-- Gateway receives final MESH frame and publishes it to MQTT.
-
-Response path uses active parent routing, not a reverse hop list.
-
-On every boot, a CH with a non-zero parent sends one immediate boot `CH_HELLO` after first entering `JOINED`, before waiting for the normal 5-minute hello interval. This is required even when the parent came from NVS/cache, so the server/topology layer sees the CH as live immediately after restart.
-
-## Current Verified Topology Pattern
-
-Latest saved observations include:
-
-| Node | Observed role |
+| Area | Source |
 |---|---|
-| Gateway `0x006F` | MESH root |
-| CH `0x0064` | layer-1 parent via Gateway |
-| CH `0x0065` | layer-1 or attached CH depending latest bench mapping |
-| CH `0x0066` | layer-2 candidate/child in latest source mapping |
+| CH runtime | `firmware/ch/src/ChStarMeshRuntimeMain.cpp` |
+| CH config | `firmware/config/ChConfig.h` |
+| MESH config | `firmware/config/LoraMeshConfig.h` |
+| Pull parser | `firmware/ch/src/ChPullRequest.cpp` |
+| Cluster response | `firmware/ch/src/ClusterResponse.cpp` |
+| Server topology decode | `server/nodered/functions/pertamina-gld-decode.js` |
 
-Bench notes changed over time as boards were moved between COM ports and IDs. Current source env mapping should be checked before upload. Runtime truth is the serial `CH_PARENT_SELECT`, `CH_HELLO_TX`, and Node-RED topology view.
+## MESH Domain
 
-## Failover
+CH-CH traffic uses Radio B and MESH AppFrame:
 
-Failover is triggered by:
+| Parameter | Value |
+|---|---:|
+| Frequency | 921.0 MHz |
+| Bandwidth | 125 kHz |
+| Spreading factor | SF9 |
+| Coding rate | 4/5 |
+| Sync word | `0x34` |
+| TX power | 17 dBm |
+| Preamble | 8 |
+| SPI | 2 MHz |
+| Max payload | 80 bytes |
 
-- parent health timeout after 180000 ms silent parent,
-- repeated alarm ACK failures,
-- weak bidirectional Gateway route detection.
+## Routing Model
 
-Expected no-traffic failover is approximately 180 seconds plus up to the joining/config response window. The expected serial trace includes `CH_PARENT_HEALTH_FAIL`, `CH_STATE state=PARENT_FAILOVER`, `CH_CONFIG_REQUEST_TX`, `CH_CONFIG_RESPONSE_RECV`, and `CH_PARENT_SELECT reason=failover`.
+No static CH-CH route is compiled into firmware. Every CH starts with `DEFAULT_PARENT_ID=0x0000`, loads a cached parent from NVS if present, then uses CH_CONFIG discovery to find a parent toward root Gateway `0x006F`.
 
-## Known Gaps
+Parent candidate state:
 
-- Discovery response collision risk remains in larger networks despite deterministic slotting.
-- Background route verification is conservative by design, so UI may show retained routes before hard TTL expires.
-- Parent/alternate decisions depend on live RF; static docs must not be treated as the only topology source.
-- Gateway node command payload mismatch with CH affects remote GLD mode switching through multi-hop until fixed.
+| Field | Meaning |
+|---|---|
+| `id` | candidate CH/Gateway ID |
+| `advertisedParent` | parent advertised by candidate |
+| `batteryMv` | candidate battery |
+| `rssiDbm`, `snrDb` | RSSI/SNR measured by local CH while receiving candidate response |
+| `reverseRssiDbm`, `reverseSnrDb` | Gateway reverse link fields when candidate is Gateway |
+| `depth` | advertised depth to root |
+| `seenAtMs` | candidate timestamp |
+| `hasReverseLink` | true only when Gateway response has reverse fields |
 
-## Post-12 Work
+Selection:
 
-- Run long soak with all active CH boards and record parent, alternate, RSSI, SNR, depth, and score over time.
-- Test failover by powering off active parent and measuring switch time.
-- Validate topology UI stale/retained states against serial truth.
-- Add automated log parser for CH_PARENT_SELECT and CH_HELLO_TX evidence.
-- Tune discovery slot/jitter if 10+ CH collisions are observed.
+- Primary score is RSSI.
+- Tie breakers are lower depth, higher SNR, lower ID.
+- Downstream/deeper candidates are rejected.
+- Gateway requires bidirectional quality to become parent.
+- Alternate parent is selected only when primary parent is not Gateway.
+- Parent/alternate are saved to NVS only after the same pair appears for 4 stable scans.
+
+## Discovery Messages
+
+`MSG_CH_CONFIG_REQUEST`:
+
+| Field | Value |
+|---|---|
+| `srcId` | requester CH |
+| `dstId` | `0xFFFF` |
+| `seq` | requester config sequence |
+| payload | requester CH ID, 2 bytes |
+
+`MSG_CH_CONFIG_RESPONSE` from a CH:
+
+| Offset | Field |
+|---:|---|
+| 0..1 | requester ID |
+| 2..3 | responder current parent |
+| 4 | responder depth |
+| 5..6 | responder battery mV |
+| 7 | route-to-root flag, `0x01` |
+
+Response anti-collision:
+
+- Response slot is `CH_ID % 16`.
+- Delay is `200 ms + slot * 280 ms`.
+- Request interval is 5000 ms.
+
+## Pull Downstream Relay
+
+Gateway/server pull payload is `requestId:uint16BE + hopList:uint16BE[]`.
+
+Intermediate CH behavior:
+
+1. Decode AppFrame.
+2. Verify `MSG_SERVER_PULL_REQUEST`.
+3. Find local CH index in hopList.
+4. If local CH is not final hop, set `dstId` to next hop.
+5. Re-encode same payload with `srcId=local CH`, same AppFrame seq, same typeFlags.
+6. Enqueue as `RelayFrame`.
+
+Final CH behavior:
+
+- If local CH is final hop, `handleServerPullRequestFrame()` builds `MSG_CLUSTER_DATA_RESPONSE`.
+- Response goes to active parent `runtimeConfig.meshDstId`, not through a reverse hop list.
+
+## Uplink Relay
+
+A CH relays these local-destination MESH frames upstream to its active parent when `decoded.dstId == CH_ID` and `parentId != CH_ID`:
+
+| Message | Relay condition |
+|---|---|
+| `MSG_CLUSTER_DATA_RESPONSE` | pull response from child path |
+| `MSG_SENSOR_DATA` | alarm/recovery/data push from child path |
+| `MSG_CH_HELLO` | topology hello from child path |
+
+Relay re-encodes frame with `srcId=local CH`, `dstId=parentId`, same seq, same payload.
+
+## Parent Health And Failover
+
+Parent health fields:
+
+| Field | Behavior |
+|---|---|
+| `lastParentSeenMs` | updated when current parent is heard as candidate |
+| `lastParentRssiDbm`, `lastParentSnrDb` | latest parent quality |
+| `PARENT_HEALTH_TIMEOUT_MS` | 180000 ms |
+| `PARENT_MIN_DWELL_MS` | 300000 ms |
+| `PARENT_SWITCH_MARGIN_DB` | 15 dB |
+
+Failover triggers:
+
+- Parent health timeout in JOINED.
+- Alarm ACK failures reach threshold 3 and failover cooldown has elapsed.
+- No-ACK burst reaches threshold 5, which enters RECOVERY.
+
+Failover state sends CH_CONFIG_REQUEST every 5000 ms and evaluates candidates after 15000 ms. If no parent is selected, it repeats failover discovery.
+
+## Topology Visibility
+
+CH sends `MSG_CH_HELLO` to active parent:
+
+- Immediately after first successful JOINED state with non-zero parent.
+- Every 300000 ms after boot hello succeeds.
+- Payload carries CH ID, parent, battery, uptime, depth, alternate parent.
+
+Gateway publishes CH_CONFIG/HELLO topology events to MQTT. Node-RED stores installed parents, discovery candidates, gateway link quality, hellos, and computed routes.
+
+## Current Source Caveat
+
+Remote GLD mode switching through multi-hop uses `MSG_SERVER_NODE_COMMAND`. Current Gateway and CH payload layouts differ by a `ttlSec` field, so this path is not source-aligned until one side is changed.

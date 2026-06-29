@@ -1,0 +1,31 @@
+flowchart TD
+    BOOT["GLD Boot\nmode=dataset dari NVS"]
+    INIT_NULL["initNulling()\nload/run nulling profile"]
+    WIFI["WiFi Connect\nSSID dari ServerConfig.h\n(CHANGE_ME di source)"]
+    MQTT_CONN["MQTT Connect\nsubscribe cmd + dataset topics"]
+    IDLE["State: IDLE\ntunggu START_DATASET"]
+    CMD_IN["Terima START_DATASET JSON\nlabel, target_samples, interval, fan settings"]
+
+    CHECK_PROFILE{nullingProfileId > 0?}
+    REJECT["Reject: reject_no_profile\npublikasi ke cmd/ack"]
+
+    FAN_ON["State: FAN_ON\nfan HIGH selama fan_on_ms"]
+    FAN_SETTLE["State: FAN_SETTLE\nfan LOW, tunggu post_fan_settle_ms"]
+    SCAN["State: SCAN\nbaca 8 channel ADS1256"]
+    PUBLISH["Publish dataset/data JSON\ndevice_id, seq, label, voltages, gains"]
+    AUTO_STOP{autostop?\ntarget_samples atau max_duration}
+    STOP_CMD["Terima STOP_DATASET\natau autostop"]
+    SUMMARY["Publish summary + idle/stopped\nke dataset/summary + dataset/status"]
+
+    BOOT --> INIT_NULL --> WIFI --> MQTT_CONN --> IDLE
+    IDLE --> CMD_IN
+    CMD_IN --> CHECK_PROFILE
+    CHECK_PROFILE -->|"Tidak"| REJECT
+    CHECK_PROFILE -->|"Ya"| FAN_ON
+    REJECT --> IDLE
+    FAN_ON --> FAN_SETTLE --> SCAN --> PUBLISH
+    PUBLISH --> AUTO_STOP
+    AUTO_STOP -->|"Belum"| SCAN
+    AUTO_STOP -->|"Ya"| STOP_CMD
+    IDLE -->|"STOP_DATASET"| STOP_CMD
+    STOP_CMD --> SUMMARY --> IDLE

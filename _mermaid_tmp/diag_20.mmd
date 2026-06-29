@@ -1,0 +1,6 @@
+flowchart LR
+    CMD_IN["MSG_SERVER_NODE_COMMAND\nmasuk di CH"] --> CHECK_POWER{NodeCache:\nexternal power?}
+    CHECK_POWER -->|"Ya (0x10 flag)"| IMMEDIATE["STAR TX immediate\nMSG_NODE_DOWNLINK"]
+    CHECK_POWER -->|"Tidak (battery)"| PENDING["Simpan PendingDownlink\nmax 16 slot, TTL 1800s"]
+    PENDING -->|"GLD kirim uplink"| WAIT_UPLINK["Deteksi uplink dari target GLD"]
+    WAIT_UPLINK -->|"dalam RX window"| DEFERRED["STAR TX deferred\nMSG_NODE_DOWNLINK"]

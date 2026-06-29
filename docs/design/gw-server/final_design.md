@@ -1,84 +1,164 @@
-# Pertamina GLD Final Design - Gateway To Server Boundary
+# Pertamina GLD Current Design - Gateway To Server Boundary
 
-Status: current-state final design, 2026-06-25. This file defines the MQTT contract between Gateway firmware and the Node-RED/server layer.
+Status: current source mirror, 2026-06-29.
 
-## Source Of Truth
+## Source Files
 
-- Gateway firmware: `firmware/gateway/src/GatewayMqttMeshMain.cpp`.
-- Gateway config: `firmware/config/GwConfig.h`, `ServerConfig.h`.
-- Node-RED flow generator: `server/nodered/apply-pertamina-gld-flow.js`.
-- Decode function: `server/nodered/functions/pertamina-gld-decode.js`.
+| Area | Source |
+|---|---|
+| Gateway firmware | `firmware/gateway/src/GatewayMqttMeshMain.cpp` |
+| Gateway config | `firmware/config/GwConfig.h`, `firmware/config/ServerConfig.h` |
+| Node-RED generator | `server/nodered/apply-pertamina-gld-flow.js` |
+| Generated server flow | `server/nodered/pertamina-gld-server.flow.json` |
+| Decode function | `server/nodered/functions/pertamina-gld-decode.js` |
 
-## Broker And Topics
+## Broker Configs In Source
 
-Current Gateway/site source config points to `10.158.198.180:1884` with topic root `gld/gateway`.
+Firmware Gateway site config:
+
+| Field | Value |
+|---|---|
+| MQTT host | `10.158.198.180` |
+| MQTT port | `1884` |
+| MQTT user/pass | `deviot` / `deviot` |
+| topic root | `gld/gateway` |
+
+Node-RED generator defaults:
+
+| Field | Value |
+|---|---|
+| node-red URL | `http://127.0.0.1:1880` |
+| node-red user dir | `C:\Users\asus\.node-red` |
+| MQTT host | `127.0.0.1` unless CLI arg overrides |
+| MQTT port | `1884` unless CLI arg overrides |
+| MQTT user/pass | environment `MQTT_USER` / `MQTT_PASS` or empty |
+
+Current generated `pertamina-gld-server.flow.json` contains broker node `pgl_mqtt_broker`; its checked-in broker host can differ from firmware source because the generator writes the snapshot using the CLI args used at generation time.
+
+## Gateway To Server Topics
 
 | Topic | Producer | Consumer | Payload |
 |---|---|---|---|
-| `gld/gateway/uplink` | Gateway | Node-RED | JSON wrapper with frameHex, RSSI/SNR, parse metadata |
-| `gld/gateway/topology` | Gateway | Node-RED | JSON topology object/event |
-| `gld/gateway/status` | Gateway | Node-RED/operator | Gateway alive/status JSON |
+| `gld/gateway/uplink` | Gateway | Node-RED | JSON wrapper around raw MESH frame |
+| `gld/gateway/topology` | Gateway | Node-RED | topology JSON from CH control frames |
+| `gld/gateway/status` | Gateway | Node-RED/operator | Gateway status JSON |
 | `gld/gateway/cmd/pull` | Node-RED/server | Gateway | pull command JSON |
 | `gld/gateway/cmd/node` | Node-RED/server | Gateway | node command JSON |
 
-## Uplink JSON Shape
+Node-RED also subscribes debug/compat inputs:
 
-Gateway uplink JSON includes:
+| Topic | Purpose |
+|---|---|
+| `gld/gateway/raw` | raw/debug AppFrame input |
+| `pertamina/gld/uplink` | compatibility input |
+| `gld/gateway/debug/http-pull` | debug path to build pull command |
+| `gld/gateway/debug/http-node` | debug path to build node command |
 
-- `source="gateway"`
-- `gatewayId`
-- `frameHex`
-- `frameLen`
-- `rssi`
-- `snr`
-- `parseStatus`
-- decoded `typeFlags`, `msgType`, `srcId`, `dstId`, `seq`, `payloadLen`, `payloadHex` when parse succeeds
-- embedded topology object for CH_HELLO when applicable
+## Gateway Uplink JSON
 
-Node-RED decodes AppFrame, validates CRC, decrypts 29-byte GLD encrypted payloads using AES-GCM, and emits GLD events. Non-data MESH control frames are treated as control/topology frames, not decode failures.
+Gateway publishes:
+
+| Field | Meaning |
+|---|---|
+| `source` | literal `gateway` |
+| `gatewayId` | numeric Gateway ID |
+| `frameHex` | full raw AppFrame as uppercase hex |
+| `frameLen` | frame length |
+| `rssi`, `snr` | radio metrics |
+| `parseStatus` | AppFrame decode status enum |
+| `typeFlags`, `msgType`, `srcId`, `dstId`, `seq`, `payloadLen` | only when AppFrame parse succeeds |
+| `topology` | only for CH_HELLO payload length >=8 |
+
+Node-RED decode accepts JSON fields `frameHex`, `appFrameHex`, `recordHex`, `payload_hex`, `payloadHex`, or `hex`; strings are parsed as JSON first, then as hex if JSON parse fails.
+
+## Decode Outputs
+
+Node-RED decode has four output groups in the generated flow:
+
+| Output | Topic/path |
+|---|---|
+| gateway status | `gld/gateway/status` |
+| gateway event envelopes/topology | `gld/gateway/events` or `gld/server/topology` |
+| decoded GLD events | `gld/server/decoded` or `gld/server/alarm` |
+| errors | `gld/gateway/error` |
+
+GLD event fields include:
+
+| Field | Meaning |
+|---|---|
+| `ok` | true for decoded event |
+| `kind` | `gld-event` |
+| `source` | `contract`, `gateway-status`, or direct source |
+| `receivedAt` | ISO timestamp |
+| `sourceTopic` | MQTT/input topic |
+| `outer` | decoded AppFrame metadata |
+| `nodeId`, `nodeIdHex` | GLD ID |
+| `seq` | GLD record sequence |
+| `flags` | GLDRecord flags |
+| `alarm` | flag bit `0x01` |
+| `externalPower` | flag bit `0x10` |
+| `testDevice` | node ID in `0xF000..0xFEFF` |
+| `payloadLen`, `payloadHex` | encrypted payload metadata |
+| `dedupKey` | `<cluster>:<node>:<seq>:<alarm|normal>` |
+| decrypt fields | `decryptOk`, key/nonce/AAD/plaintext/gas/confidence/battery validity fields |
 
 ## Pull Command Shape
 
-Server publishes:
+Node-RED topology request endpoint and inject path publish:
 
 ```json
 {"requestId":1,"hopList":["0x0064","0x0066"]}
 ```
 
-Gateway builds `MSG_SERVER_PULL_REQUEST` with `requestId + hopList[]`, sends to the first hop, and CH relays through the path. Node-RED uses the same installed topology route when the topology UI Request button is pressed.
+Gateway accepts `requestId` or `id`, and `hopList`/`hop_list`/`hops`. It builds wire payload `requestId:uint16BE + hopList:uint16BE[]`.
 
 ## Node Command Shape
 
-Server publishes:
+Node-RED/Gateway command topic accepts:
 
 ```json
 {"cluster":"0x0064","node":"0xF001","id":1,"ttl":600,"hex":"0101"}
 ```
 
-Current Gateway includes TTL in the wire payload. Current CH parser does not consume TTL in that position. This is a known compatibility caveat and must be corrected before operator-facing node commands are treated as fully final.
+Gateway wire payload includes TTL. CH current parser does not consume TTL. This source mismatch is current and must be reflected anywhere node commands are described.
 
 ## Topology Boundary
 
-Gateway publishes CH topology reports from:
+Gateway publishes topology reports from:
 
 - `MSG_CH_HELLO`
 - `MSG_CH_CONFIG_REQUEST`
 - `MSG_CH_CONFIG_RESPONSE`
 
-Node-RED stores installed parents, discovery candidates, Gateway-link RSSI, CH_HELLO ages, and computed routes. Installed topology TTL is 900000 ms. Discovery and Gateway-link TTL are 420000 ms.
+Node-RED stores topology in flow context key `pglTopology`.
 
-## Server Expectations
+Tracked maps:
 
-Node-RED expects:
+| Map | Meaning |
+|---|---|
+| `parents` | installed CH parent reports |
+| `discovery` | pending CH_CONFIG candidates |
+| `gatewayLinks` | Gateway-heard RSSI/SNR for CH_CONFIG request |
+| `hellos` | latest CH_HELLO per CH |
+| `routes` | computed Gateway-to-CH hop lists |
 
-- MQTT broker reachable on configured host/port.
-- AES key in env `GLD_AES128_KEY_HEX` or default test key for bench decode.
-- Gateway ID default `0x006F`, overridable by `PGL_GATEWAY_ID` or `GATEWAY_ID`.
-- Pull response only fully decoded when final `MSG_CLUSTER_DATA_RESPONSE` arrives at Gateway.
+TTL defaults:
 
-## Post-12 Work
+| State | Default |
+|---|---:|
+| installed parent/route | 900000 ms |
+| discovery candidate | 420000 ms |
+| Gateway-link RSSI | 420000 ms |
 
-- Formalize this boundary into a versioned contract file after node command TTL mismatch is fixed.
-- Add broker/auth provisioning model for production.
-- Add integration tests that publish representative Gateway JSON and verify Node-RED emitted GLD event/topology/pull output.
-- Add operator-safe error messages for unknown AES key, bad CRC, stale topology, and missing route.
+## HTTP Endpoints
+
+Generated Node-RED endpoints:
+
+| Endpoint | Behavior |
+|---|---|
+| `POST /pertamina-gld/decode` | manual decode |
+| `GET /pertamina-gld/topology` | topology JSON |
+| `GET /pertamina-gld/topology/view` | HTML topology UI |
+| `POST /pertamina-gld/topology/reset` | reset topology state |
+| `POST /pertamina-gld/topology/request?ch=<id>` | publish pull request if installed route exists |
+| `POST /pertamina-gld/topology/delete?ch=<id>` | remove selected CH from topology maps |

@@ -1,0 +1,29 @@
+graph LR
+    subgraph CH_HARDWARE["CH Hardware -- ESP32-WROOM-1U"]
+        subgraph RADIO_A["Radio A (STAR)"]
+            A_TXEN["TXEN GPIO5"]
+            A_RXEN["RXEN GPIO6"]
+            A_RST["RST GPIO7"]
+            A_BUSY["BUSY GPIO15"]
+            A_DIO1["DIO1 GPIO16"]
+            A_CS["CS GPIO17"]
+            SX1["SX1262 #1\n920-923 MHz SF7"]
+        end
+
+        subgraph RADIO_B["Radio B (MESH)"]
+            B_CS["CS GPIO14"]
+            B_BUSY["BUSY GPIO38"]
+            B_RXEN["RXEN GPIO39"]
+            B_TXEN["TXEN GPIO40"]
+            B_RST["RST GPIO41"]
+            B_DIO1["DIO1 GPIO42"]
+            SX2["SX1262 #2\n923.5 MHz SF9"]
+        end
+
+        SPI["SPI Bus\nSCK/MOSI/MISO\nGPIO12/11/13"]
+    end
+
+    SPI --> SX1
+    SPI --> SX2
+    SX1 -->|"LoRa STAR"| GLD_FIELD["GLD di lapangan"]
+    SX2 -->|"LoRa MESH"| NET["CH lain / Gateway"]

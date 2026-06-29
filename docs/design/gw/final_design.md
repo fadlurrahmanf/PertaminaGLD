@@ -1,88 +1,234 @@
-# Pertamina GLD Final Design - Gateway Firmware
+# Pertamina GLD Current Design - Gateway Firmware
 
-Status: current-state final design, 2026-06-25. This file describes the Gateway firmware and the current bench upload target.
+Status: current source mirror, 2026-06-29.
 
-## Source Of Truth
+## Source Files
 
-- Runtime env: `gateway_mqtt_mesh_esp32s3`.
-- Current firmware version: Gateway `0.1.3`, protocol `0.1.0`.
-- Main source path: `firmware/gateway/src/GatewayMqttMeshMain.cpp`.
-- Config source: `firmware/config/GwConfig.h`, `ServerConfig.h`, `LoraMeshConfig.h`.
+| Area | Source |
+|---|---|
+| PlatformIO env | `firmware/platformio.ini` |
+| Main runtime | `firmware/gateway/src/GatewayMqttMeshMain.cpp` |
+| Gateway config | `firmware/config/GwConfig.h` |
+| Server config | `firmware/config/ServerConfig.h` |
+| MESH config | `firmware/config/LoraMeshConfig.h` |
+| Pins | `firmware/gateway/include/GatewayBoardPins.h` |
+| Protocol | `firmware/shared/include/ProtocolConstants.h`, `AppFrame.h` |
 
-## Hardware
+## Active Build Environment
 
-Gateway uses the MESH SX1262 radio on Radio B pins:
+| Env | Board | Source set |
+|---|---|---|
+| `gw` | `4d_systems_esp32s3_gen4_r8n16` | shared `AppFrame.cpp`, `gateway/src/GatewayMqttMeshMain.cpp` |
 
-| Function | Pin |
-|---|---:|
-| SPI SCK/MOSI/MISO | GPIO12/GPIO11/GPIO13 |
-| Radio B CS/BUSY/RXEN/TXEN/RST/DIO1 | GPIO14/GPIO38/GPIO39/GPIO40/GPIO41/GPIO42 |
-| Status LED | GPIO19 |
+The env excludes GLD source, CH source, docs, tests, and versions.
 
-Radio A pins are marked unused in Gateway firmware.
-
-## Identity And Radio
-
-Gateway ID is `0x006F`. It is the MESH root and final MQTT bridge. MESH radio uses 921.0 MHz, BW125, SF9, CR 4/5, sync `0x34`, 17 dBm TX power, preamble 8, and SPI 2 MHz.
-
-## Site Network Config
-
-Gateway uses the `server::site` config namespace. For the current upload request, source config is set to:
+Firmware identifiers:
 
 | Field | Value |
 |---|---|
+| firmware name | `PertaminaGLD-Gateway` |
+| firmware version | `0.1.3` |
+| protocol version | `0.1.0` |
+| config schema version | `0.1.0` |
+
+## Hardware Pins
+
+| Function | Pin/value |
+|---|---|
+| SPI SCK/MOSI/MISO | GPIO12/GPIO11/GPIO13 |
+| unused Radio A TXEN/RXEN/RST/CS | GPIO5/GPIO6/GPIO7/GPIO17 |
+| Radio B CS/BUSY/RXEN/TXEN/RST/DIO1 | GPIO14/GPIO38/GPIO39/GPIO40/GPIO41/GPIO42 |
+| Status LED | GPIO19 |
+
+`setupPinsSafe()` sets status LED LOW, unused Radio A CS HIGH, unused Radio A RST LOW, unused Radio A RXEN/TXEN LOW, Radio B CS HIGH, Radio B RST LOW, Radio B RXEN/TXEN LOW.
+
+## Identity And Network Config
+
+| Config | Value |
+|---|---|
+| Gateway ID | `0x006F` |
 | WiFi SSID | `Fshares` |
 | WiFi password | `kayabiasa` |
 | MQTT host | `10.158.198.180` |
 | MQTT port | `1884` |
 | MQTT user/pass | `deviot` / `deviot` |
 | topic root | `gld/gateway` |
+| WiFi retry | `5000 ms` |
+| MQTT retry | `3000 ms` |
+| status interval | `10000 ms` |
+| MQTT buffer | `1024 bytes` |
 
-Do not commit production secrets permanently. Move production credentials to provisioning/NVS/local ignored config before field release.
+MQTT client ID is generated as `pgl-gateway-%04X-%08lX` using Gateway ID and ESP efuse MAC low formatting.
+
+## MESH Radio
+
+| Parameter | Value |
+|---|---:|
+| Frequency | 921.0 MHz |
+| Bandwidth | 125 kHz |
+| Spreading factor | SF9 |
+| Coding rate | 4/5 |
+| Sync word | `0x34` |
+| TX power | 17 dBm |
+| Preamble | 8 |
+| SPI clock | 2 MHz |
+| TCXO first attempt | 1.6 V |
+| XTAL fallback | 0.0 V |
+
+`beginMeshRadio()` starts SPI, toggles Radio B reset LOW 50 ms then HIGH 500 ms, creates SX1262 on Radio B pins, starts RadioLib, falls back to 0.0 V only for SPI command failure, then sets RF switch pins.
 
 ## MQTT Topics
 
-| Topic | Direction | Purpose |
+| Topic | Direction | Runtime use |
 |---|---|---|
-| `gld/gateway/uplink` | Gateway -> server | JSON wrapper for every received MESH frame |
-| `gld/gateway/status` | Gateway -> server | alive/status JSON |
-| `gld/gateway/topology` | Gateway -> server | topology reports from CH_HELLO and CH_CONFIG frames |
-| `gld/gateway/cmd/#` | server -> Gateway | command subscription umbrella |
-| `gld/gateway/cmd/pull` | server -> Gateway | build `MSG_SERVER_PULL_REQUEST` |
-| `gld/gateway/cmd/node` | server -> Gateway | build `MSG_SERVER_NODE_COMMAND` |
+| `gld/gateway/uplink` | Gateway to server | JSON wrapper for every received MESH frame |
+| `gld/gateway/status` | Gateway to server | periodic Gateway status JSON |
+| `gld/gateway/topology` | Gateway to server | CH_HELLO, CH_CONFIG_REQUEST, CH_CONFIG_RESPONSE topology JSON |
+| `gld/gateway/cmd/#` | server to Gateway | wildcard subscription |
+| `gld/gateway/cmd/pull` | server to Gateway | build `MSG_SERVER_PULL_REQUEST` |
+| `gld/gateway/cmd/node` | server to Gateway | build `MSG_SERVER_NODE_COMMAND` |
 
-Gateway connects MQTT with retry interval 3000 ms and publishes status every 10000 ms.
+Gateway subscribes all three command subscriptions after MQTT connect: wildcard, pull exact, and node exact. In callback, any topic equal to pull topic or containing `/pull` is handled as pull; any topic equal to node topic or containing `/node` is handled as node command.
+
+## Status Publish
+
+Status JSON to `gld/gateway/status`:
+
+| Field | Value |
+|---|---|
+| `kind` | `gateway-status` |
+| `gatewayId` | numeric Gateway ID |
+| `state` | currently `alive` for periodic status |
+| `wifi` | WiFi connected boolean |
+| `mqtt` | MQTT connected boolean |
+| `meshReady` | MESH radio ready boolean |
+| `ip` | local IP string when WiFi connected |
 
 ## Pull Command Builder
 
-Pull command JSON accepts `requestId` or `id` and `hopList`. Gateway builds payload `requestId(2) + hopList[]`, sets `dstId` to the first hop, and transmits `MSG_SERVER_PULL_REQUEST` on MESH.
+Accepted pull JSON:
+
+| Field | Behavior |
+|---|---|
+| `hopList`, `hop_list`, or `hops` | array of numeric or string IDs |
+| `cluster` | fallback single-hop target if no hop list array exists |
+| `requestId` | request ID |
+| `id` | fallback request ID |
+
+If no request ID is supplied, Gateway uses a local `requestId` counter starting at 1 and increments it.
+
+Wire payload:
+
+```text
+requestId:uint16BE + hopList:uint16BE[]
+```
+
+Frame:
+
+| Field | Value |
+|---|---|
+| type | `MSG_SERVER_PULL_REQUEST` |
+| srcId | Gateway ID |
+| dstId | first hop |
+| seq | Gateway `meshSeq++` |
 
 ## Node Command Builder
 
-Node command JSON expects `cluster`, `node`, optional `id`, optional `ttl`, and `hex`. Gateway builds `MSG_SERVER_NODE_COMMAND` toward the CH cluster. Current source payload includes `nodeId + commandId + ttlSec + commandLen + commandBytes`.
+Accepted node command JSON:
 
-Known integration caveat: current CH source expects `nodeId + commandId + commandLen + commandBytes`. This mismatch must be fixed or tested before relying on Gateway-origin remote GLD mode switching.
+| Field | Behavior |
+|---|---|
+| `cluster` | required target CH |
+| `node` | required target GLD |
+| `id` | command ID, default 1 |
+| `ttl` | TTL seconds, default 600 |
+| `hex` | command bytes; non-hex chars ignored by parser |
 
-## MESH Receive And Publish
+Command bytes buffer capacity is 32. Current code checks `if (commandLen > 32)` after parsing into a 32-byte buffer, so effective max is 32.
 
-For every received MESH frame, Gateway:
+Wire payload:
 
-- Captures RSSI/SNR.
-- Decodes AppFrame when possible.
-- Publishes JSON to `gld/gateway/uplink`.
-- Publishes topology events for CH_HELLO, CH_CONFIG_REQUEST, and CH_CONFIG_RESPONSE.
-- Sends compact ACK for alarm sensor frames when needed.
-- Sends Gateway CH_CONFIG_RESPONSE when it receives broadcast CH_CONFIG_REQUEST.
+```text
+nodeId:uint16BE + commandId:uint16BE + ttlSec:uint16BE + commandLen:uint8 + commandBytes
+```
 
-Gateway CH_CONFIG_RESPONSE payload contains requester ID, parent `0x0000`, depth 0, battery `0xFFFF`, route-to-root flag, and reverse RSSI/SNR. Gateway repeats the response twice with 70 ms gap.
+Frame type is `MSG_SERVER_NODE_COMMAND`, source Gateway, destination `cluster`, seq `meshSeq++`.
 
-## Upload Status
+Current source caveat: CH parser does not consume `ttlSec` in this position.
 
-Gateway was built and uploaded successfully on 2026-06-25 to COM9 with server IP `10.158.198.180`. Verification log: `firmware/logs/codex-upload-gw-com9-20260625-145100.log`. Build size was RAM 17.5 percent and flash 12.1 percent. The upload ended with `SUCCESS` and hard reset via RTS.
+## MESH Receive
 
-## Post-12 Work
+Loop order:
 
-- Fix/align node command payload with CH.
-- Move WiFi/MQTT credentials out of committed source for production.
-- Add retained/heartbeat status fields that include firmware version, broker, root ID, and radio health.
-- Soak-test Gateway as root under multi-hop CH traffic and repeated CH_CONFIG discovery.
+1. `ensureWifi()`.
+2. `ensureMqtt()`.
+3. `mqtt.loop()`.
+4. `publishStatusPeriodic()`.
+5. If MESH ready, `receiveMeshOnce()`.
+
+For each successful RX:
+
+1. Read raw frame.
+2. Capture packet length, RSSI, SNR.
+3. Publish raw wrapper to MQTT.
+4. If frame is CH_CONFIG_REQUEST, send Gateway config response.
+5. If frame is alarm `MSG_SENSOR_DATA`, send compact ACK.
+
+## Uplink JSON
+
+Gateway publishes `gld/gateway/uplink` with:
+
+| Field | Included when |
+|---|---|
+| `source="gateway"` | always |
+| `gatewayId` | always |
+| `frameHex` | always |
+| `frameLen` | always |
+| `rssi`, `snr` | always |
+| `parseStatus` | always |
+| `typeFlags`, `msgType`, `srcId`, `dstId`, `seq`, `payloadLen` | AppFrame parse OK |
+| `topology` object | parse OK and msg type is CH_HELLO with payload length >= 8 |
+
+Topology object inside uplink contains cluster ID, parent ID, optional parentAlt ID, battery, uptime, mesh depth, parentIsRoot, viaHop, Gateway ID, RSSI, SNR.
+
+## Topology Publish
+
+Gateway publishes separate topology JSON to `gld/gateway/topology` for:
+
+- `MSG_CH_HELLO`
+- `MSG_CH_CONFIG_REQUEST`
+- `MSG_CH_CONFIG_RESPONSE`
+
+Common fields: `kind`, `source`, `gatewayId`, `rootId`, `msgType`, `typeFlags`, `srcId`, `dstId`, `seq`, `payloadLen`, `rssi`, `snr`, hex ID variants.
+
+Report-specific fields:
+
+| Report | Fields |
+|---|---|
+| `ch-hello` | `chId`, `parentId`, `parentAltId`, `edgeFrom`, `edgeTo`, `batteryMv`, `uptimeSec16`, `parentIsRoot` |
+| `ch-config-response` | `chId`, `requesterId`, `parentId`, `edgeFrom`, `edgeTo`, `depth`, `batteryMv`, `routeFlags`, `routeToRoot`, `parentIsRoot` |
+| `ch-config-request` | `chId`, `requesterId` |
+
+## Gateway Responses
+
+Gateway CH_CONFIG_RESPONSE payload:
+
+| Offset | Field |
+|---:|---|
+| 0..1 | requester ID |
+| 2..3 | parent `0x0000` |
+| 4 | depth 0 |
+| 5..6 | battery `0xFFFF` |
+| 7 | route-to-root flag `0x01` |
+| 8 | Gateway RX RSSI as int8 |
+| 9 | Gateway RX SNR as int8 |
+
+Gateway alarm compact ACK:
+
+| Field | Value |
+|---|---|
+| typeFlags | `0x50` |
+| srcId | Gateway ID |
+| dstId | source CH of received alarm frame |
+| seq | same seq as received alarm frame |
+| payload | empty |

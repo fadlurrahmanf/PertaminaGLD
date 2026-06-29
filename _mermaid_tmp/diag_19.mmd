@@ -1,0 +1,27 @@
+sequenceDiagram
+    participant NR as Node-RED/Server
+    participant GW as Gateway
+    participant CH as CH (0x0064)
+    participant GLD as GLD (0xF001)
+
+    NR->>GW: MQTT cmd/node\n{"cluster":"0x0064","node":"0xF001","id":1,"ttl":600,"hex":"0101"}
+
+    GW->>GW: Parse JSON
+    GW->>GW: Build MSG_SERVER_NODE_COMMAND\nnodeId(2)+commandId(2)+ttlSec(2)+commandLen(1)+bytes
+
+    GW->>CH: LoRa MESH TX\nMSG_SERVER_NODE_COMMAND\ndstId=0x0064
+
+    CH->>CH: Parse frame (⚠️ CH parser skip ttlSec field)
+    CH->>CH: Simpan di PendingDownlink[0xF001]\nTTL 1800s
+
+    alt GLD External Power
+        CH->>GLD: LoRa STAR TX immediate\nMSG_NODE_DOWNLINK\npayload=command bytes
+    else GLD Battery Mode
+        Note over CH: Tunggu uplink berikutnya dari GLD
+        GLD->>CH: LoRa STAR TX (uplink normal)
+        CH->>GLD: LoRa STAR TX dalam RX window\nMSG_NODE_DOWNLINK\npayload=command bytes
+    end
+
+    GLD->>GLD: Parse downlink\nbyte[0]=0x01 → SET_MODE\nbyte[1]=mode (0|1|2)
+    GLD->>GLD: Simpan mode ke NVS
+    GLD->>GLD: Restart ESP

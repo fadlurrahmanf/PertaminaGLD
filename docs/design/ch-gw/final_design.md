@@ -1,84 +1,162 @@
-# Pertamina GLD Final Design - CH To Gateway Boundary
+# Pertamina GLD Current Design - CH To Gateway Boundary
 
-Status: current-state final design, 2026-06-25. This file defines the CH-Gateway MESH boundary used by the current firmware.
+Status: current source mirror, 2026-06-29.
 
-## Source Of Truth
+## Source Files
 
-- CH source: `firmware/ch/src/ChStarMeshRuntimeMain.cpp`.
-- Gateway source: `firmware/gateway/src/GatewayMqttMeshMain.cpp`.
-- Protocol source: `firmware/shared/include/ProtocolConstants.h`, `AppFrame.h`.
-- MESH radio config: `firmware/config/LoraMeshConfig.h`.
+| Area | Source |
+|---|---|
+| CH runtime | `firmware/ch/src/ChStarMeshRuntimeMain.cpp` |
+| Gateway runtime | `firmware/gateway/src/GatewayMqttMeshMain.cpp` |
+| Protocol constants | `firmware/shared/include/ProtocolConstants.h` |
+| AppFrame codec | `firmware/shared/include/AppFrame.h`, `firmware/shared/src/AppFrame.cpp` |
+| MESH config | `firmware/config/LoraMeshConfig.h` |
 
 ## AppFrame
 
-All CH-Gateway traffic uses AppFrame:
+All CH-Gateway MESH traffic uses AppFrame:
 
-| Field | Size |
+| Offset | Field | Size |
+|---:|---|---:|
+| 0 | magic `0xAA` | 1 |
+| 1 | `typeFlags` | 1 |
+| 2..3 | `srcId` big-endian | 2 |
+| 4..5 | `dstId` big-endian | 2 |
+| 6 | `seq` | 1 |
+| 7 | `payloadLen` | 1 |
+| 8.. | payload | 0..80 |
+| final 2 | CRC16-CCITT-FALSE | 2 |
+
+Constants:
+
+| Constant | Value |
 |---|---:|
-| magic `0xAA` | 1 |
-| typeFlags | 1 |
-| srcId | 2 |
-| dstId | 2 |
-| seq | 1 |
-| payloadLen | 1 |
-| payload | 0..80 |
-| crc16 | 2 |
-
-`MSG_TYPE_MASK=0x3F`; `FLAG_ALARM_ACK=0x40`; `FLAG_GLD_EXT_POWER=0x80`. MESH max payload is 80 bytes.
+| `APPFRAME_HEADER_SIZE` | 8 |
+| `APPFRAME_CRC_SIZE` | 2 |
+| `APPFRAME_OVERHEAD` | 10 |
+| `MESH_MAX_PAYLOAD` | 80 |
+| `MSG_TYPE_MASK` | `0x3F` |
+| `FLAG_ALARM_ACK` | `0x40` |
+| `FLAG_GLD_EXT_POWER` | `0x80` |
 
 ## Message Types
 
-| Type | Direction | Purpose |
+| Type | Name | Current use |
 |---:|---|---|
-| `0x10 MSG_SENSOR_DATA` | CH -> Gateway/root, or CH relay | GLD event push, alarm push, compact ACK reuse |
-| `0x30 MSG_SERVER_PULL_REQUEST` | Gateway -> CH path | Server pull request with requestId and hopList |
-| `0x31 MSG_CLUSTER_DATA_RESPONSE` | CH -> Gateway path | Pull response carrying cache records |
-| `0x32 MSG_SERVER_NODE_COMMAND` | Gateway -> CH | Store pending GLD downlink |
-| `0x33 MSG_CH_HELLO` | CH -> parent/Gateway | Installed topology and liveness |
-| `0x34 MSG_CH_CONFIG_REQUEST` | CH -> broadcast | Parent discovery |
-| `0x35 MSG_CH_CONFIG_RESPONSE` | Gateway/CH -> requester | Parent candidate response |
+| `0x10` | `MSG_SENSOR_DATA` | GLD record push, alarm push, recovery clear, compact ACK reuse |
+| `0x30` | `MSG_SERVER_PULL_REQUEST` | Gateway/server pull request toward CH path |
+| `0x31` | `MSG_CLUSTER_DATA_RESPONSE` | CH pull response toward Gateway |
+| `0x32` | `MSG_SERVER_NODE_COMMAND` | Gateway command to CH pending downlink store |
+| `0x33` | `MSG_CH_HELLO` | CH topology/liveness |
+| `0x34` | `MSG_CH_CONFIG_REQUEST` | CH parent discovery broadcast |
+| `0x35` | `MSG_CH_CONFIG_RESPONSE` | Gateway/CH parent candidate response |
 
-## Uplink Push
+## CH To Gateway Push
 
-CH converts GLD STAR records into MESH frames. Alarm frames stay queued until a compact ACK is received from the parent/Gateway. Normal records are cached and can also be returned later by pull.
+CH can send these upstream frames to active parent/Gateway:
 
-Gateway publishes every received MESH frame to MQTT `gld/gateway/uplink` as JSON containing `frameHex`, `frameLen`, RSSI, SNR, parse status, and decoded AppFrame metadata when parse succeeds.
+| Frame | Payload |
+|---|---|
+| `MSG_SENSOR_DATA` alarm push | one GLDRecord |
+| `MSG_SENSOR_DATA` recovery clear | one GLDRecord |
+| `MSG_CLUSTER_DATA_RESPONSE` | response header plus up to two current 34-byte GLDRecords |
+| `MSG_CH_HELLO` | 11-byte topology payload |
 
-## Pull Request Flow
+Gateway receives one MESH frame at a time with RadioLib `receive()`, captures RSSI/SNR, publishes it to MQTT, then handles config response and alarm ACK if applicable.
 
-Server/Gateway sends `MSG_SERVER_PULL_REQUEST`:
+## Gateway MQTT Publish For MESH Frames
 
-| Payload field | Size |
-|---|---:|
-| requestId | 2 |
-| hopList[0..n] | 2 each |
+Every valid radio RX frame is wrapped by Gateway and published to `gld/gateway/uplink` when MQTT is connected.
 
-The AppFrame `dstId` is the next hop. A relay CH rebuilds the AppFrame with itself as `srcId`, next hop as `dstId`, same `seq`, and the same payload. The final CH builds `MSG_CLUSTER_DATA_RESPONSE`.
+Gateway uplink JSON fields:
 
-Response route follows active parent routing, not a reverse hop list inside the payload. `requestId` is used to match request/response; AppFrame `seq` remains sender sequence.
+| Field | Source |
+|---|---|
+| `source` | literal `gateway` |
+| `gatewayId` | `0x006F` numeric |
+| `frameHex` | raw MESH AppFrame hex |
+| `frameLen` | raw frame length |
+| `rssi`, `snr` | RadioLib RX metrics |
+| `parseStatus` | AppFrame decode status enum value |
+| `typeFlags`, `msgType`, `srcId`, `dstId`, `seq`, `payloadLen` | included when parse OK |
+| `topology` | embedded only for valid `MSG_CH_HELLO` with payload length at least 8 |
 
-## Topology And Discovery Boundary
+Gateway also publishes topology JSON to `gld/gateway/topology` for `MSG_CH_HELLO`, `MSG_CH_CONFIG_REQUEST`, and `MSG_CH_CONFIG_RESPONSE`, unless the frame source is Gateway itself.
 
-CH_CONFIG request/response is the discovery boundary:
+## Gateway Config Response
 
-- Requester broadcasts `MSG_CH_CONFIG_REQUEST`.
-- Gateway responds with root depth 0, battery unknown `0xFFFF`, route-to-root flag, and reverse RSSI/SNR.
-- Joined CH nodes respond only when they have a route to root.
-- CH selects parent and alternate locally; Gateway does not assign parent.
+When Gateway receives a valid broadcast `MSG_CH_CONFIG_REQUEST` not from itself:
 
-Gateway also publishes topology events to MQTT `gld/gateway/topology`, including CH_HELLO, CH_CONFIG_REQUEST, and CH_CONFIG_RESPONSE derived topology reports.
+| Gateway response field | Value |
+|---|---|
+| AppFrame type | `MSG_CH_CONFIG_RESPONSE` |
+| `srcId` | Gateway ID `0x006F` |
+| `dstId` | requester ID |
+| `seq` | request seq |
+| payload 0..1 | requester ID |
+| payload 2..3 | parent `0x0000` |
+| payload 4 | depth `0` |
+| payload 5..6 | battery `0xFFFF` |
+| payload 7 | route-to-root flag `0x01` |
+| payload 8 | Gateway RX RSSI clamped to int8 |
+| payload 9 | Gateway RX SNR clamped to int8 |
 
-## Failure Modes
+Gateway waits 20 ms, then transmits the response `CONFIG_RESPONSE_REPEAT_COUNT=2` times with `CONFIG_RESPONSE_REPEAT_GAP_MS=70` ms between attempts.
 
-- If CH hears no valid candidate during JOINING, it keeps no parent and retries discovery.
-- If parent health timeout reaches 180000 ms, CH enters failover and re-discovers.
-- Weak Gateway candidates are rejected when CH-side or reverse RSSI is below configured floor.
-- Pending CH_CONFIG discovery can collide in RF; current anti-collision uses deterministic slots, and Gateway repeats root response twice.
-- Gateway-to-CH node command has a known TTL payload mismatch with current CH parser; remote GLD mode commands must be retested after this is fixed.
+## Alarm ACK
 
-## Post-12 Work
+When Gateway receives an AppFrame that:
 
-- Run multi-CH discovery soak tests and record parent/alternate stability.
-- Add stronger diagnostics for every rejected parent candidate.
-- Fix and verify `SERVER_NODE_COMMAND` payload alignment end-to-end.
-- Validate pull and alarm ACK behavior through multi-hop routes under packet loss.
+- decodes OK,
+- has message type `MSG_SENSOR_DATA`,
+- has `FLAG_ALARM_ACK`,
+
+Gateway sends a compact ACK:
+
+| Field | Value |
+|---|---|
+| typeFlags | `TYPE_ALARM_ACK_COMPACT = 0x50` |
+| srcId | Gateway ID |
+| dstId | received frame srcId |
+| seq | received frame seq |
+| payload | empty |
+
+## Pull Boundary
+
+Server publishes pull command JSON to Gateway. Gateway encodes:
+
+| Field | Value |
+|---|---|
+| AppFrame type | `MSG_SERVER_PULL_REQUEST` |
+| srcId | Gateway ID |
+| dstId | first hop in hopList |
+| seq | Gateway mesh sequence |
+| payload | `requestId:uint16BE + hopList:uint16BE[]` |
+
+Gateway accepts hop list fields named `hopList`, `hop_list`, or `hops`. If no array is supplied, it accepts `cluster` as a single-hop target.
+
+## Node Command Boundary
+
+Gateway accepts JSON fields:
+
+| JSON field | Meaning |
+|---|---|
+| `cluster` | target CH |
+| `node` | target GLD |
+| `id` | command ID, default 1 |
+| `ttl` | TTL seconds, default 600 |
+| `hex` | command bytes as hex |
+
+Current Gateway wire payload is:
+
+```text
+nodeId(2) + commandId(2) + ttlSec(2) + commandLen(1) + commandBytes
+```
+
+Current CH parser expects:
+
+```text
+nodeId(2) + commandId(2) + commandLen(1) + commandBytes
+```
+
+This mismatch is present in current source.

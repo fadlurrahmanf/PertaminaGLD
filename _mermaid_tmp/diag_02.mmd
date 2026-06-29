@@ -1,0 +1,65 @@
+graph TB
+    subgraph PHYSICAL["Fisik Lapangan"]
+        subgraph GLD_BOX["GLD Unit (ESP32-WROOM-1U)"]
+            SENSORS["MQ2/MQ3/MQ4/MQ5/MQ6/MQ7/MQ8/MQ135\n8 sensor gas"]
+            ADS["ADS1256\n24-bit ADC SPI"]
+            DAC["MCP4725 ×8\nDAC via TCA9548A"]
+            ML["Neural Network\nML Inference"]
+            GLDMCU["MCU Core\nGldUnifiedMain"]
+            LORA_GLD["SX1262\nLoRa STAR Radio"]
+        end
+
+        subgraph CH_BOX["Cluster Head Unit (ESP32-WROOM-1U)"]
+            RADIO_A["Radio A (SX1262)\nSTAR 920-923 MHz RX/TX"]
+            RADIO_B["Radio B (SX1262)\nMESH 923.5 MHz RX/TX"]
+            CACHE["NodeCache\n32 slot GLD"]
+            ALARM_Q["AlarmQueue\n8 slot"]
+            TX_Q["TxQueue\n8 slot"]
+            CHMCU["MCU Core\nChRuntime"]
+        end
+    end
+
+    subgraph BACKBONE["Backbone MESH"]
+        CH_MID["CH Intermediate\n(relay hop)"]
+    end
+
+    subgraph GW_BOX["Gateway Unit (ESP32-WROOM-1U)"]
+        RADIO_GW["Radio B (SX1262)\nMESH 923.5 MHz RX/TX"]
+        WIFI["WiFi STA"]
+        MQTTC["MQTT Client\n(PubSubClient)"]
+        GWMCU["MCU Core\nGatewayMqttMeshMain"]
+    end
+
+    subgraph SERVER_BOX["Server (PC/Cloud)"]
+        BROKER["MQTT Broker\n10.158.198.180:1884"]
+        NODERED["Node-RED\nFlow: Pertamina GLD Server"]
+        DECODE["pertamina-gld-decode.js\nAES-GCM decrypt + parse"]
+        TOPO["Topology State\npglTopology"]
+        HTTP["HTTP Endpoints\n/pertamina-gld/*"]
+    end
+
+    SENSORS --> ADS
+    ADS --> ML
+    ML --> GLDMCU
+    GLDMCU --> LORA_GLD
+    DAC --> ADS
+
+    LORA_GLD -->|"920-923 MHz SF7 STAR"| RADIO_A
+    RADIO_A --> CHMCU
+    CHMCU --> CACHE
+    CHMCU --> ALARM_Q
+    CHMCU --> TX_Q
+    TX_Q --> RADIO_B
+
+    RADIO_B -->|"923.5 MHz SF9 MESH\n(via parent chain)"| CH_MID
+    CH_MID -->|"MESH relay ke GW"| RADIO_GW
+
+    RADIO_GW --> GWMCU
+    GWMCU --> WIFI
+    WIFI --> MQTTC
+    MQTTC -->|"gld/gateway/uplink"| BROKER
+
+    BROKER --> NODERED
+    NODERED --> DECODE
+    DECODE --> TOPO
+    NODERED --> HTTP

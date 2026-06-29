@@ -1,399 +1,234 @@
-# Gateway Design
+# Pertamina GLD Current Design - Gateway Firmware
 
-**Status:** draft + bench implementation reference  
-**Tanggal:** 2026-06-18  
-**Scope:** firmware Gateway sebagai root identity/direct MESH bridge dan WiFi MQTT bridge ke server  
-**Sumber utama:** `firmware/gateway/src/GatewayMqttMeshMain.cpp`, `server/nodered/README.md`, `docs/design/gld-ch/payload-contract.draft.md`  
+Status: current source mirror, 2026-06-29.
 
----
+## Source Files
 
-## 1. Ringkasan
-
-Gateway adalah root identity/direct MESH bridge dan bridge ke server. Gateway menerima frame dari CH melalui LoRa MESH, lalu mem-publish ke server melalui MQTT. Gateway juga menerima command dari server melalui MQTT dan meneruskannya ke CH target melalui MESH.
-
-Gateway tidak melakukan decrypt payload GLD. Decrypt dilakukan di server/Node-RED.
-
-Status saat ini:
-
-- Gateway firmware `v0.1.2` sudah di-upload dan live-tested pada COM38.
-- Gateway berhasil connect WiFi dan MQTT.
-- Gateway berhasil meneruskan server pull ke CH.
-- Gateway berhasil publish `gld/gateway/uplink`.
-
----
-
-## 2. Tanggung Jawab
-
-Gateway bertanggung jawab untuk:
-
-- init Radio B / MESH,
-- connect WiFi bench,
-- connect MQTT broker,
-- subscribe topic command server,
-- build MESH frame untuk CH target,
-- receive MESH frame dari CH,
-- publish MESH frame ke MQTT dalam format JSON,
-- publish gateway status periodik,
-- memberi compact ACK untuk alarm MESH jika dibutuhkan.
-
-Gateway tidak bertanggung jawab untuk:
-
-- decrypt AES-GCM payload GLD,
-- parse plaintext gas,
-- menentukan alarm dari `gasClass/confidence`,
-- menyimpan database,
-- menjalankan dashboard,
-- melakukan training/model build.
-
----
-
-## 3. Runtime Architecture
-
-```text
-MQTT command in
-  -> command parser
-  -> AppFrame builder
-  -> MESH TX
-
-MESH RX
-  -> AppFrame parse best-effort
-  -> JSON publish to MQTT
-  -> optional compact ACK
-
-Status timer
-  -> MQTT status publish
-```
-
-Loop utama:
-
-1. Pastikan WiFi connected.
-2. Pastikan MQTT connected.
-3. Jalankan `mqtt.loop()`.
-4. Publish status periodik.
-5. Receive MESH frame.
-
----
-
-## 4. Hardware / Link
-
-Gateway memakai Radio B / MESH.
-
-Parameter bench:
-
-| Parameter | Nilai |
-|---|---:|
-| Frequency | `921.0 MHz` |
-| Bandwidth | `125 kHz` |
-| Spreading Factor | `SF9` |
-| Coding Rate | `4/5` |
-| Sync Word | `0x34` |
-| TX Power | `17 dBm` |
-| Preamble | `8` |
-| SPI | `2 MHz`, mode 0 |
-
-Catatan:
-
-- Firmware saat ini mencoba TCXO `1.6V`, lalu fallback XTAL/TCXO `0V` jika init gagal.
-- Final production pin/config harus masuk provisioning/config, bukan hardcoded.
-- LAN/Ethernet adalah opsi phase lanjut; bench saat ini memakai WiFi.
-
-Pin map firmware bench:
-
-| Sinyal | Pin |
-|---|---:|
-| SPI SCK | `12` |
-| SPI MOSI | `11` |
-| SPI MISO | `13` |
-| Radio B CS | `14` |
-| Radio B BUSY | `38` |
-| Radio B RXEN | `39` |
-| Radio B TXEN | `40` |
-| Radio B RST | `41` |
-| Radio B DIO1 | `42` |
-| LED | `19` |
-
-Build/upload bench:
-
-```powershell
-pio run -d firmware -e gateway_mqtt_mesh_esp32s3 -t upload --upload-port COM38
-```
-
-Board target:
-
-```text
-4d_systems_esp32s3_gen4_r8n16
-```
-
----
-
-## 5. IDs
-
-Bench IDs:
-
-| Entity | ID |
-|---|---:|
-| Gateway | `0x006F` |
-| Default CH | `0x0064` |
-
-Aturan:
-
-- Gateway ID adalah root identity untuk MESH.
-- CH target dapat dipilih lewat payload command MQTT.
-- ID production harus dikelola sebagai config/provisioning.
-
----
-
-## 6. MQTT Topics
-
-Gateway subscribe:
-
-| Topic | Fungsi |
+| Area | Source |
 |---|---|
-| `gld/gateway/cmd/#` | command namespace umum |
-| `gld/gateway/cmd/pull` | request data CH |
-| `gld/gateway/cmd/node` | command server ke GLD via CH |
+| PlatformIO env | `firmware/platformio.ini` |
+| Main runtime | `firmware/gateway/src/GatewayMqttMeshMain.cpp` |
+| Gateway config | `firmware/config/GwConfig.h` |
+| Server config | `firmware/config/ServerConfig.h` |
+| MESH config | `firmware/config/LoraMeshConfig.h` |
+| Pins | `firmware/gateway/include/GatewayBoardPins.h` |
+| Protocol | `firmware/shared/include/ProtocolConstants.h`, `AppFrame.h` |
 
-Gateway publish:
+## Active Build Environment
 
-| Topic | Fungsi |
+| Env | Board | Source set |
+|---|---|---|
+| `gw` | `4d_systems_esp32s3_gen4_r8n16` | shared `AppFrame.cpp`, `gateway/src/GatewayMqttMeshMain.cpp` |
+
+The env excludes GLD source, CH source, docs, tests, and versions.
+
+Firmware identifiers:
+
+| Field | Value |
 |---|---|
-| `gld/gateway/uplink` | frame MESH dari CH ke server |
-| `gld/gateway/status` | status Gateway periodik |
+| firmware name | `PertaminaGLD-Gateway` |
+| firmware version | `0.1.3` |
+| protocol version | `0.1.0` |
+| config schema version | `0.1.0` |
 
-Server/Node-RED publish turunan:
+## Hardware Pins
 
-| Topic | Fungsi |
+| Function | Pin/value |
 |---|---|
-| `gld/gateway/events` | envelope hasil parse |
-| `gld/server/decoded` | event normal hasil decrypt |
-| `gld/server/alarm` | event alarm |
-| `gld/gateway/error` | error decode/parse |
+| SPI SCK/MOSI/MISO | GPIO12/GPIO11/GPIO13 |
+| unused Radio A TXEN/RXEN/RST/CS | GPIO5/GPIO6/GPIO7/GPIO17 |
+| Radio B CS/BUSY/RXEN/TXEN/RST/DIO1 | GPIO14/GPIO38/GPIO39/GPIO40/GPIO41/GPIO42 |
+| Status LED | GPIO19 |
 
----
+`setupPinsSafe()` sets status LED LOW, unused Radio A CS HIGH, unused Radio A RST LOW, unused Radio A RXEN/TXEN LOW, Radio B CS HIGH, Radio B RST LOW, Radio B RXEN/TXEN LOW.
 
-## 7. MQTT Command: Pull
+## Identity And Network Config
 
-Input topic:
+| Config | Value |
+|---|---|
+| Gateway ID | `0x006F` |
+| WiFi SSID | `Fshares` |
+| WiFi password | `kayabiasa` |
+| MQTT host | `10.158.198.180` |
+| MQTT port | `1884` |
+| MQTT user/pass | `deviot` / `deviot` |
+| topic root | `gld/gateway` |
+| WiFi retry | `5000 ms` |
+| MQTT retry | `3000 ms` |
+| status interval | `10000 ms` |
+| MQTT buffer | `1024 bytes` |
 
-```text
-gld/gateway/cmd/pull
-```
+MQTT client ID is generated as `pgl-gateway-%04X-%08lX` using Gateway ID and ESP efuse MAC low formatting.
 
-JSON payload:
+## MESH Radio
 
-```json
-{
-  "requestId": 1,
-  "hopList": ["0x0064"]
-}
-```
+| Parameter | Value |
+|---|---:|
+| Frequency | 921.0 MHz |
+| Bandwidth | 125 kHz |
+| Spreading factor | SF9 |
+| Coding rate | 4/5 |
+| Sync word | `0x34` |
+| TX power | 17 dBm |
+| Preamble | 8 |
+| SPI clock | 2 MHz |
+| TCXO first attempt | 1.6 V |
+| XTAL fallback | 0.0 V |
 
-Catatan:
+`beginMeshRadio()` starts SPI, toggles Radio B reset LOW 50 ms then HIGH 500 ms, creates SX1262 on Radio B pins, starts RadioLib, falls back to 0.0 V only for SPI command failure, then sets RF switch pins.
 
-- Firmware Gateway memakai `hopList[]` untuk menentukan jalur CH target.
-- `requestId` boleh dikirim server untuk korelasi; jika tidak dikirim, Gateway membuat request ID lokal.
-- Field `cluster` masih diterima sebagai fallback kompatibilitas lama dan diterjemahkan menjadi `hopList[0]`.
-- Field `node` tidak dipakai untuk pull karena pull phase saat ini adalah CH-level pull dari cache, bukan request langsung ke GLD.
-- Callback bench subscribe wildcard `gld/gateway/cmd/#` dan menerima topic yang mengandung `/pull` atau `/node`; production sebaiknya exact-match topic supaya command salah topic tidak dieksekusi.
+## MQTT Topics
 
-Gateway membangun:
+| Topic | Direction | Runtime use |
+|---|---|---|
+| `gld/gateway/uplink` | Gateway to server | JSON wrapper for every received MESH frame |
+| `gld/gateway/status` | Gateway to server | periodic Gateway status JSON |
+| `gld/gateway/topology` | Gateway to server | CH_HELLO, CH_CONFIG_REQUEST, CH_CONFIG_RESPONSE topology JSON |
+| `gld/gateway/cmd/#` | server to Gateway | wildcard subscription |
+| `gld/gateway/cmd/pull` | server to Gateway | build `MSG_SERVER_PULL_REQUEST` |
+| `gld/gateway/cmd/node` | server to Gateway | build `MSG_SERVER_NODE_COMMAND` |
 
-```text
-msgType = SERVER_PULL_REQUEST (0x30)
-srcId = Gateway ID
-dstId = hopList[0]
-payload = requestId:uint16BE + hopList:uint16BE[]
-```
+Gateway subscribes all three command subscriptions after MQTT connect: wildcard, pull exact, and node exact. In callback, any topic equal to pull topic or containing `/pull` is handled as pull; any topic equal to node topic or containing `/node` is handled as node command.
 
-Catatan:
+## Status Publish
 
-- Payload 4 byte adalah bentuk single-hop bench: `requestId + hopList[0]`.
-- Multi-hop memakai `requestId + hopList[]` dengan lebih dari satu CH ID.
+Status JSON to `gld/gateway/status`:
 
----
+| Field | Value |
+|---|---|
+| `kind` | `gateway-status` |
+| `gatewayId` | numeric Gateway ID |
+| `state` | currently `alive` for periodic status |
+| `wifi` | WiFi connected boolean |
+| `mqtt` | MQTT connected boolean |
+| `meshReady` | MESH radio ready boolean |
+| `ip` | local IP string when WiFi connected |
 
-## 8. MQTT Command: Node Command
+## Pull Command Builder
 
-Input topic:
+Accepted pull JSON:
 
-```text
-gld/gateway/cmd/node
-```
+| Field | Behavior |
+|---|---|
+| `hopList`, `hop_list`, or `hops` | array of numeric or string IDs |
+| `cluster` | fallback single-hop target if no hop list array exists |
+| `requestId` | request ID |
+| `id` | fallback request ID |
 
-JSON payload rencana/bench:
+If no request ID is supplied, Gateway uses a local `requestId` counter starting at 1 and increments it.
 
-```json
-{
-  "cluster": "0x0064",
-  "node": "0xF001",
-  "id": 1,
-  "ttl": 600,
-  "hex": "..."
-}
-```
-
-Gateway membangun:
-
-```text
-msgType = SERVER_NODE_COMMAND (0x32)
-payload = nodeId:uint16BE + commandId:uint16BE + ttlSec:uint16BE + commandLen:uint8 + commandBytes
-```
-
-Status:
-
-- Command builder sudah ada di Gateway firmware.
-- Execution penuh sampai GLD adalah phase downlink berikutnya.
-- Validasi command production harus fail-closed: reject JSON invalid, `cluster` hilang/invalid, `id` invalid, `ttl` invalid, hex ganjil/invalid/overflow, dan publish NACK/error.
-
----
-
-## 9. MQTT Uplink JSON
-
-Gateway publish ke:
+Wire payload:
 
 ```text
-gld/gateway/uplink
+requestId:uint16BE + hopList:uint16BE[]
 ```
 
-JSON:
+Frame:
 
-```json
-{
-  "source": "gateway",
-  "gatewayId": 111,
-  "frameHex": "AA31...",
-  "frameLen": 50,
-  "rssi": -66,
-  "snr": 9.25,
-  "parseStatus": 0,
-  "typeFlags": 49,
-  "msgType": 49,
-  "srcId": 100,
-  "dstId": 111,
-  "seq": 1,
-  "payloadLen": 40
-}
-```
+| Field | Value |
+|---|---|
+| type | `MSG_SERVER_PULL_REQUEST` |
+| srcId | Gateway ID |
+| dstId | first hop |
+| seq | Gateway `meshSeq++` |
 
-Aturan:
+## Node Command Builder
 
-- `frameHex` adalah source of truth untuk server decode.
-- Field parse metadata membantu monitor/debug.
-- Jika `parseStatus != 0`, server tetap bisa log error dengan `frameHex`.
+Accepted node command JSON:
 
----
+| Field | Behavior |
+|---|---|
+| `cluster` | required target CH |
+| `node` | required target GLD |
+| `id` | command ID, default 1 |
+| `ttl` | TTL seconds, default 600 |
+| `hex` | command bytes; non-hex chars ignored by parser |
 
-## 10. Status Publish
+Command bytes buffer capacity is 32. Current code checks `if (commandLen > 32)` after parsing into a 32-byte buffer, so effective max is 32.
 
-Gateway publish periodik:
+Wire payload:
 
 ```text
-gld/gateway/status
+nodeId:uint16BE + commandId:uint16BE + ttlSec:uint16BE + commandLen:uint8 + commandBytes
 ```
 
-JSON:
+Frame type is `MSG_SERVER_NODE_COMMAND`, source Gateway, destination `cluster`, seq `meshSeq++`.
 
-```json
-{
-  "kind": "gateway-status",
-  "gatewayId": 111,
-  "state": "alive",
-  "wifi": true,
-  "mqtt": true,
-  "meshReady": true,
-  "ip": "10.255.102.36"
-}
-```
+Current source caveat: CH parser does not consume `ttlSec` in this position.
 
-Interval bench saat ini:
+## MESH Receive
 
-```text
-10000 ms
-```
+Loop order:
 
----
+1. `ensureWifi()`.
+2. `ensureMqtt()`.
+3. `mqtt.loop()`.
+4. `publishStatusPeriodic()`.
+5. If MESH ready, `receiveMeshOnce()`.
 
-## 11. Error Handling Dan Data Loss
+For each successful RX:
 
-Gateway:
+1. Read raw frame.
+2. Capture packet length, RSSI, SNR.
+3. Publish raw wrapper to MQTT.
+4. If frame is CH_CONFIG_REQUEST, send Gateway config response.
+5. If frame is alarm `MSG_SENSOR_DATA`, send compact ACK.
 
-- Jika MQTT down, Gateway mencoba reconnect.
-- Jika MQTT disconnected saat uplink datang, firmware bench belum punya offline buffer/retry; frame uplink bisa hilang.
-- Jika MESH TX gagal, Gateway log `GW_MESH_TX ... state != 0`.
-- Jika frame MESH parse gagal, Gateway tetap dapat publish `frameHex` dengan `parseStatus` non-zero untuk debug.
-- ACK alarm guard production harus memastikan `dstId == Gateway ID`, payload valid, dan source CH masuk allowlist sebelum ACK.
+## Uplink JSON
 
-Server/Node-RED:
+Gateway publishes `gld/gateway/uplink` with:
 
-- Jika `frameHex` invalid, publish error/debug route.
-- Jika decrypt gagal, event tidak boleh masuk alarm production tanpa gate decrypt dan key valid.
+| Field | Included when |
+|---|---|
+| `source="gateway"` | always |
+| `gatewayId` | always |
+| `frameHex` | always |
+| `frameLen` | always |
+| `rssi`, `snr` | always |
+| `parseStatus` | always |
+| `typeFlags`, `msgType`, `srcId`, `dstId`, `seq`, `payloadLen` | AppFrame parse OK |
+| `topology` object | parse OK and msg type is CH_HELLO with payload length >= 8 |
 
----
+Topology object inside uplink contains cluster ID, parent ID, optional parentAlt ID, battery, uptime, mesh depth, parentIsRoot, viaHop, Gateway ID, RSSI, SNR.
 
-## 12. Security
+## Topology Publish
 
-Phase bench:
+Gateway publishes separate topology JSON to `gld/gateway/topology` for:
 
-- WiFi/MQTT masih hardcoded di firmware untuk percepatan test.
-- Node-RED Aedes broker berjalan di laptop bench port `1884`.
+- `MSG_CH_HELLO`
+- `MSG_CH_CONFIG_REQUEST`
+- `MSG_CH_CONFIG_RESPONSE`
 
-Production requirement:
+Common fields: `kind`, `source`, `gatewayId`, `rootId`, `msgType`, `typeFlags`, `srcId`, `dstId`, `seq`, `payloadLen`, `rssi`, `snr`, hex ID variants.
 
-- WiFi SSID/password tidak boleh hardcoded.
-- MQTT host/port/user/password harus dari provisioning/config.
-- Credential tidak boleh masuk git/log.
-- Credential production harus dipindah ke NVS/provisioning/env sebelum field deployment.
-- MQTT sebaiknya memakai TLS atau setidaknya network terisolasi.
-- Gateway tidak menyimpan AES key GLD karena decrypt dilakukan di server.
+Report-specific fields:
 
----
+| Report | Fields |
+|---|---|
+| `ch-hello` | `chId`, `parentId`, `parentAltId`, `edgeFrom`, `edgeTo`, `batteryMv`, `uptimeSec16`, `parentIsRoot` |
+| `ch-config-response` | `chId`, `requesterId`, `parentId`, `edgeFrom`, `edgeTo`, `depth`, `batteryMv`, `routeFlags`, `routeToRoot`, `parentIsRoot` |
+| `ch-config-request` | `chId`, `requesterId` |
 
-## 13. Functional Monitor
+## Gateway Responses
 
-Serial boot expected:
+Gateway CH_CONFIG_RESPONSE payload:
 
-```text
-GW_MESH_READY=1
-GW_WIFI_CONNECT ssid=...
-GW_MQTT_CONNECT host=... port=1884 ok=1
-GW_MQTT_SUB topic=gld/gateway/cmd/# ok=1
-```
+| Offset | Field |
+|---:|---|
+| 0..1 | requester ID |
+| 2..3 | parent `0x0000` |
+| 4 | depth 0 |
+| 5..6 | battery `0xFFFF` |
+| 7 | route-to-root flag `0x01` |
+| 8 | Gateway RX RSSI as int8 |
+| 9 | Gateway RX SNR as int8 |
 
-Pull expected:
+Gateway alarm compact ACK:
 
-```text
-GW_MQTT_CMD topic=gld/gateway/cmd/pull
-GW_MESH_TX reason=server-pull state=0 len=14
-GW_MESH_RX state=0 len=50
-GW_MQTT_PUBLISH topic=gld/gateway/uplink ok=1 frameLen=50 parseStatus=0
-```
-
----
-
-## 14. Acceptance Criteria
-
-Gateway dianggap ready phase bench jika:
-
-- Radio MESH init sukses.
-- WiFi connected.
-- MQTT connected.
-- Subscribe command topics sukses.
-- Pull command dari MQTT menghasilkan MESH TX.
-- MESH response dari CH dipublish ke `gld/gateway/uplink`.
-- Status publish periodik muncul.
-- Node-RED dapat decode frame yang dipublish.
-
-Current bench sudah memenuhi normal pull acceptance.
-
----
-
-## 15. Open Items
-
-- Config/provisioning untuk WiFi/MQTT/IDs.
-- Offline buffer jika MQTT/server down.
-- Non-blocking MESH RX jika traffic naik.
-- Gateway OTA/update strategy.
-- Production logging level.
-- TLS/MQTT security.
-- Gateway watchdog dan reconnect hardening.
-- ACK alarm guard dengan `dstId`, payload valid, dan source CH allowlist.
+| Field | Value |
+|---|---|
+| typeFlags | `0x50` |
+| srcId | Gateway ID |
+| dstId | source CH of received alarm frame |
+| seq | same seq as received alarm frame |
+| payload | empty |

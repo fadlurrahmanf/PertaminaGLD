@@ -1,0 +1,23 @@
+stateDiagram-v2
+    [*] --> BOOT
+    BOOT --> WAIT_BATT : immediate
+
+    WAIT_BATT --> RADIO_INIT : 8x batt ≥ START_MV (3500)
+    WAIT_BATT --> WAIT_BATT : batt < threshold
+
+    RADIO_INIT --> JOINING : radio init OK, clear cache/queue
+
+    JOINING --> JOINED : kandidat diterima, parent dipilih
+    JOINING --> JOINING : kirim CH_CONFIG_REQUEST tiap 5s\ntimeout 15s → retry
+
+    JOINED --> LOW_POWER : batt < RUN_MIN_MV (3150)
+    JOINED --> PARENT_FAILOVER : parent health timeout\natau alarm ACK fail ≥ 3
+    JOINED --> JOINED : STAR RX/TX, MESH RX/TX\nhello, housekeeping
+
+    LOW_POWER --> JOINED : batt pulih
+    LOW_POWER --> PARENT_FAILOVER : parent health timeout
+
+    PARENT_FAILOVER --> JOINING : discovery ulang
+    PARENT_FAILOVER --> RECOVERY : no-ACK burst ≥ 5
+
+    RECOVERY --> [*] : ESP.restart() setelah 500ms

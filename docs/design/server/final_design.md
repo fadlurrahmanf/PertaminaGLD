@@ -1,126 +1,231 @@
-# Pertamina GLD Final Design - Server And Node-RED
+# Pertamina GLD Current Design - Server And Node-RED
 
-Status: current-state final design, 2026-06-25. This file describes the Node-RED/server flow as implemented by the current repository.
+Status: current source mirror, 2026-06-29.
 
-## Source Of Truth
+## Source Files
 
-- Flow generator/deployer: `server/nodered/apply-pertamina-gld-flow.js`.
-- Decode function: `server/nodered/functions/pertamina-gld-decode.js`.
-- Generated flow snapshot: `server/nodered/pertamina-gld-server.flow.json`.
-- Dataset helpers: `server/nodered/send_dataset_cmd.py`, `gld_dataset_recorder.py`.
-
-## Runtime Endpoints
-
-| Endpoint | Purpose |
+| Area | Source |
 |---|---|
-| `POST /pertamina-gld/decode` | manual decode input |
-| `GET /pertamina-gld/topology` | topology JSON |
-| `GET /pertamina-gld/topology/view` | browser topology UI |
-| `POST /pertamina-gld/topology/reset` | clear topology state |
-| `POST /pertamina-gld/topology/request?ch=<id>` | publish pull request using installed route |
-| `POST /pertamina-gld/topology/delete?ch=<id>` | remove CH topology state until future events recreate it |
+| Server flow generator | `server/nodered/apply-pertamina-gld-flow.js` |
+| Generated flow snapshot | `server/nodered/pertamina-gld-server.flow.json` |
+| Decode function | `server/nodered/functions/pertamina-gld-decode.js` |
+| Dataset command helper | `server/nodered/send_dataset_cmd.py` |
+| Dataset recorder helper | `server/nodered/gld_dataset_recorder.py` |
+| Dataset flow snapshot | `server/nodered/pertamina-gld-dataset.flow.json` |
 
-The live topology page auto-refreshes every 1 second and shows CH status, last CH_HELLO age, expected next event, Request, and Hapus actions.
+## Flow Generator
 
-## Decode Pipeline
+`apply-pertamina-gld-flow.js`:
 
-Node-RED accepts Gateway MQTT JSON, direct frame hex, buffers, topology objects, and gateway status objects. It:
+- Reads `functions/pertamina-gld-decode.js`.
+- Builds a Node-RED tab `Pertamina GLD Server`.
+- Writes `server/nodered/pertamina-gld-server.flow.json`.
+- With `--generate-only`, stops after writing the JSON.
+- Without `--generate-only`, reads current Node-RED `/flows`, backs up local Node-RED files, merges/replaces `pgl_*` nodes, and POSTs full deployment to Node-RED.
+- Creates/uses broker config node `pgl_mqtt_broker`.
+- Adds credentials to the deployment body only when MQTT user or password is supplied.
 
-- normalizes input,
-- validates AppFrame magic/length/CRC,
-- separates control frames from GLD data frames,
-- parses `MSG_SENSOR_DATA`, `MSG_CLUSTER_DATA_RESPONSE`, `MSG_SERVER_PULL_REQUEST`, and CH topology messages,
-- decrypts 29-byte GLD encrypted payloads with AES-128-GCM,
-- emits GLD event objects with gas class, confidence, battery, flags, dedup key, and source metadata.
+Default CLI values:
 
-Gas class mapping is:
+| Arg/default | Value |
+|---|---|
+| `node-red-url` | `http://127.0.0.1:1880` |
+| `node-red-user-dir` | `C:\Users\asus\.node-red` |
+| `gateway-status-url` | `http://192.168.4.1/api/status` |
+| `gateway-base-url` | `http://192.168.4.1` |
+| `mqtt-host` | `127.0.0.1` |
+| `mqtt-port` | `1884` |
+| `mqtt-user` | `MQTT_USER` env or empty |
+| `mqtt-password` | `MQTT_PASS` env or empty |
+
+## Runtime Inputs
+
+Generated server flow listens to:
+
+| Input | Source |
+|---|---|
+| `POST /pertamina-gld/decode` | manual HTTP decode |
+| `gld/gateway/uplink` | Gateway MQTT uplink |
+| `gld/gateway/topology` | Gateway topology JSON |
+| `gld/gateway/raw` | raw/debug MQTT input |
+| `pertamina/gld/uplink` | compatibility MQTT input |
+| optional Gateway poll inject | `gateway/status/poll` |
+| test vector inject | `gld/test/vector` |
+
+Decode normalizer accepts buffers, byte arrays, JSON strings, raw hex strings, gateway-status objects with `gateway_id` and `events`, topology objects, and objects containing `frameHex`, `appFrameHex`, `recordHex`, `payload_hex`, `payloadHex`, or `hex`.
+
+## Protocol Decode
+
+Constants in decode function:
+
+| Constant | Value |
+|---|---:|
+| `MSG_SENSOR_DATA` | `0x10` |
+| `MSG_SERVER_PULL_REQUEST` | `0x30` |
+| `MSG_CLUSTER_DATA_RESPONSE` | `0x31` |
+| `MSG_CH_HELLO` | `0x33` |
+| `MSG_MESH_CONTROL_MIN` | `0x30` |
+| `MSG_MESH_CONTROL_MAX` | `0x3F` |
+| `MSG_TYPE_MASK` | `0x3F` |
+| `FLAG_ALARM_ACK` | `0x40` |
+| `FLAG_GLD_EXT_POWER` | `0x80` |
+| `NC_FLAG_ALARM` | `0x01` |
+| `NC_FLAG_EXT_POWER` | `0x10` |
+| `GLD_ENCRYPTED_LEN` | 29 |
+| `GLD_RECORD_LEN` | 34 |
+| default Gateway ID | `0x006F` |
+| default test AES key | `000102030405060708090A0B0C0D0E0F` |
+
+Gas class names:
 
 | ID | Name |
 |---:|---|
-| 0 | clearGas |
-| 1 | LPG |
-| 2 | propana |
-| 3 | butana |
-| 4 | metana |
-| 5 | reserve |
-| 6 | anomaly |
+| 0 | `clearGas` |
+| 1 | `LPG` |
+| 2 | `propana` |
+| 3 | `butana` |
+| 4 | `metana` |
+| 5 | `reserve` |
+| 6 | `anomaly` |
+
+AppFrame validation:
+
+- Minimum length 10.
+- Magic byte `0xAA`.
+- Total length equals `10 + payloadLen`.
+- CRC16-CCITT-FALSE over header and payload.
+
+## AES-GCM Decode
+
+Encrypted payload layout:
+
+| Offset | Field |
+|---:|---|
+| 0 | key ID |
+| 1..12 | nonce |
+| 13..16 | ciphertext |
+| 17..28 | 12-byte tag |
+
+Key behavior:
+
+- Expected key ID defaults to env `GLD_KEY_ID` or 1.
+- AES key comes from env `GLD_AES128_KEY_HEX` or default test key.
+- Key hex must be 32 hex characters.
+- Node-RED function requires Node crypto from `global.get("crypto")` or global `crypto`.
+
+AAD is reconstructed as:
+
+```text
+nodeId:uint16BE + seq:uint8 + flags:uint8 + keyId:uint8
+```
+
+Plaintext must be 4 bytes: `gasClass`, `confidence`, `batteryMv:uint16BE`.
+
+## Decode Outputs
+
+Output topics:
+
+| Topic | Payload |
+|---|---|
+| `gld/gateway/status` | gateway status object |
+| `gld/gateway/events` | event envelope/debug object |
+| `gld/server/decoded` | non-alarm decoded GLD event |
+| `gld/server/alarm` | alarm decoded GLD event |
+| `gld/server/topology` | topology event |
+| `gld/gateway/error` | error object |
+
+Error object:
+
+| Field | Meaning |
+|---|---|
+| `ok` | false |
+| `kind` | `pertamina-gld-error` |
+| `reason` | error reason |
+| `detail` | error detail |
+| `sourceTopic` | input topic |
+| `receivedAt` | ISO timestamp |
 
 ## Topology State
 
-Flow state key: `pglTopology`.
+Flow context key: `pglTopology`.
 
-Tracked maps:
+Topology state fields:
 
-- `parents`: installed CH parent reports.
-- `discovery`: pending CH_CONFIG discovery candidates.
-- `gatewayLinks`: RSSI/SNR for CH_CONFIG request heard by Gateway.
-- `hellos`: latest CH_HELLO per CH.
-- `routes`: computed route from Gateway to each installed CH.
+| Field | Meaning |
+|---|---|
+| `gatewayIdHex` | root Gateway ID |
+| `parents` | installed parent reports by CH hex ID |
+| `discovery` | CH_CONFIG discovery candidates |
+| `gatewayLinks` | Gateway-heard CH_CONFIG request quality |
+| `hellos` | latest CH_HELLO per CH |
+| `routes` | computed route arrays |
+| `updatedAt` | latest installed update |
+| `discoveryUpdatedAt` | latest discovery-only update |
+| `resetAt` | set by reset endpoint |
 
-TTL defaults:
+TTL env defaults:
 
-| State | TTL |
+| Env | Default |
 |---|---:|
-| installed parent / route | 900000 ms |
-| discovery candidate | 420000 ms |
-| Gateway-link RSSI | 420000 ms |
-| CH_HELLO age | pruned with installed parent TTL |
+| `PGL_TOPOLOGY_PARENT_TTL_MS` | 900000 |
+| `PGL_TOPOLOGY_DISCOVERY_TTL_MS` | 420000 |
+| `PGL_TOPOLOGY_GATEWAY_LINK_TTL_MS` | 420000 |
 
-Discovery candidates are not retained when the same CH already has a fresh installed topology route.
+Route builder walks parent links from target CH back to Gateway, with guard limit 16.
 
-## Topology UI Actions
+## Topology HTTP UI
 
-Request button:
+Endpoints:
 
-- Requires installed route.
-- Builds `hopList` from topology route.
-- Publishes JSON to `gld/gateway/cmd/pull`.
-- Returns HTTP 400 if route is missing/invalid.
+| Endpoint | Behavior |
+|---|---|
+| `GET /pertamina-gld/topology` | returns JSON with nodes, edges, routes, discovery |
+| `GET /pertamina-gld/topology/view` | returns HTML/CSS/JS topology UI |
+| `POST /pertamina-gld/topology/reset` | clears parents, discovery, gatewayLinks, hellos, routes |
+| `POST /pertamina-gld/topology/request?ch=<id>` | publishes `{requestId, hopList}` to `gld/gateway/cmd/pull` if route exists |
+| `POST /pertamina-gld/topology/delete?ch=<id>` | deletes CH from all topology maps and any route that includes it |
 
-Hapus button:
+The HTML UI auto-refreshes every 1000 ms, stores manual node layout in `localStorage` key `pertamina-gld-topology-layout-v1`, and provides Refresh, Reset Layout, Reset Routing, Request, and Hapus controls.
 
-- Removes the selected CH from `parents`, `discovery`, `gatewayLinks`, `hellos`, and `routes`.
-- The CH reappears only after later CH_HELLO/topology/discovery events.
+## Dataset Helpers
 
-## Dataset Server Flow
+`send_dataset_cmd.py`:
 
-GLD dataset mode publishes to `gas-leak-detector/F001/dataset/data`, status, summary, and ack topics. The dataset pipeline stores bounded captures to MySQL and CSV. Final verified schema is:
+| Field | Value |
+|---|---|
+| MQTT host | env `MQTT_HOST` or `127.0.0.1` |
+| MQTT port | env `MQTT_PORT` or `1884` |
+| MQTT user/pass | env `MQTT_USER` / `MQTT_PASS` or empty |
+| client ID | `py-dataset-cmd` |
+| topic | `gas-leak-detector/F001/dataset` |
 
-- `device_id`
-- `node_id`
-- `mode`
-- `seq`
-- `timestamp_ms`
-- `label`
-- `nulling_profile_id`
-- `sensor_voltage[8]`
-- `sensor_gain[8]`
-- `feature_order[8]`
+Start command JSON:
 
-Verified feature order is MQ8, MQ135, MQ3, MQ5, MQ4, MQ7, MQ6, MQ2.
+```json
+{"cmd":"START_DATASET","label":"clear_air_test","target_samples":0,"sample_interval_ms":1000,"max_duration_ms":0,"use_fan_intake":false,"fan_on_ms":1000,"post_fan_settle_ms":0}
+```
 
-## Debug Outputs
+Stop command JSON:
 
-The flow keeps compact debug labels:
+```json
+{"cmd":"STOP_DATASET"}
+```
 
-- INSTALLED
-- DISCOVERY CANDIDATE
-- STALE DISCOVERY
-- STALE INSTALLED
+`gld_dataset_recorder.py`:
 
-For pull responses, compact debug includes response requestId, status, record count, responseFromCh, and GLD event summary when records are present.
+| Field | Default |
+|---|---|
+| MQTT topic | `gas-leak-detector/+/dataset/data` |
+| MQTT host/port | `127.0.0.1:1884` |
+| MySQL host/port | `localhost:3306` |
+| MySQL user/pass/db | `root` / empty / `pertamina_gld` |
+| CSV path | `gld-dataset.csv` |
 
-## Status And Caveats
+Recorder table columns:
 
-- Node-RED topology changes through 2026-06-24 were deployed and verified against the live page/API.
-- Current generated flow contains the same topology features and should be redeployed only when the operator wants runtime change.
-- No Node-RED deploy is required for creating this final design documentation.
-- Gateway node command path has a known firmware payload mismatch and should not be presented as fully production-verified until fixed.
+```text
+device_id,node_id,mode,seq,timestamp_ms,label,nulling_profile_id,
+sv0..sv7,gain0..gain7
+```
 
-## Post-12 Work
-
-- Add integration tests for topology Request/Hapus and pull response decode.
-- Add persistent storage/history for topology if operator needs historical route audit.
-- Add role-based operator UI if dashboard becomes a field tool.
-- Add production MySQL migration/backup scripts for dataset and alarm history.
-- Add model-training export pipeline from verified dataset rows.
+`pertamina-gld-dataset.flow.json` is a separate dataset flow snapshot. Its function expects payload fields `ch`, `gain`, `ok`, `nodeId`, `seq`, `ts_ms`, `label`, `profileId`, which differs from current GLD unified dataset JSON field names `sensor_voltage`, `sensor_gain`, `feature_order`, `node_id`, `timestamp_ms`, `nulling_profile_id`.

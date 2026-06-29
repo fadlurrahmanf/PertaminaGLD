@@ -1,0 +1,8 @@
+flowchart LR
+    GLD_ALARM["GLD\nAlarm TX"] -->|"STAR AlarmFrame"| CH_QUEUE["CH\nAlarmQueue\n(8 slot)"]
+    CH_QUEUE -->|"STAR Compact ACK"| GLD_ACK["GLD\nterima ACK"]
+    CH_QUEUE -->|"MESH AlarmPush\n+ pending ACK 1500ms"| GW_PROC["GW\nDecode + proses"]
+    GW_PROC -->|"Compact MESH ACK\n0x50"| CH_ACK["CH\nhapus dari queue"]
+    GW_PROC -->|"MQTT uplink"| NR["Node-RED\nalarm event"]
+
+    CH_QUEUE -->|"ACK timeout 1500ms\ntanpa ACK dari GW"| FAIL_COUNT["CH\nfail counter++\n(max 3 → failover)"]

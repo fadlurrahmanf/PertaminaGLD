@@ -1,0 +1,55 @@
+flowchart TD
+    subgraph SENSOR_BLOCK["Hardware Sensor"]
+        MQ["8 Sensor Gas\nMQ2/3/4/5/6/7/8/135"]
+        TCA["TCA9548A\nI2C Mux 0x71"]
+        MCP["MCP4725 ×8\nDAC 0x60\n(Nulling)"]
+        ADS["ADS1256\n24-bit ADC SPI\n(GPIO47/10/18)"]
+    end
+
+    subgraph PROC_BLOCK["Processing"]
+        MA["GldMovingAverage\n10 sampel warm-up"]
+        TC["GldThresholdClassifier"]
+        NN["NeuralNetwork\npredict()"]
+        FM["GldFrameBuilder\nGldPayload + GldCrypto"]
+    end
+
+    subgraph OUTPUT_BLOCK["Output"]
+        LORA["SX1262\nLoRa STAR TX\n920-923 MHz SF7"]
+        LED["Status LED GPIO41"]
+        LAMP["Alarm Lamp GPIO1"]
+        BUZ["Buzzer GPIO2"]
+        FAN["DC Fan GPIO42"]
+    end
+
+    subgraph POWER_BLOCK["Power"]
+        BATT["Battery ADC GPIO4"]
+        PWR24["24V-Good GPIO45"]
+        POWER["GldPower\nmode: battery/5v/24v"]
+        PMODE_BATT["Mode: battery\nexternalPower=0"]
+        PMODE_5V["Mode: 5v\nexternalPower=1"]
+        PMODE_24V["Mode: 24v\nexternalPower=1"]
+    end
+
+    MQ --> TCA
+    TCA --> ADS
+    MCP --> TCA
+    ADS -->|"8 channel voltage"| MA
+    MA -->|"setelah 10 sampel"| NN
+    NN -->|"gasClass + confidence"| TC
+    TC -->|"alarm?"| LAMP
+    TC -->|"alarm?"| BUZ
+    TC -->|"gasClass + confidence"| FM
+
+    BATT --> POWER
+    PWR24 --> POWER
+    POWER --> PMODE_BATT
+    POWER --> PMODE_5V
+    POWER --> PMODE_24V
+    POWER -->|"mode + batteryMv"| FM
+
+    PMODE_BATT -->|"FAN ON sebelum scan\nFAN OFF sesudah scan"| FAN
+    PMODE_5V -->|"FAN ON selalu\nselama inference"| FAN
+    PMODE_24V -->|"FAN ON selalu\nselama inference"| FAN
+
+    FM -->|"AppFrame + AES-GCM"| LORA
+    LORA -->|"RX window 2000ms"| DOWNLINK_RX["Terima Downlink\nMSG_NODE_DOWNLINK"]

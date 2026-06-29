@@ -42,13 +42,14 @@ pio device monitor -p <COMx> -b 115200 --raw
 
 | Environment | Target | Board COM |
 |---|---|---|
-| `gld_unified_esp32s3` | GLD unified final runtime, attached to CH3 (ID 0x0066) | COM10 |
-| `ch_layer1_1_esp32s3` | CH1 — ID 0x0064 | COM39 |
-| `ch_layer1_2_esp32s3` | CH2 — ID 0x0065 | COM38 |
-| `ch_layer2_1_esp32s3` | CH3 — ID 0x0066, GLD parent in current bench | COM5 |
-| `gateway_mqtt_mesh_esp32s3` | Gateway MESH+MQTT bridge (ID 0x006F) | COM3 |
+| `gld` | GLD unified final runtime | COM10 |
+| `gldw` | GLD WROOM bench runtime | COM9 |
+| `ch1` | CH1 - ID 0x0064 | COM39 |
+| `ch2` | CH2 - ID 0x0065 | COM38 |
+| `ch3` | CH3 - ID 0x0066, GLD parent in current bench | COM5 |
+| `gw` | Gateway MESH+MQTT bridge (ID 0x006F) | COM3 |
 
-`ch_star_mesh_runtime_esp32s3` is the base/generic CH env (single board bench). For multi-hop topology use the per-board envs above — they differ by `PGL_CH_ID`; active parent routing is discovered automatically through CH_CONFIG and is not flashed as a static parent.
+`ch1` is the base/default CH env. For multi-hop topology use `ch1`, `ch2`, and `ch3`; active parent routing is discovered automatically through CH_CONFIG and is not flashed as a static parent.
 
 Support/debug GLD per-mode envs live in `firmware/support/platformio.ini`.
 Bench-only self-test envs live in `firmware/bench/platformio.ini`.

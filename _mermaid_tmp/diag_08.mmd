@@ -1,0 +1,39 @@
+sequenceDiagram
+    participant GLD as GLD (0xF001)
+    participant CH as CH (0x0064)
+    participant GW as Gateway (0x006F)
+    participant NR as Node-RED
+
+    Note over GLD: ML detect: gasClass≠0 && conf≥30
+
+    GLD->>GLD: Alarm ON → lamp/buzzer HIGH
+    GLD->>GLD: Build AppFrame typeFlags=0x50 (alarm+battery)\nATAU 0xD0 (alarm+external)
+
+    GLD->>CH: LoRa STAR TX ALARM\nMSG_SENSOR_DATA + FLAG_ALARM_ACK\ndstId=0x0064
+
+    CH->>CH: Parse frame, deteksi alarm bit
+    CH->>CH: Push ke AlarmQueue
+    CH->>CH: Kirim Compact STAR ACK ke GLD
+
+    CH-->>GLD: Compact STAR ACK\ntypeFlags=0x50\nsrcId=0x0064, dstId=0xF001
+
+    Note over GLD: RX window: terima ACK dari CH
+
+    CH->>CH: Build MSG_SENSOR_DATA MESH ALARM\nsrcId=0x0064, dstId=aktif parent/GW
+    CH->>CH: Set pending ACK timer (1500ms)
+
+    CH->>GW: LoRa MESH TX ALARM\nMSG_SENSOR_DATA + FLAG_ALARM_ACK\npayload=GLDRecord alarm
+
+    GW->>GW: Decode frame
+    GW->>GW: Deteksi FLAG_ALARM_ACK
+
+    GW-->>CH: Compact MESH ACK\ntypeFlags=0x50\nsrcId=0x006F, dstId=0x0064
+
+    CH->>CH: Terima ACK, hapus dari AlarmQueue
+
+    GW->>NR: MQTT Publish\ngld/gateway/uplink\n{alarm flags, frameHex, ...}
+
+    NR->>NR: Decode + AES-GCM decrypt
+    NR->>NR: alarm=true
+
+    NR-->>NR: Publish gld/server/alarm\n{gasClass, confidence, alarm:true}

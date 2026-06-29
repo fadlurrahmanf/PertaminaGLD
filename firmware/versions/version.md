@@ -10,6 +10,277 @@ YYYY-MM-DD HH:mm:ss Asia/Jakarta
 
 ---
 
+## GLD v0.8.12 / CH v0.7.1 / Gateway v0.1.3 - 2026-06-26 Asia/Jakarta
+
+**Summary:** Source-sync guardrail cleanup. Firmware comments, host tests, and current design mirrors now describe the active unified GLD runtime instead of older scaffold assumptions.
+
+### Changed Files
+
+- firmware/shared/include/FirmwareVersion.h (GLD 0.8.11 -> 0.8.12)
+- firmware/gld/include/GldNullingService.h
+- firmware/tests/test_shared_protocol.py
+- firmware/README.md
+- firmware/versions/version.md
+- docs/design/gld/final_design.md
+- docs/design/gld/design.updated.draft.md
+- docs/design/ch/design.updated.draft.md
+
+### Behavior
+
+- No runtime behavior, LoRa payload, dataset schema, WiFi/MQTT, pin, nulling algorithm, or mode-flow behavior changed.
+- `GldNullingService.h` now states that `PartialSuccess` must be retried by the unified runtime and must not be saved as a complete production profile.
+- Host tests now assert the current active PlatformIO envs, GLD `0.8.12`, CH `0.7.1`, Gateway `0.1.3`, Node-RED multi-hop pull command shape, macro-based GLD board pins, and current unified runtime scaffolds.
+- Historical GLD/CH updated draft design files now carry an explicit archive banner pointing readers to the current `final_design.md` mirrors.
+
+### Test Result
+
+- `python firmware/tests/run_tests.py` -> `27/27 tests passed`.
+- No PlatformIO build-only, upload, COM port use, or bench nulling run was performed for this version yet.
+
+---
+
+## GLD v0.8.11 / CH v0.7.1 / Gateway v0.1.3 - 2026-06-26 Asia/Jakarta
+
+**Summary:** Nulling channel success now requires a non-negative final voltage. A channel cannot pass if its final post-DAC averaged voltage is below `0.000000000`.
+
+### Changed Files
+
+- firmware/shared/include/FirmwareVersion.h (GLD 0.8.10 -> 0.8.11)
+- firmware/gld/src/GldNullingService.cpp
+- firmware/gld/src/GldNullingSelfTestMain.cpp
+- firmware/versions/version.md
+- docs/design/gld/final_design.md
+
+### Behavior
+
+- `NULLING_CONFIRM_STEP` now reports `positive=1/0` and only accepts candidate DAC codes with valid, non-negative voltage.
+- After the final DAC write, `NULLING_CH_OK` is emitted only when `afterV >= 0.000000000`.
+- If the final averaged voltage is negative, the channel fails with `stage=final_check` and `reason=after_voltage_negative`.
+- A complete nulling profile is still saved only when all 8 channels pass.
+- No LoRa payload, dataset schema, WiFi/MQTT, or mode-flow behavior changed.
+
+### Test Result
+
+- `git diff --check` succeeded with existing CRLF normalization warnings only.
+- `pio project config -d firmware` succeeded.
+- No PlatformIO build-only, upload, COM port use, or bench nulling run was performed for this version yet.
+
+---
+
+## GLD v0.8.10 / CH v0.7.1 / Gateway v0.1.3 - 2026-06-26 Asia/Jakarta
+
+**Summary:** Nulling confirm sample count increased. Confirm stage now averages 10 readings per DAC code instead of 5.
+
+### Changed Files
+
+- firmware/shared/include/FirmwareVersion.h (GLD 0.8.9 -> 0.8.10)
+- firmware/gld/src/GldNullingService.cpp
+- firmware/versions/version.md
+- docs/design/gld/final_design.md
+
+### Behavior
+
+- `CONFIRM_COUNT` changed from `5` to `10`.
+- Serial nulling debug now reports `confirmCount=10` in `NULLING_SERVICE_START`.
+- This makes the final confirm step more stable before accepting a DAC code.
+- No LoRa payload, dataset schema, WiFi/MQTT, or mode-flow behavior changed.
+
+### Test Result
+
+- Build/upload succeeded with `pio run -d firmware -e gld_unified_wroom_u1_n16r8_esp32s3 -t upload --upload-port COM9`.
+- Upload target: COM9, ESP32-S3 WROOM bench board, GLD firmware `0.8.10`.
+- Upload memory: RAM 32.1%, Flash 14.3%.
+- Serial nulling test confirmed `NULLING_SERVICE_START channels=8 avgCount=8 confirmCount=10 settleMs=5`.
+- Nulling did not reach 8/8 during the bench capture; it entered `NULLING_RUNTIME_RESULT=PARTIAL_RETRY` and `NULLING_RETRY_SCHEDULED reason=partial_success delayMs=5000`.
+- Sent `SET_MODE running` over Serial to exit the retry loop; GLD returned to inference/running and produced `GLD_LORA_TX_RESULT=PASS`.
+
+---
+
+## GLD v0.8.9 / CH v0.7.1 / Gateway v0.1.3 - 2026-06-26 Asia/Jakarta
+
+**Summary:** Nulling mode is now fully local/offline. It does not connect WiFi, subscribe MQTT, or publish a retained nulling result while calibrating or retrying.
+
+### Changed Files
+
+- firmware/shared/include/FirmwareVersion.h (GLD 0.8.8 -> 0.8.9)
+- firmware/gld/src/GldUnifiedMain.cpp
+- firmware/versions/version.md
+- docs/design/gld/final_design.md
+
+### Behavior
+
+- Nulling mode uses Serial, ADS1256, TCA9548A/MCP4725 DACs, and NVS only.
+- Full 8/8 nulling pass still saves the profile locally, writes mode `INFERENCE`, and restarts into running mode.
+- Partial/failed nulling still schedules retry, but the device remains offline between retry attempts.
+- While waiting between retry attempts, mode override remains available through Serial commands such as `SET_MODE running` or `SET_MODE dataset`.
+- Dataset mode keeps WiFi/MQTT behavior unchanged.
+- No LoRa payload or protocol fields changed.
+
+### Test Result
+
+- Pending build/upload/bench verification. Per repo rule, no PlatformIO build-only command was run without explicit user approval.
+
+---
+
+## GLD v0.8.8 / CH v0.7.1 / Gateway v0.1.3 - 2026-06-26 Asia/Jakarta
+
+**Summary:** Nulling completion now controls the GLD runtime mode. A full 8/8 nulling pass saves the profile and automatically returns the device to running/inference mode; partial or failed nulling stays in nulling mode and retries.
+
+### Changed Files
+
+- firmware/shared/include/FirmwareVersion.h (GLD 0.8.7 -> 0.8.8)
+- firmware/gld/src/GldUnifiedMain.cpp
+- firmware/gld/src/GldModeManager.cpp
+- firmware/gld/include/GldCommandParser.h
+- firmware/versions/version.md
+- docs/design/gld/final_design.md
+
+### Behavior
+
+- `NULLING_RUNTIME_RESULT=PASS` is emitted only when all 8 channels pass and the complete profile is saved to NVS.
+- After a full pass, GLD logs `NULLING_AUTO_MODE_SWITCH target=running mode=inference`, writes mode `INFERENCE` to NVS, then restarts into running mode.
+- `PartialSuccess`, `AllChannelsFailed`, hardware-not-ready, or NVS-save failure schedules another nulling attempt with `NULLING_RETRY_SCHEDULED`.
+- While waiting between nulling retries, the firmware still checks Serial commands and maintains WiFi/MQTT command listening.
+- `SET_MODE running` is now accepted as an alias for `SET_MODE inference`.
+- Partial nulling results are no longer saved as a valid dataset/running nulling profile.
+- No LoRa payload or protocol fields changed.
+
+### Test Result
+
+- Pending build/upload/bench verification. Per repo rule, no PlatformIO build-only command was run without explicit user approval.
+
+---
+
+## GLD v0.8.7 / CH v0.7.1 / Gateway v0.1.3 - 2026-06-26 Asia/Jakarta
+
+**Summary:** Verbose serial debug for GLD nulling. Nulling now reports each channel's baseline prescan, exponential range search, binary search, confirm window, and final channel result.
+
+### Changed Files
+
+- firmware/shared/include/FirmwareVersion.h (GLD 0.8.6 -> 0.8.7)
+- firmware/gld/include/GldNullingService.h
+- firmware/gld/src/GldNullingService.cpp
+- firmware/gld/src/GldUnifiedMain.cpp
+- firmware/versions/version.md
+- docs/design/gld/final_design.md
+
+### Behavior
+
+- `GldNullingService` accepts an optional serial log callback; existing call sites remain compatible.
+- Unified GLD firmware passes the callback so nulling mode prints detailed progress to serial monitor.
+- Per channel, serial output includes `NULLING_CH_START`, `NULLING_BASELINE_*`, `NULLING_EXP_*`, `NULLING_BIN_*`, `NULLING_CONFIRM_*`, and either `NULLING_CH_OK` or `NULLING_CH_FAIL`.
+- Channel failure logs include the stage and reason, for example `stage=baseline`, `stage=exponential`, or `stage=confirm`.
+- Nulling algorithm thresholds, DAC search behavior, NVS save behavior, payloads, and protocol fields did not change.
+
+### Test Result
+
+- Pending build/upload/bench verification. Per repo rule, no PlatformIO build-only command was run without explicit user approval.
+
+---
+
+## GLD v0.8.6 / CH v0.7.1 / Gateway v0.1.3 - 2026-06-26 Asia/Jakarta
+
+**Summary:** MCP4725 write-control boot test and clearer ML output label. The boot IC report now tests whether each MCP4725 can be commanded, not only whether it ACKs on I2C.
+
+### Changed Files
+
+- firmware/shared/include/FirmwareVersion.h (GLD 0.8.5 -> 0.8.6)
+- firmware/gld/src/GldUnifiedMain.cpp
+- firmware/versions/version.md
+- docs/design/gld/final_design.md
+
+### Behavior
+
+- In external-power boot, each MCP4725 row writes DAC code `1` then `10`.
+- If both writes succeed, the MCP row status is `OK_TESTED`.
+- In battery-mode boot, MCP rows remain ACK-only to avoid moving DAC outputs while power is constrained.
+- `ML_MODEL` detail now prints `classes=<N> model outputs` instead of only `output=<N>`.
+- `classes=4` means the current neural-network wrapper exposes four output classes/scores.
+- If no saved nulling profile exists, DAC outputs are reset to code `0` after the MCP write-control test and before boot sensor sampling.
+- No LoRa payload or protocol fields changed.
+
+### Test Result
+
+- Pending build/upload/bench verification. Per repo rule, no PlatformIO build-only command was run without explicit user approval.
+
+---
+
+## GLD v0.8.5 / CH v0.7.1 / Gateway v0.1.3 - 2026-06-26 Asia/Jakarta
+
+**Summary:** Remove non-hardware DAC runtime row from the boot IC report. The boot table now focuses on wiring/hardware checks only, so it no longer prints `DAC_MUX runtime init SKIP` in inference mode.
+
+### Changed Files
+
+- firmware/shared/include/FirmwareVersion.h (GLD 0.8.4 -> 0.8.5)
+- firmware/gld/src/GldUnifiedMain.cpp
+- firmware/versions/version.md
+- docs/design/gld/final_design.md
+
+### Behavior
+
+- Removes the `DAC_MUX` row from `[BOOT_IC_REPORT]`.
+- The DAC hardware path remains checked by the `TCA9548A` and per-sensor `MCP4725-*` rows.
+- Dataset/nulling runtime DAC initialization behavior is unchanged.
+- No LoRa payload or protocol fields changed.
+
+### Test Result
+
+- Pending build/upload/bench verification. Per repo rule, no PlatformIO build-only command was run without explicit user approval.
+
+---
+
+## GLD v0.8.4 / CH v0.7.1 / Gateway v0.1.3 - 2026-06-26 Asia/Jakarta
+
+**Summary:** External-power boot sensor voltage snapshots. After the boot IC report, GLD now prints fast 8-sensor voltage snapshots only when external power is detected.
+
+### Changed Files
+
+- firmware/shared/include/FirmwareVersion.h (GLD 0.8.3 -> 0.8.4)
+- firmware/gld/src/GldUnifiedMain.cpp
+- firmware/versions/version.md
+- docs/design/gld/final_design.md
+
+### Behavior
+
+- Adds `[BOOT_SENSOR_SAMPLES]` after `[BOOT_IC_REPORT]` only for external power (`24v` or inferred `5v`).
+- If a saved nulling profile exists, firmware applies it first and prints `BOOT_NULLING_PROFILE_APPLY=OK profileId=<id>`.
+- If no saved nulling profile exists, firmware prints `BOOT_NULLING_PROFILE_APPLY=SKIP reason=no_profile` and samples raw/current sensor voltages.
+- Prints 5 rows, each containing all 8 sensor voltages in this shape: `1. MQ8 : x.xxxxxV | MQ135 : x.xxxxxV | ...`.
+- Battery-mode boot does not run the extra sampling block.
+- No LoRa payload or protocol fields changed.
+
+### Test Result
+
+- Pending build/upload/bench verification. Per repo rule, no PlatformIO build-only command was run without explicit user approval.
+
+---
+
+## GLD v0.8.3 / CH v0.7.1 / Gateway v0.1.3 - 2026-06-26 Asia/Jakarta
+
+**Summary:** GLD boot IC report table and active PlatformIO env cleanup. The GLD boot health report now prints a single `[BOOT_IC_REPORT]` table with `OK`, `NOT_OK`, or `SKIP` status per checked IC/function.
+
+### Changed Files
+
+- firmware/shared/include/FirmwareVersion.h (GLD 0.8.2 -> 0.8.3)
+- firmware/gld/src/GldUnifiedMain.cpp
+- firmware/platformio.ini
+- firmware/versions/version.md
+- docs/design/gld/final_design.md
+- docs/design/ch/final_design.md
+
+### Behavior
+
+- Replaces grouped human-readable boot lines (`[POWER]`, `[SPI]`, `[ADS]`, `[I2C]`, `[TCA]`, `[MCP]`, `[LORA]`, `[ML]`, `[DAC]`) with one table headed by `[BOOT_IC_REPORT]`.
+- Table rows cover power sense, SPI pins, ADS1256, I2C pins, TCA9548A, each MCP4725 behind the mux, SX1262, ML model wrapper, DAC mux runtime init, and final mode readiness.
+- Machine-readable markers such as `GLD_POWER`, `ADS_BEGIN_RESULT`, `GLD_STAR_BEGIN_STATE`, `GLD_STAR_READY`, `GLD_ML_INIT`, and mode ready lines remain.
+- Main `firmware/platformio.ini` no longer exposes the unused `gld_unified_to_ch2_1_esp32s3` and generic `ch1_esp32s3`..`ch8_esp32s3` experiment envs.
+
+### Test Result
+
+- Pending build/upload/bench verification. Per repo rule, no PlatformIO build-only command was run without explicit user approval.
+
+---
+
 ## GLD v0.8.2 / CH v0.7.1 / Gateway v0.1.3 - 2026-06-25 Asia/Jakarta
 
 **Summary:** GLD boot functional report. Every GLD boot now prints a grouped, human-readable hardware health report for power, SPI, ADS1256, I2C, TCA9548A, MCP4725 per sensor/mux channel, LoRa SX1262, and ML readiness.

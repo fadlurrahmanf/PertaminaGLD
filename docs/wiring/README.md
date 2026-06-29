@@ -14,7 +14,7 @@ pin configuration with the actual bench hardware.
 The ESP32-S3-WROOM-1U-N16R8 GLD bench board is represented in firmware by:
 
 ```text
-gld_unified_wroom_u1_n16r8_esp32s3
+gldw
 ```
 
 LoRa STAR wiring currently applied to that env:

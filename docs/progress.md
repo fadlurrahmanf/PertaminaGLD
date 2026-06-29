@@ -11,12 +11,12 @@ Last updated: 2026-06-19 Asia/Jakarta
 ## Status Ringkas
 
 - GLD COM10: upload `gld_dataset_esp32s3` v0.6.4 sukses; dataset generation live verified with MQTT ack/data, CSV rows, and MySQL rows. Nulling profile NVS terakhir profileId=2.
-- CH COM3: upload `ch_star_mesh_runtime_esp32s3` sukses.
-- Gateway COM38: upload `gateway_mqtt_mesh_esp32s3` sukses.
+- CH COM3: runtime aktif sekarang env pendek `ch1`.
+- Gateway COM38: runtime aktif sekarang env pendek `gw`.
 - Node-RED: flow Pertamina deployed, Aedes bench aktif di port `1884`.
 - Full normal path: GLD -> CH -> Gateway -> Node-RED -> `gld/server/decoded` sukses.
 - Alarm push live path: GLD alarm frame -> CH alarm push -> Gateway -> Node-RED -> `gld/server/alarm` sukses.
-- Host protocol tests: `27/27 tests passed`.
+- Host protocol tests: `28/28 tests passed`.
 - Functional monitor update uploaded:
   - GLD COM10 now sends every 10 seconds and prints header/status only.
   - CH COM3 now prints cache summary/entry without encrypted payload hex dump.

@@ -46,15 +46,18 @@ Config aktif/terkait ada di:
 Main firmware env final:
 
 ```text
-gld_unified_esp32s3
-ch_star_mesh_runtime_esp32s3
-gateway_mqtt_mesh_esp32s3
+gld
+gldw
+ch1
+ch2
+ch3
+gw
 ```
 
 Build contoh:
 
 ```powershell
-pio run -d firmware -e gld_unified_esp32s3
+pio run -d firmware -e gld
 ```
 
 Manual operasi GLD:

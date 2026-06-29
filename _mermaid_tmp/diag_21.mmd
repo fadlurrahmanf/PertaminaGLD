@@ -1,0 +1,36 @@
+flowchart TB
+    subgraph GLD_LAYER["GLD — Pembentukan Data"]
+        S_DATA["Sensor: gasClass + confidence\n+ batteryMv (4 bytes plaintext)"]
+        AAD_BUILD["AAD = nodeId(2) + seq(1) + flags(1) + keyId(1)\n→ 5 bytes"]
+        AES["AES-128-GCM encrypt\nplaintext 4B → ciphertext 4B + tag 12B"]
+        ENC_PAYLOAD["Encrypted Payload 29 bytes\n[keyId(1) + nonce(12) + ciphertext(4) + tag(12)]"]
+        APPFRAME["AppFrame\n[0xAA + typeFlags + srcId + dstId + seq + payloadLen + payload + CRC16]"]
+    end
+
+    subgraph RADIO_LAYER["Transport — LoRa STAR"]
+        LORA_PKT["LoRa Packet\n920-923 MHz SF7 sync 0x12\nmax 74 bytes (10 overhead + 64 payload)"]
+    end
+
+    subgraph CH_LAYER["CH — Cache & Relay"]
+        GLD_REC["GLDRecord 34 bytes\n[nodeId(2) + seq(1) + flags(1) + payloadLen(1) + encrypted(29)]"]
+        MESH_FRAME["AppFrame MESH\nsrcId=CH, dstId=parent\npayload = GLDRecord(s)"]
+    end
+
+    subgraph GW_LAYER["Gateway — Bridge"]
+        UPLINK_JSON["MQTT JSON Uplink\ngld/gateway/uplink\nframeHex + rssi + snr + parse"]
+    end
+
+    subgraph SERVER_LAYER["Server — Decode"]
+        DECRYPT["AES-GCM Decrypt\ngasClass + confidence + batteryMv"]
+    end
+
+    S_DATA --> AAD_BUILD
+    S_DATA --> AES
+    AAD_BUILD --> AES
+    AES --> ENC_PAYLOAD
+    ENC_PAYLOAD --> APPFRAME
+    APPFRAME --> LORA_PKT
+    LORA_PKT --> GLD_REC
+    GLD_REC --> MESH_FRAME
+    MESH_FRAME --> UPLINK_JSON
+    UPLINK_JSON --> DECRYPT

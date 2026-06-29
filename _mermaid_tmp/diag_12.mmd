@@ -1,0 +1,20 @@
+graph LR
+    MCU["MCU"] -->|"I2C SDA/SCL\nGPIO8/9"| TCA["TCA9548A\nI2C Mux 0x71"]
+    TCA -->|"Ch 0"| MQ6_DAC["MCP4725 #MQ6\n(mux ch 0)"]
+    TCA -->|"Ch 1"| MQ2_DAC["MCP4725 #MQ2\n(mux ch 1)"]
+    TCA -->|"Ch 2"| MQ7_DAC["MCP4725 #MQ7\n(mux ch 2)"]
+    TCA -->|"Ch 3"| MQ4_DAC["MCP4725 #MQ4\n(mux ch 3)"]
+    TCA -->|"Ch 4"| MQ5_DAC["MCP4725 #MQ5\n(mux ch 4)"]
+    TCA -->|"Ch 5"| MQ3_DAC["MCP4725 #MQ3\n(mux ch 5)"]
+    TCA -->|"Ch 6"| MQ135_DAC["MCP4725 #MQ135\n(mux ch 6)"]
+    TCA -->|"Ch 7"| MQ8_DAC["MCP4725 #MQ8\n(mux ch 7)"]
+
+    MCU -->|"SPI SCK/MOSI/MISO/CS/DRDY/SYNC"| ADS["ADS1256\n24-bit ADC"]
+    MQ6_DAC -->|"DAC output → sensor bias"| ADS
+    MQ2_DAC --> ADS
+    MQ7_DAC --> ADS
+    MQ4_DAC --> ADS
+    MQ5_DAC --> ADS
+    MQ3_DAC --> ADS
+    MQ135_DAC --> ADS
+    MQ8_DAC --> ADS

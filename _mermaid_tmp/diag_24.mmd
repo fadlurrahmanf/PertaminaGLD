@@ -1,0 +1,20 @@
+flowchart LR
+    subgraph HOST_TESTS["Host-Level Tests\npython firmware/tests/run_tests.py"]
+        T1["Protocol constants\n(ProtocolConstants.h values)"]
+        T2["Firmware versions\n(FirmwareVersion.h values)"]
+        T3["Active envs\n(platformio.ini check)"]
+        T4["GLD board pin macros"]
+        T5["GLD unified scaffolds"]
+        T6["Node-RED pull hopList contract"]
+        T7["Source guardrails"]
+    end
+
+    subgraph BENCH_TESTS["Bench Self-Tests\n(firmware/bench/)"]
+        B1["gld_sensor_selftest\nADS1256 + sensor read"]
+        B2["gld_nulling_selftest\nNulling calibration"]
+        B3["gld_lora_tx_selftest\nLoRa TX packet"]
+        B4["ch_star_rx_selftest\nCH STAR RX parse"]
+    end
+
+    HOST_TESTS -->|"Expected: 27/27 passed"| RESULT["Test Result"]
+    BENCH_TESTS -->|"Hardware required"| RESULT

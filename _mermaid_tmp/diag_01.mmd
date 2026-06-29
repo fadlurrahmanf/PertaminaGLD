@@ -1,0 +1,29 @@
+flowchart LR
+    subgraph FIELD["Lapangan — LoRa STAR 920-923 MHz"]
+        GLD["GLD Node\n8 sensor gas\nML inference\nLoRa STAR TX"]
+    end
+
+    subgraph BACKBONE["Jaringan Backbone LoRa MESH — 923.5 MHz"]
+        CH1["CH1\nSTAR RX\nMESH TX"]
+        CH2["CH2\nParent dari CH1\nMESH relay ke GW"]
+    end
+
+    subgraph GW["Gateway"]
+        GW_NODE["Gateway\nMESH RX\nWiFi + MQTT"]
+    end
+
+    subgraph SERVER["Server Site"]
+        MQTT["MQTT Broker\n10.158.198.180:1884"]
+        NR["Node-RED\nDecode + Routing\nTopology + Dashboard"]
+    end
+
+    GLD -->|"LoRa STAR SF7\nAES-GCM encrypted"| CH1
+    CH1 -->|"LoRa MESH SF9\n(uplink via parent)"| CH2
+    CH2 -->|"LoRa MESH SF9"| GW_NODE
+    GW_NODE -->|"WiFi\ngld/gateway/uplink"| MQTT
+    MQTT --> NR
+    NR -->|"cmd/pull\ncmd/node"| MQTT
+    MQTT -->|"gld/gateway/cmd/#"| GW_NODE
+    GW_NODE -->|"LoRa MESH\ndownlink"| CH2
+    CH2 -->|"LoRa MESH\ndownlink relay"| CH1
+    CH1 -->|"LoRa STAR\nMSG_NODE_DOWNLINK"| GLD

@@ -1,394 +1,147 @@
-# CH-CH Design
+# Pertamina GLD Current Design - CH To CH Multi-Hop
 
-**Status:** draft desain backbone antar-CH  
-**Tanggal:** 2026-06-18  
-**Scope:** komunikasi CH child ke CH parent dalam MESH/TREE sebelum mencapai Gateway  
-**Sumber utama:** `docs/design/ch/design.updated.draft.md`, `docs/design/gld-ch/payload-contract.draft.md`, firmware shared protocol  
-**Catatan:** desain ini tidak mengubah `docs/design/ch/design.md` original.
+Status: current source mirror, 2026-06-29.
 
----
+## Source Files
 
-## 1. Ringkasan
-
-CH-CH adalah jalur backbone ketika sebuah Cluster Head tidak langsung berbicara ke Gateway, tetapi mengirim data ke CH parent. Jalur ini memakai Radio B / MESH dengan `AppFrame` yang sama seperti jalur CH-Gateway.
-
-Tujuan CH-CH:
-
-- memperluas coverage area lewat TREE/MESH,
-- menjaga payload tetap opaque dari GLD sampai server,
-- meneruskan alarm prioritas tinggi tanpa menunggu pull,
-- meneruskan `CLUSTER_DATA_RESPONSE` dari CH child menuju Gateway,
-- menyediakan arah balik untuk request/config/downlink dari server.
-
-Status implementasi saat ini:
-
-- Firmware CH sudah punya dasar MESH runtime, queue, pull parser, alarm queue, dan response packing.
-- Bench yang sudah terbukti adalah CH langsung ke Gateway.
-- Multi-hop CH-CH belum menjadi jalur live-tested penuh dan harus diperlakukan sebagai desain phase lanjut.
-
-Source priority:
-
-1. `docs/design/gld-ch/payload-contract.draft.md` menang untuk `GLDRecord`, AES-GCM, dan payload GLD.
-2. `docs/design/ch/design.updated.draft.md` menang untuk perilaku CH terbaru.
-3. Dokumen ini hanya mengatur backbone CH-CH dan tidak boleh mengubah kontrak GLD payload.
-
----
-
-## 2. Topologi
-
-```text
-GLD nodes
-  -> CH child
-      -> CH parent
-          -> Gateway root
-              -> Server / Node-RED
-```
-
-Istilah:
-
-| Istilah | Arti |
+| Area | Source |
 |---|---|
-| `localChId` | ID CH yang sedang menjalankan firmware |
-| `parentId` | CH parent atau Gateway tujuan uplink |
-| `gatewayId` | root akhir jaringan MESH |
-| `childChId` | CH anak yang menitipkan traffic ke CH parent |
-| `hopList` | daftar hop forward-only untuk request/downlink dari Gateway/server |
+| CH runtime | `firmware/ch/src/ChStarMeshRuntimeMain.cpp` |
+| CH config | `firmware/config/ChConfig.h` |
+| MESH config | `firmware/config/LoraMeshConfig.h` |
+| Pull parser | `firmware/ch/src/ChPullRequest.cpp` |
+| Cluster response | `firmware/ch/src/ClusterResponse.cpp` |
+| Server topology decode | `server/nodered/functions/pertamina-gld-decode.js` |
 
-Aturan dasar:
+## MESH Domain
 
-- CH child mengirim MESH uplink ke `parentId`.
-- CH parent meneruskan frame menuju parent berikutnya atau Gateway.
-- Gateway adalah root yang menghubungkan MESH ke MQTT/server.
-- GLD tetap tidak tahu apakah CH-nya langsung ke Gateway atau lewat CH parent.
+CH-CH traffic uses Radio B and MESH AppFrame:
 
----
-
-## 3. Radio Dan Link
-
-CH-CH memakai Radio B / MESH.
-
-Parameter phase bench yang sudah dipakai firmware:
-
-| Parameter | Nilai saat ini |
+| Parameter | Value |
 |---|---:|
-| Frequency | `921.0 MHz` |
-| Bandwidth | `125 kHz` |
-| Spreading Factor | `SF9` |
-| Coding Rate | `4/5` |
-| Sync Word | `0x34` |
-| Payload max | `80 byte` |
+| Frequency | 921.0 MHz |
+| Bandwidth | 125 kHz |
+| Spreading factor | SF9 |
+| Coding rate | 4/5 |
+| Sync word | `0x34` |
+| TX power | 17 dBm |
+| Preamble | 8 |
+| SPI | 2 MHz |
+| Max payload | 80 bytes |
 
-Catatan:
+## Routing Model
 
-- Final field frequency dapat disesuaikan sebelum deployment.
-- STAR GLD-CH dan MESH CH-CH/CH-Gateway harus dipisah supaya tidak saling mengganggu.
-- CH runtime perlu non-blocking untuk radio STAR dan MESH agar tidak melewatkan GLD periodic saat menunggu MESH.
+No static CH-CH route is compiled into firmware. Every CH starts with `DEFAULT_PARENT_ID=0x0000`, loads a cached parent from NVS if present, then uses CH_CONFIG discovery to find a parent toward root Gateway `0x006F`.
 
----
+Parent candidate state:
 
-## 4. Frame Dasar
-
-Semua frame CH-CH memakai `AppFrame`.
-
-Ringkasan `AppFrame`:
-
-| Field | Size | Catatan |
-|---|---:|---|
-| `magic` | 1 | `0xAA` |
-| `typeFlags` | 1 | `msgType` + flags |
-| `srcId` | 2 | ID pengirim hop saat ini |
-| `dstId` | 2 | ID tujuan hop berikutnya |
-| `seq` | 1 | sequence frame/transaction sesuai message flow |
-| `payloadLen` | 1 | panjang payload |
-| `payload` | N | max `80 byte` untuk MESH |
-| `crc16` | 2 | CRC16-CCITT-FALSE |
-
-Aturan CH-CH:
-
-- `srcId` dan `dstId` adalah identitas hop, bukan selalu identitas asal GLD.
-- Identitas GLD asli tetap berada di `GLDRecord.nodeId`.
-- Untuk `SERVER_PULL_REQUEST` dan `CLUSTER_DATA_RESPONSE`, `AppFrame.seq` dipertahankan sebagai sequence request/response transaction, bukan diganti di setiap hop.
-- Untuk ACK/retry alarm, `seq` mengacu pada outer frame yang sedang di-ACK/retry.
-- `GLDRecord.seq` adalah sequence data/event GLD dan dipakai untuk dedup server.
-
----
-
-## 5. Message Types
-
-Message types phase awal yang relevan:
-
-| `msgType` | Nama | Arah | Fungsi |
-|---:|---|---|---|
-| `0x10` | `SENSOR_DATA` | child -> parent | Alarm push atau recovery clear satu `GLDRecord` |
-| `0x30` | `SERVER_PULL_REQUEST` | parent/root -> child | Request data CH target |
-| `0x31` | `CLUSTER_DATA_RESPONSE` | child -> parent/root | Response data normal dari latest cache |
-| `0x32` | `SERVER_NODE_COMMAND` | parent/root -> child | Scaffold command server untuk GLD melalui CH; belum live execution end-to-end |
-| `0x33` | `CH_HELLO` | child <-> parent | Discovery/keepalive phase lanjut |
-| `0x34` | `CH_CONFIG_REQUEST` | parent/root -> child | Config CH phase lanjut |
-| `0x35` | `CH_CONFIG_RESPONSE` | child -> parent/root | Response config phase lanjut |
-
-Catatan:
-
-- `CH_HELLO`, `CH_CONFIG_REQUEST`, dan `CH_CONFIG_RESPONSE` sudah ada sebagai constants, tetapi belum menjadi fokus bench end-to-end.
-- Gateway/Node-RED phase bench hanya meneruskan message type yang belum didukung sebagai raw frame/debug; belum ada route bisnis untuk CH hello/config.
-- Multi-hop forwarding harus menjaga payload GLD tetap opaque.
-
----
-
-## 6. Normal Pull Multi-Hop
-
-Normal data tidak langsung dikirim ke server setiap GLD update. Server/Gateway melakukan pull ke CH target.
-
-Alur:
-
-```text
-Server
-  -> Gateway
-  -> CH parent
-  -> CH target
-  -> CH parent
-  -> Gateway
-  -> Server
-```
-
-Request:
-
-```text
-msgType = SERVER_PULL_REQUEST (0x30)
-```
-
-Payload konseptual:
-
-```text
-requestId:uint16BE + hopList:uint16BE[]
-```
-
-Current bench compatibility:
-
-- Firmware Gateway saat ini menerima JSON `hopList[]` dan membangun payload wire `requestId + hopList[]`.
-- Direct single-hop Gateway -> CH tetap berukuran 4 byte: `requestId + hopList[0]`.
-- Firmware CH menafsirkannya sebagai `requestId + hopList[]`, memvalidasi `dstId == localChId`, dan phase awal hanya menerima `hopCount == 1`.
-- Multi-hop CH-CH membutuhkan `hopList[]` lebih dari satu entry dan relay logic yang belum live-tested.
-
-Response:
-
-```text
-msgType = CLUSTER_DATA_RESPONSE (0x31)
-```
-
-`CLUSTER_DATA_RESPONSE` payload:
-
-| Offset | Field | Size | Catatan |
-|---:|---|---:|---|
-| 0..1 | `requestId` | 2 | dari request |
-| 2 | `status` | 1 | status data |
-| 3..4 | `chBatteryMv` | 2 | `0xFFFF` jika invalid |
-| 5 | `recordCount` | 1 | jumlah `GLDRecord` |
-| 6.. | `records` | variable | repeated `GLDRecord` |
-
-Kapasitas:
-
-```text
-MESH_MAX_PAYLOAD = 80
-responseHeader = 6
-GLDRecord phase 1 = 34
-max records = floor((80 - 6) / 34) = 2
-```
-
-Aturan forwarding:
-
-- CH parent meneruskan response tanpa decrypt payload GLD.
-- CH parent boleh membaca outer `AppFrame` untuk routing.
-- CH parent tidak boleh mengubah `GLDRecord.nodeId`, `seq`, `flags`, `payloadLen`, atau `payload`.
-
----
-
-## 7. Alarm Push Multi-Hop
-
-Alarm tidak menunggu pull.
-
-Alur:
-
-```text
-GLD alarm
-  -> CH target alarmQueue
-  -> CH parent
-  -> Gateway
-  -> Server alarm route
-```
-
-Format antar-CH:
-
-```text
-msgType = SENSOR_DATA (0x10)
-FLAG_ALARM_ACK = 1
-payload = exactly one GLDRecord
-```
-
-Aturan:
-
-- Alarm push membawa tepat satu `GLDRecord`.
-- Tidak memakai wrapper `CLUSTER_DATA_RESPONSE`.
-- Retry alarm harus mempertahankan `GLDRecord.seq` dan encrypted payload yang sama.
-- CH parent harus memperlakukan alarm sebagai traffic prioritas.
-- ACK hop MESH dan ACK GLD adalah dua hal berbeda.
-
----
-
-## 8. Recovery Clear
-
-Jika GLD yang sebelumnya alarm kembali clear/non-alarm, CH target harus push recovery clear.
-
-Format:
-
-```text
-msgType = SENSOR_DATA (0x10)
-FLAG_ALARM_ACK = 0
-payload = exactly one GLDRecord
-GLDRecord.flags bit0 alarm = 0
-```
-
-Aturan:
-
-- Recovery clear tidak memakai `FLAG_ALARM_ACK`.
-- CH parent meneruskan recovery clear seperti single-record sensor push.
-- Server memakai event ini untuk menutup status alarm aktif.
-
----
-
-## 9. Routing Dan Hop List
-
-Direction request/downlink:
-
-```text
-Gateway/root -> parent -> child -> CH target
-```
-
-Direction response/uplink:
-
-```text
-CH target -> parent -> Gateway/root
-```
-
-Field routing kontrak phase awal:
-
-| Field | Fungsi |
+| Field | Meaning |
 |---|---|
-| `requestId` | korelasi response dengan request |
-| `hopList[]` | daftar CH yang harus dilewati |
+| `id` | candidate CH/Gateway ID |
+| `advertisedParent` | parent advertised by candidate |
+| `batteryMv` | candidate battery |
+| `rssiDbm`, `snrDb` | RSSI/SNR measured by local CH while receiving candidate response |
+| `reverseRssiDbm`, `reverseSnrDb` | Gateway reverse link fields when candidate is Gateway |
+| `depth` | advertised depth to root |
+| `seenAtMs` | candidate timestamp |
+| `hasReverseLink` | true only when Gateway response has reverse fields |
 
-Aturan:
+Selection:
 
-- `hopList[]` bersifat forward-only untuk request/downlink.
-- Tidak ada field routing tambahan terpisah di payload phase awal.
-- CH target adalah entry terakhir yang relevan di `hopList[]`; origin Gateway dibaca dari outer `AppFrame.srcId` atau route context.
-- Response mengikuti parent aktif atau reverse route cache jika nanti ditambahkan.
-- Phase awal boleh fixed tree/static parent.
-- Dynamic route discovery menjadi phase lanjut.
+- Primary score is RSSI.
+- Tie breakers are lower depth, higher SNR, lower ID.
+- Downstream/deeper candidates are rejected.
+- Gateway requires bidirectional quality to become parent.
+- Alternate parent is selected only when primary parent is not Gateway.
+- Parent/alternate are saved to NVS only after the same pair appears for 4 stable scans.
 
----
+## Discovery Messages
 
-## 10. Queue Priority
+`MSG_CH_CONFIG_REQUEST`:
 
-Prioritas TX MESH antar-CH:
+| Field | Value |
+|---|---|
+| `srcId` | requester CH |
+| `dstId` | `0xFFFF` |
+| `seq` | requester config sequence |
+| payload | requester CH ID, 2 bytes |
 
-1. Alarm push.
-2. Alarm/recovery clear retry.
-3. Response pull yang sudah dibangun.
-4. Pending server node command/downlink.
-5. CH status/hello/config.
+`MSG_CH_CONFIG_RESPONSE` from a CH:
 
-Aturan:
+| Offset | Field |
+|---:|---|
+| 0..1 | requester ID |
+| 2..3 | responder current parent |
+| 4 | responder depth |
+| 5..6 | responder battery mV |
+| 7 | route-to-root flag, `0x01` |
 
-- Queue penuh untuk alarm harus terdeteksi.
-- Alarm tidak boleh hilang diam-diam.
-- Normal response boleh dikoreksi oleh pull berikutnya.
-- `sentSeq` NodeCache baru ditandai setelah TX success, bukan saat build/enqueue.
+Response anti-collision:
 
----
+- Response slot is `CH_ID % 16`.
+- Delay is `200 ms + slot * 280 ms`.
+- Request interval is 5000 ms.
 
-## 11. Reliability
+## Pull Downstream Relay
 
-Phase awal:
+Gateway/server pull payload is `requestId:uint16BE + hopList:uint16BE[]`.
 
-- CRC16 di `AppFrame`.
-- Retry/ACK terutama untuk alarm path.
-- Normal pull best-effort; jika gagal, server bisa pull ulang.
+Intermediate CH behavior:
 
-Phase lanjut:
+1. Decode AppFrame.
+2. Verify `MSG_SERVER_PULL_REQUEST`.
+3. Find local CH index in hopList.
+4. If local CH is not final hop, set `dstId` to next hop.
+5. Re-encode same payload with `srcId=local CH`, same AppFrame seq, same typeFlags.
+6. Enqueue as `RelayFrame`.
 
-- Per-hop ACK untuk MESH alarm/critical frames.
-- Failover parent jika TX gagal berulang.
-- Parent health score berdasarkan RSSI/SNR/success rate.
-- Duplicate suppression untuk retry alarm.
-- Route stale timeout.
+Final CH behavior:
 
----
+- If local CH is final hop, `handleServerPullRequestFrame()` builds `MSG_CLUSTER_DATA_RESPONSE`.
+- Response goes to active parent `runtimeConfig.meshDstId`, not through a reverse hop list.
 
-## 12. Security Boundary
+## Uplink Relay
 
-CH-CH tidak decrypt payload GLD.
+A CH relays these local-destination MESH frames upstream to its active parent when `decoded.dstId == CH_ID` and `parentId != CH_ID`:
 
-Yang boleh dibaca CH parent:
+| Message | Relay condition |
+|---|---|
+| `MSG_CLUSTER_DATA_RESPONSE` | pull response from child path |
+| `MSG_SENSOR_DATA` | alarm/recovery/data push from child path |
+| `MSG_CH_HELLO` | topology hello from child path |
 
-- outer `AppFrame`,
-- `GLDRecord.nodeId`,
-- `GLDRecord.seq`,
-- `GLDRecord.flags`,
-- `payloadLen`.
+Relay re-encodes frame with `srcId=local CH`, `dstId=parentId`, same seq, same payload.
 
-Yang tidak boleh dibaca/diubah CH parent:
+## Parent Health And Failover
 
-- plaintext `gasClass`,
-- plaintext `confidence`,
-- plaintext `batteryMv`,
-- encrypted payload,
-- AAD-relevant `GLDRecord` fields.
+Parent health fields:
 
-Server adalah endpoint decrypt phase 1.
+| Field | Behavior |
+|---|---|
+| `lastParentSeenMs` | updated when current parent is heard as candidate |
+| `lastParentRssiDbm`, `lastParentSnrDb` | latest parent quality |
+| `PARENT_HEALTH_TIMEOUT_MS` | 180000 ms |
+| `PARENT_MIN_DWELL_MS` | 300000 ms |
+| `PARENT_SWITCH_MARGIN_DB` | 15 dB |
 
----
+Failover triggers:
 
-## 13. Acceptance Criteria
+- Parent health timeout in JOINED.
+- Alarm ACK failures reach threshold 3 and failover cooldown has elapsed.
+- No-ACK burst reaches threshold 5, which enters RECOVERY.
 
-### Current Direct Bench Baseline
+Failover state sends CH_CONFIG_REQUEST every 5000 ms and evaluates candidates after 15000 ms. If no parent is selected, it repeats failover discovery.
 
-Bench saat ini baru membuktikan direct CH-Gateway normal pull:
+## Topology Visibility
 
-- CH menerima GLD STAR dan update `NodeCache`.
-- Gateway mengirim `SERVER_PULL_REQUEST` langsung ke CH.
-- CH mengirim `CLUSTER_DATA_RESPONSE` langsung ke Gateway.
-- Server/Node-RED dapat decode response normal.
+CH sends `MSG_CH_HELLO` to active parent:
 
-### Future CH-CH Acceptance
+- Immediately after first successful JOINED state with non-zero parent.
+- Every 300000 ms after boot hello succeeds.
+- Payload carries CH ID, parent, battery, uptime, depth, alternate parent.
 
-Kriteria di bawah ini adalah target acceptance untuk phase multi-hop CH-CH, bukan status bench saat ini.
+Gateway publishes CH_CONFIG/HELLO topology events to MQTT. Node-RED stores installed parents, discovery candidates, gateway link quality, hellos, and computed routes.
 
-CH-CH dianggap siap phase awal jika:
+## Current Source Caveat
 
-- CH child dapat menerima GLD STAR dan update `NodeCache`.
-- CH child dapat menerima `SERVER_PULL_REQUEST` dari CH parent.
-- CH child mengirim `CLUSTER_DATA_RESPONSE` ke CH parent.
-- CH parent meneruskan response ke Gateway tanpa mengubah `GLDRecord`.
-- Server dapat decrypt record dari CH target multi-hop.
-- Alarm push satu `GLDRecord` dapat melewati CH parent sampai Gateway/server.
-- Duplicate retry alarm tidak menjadi event baru di server.
-
-Belum lulus/currently not proven:
-
-- relay multi-hop `SERVER_PULL_REQUEST`,
-- relay multi-hop `CLUSTER_DATA_RESPONSE`,
-- alarm push multi-hop,
-- `SERVER_NODE_COMMAND` sampai GLD.
-
----
-
-## 14. Open Items
-
-- Format final `CH_HELLO`.
-- Format final parent discovery/failover.
-- Reverse route cache atau static tree only.
-- Per-hop ACK MESH untuk alarm.
-- Persistent route/config storage di CH.
-- Field LoRa frequency plan final.
-- Live test multi-hop CH-CH belum dilakukan.
+Remote GLD mode switching through multi-hop uses `MSG_SERVER_NODE_COMMAND`. Current Gateway and CH payload layouts differ by a `ttlSec` field, so this path is not source-aligned until one side is changed.

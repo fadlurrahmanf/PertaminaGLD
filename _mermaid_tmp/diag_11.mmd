@@ -1,0 +1,43 @@
+flowchart TD
+    START["GLD Boot\nmode=nulling dari NVS"]
+    CHECK_HW{ADS + DAC\nsiap?}
+    RETRY_5S["Retry setelah 5000ms\n(tidak ada WiFi/MQTT)"]
+
+    subgraph NULLING_LOOP["Nulling Per Channel (0-7)"]
+        ZERO["DAC write code=0"]
+        BASELINE["Baseline prescan\ncode 0..10, avg 8 readings"]
+        EXP["Exponential search\nstep 1→2048\ncari delta ≥ 0.0001V"]
+        BIN["Binary search\npersempit low/high boundary"]
+        CONFIRM["Confirm scan\n10 code di sekitar kandidat\navg 10 readings"]
+        ACCEPT{candidate OK?\n- DAC write OK\n- ADS valid\n- volt ≥ 0.0\n- delta ≥ 0.0001}
+        DAC_FINAL["DAC write final code"]
+        AFTER_READ["After read\navg 8 readings, volt ≥ 0.0"]
+    end
+
+    CHECK_ALL{Semua 8 ch\nberhasil?}
+    SAVE_PROFILE["Simpan NVS\nnamespace: gld-null\nkey: profile"]
+    SAVE_OK{NVS save OK?}
+    PRINT_PASS["Print NULLING_RUNTIME_RESULT=PASS\nBoot IC report\nSensor samples (jika ext power)"]
+    SET_INFERENCE["Set mode=INFERENCE di NVS"]
+    RESTART["delay 800ms, flush serial\nESP32.restart()"]
+    PARTIAL["Print PARTIAL_RETRY\nschedule retry 5000ms"]
+
+    START --> CHECK_HW
+    CHECK_HW -->|"Tidak"| RETRY_5S
+    CHECK_HW -->|"Ya"| ZERO
+
+    ZERO --> BASELINE --> EXP --> BIN --> CONFIRM
+    CONFIRM --> ACCEPT
+    ACCEPT -->|"Ya"| DAC_FINAL
+    ACCEPT -->|"Tidak"| CH_FAIL["NULLING_CH_FAIL\nerror code 1-7"]
+    DAC_FINAL --> AFTER_READ
+    AFTER_READ --> CHECK_ALL
+    CH_FAIL --> CHECK_ALL
+
+    CHECK_ALL -->|"Ya"| SAVE_PROFILE
+    CHECK_ALL -->|"Ada gagal"| PARTIAL
+    SAVE_PROFILE --> SAVE_OK
+    SAVE_OK -->|"Ya"| PRINT_PASS
+    SAVE_OK -->|"Tidak"| PARTIAL
+    PRINT_PASS --> SET_INFERENCE --> RESTART
+    PARTIAL --> RETRY_5S

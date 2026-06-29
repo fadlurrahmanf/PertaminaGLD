@@ -773,27 +773,53 @@ def test_gateway_and_nodered_pull_use_hoplist_contract():
     build_pull_block = flow_src.split('nodeBase("function", "build_pull"', 1)[1].split('nodeBase("mqtt in", "mqtt_cmd_node"', 1)[0]
     assert "const hopList = Array.isArray(p.hopList)" in flow_src
     assert "nodeIdParam" not in build_pull_block
-    assert "Inject SERVER_PULL_REQUEST CH 0x0064" in flow_json
-    assert '"payload": "{\\"requestId\\":1,\\"hopList\\":[\\"0x0064\\"]}"' in flow_json
+    assert "Inject SERVER_PULL_REQUEST hopList" in flow_json
+    assert '"payload": "{\\"requestId\\":1,\\"hopList\\":[\\"0x0064\\",\\"0x0065\\",\\"0x0066\\"]}"' in flow_json
+    assert "normalize pull hopList" in flow_json
     assert "Inject request CH 0x0064 GLD 0xF001" not in flow_json
 
-    assert 'payload binary `requestId:uint16BE + hopList:uint16BE[]`' in ch_gw_doc
-    assert "payload = requestId:uint16BE + hopList:uint16BE[]" in gw_doc
+    assert "| payload | `requestId:uint16BE + hopList:uint16BE[]` |" in ch_gw_doc
+    assert "requestId:uint16BE + hopList:uint16BE[]" in gw_doc
 
 
-def test_gld_retry_snapshot_and_provisioning_scaffolds_present():
-    retry_header = pathlib.Path("firmware/gld/include/GldRetryState.h").read_text(encoding="utf-8")
-    retry_src = pathlib.Path("firmware/gld/src/GldRetryState.cpp").read_text(encoding="utf-8")
-    provisioning_header = pathlib.Path("firmware/gld/include/GldProvisioning.h").read_text(encoding="utf-8")
-    provisioning_src = pathlib.Path("firmware/gld/src/GldProvisioning.cpp").read_text(encoding="utf-8")
+def test_gld_unified_runtime_scaffolds_present():
+    platformio = pathlib.Path("firmware/platformio.ini").read_text(encoding="utf-8")
+    command_header = pathlib.Path("firmware/gld/include/GldCommandParser.h").read_text(encoding="utf-8")
+    command_src = pathlib.Path("firmware/gld/src/GldCommandParser.cpp").read_text(encoding="utf-8")
+    mode_header = pathlib.Path("firmware/gld/include/GldModeManager.h").read_text(encoding="utf-8")
+    mode_src = pathlib.Path("firmware/gld/src/GldModeManager.cpp").read_text(encoding="utf-8")
+    nulling_header = pathlib.Path("firmware/gld/include/GldNullingService.h").read_text(encoding="utf-8")
+    unified_src = pathlib.Path("firmware/gld/src/GldUnifiedMain.cpp").read_text(encoding="utf-8")
     radio_header = pathlib.Path("firmware/shared/include/RadioTransport.h").read_text(encoding="utf-8")
     config_header = pathlib.Path("firmware/shared/include/FirmwareConfig.h").read_text(encoding="utf-8")
 
-    assert "GldAlarmRetryState" in retry_header
-    assert "state.frame = frame" in retry_src
-    assert "markGldAlarmRetryAcked" in retry_header
-    assert "GldProvisioningConfig" in provisioning_header
-    assert "parseAes128KeyHex" in provisioning_src
+    assert "[env:gld]" in platformio
+    assert "[env:gldw]" in platformio
+    assert "gld_unified_esp32s3" not in platformio
+    assert "gld_unified_wroom_u1_n16r8_esp32s3" not in platformio
+    assert "gld_unified_to_ch2_1_esp32s3" not in platformio
+    assert "gld_inference_esp32s3" not in platformio
+    assert "gld_dataset_esp32s3" not in platformio
+    assert "gld_nulling_runtime_esp32s3" not in platformio
+    assert "[env:ch1]" in platformio
+    assert "[env:ch2]" in platformio
+    assert "[env:ch3]" in platformio
+    assert "[env:gw]" in platformio
+    assert "ch_star_mesh_runtime_esp32s3" not in platformio
+    assert "ch_layer1_1_esp32s3" not in platformio
+    assert "ch_layer1_2_esp32s3" not in platformio
+    assert "ch_layer2_1_esp32s3" not in platformio
+    assert "gateway_mqtt_mesh_esp32s3" not in platformio
+    assert "parseSerialCommand" in command_header
+    assert "DEBUG_ON" in command_src
+    assert "DEBUG_OFF" in command_src
+    assert "MSG_NODE_DOWNLINK" in command_src
+    assert "gldModeFromString" in mode_header
+    assert 'strcmp(str, "running")' in mode_src
+    assert "runNullingService" in nulling_header
+    assert "saveCompleteNullingProfile" in unified_src
+    assert "NULLING_RUNTIME_RESULT=PARTIAL_RETRY" in unified_src
+    assert "NULLING_AUTO_MODE_SWITCH target=running mode=inference" in unified_src
     assert "RadioTransport" in radio_header
     assert "RadioTxPacket" in radio_header
     assert "AesKeyConfig" in config_header
@@ -803,6 +829,104 @@ def test_gld_retry_snapshot_and_provisioning_scaffolds_present():
     retry_snapshot = bytes(alarm_frame)
     assert retry_snapshot == alarm_frame
     assert decode_app_frame(retry_snapshot)["seq"] == 0x90
+
+
+def test_current_design_docs_mirror_live_source_contracts():
+    current_mirror_docs = [
+        pathlib.Path("docs/design/README.md"),
+        pathlib.Path("docs/design/gld/final_design.md"),
+        pathlib.Path("docs/design/gld/design.current-firmware.draft.md"),
+        pathlib.Path("docs/design/ch/final_design.md"),
+        pathlib.Path("docs/design/gld-ch/payload-contract.draft.md"),
+        pathlib.Path("docs/design/ch-ch/design.md"),
+        pathlib.Path("docs/design/ch-ch/final_design.md"),
+        pathlib.Path("docs/design/ch-gw/design.md"),
+        pathlib.Path("docs/design/ch-gw/final_design.md"),
+        pathlib.Path("docs/design/gw/design.md"),
+        pathlib.Path("docs/design/gw/final_design.md"),
+        pathlib.Path("docs/design/gw-server/design.md"),
+        pathlib.Path("docs/design/gw-server/final_design.md"),
+        pathlib.Path("docs/design/server/design.md"),
+        pathlib.Path("docs/design/server/final_design.md"),
+    ]
+    for path in current_mirror_docs:
+        text = path.read_text(encoding="utf-8")
+        assert "Status: current source mirror, 2026-06-29." in text, path
+        assert "2026-06-26" not in text, path
+
+    firmware_readme = pathlib.Path("firmware/README.md").read_text(encoding="utf-8")
+    assert "Status: current source map, 2026-06-29." in firmware_readme
+
+    for name in ("ch-ch", "ch-gw", "gw", "gw-server", "server"):
+        design = pathlib.Path(f"docs/design/{name}/design.md").read_text(encoding="utf-8")
+        final = pathlib.Path(f"docs/design/{name}/final_design.md").read_text(encoding="utf-8")
+        assert design == final, name
+
+    gld_doc = pathlib.Path("docs/design/gld/final_design.md").read_text(encoding="utf-8")
+    gld_current_draft = pathlib.Path("docs/design/gld/design.current-firmware.draft.md").read_text(encoding="utf-8")
+    ch_doc = pathlib.Path("docs/design/ch/final_design.md").read_text(encoding="utf-8")
+    payload_doc = pathlib.Path("docs/design/gld-ch/payload-contract.draft.md").read_text(encoding="utf-8")
+    ch_ch_doc = pathlib.Path("docs/design/ch-ch/design.md").read_text(encoding="utf-8")
+    ch_gw_doc = pathlib.Path("docs/design/ch-gw/design.md").read_text(encoding="utf-8")
+    gw_doc = pathlib.Path("docs/design/gw/design.md").read_text(encoding="utf-8")
+    gw_server_doc = pathlib.Path("docs/design/gw-server/design.md").read_text(encoding="utf-8")
+    server_doc = pathlib.Path("docs/design/server/design.md").read_text(encoding="utf-8")
+    command_header = pathlib.Path("firmware/gld/include/GldCommandParser.h").read_text(encoding="utf-8")
+
+    assert "GLD_FIRMWARE_VERSION = \"0.8.12\"" in pathlib.Path("firmware/shared/include/FirmwareVersion.h").read_text(encoding="utf-8")
+    assert "| firmware version | `0.8.12` |" in gld_doc
+    assert "| firmware version | `0.7.1` |" in ch_doc
+    assert "| firmware version | `0.1.3` |" in gw_doc
+
+    assert "`gld`" in gld_doc
+    assert "`gldw`" in gld_doc
+    assert "`ch1`" in ch_doc
+    assert "`ch2`" in ch_doc
+    assert "`ch3`" in ch_doc
+    assert "`gw`" in gw_doc
+    old_env_names = (
+        "gld_unified_esp32s3",
+        "gld_unified_wroom_u1_n16r8_esp32s3",
+        "ch_star_mesh_runtime_esp32s3",
+        "ch_layer1_1_esp32s3",
+        "ch_layer1_2_esp32s3",
+        "ch_layer2_1_esp32s3",
+        "gateway_mqtt_mesh_esp32s3",
+    )
+    for text in (firmware_readme, gld_doc, gld_current_draft, ch_doc, gw_doc):
+        for old_env_name in old_env_names:
+            assert old_env_name not in text
+    assert "final_design.md" not in gld_current_draft
+    assert "`docs/design/gld/design.md` dan firmware GLD saat ini" in gld_current_draft
+
+    assert "MSG_GLD_DOWNLINK_CMD" not in command_header
+    for text in (gld_doc, payload_doc):
+        assert "MSG_NODE_DOWNLINK" in text
+        assert "MSG_GLD_DOWNLINK_CMD" not in text
+
+    assert "| Frequency | 920.0 MHz |" in gld_doc
+    assert "| MESH | 921.0 MHz | 125 kHz | 9 | 4/5 | `0x34` | 17 dBm | 8 | 2 MHz |" in ch_doc
+    assert "| Frequency | 921.0 MHz |" in gw_doc
+
+    assert "confirm count | 10" in gld_doc
+    assert "minimum final voltage | `0.0 V`" in gld_doc
+    assert "Nulling mode does not call WiFi connect, MQTT connect, MQTT subscribe, or MQTT publish." in gld_doc
+    assert "`gas-leak-detector/F001/dataset/data`" in gld_doc
+    assert "`sensor_voltage`" in gld_doc
+    assert "`sensor_gain`" in gld_doc
+    assert "`feature_order`" in gld_doc
+
+    assert "requestId:uint16BE + hopList:uint16BE[]" in ch_ch_doc
+    assert "| payload | `requestId:uint16BE + hopList:uint16BE[]` |" in ch_gw_doc
+    assert "nodeId(2) + commandId(2) + ttlSec(2) + commandLen(1) + commandBytes" in ch_gw_doc
+    assert "nodeId(2) + commandId(2) + commandLen(1) + commandBytes" in ch_gw_doc
+    assert "Gateway wire payload includes TTL. CH current parser does not consume TTL." in gw_server_doc
+
+    assert "`gld/gateway/cmd/pull`" in gw_doc
+    assert "`gld/gateway/cmd/node`" in gw_doc
+    assert "`gld/gateway/topology`" in server_doc
+    assert "`PGL_TOPOLOGY_PARENT_TTL_MS` | 900000" in server_doc
+    assert "current GLD unified dataset JSON field names `sensor_voltage`, `sensor_gain`, `feature_order`, `node_id`, `timestamp_ms`, `nulling_profile_id`" in server_doc
 
 
 def test_ch_rejects_invalid_gld_uplink_semantics():
@@ -859,8 +983,8 @@ def test_version_constants_format():
     for version in versions:
         assert re.fullmatch(r"\d+\.\d+\.\d+", version), version
 
-    assert 'GLD_FIRMWARE_VERSION = "0.8.0"' in header
-    assert 'CH_FIRMWARE_VERSION = "0.6.0"' in header
+    assert 'GLD_FIRMWARE_VERSION = "0.8.12"' in header
+    assert 'CH_FIRMWARE_VERSION = "0.7.1"' in header
     assert 'GATEWAY_FIRMWARE_VERSION = "0.1.3"' in header
     assert 'PROTOCOL_VERSION = "0.1.0"' in header
     assert 'CONFIG_SCHEMA_VERSION = "0.1.0"' in header
@@ -875,9 +999,12 @@ def test_gld_sensor_selftest_scaffold_present():
     power = pathlib.Path("firmware/gld/src/GldPower.cpp").read_text(encoding="utf-8")
 
     assert "[env:gld_sensor_selftest_esp32s3]" in platformio
-    assert "PIN_SPI_SCK = 12" in board_pins
-    assert "PIN_ADS1256_CS = 47" in board_pins
-    assert "PIN_BATTERY_VOLTAGE = 4" in board_pins
+    assert "#define PGL_GLD_PIN_SPI_SCK 12" in board_pins
+    assert "constexpr int PIN_SPI_SCK = PGL_GLD_PIN_SPI_SCK" in board_pins
+    assert "#define PGL_GLD_PIN_ADS1256_CS 47" in board_pins
+    assert "constexpr int PIN_ADS1256_CS = PGL_GLD_PIN_ADS1256_CS" in board_pins
+    assert "#define PGL_GLD_PIN_BATTERY_VOLTAGE 4" in board_pins
+    assert "constexpr int PIN_BATTERY_VOLTAGE = PGL_GLD_PIN_BATTERY_VOLTAGE" in board_pins
     assert '"MQ8", "MQ135", "MQ3", "MQ5", "MQ4", "MQ7", "MQ6", "MQ2"' in board_pins
     assert "SENSOR_SELFTEST_RESULT=" in sensor_main
     assert "SENSOR_SELFTEST_MIN_SCANS = 5" in sensor_main
@@ -950,8 +1077,10 @@ def test_gld_nulling_selftest_scaffold_present():
     nulling_main = pathlib.Path("firmware/gld/src/GldNullingSelfTestMain.cpp").read_text(encoding="utf-8")
 
     assert "[env:gld_nulling_selftest_esp32s3]" in platformio
-    assert "PIN_I2C_SDA = 8" in board_pins
-    assert "PIN_I2C_SCL = 9" in board_pins
+    assert "#define PGL_GLD_PIN_I2C_SDA 8" in board_pins
+    assert "constexpr int PIN_I2C_SDA = PGL_GLD_PIN_I2C_SDA" in board_pins
+    assert "#define PGL_GLD_PIN_I2C_SCL 9" in board_pins
+    assert "constexpr int PIN_I2C_SCL = PGL_GLD_PIN_I2C_SCL" in board_pins
     assert "TCA9548A_ADDR = 0x71" in board_pins
     assert "MCP4725_ADDR = 0x60" in board_pins
     assert "SENSOR_TO_MUX_CH" in board_pins
@@ -963,6 +1092,8 @@ def test_gld_nulling_selftest_scaffold_present():
     assert "GldDacMux" in dac_header
     assert "NULLING_STAGE=BEFORE" in nulling_main
     assert "NULLING_THRESHOLD_V = 0.0001f" in nulling_main
+    assert "NULLING_MIN_FINAL_V = 0.0f" in nulling_main
+    assert "positive=%u" in nulling_main
     assert "NULLING_STAGE=AFTER" in nulling_main
     assert "NULLING_RESULT ch=%u" in nulling_main
     assert "NULLING_SELFTEST_RESULT=PASS" in nulling_main

@@ -25,6 +25,7 @@ constexpr uint16_t NULLING_EXP_MAX_STEP = 2048;
 constexpr uint16_t NULLING_CONFIRM_WINDOW = 10;
 constexpr uint32_t NULLING_SETTLE_MS = 5;
 constexpr float NULLING_THRESHOLD_V = 0.0001f;
+constexpr float NULLING_MIN_FINAL_V = 0.0f;
 
 struct NullingSnapshot {
     int32_t raw;
@@ -236,16 +237,19 @@ bool confirmCode(uint8_t channel, float baselineVoltage, uint16_t& dacCode) {
     }
 
     for (int code = start; code <= end; ++code) {
-        dac.writeDac(channel, static_cast<uint16_t>(code));
+        const bool writeOk = dac.writeDac(channel, static_cast<uint16_t>(code));
         delay(NULLING_SETTLE_MS);
         const NullingSnapshot snapshot = readAverage(channel, NULLING_CONFIRM_COUNT);
         const float delta = fabsf(snapshot.voltage - baselineVoltage);
-        const bool changed = snapshot.valid && delta >= NULLING_THRESHOLD_V;
-        logPrintf("NULLING_CONFIRM ch=%u dac=%d voltage=%.6f deltaV=%.6f changed=%u\n",
+        const bool nonNegative = snapshot.voltage >= NULLING_MIN_FINAL_V;
+        const bool changed = writeOk && snapshot.valid && nonNegative && delta >= NULLING_THRESHOLD_V;
+        logPrintf("NULLING_CONFIRM ch=%u dac=%d voltage=%.9f deltaV=%.6f positive=%u write=%u changed=%u\n",
                   channel,
                   code,
                   snapshot.voltage,
                   delta,
+                  nonNegative ? 1 : 0,
+                  writeOk ? 1 : 0,
                   changed ? 1 : 0);
         if (changed) {
             dacCode = static_cast<uint16_t>(code);
@@ -314,8 +318,8 @@ NullingResult nullOne(uint8_t channel, const NullingSnapshot& before) {
     result.dacCode = selected;
     result.afterVoltage = after.voltage;
     result.deltaVoltage = after.voltage - result.baselineVoltage;
-    result.success = after.valid;
-    result.errorCode = after.valid ? 0 : 6;
+    result.success = after.valid && after.voltage >= NULLING_MIN_FINAL_V;
+    result.errorCode = !after.valid ? 6 : (result.success ? 0 : 7);
     return result;
 }
 
@@ -333,7 +337,7 @@ void runNullingSelftest() {
     for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
         results[ch] = nullOne(ch, before[ch]);
         allSuccess = allSuccess && results[ch].success;
-        logPrintf("NULLING_RESULT ch=%u sensor=%s success=%u errorCode=%u dacCode=%u baselineV=%.6f beforeV=%.6f afterV=%.6f deltaV=%.6f\n",
+        logPrintf("NULLING_RESULT ch=%u sensor=%s success=%u errorCode=%u dacCode=%u baselineV=%.6f beforeV=%.6f afterV=%.9f deltaV=%.6f\n",
                   ch,
                   pgl::gld::board::SENSOR_NAMES[ch],
                   results[ch].success ? 1 : 0,

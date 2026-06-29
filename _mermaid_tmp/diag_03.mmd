@@ -1,21 +1,21 @@
 flowchart LR
-    subgraph STAR_DOMAIN["Domain STAR - 920-923 MHz, SF7, Sync 0x12"]
-        G1["GLD\nRadio A"] -->|"AppFrame\nMSG_SENSOR_DATA\n29-byte encrypted"| C1["CH\nRadio A"]
-        C1 -->|"Compact ACK\n(alarm only)"| G1
-        C1 -->|"MSG_NODE_DOWNLINK"| G1
-    end
-
-    subgraph MESH_DOMAIN["Domain MESH - 923.5 MHz, SF9, Sync 0x34"]
-        C1M["CH1\nRadio B"] -->|"AlarmPush\nClusterDataResponse\nCH_HELLO (uplink)"| CHN["CH2 Parent\nRadio B"]
-        CHN -->|"relay upstream"| GWR["Gateway\nRadio B"]
-        GWR -->|"MSG_SERVER_PULL_REQUEST\nMSG_CH_CONFIG_RESPONSE\n(downlink relay)"| CHN
-        CHN -->|"relay downlink"| C1M
-        GWR -->|"Alarm Compact ACK"| CHN
-    end
-
     subgraph MQTT_DOMAIN["Domain MQTT - WiFi TCP"]
         GWR2["Gateway\nMQTT Client"] -->|"gld/gateway/uplink\ngld/gateway/topology\ngld/gateway/status"| BRK["MQTT Broker\n10.158.198.180:1884"]
         BRK -->|"gld/gateway/cmd/pull\ngld/gateway/cmd/node"| GWR2
         BRK -->|"subscribe"| NRD["Node-RED"]
         NRD -->|"publish cmd"| BRK
+    end
+
+    subgraph MESH_DOMAIN["Domain MESH - 923.5 MHz, SF9, Sync 0x34"]
+        CHN["CH2 Parent\nRadio B"] -->|"relay upstream"| GWR["Gateway\nRadio B"]
+        C1M["CH1\nRadio B"] -->|"AlarmPush\nClusterDataResponse\nCH_HELLO (uplink)"| CHN
+        CHN -->|"relay downlink"| C1M
+        GWR -->|"MSG_SERVER_PULL_REQUEST\nMSG_CH_CONFIG_RESPONSE\n(downlink relay)"| CHN
+        GWR -->|"Alarm Compact ACK"| CHN
+    end
+
+    subgraph STAR_DOMAIN["Domain STAR - 920-923 MHz, SF7, Sync 0x12"]
+        G1["GLD\nRadio A"] -->|"AppFrame\nMSG_SENSOR_DATA\n29-byte encrypted"| C1["CH\nRadio A"]
+        C1 -->|"Compact ACK\n(alarm only)"| G1
+        C1 -->|"MSG_NODE_DOWNLINK"| G1
     end

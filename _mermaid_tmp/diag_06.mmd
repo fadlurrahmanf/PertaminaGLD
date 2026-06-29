@@ -5,18 +5,15 @@ stateDiagram-v2
     NVS_LOAD --> NULLING : mode=nulling
 
     state INFERENCE {
-        [*] --> FAN_INIT : non-battery: FAN ON
-        FAN_INIT --> SCAN
-        SCAN --> FAN_ON_BATT : battery mode: FAN ON
-        FAN_ON_BATT --> AVG : baca 8 ch ADS tiap 1000ms
-        AVG --> ML_PREDICT : >=10 sampel
+        [*] --> SCAN
+        SCAN --> AVG : baca 8 ch ADS tiap 1000ms
+        AVG --> ML_PREDICT : primed (>=8 sampel per ch)
         ML_PREDICT --> ALARM_CHECK : gasClass + confidence
-        ALARM_CHECK --> FAN_OFF_BATT : battery mode: FAN OFF
-        FAN_OFF_BATT --> LORA_TX : tiap 10000ms
-        ALARM_CHECK --> LORA_TX : non-battery mode langsung
-        LORA_TX --> RX_WINDOW : 2000ms
-        RX_WINDOW --> SLEEP_BATT : battery mode: deep sleep
-        RX_WINDOW --> SCAN : non-battery mode: loop
+        ALARM_CHECK --> UPDATE_OUTPUTS : updateAlarmOutputs()
+        UPDATE_OUTPUTS --> SCAN
+        ALARM_CHECK --> LORA_TX : transmitOnce() tiap 10000ms
+        LORA_TX --> RX_WINDOW : openLoRaRxWindow() 2000ms
+        RX_WINDOW --> SCAN
     }
 
     state DATASET {

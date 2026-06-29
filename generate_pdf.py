@@ -28,11 +28,18 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 
 # ─── paths ──────────────────────────────────────────────────────────────────
-MD_FILE  = Path("D:/PertaminaGLD/Pertamina_GLD_Visual_End_to_End.md")
-PDF_FILE = Path("D:/PertaminaGLD/Pertamina_GLD_Visual_End_to_End_System_Explanation.pdf")
+import argparse
+_ap = argparse.ArgumentParser()
+_ap.add_argument("--input",  default="D:/PertaminaGLD/Pertamina_GLD_Visual_End_to_End.md")
+_ap.add_argument("--output", default="D:/PertaminaGLD/Pertamina_GLD_Visual_End_to_End_System_Explanation.pdf")
+_args, _ = _ap.parse_known_args()
+
+MD_FILE  = Path(_args.input)
+PDF_FILE = Path(_args.output)
 MMDC     = "C:/Users/asus/AppData/Roaming/npm/mmdc.cmd"
 WORK_DIR = Path("D:/PertaminaGLD/_mermaid_tmp")
 WORK_DIR.mkdir(exist_ok=True)
+DOC_TITLE = "Pertamina GLD"
 
 # ─── colours ────────────────────────────────────────────────────────────────
 NAVY    = colors.HexColor("#00356b")
@@ -41,12 +48,12 @@ LBLUE   = colors.HexColor("#c8daea")
 STRIP   = colors.HexColor("#f0f4fa")
 AMBER   = colors.HexColor("#f09020")
 AMBER_BG= colors.HexColor("#fffbf0")
-CODE_BG = colors.HexColor("#f4f6fa")
+CODE_BG = colors.HexColor("#eef1f7")
 CODE_FG = colors.HexColor("#1e2236")
 WHITE   = colors.white
 BLACK   = colors.black
-GRAY    = colors.HexColor("#666666")
-DKGRAY  = colors.HexColor("#1a1a1a")
+GRAY    = colors.HexColor("#333333")
+DKGRAY  = colors.black
 
 PAGE_W, PAGE_H = A4
 MARGIN = 16 * mm
@@ -78,17 +85,17 @@ sBody = S("Body", fontName="Helvetica", fontSize=9,
           leading=14, textColor=DKGRAY, spaceAfter=6)
 
 sCode = S("Code", fontName="Courier", fontSize=7.5,
-          leading=11, textColor=colors.HexColor("#c9d1d9"),
-          backColor=CODE_FG, spaceAfter=6,
+          leading=11, textColor=CODE_FG,
+          backColor=CODE_BG, spaceAfter=6,
           leftIndent=8, rightIndent=8,
           borderPad=6)
 
 sCodeInline = S("CodeInline", fontName="Courier", fontSize=8,
-                textColor=colors.HexColor("#003366"),
+                textColor=colors.HexColor("#002255"),
                 backColor=CODE_BG)
 
 sNote = S("Note", fontName="Helvetica-Oblique", fontSize=8.5,
-          textColor=colors.HexColor("#5a4000"),
+          textColor=colors.HexColor("#3a2600"),
           backColor=AMBER_BG, leftIndent=10, rightIndent=4,
           spaceAfter=6, spaceBefore=4,
           borderPad=4)
@@ -100,13 +107,13 @@ sTD = S("TD", fontName="Helvetica", fontSize=8,
         textColor=DKGRAY, alignment=TA_LEFT, leading=11)
 
 sTDCode = S("TDCode", fontName="Courier", fontSize=7.5,
-            textColor=colors.HexColor("#003366"), alignment=TA_LEFT, leading=11)
+            textColor=colors.HexColor("#002255"), alignment=TA_LEFT, leading=11)
 
 sCaption = S("Caption", fontName="Helvetica-Oblique", fontSize=8,
-             textColor=GRAY, alignment=TA_CENTER, spaceBefore=2, spaceAfter=8)
+             textColor=DKGRAY, alignment=TA_CENTER, spaceBefore=2, spaceAfter=8)
 
 sMeta = S("Meta", fontName="Helvetica", fontSize=8.5,
-          textColor=colors.HexColor("#444444"), spaceAfter=6, leading=14)
+          textColor=DKGRAY, spaceAfter=6, leading=14)
 
 sBullet = S("Bullet", fontName="Helvetica", fontSize=9,
             leading=13, textColor=DKGRAY,
@@ -505,16 +512,16 @@ def _draw_header_footer(canvas, doc, first=False):
         canvas.rect(MARGIN, h - 14 * mm, w - 2 * MARGIN, 7 * mm, fill=1, stroke=0)
         canvas.setFillColor(WHITE)
         canvas.setFont("Helvetica-Bold", 7.5)
-        canvas.drawString(MARGIN + 3, h - 10 * mm, "Pertamina GLD — Penjelasan Visual End-to-End Sistem")
+        canvas.drawString(MARGIN + 3, h - 10 * mm, DOC_TITLE)
         canvas.setFont("Helvetica", 7)
         canvas.drawRightString(w - MARGIN - 3, h - 10 * mm, "CONFIDENTIAL")
 
     # footer
     canvas.setFillColor(LBLUE)
     canvas.rect(MARGIN, 8 * mm, w - 2 * MARGIN, 0.4 * mm, fill=1, stroke=0)
-    canvas.setFillColor(colors.HexColor("#444444"))
-    canvas.setFont("Helvetica", 7)
-    canvas.drawString(MARGIN, 5.5 * mm, "Pertamina GLD (c) 2026-06-29 -- Berdasarkan source code firmware/docs saat ini")
+    canvas.setFillColor(BLACK)
+    canvas.setFont("Helvetica", 7.5)
+    canvas.drawString(MARGIN, 5.5 * mm, f"Pertamina GLD © 2026-06-29 — Berdasarkan: design dan firmware yang sedang berjalan")
     canvas.drawRightString(w - MARGIN, 5.5 * mm, f"Halaman {doc.page}")
 
     canvas.restoreState()
@@ -523,8 +530,13 @@ def _draw_header_footer(canvas, doc, first=False):
 # ─── main ───────────────────────────────────────────────────────────────────
 
 def main():
+    global DOC_TITLE
     print(f"Reading {MD_FILE} ...")
     md_text = MD_FILE.read_text(encoding="utf-8")
+
+    import re as _re
+    m = _re.search(r'^#\s+(.+)', md_text, _re.MULTILINE)
+    DOC_TITLE = m.group(1).strip() if m else "Pertamina GLD"
 
     print("Building PDF content ...")
     story = md_to_flowables(md_text)

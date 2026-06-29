@@ -1,7 +1,6 @@
 graph LR
     subgraph RUNTIME["Runtime Deploy -- firmware/platformio.ini"]
         GLD_ENV["env:gld\nGLD unified runtime\ninference + dataset + nulling"]
-        GLDW_ENV["env:gldw\nextends env:gld\n16MB flash, 8MB OPI PSRAM"]
         CH1_ENV["env:ch1\nCH ID 0x0064 (default)\nbatt threshold normal"]
         CH2_ENV["env:ch2\nextends env:ch1\nCH ID 0x0065\nbatt threshold = 0"]
         CH3_ENV["env:ch3\nextends env:ch1\nCH ID 0x0066"]
@@ -9,7 +8,6 @@ graph LR
     end
 
     GLD_ENV -->|"flash ke GLD hardware"| HW_GLD["GLD Unit"]
-    GLDW_ENV -->|"flash ke GLD WROOM"| HW_GLDW["GLD Unit WROOM"]
     CH1_ENV -->|"flash ke CH1"| HW_CH1["CH1"]
     CH2_ENV -->|"flash ke CH2"| HW_CH2["CH2"]
     CH3_ENV -->|"flash ke CH3"| HW_CH3["CH3"]

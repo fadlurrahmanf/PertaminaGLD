@@ -1,4 +1,4 @@
-# Penjelasan Visual End-to-End Sistem Pertamina GLD
+﻿# Penjelasan Visual End-to-End Sistem Pertamina GLD
 
 ---
 
@@ -87,13 +87,13 @@ flowchart LR
 |---|---|---|
 | **Normal Cache Update** | Tiap 10 detik | GLD ke CH (simpan di NodeCache, tidak diteruskan otomatis ke server) |
 | **Server Pull Data** | Node-RED request | Node-RED ke MQTT ke GW ke CH (hopList relay) ke GW ke MQTT ke Node-RED |
-| **Alarm Push** | GasClass berbeda 0 dan conf lebih dari sama dengan 30 | GLD ke CH ke parent chain CH ke GW ke MQTT ke Node-RED |
-| **Dataset Capture** | Mode dataset aktif | GLD ke MQTT Broker Dataset ke Node-RED |
+| **Alarm Push** | GasClass tidak sama dengan 0 dan conf lebih dari sama dengan 40 | GLD ke CH ke parent chain CH ke GW ke MQTT ke Node-RED (langsung, tanpa pull request) |
+| **Dataset Capture** | Menerima START_DATASET via MQTT | GLD ke MQTT Broker Dataset ke Node-RED |
 | **Downlink Command** | Operator | Node-RED ke MQTT ke GW ke CH ke GLD (via LoRa STAR) |
 | **Topology Report** | CH boot + tiap 5 menit | CH ke parent CHx ke GW ke MQTT ke Node-RED |
 | **Nulling** | Mode nulling, offline | GLD lokal saja (DAC/ADS), tidak ke server |
 
-> **Penting:** Data sensor GLD tidak otomatis diteruskan ke server. CH hanya menyimpan di NodeCache. Data dikirim ke server hanya jika Node-RED mengirim pull request ke CH tersebut.
+> **Penting:** Data sensor GLD **non-alarm** tidak otomatis diteruskan ke server — CH hanya menyimpan di NodeCache dan baru dikirim ke server saat ada pull request dari Node-RED. Pengecualian: **data alarm** langsung di-push dari CH ke Gateway ke Node-RED tanpa perlu pull request.
 
 ---
 
@@ -177,29 +177,29 @@ graph TB
 
 ```mermaid
 flowchart LR
-    subgraph STAR_DOMAIN["Domain STAR - 920-923 MHz, SF7, Sync 0x12"]
-        G1["GLD\nRadio A"] -->|"AppFrame\nMSG_SENSOR_DATA\n29-byte encrypted"| C1["CH\nRadio A"]
-        C1 -->|"Compact ACK\n(alarm only)"| G1
-        C1 -->|"MSG_NODE_DOWNLINK"| G1
-    end
-
-    subgraph MESH_DOMAIN["Domain MESH - 923.5 MHz, SF9, Sync 0x34"]
-        C1M["CH1\nRadio B"] -->|"AlarmPush\nClusterDataResponse\nCH_HELLO (uplink)"| CHN["CH2 Parent\nRadio B"]
-        CHN -->|"relay upstream"| GWR["Gateway\nRadio B"]
-        GWR -->|"MSG_SERVER_PULL_REQUEST\nMSG_CH_CONFIG_RESPONSE\n(downlink relay)"| CHN
-        CHN -->|"relay downlink"| C1M
-        GWR -->|"Alarm Compact ACK"| CHN
-    end
-
     subgraph MQTT_DOMAIN["Domain MQTT - WiFi TCP"]
         GWR2["Gateway\nMQTT Client"] -->|"gld/gateway/uplink\ngld/gateway/topology\ngld/gateway/status"| BRK["MQTT Broker\n10.158.198.180:1884"]
         BRK -->|"gld/gateway/cmd/pull\ngld/gateway/cmd/node"| GWR2
         BRK -->|"subscribe"| NRD["Node-RED"]
         NRD -->|"publish cmd"| BRK
     end
+
+    subgraph MESH_DOMAIN["Domain MESH - 923.5 MHz, SF9, Sync 0x34"]
+        CHN["CH2 Parent\nRadio B"] -->|"relay upstream"| GWR["Gateway\nRadio B"]
+        C1M["CH1\nRadio B"] -->|"AlarmPush\nClusterDataResponse\nCH_HELLO (uplink)"| CHN
+        CHN -->|"relay downlink"| C1M
+        GWR -->|"MSG_SERVER_PULL_REQUEST\nMSG_CH_CONFIG_RESPONSE\n(downlink relay)"| CHN
+        GWR -->|"Alarm Compact ACK"| CHN
+    end
+
+    subgraph STAR_DOMAIN["Domain STAR - 920-923 MHz, SF7, Sync 0x12"]
+        G1["GLD\nRadio A"] -->|"AppFrame\nMSG_SENSOR_DATA\n29-byte encrypted"| C1["CH\nRadio A"]
+        C1 -->|"Compact ACK\n(alarm only)"| G1
+        C1 -->|"MSG_NODE_DOWNLINK"| G1
+    end
 ```
 
-*Gambar 3: Tiga domain komunikasi: STAR (GLD ke CH, kiri), MESH (CH parent-child ke GW, tengah), MQTT (GW ke Server, kanan).*
+*Gambar 3: Tiga domain komunikasi yang digunakan sistem Pertamina GLD.*
 
 ---
 
@@ -223,7 +223,6 @@ flowchart LR
 graph LR
     subgraph RUNTIME["Runtime Deploy -- firmware/platformio.ini"]
         GLD_ENV["env:gld\nGLD unified runtime\ninference + dataset + nulling"]
-        GLDW_ENV["env:gldw\nextends env:gld\n16MB flash, 8MB OPI PSRAM"]
         CH1_ENV["env:ch1\nCH ID 0x0064 (default)\nbatt threshold normal"]
         CH2_ENV["env:ch2\nextends env:ch1\nCH ID 0x0065\nbatt threshold = 0"]
         CH3_ENV["env:ch3\nextends env:ch1\nCH ID 0x0066"]
@@ -231,7 +230,6 @@ graph LR
     end
 
     GLD_ENV -->|"flash ke GLD hardware"| HW_GLD["GLD Unit"]
-    GLDW_ENV -->|"flash ke GLD WROOM"| HW_GLDW["GLD Unit WROOM"]
     CH1_ENV -->|"flash ke CH1"| HW_CH1["CH1"]
     CH2_ENV -->|"flash ke CH2"| HW_CH2["CH2"]
     CH3_ENV -->|"flash ke CH3"| HW_CH3["CH3"]
@@ -247,7 +245,6 @@ graph LR
 | Env | Role | Fungsi |
 |---|---|---|
 | `gld` | GLD (ID 0xF001) | GLD unified: inference + dataset + nulling |
-| `gldw` | GLD (ID 0xF001) | GLD unified, 16MB flash, 8MB PSRAM (WROOM variant) |
 | `ch1` | CH (ID 0x0064) | CH runtime default, batt threshold normal |
 | `ch2` | CH (ID 0x0065) | CH runtime, batt threshold = 0 |
 | `ch3` | CH (ID 0x0066) | CH runtime |
@@ -263,65 +260,67 @@ graph LR
 
 ```mermaid
 flowchart TD
-    subgraph SENSOR_BLOCK["Hardware Sensor"]
+    subgraph SENSOR_BLOCK["Sensor Hardware (tiap 1000ms)"]
         MQ["8 Sensor Gas\nMQ2/3/4/5/6/7/8/135"]
         TCA["TCA9548A\nI2C Mux 0x71"]
-        MCP["MCP4725 ×8\nDAC 0x60\n(Nulling)"]
-        ADS["ADS1256\n24-bit ADC SPI\n(GPIO47/10/18)"]
+        ADS["ADS1256\n24-bit ADC SPI"]
+        MA["GldMovingAverage\nmin 8 sampel per channel\nsebelum inference aktif"]
     end
 
-    subgraph PROC_BLOCK["Processing"]
-        MA["GldMovingAverage\n10 sampel warm-up"]
-        TC["GldThresholdClassifier"]
-        NN["NeuralNetwork\npredict()"]
-        FM["GldFrameBuilder\nGldPayload + GldCrypto"]
+    subgraph INFERENCE_BLOCK["ML Inference (setelah priming)"]
+        NN["NeuralNetwork.predict()\nfeature scaling + forward pass"]
+        RESULT["gasClass + confidence\n(0=clear, 1=LPG, 2=methane, 3=propane, 4=butane)"]
+        ALARM_CHK{"alarm?\ngasClass != 0\nconf >= 40%"}
     end
 
-    subgraph OUTPUT_BLOCK["Output"]
-        LORA["SX1262\nLoRa STAR TX\n920-923 MHz SF7"]
-        LED["Status LED GPIO41"]
-        LAMP["Alarm Lamp GPIO1"]
-        BUZ["Buzzer GPIO2"]
-        FAN["DC Fan GPIO42"]
+    subgraph ALARM_OUTPUT["Alarm Outputs (via ULN2003G)"]
+        LAMP["Alarm Lamp\nGPIO1 LOW (active low)"]
+        BUZ["Buzzer\nGPIO2 LOW (active low)"]
+        LED["Status LED\nGPIO41 LOW (active low)"]
     end
 
-    subgraph POWER_BLOCK["Power"]
-        BATT["Battery ADC GPIO4"]
-        PWR24["24V-Good GPIO45"]
-        POWER["GldPower\nmode: battery/5v/24v"]
-        PMODE_BATT["Mode: battery\nexternalPower=0"]
-        PMODE_5V["Mode: 5v\nexternalPower=1"]
-        PMODE_24V["Mode: 24v\nexternalPower=1"]
+    subgraph TX_BLOCK["LoRa TX (tiap 10000ms)"]
+        BUILD["Build AppFrame\ngasClass + confidence + batteryMv"]
+        ENC["AES-128-GCM encrypt\n29-byte encrypted payload"]
+        LORA["SX1262 TX\n920-923 MHz SF7"]
+        RX["openLoRaRxWindow()\n2000ms, poll tiap 5ms"]
+        DNLK["Terima MSG_NODE_DOWNLINK\n(mode switch)"]
+    end
+
+    subgraph POWER_BLOCK["Power Detection"]
+        P45["GPIO45\n(External Power Pin)"]
+        BATGPIO4["Battery GPIO4\n(ADC Measurement)"]
+        PM24["Mode: 24v\nexternalPower=true"]
+        PMBAT["Mode: battery\nexternalPower=false"]
+        PM5V["Mode: 5v\nexternalPower=true"]
     end
 
     MQ --> TCA
     TCA --> ADS
-    MCP --> TCA
-    ADS -->|"8 channel voltage"| MA
-    MA -->|"setelah 10 sampel"| NN
-    NN -->|"gasClass + confidence"| TC
-    TC -->|"alarm?"| LAMP
-    TC -->|"alarm?"| BUZ
-    TC -->|"gasClass + confidence"| FM
+    ADS -->|"8 channel voltage\nrunScan()"| MA
+    MA -->|"primed: semua ch >= 8 sampel"| NN
+    NN --> RESULT
+    RESULT --> ALARM_CHK
+    ALARM_CHK -->|"Ya"| LAMP
+    ALARM_CHK -->|"Ya"| BUZ
+    ALARM_CHK -->|"Ya"| LED
 
-    BATT --> POWER
-    PWR24 --> POWER
-    POWER --> PMODE_BATT
-    POWER --> PMODE_5V
-    POWER --> PMODE_24V
-    POWER -->|"mode + batteryMv"| FM
+    P45 -->|"HIGH"| PM24
+    P45 -->|"LOW"| BATGPIO4
+    BATGPIO4 -->|"ADC valid"| PMBAT
+    BATGPIO4 -->|"ADC invalid"| PM5V
 
-    PMODE_BATT -->|"FAN ON sebelum scan\nFAN OFF sesudah scan"| FAN
-    PMODE_5V -->|"FAN ON selalu\nselama inference"| FAN
-    PMODE_24V -->|"FAN ON selalu\nselama inference"| FAN
-
-    FM -->|"AppFrame + AES-GCM"| LORA
-    LORA -->|"RX window 2000ms"| DOWNLINK_RX["Terima Downlink\nMSG_NODE_DOWNLINK"]
+    BATGPIO4 -->|"batteryMv"| BUILD
+    RESULT -->|"gasClass + confidence"| BUILD
+    BUILD --> ENC
+    ENC --> LORA
+    LORA --> RX
+    RX -->|"jika ada downlink"| DNLK
 ```
 
-*Gambar 5: Diagram internal GLD Node — sensor ke frame LoRa, termasuk kontrol DC Fan dan 3 mode power.*
+*Gambar 5: Diagram internal GLD Node berdasarkan source firmware — scan sensor tiap 1000ms, TX LoRa tiap 10000ms.*
 
-> **Catatan:** DC Fan (GPIO42) pada inference mode adalah design intent. Firmware saat ini belum mengimplementasikan kontrol fan di inference loop — perlu firmware update.
+> **Catatan:** DC Fan (GPIO42) diinisialisasi LOW dan tidak dikontrol dalam inference mode. Fan hanya aktif di dataset mode saat menerima perintah `START_DATASET` dengan `use_fan_intake=true`.
 
 ---
 
@@ -335,18 +334,15 @@ stateDiagram-v2
     NVS_LOAD --> NULLING : mode=nulling
 
     state INFERENCE {
-        [*] --> FAN_INIT : non-battery: FAN ON
-        FAN_INIT --> SCAN
-        SCAN --> FAN_ON_BATT : battery mode: FAN ON
-        FAN_ON_BATT --> AVG : baca 8 ch ADS tiap 1000ms
-        AVG --> ML_PREDICT : >=10 sampel
+        [*] --> SCAN
+        SCAN --> AVG : baca 8 ch ADS tiap 1000ms
+        AVG --> ML_PREDICT : primed (>=8 sampel per ch)
         ML_PREDICT --> ALARM_CHECK : gasClass + confidence
-        ALARM_CHECK --> FAN_OFF_BATT : battery mode: FAN OFF
-        FAN_OFF_BATT --> LORA_TX : tiap 10000ms
-        ALARM_CHECK --> LORA_TX : non-battery mode langsung
-        LORA_TX --> RX_WINDOW : 2000ms
-        RX_WINDOW --> SLEEP_BATT : battery mode: deep sleep
-        RX_WINDOW --> SCAN : non-battery mode: loop
+        ALARM_CHECK --> UPDATE_OUTPUTS : updateAlarmOutputs()
+        UPDATE_OUTPUTS --> SCAN
+        ALARM_CHECK --> LORA_TX : transmitOnce() tiap 10000ms
+        LORA_TX --> RX_WINDOW : openLoRaRxWindow() 2000ms
+        RX_WINDOW --> SCAN
     }
 
     state DATASET {
@@ -382,7 +378,7 @@ stateDiagram-v2
 
 *Gambar 6: Diagram mode GLD — inference (dengan fan dan sleep battery), dataset, dan nulling.*
 
-> **Catatan design intent:** Sleep setelah RX_WINDOW pada mode battery dan kontrol DC Fan di inference loop adalah design intent yang belum diimplementasikan di firmware saat ini — keduanya perlu firmware update.
+> **Catatan:** Diagram di atas mencerminkan firmware yang ada. DC Fan tidak dikontrol dalam inference — hanya aktif di dataset mode. Sleep setelah RX_WINDOW belum diimplementasikan (loop terus berjalan).
 
 ---
 
@@ -443,11 +439,25 @@ LoRa Downlink via `MSG_NODE_DOWNLINK`: dikirim dari CH ke GLD setelah CMD diteri
 
 ---
 
+### Skenario Penggunaan Command
+
+| Skenario Operator | Command | Via |
+|---|---|---|
+| Kembali ke monitoring normal setelah kalibrasi atau debug | `SET_MODE inference` | Serial, MQTT, atau LoRa (remote) |
+| Mulai pengambilan data training sensor | `SET_MODE dataset` lalu `START_DATASET` | Serial + MQTT |
+| Kalibrasi sensor setelah pemasangan baru atau relokasi | `SET_MODE nulling` | Serial, MQTT, atau LoRa (remote) |
+| Debug real-time: lihat log sensor, inference, dan alarm di serial monitor | `DEBUG_ON` | Serial (USB) |
+| Matikan log debug setelah selesai investigasi | `DEBUG_OFF` | Serial (USB) |
+| Remote ganti mode GLD dari server tanpa akses fisik | `SET_MODE inference/dataset/nulling` | Server ke MQTT ke GW ke CH ke GLD |
+| Hentikan sesi dataset sebelum target sampel tercapai | `STOP_DATASET` | MQTT |
+
+---
+
 ### Model ML dan Alarm Rule
 
 **Alarm rule (dari source):**
 ```
-alarm = gasClass != clearGas (0) && confidence >= 30
+alarm = gasClass != clearGas (0) && confidence >= 40
 ```
 
 | Model Class | Protocol Gas Class | Nama Gas |
@@ -482,7 +492,7 @@ sequenceDiagram
     GLD->>GLD: ADS1256 baca 8 channel
     GLD->>GLD: Moving average (min 10 sampel)
     GLD->>GLD: ML predict → gasClass + confidence
-    GLD->>GLD: Alarm? (gasClass≠0 && conf≥30)
+    GLD->>GLD: Alarm? (gasClass≠0 && conf≥40)
     GLD->>GLD: Build plaintext 4B
     GLD->>GLD: AES-128-GCM encrypt → 29B
     GLD->>GLD: Build AppFrame (MSG_SENSOR_DATA)
@@ -547,9 +557,9 @@ sequenceDiagram
     participant GW as Gateway (0x006F)
     participant NR as Node-RED
 
-    Note over GLD: ML detect: gasClass≠0 && conf≥30
+    Note over GLD: ML detect: gasClass≠0 && conf≥40
 
-    GLD->>GLD: Alarm ON → lamp/buzzer HIGH
+    GLD->>GLD: Alarm ON → lamp/buzzer LOW (active low via ULN2003G)
     GLD->>GLD: Build AppFrame typeFlags=0x50 (alarm+battery)\nATAU 0xD0 (alarm+external)
 
     GLD->>CH: LoRa STAR TX ALARM\nMSG_SENSOR_DATA + FLAG_ALARM_ACK\ndstId=0x0064
@@ -1307,7 +1317,7 @@ sequenceDiagram
 
     GW->>CH: LoRa MESH TX\nMSG_SERVER_NODE_COMMAND\ndstId=0x0064
 
-    CH->>CH: Parse frame (⚠️ CH parser skip ttlSec field)
+    CH->>CH: Parse frame (⚠ï¸ CH parser skip ttlSec field)
     CH->>CH: Simpan di PendingDownlink[0xF001]\nTTL 1800s
 
     alt GLD External Power
@@ -1434,8 +1444,8 @@ flowchart TB
 
 | Name | Nilai | Kondisi |
 |---|---|---|
-| Normal + Battery | `0x10` | gasClass=0 atau conf<30, baterai |
-| Normal + External | `0x90` | gasClass=0 atau conf<30, external power |
+| Normal + Battery | `0x10` | gasClass=0 atau conf<40, baterai |
+| Normal + External | `0x90` | gasClass=0 atau conf<40, external power |
 | Alarm + Battery | `0x50` | alarm aktif, baterai |
 | Alarm + External | `0xD0` | alarm aktif, external power |
 | Compact Alarm ACK | `0x50` | ACK dari CH/GW ke pengirim alarm |

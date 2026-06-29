@@ -10,7 +10,7 @@ sequenceDiagram
     GLD->>GLD: ADS1256 baca 8 channel
     GLD->>GLD: Moving average (min 10 sampel)
     GLD->>GLD: ML predict → gasClass + confidence
-    GLD->>GLD: Alarm? (gasClass≠0 && conf≥30)
+    GLD->>GLD: Alarm? (gasClass≠0 && conf≥40)
     GLD->>GLD: Build plaintext 4B
     GLD->>GLD: AES-128-GCM encrypt → 29B
     GLD->>GLD: Build AppFrame (MSG_SENSOR_DATA)

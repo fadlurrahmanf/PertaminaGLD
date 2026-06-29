@@ -4,9 +4,9 @@ sequenceDiagram
     participant GW as Gateway (0x006F)
     participant NR as Node-RED
 
-    Note over GLD: ML detect: gasClass≠0 && conf≥30
+    Note over GLD: ML detect: gasClass≠0 && conf≥40
 
-    GLD->>GLD: Alarm ON → lamp/buzzer HIGH
+    GLD->>GLD: Alarm ON → lamp/buzzer LOW (active low via ULN2003G)
     GLD->>GLD: Build AppFrame typeFlags=0x50 (alarm+battery)\nATAU 0xD0 (alarm+external)
 
     GLD->>CH: LoRa STAR TX ALARM\nMSG_SENSOR_DATA + FLAG_ALARM_ACK\ndstId=0x0064

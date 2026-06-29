@@ -11,7 +11,7 @@ sequenceDiagram
 
     GW->>CH: LoRa MESH TX\nMSG_SERVER_NODE_COMMAND\ndstId=0x0064
 
-    CH->>CH: Parse frame (⚠️ CH parser skip ttlSec field)
+    CH->>CH: Parse frame (⚠ï¸ CH parser skip ttlSec field)
     CH->>CH: Simpan di PendingDownlink[0xF001]\nTTL 1800s
 
     alt GLD External Power

@@ -34,9 +34,9 @@ constexpr uint8_t TYPE_ALARM_ACK_COMPACT = MSG_SENSOR_DATA | FLAG_ALARM_ACK;
 
 constexpr uint8_t GLD_GAS_CLEAR = 0;
 constexpr uint8_t GLD_GAS_LPG = 1;
-constexpr uint8_t GLD_GAS_PROPANE = 2;
-constexpr uint8_t GLD_GAS_BUTANE = 3;
-constexpr uint8_t GLD_GAS_METHANE = 4;
+constexpr uint8_t GLD_GAS_METHANE = 2;
+constexpr uint8_t GLD_GAS_PROPANE = 3;
+constexpr uint8_t GLD_GAS_BUTANE = 4;
 constexpr uint8_t GLD_GAS_RESERVED = 5;
 constexpr uint8_t GLD_GAS_ANOMALY = 6;
 

@@ -59,21 +59,34 @@ void emitLog(GldNullingLogFn logFn, const char* fmt, ...) {
     logFn(line);
 }
 
-Snapshot readAverage(GldAds1256Reader& ads, uint8_t ch, uint8_t count) {
+void serviceTick(GldNullingTickFn tickFn) {
+    if (tickFn) tickFn();
+}
+
+void settle(GldNullingTickFn tickFn) {
+    serviceTick(tickFn);
+    delay(SETTLE_MS);
+    serviceTick(tickFn);
+}
+
+Snapshot readAverage(GldAds1256Reader& ads, uint8_t ch, uint8_t count,
+                     GldNullingTickFn tickFn) {
     float sum = 0.0f;
     bool valid = true;
     for (uint8_t i = 0; i < count; ++i) {
+        serviceTick(tickFn);
         const GldAds1256Reading r = ads.readChannel(ch);
         sum += r.voltage;
         valid = valid && (r.status == GldAds1256Status::Ok);
     }
+    serviceTick(tickFn);
     return {sum / static_cast<float>(count), valid};
 }
 
 bool findRange(GldAds1256Reader& ads, GldDacMux& dac,
                uint8_t ch, float baselineV,
                uint16_t& outLow, uint16_t& outHigh,
-               GldNullingLogFn logFn) {
+               GldNullingLogFn logFn, GldNullingTickFn tickFn) {
     uint16_t step     = EXP_INIT_STEP;
     uint16_t previous = 0;
     uint16_t current  = 1;
@@ -87,8 +100,8 @@ bool findRange(GldAds1256Reader& ads, GldDacMux& dac,
                     static_cast<unsigned>(current));
             return false;
         }
-        delay(SETTLE_MS);
-        const Snapshot snap = readAverage(ads, ch, AVG_COUNT);
+        settle(tickFn);
+        const Snapshot snap = readAverage(ads, ch, AVG_COUNT, tickFn);
         const float delta = fabsf(snap.voltage - baselineV);
         emitLog(logFn, "NULLING_EXP_STEP ch=%u sensor=%s code=%u voltage=%.6f delta=%.6f valid=%u",
                 static_cast<unsigned>(ch), sensorName(ch),
@@ -121,15 +134,15 @@ bool findRange(GldAds1256Reader& ads, GldDacMux& dac,
 uint16_t binarySearch(GldAds1256Reader& ads, GldDacMux& dac,
                       uint8_t ch, float baselineV,
                       uint16_t low, uint16_t high,
-                      GldNullingLogFn logFn) {
+                      GldNullingLogFn logFn, GldNullingTickFn tickFn) {
     emitLog(logFn, "NULLING_BIN_START ch=%u sensor=%s low=%u high=%u",
             static_cast<unsigned>(ch), sensorName(ch),
             static_cast<unsigned>(low), static_cast<unsigned>(high));
     while (low + 1 < high) {
         const uint16_t mid = static_cast<uint16_t>((low + high) / 2);
         const bool writeOk = dac.writeDac(ch, mid);
-        delay(SETTLE_MS);
-        const Snapshot snap = readAverage(ads, ch, AVG_COUNT);
+        settle(tickFn);
+        const Snapshot snap = readAverage(ads, ch, AVG_COUNT, tickFn);
         const float delta = fabsf(snap.voltage - baselineV);
         emitLog(logFn, "NULLING_BIN_STEP ch=%u sensor=%s low=%u high=%u mid=%u voltage=%.6f delta=%.6f valid=%u write=%u",
                 static_cast<unsigned>(ch), sensorName(ch),
@@ -149,7 +162,7 @@ uint16_t binarySearch(GldAds1256Reader& ads, GldDacMux& dac,
 
 bool confirmCode(GldAds1256Reader& ads, GldDacMux& dac,
                  uint8_t ch, float baselineV, uint16_t& dacCode,
-                 GldNullingLogFn logFn) {
+                 GldNullingLogFn logFn, GldNullingTickFn tickFn) {
     int start = static_cast<int>(dacCode) - 5;
     if (start < board::GLD_DAC_CODE_MIN) start = board::GLD_DAC_CODE_MIN;
     int end = start + static_cast<int>(CONFIRM_WINDOW) - 1;
@@ -162,8 +175,8 @@ bool confirmCode(GldAds1256Reader& ads, GldDacMux& dac,
             static_cast<unsigned>(ch), sensorName(ch), start, end);
     for (int code = start; code <= end; ++code) {
         const bool writeOk = dac.writeDac(ch, static_cast<uint16_t>(code));
-        delay(SETTLE_MS);
-        const Snapshot snap = readAverage(ads, ch, CONFIRM_COUNT);
+        settle(tickFn);
+        const Snapshot snap = readAverage(ads, ch, CONFIRM_COUNT, tickFn);
         const float delta = fabsf(snap.voltage - baselineV);
         const bool nonNegative = snap.voltage >= MIN_FINAL_V;
         emitLog(logFn, "NULLING_CONFIRM_STEP ch=%u sensor=%s code=%d voltage=%.9f delta=%.6f valid=%u positive=%u write=%u",
@@ -192,7 +205,8 @@ struct ChannelResult {
 };
 
 ChannelResult nullOneChannel(GldAds1256Reader& ads, GldDacMux& dac,
-                             uint8_t ch, GldNullingLogFn logFn) {
+                             uint8_t ch, GldNullingLogFn logFn,
+                             GldNullingTickFn tickFn) {
     ChannelResult r{};
     r.success = false;
     emitLog(logFn, "NULLING_CH_START ch=%u sensor=%s",
@@ -205,7 +219,7 @@ ChannelResult nullOneChannel(GldAds1256Reader& ads, GldDacMux& dac,
                 static_cast<unsigned>(r.errorCode), channelErrorName(r.errorCode));
         return r;
     }
-    delay(SETTLE_MS);
+    settle(tickFn);
 
     emitLog(logFn, "NULLING_BASELINE_START ch=%u sensor=%s codeMin=%u codeMax=%u avgCount=%u",
             static_cast<unsigned>(ch), sensorName(ch),
@@ -216,8 +230,8 @@ ChannelResult nullOneChannel(GldAds1256Reader& ads, GldDacMux& dac,
     uint8_t baseCount  = 0;
     for (uint16_t code = 0; code <= BASELINE_PRESCAN_MAX; ++code) {
         const bool writeOk = dac.writeDac(ch, code);
-        delay(SETTLE_MS);
-        const Snapshot s = readAverage(ads, ch, AVG_COUNT);
+        settle(tickFn);
+        const Snapshot s = readAverage(ads, ch, AVG_COUNT, tickFn);
         emitLog(logFn, "NULLING_BASELINE_STEP ch=%u sensor=%s code=%u voltage=%.6f valid=%u write=%u",
                 static_cast<unsigned>(ch), sensorName(ch),
                 static_cast<unsigned>(code), s.voltage,
@@ -237,7 +251,7 @@ ChannelResult nullOneChannel(GldAds1256Reader& ads, GldDacMux& dac,
             static_cast<unsigned>(baseCount));
 
     uint16_t low = 0, high = 0;
-    if (!findRange(ads, dac, ch, r.baselineV, low, high, logFn)) {
+    if (!findRange(ads, dac, ch, r.baselineV, low, high, logFn, tickFn)) {
         r.errorCode = 3;
         emitLog(logFn, "NULLING_CH_FAIL ch=%u sensor=%s stage=exponential error=%u reason=%s",
                 static_cast<unsigned>(ch), sensorName(ch),
@@ -245,8 +259,8 @@ ChannelResult nullOneChannel(GldAds1256Reader& ads, GldDacMux& dac,
         return r;
     }
 
-    uint16_t selected = binarySearch(ads, dac, ch, r.baselineV, low, high, logFn);
-    if (!confirmCode(ads, dac, ch, r.baselineV, selected, logFn)) {
+    uint16_t selected = binarySearch(ads, dac, ch, r.baselineV, low, high, logFn, tickFn);
+    if (!confirmCode(ads, dac, ch, r.baselineV, selected, logFn, tickFn)) {
         r.errorCode = 4;
         emitLog(logFn, "NULLING_CH_FAIL ch=%u sensor=%s stage=confirm error=%u reason=%s",
                 static_cast<unsigned>(ch), sensorName(ch),
@@ -261,8 +275,8 @@ ChannelResult nullOneChannel(GldAds1256Reader& ads, GldDacMux& dac,
                 static_cast<unsigned>(r.errorCode), channelErrorName(r.errorCode));
         return r;
     }
-    delay(SETTLE_MS);
-    const Snapshot after = readAverage(ads, ch, AVG_COUNT);
+    settle(tickFn);
+    const Snapshot after = readAverage(ads, ch, AVG_COUNT, tickFn);
     r.afterV = after.voltage;
     if (!after.valid) {
         r.errorCode = 6;
@@ -293,7 +307,8 @@ ChannelResult nullOneChannel(GldAds1256Reader& ads, GldDacMux& dac,
 
 GldNullingServiceResult runNullingService(GldAds1256Reader& ads,
                                           GldDacMux& dac,
-                                          GldNullingLogFn logFn) {
+                                          GldNullingLogFn logFn,
+                                          GldNullingTickFn tickFn) {
     GldNullingServiceResult out{};
     out.status = GldNullingStatus::Ok;
 
@@ -304,11 +319,13 @@ GldNullingServiceResult runNullingService(GldAds1256Reader& ads,
             static_cast<unsigned long>(SETTLE_MS));
 
     if (!ads.ready()) {
+        serviceTick(tickFn);
         out.status = GldNullingStatus::AdsNotReady;
         emitLog(logFn, "NULLING_SERVICE_BLOCKED status=%s", gldNullingStatusName(out.status));
         return out;
     }
     if (!dac.ready()) {
+        serviceTick(tickFn);
         out.status = GldNullingStatus::DacNotReady;
         emitLog(logFn, "NULLING_SERVICE_BLOCKED status=%s", gldNullingStatusName(out.status));
         return out;
@@ -316,7 +333,8 @@ GldNullingServiceResult runNullingService(GldAds1256Reader& ads,
 
     uint8_t successes = 0;
     for (uint8_t ch = 0; ch < board::SENSOR_COUNT; ++ch) {
-        const ChannelResult cr = nullOneChannel(ads, dac, ch, logFn);
+        serviceTick(tickFn);
+        const ChannelResult cr = nullOneChannel(ads, dac, ch, logFn, tickFn);
         out.profile.dacCode[ch]   = cr.dacCode;
         out.profile.baselineV[ch] = cr.baselineV;
         out.profile.afterV[ch]    = cr.afterV;

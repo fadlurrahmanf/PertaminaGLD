@@ -1,14 +1,9 @@
-graph LR
-    subgraph RUNTIME["Runtime Deploy -- firmware/platformio.ini"]
-        GLD_ENV["env:gld\nGLD unified runtime\ninference + dataset + nulling"]
-        CH1_ENV["env:ch1\nCH ID 0x0064 (default)\nbatt threshold normal"]
-        CH2_ENV["env:ch2\nextends env:ch1\nCH ID 0x0065\nbatt threshold = 0"]
-        CH3_ENV["env:ch3\nextends env:ch1\nCH ID 0x0066"]
-        GW_ENV["env:gw\nGateway MESH+WiFi+MQTT"]
-    end
-
-    GLD_ENV -->|"flash ke GLD hardware"| HW_GLD["GLD Unit"]
-    CH1_ENV -->|"flash ke CH1"| HW_CH1["CH1"]
-    CH2_ENV -->|"flash ke CH2"| HW_CH2["CH2"]
-    CH3_ENV -->|"flash ke CH3"| HW_CH3["CH3"]
-    GW_ENV -->|"flash ke Gateway"| HW_GW["Gateway"]
+flowchart TD
+    START["Mulai packing response"] --> LOOP["Cari entry NodeCache:\n• used=true\n• belum dipilih\n• bukan alarm\n• tidak stale"]
+    LOOP --> FOUND{Entry ditemukan?}
+    FOUND -->|Tidak| DONE["Selesai — kirim response"]
+    FOUND -->|Ya| FIT{"Muat dalam sisa\npayload MESH\n(maks 80 byte)?"}
+    FIT -->|Tidak| SKIP["Skip entry ini\n(catat di skippedList)"]
+    FIT -->|Ya| ADD["Tambahkan ke response\nMark sebagai sentSeq"]
+    ADD --> LOOP
+    SKIP --> LOOP

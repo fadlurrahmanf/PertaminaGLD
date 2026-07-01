@@ -36,7 +36,7 @@ below records the important corrections made for the current firmware.
 
 | Baseline topic | Current firmware truth |
 |---|---|
-| PlatformIO draft env | Active GLD runtime envs are `gld` and `gldw`. |
+| PlatformIO draft env | Active GLD runtime env is `gld`; the env uses the GLDW / ESP32-S3-WROOM-1U-N16R8 board profile. |
 | Runtime mode names `RUNNING`, `TRAINING`, `SETUP` | Current mode enum is `INFERENCE`, `DATASET`, `NULLING`; command string `running` maps to `inference`. |
 | Modbus RTU / RS485 runtime | Not compiled into the current GLD runtime envs. |
 | EEPROM `boardId`, `modelFilePath`, `wiperArr` config | Current persistence uses ESP32 Preferences/NVS for mode and nulling profile. |
@@ -49,15 +49,15 @@ below records the important corrections made for the current firmware.
 
 ## 3. Firmware Workspace
 
-Current deploy/runtime environments in `firmware/platformio.ini`:
+Current deploy/runtime environment in `firmware/platformio.ini`:
 
 | Env | Board | Purpose |
 |---|---|---|
-| `gld` | `4d_systems_esp32s3_gen4_r8n16` | Main GLD unified runtime for the 4D ESP32-S3 board profile. |
-| `gldw` | `esp32-s3-devkitc-1` | GLD unified runtime for ESP32-S3-WROOM-1U-N16R8 bench board. |
+| `gld` | `esp32-s3-devkitc-1` | Main GLD unified runtime for the GLDW / ESP32-S3-WROOM-1U-N16R8 board profile. |
 
-`gldw` extends `gld`, sets 16 MB flash and OPI PSRAM options, defines
-`BOARD_HAS_PSRAM`, and enables `PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8=1`.
+The `gld` env sets 16 MB flash and OPI PSRAM options, defines
+`BOARD_HAS_PSRAM`, enables `PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8=1`, and keeps
+`upload_speed = 57600` for the CH340 bench upload path.
 
 Current GLD runtime source set:
 
@@ -105,7 +105,7 @@ dataset mode:
 ADS1256 + DAC/nulling profile + WiFi/MQTT dataset capture
 
 nulling mode:
-ADS1256 + TCA9548A + MCP4725 DAC search + NVS profile save/retry
+ADS1256 + TCA9548A + MCP4725 DAC search + NVS profile save/retry + WiFi off
 ```
 
 ## 5. Hardware And Pins
@@ -190,10 +190,10 @@ Current mode enum:
 
 | Mode string | Enum value | Runtime behavior |
 |---|---:|---|
-| `inference` | 0 | ADS scan, moving average, ML inference, alarm outputs, LoRa STAR uplink, LoRa RX window. |
+| `inference` | 0 | ADS scan, moving average, ML inference, alarm outputs, LoRa STAR uplink, LoRa RX window, WiFi/MQTT explicitly off. |
 | `running` | alias | Parsed as `inference`. |
 | `dataset` | 1 | ADS + DAC/nulling profile + WiFi/MQTT dataset capture. |
-| `nulling` | 2 | Offline ADS/DAC nulling calibration and NVS profile save/retry. |
+| `nulling` | 2 | Offline ADS/DAC nulling calibration and NVS profile save/retry, WiFi/MQTT explicitly off. |
 
 Mode is stored in ESP32 Preferences namespace `gld`, key `mode`. Invalid or
 missing value falls back to `inference`.
@@ -282,8 +282,9 @@ alarm = gasClass != clearGas && confidence >= 30
 ```
 
 When alarm state changes, firmware updates alarm lamp, buzzer, and status LED
-through optional pins. On the WROOM profile, alarm lamp and buzzer are disabled
-by pin value `-1`, so only valid optional pins are driven.
+through optional pins. These outputs are active-low: ON writes LOW, OFF writes
+HIGH. On the WROOM profile, alarm lamp and buzzer are disabled by pin value
+`-1`, so only valid optional pins are driven.
 
 ## 10. LoRa STAR Runtime
 
@@ -392,7 +393,8 @@ GLD uplink.
 ## 12. Nulling Mode
 
 Current nulling mode is a persistent GLD mode. It is offline/local: the nulling
-mode loop does not connect WiFi, MQTT, subscribe, or publish.
+mode setup calls the offline-mode guard and the loop does not connect WiFi,
+MQTT, subscribe, or publish.
 
 Nulling profile:
 

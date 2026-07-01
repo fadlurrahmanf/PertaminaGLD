@@ -1,6 +1,6 @@
 ﻿# Pertamina GLD — Protocol & Role Reference
 
-**Versi:** 1.0 | **Tanggal:** 2026-06-29 | **Berdasarkan:** Firmware yang sedang berjalan
+**Versi:** 1.0 | **Tanggal:** 2026-06-29 | **Berdasarkan:** Design dan firmware yang sedang berjalan
 
 Dokumen ini menjelaskan peran masing-masing komponen sistem Pertamina GLD, format byte protokol komunikasi, dan logika operasional berdasarkan source firmware aktual.
 
@@ -33,7 +33,7 @@ GLD (Gas Leak Detector) adalah node sensor ujung yang melakukan pembacaan gas, i
 - Membuka **RX window 2.000 ms** setelah setiap TX: menerima perintah mode dari CH
 - Mendeteksi sumber daya: GPIO45 HIGH → 24v; GPIO45 LOW + GPIO4 ADC valid → battery; selain itu → 5v
 
-**Kondisi alarm:** `gasClass ≠ 0 && confidence ≥ 40%`
+**Kondisi alarm:** `gasClass ≠ 0 && confidence ≥ 30%`
 
 Saat alarm aktif, GLD menyalakan output fisik via ULN2003G (active low):
 - **Alarm Lamp** — GPIO1 LOW

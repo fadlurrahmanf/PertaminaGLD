@@ -138,6 +138,7 @@ static pgl::ch::ChTxItem       txQueue[TX_QUEUE_CAPACITY]{};
 struct PendingDownlink {
     uint16_t nodeId;
     uint16_t commandId;
+    uint32_t ttlMs;
     uint8_t  payloadLen;
     uint8_t  payload[8];
     bool     active;
@@ -1024,7 +1025,8 @@ void runHousekeeping() {
     uint8_t expiredDl = 0;
     for (size_t i = 0; i < DOWNLINK_STORE_CAPACITY; ++i) {
         PendingDownlink& dl = downlinkStore[i];
-        if (dl.active && (now - dl.receivedAtMs) >= PENDING_TTL_MS) {
+        const uint32_t ttlMs = dl.ttlMs > 0 ? dl.ttlMs : PENDING_TTL_MS;
+        if (dl.active && (now - dl.receivedAtMs) >= ttlMs) {
             logPrintf("CH_DOWNLINK_TTL_EXPIRED nodeId=0x%04X ageMs=%lu\n",
                       dl.nodeId, static_cast<unsigned long>(now - dl.receivedAtMs));
             dl.active = false;
@@ -1226,21 +1228,23 @@ void handleMeshPacketReceived() {
 
     // SERVER_NODE_COMMAND: store pending downlink
     if (msgType == pgl::protocol::MSG_SERVER_NODE_COMMAND) {
-        if (decoded.payloadLen >= 5 && decoded.payload != nullptr) {
+        if (decoded.payloadLen >= 7 && decoded.payload != nullptr) {
             const uint16_t targetNodeId = (static_cast<uint16_t>(decoded.payload[0]) << 8) | decoded.payload[1];
             const uint16_t commandId    = (static_cast<uint16_t>(decoded.payload[2]) << 8) | decoded.payload[3];
-            const uint8_t  commandLen   = decoded.payload[4];
-            if (commandLen <= 8 && decoded.payloadLen >= static_cast<uint8_t>(5u + commandLen)) {
+            const uint16_t ttlSec       = (static_cast<uint16_t>(decoded.payload[4]) << 8) | decoded.payload[5];
+            const uint8_t  commandLen   = decoded.payload[6];
+            if (commandLen <= 8 && decoded.payloadLen >= static_cast<uint8_t>(7u + commandLen)) {
                 PendingDownlink* dl = findOrAllocateDownlink(targetNodeId);
                 if (dl != nullptr) {
                     dl->nodeId       = targetNodeId;
                     dl->commandId    = commandId;
+                    dl->ttlMs        = ttlSec > 0 ? static_cast<uint32_t>(ttlSec) * 1000UL : PENDING_TTL_MS;
                     dl->payloadLen   = commandLen;
                     dl->receivedAtMs = millis();
-                    memcpy(dl->payload, decoded.payload + 5, commandLen);
+                    memcpy(dl->payload, decoded.payload + 7, commandLen);
                     dl->active = true;
-                    logPrintf("CH_DOWNLINK_STORED nodeId=0x%04X commandId=%u payloadLen=%u\n",
-                              targetNodeId, commandId, static_cast<unsigned>(commandLen));
+                    logPrintf("CH_DOWNLINK_STORED nodeId=0x%04X commandId=%u ttlSec=%u payloadLen=%u\n",
+                              targetNodeId, commandId, ttlSec, static_cast<unsigned>(commandLen));
                     if (isNodeExtPower(targetNodeId) && starReady && starRadio != nullptr) {
                         logPrintf("CH_DOWNLINK_EXT_POWER_IMMEDIATE nodeId=0x%04X\n", targetNodeId);
                         sendNodeDownlink(targetNodeId, dl);

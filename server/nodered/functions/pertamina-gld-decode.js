@@ -1,9 +1,9 @@
 const GAS_CLASS = {
     0: "clearGas",
     1: "LPG",
-    2: "propana",
-    3: "butana",
-    4: "metana",
+    2: "methane",
+    3: "propane",
+    4: "butane",
     5: "reserve",
     6: "anomaly"
 };

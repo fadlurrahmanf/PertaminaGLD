@@ -11,6 +11,7 @@ namespace {
 void resetCommand(GldSerialCommand& command) {
     command.type = GldSerialCommandType::None;
     command.mode = GldMode::INFERENCE;
+    command.payload[0] = '\0';
 }
 
 bool decodeLine(const char* line, GldSerialCommand& outCommand) {
@@ -27,10 +28,34 @@ bool decodeLine(const char* line, GldSerialCommand& outCommand) {
         outCommand.type = GldSerialCommandType::DebugOff;
         return true;
     }
+    if (strcmp(line, "APP_PING") == 0) {
+        outCommand.type = GldSerialCommandType::AppPing;
+        return true;
+    }
+    if (strcmp(line, "GET_INFO") == 0) {
+        outCommand.type = GldSerialCommandType::GetInfo;
+        return true;
+    }
+    if (strcmp(line, "GET_STATUS") == 0) {
+        outCommand.type = GldSerialCommandType::GetStatus;
+        return true;
+    }
+    if (strncmp(line, "SET_APP_CONFIG_JSON ", 20) == 0) {
+        outCommand.type = GldSerialCommandType::SetAppConfigJson;
+        strncpy(outCommand.payload, line + 20, sizeof(outCommand.payload) - 1);
+        outCommand.payload[sizeof(outCommand.payload) - 1] = '\0';
+        return true;
+    }
+    if (strncmp(line, "SET_DEVICE_ID_JSON ", 19) == 0) {
+        outCommand.type = GldSerialCommandType::SetDeviceIdJson;
+        strncpy(outCommand.payload, line + 19, sizeof(outCommand.payload) - 1);
+        outCommand.payload[sizeof(outCommand.payload) - 1] = '\0';
+        return true;
+    }
     return false;
 }
 
-bool readCommandFrom(Stream& stream, char* buf, uint8_t& pos,
+bool readCommandFrom(Stream& stream, char* buf, uint16_t& pos,
                      GldSerialCommand& outCommand) {
     while (stream.available()) {
         const int value = stream.read();
@@ -40,7 +65,7 @@ bool readCommandFrom(Stream& stream, char* buf, uint8_t& pos,
             buf[pos] = '\0';
             pos = 0;
             if (decodeLine(buf, outCommand)) return true;
-        } else if (pos < 31) {
+        } else if (pos < 511) {
             buf[pos++] = c;
         }
     }
@@ -50,11 +75,11 @@ bool readCommandFrom(Stream& stream, char* buf, uint8_t& pos,
 }  // namespace
 
 bool parseSerialCommand(GldSerialCommand& outCommand) {
-    static char usbBuf[32];
-    static uint8_t usbPos = 0;
+    static char usbBuf[512];
+    static uint16_t usbPos = 0;
 #if defined(ARDUINO_ARCH_ESP32)
-    static char uart0Buf[32];
-    static uint8_t uart0Pos = 0;
+    static char uart0Buf[512];
+    static uint16_t uart0Pos = 0;
 #endif
     resetCommand(outCommand);
 

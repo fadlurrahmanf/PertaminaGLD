@@ -21,12 +21,11 @@ Status: current source mirror, 2026-06-29. Dokumen ini mengikuti firmware GLD un
 
 ## Active Build Environments
 
-`firmware/platformio.ini` contains two GLD runtime envs:
+`firmware/platformio.ini` contains one active GLD runtime env:
 
 | Env | Board | Purpose |
 |---|---|---|
-| `gld` | `4d_systems_esp32s3_gen4_r8n16` | Default GLD unified runtime |
-| `gldw` | `esp32-s3-devkitc-1` | ESP32-S3-WROOM-1U-N16R8 override with 16 MB flash, 8 MB OPI PSRAM, `PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8=1` |
+| `gld` | `esp32-s3-devkitc-1` | GLD unified runtime for the GLDW / ESP32-S3-WROOM-1U-N16R8 board profile, with 16 MB flash, 8 MB OPI PSRAM, and `PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8=1` |
 
 The GLD env compiles only these runtime sources: shared `AppFrame`, `GldCrypto`, `GldPayload`, `GldRecord`; GLD `GldAds1256Reader`, `GldCommandParser`, `GldDacMux`, `GldFrameBuilder`, `GldModeManager`, `GldMovingAverage`, `GldNullingService`, `GldPower`, `GldThresholdClassifier`, `GldUnifiedMain`; model `NeuralNetwork`, `scaler_params`, `model_data`.
 
@@ -124,10 +123,10 @@ Mode is stored in NVS namespace `gld`, key `mode`. Invalid or missing value fall
 
 | Mode string | ID | Runtime behavior |
 |---|---:|---|
-| `inference` | 0 | ADS, moving average, ML, local alarm outputs, LoRa STAR uplink, LoRa RX window |
+| `inference` | 0 | ADS, moving average, ML, local alarm outputs, LoRa STAR uplink, LoRa RX window, WiFi/MQTT explicitly off |
 | `running` | alias | Parsed as `inference` |
 | `dataset` | 1 | ADS + DAC + nulling profile + WiFi/MQTT dataset capture |
-| `nulling` | 2 | ADS + DAC + offline nulling calibration, no WiFi/MQTT |
+| `nulling` | 2 | ADS + DAC + offline nulling calibration, WiFi/MQTT explicitly off |
 
 Mode commands:
 
@@ -140,6 +139,10 @@ Mode commands:
 | LoRa downlink | `MSG_NODE_DOWNLINK`, payload byte 0 `0x01`, payload byte 1 mode `0|1|2` |
 
 `DEBUG_OFF` disables normal `logPrintf/logPrintln` output, but the debug toggle acknowledgement uses raw serial and remains visible.
+
+Network policy: firmware only calls `WiFi.begin()` and MQTT connect in `dataset`
+mode. `inference`/`running` and `nulling` call the offline-mode guard, which
+disconnects MQTT/socket state and sets `WiFi.mode(WIFI_OFF)`.
 
 ## Boot Flow And Report
 
@@ -300,9 +303,9 @@ Model class to protocol gas class:
 |---:|---:|---|
 | 0 | 0 | clearGas |
 | 1 | 1 | LPG |
-| 2 | 4 | methane |
-| 3 | 2 | propane |
-| 4 | 3 | butane |
+| 2 | 2 | methane |
+| 3 | 3 | propane |
+| 4 | 4 | butane |
 | other | 6 | anomaly |
 
 Alarm rule:
@@ -311,7 +314,7 @@ Alarm rule:
 alarm = gasClass != clearGas && confidence >= 30
 ```
 
-Local outputs are updated only when alarm state changes. Alarm ON writes alarm lamp, buzzer, and status LED HIGH when those pins are enabled. Alarm OFF writes them LOW.
+Local outputs are updated only when alarm state changes. Alarm lamp, buzzer, and status LED are active-low: alarm ON writes LOW when those pins are enabled, and alarm OFF writes HIGH.
 
 ## LoRa STAR Uplink
 
@@ -363,10 +366,14 @@ AAD is `nodeId:uint16BE + seq:uint8 + recordFlags:uint8 + keyId:uint8`.
 
 ## Dataset Mode
 
-Dataset mode initializes ADS and DAC. It calls `initNulling()`:
+Dataset mode initializes ADS and DAC. It loads the saved nulling profile without
+running nulling automatically:
 
 - If a profile exists, load it and write saved DAC codes.
-- If no profile exists, run nulling immediately once and save profile ID 1 only if status is OK.
+- If no profile exists, keep `nullingProfileId=0`, log `auto_nulling=skip`, and
+  let `START_DATASET` reject with `reject_no_profile`.
+- Operators must explicitly run `SET_MODE nulling` first when a fresh nulling
+  profile is required.
 
 Dataset mode then connects WiFi/MQTT, subscribes `TOPIC_CMD`, subscribes `TOPIC_DATASET`, and enters state machine.
 
@@ -428,3 +435,6 @@ Autostop:
 - If `max_duration_ms > 0` and elapsed session duration reaches it, stop and publish summary/status.
 
 `STOP_DATASET` turns fan and status LED off, publishes ack, summary, and `idle/stopped`.
+While GLD remains in `dataset` mode it keeps WiFi/MQTT alive so the app can send
+another dataset command. Switching back to `inference` reboots and disables
+WiFi/MQTT through the offline-mode guard.

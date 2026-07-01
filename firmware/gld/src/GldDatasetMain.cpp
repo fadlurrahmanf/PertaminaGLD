@@ -44,6 +44,8 @@ constexpr uint32_t WIFI_TIMEOUT_MS    = GLD_WIFI_TIMEOUT_MS;
 constexpr uint32_t MQTT_RETRY_MS      = GLD_MQTT_RETRY_MS;
 constexpr uint32_t STATUS_INTERVAL_MS = GLD_STATUS_INTERVAL_MS;
 constexpr uint16_t MQTT_BUFFER_SIZE   = GLD_MQTT_BUFFER_SIZE;
+constexpr uint8_t ACTIVE_LOW_OUTPUT_ON = LOW;
+constexpr uint8_t ACTIVE_LOW_OUTPUT_OFF = HIGH;
 
 // ---- Hardware ----
 SPIClass                   gldSpi;
@@ -108,10 +110,10 @@ void setupPins() {
     pinMode(pgl::gld::board::PIN_LORA_CS,    OUTPUT); digitalWrite(pgl::gld::board::PIN_LORA_CS,    HIGH);
     pinMode(pgl::gld::board::PIN_LORA_RXEN,  OUTPUT); digitalWrite(pgl::gld::board::PIN_LORA_RXEN,  LOW);
     pinMode(pgl::gld::board::PIN_LORA_TXEN,  OUTPUT); digitalWrite(pgl::gld::board::PIN_LORA_TXEN,  LOW);
-    pinMode(pgl::gld::board::PIN_ALARM_LAMP, OUTPUT); digitalWrite(pgl::gld::board::PIN_ALARM_LAMP, LOW);
-    pinMode(pgl::gld::board::PIN_BUZZER,     OUTPUT); digitalWrite(pgl::gld::board::PIN_BUZZER,     LOW);
+    pinMode(pgl::gld::board::PIN_ALARM_LAMP, OUTPUT); digitalWrite(pgl::gld::board::PIN_ALARM_LAMP, ACTIVE_LOW_OUTPUT_OFF);
+    pinMode(pgl::gld::board::PIN_BUZZER,     OUTPUT); digitalWrite(pgl::gld::board::PIN_BUZZER,     ACTIVE_LOW_OUTPUT_OFF);
     pinMode(pgl::gld::board::PIN_DC_FAN,     OUTPUT); digitalWrite(pgl::gld::board::PIN_DC_FAN,     LOW);
-    pinMode(pgl::gld::board::PIN_STATUS_LED, OUTPUT); digitalWrite(pgl::gld::board::PIN_STATUS_LED, LOW);
+    pinMode(pgl::gld::board::PIN_STATUS_LED, OUTPUT); digitalWrite(pgl::gld::board::PIN_STATUS_LED, ACTIVE_LOW_OUTPUT_OFF);
 }
 
 // ---------------------------------------------------------------------------
@@ -126,13 +128,18 @@ void applyNullingProfile(const pgl::gld::GldNullingProfile& profile) {
     logPrintf("DAC_APPLY profileId=%u\n", profile.profileId);
 }
 
-bool initNulling() {
+bool initNulling(bool runIfMissing) {
     pgl::gld::GldNullingProfile profile{};
     if (pgl::gld::loadNullingProfile(profile)) {
         logPrintf("NULLING_NVS_LOAD=found profileId=%u\n", profile.profileId);
         nullingProfileId = profile.profileId;
         applyNullingProfile(profile);
         return true;
+    }
+    if (!runIfMissing) {
+        nullingProfileId = 0;
+        logPrintln("NULLING_NVS_LOAD=empty auto_nulling=skip");
+        return false;
     }
     logPrintln("NULLING_NVS_LOAD=empty running_nulling_now");
     const pgl::gld::GldNullingServiceResult result =
@@ -248,7 +255,7 @@ void handleCmd(const char* payload, unsigned int length) {
         lastScanMs     = sessionStartMs;
         sampleStep     = SampleStep::None;
         datasetState   = DatasetState::Running;
-        digitalWrite(pgl::gld::board::PIN_STATUS_LED, HIGH);
+        digitalWrite(pgl::gld::board::PIN_STATUS_LED, ACTIVE_LOW_OUTPUT_ON);
         publishCmdAck("START_DATASET", "ok");
         publishStatus("running", currentLabel);
         logPrintf("DATASET_START label=%s target=%lu interval=%lu fan=%u\n",
@@ -264,7 +271,7 @@ void handleCmd(const char* payload, unsigned int length) {
         }
         datasetState = DatasetState::Idle;
         sampleStep   = SampleStep::None;
-        digitalWrite(pgl::gld::board::PIN_STATUS_LED, LOW);
+        digitalWrite(pgl::gld::board::PIN_STATUS_LED, ACTIVE_LOW_OUTPUT_OFF);
         publishCmdAck("STOP_DATASET", "ok");
         publishSummary();
         publishStatus("idle", "stopped");
@@ -372,7 +379,7 @@ void stopDataset() {
     digitalWrite(pgl::gld::board::PIN_DC_FAN, LOW);
     datasetState = DatasetState::Idle;
     sampleStep   = SampleStep::None;
-    digitalWrite(pgl::gld::board::PIN_STATUS_LED, LOW);
+    digitalWrite(pgl::gld::board::PIN_STATUS_LED, ACTIVE_LOW_OUTPUT_OFF);
     publishSummary();
     publishStatus("idle", "completed");
 }
@@ -412,7 +419,7 @@ void setup() {
     logPrintf("DAC_MUX_BEGIN_RESULT=%s\n", dacReady ? "PASS" : "FAIL");
 
     if (adsReady && dacReady) {
-        initNulling();
+        initNulling(false);
     }
 
     logPrintf("DATASET_READY adsReady=%u dacReady=%u nullingProfileId=%u\n",

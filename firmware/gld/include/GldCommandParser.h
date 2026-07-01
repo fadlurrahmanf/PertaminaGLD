@@ -10,17 +10,28 @@ enum class GldSerialCommandType : uint8_t {
     SetMode,
     DebugOn,
     DebugOff,
+    AppPing,
+    GetInfo,
+    GetStatus,
+    SetAppConfigJson,
+    SetDeviceIdJson,
 };
 
 struct GldSerialCommand {
     GldSerialCommandType type = GldSerialCommandType::None;
     GldMode mode = GldMode::INFERENCE;
+    char payload[512]{};
 };
 
 // Read USB CDC Serial and UART0 Serial0 for supported GLD runtime commands:
 // - SET_MODE inference|running|dataset|nulling
 // - DEBUG_ON
 // - DEBUG_OFF
+// - APP_PING
+// - GET_INFO
+// - GET_STATUS
+// - SET_APP_CONFIG_JSON {...}
+// - SET_DEVICE_ID_JSON {...}
 bool parseSerialCommand(GldSerialCommand& outCommand);
 
 // Read Serial for "SET_MODE inference|running|dataset|nulling\n".

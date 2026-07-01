@@ -1,43 +1,20 @@
 sequenceDiagram
-    participant GLD as GLD (0xF001)
-    participant CH as CH (0x0064)
-    participant GW as Gateway (0x006F)
-    participant NR as Node-RED
+    participant SRV as Server (Node-RED)
+    participant GW as Gateway
+    participant CH as Cluster Head
+    participant GLD as GLD Node
 
-    Note over GLD: Tiap 1000ms: baca 8 sensor
-    Note over GLD: Tiap 10000ms: build + kirim frame
+    SRV->>GW: MQTT cmd/node: {cluster, node, ttl, hex}
+    GW->>CH: MSG_SERVER_NODE_COMMAND (MESH)\ntargetNodeId + commandBytes
 
-    GLD->>GLD: ADS1256 baca 8 channel
-    GLD->>GLD: Moving average (min 10 sampel)
-    GLD->>GLD: ML predict → gasClass + confidence
-    GLD->>GLD: Alarm? (gasClass≠0 && conf≥40)
-    GLD->>GLD: Build plaintext 4B
-    GLD->>GLD: AES-128-GCM encrypt → 29B
-    GLD->>GLD: Build AppFrame (MSG_SENSOR_DATA)
+    alt GLD daya eksternal (flag ext_power di cache)
+        CH->>GLD: MSG_NODE_DOWNLINK (STAR) — segera
+        GLD-->>CH: (RX window sudah terbuka)
+    else GLD daya baterai
+        CH->>CH: Simpan di downlinkStore
+        Note over CH: Tunggu uplink dari GLD ini
+        GLD->>CH: MSG_SENSOR_DATA (STAR) — uplink berikutnya
+        CH->>GLD: MSG_NODE_DOWNLINK (STAR) — dalam RX window
+    end
 
-    GLD->>CH: LoRa STAR TX\nAppFrame typeFlags=0x10/0x90\nsrcId=0xF001, dstId=0x0064\npayload=29B encrypted
-
-    CH->>CH: Parse AppFrame
-    CH->>CH: Store/update NodeCache[0xF001]
-    Note over CH: seq, flags, payload disimpan
-
-    CH->>CH: Build MSG_SENSOR_DATA MESH\nsrcId=0x0064, dstId=0x006F
-
-    Note over GLD: Buka RX window 2000ms
-    CH-->>GLD: (tidak ada downlink untuk normal data)
-
-    CH->>GW: LoRa MESH TX\nAppFrame MESH\npayload=GLDRecord 34B
-
-    GW->>GW: Parse AppFrame
-    GW->>GW: Capture RSSI/SNR
-    GW->>GW: Build uplink JSON
-
-    GW->>NR: MQTT Publish\ngld/gateway/uplink\n{frameHex, rssi, snr, typeFlags, ...}
-
-    NR->>NR: Normalize input
-    NR->>NR: AppFrame parse
-    NR->>NR: Decode GLDRecord
-    NR->>NR: AES-GCM decrypt
-    NR->>NR: Extract gasClass, confidence, batteryMv
-
-    NR-->>NR: Publish gld/server/decoded\n{nodeId, gasClass, confidence, battery, alarm:false}
+    GLD->>GLD: Terapkan SET_MODE baru

@@ -142,6 +142,6 @@ CH sends `MSG_CH_HELLO` to active parent:
 
 Gateway publishes CH_CONFIG/HELLO topology events to MQTT. Node-RED stores installed parents, discovery candidates, gateway link quality, hellos, and computed routes.
 
-## Current Source Caveat
+## Remote GLD Mode Switching
 
-Remote GLD mode switching through multi-hop uses `MSG_SERVER_NODE_COMMAND`. Current Gateway and CH payload layouts differ by a `ttlSec` field, so this path is not source-aligned until one side is changed.
+Remote GLD mode switching through multi-hop uses `MSG_SERVER_NODE_COMMAND`. Gateway and CH use the same payload layout: `nodeId + commandId + ttlSec + commandLen + commandBytes`; CH stores `ttlSec` as the pending downlink expiry.

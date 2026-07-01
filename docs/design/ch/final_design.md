@@ -300,14 +300,15 @@ CH stores pending downlink from `MSG_SERVER_NODE_COMMAND`:
 |---:|---|
 | 0..1 | target GLD node ID |
 | 2..3 | command ID |
-| 4 | command length |
-| 5.. | command bytes, max accepted length 8 |
+| 4..5 | TTL seconds |
+| 6 | command length |
+| 7.. | command bytes, max accepted length 8 |
 
 If NodeCache says target GLD is external-powered and STAR is ready, CH sends `MSG_NODE_DOWNLINK` immediately. If target GLD is not external-powered, CH waits for the next STAR uplink from that GLD and sends downlink inside the GLD RX window.
 
 Pending downlink store has one active slot per `nodeId` lookup. A new command for the same node reuses the existing slot and overwrites its fields.
 
-Current source caveat: Gateway builds `MSG_SERVER_NODE_COMMAND` with `nodeId + commandId + ttlSec + commandLen + commandBytes`, while CH currently parses `nodeId + commandId + commandLen + commandBytes`. That mismatch is present in current source.
+CH source parses the same `MSG_SERVER_NODE_COMMAND` payload that Gateway builds: `nodeId + commandId + ttlSec + commandLen + commandBytes`. `ttlSec` becomes the pending downlink expiry; `0` uses the CH default pending TTL.
 
 ## Serial Logs
 

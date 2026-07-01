@@ -120,7 +120,13 @@ Node-RED/Gateway command topic accepts:
 {"cluster":"0x0064","node":"0xF001","id":1,"ttl":600,"hex":"0101"}
 ```
 
-Gateway wire payload includes TTL. CH current parser does not consume TTL. This source mismatch is current and must be reflected anywhere node commands are described.
+Gateway encodes and CH parses the same wire payload:
+
+```text
+nodeId:uint16BE + commandId:uint16BE + ttlSec:uint16BE + commandLen:uint8 + commandBytes
+```
+
+`ttlSec` controls the CH pending-downlink expiry; `0` falls back to the CH default pending TTL.
 
 ## Topology Boundary
 

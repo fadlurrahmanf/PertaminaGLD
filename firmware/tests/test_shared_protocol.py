@@ -1,4 +1,5 @@
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+import json
 import pathlib
 import re
 
@@ -21,7 +22,9 @@ TYPE_GLD_ALARM_EXTERNAL = 0xD0
 
 GLD_GAS_CLEAR = 0
 GLD_GAS_LPG = 1
-GLD_GAS_METHANE = 4
+GLD_GAS_METHANE = 2
+GLD_GAS_PROPANE = 3
+GLD_GAS_BUTANE = 4
 GLD_LEL_THRESHOLD_PERCENT = 30
 GLD_PLAINTEXT_PAYLOAD_SIZE = 4
 GLD_ENCRYPTED_PAYLOAD_SIZE = 29
@@ -782,6 +785,82 @@ def test_gateway_and_nodered_pull_use_hoplist_contract():
     assert "requestId:uint16BE + hopList:uint16BE[]" in gw_doc
 
 
+def test_server_site_and_dataset_flows_follow_current_firmware_contract():
+    decode_src = pathlib.Path("server/nodered/functions/pertamina-gld-decode.js").read_text(encoding="utf-8")
+    server_flow = pathlib.Path("server/nodered/pertamina-gld-server.flow.json").read_text(encoding="utf-8-sig")
+    server_wrapper = pathlib.Path("server/nodered/apply-pertamina-gld-flow.ps1").read_text(encoding="utf-8-sig")
+    dataset_flow = pathlib.Path("server/nodered/pertamina-gld-dataset.flow.json").read_text(encoding="utf-8-sig")
+    dataset_generator = pathlib.Path("server/nodered/apply-pertamina-gld-dataset-flow.ps1").read_text(encoding="utf-8-sig")
+    dataset_wrapper = pathlib.Path("server/nodered/deploy-dataset-flow.py").read_text(encoding="utf-8")
+    dataset_recorder = pathlib.Path("server/nodered/gld_dataset_recorder.py").read_text(encoding="utf-8")
+    gateway_src = pathlib.Path("firmware/gateway/src/GatewayMqttMeshMain.cpp").read_text(encoding="utf-8")
+    ch_runtime = pathlib.Path("firmware/ch/src/ChStarMeshRuntimeMain.cpp").read_text(encoding="utf-8")
+    server_doc = pathlib.Path("docs/design/server/design.md").read_text(encoding="utf-8")
+    gw_server_doc = pathlib.Path("docs/design/gw-server/design.md").read_text(encoding="utf-8")
+
+    server_nodes = json.loads(server_flow)
+    dataset_nodes = json.loads(dataset_flow)
+    server_decode_func = next(
+        node["func"] for node in server_nodes
+        if node.get("type") == "function" and node.get("name") == "decode Gateway/GLD contract"
+    )
+
+    for gas_line in ('2: "methane"', '3: "propane"', '4: "butane"'):
+        assert gas_line in decode_src
+        assert gas_line in server_decode_func
+    for stale_name in ("propana", "butana", "metana"):
+        assert stale_name not in decode_src
+        assert stale_name not in server_decode_func
+        assert stale_name not in server_doc
+
+    assert "Inject GLD SET_MODE dataset" in server_flow
+    assert '\\"hex\\":\\"0101\\"' in server_flow
+    assert "Inject GLD command placeholder" not in server_flow
+    assert '\\"hex\\":\\"0102\\"' not in server_flow
+    assert "apply-pertamina-gld-flow.js" in server_wrapper
+    assert "ConvertTo-Json -Depth 30" not in server_wrapper
+
+    for text in (dataset_flow, dataset_generator, dataset_recorder):
+        for required in ("sensor_voltage", "sensor_gain", "device_id", "node_id", "timestamp_ms", "nulling_profile_id"):
+            assert required in text
+        for stale_schema in ("p.ch", "p.nodeId", "p.ts_ms", "p.profileId", "ok0", "ok1", "ts_ms"):
+            assert stale_schema not in text
+    dataset_names = {node.get("name") for node in dataset_nodes}
+    dataset_topics = {node.get("topic") for node in dataset_nodes if node.get("topic")}
+    start_node = next(node for node in dataset_nodes if node.get("name") == "START_DATASET clear_air_test")
+    stop_node = next(node for node in dataset_nodes if node.get("name") == "STOP_DATASET")
+    assert "dataset command" in dataset_names
+    assert "cmd/ack" in dataset_names
+    assert "gas-leak-detector/F001/dataset" in dataset_topics
+    assert "gas-leak-detector/+/cmd/ack" in dataset_topics
+    assert start_node["payloadType"] == "json"
+    assert '"cmd":"START_DATASET"' in start_node["payload"]
+    assert '"use_fan_intake":false' in start_node["payload"]
+    assert start_node["wires"] == [["pgld_ds_mqtt_dataset_cmd_out"]]
+    assert stop_node["payloadType"] == "json"
+    assert stop_node["payload"] == '{"cmd":"STOP_DATASET"}'
+    assert stop_node["wires"] == [["pgld_ds_mqtt_dataset_cmd_out"]]
+    for node in dataset_nodes:
+        if "wires" in node and node["wires"]:
+            assert all(isinstance(output_wires, list) for output_wires in node["wires"]), node.get("name")
+    assert "gas-leak-detector/+/dataset/summary" in dataset_flow
+    assert "apply-pertamina-gld-dataset-flow.ps1" in dataset_wrapper
+    assert "PARSE_FN" not in dataset_wrapper
+    assert "START_DATASET clear_air_test" in server_doc
+    assert "gas-leak-detector/+/cmd/ack" in server_doc
+    assert "The dataset flow expects the current GLD unified JSON field names" in server_doc
+
+    assert "writeU16Be(&payload[4], ttlSec);" in gateway_src
+    assert "payload[6] = static_cast<uint8_t>(commandLen);" in gateway_src
+    assert "memcpy(&payload[7], commandBytes, commandLen);" in gateway_src
+    assert "const uint16_t ttlSec       = (static_cast<uint16_t>(decoded.payload[4]) << 8) | decoded.payload[5];" in ch_runtime
+    assert "const uint8_t  commandLen   = decoded.payload[6];" in ch_runtime
+    assert "memcpy(dl->payload, decoded.payload + 7, commandLen);" in ch_runtime
+    assert "dl->ttlMs        = ttlSec > 0 ? static_cast<uint32_t>(ttlSec) * 1000UL : PENDING_TTL_MS;" in ch_runtime
+    assert "Gateway encodes and CH parses the same wire payload" in gw_server_doc
+    assert "CH current parser does not consume TTL" not in gw_server_doc
+
+
 def test_gld_unified_runtime_scaffolds_present():
     platformio = pathlib.Path("firmware/platformio.ini").read_text(encoding="utf-8")
     command_header = pathlib.Path("firmware/gld/include/GldCommandParser.h").read_text(encoding="utf-8")
@@ -794,7 +873,9 @@ def test_gld_unified_runtime_scaffolds_present():
     config_header = pathlib.Path("firmware/shared/include/FirmwareConfig.h").read_text(encoding="utf-8")
 
     assert "[env:gld]" in platformio
-    assert "[env:gldw]" in platformio
+    assert "[env:gldw]" not in platformio
+    assert "board = esp32-s3-devkitc-1" in platformio
+    assert "-DPGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8=1" in platformio
     assert "gld_unified_esp32s3" not in platformio
     assert "gld_unified_wroom_u1_n16r8_esp32s3" not in platformio
     assert "gld_unified_to_ch2_1_esp32s3" not in platformio
@@ -813,6 +894,26 @@ def test_gld_unified_runtime_scaffolds_present():
     assert "parseSerialCommand" in command_header
     assert "DEBUG_ON" in command_src
     assert "DEBUG_OFF" in command_src
+    assert "APP_PING" in command_src
+    assert "GET_INFO" in command_src
+    assert "GET_STATUS" in command_src
+    assert "GldSerialCommandType::AppPing" in command_src
+    assert "GldSerialCommandType::GetInfo" in command_src
+    assert "GldSerialCommandType::GetStatus" in command_src
+    assert "GLD_INFO_JSON" in unified_src
+    assert "GLD_STATUS_JSON" in unified_src
+    assert "GLD_CMD_ACK_JSON" in unified_src
+    assert "disableNetworkForOfflineMode(\"inference_mode\")" in unified_src
+    assert "disableNetworkForOfflineMode(\"nulling_mode\")" in unified_src
+    assert "WiFi.mode(WIFI_OFF)" in unified_src
+    assert "emitCommandAck(\"SET_MODE\", \"ok\", \"mode switch accepted\", true)" in unified_src
+    assert "doc[\"targetChId\"] = static_cast<uint16_t>(GLD_CH_ID)" in unified_src
+    assert "bootHealth" in unified_src
+    assert "sensorVoltage" in unified_src
+    assert "sensorGain" in unified_src
+    assert "featureOrder" in unified_src
+    assert "latestTelemetryValid = true" in unified_src
+    assert "lastLoraTxState = txState" in unified_src
     assert "MSG_NODE_DOWNLINK" in command_src
     assert "gldModeFromString" in mode_header
     assert 'strcmp(str, "running")' in mode_src
@@ -829,6 +930,36 @@ def test_gld_unified_runtime_scaffolds_present():
     retry_snapshot = bytes(alarm_frame)
     assert retry_snapshot == alarm_frame
     assert decode_app_frame(retry_snapshot)["seq"] == 0x90
+
+
+def test_gld_protocol_reference_matches_active_firmware():
+    protocol_header = pathlib.Path("firmware/shared/include/ProtocolConstants.h").read_text(encoding="utf-8")
+    unified_src = pathlib.Path("firmware/gld/src/GldUnifiedMain.cpp").read_text(encoding="utf-8")
+    protocol_ref = pathlib.Path("Pertamina_GLD_Protocol_Reference.md").read_text(encoding="utf-8")
+    final_design = pathlib.Path("docs/design/gld/final_design.md").read_text(encoding="utf-8")
+    payload_contract = pathlib.Path("docs/design/gld-ch/payload-contract.draft.md").read_text(encoding="utf-8")
+
+    assert "GLD_GAS_METHANE = 2" in protocol_header
+    assert "GLD_GAS_PROPANE = 3" in protocol_header
+    assert "GLD_GAS_BUTANE = 4" in protocol_header
+    assert "| 2 | 2 | methane |" in final_design
+    assert "| 3 | 3 | propane |" in final_design
+    assert "| 4 | 4 | butane |" in final_design
+    assert "| 2 | methane |" in payload_contract
+    assert "| 3 | propane |" in payload_contract
+    assert "| 4 | butane |" in payload_contract
+
+    assert "GLD_LEL_THRESHOLD_PERCENT = 30" in protocol_header
+    assert "confidence >= 30" in final_design
+    assert "confidence >= 40" not in protocol_ref
+    assert "confidence ≥ 40" not in protocol_ref
+
+    assert "ACTIVE_LOW_OUTPUT_ON = LOW" in unified_src
+    assert "ACTIVE_LOW_OUTPUT_OFF = HIGH" in unified_src
+    assert "PIN_ALARM_LAMP, alarm ? ACTIVE_LOW_OUTPUT_ON : ACTIVE_LOW_OUTPUT_OFF" in unified_src
+    assert "PIN_BUZZER,     alarm ? ACTIVE_LOW_OUTPUT_ON : ACTIVE_LOW_OUTPUT_OFF" in unified_src
+    assert "PIN_STATUS_LED, alarm ? ACTIVE_LOW_OUTPUT_ON : ACTIVE_LOW_OUTPUT_OFF" in unified_src
+    assert "Alarm lamp, buzzer, and status LED are active-low" in final_design
 
 
 def test_current_design_docs_mirror_live_source_contracts():
@@ -879,7 +1010,8 @@ def test_current_design_docs_mirror_live_source_contracts():
     assert "| firmware version | `0.1.3` |" in gw_doc
 
     assert "`gld`" in gld_doc
-    assert "`gldw`" in gld_doc
+    assert "`gldw`" not in gld_doc
+    assert "GLDW / ESP32-S3-WROOM-1U-N16R8" in gld_doc
     assert "`ch1`" in ch_doc
     assert "`ch2`" in ch_doc
     assert "`ch3`" in ch_doc
@@ -910,7 +1042,7 @@ def test_current_design_docs_mirror_live_source_contracts():
 
     assert "confirm count | 10" in gld_doc
     assert "minimum final voltage | `0.0 V`" in gld_doc
-    assert "Nulling mode does not call WiFi connect, MQTT connect, MQTT subscribe, or MQTT publish." in gld_doc
+    assert "inference`/`running` and `nulling` call the offline-mode guard" in gld_doc
     assert "`gas-leak-detector/F001/dataset/data`" in gld_doc
     assert "`sensor_voltage`" in gld_doc
     assert "`sensor_gain`" in gld_doc
@@ -919,14 +1051,15 @@ def test_current_design_docs_mirror_live_source_contracts():
     assert "requestId:uint16BE + hopList:uint16BE[]" in ch_ch_doc
     assert "| payload | `requestId:uint16BE + hopList:uint16BE[]` |" in ch_gw_doc
     assert "nodeId(2) + commandId(2) + ttlSec(2) + commandLen(1) + commandBytes" in ch_gw_doc
-    assert "nodeId(2) + commandId(2) + commandLen(1) + commandBytes" in ch_gw_doc
-    assert "Gateway wire payload includes TTL. CH current parser does not consume TTL." in gw_server_doc
+    assert "nodeId(2) + commandId(2) + commandLen(1) + commandBytes" not in ch_gw_doc
+    assert "Gateway encodes and CH parses the same wire payload" in gw_server_doc
+    assert "Gateway wire payload includes TTL. CH current parser does not consume TTL." not in gw_server_doc
 
     assert "`gld/gateway/cmd/pull`" in gw_doc
     assert "`gld/gateway/cmd/node`" in gw_doc
     assert "`gld/gateway/topology`" in server_doc
     assert "`PGL_TOPOLOGY_PARENT_TTL_MS` | 900000" in server_doc
-    assert "current GLD unified dataset JSON field names `sensor_voltage`, `sensor_gain`, `feature_order`, `node_id`, `timestamp_ms`, `nulling_profile_id`" in server_doc
+    assert "The dataset flow expects the current GLD unified JSON field names `sensor_voltage`, `sensor_gain`, `feature_order`, `device_id`, `node_id`, `timestamp_ms`, `label`, and `nulling_profile_id`." in server_doc
 
 
 def test_ch_rejects_invalid_gld_uplink_semantics():
@@ -988,6 +1121,21 @@ def test_version_constants_format():
     assert 'GATEWAY_FIRMWARE_VERSION = "0.1.3"' in header
     assert 'PROTOCOL_VERSION = "0.1.0"' in header
     assert 'CONFIG_SCHEMA_VERSION = "0.1.0"' in header
+
+
+def test_gld_operator_firmware_package_generator_present():
+    script = pathlib.Path("firmware/tools/package_firmware_release.py").read_text(encoding="utf-8")
+    assert "does" in script and "not compile firmware" in script
+    assert "bootloader.bin" in script
+    assert "partitions.bin" in script
+    assert "boot_app0.bin" in script
+    assert "firmware.bin" in script
+    assert '"packageType": "pertamina-gld-prebuilt-firmware"' in script
+    assert '"deviceId": args.device_id' in script
+    assert '"boardProfile": args.board_profile' in script
+    assert '"flashFiles": flash_files' in script
+    assert "sha256(target)" in script
+    assert "GLD_FIRMWARE_VERSION" in script
 
 
 def test_gld_sensor_selftest_scaffold_present():

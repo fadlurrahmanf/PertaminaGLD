@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "packageType": "pertamina-gld-prebuilt-firmware",
+  "deviceId": "F000",
+  "boardProfile": "4D-ESP32S3",
+  "environment": "gld",
+  "firmwareVersion": "0.8.12",
+  "protocolVersion": "0.1.0",
+  "chip": "esp32s3",
+  "baud": 460800,
+  "createdAtUtc": "20260630T062122Z",
+  "sourceBuildDir": "D:\\PertaminaGLD\\firmware\\.pio\\build\\gld",
+  "flashFiles": [
+    {
+      "path": "bootloader.bin",
+      "offset": "0x0000",
+      "size": 15104,
+      "sha256": "2a71d69b471e20c2bac7fb469f3c6a807b3ebee780e348e5889db0da849ca363"
+    },
+    {
+      "path": "partitions.bin",
+      "offset": "0x8000",
+      "size": 3072,
+      "sha256": "bd0f7954aca2ef7d925ee21aaa1f3dc8822d1d6ce5cbbd26a135e5886bfff6ce"
+    },
+    {
+      "path": "boot_app0.bin",
+      "offset": "0xE000",
+      "size": 8192,
+      "sha256": "f94c5d786a7a8fab06ac5d10e33bf37711a6697636dc037559ea19cc410a17f0"
+    },
+    {
+      "path": "firmware.bin",
+      "offset": "0x10000",
+      "size": 946192,
+      "sha256": "99b93b9d7c46d310fe5504466002eff8509c8727734d45654ec8692df0db948b"
+    }
+  ]
+}

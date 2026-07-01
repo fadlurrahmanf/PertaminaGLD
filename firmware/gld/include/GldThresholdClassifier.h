@@ -18,7 +18,7 @@ struct GldThresholdConfig {
 };
 
 struct GldClassifyResult {
-    uint8_t gasClass;    // GLD_GAS_CLEAR=0, GLD_GAS_LPG=1, GLD_GAS_METHANE=4
+    uint8_t gasClass;    // GLD_GAS_CLEAR=0, GLD_GAS_LPG=1, GLD_GAS_METHANE=2
     uint8_t confidence;  // 0-100
 };
 

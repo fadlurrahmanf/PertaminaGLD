@@ -1,57 +1,7 @@
 flowchart TD
-    subgraph SENSOR_BLOCK["Sensor Hardware (tiap 1000ms)"]
-        MQ["8 Sensor Gas\nMQ2/3/4/5/6/7/8/135"]
-        TCA["TCA9548A\nI2C Mux 0x71"]
-        ADS["ADS1256\n24-bit ADC SPI"]
-        MA["GldMovingAverage\nmin 8 sampel per channel\nsebelum inference aktif"]
-    end
-
-    subgraph INFERENCE_BLOCK["ML Inference (setelah priming)"]
-        NN["NeuralNetwork.predict()\nfeature scaling + forward pass"]
-        RESULT["gasClass + confidence\n(0=clear, 1=LPG, 2=methane, 3=propane, 4=butane)"]
-        ALARM_CHK{"alarm?\ngasClass != 0\nconf >= 40%"}
-    end
-
-    subgraph ALARM_OUTPUT["Alarm Outputs (via ULN2003G)"]
-        LAMP["Alarm Lamp\nGPIO1 LOW (active low)"]
-        BUZ["Buzzer\nGPIO2 LOW (active low)"]
-        LED["Status LED\nGPIO41 LOW (active low)"]
-    end
-
-    subgraph TX_BLOCK["LoRa TX (tiap 10000ms)"]
-        BUILD["Build AppFrame\ngasClass + confidence + batteryMv"]
-        ENC["AES-128-GCM encrypt\n29-byte encrypted payload"]
-        LORA["SX1262 TX\n920-923 MHz SF7"]
-        RX["openLoRaRxWindow()\n2000ms, poll tiap 5ms"]
-        DNLK["Terima MSG_NODE_DOWNLINK\n(mode switch)"]
-    end
-
-    subgraph POWER_BLOCK["Power Detection"]
-        P45["GPIO45\n(External Power Pin)"]
-        BATGPIO4["Battery GPIO4\n(ADC Measurement)"]
-        PM24["Mode: 24v\nexternalPower=true"]
-        PMBAT["Mode: battery\nexternalPower=false"]
-        PM5V["Mode: 5v\nexternalPower=true"]
-    end
-
-    MQ --> TCA
-    TCA --> ADS
-    ADS -->|"8 channel voltage\nrunScan()"| MA
-    MA -->|"primed: semua ch >= 8 sampel"| NN
-    NN --> RESULT
-    RESULT --> ALARM_CHK
-    ALARM_CHK -->|"Ya"| LAMP
-    ALARM_CHK -->|"Ya"| BUZ
-    ALARM_CHK -->|"Ya"| LED
-
-    P45 -->|"HIGH"| PM24
-    P45 -->|"LOW"| BATGPIO4
-    BATGPIO4 -->|"ADC valid"| PMBAT
-    BATGPIO4 -->|"ADC invalid"| PM5V
-
-    BATGPIO4 -->|"batteryMv"| BUILD
-    RESULT -->|"gasClass + confidence"| BUILD
-    BUILD --> ENC
-    ENC --> LORA
-    LORA --> RX
-    RX -->|"jika ada downlink"| DNLK
+    CMD["CH terima MSG_SERVER_NODE_COMMAND\ndari GW via MESH"] --> CHECK{"flags di NodeCache GLD\nbit4 (NC_FLAG_EXT_POWER)?"}
+    CHECK -->|"SET\n(daya eksternal)"| IMM["Kirim MSG_NODE_DOWNLINK\nke GLD langsung via STAR"]
+    CHECK -->|"CLEAR\n(baterai)"| QUEUE["Simpan perintah di\ndownlinkStore (maks 16 slot)"]
+    QUEUE --> WAIT["Tunggu GLD kirim uplink\nberikutnya via STAR"]
+    WAIT --> TRIGGER["CH terima MSG_SENSOR_DATA\ndari GLD yang sama"]
+    TRIGGER --> SEND["Kirim MSG_NODE_DOWNLINK\nke GLD dalam RX window"]

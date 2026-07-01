@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
+#include <Preferences.h>
 #include <PubSubClient.h>
 #include <RadioLib.h>
 #include <SPI.h>
@@ -8,6 +9,7 @@
 
 #include <cstdarg>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 
 #include "BoardPins.h"
@@ -33,22 +35,15 @@ namespace {
 // ---------------------------------------------------------------------------
 // Resolved from GldConfig.h
 // ---------------------------------------------------------------------------
-constexpr const char* WIFI_SSID      = GLD_WIFI_SSID;
-constexpr const char* WIFI_PASSWORD  = GLD_WIFI_PASSWORD;
-constexpr const char* MQTT_HOST      = GLD_MQTT_HOST;
-constexpr uint16_t    MQTT_PORT      = GLD_MQTT_PORT;
-constexpr const char* MQTT_USER      = GLD_MQTT_USER;
-constexpr const char* MQTT_PASS      = GLD_MQTT_PASS;
-constexpr const char* MQTT_CLIENT_ID = GLD_MQTT_CLIENT_ID;
-constexpr const char* DEVICE_ID_STR  = GLD_DEVICE_ID_STR;
-constexpr uint16_t    NODE_ID        = GLD_NODE_ID;
-
-constexpr const char* TOPIC_CMD         = GLD_TOPIC_CMD;
-constexpr const char* TOPIC_DATASET     = GLD_TOPIC_DATASET;
-constexpr const char* TOPIC_DATA        = GLD_TOPIC_DATA;
-constexpr const char* TOPIC_STATUS      = GLD_TOPIC_STATUS;
-constexpr const char* TOPIC_SUMMARY     = GLD_TOPIC_SUMMARY;
-constexpr const char* TOPIC_ACK         = GLD_TOPIC_ACK;
+constexpr const char* DEFAULT_WIFI_SSID      = GLD_WIFI_SSID;
+constexpr const char* DEFAULT_WIFI_PASSWORD  = GLD_WIFI_PASSWORD;
+constexpr const char* DEFAULT_MQTT_HOST      = GLD_MQTT_HOST;
+constexpr uint16_t    DEFAULT_MQTT_PORT      = GLD_MQTT_PORT;
+constexpr const char* DEFAULT_MQTT_USER      = GLD_MQTT_USER;
+constexpr const char* DEFAULT_MQTT_PASS      = GLD_MQTT_PASS;
+constexpr const char* DEFAULT_DEVICE_ID_STR  = GLD_DEVICE_ID_STR;
+constexpr uint16_t    DEFAULT_NODE_ID        = GLD_NODE_ID;
+constexpr const char* DEFAULT_TOPIC_ROOT     = PGL_SERVER_DATASET_TOPIC_ROOT;
 
 // ---------------------------------------------------------------------------
 // LoRa config (STAR) — harus cocok dengan CH, tidak diubah per-node
@@ -92,6 +87,8 @@ constexpr const char* BOARD_PROFILE = "4D-ESP32S3";
 // ---------------------------------------------------------------------------
 constexpr uint8_t HW_TO_MODEL[8] = {0, 2, 5, 3, 4, 6, 1, 7};
 constexpr uint8_t ML_CONFIDENCE_THRESHOLD = pgl::protocol::GLD_LEL_THRESHOLD_PERCENT;
+constexpr uint8_t ACTIVE_LOW_OUTPUT_ON = LOW;
+constexpr uint8_t ACTIVE_LOW_OUTPUT_OFF = HIGH;
 
 // ---------------------------------------------------------------------------
 // Runtime objects
@@ -127,6 +124,39 @@ uint8_t  nullingAttemptCount = 0;
 pgl::gld::GldClassifyResult lastResult{pgl::protocol::GLD_GAS_CLEAR, 100};
 bool     debugEnabled    = true;
 int16_t  lastLoraBeginState = 0;
+int16_t  lastLoraTxState = 0;
+bool     lastLoraTxOk = false;
+int      lastBootAdsDrdyLevel = -1;
+uint8_t  lastBootAdsStatus = 0;
+bool     lastBootTcaOk = false;
+uint8_t  lastBootMcpOkCount = 0;
+bool     lastBootMcpControlTested = false;
+uint8_t  lastBootMcpControlOkCount = 0;
+float    latestSensorVoltage[pgl::gld::board::SENSOR_COUNT]{};
+uint8_t  latestSensorGain[pgl::gld::board::SENSOR_COUNT]{};
+uint8_t  latestSensorStatus[pgl::gld::board::SENSOR_COUNT]{};
+bool     latestTelemetryValid = false;
+
+struct RuntimeConfig {
+    char deviceId[17]{};
+    uint16_t nodeId = DEFAULT_NODE_ID;
+    char wifiSsid[33]{};
+    char wifiPassword[65]{};
+    char mqttHost[65]{};
+    uint16_t mqttPort = DEFAULT_MQTT_PORT;
+    char mqttUser[33]{};
+    char mqttPass[65]{};
+    char topicRoot[65]{};
+};
+
+RuntimeConfig runtimeConfig{};
+char mqttClientId[40]{};
+char topicCmd[128]{};
+char topicDataset[128]{};
+char topicData[128]{};
+char topicStatus[128]{};
+char topicSummary[128]{};
+char topicAck[128]{};
 
 // Dataset session state
 enum class DatasetState : uint8_t { Idle, Running };
@@ -158,6 +188,27 @@ void rawPrintln(const char* text) {
 #endif
 }
 
+void rawPrint(const char* text) {
+    Serial.print(text);
+#if defined(ARDUINO_ARCH_ESP32)
+    Serial0.print(text);
+#endif
+}
+
+template <typename TDoc>
+void rawJsonLine(const char* prefix, const TDoc& doc) {
+    Serial.print(prefix);
+    Serial.print(' ');
+    serializeJson(doc, Serial);
+    Serial.println();
+#if defined(ARDUINO_ARCH_ESP32)
+    Serial0.print(prefix);
+    Serial0.print(' ');
+    serializeJson(doc, Serial0);
+    Serial0.println();
+#endif
+}
+
 void logPrintf(const char* fmt, ...) {
     if (!debugEnabled) return;
     char buf[256];
@@ -179,8 +230,251 @@ void logPrintln(const char* text) {
 #endif
 }
 
+void copyBounded(char* target, size_t targetSize, const char* source) {
+    if (targetSize == 0) return;
+    if (source == nullptr) source = "";
+    strncpy(target, source, targetSize - 1);
+    target[targetSize - 1] = '\0';
+}
+
+uint16_t nodeIdFromDeviceId(const char* deviceId, uint16_t fallback) {
+    if (deviceId == nullptr || strlen(deviceId) != 4) return fallback;
+    char* end = nullptr;
+    const unsigned long parsed = strtoul(deviceId, &end, 16);
+    if (end == deviceId || *end != '\0' || parsed == 0 || parsed > 0xFFFFUL) return fallback;
+    return static_cast<uint16_t>(parsed);
+}
+
+void buildRuntimeTopics() {
+    snprintf(mqttClientId, sizeof(mqttClientId), "gld-unified-%s", runtimeConfig.deviceId);
+    snprintf(topicCmd, sizeof(topicCmd), "%s/%s/cmd", runtimeConfig.topicRoot, runtimeConfig.deviceId);
+    snprintf(topicDataset, sizeof(topicDataset), "%s/%s/dataset", runtimeConfig.topicRoot, runtimeConfig.deviceId);
+    snprintf(topicData, sizeof(topicData), "%s/%s/dataset/data", runtimeConfig.topicRoot, runtimeConfig.deviceId);
+    snprintf(topicStatus, sizeof(topicStatus), "%s/%s/dataset/status", runtimeConfig.topicRoot, runtimeConfig.deviceId);
+    snprintf(topicSummary, sizeof(topicSummary), "%s/%s/dataset/summary", runtimeConfig.topicRoot, runtimeConfig.deviceId);
+    snprintf(topicAck, sizeof(topicAck), "%s/%s/cmd/ack", runtimeConfig.topicRoot, runtimeConfig.deviceId);
+}
+
+void resetRuntimeConfigDefaults() {
+    copyBounded(runtimeConfig.deviceId, sizeof(runtimeConfig.deviceId), DEFAULT_DEVICE_ID_STR);
+    runtimeConfig.nodeId = DEFAULT_NODE_ID;
+    copyBounded(runtimeConfig.wifiSsid, sizeof(runtimeConfig.wifiSsid), DEFAULT_WIFI_SSID);
+    copyBounded(runtimeConfig.wifiPassword, sizeof(runtimeConfig.wifiPassword), DEFAULT_WIFI_PASSWORD);
+    copyBounded(runtimeConfig.mqttHost, sizeof(runtimeConfig.mqttHost), DEFAULT_MQTT_HOST);
+    runtimeConfig.mqttPort = DEFAULT_MQTT_PORT;
+    copyBounded(runtimeConfig.mqttUser, sizeof(runtimeConfig.mqttUser), DEFAULT_MQTT_USER);
+    copyBounded(runtimeConfig.mqttPass, sizeof(runtimeConfig.mqttPass), DEFAULT_MQTT_PASS);
+    copyBounded(runtimeConfig.topicRoot, sizeof(runtimeConfig.topicRoot), DEFAULT_TOPIC_ROOT);
+    buildRuntimeTopics();
+}
+
+void loadRuntimeConfig() {
+    resetRuntimeConfigDefaults();
+    Preferences prefs;
+    if (!prefs.begin("gld_app", true)) {
+        logPrintln("GLD_APP_CONFIG_LOAD=DEFAULT reason=nvs_unavailable");
+        return;
+    }
+    String value = prefs.getString("deviceId", runtimeConfig.deviceId);
+    copyBounded(runtimeConfig.deviceId, sizeof(runtimeConfig.deviceId), value.c_str());
+    runtimeConfig.nodeId = prefs.getUShort("nodeId", nodeIdFromDeviceId(runtimeConfig.deviceId, DEFAULT_NODE_ID));
+    value = prefs.getString("wifiSsid", runtimeConfig.wifiSsid);
+    copyBounded(runtimeConfig.wifiSsid, sizeof(runtimeConfig.wifiSsid), value.c_str());
+    value = prefs.getString("wifiPass", runtimeConfig.wifiPassword);
+    copyBounded(runtimeConfig.wifiPassword, sizeof(runtimeConfig.wifiPassword), value.c_str());
+    value = prefs.getString("mqttHost", runtimeConfig.mqttHost);
+    copyBounded(runtimeConfig.mqttHost, sizeof(runtimeConfig.mqttHost), value.c_str());
+    runtimeConfig.mqttPort = prefs.getUShort("mqttPort", runtimeConfig.mqttPort);
+    value = prefs.getString("mqttUser", runtimeConfig.mqttUser);
+    copyBounded(runtimeConfig.mqttUser, sizeof(runtimeConfig.mqttUser), value.c_str());
+    value = prefs.getString("mqttPass", runtimeConfig.mqttPass);
+    copyBounded(runtimeConfig.mqttPass, sizeof(runtimeConfig.mqttPass), value.c_str());
+    value = prefs.getString("topicRoot", runtimeConfig.topicRoot);
+    copyBounded(runtimeConfig.topicRoot, sizeof(runtimeConfig.topicRoot), value.c_str());
+    prefs.end();
+    buildRuntimeTopics();
+    logPrintf("GLD_APP_CONFIG_LOAD=OK deviceId=%s nodeId=0x%04X ssid=%s mqttHost=%s mqttPort=%u topicRoot=%s\n",
+              runtimeConfig.deviceId,
+              runtimeConfig.nodeId,
+              runtimeConfig.wifiSsid,
+              runtimeConfig.mqttHost,
+              runtimeConfig.mqttPort,
+              runtimeConfig.topicRoot);
+}
+
+bool saveRuntimeConfig() {
+    Preferences prefs;
+    if (!prefs.begin("gld_app", false)) return false;
+    prefs.putString("deviceId", runtimeConfig.deviceId);
+    prefs.putUShort("nodeId", runtimeConfig.nodeId);
+    prefs.putString("wifiSsid", runtimeConfig.wifiSsid);
+    prefs.putString("wifiPass", runtimeConfig.wifiPassword);
+    prefs.putString("mqttHost", runtimeConfig.mqttHost);
+    prefs.putUShort("mqttPort", runtimeConfig.mqttPort);
+    prefs.putString("mqttUser", runtimeConfig.mqttUser);
+    prefs.putString("mqttPass", runtimeConfig.mqttPass);
+    prefs.putString("topicRoot", runtimeConfig.topicRoot);
+    prefs.end();
+    return true;
+}
+
+bool validDeviceId(const char* deviceId) {
+    if (deviceId == nullptr || strlen(deviceId) != 4) return false;
+    for (uint8_t i = 0; i < 4; ++i) {
+        const char c = deviceId[i];
+        const bool ok = (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f');
+        if (!ok) return false;
+    }
+    return nodeIdFromDeviceId(deviceId, 0) != 0;
+}
+
 void nullingLogLine(const char* text) {
     logPrintln(text);
+}
+
+const char* datasetStateName() {
+    return datasetState == DatasetState::Running ? "running" : "idle";
+}
+
+const char* sampleStepName() {
+    switch (sampleStep) {
+        case SampleStep::FanOn: return "fan_on";
+        case SampleStep::FanSettle: return "fan_settle";
+        case SampleStep::Scan: return "scan";
+        case SampleStep::None:
+        default:
+            return "idle";
+    }
+}
+
+void emitCommandAck(const char* cmd, const char* status,
+                    const char* message, bool rebootExpected) {
+    StaticJsonDocument<256> doc;
+    doc["deviceId"] = runtimeConfig.deviceId;
+    doc["nodeId"] = runtimeConfig.nodeId;
+    doc["cmd"] = cmd;
+    doc["status"] = status;
+    doc["message"] = message;
+    doc["rebootExpected"] = rebootExpected;
+    doc["mode"] = pgl::gld::gldModeName(currentMode);
+    doc["uptimeMs"] = static_cast<uint32_t>(millis());
+    rawJsonLine("GLD_CMD_ACK_JSON", doc);
+}
+
+void addCapabilities(JsonObject caps) {
+    caps["appPing"] = true;
+    caps["getInfo"] = true;
+    caps["getStatus"] = true;
+    caps["serialAckJson"] = true;
+    caps["runningTelemetry"] = true;
+    caps["modeSwitchReboots"] = true;
+    caps["datasetControlPath"] = "mqtt";
+    caps["nullingConfig"] = "read_only";
+    caps["serialAppConfig"] = true;
+    caps["serialDeviceId"] = true;
+}
+
+void addTelemetry(JsonObject telemetry) {
+    telemetry["valid"] = latestTelemetryValid;
+    telemetry["sampleMs"] = lastScanMs;
+    telemetry["gasClass"] = lastResult.gasClass;
+    telemetry["gasName"] = pgl::gld::gldGasClassName(lastResult.gasClass);
+    telemetry["confidence"] = lastResult.confidence;
+    telemetry["alarm"] = lastAlarm;
+
+    JsonArray voltage = telemetry.createNestedArray("sensorVoltage");
+    JsonArray gain = telemetry.createNestedArray("sensorGain");
+    JsonArray status = telemetry.createNestedArray("sensorStatus");
+    JsonArray order = telemetry.createNestedArray("featureOrder");
+    for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
+        voltage.add(latestSensorVoltage[ch]);
+        gain.add(latestSensorGain[ch]);
+        status.add(latestSensorStatus[ch]);
+        order.add(pgl::gld::board::SENSOR_NAMES[ch]);
+    }
+}
+
+void emitInfoJson() {
+    StaticJsonDocument<1024> doc;
+    doc["deviceId"] = runtimeConfig.deviceId;
+    doc["nodeId"] = runtimeConfig.nodeId;
+    doc["targetChId"] = static_cast<uint16_t>(GLD_CH_ID);
+    doc["firmwareName"] = pgl::firmware::GLD_FIRMWARE_NAME;
+    doc["firmwareVersion"] = pgl::firmware::GLD_FIRMWARE_VERSION;
+    doc["protocolVersion"] = pgl::firmware::PROTOCOL_VERSION;
+    doc["boardProfile"] = BOARD_PROFILE;
+    doc["mode"] = pgl::gld::gldModeName(currentMode);
+    doc["baud"] = 115200;
+    doc["sensorCount"] = pgl::gld::board::SENSOR_COUNT;
+    doc["mqttTopicRoot"] = runtimeConfig.topicRoot;
+    JsonObject appConfig = doc.createNestedObject("appConfig");
+    appConfig["wifiSsid"] = runtimeConfig.wifiSsid;
+    appConfig["mqttHost"] = runtimeConfig.mqttHost;
+    appConfig["mqttPort"] = runtimeConfig.mqttPort;
+    appConfig["mqttUser"] = runtimeConfig.mqttUser;
+    appConfig["topicRoot"] = runtimeConfig.topicRoot;
+    JsonObject caps = doc.createNestedObject("capabilities");
+    addCapabilities(caps);
+    rawJsonLine("GLD_INFO_JSON", doc);
+}
+
+void emitStatusJson() {
+    const pgl::gld::GldPowerReading power = pgl::gld::readGldPower();
+    StaticJsonDocument<1536> doc;
+    doc["deviceId"] = runtimeConfig.deviceId;
+    doc["nodeId"] = runtimeConfig.nodeId;
+    doc["mode"] = pgl::gld::gldModeName(currentMode);
+    doc["uptimeMs"] = static_cast<uint32_t>(millis());
+    doc["debugEnabled"] = debugEnabled;
+
+    JsonObject powerObj = doc.createNestedObject("power");
+    powerObj["mode"] = pgl::gld::gldPowerModeName(power.mode);
+    powerObj["externalPower"] = power.externalPower;
+    powerObj["batteryMv"] = power.batteryMv;
+    powerObj["batteryValid"] = power.batteryValid;
+
+    JsonObject boot = doc.createNestedObject("bootHealth");
+    boot["adsReady"] = adsReady;
+    boot["adsDrdyLevel"] = lastBootAdsDrdyLevel;
+    boot["adsStatus"] = lastBootAdsStatus;
+    boot["tcaOk"] = lastBootTcaOk;
+    boot["mcpOkCount"] = lastBootMcpOkCount;
+    boot["mcpControlTested"] = lastBootMcpControlTested;
+    boot["mcpControlOkCount"] = lastBootMcpControlOkCount;
+    boot["dacReady"] = dacReady;
+    boot["radioReady"] = radioReady;
+    boot["mlReady"] = mlReady;
+
+    JsonObject lora = doc.createNestedObject("lora");
+    lora["beginState"] = lastLoraBeginState;
+    lora["lastTxState"] = lastLoraTxState;
+    lora["lastTxOk"] = lastLoraTxOk;
+    lora["txSeq"] = txSeq;
+    lora["txCounter"] = txCounter;
+
+    JsonObject dataset = doc.createNestedObject("dataset");
+    dataset["state"] = datasetStateName();
+    dataset["step"] = sampleStepName();
+    dataset["label"] = currentLabel;
+    dataset["seq"] = datasetSeq;
+    dataset["targetSamples"] = targetSamples;
+    dataset["sampleIntervalMs"] = sampleIntervalMs;
+    dataset["maxDurationMs"] = maxDurationMs;
+    dataset["useFanIntake"] = useFanIntake;
+    dataset["fanOnMs"] = fanOnMs;
+    dataset["postFanSettleMs"] = postFanSettleMs;
+    dataset["nullingProfileId"] = nullingProfileId;
+
+    JsonObject nulling = doc.createNestedObject("nulling");
+    nulling["done"] = nullDone;
+    nulling["retryArmed"] = nullingRetryArmed;
+    nulling["attemptCount"] = nullingAttemptCount;
+    nulling["nextRetryMs"] = nextNullingRetryMs;
+
+    JsonObject telemetry = doc.createNestedObject("telemetry");
+    addTelemetry(telemetry);
+
+    rawJsonLine("GLD_STATUS_JSON", doc);
 }
 
 // ---------------------------------------------------------------------------
@@ -188,6 +482,7 @@ void nullingLogLine(const char* text) {
 // ---------------------------------------------------------------------------
 
 void onModeCmd(pgl::gld::GldMode newMode) {
+    emitCommandAck("SET_MODE", "ok", "mode switch accepted", true);
     logPrintf("GLD_MODE_SWITCH current=%s new=%s\n",
               pgl::gld::gldModeName(currentMode),
               pgl::gld::gldModeName(newMode));
@@ -196,18 +491,105 @@ void onModeCmd(pgl::gld::GldMode newMode) {
 
 void onDebugCmd(bool enabled) {
     debugEnabled = enabled;
+    emitCommandAck(enabled ? "DEBUG_ON" : "DEBUG_OFF", "ok",
+                   enabled ? "serial debug enabled" : "serial debug disabled",
+                   false);
     rawPrintln(enabled
         ? "DEBUG_ON accepted, serial debug enabled"
         : "DEBUG_OFF accepted, serial debug disabled");
 }
 
-// Check Serial every loop tick for SET_MODE and DEBUG_ON/OFF commands.
-void checkSerial() {
-    pgl::gld::GldSerialCommand command{};
-    if (!pgl::gld::parseSerialCommand(command)) {
+void rebootAfterAckIfRequested(bool reboot) {
+    if (!reboot) return;
+    delay(250);
+    ESP.restart();
+}
+
+void onSetAppConfigJson(const char* payload) {
+    StaticJsonDocument<768> doc;
+    if (deserializeJson(doc, payload)) {
+        emitCommandAck("SET_APP_CONFIG", "error", "invalid json", false);
+        return;
+    }
+    const char* ssid = doc["ssid"].as<const char*>();
+    if (ssid == nullptr) ssid = doc["wifiSsid"].as<const char*>();
+    if (ssid == nullptr) ssid = runtimeConfig.wifiSsid;
+    const char* password = doc["password"].as<const char*>();
+    if (password == nullptr) password = doc["wifiPassword"].as<const char*>();
+    if (password == nullptr) password = runtimeConfig.wifiPassword;
+    const char* mqttHost = doc["mqttHost"].as<const char*>();
+    if (mqttHost == nullptr) mqttHost = doc["brokerHost"].as<const char*>();
+    if (mqttHost == nullptr) mqttHost = runtimeConfig.mqttHost;
+    const uint16_t mqttPort = doc["mqttPort"] | runtimeConfig.mqttPort;
+    const char* mqttUser = doc["mqttUser"].as<const char*>();
+    if (mqttUser == nullptr) mqttUser = runtimeConfig.mqttUser;
+    const char* mqttPass = doc["mqttPass"].as<const char*>();
+    if (mqttPass == nullptr) mqttPass = runtimeConfig.mqttPass;
+    const char* topicRoot = doc["topicRoot"].as<const char*>();
+    if (topicRoot == nullptr) topicRoot = runtimeConfig.topicRoot;
+    const bool reboot = doc["reboot"] | true;
+
+    if (strlen(ssid) == 0 || strlen(mqttHost) == 0 || strlen(topicRoot) == 0 || mqttPort == 0) {
+        emitCommandAck("SET_APP_CONFIG", "rejected", "ssid, mqttHost, mqttPort, and topicRoot are required", false);
         return;
     }
 
+    copyBounded(runtimeConfig.wifiSsid, sizeof(runtimeConfig.wifiSsid), ssid);
+    copyBounded(runtimeConfig.wifiPassword, sizeof(runtimeConfig.wifiPassword), password);
+    copyBounded(runtimeConfig.mqttHost, sizeof(runtimeConfig.mqttHost), mqttHost);
+    runtimeConfig.mqttPort = mqttPort;
+    copyBounded(runtimeConfig.mqttUser, sizeof(runtimeConfig.mqttUser), mqttUser);
+    copyBounded(runtimeConfig.mqttPass, sizeof(runtimeConfig.mqttPass), mqttPass);
+    copyBounded(runtimeConfig.topicRoot, sizeof(runtimeConfig.topicRoot), topicRoot);
+    buildRuntimeTopics();
+
+    if (!saveRuntimeConfig()) {
+        emitCommandAck("SET_APP_CONFIG", "error", "failed to save app config", false);
+        return;
+    }
+
+    logPrintf("GLD_APP_CONFIG_SAVE=OK ssid=%s mqttHost=%s mqttPort=%u topicRoot=%s reboot=%u\n",
+              runtimeConfig.wifiSsid,
+              runtimeConfig.mqttHost,
+              runtimeConfig.mqttPort,
+              runtimeConfig.topicRoot,
+              reboot ? 1 : 0);
+    emitCommandAck("SET_APP_CONFIG", "ok", reboot ? "app config saved; rebooting" : "app config saved", reboot);
+    if (!reboot) {
+        mqtt.disconnect();
+        WiFi.disconnect(false);
+    }
+    rebootAfterAckIfRequested(reboot);
+}
+
+void onSetDeviceIdJson(const char* payload) {
+    StaticJsonDocument<256> doc;
+    if (deserializeJson(doc, payload)) {
+        emitCommandAck("SET_DEVICE_ID", "error", "invalid json", false);
+        return;
+    }
+    const char* deviceId = doc["deviceId"].as<const char*>();
+    if (deviceId == nullptr) deviceId = doc["id"].as<const char*>();
+    if (deviceId == nullptr) deviceId = "";
+    const bool reboot = doc["reboot"] | true;
+    if (!validDeviceId(deviceId)) {
+        emitCommandAck("SET_DEVICE_ID", "rejected", "deviceId must be 4 hex chars, for example F001", false);
+        return;
+    }
+    copyBounded(runtimeConfig.deviceId, sizeof(runtimeConfig.deviceId), deviceId);
+    runtimeConfig.nodeId = doc["nodeId"] | nodeIdFromDeviceId(runtimeConfig.deviceId, DEFAULT_NODE_ID);
+    buildRuntimeTopics();
+    if (!saveRuntimeConfig()) {
+        emitCommandAck("SET_DEVICE_ID", "error", "failed to save device id", false);
+        return;
+    }
+    logPrintf("GLD_DEVICE_ID_SAVE=OK deviceId=%s nodeId=0x%04X reboot=%u\n",
+              runtimeConfig.deviceId, runtimeConfig.nodeId, reboot ? 1 : 0);
+    emitCommandAck("SET_DEVICE_ID", "ok", reboot ? "device id saved; rebooting" : "device id saved", reboot);
+    rebootAfterAckIfRequested(reboot);
+}
+
+void handleSerialCommand(const pgl::gld::GldSerialCommand& command) {
     switch (command.type) {
         case pgl::gld::GldSerialCommandType::SetMode:
             onModeCmd(command.mode);
@@ -218,9 +600,35 @@ void checkSerial() {
         case pgl::gld::GldSerialCommandType::DebugOff:
             onDebugCmd(false);
             break;
+        case pgl::gld::GldSerialCommandType::AppPing:
+            emitCommandAck("APP_PING", "ok", "pong", false);
+            break;
+        case pgl::gld::GldSerialCommandType::GetInfo:
+            emitInfoJson();
+            break;
+        case pgl::gld::GldSerialCommandType::GetStatus:
+            emitStatusJson();
+            break;
+        case pgl::gld::GldSerialCommandType::SetAppConfigJson:
+            onSetAppConfigJson(command.payload);
+            break;
+        case pgl::gld::GldSerialCommandType::SetDeviceIdJson:
+            onSetDeviceIdJson(command.payload);
+            break;
         case pgl::gld::GldSerialCommandType::None:
         default:
             break;
+    }
+}
+
+// Check Serial every loop tick for operator/app commands.
+void checkSerial() {
+    for (uint8_t i = 0; i < 8; ++i) {
+        pgl::gld::GldSerialCommand command{};
+        if (!pgl::gld::parseSerialCommand(command)) {
+            return;
+        }
+        handleSerialCommand(command);
     }
 }
 
@@ -249,10 +657,10 @@ void setupPins() {
     pinMode(pgl::gld::board::PIN_LORA_RST,   OUTPUT); digitalWrite(pgl::gld::board::PIN_LORA_RST,   HIGH);
     pinMode(pgl::gld::board::PIN_LORA_RXEN,  OUTPUT); digitalWrite(pgl::gld::board::PIN_LORA_RXEN,  LOW);
     pinMode(pgl::gld::board::PIN_LORA_TXEN,  OUTPUT); digitalWrite(pgl::gld::board::PIN_LORA_TXEN,  LOW);
-    optionalPinMode(pgl::gld::board::PIN_ALARM_LAMP, OUTPUT); optionalDigitalWrite(pgl::gld::board::PIN_ALARM_LAMP, LOW);
-    optionalPinMode(pgl::gld::board::PIN_BUZZER,     OUTPUT); optionalDigitalWrite(pgl::gld::board::PIN_BUZZER,     LOW);
+    optionalPinMode(pgl::gld::board::PIN_ALARM_LAMP, OUTPUT); optionalDigitalWrite(pgl::gld::board::PIN_ALARM_LAMP, ACTIVE_LOW_OUTPUT_OFF);
+    optionalPinMode(pgl::gld::board::PIN_BUZZER,     OUTPUT); optionalDigitalWrite(pgl::gld::board::PIN_BUZZER,     ACTIVE_LOW_OUTPUT_OFF);
     optionalPinMode(pgl::gld::board::PIN_DC_FAN,     OUTPUT); optionalDigitalWrite(pgl::gld::board::PIN_DC_FAN,     LOW);
-    optionalPinMode(pgl::gld::board::PIN_STATUS_LED, OUTPUT); optionalDigitalWrite(pgl::gld::board::PIN_STATUS_LED, LOW);
+    optionalPinMode(pgl::gld::board::PIN_STATUS_LED, OUTPUT); optionalDigitalWrite(pgl::gld::board::PIN_STATUS_LED, ACTIVE_LOW_OUTPUT_OFF);
 }
 
 const char* passFail(bool ok) {
@@ -440,15 +848,28 @@ void printBootIcReport(const pgl::gld::GldPowerReading& power,
 }
 
 // ---------------------------------------------------------------------------
-// WiFi + MQTT helpers (dataset / nulling modes)
+// WiFi + MQTT helpers (dataset mode only)
 // ---------------------------------------------------------------------------
 
+void disableNetworkForOfflineMode(const char* reason) {
+    if (mqtt.connected()) mqtt.disconnect();
+    wifiClient.stop();
+    WiFi.disconnect(true);
+    WiFi.mode(WIFI_OFF);
+    logPrintf("WIFI_OFF mode=%s reason=%s\n",
+              pgl::gld::gldModeName(currentMode),
+              reason != nullptr ? reason : "offline_mode");
+}
+
 bool connectWifi() {
-    logPrintf("WIFI_CONNECT ssid=%s\n", WIFI_SSID);
+    logPrintf("WIFI_CONNECT ssid=%s\n", runtimeConfig.wifiSsid);
     WiFi.mode(WIFI_STA);
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    WiFi.begin(runtimeConfig.wifiSsid, runtimeConfig.wifiPassword);
     const uint32_t t0 = millis();
-    while (WiFi.status() != WL_CONNECTED && millis() - t0 < WIFI_TIMEOUT_MS) delay(200);
+    while (WiFi.status() != WL_CONNECTED && millis() - t0 < WIFI_TIMEOUT_MS) {
+        checkSerial();
+        delay(50);
+    }
     const bool ok = WiFi.status() == WL_CONNECTED;
     logPrintf(ok ? "WIFI_CONNECTED ip=%s\n" : "WIFI_CONNECT_FAILED\n",
               ok ? WiFi.localIP().toString().c_str() : "");
@@ -468,15 +889,15 @@ bool mqttConnect() {
     const uint32_t now = millis();
     if (now - lastMqttAttemptMs < MQTT_RETRY_MS) return false;
     lastMqttAttemptMs = now;
-    mqtt.setServer(MQTT_HOST, MQTT_PORT);
+    mqtt.setServer(runtimeConfig.mqttHost, runtimeConfig.mqttPort);
     mqtt.setCallback(mqttCallback);
-    logPrintf("MQTT_CONNECT host=%s port=%u\n", MQTT_HOST, MQTT_PORT);
-    const bool ok = mqtt.connect(MQTT_CLIENT_ID, MQTT_USER, MQTT_PASS);
+    logPrintf("MQTT_CONNECT host=%s port=%u\n", runtimeConfig.mqttHost, runtimeConfig.mqttPort);
+    const bool ok = mqtt.connect(mqttClientId, runtimeConfig.mqttUser, runtimeConfig.mqttPass);
     logPrintf("MQTT_CONNECT_RESULT=%s state=%d\n", ok ? "OK" : "FAIL", mqtt.state());
     if (ok) {
-        mqtt.subscribe(TOPIC_CMD);
+        mqtt.subscribe(topicCmd);
         if (currentMode == pgl::gld::GldMode::DATASET) {
-            mqtt.subscribe(TOPIC_DATASET);
+            mqtt.subscribe(topicDataset);
         }
     } else {
         wifiClient.stop();
@@ -495,29 +916,29 @@ void maintainMqtt() {
 
 void publishCmdAck(const char* cmd, const char* result) {
     StaticJsonDocument<128> doc;
-    doc["device_id"] = DEVICE_ID_STR;
+    doc["device_id"] = runtimeConfig.deviceId;
     doc["cmd"] = cmd;
     doc["result"] = result;
     doc["timestamp_ms"] = static_cast<uint32_t>(millis());
     char buf[128];
     serializeJson(doc, buf, sizeof(buf));
-    mqtt.publish(TOPIC_ACK, buf, false);
+    mqtt.publish(topicAck, buf, false);
 }
 
 void publishDatasetStatus(const char* state, const char* detail) {
     StaticJsonDocument<128> doc;
-    doc["device_id"] = DEVICE_ID_STR;
+    doc["device_id"] = runtimeConfig.deviceId;
     doc["stage"] = "DATASET";
     doc["state"] = state;
     doc["detail"] = detail;
     char buf[128];
     serializeJson(doc, buf, sizeof(buf));
-    mqtt.publish(TOPIC_STATUS, buf, false);
+    mqtt.publish(topicStatus, buf, false);
 }
 
 void publishDatasetSummary() {
     StaticJsonDocument<192> doc;
-    doc["device_id"] = DEVICE_ID_STR;
+    doc["device_id"] = runtimeConfig.deviceId;
     doc["stage"] = "DATASET";
     doc["label"] = currentLabel;
     doc["total_samples"] = datasetSeq;
@@ -525,7 +946,7 @@ void publishDatasetSummary() {
     doc["nulling_profile_id"] = nullingProfileId;
     char buf[192];
     serializeJson(doc, buf, sizeof(buf));
-    mqtt.publish(TOPIC_SUMMARY, buf, false);
+    mqtt.publish(topicSummary, buf, false);
 }
 
 // ---------------------------------------------------------------------------
@@ -575,7 +996,7 @@ void handleDatasetTopic(const char* payload, unsigned int length) {
         lastScanMs     = sessionStartMs;
         sampleStep     = SampleStep::None;
         datasetState   = DatasetState::Running;
-        optionalDigitalWrite(pgl::gld::board::PIN_STATUS_LED, HIGH);
+        optionalDigitalWrite(pgl::gld::board::PIN_STATUS_LED, ACTIVE_LOW_OUTPUT_ON);
         publishCmdAck("START_DATASET", "ok");
         publishDatasetStatus("running", currentLabel);
         logPrintf("DATASET_START label=%s target=%lu interval=%lu\n",
@@ -587,7 +1008,7 @@ void handleDatasetTopic(const char* payload, unsigned int length) {
             optionalDigitalWrite(pgl::gld::board::PIN_DC_FAN, LOW);
         datasetState = DatasetState::Idle;
         sampleStep   = SampleStep::None;
-        optionalDigitalWrite(pgl::gld::board::PIN_STATUS_LED, LOW);
+        optionalDigitalWrite(pgl::gld::board::PIN_STATUS_LED, ACTIVE_LOW_OUTPUT_OFF);
         publishCmdAck("STOP_DATASET", "ok");
         publishDatasetSummary();
         publishDatasetStatus("idle", "stopped");
@@ -598,9 +1019,9 @@ void handleDatasetTopic(const char* payload, unsigned int length) {
 }
 
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
-    if (strcmp(topic, TOPIC_CMD) == 0) {
+    if (strcmp(topic, topicCmd) == 0) {
         handleCmdTopic(reinterpret_cast<const char*>(payload), length);
-    } else if (strcmp(topic, TOPIC_DATASET) == 0) {
+    } else if (strcmp(topic, topicDataset) == 0) {
         handleDatasetTopic(reinterpret_cast<const char*>(payload), length);
     }
 }
@@ -609,7 +1030,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 // Nulling helpers
 // ---------------------------------------------------------------------------
 
-bool initNulling() {
+bool initNulling(bool runIfMissing) {
     pgl::gld::GldNullingProfile profile{};
     if (pgl::gld::loadNullingProfile(profile)) {
         logPrintf("NULLING_NVS_LOAD=found profileId=%u\n", profile.profileId);
@@ -618,9 +1039,14 @@ bool initNulling() {
             dac.writeDac(ch, profile.dacCode[ch]);
         return true;
     }
+    if (!runIfMissing) {
+        nullingProfileId = 0;
+        logPrintln("NULLING_NVS_LOAD=empty auto_nulling=skip");
+        return false;
+    }
     logPrintln("NULLING_NVS_LOAD=empty running_nulling_now");
     const pgl::gld::GldNullingServiceResult result =
-        pgl::gld::runNullingService(ads, dac, nullingLogLine);
+        pgl::gld::runNullingService(ads, dac, nullingLogLine, checkSerial);
     logPrintf("NULLING_RUN status=%s successCount=%u\n",
               pgl::gld::gldNullingStatusName(result.status), result.successCount);
     if (result.status != pgl::gld::GldNullingStatus::Ok) return false;
@@ -716,7 +1142,7 @@ void runNullingRetryAttempt() {
     }
 
     const pgl::gld::GldNullingServiceResult result =
-        pgl::gld::runNullingService(ads, dac, nullingLogLine);
+        pgl::gld::runNullingService(ads, dac, nullingLogLine, checkSerial);
     logPrintf("NULLING_RETRY_DONE status=%s successCount=%u\n",
               pgl::gld::gldNullingStatusName(result.status), result.successCount);
 
@@ -872,9 +1298,9 @@ bool nonceProvider(uint8_t nonce[pgl::protocol::GLD_AES_GCM_NONCE_SIZE], void* c
 void updateAlarmOutputs(bool alarm) {
     if (alarm == lastAlarm) return;
     lastAlarm = alarm;
-    optionalDigitalWrite(pgl::gld::board::PIN_ALARM_LAMP, alarm ? HIGH : LOW);
-    optionalDigitalWrite(pgl::gld::board::PIN_BUZZER,     alarm ? HIGH : LOW);
-    optionalDigitalWrite(pgl::gld::board::PIN_STATUS_LED, alarm ? HIGH : LOW);
+    optionalDigitalWrite(pgl::gld::board::PIN_ALARM_LAMP, alarm ? ACTIVE_LOW_OUTPUT_ON : ACTIVE_LOW_OUTPUT_OFF);
+    optionalDigitalWrite(pgl::gld::board::PIN_BUZZER,     alarm ? ACTIVE_LOW_OUTPUT_ON : ACTIVE_LOW_OUTPUT_OFF);
+    optionalDigitalWrite(pgl::gld::board::PIN_STATUS_LED, alarm ? ACTIVE_LOW_OUTPUT_ON : ACTIVE_LOW_OUTPUT_OFF);
     logPrintf("GLD_ALARM_OUTPUT alarm=%u\n", alarm ? 1 : 0);
 }
 
@@ -913,15 +1339,20 @@ void runScan() {
     uint8_t primedChannels = 0;
     for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
         const pgl::gld::GldAds1256Reading r = ads.readChannel(ch);
+        latestSensorGain[ch] = r.gain;
+        latestSensorStatus[ch] = static_cast<uint8_t>(r.status);
         mavVoltage[ch] = (r.status == pgl::gld::GldAds1256Status::Ok)
-                         ? movingAvg.add(ch, r.voltage)
-                         : movingAvg.value(ch);
+                          ? movingAvg.add(ch, r.voltage)
+                          : movingAvg.value(ch);
+        latestSensorVoltage[ch] = mavVoltage[ch];
         if (movingAvg.count(ch) >= MIN_PRIMED_COUNT) ++primedChannels;
     }
+    latestTelemetryValid = true;
     const bool primed = primedChannels >= pgl::gld::board::SENSOR_COUNT;
     if (primed) runInference(mavVoltage);
     const bool alarm = lastResult.gasClass != pgl::protocol::GLD_GAS_CLEAR &&
                        lastResult.confidence >= ML_CONFIDENCE_THRESHOLD;
+    lastAlarm = alarm;
     logPrintf("GLD_SENSOR_SCAN seq=%lu allValid=%u primed=%u gasClass=%u(%s) confidence=%u alarm=%u\n",
               static_cast<unsigned long>(txCounter),
               adsReady ? 1 : 0, primed ? 1 : 0,
@@ -944,7 +1375,7 @@ void openLoRaRxWindow() {
         logPrintf("GLD_LORA_DOWNLINK_RX state=%d len=%u\n", rxState, static_cast<unsigned>(rxLen));
         if (rxState == RADIOLIB_ERR_NONE) {
             pgl::gld::GldMode newMode;
-            if (pgl::gld::parseLoRaDownlinkCmd(rxBuf, rxLen, NODE_ID, newMode)) {
+            if (pgl::gld::parseLoRaDownlinkCmd(rxBuf, rxLen, runtimeConfig.nodeId, newMode)) {
                 logPrintf("GLD_LORA_DOWNLINK_CMD mode=%s\n", pgl::gld::gldModeName(newMode));
                 onModeCmd(newMode);
             }
@@ -958,7 +1389,7 @@ void transmitOnce() {
     const uint16_t batteryMv = power.batteryValid ? power.batteryMv
                                                    : pgl::protocol::GLD_BATTERY_MV_INVALID;
     pgl::gld::GldFrameBuilderConfig config{
-        NODE_ID, static_cast<uint16_t>(GLD_CH_ID),
+        runtimeConfig.nodeId, static_cast<uint16_t>(GLD_CH_ID),
         pgl::gld::selftest::KEY_ID,  pgl::gld::selftest::AES_KEY,
         power.externalPower, pgl::protocol::GLD_LEL_THRESHOLD_PERCENT,
     };
@@ -978,12 +1409,16 @@ void transmitOnce() {
               lastResult.confidence, static_cast<unsigned>(frame.size));
 
     if (buildStatus != pgl::gld::GldFrameStatus::Ok) {
+        lastLoraTxState = -32768;
+        lastLoraTxOk = false;
         logPrintln("GLD_LORA_TX_RESULT=FAIL");
         return;
     }
 
     digitalWrite(pgl::gld::board::PIN_ADS1256_CS, HIGH);
     const int16_t txState = loraRadio->transmit(frame.bytes, frame.size);
+    lastLoraTxState = txState;
+    lastLoraTxOk = txState == RADIOLIB_ERR_NONE;
     digitalWrite(pgl::gld::board::PIN_LORA_RXEN, LOW);
     digitalWrite(pgl::gld::board::PIN_LORA_TXEN, LOW);
     logPrintf("GLD_STAR_TX_STATE=%d seq=%u\n", txState, txSeq);
@@ -1000,8 +1435,8 @@ void transmitOnce() {
 
 void publishDataRecord() {
     StaticJsonDocument<1024> doc;
-    doc["device_id"]          = DEVICE_ID_STR;
-    doc["node_id"]            = NODE_ID;
+    doc["device_id"]          = runtimeConfig.deviceId;
+    doc["node_id"]            = runtimeConfig.nodeId;
     doc["mode"]               = "DATASET";
     doc["seq"]                = datasetSeq;
     doc["timestamp_ms"]       = static_cast<uint32_t>(millis());
@@ -1012,13 +1447,17 @@ void publishDataRecord() {
     JsonArray foArr  = doc.createNestedArray("feature_order");
     for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
         const pgl::gld::GldAds1256Reading r = ads.readChannel(ch);
+        latestSensorVoltage[ch] = r.voltage;
+        latestSensorGain[ch] = r.gain;
+        latestSensorStatus[ch] = static_cast<uint8_t>(r.status);
         svArr.add(r.voltage);
         gainArr.add(r.gain);
         foArr.add(pgl::gld::board::SENSOR_NAMES[ch]);
     }
+    latestTelemetryValid = true;
     char payload[896];
     const size_t len = serializeJson(doc, payload, sizeof(payload));
-    const bool ok = mqtt.publish(TOPIC_DATA, payload, false);
+    const bool ok = mqtt.publish(topicData, payload, false);
     logPrintf("DATASET_RECORD seq=%lu ok=%u len=%u\n",
               static_cast<unsigned long>(datasetSeq), ok ? 1 : 0,
               static_cast<unsigned>(len));
@@ -1041,7 +1480,7 @@ void stopDataset() {
     optionalDigitalWrite(pgl::gld::board::PIN_DC_FAN, LOW);
     datasetState = DatasetState::Idle;
     sampleStep   = SampleStep::None;
-    optionalDigitalWrite(pgl::gld::board::PIN_STATUS_LED, LOW);
+    optionalDigitalWrite(pgl::gld::board::PIN_STATUS_LED, ACTIVE_LOW_OUTPUT_OFF);
     publishDatasetSummary();
     publishDatasetStatus("idle", "completed");
 }
@@ -1091,6 +1530,7 @@ void setup() {
     Serial0.begin(115200);
 #endif
     delay(1000);
+    loadRuntimeConfig();
     setupPins();
     pgl::gld::beginGldPowerPins();
     movingAvg.reset();
@@ -1114,15 +1554,31 @@ void setup() {
     logPrintf("GLD_POWER mode=%s externalPower=%u batteryMv=%u\n",
               pgl::gld::gldPowerModeName(power.mode),
               power.externalPower ? 1 : 0, power.batteryMv);
+    emitInfoJson();
+    emitStatusJson();
 
     adsReady = ads.begin(gldSpi);
     logPrintf("ADS_BEGIN_RESULT=%s\n", adsReady ? "PASS" : "FAIL");
     const BootAdsReport bootAds = probeBootAds(adsReady);
     const BootI2cReport bootI2c = probeBootI2c();
     const BootMcpControlReport bootMcpControl = testBootMcpControl(power.externalPower);
+    lastBootAdsDrdyLevel = bootAds.drdyLevel;
+    lastBootAdsStatus = bootAds.status;
+    lastBootTcaOk = bootI2c.tcaOk;
+    lastBootMcpOkCount = bootI2c.mcpOkCount;
+    lastBootMcpControlTested = bootMcpControl.tested;
+    lastBootMcpControlOkCount = 0;
+    for (uint8_t sensor = 0; sensor < pgl::gld::board::SENSOR_COUNT; ++sensor) {
+        if (bootMcpControl.dacReady &&
+            bootMcpControl.writeLow[sensor] &&
+            bootMcpControl.writeHigh[sensor]) {
+            ++lastBootMcpControlOkCount;
+        }
+    }
 
     if (currentMode == pgl::gld::GldMode::INFERENCE) {
         // --- INFERENCE mode init ---
+        disableNetworkForOfflineMode("inference_mode");
         network = new NeuralNetwork();
         mlReady = network->isInitialized();
         const int mlOutputSize = mlReady ? network->getOutputSize() : -1;
@@ -1155,7 +1611,7 @@ void setup() {
         logPrintf("DAC_MUX_BEGIN_RESULT=%s\n", dacReady ? "PASS" : "FAIL");
 
         if (currentMode == pgl::gld::GldMode::DATASET) {
-            if (adsReady && dacReady) initNulling();
+            if (adsReady && dacReady) initNulling(false);
             logPrintf("DATASET_READY adsReady=%u dacReady=%u nullingProfileId=%u\n",
                       adsReady ? 1 : 0, dacReady ? 1 : 0, nullingProfileId);
             char modeDetail[96];
@@ -1178,6 +1634,7 @@ void setup() {
 
         } else {
             // NULLING mode: run calibration first (blocking)
+            disableNetworkForOfflineMode("nulling_mode");
             if (!adsReady || !dacReady) {
                 logPrintf("NULLING_BLOCKED adsReady=%u dacReady=%u\n",
                           adsReady ? 1 : 0, dacReady ? 1 : 0);
@@ -1198,7 +1655,7 @@ void setup() {
                 logPrintln("NULLING_RUN=start");
 
                 const pgl::gld::GldNullingServiceResult result =
-                    pgl::gld::runNullingService(ads, dac, nullingLogLine);
+                    pgl::gld::runNullingService(ads, dac, nullingLogLine, checkSerial);
                 logPrintf("NULLING_RUN_DONE status=%s successCount=%u\n",
                           pgl::gld::gldNullingStatusName(result.status), result.successCount);
 

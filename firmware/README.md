@@ -31,8 +31,7 @@ Active envs in `firmware/platformio.ini`:
 
 | Env | Role |
 |---|---|
-| `gld` | GLD unified runtime on `4d_systems_esp32s3_gen4_r8n16` |
-| `gldw` | GLD unified runtime for ESP32-S3-WROOM-1U-N16R8 bench wiring |
+| `gld` | GLD unified runtime for the GLDW / ESP32-S3-WROOM-1U-N16R8 board profile |
 | `ch1` | CH runtime default, `PGL_CH_ID=0x0064` |
 | `ch2` | CH runtime, `PGL_CH_ID=0x0065`, battery thresholds disabled for bench |
 | `ch3` | CH runtime, `PGL_CH_ID=0x0066` |
@@ -41,7 +40,7 @@ Active envs in `firmware/platformio.ini`:
 Main GLD upload example:
 
 ```powershell
-pio run -d firmware -e gldw -t upload --upload-port COM9
+pio run -d firmware -e gld -t upload --upload-port COM10
 ```
 
 Main CH upload example:

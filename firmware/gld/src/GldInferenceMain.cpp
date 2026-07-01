@@ -44,6 +44,8 @@ uint32_t lastScanMs = 0;
 uint32_t lastTxMs   = 0;
 bool lastAlarm = false;
 pgl::gld::GldClassifyResult lastResult{pgl::protocol::GLD_GAS_CLEAR, 100};
+constexpr uint8_t ACTIVE_LOW_OUTPUT_ON = LOW;
+constexpr uint8_t ACTIVE_LOW_OUTPUT_OFF = HIGH;
 
 // LoRa config — must match CH STAR radio config
 constexpr float    GLD_STAR_TX_FREQ_MHZ    = 920.0f;
@@ -118,10 +120,10 @@ void setupPins() {
     pinMode(pgl::gld::board::PIN_LORA_RST,   OUTPUT); digitalWrite(pgl::gld::board::PIN_LORA_RST,   HIGH);
     pinMode(pgl::gld::board::PIN_LORA_RXEN,  OUTPUT); digitalWrite(pgl::gld::board::PIN_LORA_RXEN,  LOW);
     pinMode(pgl::gld::board::PIN_LORA_TXEN,  OUTPUT); digitalWrite(pgl::gld::board::PIN_LORA_TXEN,  LOW);
-    pinMode(pgl::gld::board::PIN_ALARM_LAMP, OUTPUT); digitalWrite(pgl::gld::board::PIN_ALARM_LAMP, LOW);
-    pinMode(pgl::gld::board::PIN_BUZZER,     OUTPUT); digitalWrite(pgl::gld::board::PIN_BUZZER,     LOW);
+    pinMode(pgl::gld::board::PIN_ALARM_LAMP, OUTPUT); digitalWrite(pgl::gld::board::PIN_ALARM_LAMP, ACTIVE_LOW_OUTPUT_OFF);
+    pinMode(pgl::gld::board::PIN_BUZZER,     OUTPUT); digitalWrite(pgl::gld::board::PIN_BUZZER,     ACTIVE_LOW_OUTPUT_OFF);
     pinMode(pgl::gld::board::PIN_DC_FAN,     OUTPUT); digitalWrite(pgl::gld::board::PIN_DC_FAN,     LOW);
-    pinMode(pgl::gld::board::PIN_STATUS_LED, OUTPUT); digitalWrite(pgl::gld::board::PIN_STATUS_LED, LOW);
+    pinMode(pgl::gld::board::PIN_STATUS_LED, OUTPUT); digitalWrite(pgl::gld::board::PIN_STATUS_LED, ACTIVE_LOW_OUTPUT_OFF);
 }
 
 bool beginLoraRadio() {
@@ -165,8 +167,9 @@ bool beginLoraRadio() {
 void updateAlarmOutputs(bool alarm) {
     if (alarm == lastAlarm) return;
     lastAlarm = alarm;
-    digitalWrite(pgl::gld::board::PIN_ALARM_LAMP, alarm ? HIGH : LOW);
-    digitalWrite(pgl::gld::board::PIN_STATUS_LED, alarm ? HIGH : LOW);
+    digitalWrite(pgl::gld::board::PIN_ALARM_LAMP, alarm ? ACTIVE_LOW_OUTPUT_ON : ACTIVE_LOW_OUTPUT_OFF);
+    digitalWrite(pgl::gld::board::PIN_BUZZER,     alarm ? ACTIVE_LOW_OUTPUT_ON : ACTIVE_LOW_OUTPUT_OFF);
+    digitalWrite(pgl::gld::board::PIN_STATUS_LED, alarm ? ACTIVE_LOW_OUTPUT_ON : ACTIVE_LOW_OUTPUT_OFF);
     logPrintf("GLD_ALARM_OUTPUT alarm=%u\n", alarm ? 1 : 0);
 }
 

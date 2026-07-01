@@ -26,6 +26,7 @@ constexpr uint16_t NULLING_CONFIRM_WINDOW = 10;
 constexpr uint32_t NULLING_SETTLE_MS = 5;
 constexpr float NULLING_THRESHOLD_V = 0.0001f;
 constexpr float NULLING_MIN_FINAL_V = 0.0f;
+constexpr uint8_t ACTIVE_LOW_OUTPUT_OFF = HIGH;
 
 struct NullingSnapshot {
     int32_t raw;
@@ -84,13 +85,13 @@ void setupOutputsSafe() {
     pinMode(pgl::gld::board::PIN_LORA_TXEN, OUTPUT);
     digitalWrite(pgl::gld::board::PIN_LORA_TXEN, LOW);
     pinMode(pgl::gld::board::PIN_ALARM_LAMP, OUTPUT);
-    digitalWrite(pgl::gld::board::PIN_ALARM_LAMP, LOW);
+    digitalWrite(pgl::gld::board::PIN_ALARM_LAMP, ACTIVE_LOW_OUTPUT_OFF);
     pinMode(pgl::gld::board::PIN_BUZZER, OUTPUT);
-    digitalWrite(pgl::gld::board::PIN_BUZZER, LOW);
+    digitalWrite(pgl::gld::board::PIN_BUZZER, ACTIVE_LOW_OUTPUT_OFF);
     pinMode(pgl::gld::board::PIN_DC_FAN, OUTPUT);
     digitalWrite(pgl::gld::board::PIN_DC_FAN, LOW);
     pinMode(pgl::gld::board::PIN_STATUS_LED, OUTPUT);
-    digitalWrite(pgl::gld::board::PIN_STATUS_LED, LOW);
+    digitalWrite(pgl::gld::board::PIN_STATUS_LED, ACTIVE_LOW_OUTPUT_OFF);
 }
 
 void printBootHeader() {

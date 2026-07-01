@@ -76,9 +76,9 @@ Protocol gas classes:
 |---:|---|
 | 0 | clearGas |
 | 1 | LPG |
-| 2 | propane |
-| 3 | butane |
-| 4 | methane |
+| 2 | methane |
+| 3 | propane |
+| 4 | butane |
 | 5 | reserved |
 | 6 | anomaly |
 
@@ -88,9 +88,9 @@ GLD current model-class mapping:
 |---:|---:|
 | 0 | 0 |
 | 1 | 1 |
-| 2 | 4 |
-| 3 | 2 |
-| 4 | 3 |
+| 2 | 2 |
+| 3 | 3 |
+| 4 | 4 |
 | other | 6 |
 
 Alarm rule:
@@ -299,11 +299,11 @@ GLD downlink over STAR uses:
 
 GLD parser currently recognizes command payload byte 0 `0x01` as SET_MODE and byte 1 as mode `0|1|2`.
 
-Current Gateway-to-CH command mismatch:
+Current Gateway-to-CH command boundary:
 
 | Component | Wire layout |
 |---|---|
 | Gateway builder | `nodeId(2) + commandId(2) + ttlSec(2) + commandLen(1) + commandBytes` |
-| CH parser | `nodeId(2) + commandId(2) + commandLen(1) + commandBytes` |
+| CH parser | `nodeId(2) + commandId(2) + ttlSec(2) + commandLen(1) + commandBytes` |
 
-This mismatch is current source truth.
+Gateway and CH are source-aligned for this boundary. `ttlSec` is stored as CH pending-downlink TTL; `0` uses the CH default pending TTL.

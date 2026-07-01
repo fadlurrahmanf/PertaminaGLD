@@ -35,6 +35,8 @@ constexpr int8_t GLD_LORA_SELFTEST_TX_POWER_DBM = 17;
 constexpr uint16_t GLD_LORA_SELFTEST_PREAMBLE = 8;
 constexpr float GLD_LORA_TCXO_VOLTAGE = 1.6f;
 constexpr float GLD_LORA_XTAL_TCXO_VOLTAGE = 0.0f;
+constexpr uint8_t ACTIVE_LOW_OUTPUT_ON = LOW;
+constexpr uint8_t ACTIVE_LOW_OUTPUT_OFF = HIGH;
 
 void beginLogPorts() {
     Serial.begin(115200);
@@ -118,13 +120,13 @@ void setupOutputsSafe() {
     pinMode(pgl::gld::board::PIN_LORA_TXEN, OUTPUT);
     digitalWrite(pgl::gld::board::PIN_LORA_TXEN, LOW);
     pinMode(pgl::gld::board::PIN_ALARM_LAMP, OUTPUT);
-    digitalWrite(pgl::gld::board::PIN_ALARM_LAMP, LOW);
+    digitalWrite(pgl::gld::board::PIN_ALARM_LAMP, ACTIVE_LOW_OUTPUT_OFF);
     pinMode(pgl::gld::board::PIN_BUZZER, OUTPUT);
-    digitalWrite(pgl::gld::board::PIN_BUZZER, LOW);
+    digitalWrite(pgl::gld::board::PIN_BUZZER, ACTIVE_LOW_OUTPUT_OFF);
     pinMode(pgl::gld::board::PIN_DC_FAN, OUTPUT);
     digitalWrite(pgl::gld::board::PIN_DC_FAN, LOW);
     pinMode(pgl::gld::board::PIN_STATUS_LED, OUTPUT);
-    digitalWrite(pgl::gld::board::PIN_STATUS_LED, LOW);
+    digitalWrite(pgl::gld::board::PIN_STATUS_LED, ACTIVE_LOW_OUTPUT_OFF);
 }
 
 void reportPowerSelftest() {
@@ -257,7 +259,7 @@ void scanSensorsOnce() {
     }
 
     ++scanCount;
-    digitalWrite(pgl::gld::board::PIN_STATUS_LED, scan.allValid ? HIGH : LOW);
+    digitalWrite(pgl::gld::board::PIN_STATUS_LED, scan.allValid ? ACTIVE_LOW_OUTPUT_ON : ACTIVE_LOW_OUTPUT_OFF);
     maybeReportSelftest(seq, scan.allValid);
 }
 

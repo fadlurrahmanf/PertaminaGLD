@@ -418,9 +418,9 @@ Source: BaseDesign.
 
 | Flow | Inti langkah | Contoh call |
 |---|---|---|
-| Set output command | ESP32 mengubah GPIO kontrol sesuai status alarm atau kebutuhan runtime | `digitalWrite(PIN_ALARM_LAMP, HIGH);` |
+| Set active-low alarm/buzzer output | ESP32 mengubah GPIO kontrol sesuai status alarm atau kebutuhan runtime | `digitalWrite(PIN_ALARM_LAMP, LOW);` |
 | ULN2003 drive load | Sinyal GPIO masuk ke input ULN2003 lalu driver men-switch beban board terkait | `ULN2003 input follows GPIO state` |
-| Release load | Saat status output tidak diperlukan lagi, GPIO dimatikan dan ULN2003 melepas beban | `digitalWrite(PIN_ALARM_LAMP, LOW);` |
+| Release active-low alarm/buzzer output | Saat status output tidak diperlukan lagi, GPIO dimatikan dan ULN2003 melepas beban | `digitalWrite(PIN_ALARM_LAMP, HIGH);` |
 
 Catatan: pada board ini, `Status-LED` bukan jalur ULN2003; yang melewati ULN2003 adalah `Alarm-Lamp`, `Buzzer`, dan `Fan`.
 - Library used: `none(GPIO-based output driver)`

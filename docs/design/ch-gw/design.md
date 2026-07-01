@@ -153,10 +153,4 @@ Current Gateway wire payload is:
 nodeId(2) + commandId(2) + ttlSec(2) + commandLen(1) + commandBytes
 ```
 
-Current CH parser expects:
-
-```text
-nodeId(2) + commandId(2) + commandLen(1) + commandBytes
-```
-
-This mismatch is present in current source.
+Current CH parser expects the same payload shape. `ttlSec` becomes the pending downlink expiry; `0` falls back to the CH default pending TTL.

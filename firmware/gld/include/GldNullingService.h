@@ -23,13 +23,15 @@ struct GldNullingServiceResult {
 };
 
 using GldNullingLogFn = void (*)(const char* line);
+using GldNullingTickFn = void (*)();
 
 // Run the nulling algorithm on all 8 sensor channels.
 // ads and dac must be initialized (begin() called) before calling.
 // The profile dacCodes are applied to the DAC hardware after each channel.
 GldNullingServiceResult runNullingService(GldAds1256Reader& ads,
                                           GldDacMux& dac,
-                                          GldNullingLogFn logFn = nullptr);
+                                          GldNullingLogFn logFn = nullptr,
+                                          GldNullingTickFn tickFn = nullptr);
 
 // NVS persistence via ESP32 Preferences.
 bool saveNullingProfile(const GldNullingProfile& profile);

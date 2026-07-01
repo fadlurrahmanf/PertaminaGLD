@@ -11,6 +11,8 @@ Status: current source mirror, 2026-06-29.
 | Decode function | `server/nodered/functions/pertamina-gld-decode.js` |
 | Dataset command helper | `server/nodered/send_dataset_cmd.py` |
 | Dataset recorder helper | `server/nodered/gld_dataset_recorder.py` |
+| Dataset flow generator | `server/nodered/apply-pertamina-gld-dataset-flow.ps1` |
+| Dataset deploy compatibility wrapper | `server/nodered/deploy-dataset-flow.py` |
 | Dataset flow snapshot | `server/nodered/pertamina-gld-dataset.flow.json` |
 
 ## Flow Generator
@@ -82,9 +84,9 @@ Gas class names:
 |---:|---|
 | 0 | `clearGas` |
 | 1 | `LPG` |
-| 2 | `propana` |
-| 3 | `butana` |
-| 4 | `metana` |
+| 2 | `methane` |
+| 3 | `propane` |
+| 4 | `butane` |
 | 5 | `reserve` |
 | 6 | `anomaly` |
 
@@ -228,4 +230,23 @@ device_id,node_id,mode,seq,timestamp_ms,label,nulling_profile_id,
 sv0..sv7,gain0..gain7
 ```
 
-`pertamina-gld-dataset.flow.json` is a separate dataset flow snapshot. Its function expects payload fields `ch`, `gain`, `ok`, `nodeId`, `seq`, `ts_ms`, `label`, `profileId`, which differs from current GLD unified dataset JSON field names `sensor_voltage`, `sensor_gain`, `feature_order`, `node_id`, `timestamp_ms`, `nulling_profile_id`.
+`apply-pertamina-gld-dataset-flow.ps1` generates `pertamina-gld-dataset.flow.json`. `deploy-dataset-flow.py` is a compatibility wrapper that forwards to the PowerShell generator so the dataset flow has one source of truth.
+
+The generated dataset flow includes operator inject controls:
+
+| Node | MQTT topic | Payload |
+|---|---|---|
+| `START_DATASET clear_air_test` | `gas-leak-detector/F001/dataset` | `START_DATASET` JSON with `label`, `target_samples`, `sample_interval_ms`, `max_duration_ms`, `use_fan_intake`, `fan_on_ms`, and `post_fan_settle_ms` |
+| `STOP_DATASET` | `gas-leak-detector/F001/dataset` | `{"cmd":"STOP_DATASET"}` |
+
+The generated dataset flow listens to:
+
+| Topic | Use |
+|---|---|
+| `gas-leak-detector/+/dataset/data` | insert current GLD unified dataset records to MySQL and append CSV |
+| `gas-leak-detector/+/dataset/status` | debug dataset lifecycle status |
+| `gas-leak-detector/+/dataset/summary` | debug dataset session summary |
+| `gas-leak-detector/+/cmd/ack` | debug GLD command ACK, including `START_DATASET` and `STOP_DATASET` results |
+| `gas-leak-detector/+/nulling/result` | debug retained nulling profile result |
+
+The dataset flow expects the current GLD unified JSON field names `sensor_voltage`, `sensor_gain`, `feature_order`, `device_id`, `node_id`, `timestamp_ms`, `label`, and `nulling_profile_id`.

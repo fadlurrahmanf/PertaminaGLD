@@ -154,7 +154,7 @@ nodeId:uint16BE + commandId:uint16BE + ttlSec:uint16BE + commandLen:uint8 + comm
 
 Frame type is `MSG_SERVER_NODE_COMMAND`, source Gateway, destination `cluster`, seq `meshSeq++`.
 
-Current source caveat: CH parser does not consume `ttlSec` in this position.
+CH parses the same payload shape and stores `ttlSec` as the pending downlink expiry. A `ttlSec` of `0` uses the CH default pending TTL.
 
 ## MESH Receive
 

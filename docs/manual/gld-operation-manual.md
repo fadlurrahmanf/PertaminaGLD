@@ -503,7 +503,7 @@ Expected CH log:
 
 ```text
 CH_MESH_RX state=0 len=...
-CH_DOWNLINK_STORED nodeId=0xF001 commandId=1 payloadLen=2
+CH_DOWNLINK_STORED nodeId=0xF001 commandId=1 ttlSec=600 payloadLen=2
 CH_NODE_DOWNLINK_TX nodeId=0xF001 encStatus=0 frameSize=...
 ```
 
@@ -516,22 +516,14 @@ dengan format:
 nodeId:uint16 + commandId:uint16 + ttlSec:uint16 + commandLen:uint8 + commandBytes
 ```
 
-Tetapi parser CH saat manual ini dibuat membaca format:
-
-```text
-nodeId:uint16 + commandId:uint16 + commandLen:uint8 + commandBytes
-```
-
-Artinya command `gld/gateway/cmd/node` berisiko tidak sampai ke GLD sebagai
-mode switch sampai format Gateway dan CH disamakan. Jalur final konseptual yang
-benar tetap:
+Parser CH sekarang membaca format yang sama. Command `gld/gateway/cmd/node`
+berjalan lewat jalur:
 
 ```text
 Gateway MQTT -> MSG_SERVER_NODE_COMMAND -> CH pending downlink -> MSG_NODE_DOWNLINK -> GLD
 ```
 
-Untuk operasi lapangan sekarang, pakai Serial atau MQTT langsung ke GLD untuk
-mode switch sampai mismatch ini diperbaiki dan diverifikasi end-to-end.
+`ttlSec` menjadi expiry pending downlink di CH; nilai `0` memakai TTL default CH.
 
 ## 5. Node-RED Server
 
@@ -540,19 +532,26 @@ Flow server memakai broker lokal Aedes di port `1884` untuk bench saat ini.
 Deploy flow site:
 
 ```powershell
-.\server\nodered\apply-pertamina-gld-flow.ps1 `
-  -NodeRedUrl "http://127.0.0.1:1880" `
-  -GatewayStatusUrl "http://0.0.0.0/disabled-until-gateway-ip-known" `
-  -GatewayBaseUrl "http://0.0.0.0" `
-  -MqttHost "127.0.0.1" `
-  -MqttPort 1884
+node .\server\nodered\apply-pertamina-gld-flow.js `
+  --node-red-url "http://127.0.0.1:1880" `
+  --gateway-status-url "http://0.0.0.0/disabled-until-gateway-ip-known" `
+  --gateway-base-url "http://0.0.0.0" `
+  --mqtt-host "127.0.0.1" `
+  --mqtt-port 1884
 ```
 
 Deploy dataset flow:
 
 ```powershell
-python server\nodered\deploy-dataset-flow.py
+powershell -ExecutionPolicy Bypass -File .\server\nodered\apply-pertamina-gld-dataset-flow.ps1 `
+  -NodeRedUrl "http://127.0.0.1:1880" `
+  -MqttHost "127.0.0.1" `
+  -MqttPort 1884
 ```
+
+Dataset flow menyediakan inject operator `START_DATASET clear_air_test` dan
+`STOP_DATASET`. Keduanya publish ke `gas-leak-detector/F001/dataset`; hasil
+command terlihat di debug `cmd/ack` dari topic `gas-leak-detector/+/cmd/ack`.
 
 Topic server/Gateway:
 
@@ -769,24 +768,18 @@ Checklist:
 
 ### 7.6 Gateway Command Tidak Mengubah Mode GLD
 
-Penyebab paling mungkin saat manual ini dibuat: mismatch format
-`SERVER_NODE_COMMAND` antara Gateway dan CH.
-
-Gunakan jalur aman sementara:
-
-- Serial `SET_MODE ...`, atau
-- MQTT langsung ke `gas-leak-detector/F001/cmd` saat GLD online via WiFi.
-
-Setelah mismatch diperbaiki, validasi ulang dengan urutan log:
+Validasi jalur Gateway -> CH -> GLD dengan urutan log:
 
 ```text
 GW_MQTT_CMD topic=gld/gateway/cmd/node
 GW_MESH_TX purpose=node-command
-CH_DOWNLINK_STORED nodeId=0xF001 payloadLen=2
+CH_DOWNLINK_STORED nodeId=0xF001 commandId=1 ttlSec=600 payloadLen=2
 CH_NODE_DOWNLINK_TX nodeId=0xF001
 GLD_LORA_DOWNLINK_CMD mode=...
 GLD_MODE_SWITCH current=... new=...
 ```
+
+Jika `CH_DOWNLINK_STORED` muncul tetapi `CH_NODE_DOWNLINK_TX` tidak muncul, cek apakah target GLD terakhir terdeteksi external power atau tunggu uplink GLD berikutnya untuk membuka RX window battery mode.
 
 ## 8. Quick Command Reference
 
@@ -844,14 +837,14 @@ Set GLD to nulling through Gateway/CH:
 mosquitto_pub -h CHANGE_ME_MQTT_HOST -p 1884 -u <mqtt-user> -P <mqtt-pass> -t "gld/gateway/cmd/node" -m "{\"cluster\":\"0x0064\",\"node\":\"0xF001\",\"id\":3,\"ttl\":600,\"hex\":\"0102\"}"
 ```
 
-Current warning: validate Gateway/CH payload compatibility before relying on
-these LoRa mode switch commands in field operation.
+Current note: validate the full Gateway -> CH -> GLD LoRa mode switch path on
+the target hardware before relying on it in field operation.
 
 ## 9. Acceptance Checklist
 
 GLD is ready for operation when:
 
-- GLD boots and shows firmware `0.8.0`.
+- GLD boots and shows firmware `0.8.12`.
 - `GLD_MODE` is readable from serial boot log.
 - Serial `SET_MODE inference|dataset|nulling` works and reboots into target mode.
 - Nulling can produce `NULLING_RUNTIME_RESULT=PASS` or acceptable `PARTIAL`.
@@ -861,5 +854,5 @@ GLD is ready for operation when:
 - Gateway publishes received frame to `gld/gateway/uplink`.
 - Node-RED decodes normal data to `gld/server/decoded`.
 - Alarm path publishes alarm data to `gld/server/alarm`.
-- Gateway->CH->GLD LoRa downlink is retested after the payload-format mismatch
-  is fixed.
+- Gateway->CH->GLD LoRa downlink is retested on target hardware with
+  `CH_DOWNLINK_STORED`, `CH_NODE_DOWNLINK_TX`, and `GLD_LORA_DOWNLINK_CMD`.

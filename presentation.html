@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pertamina GLD — Gas Leak Detector</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/night.css" id="theme">
+  <style>
+    .reveal { font-family: 'Segoe UI', system-ui, sans-serif; }
+    .reveal h1 { font-size: 2.8em; text-transform: none; }
+    .reveal h2 { font-size: 1.6em; text-transform: none; color: #4fc3f7; }
+    .reveal h3 { font-size: 1.2em; text-transform: none; color: #81d4fa; }
+    .reveal p, .reveal li { font-size: 0.75em; }
+    .reveal ul { list-style: none; }
+    .reveal ul li::before { content: ">";
+    color: #4fc3f7; font-weight: bold; margin-right: 0.5em; }
+    .reveal table { font-size: 0.6em; }
+    .reveal th { color: #4fc3f7; }
+    .reveal .badge {
+      display: inline-block; background: #1a237e; color: #fff;
+      padding: 0.2em 0.6em; border-radius: 4px; font-size: 0.6em;
+      margin: 0.2em;
+    }
+    .reveal .badge-green { background: #1b5e20; }
+    .reveal .badge-orange { background: #e65100; }
+    .reveal .badge-red { background: #b71c1c; }
+    .reveal .badge-blue { background: #0d47a1; }
+    .reveal .arc {
+      display: flex; justify-content: center; gap: 1em; flex-wrap: wrap;
+    }
+    .reveal .arc-item {
+      background: rgba(79,195,247,0.1); border: 1px solid #4fc3f7;
+      border-radius: 8px; padding: 0.6em 1em; min-width: 120px;
+    }
+    .reveal .arc-item h4 { margin: 0 0 0.3em; color: #4fc3f7; font-size: 0.6em; }
+    .reveal .arc-item p { margin: 0; font-size: 0.5em; }
+    .reveal .diagram-box {
+      background: rgba(0,0,0,0.4); border: 1px solid #4fc3f7;
+      border-radius: 8px; padding: 1em; margin: 0.5em 0;
+      font-family: 'Consolas', monospace; font-size: 0.55em; line-height: 1.5;
+    }
+    .reveal .diagram-box .hl { color: #4fc3f7; }
+    .reveal .diagram-box .gr { color: #66bb6a; }
+    .reveal .diagram-box .or { color: #ffa726; }
+    .reveal .diagram-box .rd { color: #ef5350; }
+    .reveal .img-placeholder {
+      background: rgba(79,195,247,0.05); border: 2px dashed #4fc3f7;
+      border-radius: 8px; padding: 1.5em; text-align: center; color: #4fc3f7;
+    }
+    .reveal .two-col {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 1em; text-align: left;
+    }
+    .reveal .version-table td { font-size: 0.9em; padding: 0.2em 0.6em; }
+    .slide-number { font-size: 0.5em !important; }
+  </style>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- ===== 1. TITLE ===== -->
+<section>
+  <h1 style="font-size:3.2em; margin-bottom:0.2em;">Pertamina GLD</h1>
+  <h3 style="color:#b0bec5;">Gas Leak Detector</h3>
+  <p style="margin-top:1.5em; font-size:0.6em;">
+    Sistem IoT deteksi kebocoran gas dengan<br>
+    LoRa MESH + ML Inference on Edge
+  </p>
+  <p style="margin-top:0.8em; font-size:0.45em; color:#78909c;">
+    ESP32-S3 &bull; MQ Sensor Array &bull; TensorFlow Micro &bull; AES-128-GCM
+  </p>
+</section>
+
+<!-- ===== 2. AGENDA ===== -->
+<section>
+  <h2>Agenda</h2>
+  <ul>
+    <li>Latar Belakang &amp; Masalah</li>
+    <li>Arsitektur Sistem</li>
+    <li>Perangkat Keras</li>
+    <li>Topologi Jaringan</li>
+    <li>Alur Data End-to-End</li>
+    <li>Komponen Sistem (GLD, CH, Gateway, Server)</li>
+    <li>ML Inference di Edge</li>
+    <li>Keamanan Data</li>
+    <li>Operator Console</li>
+    <li>Status &amp; Capaian</li>
+  </ul>
+</section>
+
+<!-- ===== 3. LATAR BELAKANG ===== -->
+<section>
+  <h2>Latar Belakang</h2>
+  <div class="two-col">
+    <div>
+      <h3>Masalah</h3>
+      <ul>
+        <li>Kebocoran gas LPG/beracun di lingkungan industri &amp; rumah tangga</li>
+        <li>Deteksi dini menyelamatkan jiwa &amp; aset</li>
+        <li>Area luas membutuhkan banyak sensor tersebar</li>
+        <li>Kabel tidak praktis &rarr; solusi wireless</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Solusi</h3>
+      <ul>
+        <li>Node sensor nirkabel bertenaga baterai</li>
+        <li>Komunikasi LoRa jarak jauh &amp; hemat daya</li>
+        <li>Topologi STAR + MESH untuk coverage luas</li>
+        <li>ML on-device untuk deteksi cerdas</li>
+        <li>Server Node-RED untuk monitoring terpusat</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 4. ARSITEKTUR SISTEM ===== -->
+<section>
+  <h2>Arsitektur Sistem</h2>
+  <div class="diagram-box">
+    <span class="hl">[ GLD Node ]</span>  &mdash;LoRa STAR&mdash;&gt;  <span class="gr">[ Cluster Head ]</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="or">[ CH ]</span> &lt;--LoRa MESH--&gt; <span class="or">[ CH ]</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="rd">[ Gateway ]</span> &mdash;WiFi/MQTT&mdash;&gt; <span class="hl">[ Node-RED Server ]</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span style="color:#ce93d8;">[ MySQL ]</span> <span style="color:#ce93d8;">[ CSV ]</span>
+  </div>
+  <p style="font-size:0.45em; margin-top:0.5em;">
+    <span class="badge">GLD Node</span> sensor endpoint &bull;
+    <span class="badge badge-green">Cluster Head</span> relay &amp; cache &bull;
+    <span class="badge badge-red">Gateway</span> bridge &bull;
+    <span class="badge badge-blue">Server</span> pemrosesan &amp; storage
+  </p>
+</section>
+
+<!-- ===== 5. PERANGKAT KERAS ===== -->
+<section>
+  <h2>Perangkat Keras</h2>
+  <div class="two-col">
+    <div>
+      <h3>GLD Node</h3>
+      <ul>
+        <li>ESP32-S3 (Xtensa LX7 dual-core)</li>
+        <li>8× MQ sensor array</li>
+        <li>ADS1256 24-bit ADC</li>
+        <li>TCA9548A I2C multiplexer</li>
+        <li>RFM95W LoRa transceiver</li>
+        <li>Baterai + power management</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Cluster Head &amp; Gateway</h3>
+      <ul>
+        <li>ESP32-S3</li>
+        <li>SX1262 LoRa transceiver</li>
+        <li>CH: cache SRAM + alarm queue</li>
+        <li>Gateway: WiFi + MQTT client</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 6. SENSOR ARRAY ===== -->
+<section>
+  <h2>Sensor Array</h2>
+  <table>
+    <thead>
+      <tr><th>Sensor</th><th>Target Gas</th><th>Range</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>MQ-2</td><td>LPG, Propana, H<sub>2</sub></td><td>300–10000 ppm</td></tr>
+      <tr><td>MQ-3</td><td>Alkohol, Etanol</td><td>25–500 ppm</td></tr>
+      <tr><td>MQ-4</td><td>CH<sub>4</sub> (Metana)</td><td>300–10000 ppm</td></tr>
+      <tr><td>MQ-5</td><td>LPG, Alam Gas</td><td>300–10000 ppm</td></tr>
+      <tr><td>MQ-6</td><td>LPG, Propana</td><td>200–10000 ppm</td></tr>
+      <tr><td>MQ-7</td><td>CO (Karbon Monoksida)</td><td>20–2000 ppm</td></tr>
+      <tr><td>MQ-8</td><td>H<sub>2</sub> (Hidrogen)</td><td>100–10000 ppm</td></tr>
+      <tr><td>MQ-135</td><td>NH<sub>3</sub>, CO<sub>2</sub>, asap</td><td>10–1000 ppm</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size:0.45em; margin-top:0.3em;">
+    <span class="badge badge-green">MQ-2</span>
+    <span class="badge badge-blue">MQ-3</span>
+    <span class="badge badge-orange">MQ-4</span>
+    <span class="badge badge-red">MQ-5</span>
+    <span class="badge">MQ-6</span>
+    <span class="badge badge-green">MQ-7</span>
+    <span class="badge badge-blue">MQ-8</span>
+    <span class="badge badge-orange">MQ-135</span>
+  </p>
+</section>
+
+<!-- ===== 7. TOPOLOGI JARINGAN ===== -->
+<section>
+  <h2>Topologi Jaringan</h2>
+  <div class="two-col">
+    <div>
+      <h3>LoRa STAR</h3>
+      <ul>
+        <li>GLD Nodes &rarr; Cluster Head</li>
+        <li>Point-to-multipoint</li>
+        <li>GLD tidak perlu routing</li>
+        <li>CH sebagai penerima tunggal</li>
+      </ul>
+    </div>
+    <div>
+      <h3>LoRa MESH</h3>
+      <ul>
+        <li>Cluster Heads &harr; Gateway</li>
+        <li>Multi-hop routing</li>
+        <li>Coverage area luas</li>
+        <li>Fallback jalur alternatif</li>
+      </ul>
+    </div>
+  </div>
+  <div class="diagram-box" style="margin-top:0.5em; font-size:0.5em;">
+    <span class="hl">F001</span> \                  / <span class="gr">CH1</span> &mdash;- <span class="gr">CH2</span><br>
+    <span class="hl">F002</span> -- <span class="or">STAR</span> -- <span class="gr">CH3</span> &lt;--<span class="hl">MESH</span>--&gt; |<br>
+    <span class="hl">F003</span> /                  \ <span class="gr">CH4</span> &mdash;- <span class="gr">CH5</span> &mdash; <span class="rd">GW</span> &mdash;TCP/MQTT&mdash; <span style="color:#ce93d8;">Server</span>
+  </div>
+</section>
+
+<!-- ===== 8. ALUR DATA ===== -->
+<section>
+  <h2>Alur Data End-to-End</h2>
+  <div style="font-size:0.5em; text-align:left;">
+    <ol>
+      <li><strong>GLD Node:</strong> Baca 8 sensor &rarr; ML inference &rarr; enkripsi AES-128-GCM &rarr; kirim via LoRa STAR</li>
+      <li><strong>Cluster Head:</strong> Terima &rarr; cache record &rarr; siapkan relay MESH</li>
+      <li><strong>CH &rarr; Gateway (MESH):</strong> Forward data via LoRa MESH multi-hop</li>
+      <li><strong>Gateway:</strong> Terima MESH &rarr; parse frame &rarr; publish MQTT</li>
+      <li><strong>Server Node-RED:</strong> Subscribe MQTT &rarr; dekripsi &rarr; dedup &rarr; simpan MySQL/CSV</li>
+      <li><strong>Alarm Push:</strong> GLD deteksi gas &rarr; alarm flag &rarr; CH relay prioritas &rarr; server notifikasi</li>
+    </ol>
+  </div>
+  <div class="diagram-box" style="font-size:0.5em; margin-top:0.3em;">
+    <span class="hl">Sensor</span> &rarr; ADC &rarr; ML &rarr; <span class="or">Encrypt</span> &rarr; LoRa &rarr; <span class="gr">CH</span> &rarr; MESH &rarr; <span class="rd">GW</span> &rarr; MQTT &rarr; <span style="color:#ce93d8;">Node-RED</span> &rarr; <span class="gr">Decrypt</span> &rarr; DB
+  </div>
+</section>
+
+<!-- ===== 9. GLD NODE ===== -->
+<section>
+  <h2>GLD Node</h2>
+  <div class="two-col">
+    <div>
+      <h3>Tugas</h3>
+      <ul>
+        <li>Membaca 8 sensor gas via ADS1256</li>
+        <li>Nulling &amp; kalibrasi profil</li>
+        <li>Ekstraksi fitur (voltage, gain)</li>
+        <li>Inference ML (TFLite Micro)</li>
+        <li>Enkripsi payload AES-128-GCM</li>
+        <li>Transmisi LoRa STAR ke CH</li>
+        <li>Dataset generation via WiFi/MQTT</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Firmware</h3>
+      <p><span class="badge">v0.8.12</span> GLD</p>
+      <p style="font-size:0.5em;">
+        PlatformIO &bull; ESP32-S3 &bull; 240 MHz<br>
+        16MB Flash &bull; 8MB PSRAM<br>
+        RadioLib &bull; tfmicro
+      </p>
+      <h3>Mode Operasi</h3>
+      <ul>
+        <li><strong>Normal:</strong> TX periodik ke CH</li>
+        <li><strong>Dataset:</strong> Record streaming via WiFi</li>
+        <li><strong>Nulling:</strong> Kalibrasi offset sensor</li>
+        <li><strong>Alarm:</strong> Prioritas tinggi jika gas terdeteksi</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 10. ML INFERENCE ===== -->
+<section>
+  <h2>ML Inference di Edge</h2>
+  <div class="two-col">
+    <div>
+      <h3>TensorFlow Micro</h3>
+      <ul>
+        <li>Model neural network di ESP32-S3</li>
+        <li>Input: 16 fitur (8 voltage + 8 gain)</li>
+        <li>Output: gas class + confidence</li>
+        <li>Placeholder model terintegrasi</li>
+        <li>Siap diganti model hasil training</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Pipeline</h3>
+      <ul>
+        <li>Baca sensor &rarr; raw ADC</li>
+        <li>Nulling correction</li>
+        <li>Scaler (standardisasi)</li>
+        <li>NeuralNetwork predict</li>
+        <li>Output: <code>gasClass</code>, <code>confidence</code></li>
+        <li>Jika confidence &gt; threshold &rarr; alarm</li>
+      </ul>
+    </div>
+  </div>
+  <p style="font-size:0.45em; margin-top:0.3em;">
+    <span class="badge badge-green">Status:</span> Model placeholder aktif, inference pipeline terverifikasi
+  </p>
+</section>
+
+<!-- ===== 11. CLUSTER HEAD ===== -->
+<section>
+  <h2>Cluster Head (CH)</h2>
+  <div class="two-col">
+    <div>
+      <h3>Tugas</h3>
+      <ul>
+        <li>Menerima data dari GLD via LoRa STAR</li>
+        <li>Cache record GLD terbaru</li>
+        <li>Relay data ke Gateway via LoRa MESH</li>
+        <li>Alarm queue &amp; prioritas forwarding</li>
+        <li>Menjawab pull request dari Gateway</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Firmware</h3>
+      <p><span class="badge badge-green">v0.7.1</span> CH</p>
+      <p style="font-size:0.5em;">
+        NodeCache &bull; AlarmQueue &bull; ChRuntime<br>
+        STAR + MESH concurrent receive<br>
+        Non-blocking runtime loop
+      </p>
+      <h3>Konfigurasi</h3>
+      <p style="font-size:0.5em;">
+        ch1, ch2, ch3 — multiple CH units<br>
+        MESH routing via hopList
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 12. GATEWAY ===== -->
+<section>
+  <h2>Gateway</h2>
+  <div class="two-col">
+    <div>
+      <h3>Tugas</h3>
+      <ul>
+        <li>Bridge LoRa MESH &harr; WiFi/MQTT</li>
+        <li>Terima data dari CH via MESH</li>
+        <li>Parse &amp; validasi frame</li>
+        <li>Publish ke broker MQTT</li>
+        <li>Terima perintah dari server (pull request)</li>
+        <li>Kirim compact ACK ke CH</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Firmware</h3>
+      <p><span class="badge badge-red">v0.1.3</span> Gateway</p>
+      <p style="font-size:0.5em;">
+        GatewayMqttMeshMain &bull; PubSubClient<br>
+        MESH pull + forward logic<br>
+        MQTT TLS/plain
+      </p>
+      <h3>Data Flow</h3>
+      <p style="font-size:0.5em;">
+        MESH RX &rarr; parseStatus &rarr; MQTT publish<br>
+        topic: <code>gld/gateway/uplink</code>
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 13. SERVER ===== -->
+<section>
+  <h2>Server Node-RED</h2>
+  <div class="two-col">
+    <div>
+      <h3>Tugas</h3>
+      <ul>
+        <li>Subscribe MQTT topics</li>
+        <li>Dekripsi payload AES-128-GCM</li>
+        <li>Deduplikasi record</li>
+        <li>Simpan ke MySQL &amp; CSV</li>
+        <li>Alarm notification</li>
+        <li>Kirim perintah ke Gateway</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Topik MQTT</h3>
+      <table>
+        <tr><td><code>gld/gateway/uplink</code></td><td>Data dari Gateway</td></tr>
+        <tr><td><code>gld/server/decoded</code></td><td>Hasil dekripsi</td></tr>
+        <tr><td><code>gld/server/alarm</code></td><td>Notifikasi alarm</td></tr>
+        <tr><td><code>gld/F001/cmd</code></td><td>Perintah ke GLD</td></tr>
+        <tr><td><code>gld/F001/dataset/#</code></td><td>Dataset streaming</td></tr>
+      </table>
+    </div>
+  </div>
+  <p style="font-size:0.45em; margin-top:0.3em;">
+    <span class="badge badge-blue">MySQL</span> gld_dataset table &bull;
+    <span class="badge badge-orange">CSV</span> file logging &bull;
+    <span class="badge">Aedes MQTT</span> broker bench port 1884
+  </p>
+</section>
+
+<!-- ===== 14. KEAMANAN ===== -->
+<section>
+  <h2>Keamanan Data</h2>
+  <div class="two-col">
+    <div>
+      <h3>AES-128-GCM</h3>
+      <ul>
+        <li>Enkripsi payload sensor di GLD Node</li>
+        <li>Dekripsi di server Node-RED</li>
+        <li>Key 128-bit, IV 12-byte random</li>
+        <li>Authentication tag (integrity check)</li>
+        <li>Tidak ada decrypt di CH atau Gateway</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Format Payload</h3>
+      <p style="font-size:0.5em;">
+        <code>GCM_tag(16) + IV(12) + ciphertext</code>
+      </p>
+      <p style="font-size:0.5em; margin-top:0.3em;">
+        Frame header: <code>srcId(2) + dstId(2) + seq(2) + flags(1) +...</code>
+      </p>
+      <p style="font-size:0.45em; margin-top:0.5em;">
+        Protokol: <span class="badge">v0.1.0</span>
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 15. OPERATOR CONSOLE ===== -->
+<section>
+  <h2>GLD Operator Lite</h2>
+  <div class="two-col">
+    <div>
+      <h3>Fitur</h3>
+      <ul>
+        <li>Dashboard browser-based</li>
+        <li>Tab: Running, Dataset, Nulling, Log, Expert</li>
+        <li>Visualisasi real-time sensor</li>
+        <li>Perintah START/STOP dataset</li>
+        <li>Log streaming dari serial bridge</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Teknologi</h3>
+      <p style="font-size:0.5em;">
+        HTML5 + CSS3 + vanilla JavaScript<br>
+        Python bridge (bridge.py)<br>
+        Industrial dark theme<br>
+        <span class="badge">v0.2.0-lite-bridge</span>
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 16. STATUS ===== -->
+<section>
+  <h2>Status &amp; Capaian</h2>
+  <div class="two-col">
+    <div>
+      <h3>Selesai (12/12 Milestone)</h3>
+      <ul>
+        <li>Shared protocol &amp; frame format</li>
+        <li>GLD board bring-up &amp; nulling</li>
+        <li>STAR TX + STAR RX</li>
+        <li>CH runtime / cache / pull</li>
+        <li>Gateway MQTT + MESH bridge</li>
+        <li>Full normal path end-to-end</li>
+        <li>Alarm push live test</li>
+        <li>Dataset generation &amp; recording</li>
+        <li>ML inference pipeline integrated</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Versi Firmware</h3>
+      <table class="version-table">
+        <tr><td>GLD</td><td><span class="badge">v0.8.12</span></td></tr>
+        <tr><td>CH</td><td><span class="badge badge-green">v0.7.1</span></td></tr>
+        <tr><td>Gateway</td><td><span class="badge badge-red">v0.1.3</span></td></tr>
+        <tr><td>Protokol</td><td><span class="badge">v0.1.0</span></td></tr>
+        <tr><td>Operator</td><td><span class="badge badge-blue">v0.2.0</span></td></tr>
+      </table>
+      <h3>Host Tests</h3>
+      <p style="font-size:0.5em;">
+        <span class="badge badge-green">28/28</span> protocol tests passed
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 17. DIAGRAM TOPOLOGI ===== -->
+<section>
+  <h2>Topologi Jaringan</h2>
+  <div class="img-placeholder">
+    <p style="font-size:1em;">images/topology-layer-routing-2026-06-24.png</p>
+    <p style="font-size:0.6em; margin-top:0.5em;">
+      Lihat file gambar di <code>images/topology-layer-routing-2026-06-24.png</code>
+    </p>
+  </div>
+</section>
+
+<!-- ===== 18. NEXT STEPS ===== -->
+<section>
+  <h2>Langkah Selanjutnya</h2>
+  <div class="two-col">
+    <div>
+      <h3>Jangka Pendek</h3>
+      <ul>
+        <li>Remote GLD dataset via LoRa/MQTT</li>
+        <li>Replace model placeholder &rarr; model trained</li>
+        <li>MESH ACK/retry production</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Jangka Panjang</h3>
+      <ul>
+        <li>Deploy multi-node production</li>
+        <li>Dashboard visualisasi lanjutan</li>
+        <li>Integrasi dengan sistem existing</li>
+        <li>Battery optimization</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 19. TERIMA KASIH ===== -->
+<section>
+  <h1 style="font-size:2.5em;">Terima Kasih</h1>
+  <p style="margin-top:1em;">
+    Pertamina GLD — Gas Leak Detector
+  </p>
+  <p style="font-size:0.5em; color:#78909c; margin-top:0.5em;">
+    ESP32-S3 &bull; LoRa &bull; ML Edge &bull; AES-128-GCM &bull; Node-RED
+  </p>
+</section>
+
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+<script>
+  Reveal.initialize({
+    controls: true,
+    progress: true,
+    center: true,
+    hash: true,
+    slideNumber: true,
+    transition: 'slide',
+    width: 1280,
+    height: 720
+  });
+</script>
+</body>
+</html>

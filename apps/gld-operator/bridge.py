@@ -47,7 +47,7 @@ APP_DIR = Path(__file__).resolve().parent
 REPO_ROOT = APP_DIR.parents[1]
 FIRMWARE_DIR = REPO_ROOT / "firmware"
 DATASET_OUTPUT_DIR = APP_DIR / "output" / "datasets"
-VERSION = "0.2.0-lite-bridge"
+VERSION = "0.2.3-lite-bridge"
 
 
 class EventHub:
@@ -148,12 +148,14 @@ class SerialBridge:
         self.events.emit("serial_status", {"connected": False})
         return {"connected": False}
 
-    def write_line(self, line: str) -> dict[str, Any]:
+    def write_line(self, line: str, require_connected: bool = True) -> dict[str, Any]:
         if not line.endswith("\n"):
             line += "\n"
         with self._lock:
             ser = self._serial
         if ser is None or not ser.is_open:
+            if not require_connected:
+                return {"ok": False, "connected": False, "skipped": True, "message": "serial port is not connected"}
             raise RuntimeError("serial port is not connected")
         ser.write(line.encode("utf-8", errors="replace"))
         ser.flush()
@@ -421,6 +423,25 @@ def mqtt_publish_dataset(payload: dict[str, Any]) -> dict[str, Any]:
     return {"ok": True, "topic": topic}
 
 
+def validate_firmware_manifest(manifest: Any, env: str, target_id: str) -> None:
+    if manifest in (None, ""):
+        return
+    if not isinstance(manifest, dict):
+        raise RuntimeError("manifest must be a JSON object")
+    manifest_env = str(manifest.get("env") or manifest.get("environment") or "").strip()
+    if manifest_env and manifest_env != env:
+        raise RuntimeError(f"manifest env {manifest_env} does not match selected env {env}")
+    package_device_id = str(manifest.get("deviceId") or "").strip().upper()
+    if package_device_id and package_device_id != "F000" and package_device_id != target_id:
+        raise RuntimeError(f"manifest deviceId {package_device_id} does not match target ID {target_id}")
+    chip = str(manifest.get("chipFamily") or manifest.get("chip") or "").strip()
+    if chip and not re.search(r"esp32s3", chip, re.IGNORECASE):
+        raise RuntimeError(f"manifest chip {chip} is not ESP32-S3")
+    flash_files = manifest.get("flashFiles")
+    if flash_files is not None and not isinstance(flash_files, list):
+        raise RuntimeError("manifest flashFiles must be a list")
+
+
 def firmware_upload(payload: dict[str, Any]) -> dict[str, Any]:
     env = str(payload.get("env") or "gld").strip()
     port = str(payload.get("port") or "").strip()
@@ -429,6 +450,7 @@ def firmware_upload(payload: dict[str, Any]) -> dict[str, Any]:
         raise RuntimeError("invalid PlatformIO env")
     if not port:
         raise RuntimeError("port is required")
+    validate_firmware_manifest(payload.get("manifest"), env, target_id)
     serial_bridge.disconnect()
 
     def worker() -> None:
@@ -466,6 +488,12 @@ class Handler(SimpleHTTPRequestHandler):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, directory=str(APP_DIR), **kwargs)
+
+    def handle(self) -> None:
+        try:
+            super().handle()
+        except (BrokenPipeError, ConnectionAbortedError, ConnectionResetError):
+            pass
 
     def end_headers(self) -> None:
         self.send_header("Access-Control-Allow-Origin", "*")
@@ -525,7 +553,7 @@ class Handler(SimpleHTTPRequestHandler):
             elif path == "/api/serial/disconnect":
                 result = serial_bridge.disconnect()
             elif path == "/api/serial/write":
-                result = serial_bridge.write_line(str(payload.get("line") or ""))
+                result = serial_bridge.write_line(str(payload.get("line") or ""), require_connected=False)
             elif path == "/api/mqtt/dataset":
                 result = mqtt_publish_dataset(payload)
             elif path == "/api/mqtt/dataset-monitor/stop":

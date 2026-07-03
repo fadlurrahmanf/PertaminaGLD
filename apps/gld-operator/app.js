@@ -21,6 +21,12 @@ const CHART_COLORS = [
 ];
 
 const SENSOR_NAMES = ["MQ8", "MQ135", "MQ3", "MQ5", "MQ4", "MQ7", "MQ6", "MQ2"];
+const SENSOR_STATUS_NAMES = {
+  0: "Ok",
+  1: "NotReady",
+  2: "DrdyTimeout",
+  3: "InvalidChannel"
+};
 
 function initialDatasetSession() {
   return {
@@ -65,8 +71,13 @@ const state = {
   history: [],
   info: null,
   status: null,
+  alarmActive: false,
+  alarmMuted: false,
+  alarmAudioContext: null,
+  alarmLastBeep: 0,
   mode: "unknown",
-  expertUnlocked: false
+  expertUnlocked: false,
+  manifest: null
 };
 
 const encoder = new TextEncoder();
@@ -74,6 +85,7 @@ const decoder = new TextDecoder();
 
 const elements = {
   alarmBadge: $("alarmBadge"),
+  alarmMuteBtn: $("alarmMuteBtn"),
   portSetupBtn: $("portSetupBtn"),
   closeSetupBtn: $("closeSetupBtn"),
   setupPanel: $("setupPanel"),
@@ -84,6 +96,8 @@ const elements = {
   portLabel: $("portLabel"),
   protocolLabel: $("protocolLabel"),
   portSelect: $("portSelect"),
+  manualPortInput: $("manualPortInput"),
+  useManualPortBtn: $("useManualPortBtn"),
   portDetail: $("portDetail"),
   refreshPortsBtn: $("refreshPortsBtn"),
   refreshLoopBtn: $("refreshLoopBtn"),
@@ -108,6 +122,9 @@ const elements = {
   nullingSummary: $("nullingSummary"),
   nullingMeta: $("nullingMeta"),
   nullingChannels: $("nullingChannels"),
+  sensorCheckSummary: $("sensorCheckSummary"),
+  sensorCheckMeta: $("sensorCheckMeta"),
+  sensorCheckChannels: $("sensorCheckChannels"),
   topDeviceStatus: $("topDeviceStatus"),
   topModeStatus: $("topModeStatus"),
   topGasStatus: $("topGasStatus"),
@@ -129,6 +146,29 @@ function setText(id, value) {
   const element = $(id);
   if (!element) return;
   element.textContent = value == null || value === "" ? "Unknown" : String(value);
+}
+
+function resetDeviceSnapshot() {
+  state.info = null;
+  state.status = null;
+  state.mode = "unknown";
+  setText("deviceId", "Unknown");
+  setText("modeValue", "Unknown");
+  setText("firmwareValue", "Unknown");
+  setText("gasValue", "n/a");
+  setText("confidenceValue", "-%");
+  setText("powerMode", "Unknown");
+  setText("externalPower", "Unknown");
+  setText("batteryValue", "Unknown");
+  setText("batteryValueMirror", "Unknown");
+  setText("loraValue", "Unknown");
+  setText("adsHealth", "Unknown");
+  setText("mcpHealth", "Unknown");
+  setText("dacHealth", "Unknown");
+  setText("mlHealth", "Unknown");
+  updateAlarmState(false);
+  renderSensorCheck();
+  syncDeviceSummary();
 }
 
 function textValue(value, fallback = "Unknown") {
@@ -323,6 +363,140 @@ function renderNullingChannels() {
   }
 }
 
+function sensorPresenceFromStatus(status = state.status) {
+  const telemetry = status?.telemetry || {};
+  const boot = status?.bootHealth || {};
+  const featureOrder = Array.isArray(telemetry.featureOrder) && telemetry.featureOrder.length
+    ? telemetry.featureOrder
+    : latestFeatureOrderForNulling();
+  const voltages = Array.isArray(telemetry.sensorVoltage) ? telemetry.sensorVoltage : [];
+  const gains = Array.isArray(telemetry.sensorGain) ? telemetry.sensorGain : [];
+  const statuses = Array.isArray(telemetry.sensorStatus) ? telemetry.sensorStatus : [];
+  const explicit = boot.sensorPresent || boot.mqPresent || boot.sensorInstalled || status?.sensorPresent;
+  const health = boot.sensorHealth || boot.mqHealth || status?.sensorHealth;
+  const adsReady = boot.adsReady === true;
+  const mcpOkCount = Number(boot.mcpOkCount);
+
+  return Array.from({ length: 8 }, (_, index) => {
+    const sensor = featureOrder[index] || SENSOR_NAMES[index] || `CH${index + 1}`;
+    const voltage = voltages[index];
+    const gain = gains[index];
+    const explicitValue = Array.isArray(explicit) ? explicit[index] : undefined;
+    const healthValue = Array.isArray(health) ? health[index] : undefined;
+    const adsStatus = statuses[index];
+    const adsStatusNumber = Number(adsStatus);
+    const adsStatusName = SENSOR_STATUS_NAMES[adsStatusNumber] || (adsStatus == null ? "" : `Status ${adsStatus}`);
+    const voltageNumber = Number(voltage);
+    const hasVoltage = Number.isFinite(voltageNumber);
+    const hasGain = gain != null && gain !== "";
+    let showReading = telemetry.valid === true;
+
+    let stage = "Unknown";
+    let tone = "idle";
+    let detail = "Waiting for GET_STATUS telemetry";
+
+    if (explicitValue === false || explicitValue === 0 || healthValue === "missing") {
+      stage = "Missing";
+      tone = "fail";
+      detail = "Firmware reports sensor not installed";
+      showReading = false;
+    } else if (healthValue === "fault" || healthValue === "error") {
+      stage = "Fault";
+      tone = "fail";
+      detail = "Firmware reports sensor fault";
+      showReading = false;
+    } else if (telemetry.valid === true && adsStatusNumber === 0) {
+      stage = "Present";
+      tone = "pass";
+      detail = "ADS1256 status OK";
+      showReading = hasVoltage || hasGain;
+    } else if (telemetry.valid === true && adsStatusNumber === 1) {
+      stage = "Not Ready";
+      tone = "active";
+      detail = "ADS1256 channel not ready";
+      showReading = false;
+    } else if (telemetry.valid === true && adsStatusNumber === 2) {
+      stage = "Fault";
+      tone = "fail";
+      detail = "ADS1256 DRDY timeout";
+      showReading = false;
+    } else if (telemetry.valid === true && adsStatusNumber === 3) {
+      stage = "Fault";
+      tone = "fail";
+      detail = "Invalid ADS1256 channel";
+      showReading = false;
+    } else if (explicitValue === true || explicitValue === 1 || healthValue === "ok" || healthValue === "present") {
+      stage = "Present";
+      tone = "pass";
+      detail = "Firmware reports sensor present";
+      showReading = hasVoltage || hasGain;
+    } else if (telemetry.valid === true && hasVoltage && hasGain && adsReady) {
+      stage = "Present";
+      tone = "pass";
+      detail = "Voltage and gain are readable";
+    } else if (telemetry.valid === true && hasVoltage && !adsReady) {
+      stage = "Read Only";
+      tone = "active";
+      detail = "Voltage seen, ADS health not ready";
+    } else if (Number.isFinite(mcpOkCount) && mcpOkCount < index + 1) {
+      stage = "Check";
+      tone = "active";
+      detail = "MCP ready count is below this channel";
+    }
+
+    return {
+      index,
+      sensor,
+      stage,
+      tone,
+      detail: adsStatusName && telemetry.valid === true ? `${detail} (${adsStatusName})` : detail,
+      voltage: showReading && hasVoltage ? voltageNumber.toFixed(6) : "",
+      gain: showReading && hasGain ? String(gain) : ""
+    };
+  });
+}
+
+function renderSensorCheck() {
+  const channels = sensorPresenceFromStatus();
+  const present = channels.filter((channel) => channel.tone === "pass").length;
+  const fail = channels.filter((channel) => channel.tone === "fail").length;
+  const check = channels.filter((channel) => channel.tone === "active").length;
+  const boot = state.status?.bootHealth || {};
+  const telemetry = state.status?.telemetry || {};
+
+  elements.sensorCheckSummary.textContent = fail
+    ? `${fail} MQ sensor channel needs attention.`
+    : present === 8 ? "All 8 MQ sensor channels look present." : `${present}/8 MQ sensor channels confirmed.`;
+  elements.sensorCheckMeta.textContent = `ADS: ${boot.adsReady === true ? "Ready" : boot.adsReady === false ? "Not ready" : "Unknown"} - MCP: ${Number.isFinite(boot.mcpOkCount) ? `${boot.mcpOkCount}/8` : "Unknown"} - Latest telemetry: ${telemetry.valid ? "valid" : "none"}${check ? ` - Check ${check}` : ""}`;
+  elements.sensorCheckChannels.innerHTML = "";
+
+  for (const channel of channels) {
+    const card = document.createElement("article");
+    card.className = `channel-card ${channel.tone}`.trim();
+
+    const head = document.createElement("div");
+    head.className = "channel-card-head";
+    const title = document.createElement("strong");
+    title.textContent = `CH${channel.index + 1}`;
+    const sensor = document.createElement("span");
+    sensor.textContent = channel.sensor;
+    head.append(title, sensor);
+
+    const stage = document.createElement("span");
+    stage.className = "channel-stage";
+    stage.textContent = channel.stage;
+
+    const detail = document.createElement("small");
+    detail.textContent = channel.detail;
+
+    const extra = document.createElement("small");
+    extra.textContent = [channel.voltage ? `V ${channel.voltage}` : "", channel.gain ? `gain ${channel.gain}` : ""].filter(Boolean).join(" - ") || "No live reading";
+
+    card.append(head, stage, detail, extra);
+    elements.sensorCheckChannels.append(card);
+  }
+}
+
 function updateNullingMeta() {
   const nulling = state.status?.nulling || {};
   const retry = nulling.retryArmed === true ? "yes" : "no";
@@ -416,7 +590,7 @@ function updateStatus(status) {
   setText("confidenceValue", Number.isFinite(telemetry.confidence) ? `${telemetry.confidence}%` : "-%");
 
   const alarm = Boolean(telemetry.alarm || status.alarm);
-  setBadge(elements.alarmBadge, alarm ? "Active alarm" : "No active alarms", alarm ? "alarm" : "ok");
+  updateAlarmState(alarm);
 
   const power = status.power || {};
   setText("powerMode", power.mode);
@@ -437,6 +611,7 @@ function updateStatus(status) {
   syncDeviceSummary();
   updateDatasetFromStatus(status);
   updateNullingMeta();
+  renderSensorCheck();
   renderNullingChannels();
 }
 
@@ -444,6 +619,44 @@ function formatGas(gasClass) {
   if (gasClass === 0) return "clearGas";
   if (gasClass == null) return "n/a";
   return `class ${gasClass}`;
+}
+
+function updateAlarmState(alarm) {
+  state.alarmActive = alarm;
+  setBadge(elements.alarmBadge, alarm ? (state.alarmMuted ? "Alarm muted" : "Active alarm") : "No active alarms", alarm ? "alarm" : "ok");
+  elements.alarmMuteBtn.textContent = state.alarmMuted ? "Unmute Alarm" : "Mute Alarm";
+  elements.alarmMuteBtn.disabled = !alarm && !state.alarmMuted;
+  if (alarm && !state.alarmMuted) playAlarmBeep();
+}
+
+function toggleAlarmMute() {
+  state.alarmMuted = !state.alarmMuted;
+  updateAlarmState(state.alarmActive);
+}
+
+function playAlarmBeep() {
+  const now = Date.now();
+  if (now - state.alarmLastBeep < 1800) return;
+  state.alarmLastBeep = now;
+  try {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return;
+    const context = state.alarmAudioContext || new AudioContextClass();
+    state.alarmAudioContext = context;
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.type = "square";
+    oscillator.frequency.value = 880;
+    gain.gain.setValueAtTime(0.0001, context.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.08, context.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.22);
+    oscillator.connect(gain);
+    gain.connect(context.destination);
+    oscillator.start();
+    oscillator.stop(context.currentTime + 0.24);
+  } catch (error) {
+    appendLog(`ALARM_SOUND_ERROR ${error.message}`, "in");
+  }
 }
 
 function maybeAppendTelemetry(status) {
@@ -1027,10 +1240,13 @@ async function connectSerial() {
       return;
     }
     try {
+      resetDeviceSnapshot();
       await bridgeFetch("/api/serial/connect", {
         method: "POST",
         body: JSON.stringify({ port, baud: 115200 })
       });
+      state.connected = true;
+      updateConnectionUi("connected", "ok");
       await wait(180);
       await sendCommand("APP_PING");
       await wait(120);
@@ -1131,6 +1347,10 @@ async function sendCommand(command) {
   }
 
   if (state.bridgeAvailable) {
+    if (!state.connected) {
+      appendLog(`SEND_SKIPPED serial not connected: ${line.trimEnd()}`, "in");
+      return;
+    }
     await bridgeFetch("/api/serial/write", {
       method: "POST",
       body: JSON.stringify({ line: line.trimEnd() })
@@ -1175,11 +1395,36 @@ function updateSelectedPortDetail() {
     return;
   }
   const parts = [option.value];
+  if (option.dataset.manual === "true") parts.push("manual override");
   if (option.dataset.description) parts.push(option.dataset.description);
   if (option.dataset.manufacturer) parts.push(option.dataset.manufacturer);
   elements.portDetail.textContent = parts.join(" - ");
   elements.portLabel.textContent = option.value;
   elements.sidePortSummary.textContent = option.value;
+}
+
+function normalizePortName(value) {
+  return String(value || "").trim().toUpperCase();
+}
+
+function ensureManualPortOption(select = true) {
+  const manual = normalizePortName(elements.manualPortInput.value);
+  if (!/^COM\d+$/i.test(manual)) {
+    appendLog(`MANUAL_PORT_REJECTED invalid COM port: ${elements.manualPortInput.value}`, "in");
+    return "";
+  }
+  let option = Array.from(elements.portSelect.options).find((item) => item.value.toUpperCase() === manual);
+  if (!option) {
+    option = new Option(`${manual} (manual)`, manual);
+    option.dataset.manual = "true";
+    elements.portSelect.append(option);
+  }
+  if (select) {
+    elements.portSelect.value = manual;
+    updateSelectedPortDetail();
+    appendLog(`MANUAL_PORT_SELECTED ${manual}`, "in");
+  }
+  return manual;
 }
 
 function setSetupOpen(open) {
@@ -1262,6 +1507,12 @@ async function publishDatasetCommand(command) {
       await sendCommand("SET_MODE nulling");
       return;
     }
+    const mode = String(state.status?.mode || state.info?.mode || state.mode || "").toLowerCase();
+    if (!state.mock && mode !== "dataset") {
+      setDatasetState("Switching Mode", "Sending SET_MODE dataset before MQTT START_DATASET", "SET_MODE dataset before START_DATASET");
+      await sendCommand("SET_MODE dataset");
+      await wait(2500);
+    }
   } else {
     setDatasetState("Stopping", "Publishing STOP_DATASET", "STOP_DATASET requested");
   }
@@ -1316,11 +1567,17 @@ async function uploadFirmware() {
     appendLog("UPLOAD_SKIPPED select a COM port first", "in");
     return;
   }
+  const manifestWarning = validateManifestForUpload(state.manifest, env, targetDeviceId);
+  if (manifestWarning) {
+    appendLog(`UPLOAD_SKIPPED ${manifestWarning}`, "in");
+    switchTab("firmware");
+    return;
+  }
   if (!window.confirm(`Upload PlatformIO env ${env} to ${port}?`)) return;
   try {
     await bridgeFetch("/api/firmware/upload", {
       method: "POST",
-      body: JSON.stringify({ env, port, targetDeviceId })
+      body: JSON.stringify({ env, port, targetDeviceId, manifest: state.manifest })
     });
     switchTab("log");
   } catch (error) {
@@ -1351,7 +1608,7 @@ async function useLocalhost() {
 }
 
 function saveForm() {
-  const ids = ["datasetLabel", "targetSamples", "sampleIntervalMs", "maxDurationMs", "fanOnMs", "postFanSettleMs", "wifiSsid", "mqttHost", "mqttPort", "mqttUser", "topicRoot", "firmwareEnv", "targetDeviceId"];
+  const ids = ["datasetLabel", "targetSamples", "sampleIntervalMs", "maxDurationMs", "fanOnMs", "postFanSettleMs", "wifiSsid", "mqttHost", "mqttPort", "mqttUser", "topicRoot", "firmwareEnv", "targetDeviceId", "manualPortInput"];
   const data = Object.fromEntries(ids.map((id) => [id, $(id).value]));
   localStorage.setItem("gldOperatorWeb.form", JSON.stringify(data));
 }
@@ -1389,14 +1646,7 @@ function exportCsv() {
     "gasClass",
     "confidence",
     "alarm",
-    "MQ1",
-    "MQ2",
-    "MQ3",
-    "MQ4",
-    "MQ5",
-    "MQ6",
-    "MQ7",
-    "MQ8"
+    ...SENSOR_NAMES
   ];
   const rows = state.history.map((point) => [
     new Date(point.ts).toISOString(),
@@ -1475,7 +1725,12 @@ async function initDatasetOutputDir() {
 function startBridgeEvents() {
   if (state.eventSource) state.eventSource.close();
   const source = new EventSource(bridgeUrl("/api/events"));
+  source.onerror = () => {
+    if (!state.bridgeAvailable) return;
+    setBadge(elements.connectionBadge, "bridge event lost", "warn");
+  };
   source.addEventListener("serial_line", (event) => {
+    if (state.mock) return;
     const payload = JSON.parse(event.data);
     handleLine(payload.line);
   });
@@ -1557,6 +1812,7 @@ async function refreshPorts(bridgeAlreadyChecked = false) {
     const ports = result.ports || [];
     if (!ports.length) {
       elements.portSelect.append(new Option("No serial ports", ""));
+      ensureManualPortOption(false);
       updateSelectedPortDetail();
       return;
     }
@@ -1566,11 +1822,15 @@ async function refreshPorts(bridgeAlreadyChecked = false) {
       option.dataset.manufacturer = port.manufacturer || "";
       elements.portSelect.append(option);
     }
-    const preferred = ports.find((port) => port.path === "COM10") || ports[0];
+    const manual = ensureManualPortOption(false);
+    const preferred = ports.find((port) => port.path === "COM10")
+      || (manual ? { path: manual } : null)
+      || ports[0];
     elements.portSelect.value = preferred.path;
     elements.portLabel.textContent = preferred.path;
     updateSelectedPortDetail();
-    appendLog(`PORT_SCAN_OK ${ports.map((port) => port.path).join(", ")}`, "in");
+    const scanned = ports.map((port) => port.path).join(", ");
+    appendLog(`PORT_SCAN_OK ${scanned}${manual && !ports.some((port) => port.path.toUpperCase() === manual) ? ` manual=${manual}` : ""}`, "in");
   } catch (error) {
     appendLog(`PORT_SCAN_ERROR ${error.message}`, "in");
   } finally {
@@ -1583,6 +1843,10 @@ function togglePolling() {
   if (state.polling) {
     stopPolling();
   } else {
+    if (!state.mock && !state.connected) {
+      appendLog("POLL_SKIPPED serial not connected", "in");
+      return;
+    }
     state.polling = true;
     elements.refreshLoopBtn.textContent = "Stop Poll";
     state.pollTimer = setInterval(() => sendCommand("GET_STATUS"), 1000);
@@ -1603,6 +1867,7 @@ function toggleMock() {
     state.mockTimer = null;
     state.mock = false;
     state.connected = false;
+    resetDeviceSnapshot();
     updateConnectionUi("disconnected", "");
     return;
   }
@@ -1656,7 +1921,7 @@ function emitMockInfo() {
     nodeId: 0xF001,
     firmwareVersion: "0.8.12",
     protocolVersion: "0.1.0",
-    boardProfile: "4D-ESP32S3",
+    boardProfile: "GLDW-WROOM-1U-N16R8",
     mode: state.mode === "unknown" ? "inference" : state.mode,
     baud: 115200,
     appConfig: {
@@ -1704,6 +1969,7 @@ function emitMockStatus() {
       alarm,
       sensorVoltage: voltage,
       sensorGain: [64, 64, 64, 64, 64, 32, 64, 64],
+      sensorStatus: [0, 0, 0, 0, 0, 0, 0, 0],
       featureOrder: ["MQ8", "MQ135", "MQ3", "MQ5", "MQ4", "MQ7", "MQ6", "MQ2"]
     }
   };
@@ -1762,23 +2028,45 @@ async function loadManifestFile(file) {
   const text = await file.text();
   try {
     const manifest = JSON.parse(text);
+    state.manifest = manifest;
     $("packageDeviceId").value = manifest.deviceId || "";
+    if (manifest.env || manifest.environment) $("firmwareEnv").value = manifest.env || manifest.environment;
     $("manifestPreview").textContent = JSON.stringify(manifest, null, 2);
   } catch (error) {
+    state.manifest = null;
     $("manifestPreview").textContent = `Invalid manifest: ${error.message}`;
   }
 }
 
+function validateManifestForUpload(manifest, env, targetDeviceId) {
+  if (!manifest) return "";
+  const manifestEnv = manifest.env || manifest.environment;
+  if (manifestEnv && manifestEnv !== env) return `manifest env ${manifestEnv} does not match selected env ${env}`;
+  const packageDeviceId = String(manifest.deviceId || "").toUpperCase();
+  if (packageDeviceId && packageDeviceId !== "F000" && packageDeviceId !== targetDeviceId) {
+    return `manifest deviceId ${packageDeviceId} does not match target ID ${targetDeviceId}`;
+  }
+  const chip = manifest.chipFamily || manifest.chip;
+  if (chip && !/esp32s3/i.test(String(chip))) return `manifest chip ${chip} is not ESP32-S3`;
+  return "";
+}
+
 function setupEvents() {
-  elements.portSetupBtn.addEventListener("click", () => setSetupOpen(true));
+  elements.portSetupBtn.addEventListener("click", () => {
+    setSetupOpen(true);
+    if (state.bridgeAvailable) refreshPorts(true);
+  });
   elements.closeSetupBtn.addEventListener("click", () => setSetupOpen(false));
   document.querySelectorAll("[data-close-setup]").forEach((node) => {
     node.addEventListener("click", () => setSetupOpen(false));
   });
   elements.connectBtn.addEventListener("click", connectSerial);
   elements.disconnectBtn.addEventListener("click", () => state.mock ? toggleMock() : disconnectSerial());
+  elements.alarmMuteBtn.addEventListener("click", toggleAlarmMute);
   elements.mockBtn.addEventListener("click", toggleMock);
   elements.refreshPortsBtn.addEventListener("click", refreshPorts);
+  elements.useManualPortBtn.addEventListener("click", () => ensureManualPortOption(true));
+  elements.manualPortInput.addEventListener("change", saveForm);
   elements.portSelect.addEventListener("change", updateSelectedPortDetail);
   elements.refreshLoopBtn.addEventListener("click", togglePolling);
   elements.rangeSelect.addEventListener("change", () => {
@@ -1801,6 +2089,11 @@ function setupEvents() {
     elements.nullingSummary.textContent = "No nulling activity.";
     updateNullingMeta();
     renderNullingChannels();
+  });
+  $("refreshSensorCheckBtn").addEventListener("click", () => sendCommand("GET_STATUS"));
+  $("clearSensorCheckBtn").addEventListener("click", () => {
+    state.status = null;
+    renderSensorCheck();
   });
   $("applyConfigBtn").addEventListener("click", applyGldSettings);
   $("switchDatasetBtn").addEventListener("click", () => sendCommand("SET_MODE dataset"));
@@ -1855,7 +2148,9 @@ async function bootstrap() {
   setInterval(refreshDatasetWaitingState, 1000);
   updateNullingMeta();
   renderNullingChannels();
+  renderSensorCheck();
   drawChart();
+  updateAlarmState(false);
   syncDeviceSummary();
   await initBridge();
   if (!window.isSecureContext) {

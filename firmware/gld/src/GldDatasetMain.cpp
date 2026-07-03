@@ -234,6 +234,11 @@ void handleCmd(const char* payload, unsigned int length) {
     logPrintf("DATASET_CMD cmd=%s\n", cmd);
 
     if (strcmp(cmd, "START_DATASET") == 0) {
+        if (!pgl::gld::readGldPower().externalPower) {
+            logPrintln("DATASET_START_REJECT battery_mode_not_allowed");
+            publishCmdAck("START_DATASET", "reject_battery_mode");
+            return;
+        }
         if (nullingProfileId == 0) {
             logPrintln("DATASET_START_REJECT no_nulling_profile");
             publishCmdAck("START_DATASET", "reject_no_profile");

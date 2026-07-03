@@ -28,6 +28,23 @@ void switchGldMode(GldMode mode) {
     ESP.restart();
 }
 
+static constexpr const char* NVS_ALARM_KEY = "alarm";
+
+bool readGldAlarmLatched() {
+    Preferences prefs;
+    prefs.begin(NVS_NS, true);
+    const bool val = prefs.getBool(NVS_ALARM_KEY, false);
+    prefs.end();
+    return val;
+}
+
+void writeGldAlarmLatched(bool active) {
+    Preferences prefs;
+    prefs.begin(NVS_NS, false);
+    prefs.putBool(NVS_ALARM_KEY, active);
+    prefs.end();
+}
+
 const char* gldModeName(GldMode mode) {
     switch (mode) {
         case GldMode::INFERENCE: return "inference";

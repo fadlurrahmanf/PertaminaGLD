@@ -177,6 +177,7 @@ Topbar menampilkan:
 - Confidence.
 - Alarm badge.
 - Tombol `Port Setup`.
+- Tombol `Mute Alarm` untuk local sound mute tanpa mengirim clear ke GLD.
 - Tombol `Mock GLD`.
 
 ### 7.2 Sidebar
@@ -192,6 +193,7 @@ Sidebar berisi:
 Tabs utama:
 
 - `Running`
+- `Sensor Check`
 - `Dataset`
 - `Nulling`
 - `Log`
@@ -206,6 +208,9 @@ Controls:
 
 - Dropdown COM port.
 - `Scan`: memanggil `/api/ports`.
+- Manual COM input: default `COM10`, menambahkan option manual saat scan tidak
+  menemukan port USB.
+- `Use Manual`: memilih manual COM override.
 - `Connect Serial`: memanggil `/api/serial/connect`.
 - `Disconnect`: memanggil `/api/serial/disconnect`.
 
@@ -214,6 +219,7 @@ Default:
 ```text
 baud: 115200
 preferred port: COM10, jika ada
+manual fallback: COM10
 ```
 
 Setelah connect, app mengirim handshake ringan:
@@ -296,12 +302,51 @@ Running CSV columns:
 
 ```text
 timeIso, deviceId, mode, gasName, gasClass, confidence, alarm,
-MQ1, MQ2, MQ3, MQ4, MQ5, MQ6, MQ7, MQ8
+MQ8, MQ135, MQ3, MQ5, MQ4, MQ7, MQ6, MQ2
 ```
 
-Catatan: header running CSV masih memakai label `MQ1..MQ8`, sedangkan dataset
-CSV memakai sensor order eksplisit. Ini kandidat perapihan berikutnya agar
-running CSV konsisten dengan `featureOrder`.
+Running CSV memakai sensor order eksplisit yang sama dengan firmware default.
+
+## 10A. Sensor Check View
+
+Sensor Check tab menampilkan visual kartu CH1-CH8 seperti Nulling, tetapi
+fokusnya mengecek apakah sensor MQ terpasang/terbaca.
+
+Input utama:
+
+- `GLD_STATUS_JSON.telemetry.sensorVoltage[8]`
+- `GLD_STATUS_JSON.telemetry.sensorGain[8]`
+- `GLD_STATUS_JSON.telemetry.sensorStatus[8]`
+- `GLD_STATUS_JSON.telemetry.featureOrder[8]`
+- `GLD_STATUS_JSON.bootHealth.adsReady`
+- `GLD_STATUS_JSON.bootHealth.mcpOkCount`
+- Optional future fields: `bootHealth.sensorPresent`, `bootHealth.mqPresent`,
+  `bootHealth.sensorHealth`, atau field sejenis di root status.
+
+Status kartu:
+
+```text
+Present   firmware reports present, or voltage+gain readable while ADS ready
+Missing   firmware reports missing/not installed
+Fault     firmware reports fault/error
+Check     MCP ready count is below that channel
+Read Only voltage seen but ADS health is not ready
+Unknown   no usable status yet
+```
+
+Firmware `sensorStatus` mapping dari `GldAds1256Status`:
+
+```text
+0 Ok             -> Present
+1 NotReady       -> Not Ready
+2 DrdyTimeout    -> Fault
+3 InvalidChannel -> Fault
+```
+
+Controls:
+
+- `Refresh Status`: mengirim `GET_STATUS`.
+- `Clear`: menghapus status lokal sensor check.
 
 ## 11. Dataset Workflow
 
@@ -347,8 +392,8 @@ Default `Run nulling before dataset` adalah OFF dan sengaja tidak disimpan ke
 Keputusan desain terbaru:
 
 - `Start Dataset` default tidak menjalankan nulling.
-- Jika checkbox OFF, app langsung publish `START_DATASET` dengan
-  `run_nulling_first=false`.
+- Jika checkbox OFF, app mengirim `SET_MODE dataset`, memberi waktu mode switch,
+  lalu publish `START_DATASET` dengan `run_nulling_first=false`.
 - Jika checkbox ON, app switch ke mode nulling:
 
 ```text
@@ -700,7 +745,8 @@ bench/debug, bukan final production lock.
 
 Firmware tab menyediakan:
 
-- `Load Manifest`: membaca file `.json` lokal dan menampilkan preview.
+- `Load Manifest`: membaca file `.json` lokal, mengisi env/package ID, dan
+  menampilkan preview.
 - `Upload Firmware`: memanggil bridge `/api/firmware/upload`.
 - `Inject ID`: mengirim `SET_DEVICE_ID_JSON`.
 
@@ -719,6 +765,14 @@ Upload command bridge:
 ```powershell
 pio run -e {env} -t upload --upload-port {port}
 ```
+
+Jika manifest dimuat, UI dan bridge memvalidasi:
+
+- `env` atau `environment` harus sesuai field `PlatformIO Env`.
+- `deviceId` manifest boleh `F000` sebagai package dummy, atau harus sama
+  dengan `Target GLD ID`.
+- `chip` atau `chipFamily` harus ESP32-S3.
+- `flashFiles`, jika ada, harus berupa list.
 
 Setelah upload sukses dan target ID valid, bridge mencoba reconnect serial dan
 mengirim:
@@ -934,6 +988,8 @@ Current safety controls:
 
 - Serial connect/disconnect explicit.
 - Firmware upload asks browser `confirm()`.
+- Firmware upload validates loaded manifest against selected env, target ID,
+  chip family, and `flashFiles` shape.
 - Apply GLD settings asks browser `confirm()`.
 - Inject ID asks browser `confirm()`.
 - Expert terminal disabled until local `Unlock`.
@@ -942,7 +998,6 @@ Current safety controls:
 Known safety gaps:
 
 - Expert unlock has no PIN yet.
-- Firmware upload does not validate manifest strictly before upload.
 - Bridge has permissive CORS and is intended for localhost bench only.
 - MQTT credentials are not encrypted; password fields are not persisted.
 - No authentication on local bridge.
@@ -951,7 +1006,6 @@ Recommended production hardening:
 
 - Bind bridge to `127.0.0.1` only, keep current default.
 - Add one-time local admin PIN for Expert/Firmware.
-- Validate firmware manifest before upload.
 - Reject upload if manifest device profile does not match connected GLD.
 - Add visible COM lock/release state before upload.
 
@@ -1210,9 +1264,8 @@ High priority:
 - Add bridge status indicator that can restart/reconnect after bridge downtime.
 - Add explicit COM lock status before upload.
 - Add upload preflight: disconnect serial, verify `mode COMx`, then upload.
-- Add manifest validation for firmware package.
+- Add stricter manifest validation against actual flash files/checksums.
 - Add Expert/Firmware PIN lock.
-- Align running CSV headers with real `featureOrder`.
 - Add visible `reject_no_profile` action button: "Run Nulling Now".
 
 Medium priority:

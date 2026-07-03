@@ -63,12 +63,6 @@ constexpr uint32_t SCAN_INTERVAL_MS = 1000;
 constexpr uint32_t TX_INTERVAL_MS   = 10000;
 constexpr uint8_t  MIN_PRIMED_COUNT = pgl::gld::GLD_SENSOR_MOVING_AVERAGE_WINDOW;
 
-// Channel remapping: hardware channel → model input index.
-// Matches ApplyGasleak takeDataMQ() switch-case exactly.
-// HW:    ch0=MQ8  ch1=MQ135  ch2=MQ3  ch3=MQ5  ch4=MQ4  ch5=MQ7  ch6=MQ6  ch7=MQ2
-// Model: [0]=MQ8  [1]=MQ6    [2]=MQ135 [3]=MQ5  [4]=MQ4  [5]=MQ3  [6]=MQ7  [7]=MQ2
-constexpr uint8_t HW_TO_MODEL[8] = {0, 2, 5, 3, 4, 6, 1, 7};
-
 // ML confidence threshold for alarm (0-100 scale matching GLD_LEL_THRESHOLD_PERCENT)
 constexpr uint8_t ML_CONFIDENCE_THRESHOLD = pgl::protocol::GLD_LEL_THRESHOLD_PERCENT;
 
@@ -207,10 +201,10 @@ void runInference(const float mavVoltage[8]) {
     float* modelInput = network->getInputBuffer();
     if (!modelInput) return;
 
-    // Apply channel remapping + StandardScaler normalization
-    for (uint8_t hwCh = 0; hwCh < pgl::gld::board::SENSOR_COUNT; ++hwCh) {
-        const uint8_t mIdx = HW_TO_MODEL[hwCh];
-        modelInput[mIdx] = (mavVoltage[hwCh] - feature_means[mIdx]) / feature_stds[mIdx];
+    // Apply StandardScaler normalization; channel n is fed directly as feature n
+    // (no remap - hardware channel order matches model feature order).
+    for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
+        modelInput[ch] = (mavVoltage[ch] - feature_means[ch]) / feature_stds[ch];
     }
 
     float confidenceFloat = 0.0f;

@@ -21,10 +21,13 @@ http://127.0.0.1:5173/
 
 Bridge features:
 
-- COM scan and native serial connect at 115200 baud.
+- COM scan and native serial connect at 115200 baud, with manual COM override
+  for cases where Windows/pyserial does not enumerate the USB adapter yet.
 - Serial command write/read for `APP_PING`, `GET_INFO`, `GET_STATUS`,
   `SET_MODE`, `SET_APP_CONFIG_JSON`, and `SET_DEVICE_ID_JSON`.
 - Windows WiFi SSID/password and local IPv4 lookup for `Use this PC`.
+- Visual alarm badge plus local sound/mute. Mute is local only and does not send
+  an alarm clear command to GLD.
 - Dataset MQTT command publish when `paho-mqtt` is installed and a broker is
   reachable.
 - Dataset session monitor subscribes to MQTT `cmd/ack`, `dataset/status`,
@@ -33,8 +36,8 @@ Bridge features:
   `DATASET_AUTOSTOP`, and `DATASET_STOP`.
 - `Start Dataset` does not run nulling first by default. Use the Dataset tab
   `Run nulling before dataset` option only when the GLD needs a fresh nulling
-  profile; otherwise the app publishes `START_DATASET` directly with
-  `run_nulling_first=false`.
+  profile. With the option off, the app first sends `SET_MODE dataset`, then
+  publishes `START_DATASET` with `run_nulling_first=false`.
 - Dataset CSV output is saved by default to:
 
 ```text
@@ -48,7 +51,9 @@ D:\PertaminaGLD\apps\gld-operator\output\datasets
 pio run -e gld -t upload --upload-port COM10
 ```
 
-The UI can start that upload from the Firmware tab via the bridge.
+The UI can start that upload from the Firmware tab via the bridge. If a
+manifest is loaded, the UI and bridge validate the selected env, target ID, chip
+family, and `flashFiles` shape before starting the upload.
 
 ## Fallback HTML-Only Run
 

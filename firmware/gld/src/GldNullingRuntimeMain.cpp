@@ -12,6 +12,7 @@
 #include "GldAds1256Reader.h"
 #include "GldDacMux.h"
 #include "GldConfig.h"
+#include "GldModeManager.h"
 #include "GldNullingProfile.h"
 #include "GldNullingService.h"
 #include "GldPower.h"
@@ -203,6 +204,15 @@ void setup() {
               pgl::gld::gldPowerModeName(power.mode),
               power.externalPower ? 1 : 0,
               power.batteryMv);
+
+    if (!power.externalPower) {
+        logPrintln("NULLING_BLOCKED reason=battery_mode_not_allowed");
+        return;
+    }
+    if (pgl::gld::readGldAlarmLatched()) {
+        logPrintln("NULLING_BLOCKED reason=alarm_latched");
+        return;
+    }
 
     // ----- Load existing profile from NVS -----
     pgl::gld::GldNullingProfile existing{};

@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>GLD Operator</title>
-    <link rel="stylesheet" href="./style.css">
+    <link rel="stylesheet" href="./style.css?v=20260701-1606">
   </head>
   <body>
     <main class="shell">
@@ -26,6 +26,7 @@
 
         <div class="top-actions">
           <button id="portSetupBtn" type="button">Port Setup</button>
+          <button id="alarmMuteBtn" type="button">Mute Alarm</button>
           <button id="mockBtn" type="button">Mock GLD</button>
         </div>
       </header>
@@ -72,6 +73,7 @@
         <section class="workspace">
           <nav class="tabs" aria-label="Operator views">
             <button class="tab active" data-tab="running" type="button">Running</button>
+            <button class="tab" data-tab="sensor-check" type="button">Sensor Check</button>
             <button class="tab" data-tab="dataset" type="button">Dataset</button>
             <button class="tab" data-tab="nulling" type="button">Nulling</button>
             <button class="tab" data-tab="log" type="button">Log</button>
@@ -143,6 +145,21 @@
                   <div><dt>ML</dt><dd id="mlHealth">Unknown</dd></div>
                 </dl>
               </section>
+            </div>
+          </section>
+
+          <section id="sensor-check" class="view">
+            <div class="panel">
+              <div class="section-title wrap">
+                <h2>MQ Sensor Check</h2>
+                <div class="toolbar">
+                  <button id="refreshSensorCheckBtn" type="button">Refresh Status</button>
+                  <button id="clearSensorCheckBtn" type="button">Clear</button>
+                </div>
+              </div>
+              <div id="sensorCheckSummary" class="status-line">Waiting for GLD status.</div>
+              <div id="sensorCheckMeta" class="status-line">ADS: Unknown - MCP: Unknown - Latest telemetry: none</div>
+              <div id="sensorCheckChannels" class="channel-grid" aria-label="MQ sensor presence"></div>
             </div>
           </section>
 
@@ -337,6 +354,10 @@
             </select>
             <button id="refreshPortsBtn" type="button">Scan</button>
           </div>
+          <div class="port-row manual-port-row">
+            <input id="manualPortInput" value="COM10" aria-label="Manual COM port" placeholder="COM10">
+            <button id="useManualPortBtn" type="button">Use Manual</button>
+          </div>
           <p id="portDetail" class="port-detail">No serial port selected.</p>
           <div class="connect-actions">
             <button id="connectBtn" type="button" class="primary">Connect Serial</button>
@@ -346,6 +367,6 @@
       </section>
     </main>
 
-    <script src="./app.js"></script>
+    <script src="./app.js?v=20260701-1606"></script>
   </body>
 </html>

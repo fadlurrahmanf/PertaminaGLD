@@ -18,7 +18,7 @@ pgl::gld::GldDacMux dac;
 SPIClass sensorSpi;
 
 constexpr uint8_t NULLING_AVG_COUNT = 8;
-constexpr uint8_t NULLING_CONFIRM_COUNT = 5;
+constexpr uint8_t NULLING_CONFIRM_COUNT = 10;
 constexpr uint16_t NULLING_BASELINE_PRESCAN_MAX = 10;
 constexpr uint16_t NULLING_EXP_INIT_STEP = 1;
 constexpr uint16_t NULLING_EXP_MAX_STEP = 2048;

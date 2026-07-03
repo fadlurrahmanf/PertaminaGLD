@@ -82,10 +82,6 @@ constexpr const char* BOARD_PROFILE = "WROOM-1U-N16R8";
 constexpr const char* BOARD_PROFILE = "4D-ESP32S3";
 #endif
 
-// ---------------------------------------------------------------------------
-// Channel remapping: hardware ADS1256 channel → model input index
-// ---------------------------------------------------------------------------
-constexpr uint8_t HW_TO_MODEL[8] = {0, 2, 5, 3, 4, 6, 1, 7};
 constexpr uint8_t ML_CONFIDENCE_THRESHOLD = pgl::protocol::GLD_LEL_THRESHOLD_PERCENT;
 constexpr uint8_t ACTIVE_LOW_OUTPUT_ON = LOW;
 constexpr uint8_t ACTIVE_LOW_OUTPUT_OFF = HIGH;
@@ -132,12 +128,21 @@ bool     lastBootTcaOk = false;
 uint8_t  lastBootMcpOkCount = 0;
 bool     lastBootMcpControlTested = false;
 uint8_t  lastBootMcpControlOkCount = 0;
+bool     batteryPowerMode = false;
+bool     batteryCyclePoweredOff = false;
+uint32_t lastTpl5010KeepaliveMs = 0;
 float    latestSensorVoltage[pgl::gld::board::SENSOR_COUNT]{};
 uint8_t  latestSensorGain[pgl::gld::board::SENSOR_COUNT]{};
 uint8_t  latestSensorStatus[pgl::gld::board::SENSOR_COUNT]{};
 bool     latestTelemetryValid = false;
 
+// Marks the NVS-stored board deployment config as deliberately set via
+// SET_APP_CONFIG_JSON, matching design.md's BoardDeploymentConfig ctrlword gate.
+// 0x00 (default) means "never configured; running on compiled-in defaults".
+constexpr uint8_t GLD_CTRL_WORD_VALUE = 0xA3;
+
 struct RuntimeConfig {
+    uint8_t ctrlword = 0x00;
     char deviceId[17]{};
     uint16_t nodeId = DEFAULT_NODE_ID;
     char wifiSsid[33]{};
@@ -150,6 +155,12 @@ struct RuntimeConfig {
 };
 
 RuntimeConfig runtimeConfig{};
+
+bool runtimeConfigValid() {
+    return runtimeConfig.ctrlword == GLD_CTRL_WORD_VALUE &&
+           strlen(runtimeConfig.wifiSsid) > 0 &&
+           strlen(runtimeConfig.mqttHost) > 0;
+}
 char mqttClientId[40]{};
 char topicCmd[128]{};
 char topicDataset[128]{};
@@ -291,9 +302,11 @@ void loadRuntimeConfig() {
     copyBounded(runtimeConfig.mqttPass, sizeof(runtimeConfig.mqttPass), value.c_str());
     value = prefs.getString("topicRoot", runtimeConfig.topicRoot);
     copyBounded(runtimeConfig.topicRoot, sizeof(runtimeConfig.topicRoot), value.c_str());
+    runtimeConfig.ctrlword = static_cast<uint8_t>(prefs.getUChar("ctrlword", runtimeConfig.ctrlword));
     prefs.end();
     buildRuntimeTopics();
-    logPrintf("GLD_APP_CONFIG_LOAD=OK deviceId=%s nodeId=0x%04X ssid=%s mqttHost=%s mqttPort=%u topicRoot=%s\n",
+    logPrintf("GLD_APP_CONFIG_LOAD=%s deviceId=%s nodeId=0x%04X ssid=%s mqttHost=%s mqttPort=%u topicRoot=%s\n",
+              runtimeConfigValid() ? "OK" : "DEFAULT_UNCONFIGURED",
               runtimeConfig.deviceId,
               runtimeConfig.nodeId,
               runtimeConfig.wifiSsid,
@@ -305,6 +318,8 @@ void loadRuntimeConfig() {
 bool saveRuntimeConfig() {
     Preferences prefs;
     if (!prefs.begin("gld_app", false)) return false;
+    runtimeConfig.ctrlword = GLD_CTRL_WORD_VALUE;
+    prefs.putUChar("ctrlword", runtimeConfig.ctrlword);
     prefs.putString("deviceId", runtimeConfig.deviceId);
     prefs.putUShort("nodeId", runtimeConfig.nodeId);
     prefs.putString("wifiSsid", runtimeConfig.wifiSsid);
@@ -413,6 +428,7 @@ void emitInfoJson() {
     appConfig["mqttPort"] = runtimeConfig.mqttPort;
     appConfig["mqttUser"] = runtimeConfig.mqttUser;
     appConfig["topicRoot"] = runtimeConfig.topicRoot;
+    appConfig["configValid"] = runtimeConfigValid();
     JsonObject caps = doc.createNestedObject("capabilities");
     addCapabilities(caps);
     rawJsonLine("GLD_INFO_JSON", doc);
@@ -432,6 +448,8 @@ void emitStatusJson() {
     powerObj["externalPower"] = power.externalPower;
     powerObj["batteryMv"] = power.batteryMv;
     powerObj["batteryValid"] = power.batteryValid;
+    powerObj["batteryLow"] = power.batteryLow;
+    powerObj["batteryCritical"] = power.batteryCritical;
 
     JsonObject boot = doc.createNestedObject("bootHealth");
     boot["adsReady"] = adsReady;
@@ -1298,6 +1316,7 @@ bool nonceProvider(uint8_t nonce[pgl::protocol::GLD_AES_GCM_NONCE_SIZE], void* c
 void updateAlarmOutputs(bool alarm) {
     if (alarm == lastAlarm) return;
     lastAlarm = alarm;
+    pgl::gld::writeGldAlarmLatched(alarm);
     optionalDigitalWrite(pgl::gld::board::PIN_ALARM_LAMP, alarm ? ACTIVE_LOW_OUTPUT_ON : ACTIVE_LOW_OUTPUT_OFF);
     optionalDigitalWrite(pgl::gld::board::PIN_BUZZER,     alarm ? ACTIVE_LOW_OUTPUT_ON : ACTIVE_LOW_OUTPUT_OFF);
     optionalDigitalWrite(pgl::gld::board::PIN_STATUS_LED, alarm ? ACTIVE_LOW_OUTPUT_ON : ACTIVE_LOW_OUTPUT_OFF);
@@ -1319,9 +1338,10 @@ void runInference(const float mavVoltage[8]) {
     if (!mlReady || !network->isInitialized()) return;
     float* modelInput = network->getInputBuffer();
     if (!modelInput) return;
-    for (uint8_t hwCh = 0; hwCh < pgl::gld::board::SENSOR_COUNT; ++hwCh) {
-        const uint8_t mIdx = HW_TO_MODEL[hwCh];
-        modelInput[mIdx] = (mavVoltage[hwCh] - feature_means[mIdx]) / feature_stds[mIdx];
+    // Channel n is fed directly as feature n (no remap - hardware channel order
+    // matches model feature order).
+    for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
+        modelInput[ch] = (mavVoltage[ch] - feature_means[ch]) / feature_stds[ch];
     }
     float confidenceFloat = 0.0f;
     const int predicted = network->predict(confidenceFloat);
@@ -1352,7 +1372,6 @@ void runScan() {
     if (primed) runInference(mavVoltage);
     const bool alarm = lastResult.gasClass != pgl::protocol::GLD_GAS_CLEAR &&
                        lastResult.confidence >= ML_CONFIDENCE_THRESHOLD;
-    lastAlarm = alarm;
     logPrintf("GLD_SENSOR_SCAN seq=%lu allValid=%u primed=%u gasClass=%u(%s) confidence=%u alarm=%u\n",
               static_cast<unsigned long>(txCounter),
               adsReady ? 1 : 0, primed ? 1 : 0,
@@ -1602,8 +1621,35 @@ void setup() {
                           modeDetail);
         runExternalPowerBootSensorSamples(power);
 
+        batteryPowerMode = !power.externalPower;
+        lastTpl5010KeepaliveMs = millis();
         lastScanMs = millis();
         lastTxMs   = millis();
+
+    } else if (!power.externalPower) {
+        // Dataset and Nulling are not allowed on battery power (design.md §7.5/§7.6/§7.7).
+        logPrintf("MODE_BLOCKED reason=battery_mode_not_allowed mode=%s\n",
+                  pgl::gld::gldModeName(currentMode));
+        pgl::gld::writeGldMode(pgl::gld::GldMode::INFERENCE);
+        delay(NULLING_AUTO_RESTART_DELAY_MS);
+        Serial.flush();
+#if defined(ARDUINO_ARCH_ESP32)
+        Serial0.flush();
+#endif
+        ESP.restart();
+
+    } else if (currentMode == pgl::gld::GldMode::NULLING && pgl::gld::readGldAlarmLatched()) {
+        // Nulling must not run while a prior alarm is still latched/unacknowledged
+        // (design.md §3.6: "nulling blocked when alarm active"). Clear the alarm
+        // (button hold / IO38 CLR) before switching into Nulling mode again.
+        logPrintln("MODE_BLOCKED reason=alarm_latched mode=nulling");
+        pgl::gld::writeGldMode(pgl::gld::GldMode::INFERENCE);
+        delay(NULLING_AUTO_RESTART_DELAY_MS);
+        Serial.flush();
+#if defined(ARDUINO_ARCH_ESP32)
+        Serial0.flush();
+#endif
+        ESP.restart();
 
     } else {
         // --- DATASET / NULLING mode init ---
@@ -1710,6 +1756,39 @@ void loop() {
 
     if (currentMode == pgl::gld::GldMode::INFERENCE) {
         const uint32_t now = millis();
+
+        // Battery mode is powered through the TPL5010 wake latch: a keepalive
+        // pulse on DONE (IO14) is required at least every
+        // GLD_TPL5010_KEEPALIVE_INTERVAL_MS or TPL5010 asserts RSTn and force-resets
+        // the ESP32. This does not power the node off - only pulseGldPowerLatchClear()
+        // (IO38/CLR) does that.
+        if (batteryPowerMode &&
+            now - lastTpl5010KeepaliveMs >= pgl::gld::GLD_TPL5010_KEEPALIVE_INTERVAL_MS) {
+            lastTpl5010KeepaliveMs = now;
+            pgl::gld::pulseGldTpl5010Keepalive();
+        }
+
+        if (batteryPowerMode) {
+            // One-shot wake cycle: scan + inference + LoRa TX + RX window, then
+            // clear the power latch to shut the node down. If an alarm is active,
+            // stay powered (the alarm lamp/buzzer are driven directly by ESP32
+            // GPIO, so cutting power would silence them) and retry each
+            // SCAN_INTERVAL_MS until the alarm clears.
+            if (!batteryCyclePoweredOff && now - lastScanMs >= SCAN_INTERVAL_MS) {
+                lastScanMs = now;
+                if (adsReady) runScan();
+                if (radioReady) transmitOnce();
+                if (!lastAlarm) {
+                    logPrintln("GLD_BATTERY_CYCLE_DONE power_off");
+                    pgl::gld::pulseGldPowerLatchClear();
+                    batteryCyclePoweredOff = true;
+                } else {
+                    logPrintln("GLD_BATTERY_CYCLE_ALARM_ACTIVE staying_awake");
+                }
+            }
+            return;
+        }
+
         if (adsReady && now - lastScanMs >= SCAN_INTERVAL_MS) {
             lastScanMs = now;
             runScan();

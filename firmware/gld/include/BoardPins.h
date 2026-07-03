@@ -26,10 +26,13 @@
 #define PGL_GLD_PIN_LORA_TXEN 6
 #endif
 #ifndef PGL_GLD_PIN_ALARM_LAMP
-#define PGL_GLD_PIN_ALARM_LAMP -1
+#define PGL_GLD_PIN_ALARM_LAMP 41
 #endif
 #ifndef PGL_GLD_PIN_BUZZER
-#define PGL_GLD_PIN_BUZZER -1
+#define PGL_GLD_PIN_BUZZER 40
+#endif
+#ifndef PGL_GLD_PIN_STATUS_LED
+#define PGL_GLD_PIN_STATUS_LED 39
 #endif
 #endif
 
@@ -97,6 +100,12 @@ namespace pgl::gld::board {
 #ifndef PGL_GLD_PIN_TPL5110_DONE
 #define PGL_GLD_PIN_TPL5110_DONE 14
 #endif
+// Active-low CLR input of the SN74AUP1G74 power-latch flip-flop. Pulsing this
+// HIGH->LOW->HIGH clears the latch and cuts ESP32 power (shared with the
+// "clear latched alarm error" button function - see design.md §3.18).
+#ifndef PGL_GLD_PIN_POWER_LATCH_CLR
+#define PGL_GLD_PIN_POWER_LATCH_CLR 38
+#endif
 #ifndef PGL_GLD_PIN_BATTERY_VOLTAGE
 #define PGL_GLD_PIN_BATTERY_VOLTAGE 4
 #endif
@@ -131,6 +140,7 @@ constexpr int PIN_BUZZER = PGL_GLD_PIN_BUZZER;
 constexpr int PIN_DC_FAN = PGL_GLD_PIN_DC_FAN;
 
 constexpr int PIN_TPL5110_DONE = PGL_GLD_PIN_TPL5110_DONE;
+constexpr int PIN_POWER_LATCH_CLR = PGL_GLD_PIN_POWER_LATCH_CLR;
 constexpr int PIN_BATTERY_VOLTAGE = PGL_GLD_PIN_BATTERY_VOLTAGE;
 constexpr int PIN_24V_POWER_GOOD = PGL_GLD_PIN_24V_POWER_GOOD;
 constexpr int PIN_USER_BUTTON = PGL_GLD_PIN_USER_BUTTON;

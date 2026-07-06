@@ -297,7 +297,20 @@ GLD downlink over STAR uses:
 | dstId | target GLD |
 | payload | command bytes |
 
-GLD parser currently recognizes command payload byte 0 `0x01` as SET_MODE and byte 1 as mode `0|1|2`.
+GLD parser recognizes only authenticated SET_MODE payloads:
+
+| Offset | Field | Size |
+|---:|---|---:|
+| 0 | command type `0x81` | 1 |
+| 1 | mode `0=inference/running`, `1=dataset`, `2=nulling` | 1 |
+| 2..3 | `commandId:uint16BE` | 2 |
+| 4..7 | AES-CMAC tag, first 4 bytes | 4 |
+
+The AES-CMAC input is `srcId:uint16BE + dstId:uint16BE + appFrameSeq:uint8 + payload[0..3]`.
+CH sets `appFrameSeq = commandId & 0xFF` when forwarding `MSG_NODE_DOWNLINK`,
+so the server-side builder can compute the same tag before sending the
+Gateway command. GLD rejects missing keys, bad tags, stale/replayed
+`commandId`, wrong destination, and old unauthenticated `0x01 + mode` payloads.
 
 Current Gateway-to-CH command boundary:
 

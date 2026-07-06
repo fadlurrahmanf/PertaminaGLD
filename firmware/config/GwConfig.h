@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 
 #include "LoraMeshConfig.h"
@@ -26,6 +27,12 @@ constexpr uint32_t MQTT_RETRY_MS = 3000;
 // Interval publish status Gateway dalam ms. Status berisi gatewayId, WiFi/MQTT,
 // meshReady, dan IP.
 constexpr uint32_t STATUS_INTERVAL_MS = 10000;
+
+// Queue RAM bounded untuk frame MESH yang sudah diterima tetapi belum berhasil
+// dipublish ke MQTT. Dipakai agar uplink/topology tidak langsung hilang saat
+// broker atau WiFi site putus singkat.
+constexpr uint8_t MQTT_UPLINK_QUEUE_CAPACITY = 8;
+constexpr size_t MQTT_UPLINK_QUEUE_ITEM_BYTES = 1024;
 
 // Jumlah pengiriman CH_CONFIG_RESPONSE untuk satu CH_CONFIG_REQUEST. Dua kali
 // dipakai agar CH lebih besar peluangnya menerima balasan Gateway saat beberapa

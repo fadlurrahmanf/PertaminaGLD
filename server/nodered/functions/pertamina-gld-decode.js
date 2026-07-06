@@ -21,7 +21,6 @@ const NC_FLAG_ALARM = 0x01;
 const NC_FLAG_EXT_POWER = 0x10;
 const GLD_ENCRYPTED_LEN = 29;
 const GLD_RECORD_LEN = 34;
-const DEFAULT_TEST_KEY_HEX = "000102030405060708090A0B0C0D0E0F";
 const DEFAULT_GATEWAY_ID = 0x006F;
 
 function fail(reason, detail) {
@@ -74,13 +73,17 @@ function getAesKey(keyId) {
         throw new Error(`unknown keyId ${keyId}, expected ${envKeyId}`);
     }
 
-    const keyHex = cleanHex(env.get("GLD_AES128_KEY_HEX") || DEFAULT_TEST_KEY_HEX).toUpperCase();
+    const configuredKey = env.get("GLD_AES128_KEY_HEX");
+    if (!configuredKey) {
+        throw new Error("GLD_AES128_KEY_HEX is required; production decoder must not fall back to the self-test key");
+    }
+    const keyHex = cleanHex(configuredKey).toUpperCase();
     if (keyHex.length !== 32) {
         throw new Error("GLD_AES128_KEY_HEX must be 32 hex characters");
     }
     return {
         key: Buffer.from(keyHex, "hex"),
-        source: env.get("GLD_AES128_KEY_HEX") ? "env" : "default_test_key"
+        source: "env"
     };
 }
 

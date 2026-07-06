@@ -309,6 +309,9 @@ If NodeCache says target GLD is external-powered and STAR is ready, CH sends `MS
 Pending downlink store has one active slot per `nodeId` lookup. A new command for the same node reuses the existing slot and overwrites its fields.
 
 CH source parses the same `MSG_SERVER_NODE_COMMAND` payload that Gateway builds: `nodeId + commandId + ttlSec + commandLen + commandBytes`. `ttlSec` becomes the pending downlink expiry; `0` uses the CH default pending TTL.
+For GLD mode commands, `commandBytes` is the authenticated GLD payload
+`0x81 + mode + commandId + cmacTag4`; CH stores it opaquely and forwards it as
+`MSG_NODE_DOWNLINK` with AppFrame seq `commandId & 0xFF`.
 
 ## Serial Logs
 

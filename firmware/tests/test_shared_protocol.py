@@ -105,8 +105,6 @@ class TxQueue:
             for entry in entries:
                 if entry.used and entry.node_id == item["node_id"] and entry.current_seq == item["gld_seq"]:
                     entry.sent_seq = entry.current_seq
-            if item["kind"] == "AlarmPush":
-                alarm_queue.remove(item["node_id"], item["gld_seq"])
         return item
 
 
@@ -661,6 +659,11 @@ def test_ch_runtime_alarm_queue_ack_and_tx_success_semantics():
     sent_item = tx_queue.pop_success(entries, alarm_queue)
     assert sent_item["kind"] == "AlarmPush"
     assert not entries[0].unsent
+    assert len(alarm_queue.items) == 1
+    assert alarm_queue.items[0]["node_id"] == 0xF001
+    assert alarm_queue.items[0]["seq"] == 0x80
+
+    alarm_queue.remove(sent_item["node_id"], sent_item["gld_seq"])
     assert alarm_queue.items == []
 
 
@@ -814,9 +817,15 @@ def test_server_site_and_dataset_flows_follow_current_firmware_contract():
         assert stale_name not in server_doc
 
     assert "Inject GLD SET_MODE dataset" in server_flow
-    assert '\\"hex\\":\\"0101\\"' in server_flow
+    assert "build authenticated node command" in server_flow
+    assert "gld/server/cmd/node" in server_flow
+    assert "aes-cmac-32" in server_flow
+    assert "GLD_AES128_KEY_HEX must be set" in server_flow
+    assert '\\"hex\\":\\"0101\\"' not in server_flow
     assert "Inject GLD command placeholder" not in server_flow
     assert '\\"hex\\":\\"0102\\"' not in server_flow
+    assert "GLD_AES128_KEY_HEX is required" in decode_src
+    assert "default_test_key" not in decode_src
     assert "apply-pertamina-gld-flow.js" in server_wrapper
     assert "ConvertTo-Json -Depth 30" not in server_wrapper
 
@@ -915,6 +924,17 @@ def test_gld_unified_runtime_scaffolds_present():
     assert "latestTelemetryValid = true" in unified_src
     assert "lastLoraTxState = txState" in unified_src
     assert "MSG_NODE_DOWNLINK" in command_src
+    assert "GLD_SECURITY_NOT_PROVISIONED" in unified_src
+    assert "aesKeyHex" in unified_src
+    assert "GLD_ALLOW_SELFTEST_AES_FALLBACK 0" in pathlib.Path("firmware/config/GldConfig.h").read_text(encoding="utf-8")
+    assert "CMD_SET_MODE_AUTHENTICATED = 0x81" in command_src
+    crypto_header = pathlib.Path("firmware/shared/include/GldCrypto.h").read_text(encoding="utf-8")
+    crypto_src = pathlib.Path("firmware/shared/src/GldCrypto.cpp").read_text(encoding="utf-8")
+    assert "computeAesCmac128" in crypto_header
+    assert "mbedtls_aes_crypt_ecb" in crypto_src
+    assert "computeAesCmac128(aesKey, macInput" in command_src
+    assert "commandIdIsNewer" in command_src
+    assert "runtimeConfig.lastDownlinkCommandId" in unified_src
     assert "gldModeFromString" in mode_header
     assert 'strcmp(str, "running")' in mode_src
     assert "runNullingService" in nulling_header
@@ -1057,6 +1077,7 @@ def test_current_design_docs_mirror_live_source_contracts():
 
     assert "`gld/gateway/cmd/pull`" in gw_doc
     assert "`gld/gateway/cmd/node`" in gw_doc
+    assert "`gld/server/cmd/node`" in gw_server_doc
     assert "`gld/gateway/topology`" in server_doc
     assert "`PGL_TOPOLOGY_PARENT_TTL_MS` | 900000" in server_doc
     assert "The dataset flow expects the current GLD unified JSON field names `sensor_voltage`, `sensor_gain`, `feature_order`, `device_id`, `node_id`, `timestamp_ms`, `label`, and `nulling_profile_id`." in server_doc
@@ -1086,6 +1107,9 @@ def test_cpp_guard_scaffolds_are_present():
     alarm_queue_header = pathlib.Path("firmware/ch/include/AlarmQueue.h").read_text(encoding="utf-8")
     tx_queue_header = pathlib.Path("firmware/ch/include/ChTxQueue.h").read_text(encoding="utf-8")
     runtime_src = pathlib.Path("firmware/ch/src/ChRuntime.cpp").read_text(encoding="utf-8")
+    ch_runtime_main = pathlib.Path("firmware/ch/src/ChStarMeshRuntimeMain.cpp").read_text(encoding="utf-8")
+    gw_runtime_main = pathlib.Path("firmware/gateway/src/GatewayMqttMeshMain.cpp").read_text(encoding="utf-8")
+    gw_config = pathlib.Path("firmware/config/GwConfig.h").read_text(encoding="utf-8")
 
     assert "InvalidInput" in builder_header
     assert "clearBuiltFrame(out)" in builder_src
@@ -1101,6 +1125,12 @@ def test_cpp_guard_scaffolds_are_present():
     assert "processGldStarFrame" in runtime_src
     assert "handleServerPullRequestFrame" in runtime_src
     assert "AlarmQueueFull" in runtime_src
+    assert "CH_ALARM_ACK_RETRY" in ch_runtime_main
+    assert "CH_ALARM_ACK_GIVEUP" in ch_runtime_main
+    assert "ALARM_RETRY_MAX" in ch_runtime_main
+    assert "GW_MQTT_QUEUE_ENQUEUE" in gw_runtime_main
+    assert "GW_MQTT_QUEUE_DRAIN" in gw_runtime_main
+    assert "MQTT_UPLINK_QUEUE_CAPACITY" in gw_config
 
 
 def test_invalid_payload_len_rejected_by_contract():

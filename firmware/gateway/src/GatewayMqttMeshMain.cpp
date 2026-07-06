@@ -46,6 +46,8 @@ constexpr uint32_t MESH_SPI_HZ = pgl::config::gw::MESH_SPI_HZ;
 constexpr uint32_t WIFI_RETRY_MS = pgl::config::gw::WIFI_RETRY_MS;
 constexpr uint32_t MQTT_RETRY_MS = pgl::config::gw::MQTT_RETRY_MS;
 constexpr uint32_t STATUS_INTERVAL_MS = pgl::config::gw::STATUS_INTERVAL_MS;
+constexpr uint8_t MQTT_UPLINK_QUEUE_CAPACITY = pgl::config::gw::MQTT_UPLINK_QUEUE_CAPACITY;
+constexpr size_t MQTT_UPLINK_QUEUE_ITEM_BYTES = pgl::config::gw::MQTT_UPLINK_QUEUE_ITEM_BYTES;
 constexpr uint8_t CONFIG_RESPONSE_REPEAT_COUNT = pgl::config::gw::CONFIG_RESPONSE_REPEAT_COUNT;
 constexpr uint16_t CONFIG_RESPONSE_REPEAT_GAP_MS = pgl::config::gw::CONFIG_RESPONSE_REPEAT_GAP_MS;
 
@@ -60,6 +62,19 @@ uint32_t lastWifiAttemptMs = 0;
 uint32_t lastMqttAttemptMs = 0;
 uint32_t lastStatusMs = 0;
 bool meshReady = false;
+
+struct PendingMqttPublish {
+    bool used;
+    char topic[96];
+    char payload[MQTT_UPLINK_QUEUE_ITEM_BYTES];
+    size_t len;
+    uint32_t enqueuedAtMs;
+    uint8_t attempts;
+};
+
+PendingMqttPublish mqttQueue[MQTT_UPLINK_QUEUE_CAPACITY]{};
+uint32_t mqttQueuePublished = 0;
+uint32_t mqttQueueDropped = 0;
 
 void logPrint(const char* text) {
     Serial.print(text);
@@ -82,6 +97,117 @@ void logPrintf(const char* fmt, ...) {
     vsnprintf(buffer, sizeof(buffer), fmt, args);
     va_end(args);
     logPrint(buffer);
+}
+
+size_t mqttQueueDepth() {
+    size_t depth = 0;
+    for (const auto& item : mqttQueue) {
+        if (item.used) {
+            depth++;
+        }
+    }
+    return depth;
+}
+
+int findFreeMqttQueueSlot() {
+    for (size_t i = 0; i < MQTT_UPLINK_QUEUE_CAPACITY; ++i) {
+        if (!mqttQueue[i].used) {
+            return static_cast<int>(i);
+        }
+    }
+    return -1;
+}
+
+bool publishMqttNow(const char* topic, const char* payload, size_t len, const char* reason) {
+    const bool ok = mqtt.connected() &&
+                    topic != nullptr &&
+                    payload != nullptr &&
+                    len > 0 &&
+                    mqtt.publish(topic, reinterpret_cast<const uint8_t*>(payload), len);
+    logPrintf("GW_MQTT_PUBLISH_NOW reason=%s topic=%s ok=%u len=%u queueDepth=%u\n",
+              reason,
+              topic != nullptr ? topic : "(null)",
+              ok ? 1 : 0,
+              static_cast<unsigned>(len),
+              static_cast<unsigned>(mqttQueueDepth()));
+    return ok;
+}
+
+bool enqueueMqttPublish(const char* topic, const char* payload, size_t len, const char* reason) {
+    if (topic == nullptr || payload == nullptr || len == 0 || len >= MQTT_UPLINK_QUEUE_ITEM_BYTES) {
+        mqttQueueDropped++;
+        logPrintf("GW_MQTT_QUEUE_DROP reason=%s topic=%s len=%u capacityBytes=%u dropped=%lu\n",
+                  reason,
+                  topic != nullptr ? topic : "(null)",
+                  static_cast<unsigned>(len),
+                  static_cast<unsigned>(MQTT_UPLINK_QUEUE_ITEM_BYTES),
+                  static_cast<unsigned long>(mqttQueueDropped));
+        return false;
+    }
+
+    const int slot = findFreeMqttQueueSlot();
+    if (slot < 0) {
+        mqttQueueDropped++;
+        logPrintf("GW_MQTT_QUEUE_DROP reason=%s topic=%s len=%u queueFull=1 depth=%u dropped=%lu\n",
+                  reason,
+                  topic,
+                  static_cast<unsigned>(len),
+                  static_cast<unsigned>(mqttQueueDepth()),
+                  static_cast<unsigned long>(mqttQueueDropped));
+        return false;
+    }
+
+    PendingMqttPublish& item = mqttQueue[slot];
+    item.used = true;
+    strncpy(item.topic, topic, sizeof(item.topic) - 1);
+    item.topic[sizeof(item.topic) - 1] = '\0';
+    memcpy(item.payload, payload, len);
+    item.payload[len] = '\0';
+    item.len = len;
+    item.enqueuedAtMs = millis();
+    item.attempts = 0;
+    logPrintf("GW_MQTT_QUEUE_ENQUEUE reason=%s topic=%s len=%u depth=%u dropped=%lu\n",
+              reason,
+              item.topic,
+              static_cast<unsigned>(len),
+              static_cast<unsigned>(mqttQueueDepth()),
+              static_cast<unsigned long>(mqttQueueDropped));
+    return true;
+}
+
+bool publishOrQueueMqtt(const char* topic, const char* payload, size_t len, const char* reason) {
+    if (publishMqttNow(topic, payload, len, reason)) {
+        return true;
+    }
+    return enqueueMqttPublish(topic, payload, len, reason);
+}
+
+void drainMqttQueue() {
+    if (!mqtt.connected()) {
+        return;
+    }
+    for (size_t i = 0; i < MQTT_UPLINK_QUEUE_CAPACITY; ++i) {
+        PendingMqttPublish& item = mqttQueue[i];
+        if (!item.used) {
+            continue;
+        }
+        item.attempts++;
+        const bool ok = mqtt.publish(item.topic, reinterpret_cast<const uint8_t*>(item.payload), item.len);
+        logPrintf("GW_MQTT_QUEUE_DRAIN topic=%s ok=%u len=%u attempts=%u ageMs=%lu depth=%u\n",
+                  item.topic,
+                  ok ? 1 : 0,
+                  static_cast<unsigned>(item.len),
+                  item.attempts,
+                  static_cast<unsigned long>(millis() - item.enqueuedAtMs),
+                  static_cast<unsigned>(mqttQueueDepth()));
+        if (!ok) {
+            return;
+        }
+        item.used = false;
+        item.len = 0;
+        mqttQueuePublished++;
+        return;
+    }
 }
 
 int8_t clampToI8(float value) {
@@ -326,16 +452,19 @@ void ensureMqtt() {
 }
 
 bool publishStatus(const char* state) {
-    StaticJsonDocument<256> doc;
+    StaticJsonDocument<384> doc;
     doc["kind"] = "gateway-status";
     doc["gatewayId"] = GATEWAY_ID;
     doc["state"] = state;
     doc["wifi"] = WiFi.status() == WL_CONNECTED;
     doc["mqtt"] = mqtt.connected();
     doc["meshReady"] = meshReady;
+    doc["mqttQueueDepth"] = mqttQueueDepth();
+    doc["mqttQueueDropped"] = mqttQueueDropped;
+    doc["mqttQueuePublished"] = mqttQueuePublished;
     doc["ip"] = WiFi.status() == WL_CONNECTED ? WiFi.localIP().toString() : "";
 
-    char json[256];
+    char json[384];
     const size_t len = serializeJson(doc, json, sizeof(json));
     const bool ok = mqtt.connected() && mqtt.publish(TOPIC_STATUS, reinterpret_cast<const uint8_t*>(json), len);
     logPrintf("GW_MQTT_STATUS state=%s ok=%u\n", state, ok ? 1 : 0);
@@ -606,7 +735,7 @@ bool publishTopologyReport(const pgl::protocol::FrameView& decoded, float rssi, 
 
     char json[1024];
     const size_t len = serializeJson(doc, json, sizeof(json));
-    const bool ok = mqtt.connected() && mqtt.publish(TOPIC_TOPOLOGY, reinterpret_cast<const uint8_t*>(json), len);
+    const bool ok = publishOrQueueMqtt(TOPIC_TOPOLOGY, json, len, "topology");
     if (parentId != 0) {
         logPrintf("GW_TOPOLOGY_PUBLISH topic=%s report=%s ch=0x%04X parent=0x%04X ok=%u\n",
                   TOPIC_TOPOLOGY, reportType, chId, parentId, ok ? 1 : 0);
@@ -663,7 +792,7 @@ void publishMeshFrame(const uint8_t* frame, size_t frameLen, float rssi, float s
 
     char json[1024];
     const size_t len = serializeJson(doc, json, sizeof(json));
-    const bool ok = mqtt.connected() && mqtt.publish(TOPIC_UPLINK, reinterpret_cast<const uint8_t*>(json), len);
+    const bool ok = publishOrQueueMqtt(TOPIC_UPLINK, json, len, "uplink");
     logPrintf("GW_MQTT_PUBLISH topic=%s ok=%u frameLen=%u parseStatus=%u\n",
               TOPIC_UPLINK,
               ok ? 1 : 0,
@@ -820,6 +949,7 @@ void loop() {
     ensureMqtt();
     mqtt.loop();
     publishStatusPeriodic();
+    drainMqttQueue();
 
     if (meshReady && meshRadio != nullptr) {
         receiveMeshOnce();

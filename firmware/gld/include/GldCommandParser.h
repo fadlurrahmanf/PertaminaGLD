@@ -40,9 +40,13 @@ bool parseSerialCommand(GldSerialCommand& outCommand);
 bool parseSerialModeCommand(GldMode& outMode);
 
 // Parse a raw LoRa AppFrame for MSG_NODE_DOWNLINK.
-// Validates magic, CRC, message type, and that targetNodeId == myNodeId.
-// Returns true + sets outMode when a valid mode-switch command is found.
+// Validates magic, CRC, message type, targetNodeId, AES-CMAC auth tag, and
+// replay commandId before accepting a mode-switch command.
 bool parseLoRaDownlinkCmd(const uint8_t* frame, size_t frameLen,
-                          uint16_t myNodeId, GldMode& outMode);
+                          uint16_t myNodeId,
+                          const uint8_t aesKey[16],
+                          bool aesKeyPresent,
+                          uint16_t& lastCommandId,
+                          GldMode& outMode);
 
 }  // namespace pgl::gld

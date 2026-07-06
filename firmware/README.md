@@ -94,12 +94,19 @@ python firmware/tests/run_tests.py
 Current expected result:
 
 ```text
-27/27 tests passed
+31/31 tests passed
 ```
 
 These tests assert current protocol constants, firmware versions, active envs,
-GLD board pin macros, current GLD unified scaffolds, Node-RED pull hopList
-contract, and selected source guardrails.
+GLD board pin macros, current GLD unified scaffolds, authenticated downlink
+guards, Node-RED pull hopList contract, and selected source guardrails.
+
+## GLD Security Provisioning
+
+The production `gld` runtime blocks LoRa uplink until `SET_APP_CONFIG_JSON`
+provisions `keyId` plus `aesKeyHex` into NVS. `GLD_ALLOW_SELFTEST_AES_FALLBACK`
+defaults to `0`; use `-DGLD_ALLOW_SELFTEST_AES_FALLBACK=1` only for explicit
+bench/self-test builds.
 
 ## Current Design Mirrors
 

@@ -57,6 +57,7 @@ constexpr uint16_t BATT_START_MV           = pgl::config::ch::BATT_START_MV;
 constexpr uint16_t BATT_RUN_MIN_MV         = pgl::config::ch::BATT_RUN_MIN_MV;
 constexpr uint16_t BATT_CRITICAL_MV        = pgl::config::ch::BATT_CRITICAL_MV;
 constexpr uint32_t ALARM_ACK_TMO_MS        = pgl::config::ch::ALARM_ACK_TMO_MS;
+constexpr uint8_t  ALARM_RETRY_MAX         = pgl::config::ch::ALARM_RETRY_MAX;
 constexpr uint8_t  PARENT_FAIL_TH          = pgl::config::ch::PARENT_FAIL_TH;
 constexpr uint8_t  NO_ACK_RECOVERY_TH      = pgl::config::ch::NO_ACK_RECOVERY_TH;
 constexpr uint32_t FAILOVER_CDN_MS         = pgl::config::ch::FAILOVER_CDN_MS;
@@ -814,10 +815,10 @@ bool enqueueRelayFrame(const pgl::protocol::FrameView& decoded, uint16_t nextHop
 
 bool sendNodeDownlink(uint16_t targetNodeId, PendingDownlink* dl) {
     if (!starReady || starRadio == nullptr || dl == nullptr || !dl->active) return false;
-    static uint8_t downlinkSeq = 0;
+    const uint8_t downlinkSeq = static_cast<uint8_t>(dl->commandId & 0x00FF);
     uint8_t downlinkFrame[pgl::protocol::APPFRAME_OVERHEAD + pgl::protocol::STAR_MAX_PAYLOAD]{};
     const pgl::protocol::FrameEncodeResult enc = pgl::protocol::encodeAppFrame(
-        pgl::protocol::MSG_NODE_DOWNLINK, CH_ID, targetNodeId, downlinkSeq++,
+        pgl::protocol::MSG_NODE_DOWNLINK, CH_ID, targetNodeId, downlinkSeq,
         dl->payload, dl->payloadLen,
         downlinkFrame, sizeof(downlinkFrame), pgl::protocol::STAR_MAX_PAYLOAD);
     logPrintf("CH_NODE_DOWNLINK_TX nodeId=0x%04X encStatus=%u frameSize=%u\n",
@@ -839,6 +840,7 @@ void onAlarmAckFromParent() {
               alarmAck.nodeId, alarmAck.seq, alarmAck.retryCount);
     pgl::ch::markAlarmAcked(alarmAck.nodeId, alarmAck.seq, alarmQueue, ALARM_QUEUE_CAPACITY);
     alarmAck.active = false;
+    parentFailCnt   = 0;
     noAckBurst      = 0;
 }
 
@@ -864,8 +866,30 @@ void checkAlarmAckTimeout() {
     if (!alarmAck.active) return;
     if (millis() - alarmAck.sentAtMs < ALARM_ACK_TMO_MS) return;
 
-    logPrintf("CH_ALARM_ACK_TIMEOUT nodeId=0x%04X seq=%u noRetry=1\n",
-              alarmAck.nodeId, alarmAck.seq);
+    if (alarmAck.retryCount < ALARM_RETRY_MAX) {
+        const uint8_t nextRetry = static_cast<uint8_t>(alarmAck.retryCount + 1);
+        const bool canRetry = meshReady && meshRadio != nullptr && txAllowed() &&
+                              alarmAck.frameSize > 0 && alarmAck.frameSize <= sizeof(alarmAck.frame);
+        bool txOk = false;
+        if (canRetry) {
+            txOk = transmitRadio(meshRadio, MESH_PINS, alarmAck.frame, alarmAck.frameSize, "MESH_ALARM_RETRY");
+            startMeshReceive("after-alarm-retry");
+        }
+        alarmAck.retryCount = nextRetry;
+        alarmAck.sentAtMs = millis();
+        logPrintf("CH_ALARM_ACK_RETRY nodeId=0x%04X seq=%u retry=%u max=%u txOk=%u canRetry=%u\n",
+                  alarmAck.nodeId, alarmAck.seq, nextRetry, ALARM_RETRY_MAX,
+                  txOk ? 1 : 0, canRetry ? 1 : 0);
+        if (!txOk) {
+            parentFailCnt++;
+            noAckBurst++;
+            checkFailover();
+        }
+        return;
+    }
+
+    logPrintf("CH_ALARM_ACK_GIVEUP nodeId=0x%04X seq=%u retries=%u max=%u\n",
+              alarmAck.nodeId, alarmAck.seq, alarmAck.retryCount, ALARM_RETRY_MAX);
     pgl::ch::markAlarmAcked(alarmAck.nodeId, alarmAck.seq, alarmQueue, ALARM_QUEUE_CAPACITY);
     alarmAck.active = false;
     parentFailCnt++;

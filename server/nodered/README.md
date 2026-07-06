@@ -32,7 +32,8 @@ Flow menyediakan:
   - default flow generator tidak mengaktifkan polling HTTP.
 - MQTT command bridge:
   - inject/publish `gld/gateway/cmd/pull`
-  - inject/publish `gld/gateway/cmd/node`
+  - high-level GLD command input `gld/server/cmd/node`
+  - signed Gateway command output `gld/gateway/cmd/node`
 - Inject test vector:
   - `GLD AES-GCM test vector`
 
@@ -45,6 +46,7 @@ Flow menyediakan:
 - `gld/gateway/error`
 - command inject:
   - `gld/gateway/cmd/pull`
+  - `gld/server/cmd/node`
   - `gld/gateway/cmd/node`
 
 Pull command mengikuti kontrak CH `SERVER_PULL_REQUEST`: payload berisi
@@ -54,7 +56,9 @@ Pull command mengikuti kontrak CH `SERVER_PULL_REQUEST`: payload berisi
 {"requestId":1,"hopList":["0x0064"]}
 ```
 
-Command GLD/downlink tetap memakai topic berbeda `gld/gateway/cmd/node` dan
+Command GLD/downlink high-level masuk ke `gld/server/cmd/node` dengan
+`mode`. Flow menandatangani payload memakai `GLD_AES128_KEY_HEX` lalu publish
+hasil `hex` authenticated ke `gld/gateway/cmd/node`; topic Gateway ini tetap
 boleh membawa `node`.
 
 ## Dataset Flow Controls
@@ -98,7 +102,7 @@ bench `v0.1.2` diarahkan ke `CHANGE_ME_MQTT_HOST:1884`.
 
 ## Catatan Keamanan
 
-Flow memakai test key `000102030405060708090A0B0C0D0E0F` jika `GLD_AES128_KEY_HEX` tidak diisi. Ini hanya untuk bench/selftest. Untuk produksi, set key dari environment/secret store.
+Flow wajib menerima `GLD_AES128_KEY_HEX` dari environment/secret store. Jika key kosong, decrypt GLD dan builder downlink authenticated ditolak eksplisit; tidak ada fallback ke test key produksi.
 
 ## Compatibility Notes
 

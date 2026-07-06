@@ -1,5 +1,6 @@
 #include "GldCommandParser.h"
 #include "AppFrame.h"
+#include "GldCrypto.h"
 #include "ProtocolConstants.h"
 #include <Arduino.h>
 #include <cstring>
@@ -7,6 +8,10 @@
 namespace pgl::gld {
 
 namespace {
+
+constexpr uint8_t CMD_SET_MODE_AUTHENTICATED = 0x81;
+constexpr size_t AUTHENTICATED_MODE_CMD_LEN = 8;
+constexpr size_t AUTH_TAG_LEN = 4;
 
 void resetCommand(GldSerialCommand& command) {
     command.type = GldSerialCommandType::None;
@@ -72,6 +77,38 @@ bool readCommandFrom(Stream& stream, char* buf, uint16_t& pos,
     return false;
 }
 
+bool commandIdIsNewer(uint16_t candidate, uint16_t lastAccepted) {
+    if (candidate == 0 || candidate == lastAccepted) {
+        return false;
+    }
+    if (lastAccepted == 0) {
+        return true;
+    }
+    return static_cast<uint16_t>(candidate - lastAccepted) < 0x8000;
+}
+
+bool verifyModeCommandCmac(const pgl::protocol::FrameView& decoded,
+                           const uint8_t aesKey[16]) {
+    if (decoded.payload == nullptr || decoded.payloadLen != AUTHENTICATED_MODE_CMD_LEN || aesKey == nullptr) {
+        return false;
+    }
+
+    uint8_t macInput[9]{};
+    macInput[0] = static_cast<uint8_t>((decoded.srcId >> 8) & 0xFF);
+    macInput[1] = static_cast<uint8_t>(decoded.srcId & 0xFF);
+    macInput[2] = static_cast<uint8_t>((decoded.dstId >> 8) & 0xFF);
+    macInput[3] = static_cast<uint8_t>(decoded.dstId & 0xFF);
+    macInput[4] = decoded.seq;
+    memcpy(&macInput[5], decoded.payload, 4);
+
+    uint8_t cmac[16]{};
+    if (pgl::protocol::computeAesCmac128(aesKey, macInput, sizeof(macInput), cmac)
+        != pgl::protocol::GldCryptoStatus::Ok) {
+        return false;
+    }
+    return memcmp(cmac, &decoded.payload[4], AUTH_TAG_LEN) == 0;
+}
+
 }  // namespace
 
 bool parseSerialCommand(GldSerialCommand& outCommand) {
@@ -99,8 +136,13 @@ bool parseSerialModeCommand(GldMode& outMode) {
 }
 
 bool parseLoRaDownlinkCmd(const uint8_t* frame, size_t frameLen,
-                          uint16_t myNodeId, GldMode& outMode) {
+                          uint16_t myNodeId,
+                          const uint8_t aesKey[16],
+                          bool aesKeyPresent,
+                          uint16_t& lastCommandId,
+                          GldMode& outMode) {
     if (frame == nullptr || frameLen == 0) return false;
+    if (!aesKeyPresent || aesKey == nullptr) return false;
 
     pgl::protocol::FrameView decoded{};
     if (pgl::protocol::decodeAppFrame(frame, frameLen, decoded,
@@ -117,14 +159,20 @@ bool parseLoRaDownlinkCmd(const uint8_t* frame, size_t frameLen,
     // dstId in AppFrame header must match this GLD
     if (decoded.dstId != myNodeId) return false;
 
-    // Payload: cmdType(1) mode(1) — commandPayload forwarded verbatim by CH
-    if (decoded.payloadLen < 2 || decoded.payload == nullptr) return false;
+    // Payload: cmdType(1)=0x81, mode(1), commandId:uint16BE, cmacTag4.
+    if (decoded.payloadLen != AUTHENTICATED_MODE_CMD_LEN || decoded.payload == nullptr) return false;
 
-    if (decoded.payload[0] != 0x01) return false;  // cmdType SET_MODE
+    if (decoded.payload[0] != CMD_SET_MODE_AUTHENTICATED) return false;
 
     const uint8_t modeVal = decoded.payload[1];
     if (modeVal > static_cast<uint8_t>(GldMode::NULLING)) return false;
 
+    const uint16_t commandId =
+        (static_cast<uint16_t>(decoded.payload[2]) << 8) | decoded.payload[3];
+    if (!commandIdIsNewer(commandId, lastCommandId)) return false;
+    if (!verifyModeCommandCmac(decoded, aesKey)) return false;
+
+    lastCommandId = commandId;
     outMode = static_cast<GldMode>(modeVal);
     return true;
 }

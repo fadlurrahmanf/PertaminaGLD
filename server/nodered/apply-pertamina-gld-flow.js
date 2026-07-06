@@ -2016,6 +2016,20 @@ return msg;`,
     y: 700,
     wires: []
   }),
+  nodeBase("mqtt in", "mqtt_server_node_command", {
+    name: "MQTT high-level node command",
+    topic: "gld/server/cmd/node",
+    qos: "0",
+    datatype: "json",
+    broker,
+    nl: false,
+    rap: true,
+    rh: 0,
+    inputs: 0,
+    x: 200,
+    y: 740,
+    wires: [[id("build_node_command_auth")]]
+  }),
   nodeBase("inject", "inject_node_command", {
     name: "Inject GLD SET_MODE dataset",
     props: [{ p: "payload" }, { p: "topic", vt: "str" }],
@@ -2023,11 +2037,124 @@ return msg;`,
     crontab: "",
     once: false,
     onceDelay: "0.1",
-    topic: "gld/gateway/cmd/node",
-    payload: JSON.stringify({ cluster: "0x0064", node: "0xF001", id: 1, ttl: 600, hex: "0101" }),
+    topic: "gld/server/cmd/node",
+    payload: JSON.stringify({ cluster: "0x0064", node: "0xF001", id: 1, ttl: 600, mode: "dataset" }),
     payloadType: "json",
     x: 200,
-    y: 760,
+    y: 800,
+    wires: [[id("build_node_command_auth")]]
+  }),
+  nodeBase("function", "build_node_command_auth", {
+    name: "build authenticated node command",
+    func: `function cleanHex(input) {
+  return String(input || "").replace(/^0x/i, "").replace(/[^0-9a-fA-F]/g, "");
+}
+
+function parseId(value, fallback) {
+  if (value === undefined || value === null || value === "") return fallback;
+  const text = String(value).trim();
+  const parsed = text.toLowerCase().startsWith("0x") ? parseInt(text, 16) : Number(text);
+  return Number.isFinite(parsed) ? (parsed & 0xFFFF) : fallback;
+}
+
+function u16be(value) {
+  return Buffer.from([(value >> 8) & 0xFF, value & 0xFF]);
+}
+
+function xor16(a, b) {
+  const out = Buffer.alloc(16);
+  for (let i = 0; i < 16; i++) out[i] = a[i] ^ b[i];
+  return out;
+}
+
+function leftShiftOne(block) {
+  const out = Buffer.alloc(16);
+  let carry = 0;
+  for (let i = 15; i >= 0; i--) {
+    const value = block[i];
+    out[i] = ((value << 1) & 0xFF) | carry;
+    carry = (value & 0x80) ? 1 : 0;
+  }
+  return out;
+}
+
+function aesBlock(cryptoModule, key, block) {
+  const cipher = cryptoModule.createCipheriv("aes-128-ecb", key, null);
+  cipher.setAutoPadding(false);
+  return Buffer.concat([cipher.update(block), cipher.final()]);
+}
+
+function aesCmac(cryptoModule, key, message) {
+  const zero = Buffer.alloc(16);
+  const rb = 0x87;
+  const l = aesBlock(cryptoModule, key, zero);
+  const k1 = leftShiftOne(l);
+  if (l[0] & 0x80) k1[15] ^= rb;
+  const k2 = leftShiftOne(k1);
+  if (k1[0] & 0x80) k2[15] ^= rb;
+
+  const complete = message.length > 0 && message.length % 16 === 0;
+  const blockCount = complete ? message.length / 16 : Math.floor(message.length / 16) + 1;
+  let last = Buffer.alloc(16);
+  const lastOffset = (blockCount - 1) * 16;
+  if (complete) {
+    last = xor16(message.subarray(lastOffset, lastOffset + 16), k1);
+  } else {
+    message.copy(last, 0, lastOffset);
+    last[message.length - lastOffset] = 0x80;
+    last = xor16(last, k2);
+  }
+
+  let x = Buffer.alloc(16);
+  for (let i = 0; i < blockCount - 1; i++) {
+    x = aesBlock(cryptoModule, key, xor16(x, message.subarray(i * 16, i * 16 + 16)));
+  }
+  return aesBlock(cryptoModule, key, xor16(x, last));
+}
+
+const p = msg.payload || {};
+const cryptoModule = global.get("crypto") || (typeof crypto !== "undefined" ? crypto : null);
+if (!cryptoModule || typeof cryptoModule.createCipheriv !== "function") {
+  node.error("Node-RED crypto module is required for authenticated GLD node commands", msg);
+  return null;
+}
+
+const keyHex = cleanHex(env.get("GLD_AES128_KEY_HEX"));
+if (keyHex.length !== 32) {
+  node.error("GLD_AES128_KEY_HEX must be set to 32 hex chars before building GLD node commands", msg);
+  return null;
+}
+
+const modeMap = { inference: 0, running: 0, dataset: 1, nulling: 2 };
+const modeText = String(p.mode ?? "dataset").trim().toLowerCase();
+const mode = modeMap[modeText] !== undefined ? modeMap[modeText] : Number(p.mode);
+if (!Number.isFinite(mode) || mode < 0 || mode > 2) {
+  node.error("mode must be inference/running, dataset, nulling, or 0..2", msg);
+  return null;
+}
+
+const cluster = parseId(p.cluster || p.clusterId, 0x0064);
+const nodeId = parseId(p.node || p.nodeId, 0xF001);
+const commandId = parseId(p.id || p.commandId, 1);
+const appSeq = commandId & 0xFF;
+const command = Buffer.from([0x81, mode & 0xFF, (commandId >> 8) & 0xFF, commandId & 0xFF]);
+const macInput = Buffer.concat([u16be(cluster), u16be(nodeId), Buffer.from([appSeq]), command]);
+const tag = aesCmac(cryptoModule, Buffer.from(keyHex, "hex"), macInput).subarray(0, 4);
+
+p.hex = Buffer.concat([command, tag]).toString("hex").toUpperCase();
+p.id = commandId;
+p.commandAuth = "aes-cmac-32";
+p.commandPayload = "cmdType(0x81)+mode+commandId+cmacTag4";
+msg.payload = p;
+return msg;`,
+    outputs: 1,
+    timeout: 0,
+    noerr: 0,
+    initialize: "",
+    finalize: "",
+    libs: [],
+    x: 520,
+    y: 780,
     wires: [[id("mqtt_out_node_command"), id("debug_mqtt_command")]]
   }),
   nodeBase("mqtt out", "mqtt_out_node_command", {
@@ -2041,8 +2168,8 @@ return msg;`,
     correl: "",
     expiry: "",
     broker,
-    x: 560,
-    y: 760,
+    x: 820,
+    y: 780,
     wires: []
   }),
   nodeBase("debug", "debug_mqtt_command", {

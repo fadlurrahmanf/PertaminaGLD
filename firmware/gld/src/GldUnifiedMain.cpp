@@ -8,6 +8,7 @@
 #include <esp_system.h>
 
 #include <cstdarg>
+#include <cctype>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -152,6 +153,10 @@ struct RuntimeConfig {
     char mqttUser[33]{};
     char mqttPass[65]{};
     char topicRoot[65]{};
+    uint8_t aesKeyId = 0;
+    uint8_t aesKey[16]{};
+    bool aesKeyPresent = false;
+    uint16_t lastDownlinkCommandId = 0;
 };
 
 RuntimeConfig runtimeConfig{};
@@ -256,6 +261,57 @@ uint16_t nodeIdFromDeviceId(const char* deviceId, uint16_t fallback) {
     return static_cast<uint16_t>(parsed);
 }
 
+int hexNibble(char c) {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    return -1;
+}
+
+bool parseAesKeyHex(const char* text, uint8_t out[16]) {
+    if (text == nullptr || out == nullptr) return false;
+    size_t outLen = 0;
+    int highNibble = -1;
+    for (const char* p = text; *p != '\0'; ++p) {
+        if ((*p == '0') && (p[1] == 'x' || p[1] == 'X') && highNibble < 0 && outLen == 0) {
+            ++p;
+            continue;
+        }
+        const int nibble = hexNibble(*p);
+        if (nibble < 0) {
+            if (*p == ':' || *p == '-' || *p == '_' || isspace(static_cast<unsigned char>(*p))) {
+                continue;
+            }
+            return false;
+        }
+        if (highNibble < 0) {
+            highNibble = nibble;
+        } else {
+            if (outLen >= 16) return false;
+            out[outLen++] = static_cast<uint8_t>((highNibble << 4) | nibble);
+            highNibble = -1;
+        }
+    }
+    return highNibble < 0 && outLen == 16;
+}
+
+void clearRuntimeAesKey() {
+    runtimeConfig.aesKeyId = 0;
+    memset(runtimeConfig.aesKey, 0, sizeof(runtimeConfig.aesKey));
+    runtimeConfig.aesKeyPresent = false;
+}
+
+void applySelfTestAesFallbackIfAllowed() {
+#if GLD_ALLOW_SELFTEST_AES_FALLBACK
+    runtimeConfig.aesKeyId = pgl::gld::selftest::KEY_ID;
+    memcpy(runtimeConfig.aesKey, pgl::gld::selftest::AES_KEY, sizeof(runtimeConfig.aesKey));
+    runtimeConfig.aesKeyPresent = true;
+    logPrintln("GLD_SECURITY_LOAD=SELFTEST_FALLBACK");
+#else
+    logPrintln("GLD_SECURITY_LOAD=UNPROVISIONED");
+#endif
+}
+
 void buildRuntimeTopics() {
     snprintf(mqttClientId, sizeof(mqttClientId), "gld-unified-%s", runtimeConfig.deviceId);
     snprintf(topicCmd, sizeof(topicCmd), "%s/%s/cmd", runtimeConfig.topicRoot, runtimeConfig.deviceId);
@@ -276,6 +332,8 @@ void resetRuntimeConfigDefaults() {
     copyBounded(runtimeConfig.mqttUser, sizeof(runtimeConfig.mqttUser), DEFAULT_MQTT_USER);
     copyBounded(runtimeConfig.mqttPass, sizeof(runtimeConfig.mqttPass), DEFAULT_MQTT_PASS);
     copyBounded(runtimeConfig.topicRoot, sizeof(runtimeConfig.topicRoot), DEFAULT_TOPIC_ROOT);
+    clearRuntimeAesKey();
+    runtimeConfig.lastDownlinkCommandId = 0;
     buildRuntimeTopics();
 }
 
@@ -303,16 +361,32 @@ void loadRuntimeConfig() {
     value = prefs.getString("topicRoot", runtimeConfig.topicRoot);
     copyBounded(runtimeConfig.topicRoot, sizeof(runtimeConfig.topicRoot), value.c_str());
     runtimeConfig.ctrlword = static_cast<uint8_t>(prefs.getUChar("ctrlword", runtimeConfig.ctrlword));
+    runtimeConfig.aesKeyId = static_cast<uint8_t>(prefs.getUChar("aesKeyId", 0));
+    runtimeConfig.aesKeyPresent = prefs.getBool("aesKeySet", false) &&
+                                  runtimeConfig.aesKeyId != 0 &&
+                                  prefs.getBytesLength("aesKey") == sizeof(runtimeConfig.aesKey);
+    if (runtimeConfig.aesKeyPresent) {
+        prefs.getBytes("aesKey", runtimeConfig.aesKey, sizeof(runtimeConfig.aesKey));
+    } else {
+        clearRuntimeAesKey();
+    }
+    runtimeConfig.lastDownlinkCommandId = prefs.getUShort("lastCmdId", 0);
     prefs.end();
+    if (!runtimeConfig.aesKeyPresent) {
+        applySelfTestAesFallbackIfAllowed();
+    }
     buildRuntimeTopics();
-    logPrintf("GLD_APP_CONFIG_LOAD=%s deviceId=%s nodeId=0x%04X ssid=%s mqttHost=%s mqttPort=%u topicRoot=%s\n",
+    logPrintf("GLD_APP_CONFIG_LOAD=%s deviceId=%s nodeId=0x%04X ssid=%s mqttHost=%s mqttPort=%u topicRoot=%s aesKey=%u keyId=%u lastCmdId=%u\n",
               runtimeConfigValid() ? "OK" : "DEFAULT_UNCONFIGURED",
               runtimeConfig.deviceId,
               runtimeConfig.nodeId,
               runtimeConfig.wifiSsid,
               runtimeConfig.mqttHost,
               runtimeConfig.mqttPort,
-              runtimeConfig.topicRoot);
+              runtimeConfig.topicRoot,
+              runtimeConfig.aesKeyPresent ? 1 : 0,
+              runtimeConfig.aesKeyId,
+              runtimeConfig.lastDownlinkCommandId);
 }
 
 bool saveRuntimeConfig() {
@@ -329,6 +403,24 @@ bool saveRuntimeConfig() {
     prefs.putString("mqttUser", runtimeConfig.mqttUser);
     prefs.putString("mqttPass", runtimeConfig.mqttPass);
     prefs.putString("topicRoot", runtimeConfig.topicRoot);
+    if (runtimeConfig.aesKeyPresent && runtimeConfig.aesKeyId != 0) {
+        prefs.putBool("aesKeySet", true);
+        prefs.putUChar("aesKeyId", runtimeConfig.aesKeyId);
+        prefs.putBytes("aesKey", runtimeConfig.aesKey, sizeof(runtimeConfig.aesKey));
+    } else {
+        prefs.putBool("aesKeySet", false);
+        prefs.remove("aesKeyId");
+        prefs.remove("aesKey");
+    }
+    prefs.putUShort("lastCmdId", runtimeConfig.lastDownlinkCommandId);
+    prefs.end();
+    return true;
+}
+
+bool saveDownlinkReplayState() {
+    Preferences prefs;
+    if (!prefs.begin("gld_app", false)) return false;
+    prefs.putUShort("lastCmdId", runtimeConfig.lastDownlinkCommandId);
     prefs.end();
     return true;
 }
@@ -387,6 +479,8 @@ void addCapabilities(JsonObject caps) {
     caps["nullingConfig"] = "read_only";
     caps["serialAppConfig"] = true;
     caps["serialDeviceId"] = true;
+    caps["securityProvisioning"] = "SET_APP_CONFIG_JSON aesKeyHex";
+    caps["authenticatedDownlink"] = true;
 }
 
 void addTelemetry(JsonObject telemetry) {
@@ -429,6 +523,11 @@ void emitInfoJson() {
     appConfig["mqttUser"] = runtimeConfig.mqttUser;
     appConfig["topicRoot"] = runtimeConfig.topicRoot;
     appConfig["configValid"] = runtimeConfigValid();
+    JsonObject security = doc.createNestedObject("security");
+    security["aesKeyProvisioned"] = runtimeConfig.aesKeyPresent;
+    security["keyId"] = runtimeConfig.aesKeyId;
+    security["selfTestFallbackAllowed"] = GLD_ALLOW_SELFTEST_AES_FALLBACK ? true : false;
+    security["lastDownlinkCommandId"] = runtimeConfig.lastDownlinkCommandId;
     JsonObject caps = doc.createNestedObject("capabilities");
     addCapabilities(caps);
     rawJsonLine("GLD_INFO_JSON", doc);
@@ -469,6 +568,9 @@ void emitStatusJson() {
     lora["lastTxOk"] = lastLoraTxOk;
     lora["txSeq"] = txSeq;
     lora["txCounter"] = txCounter;
+    lora["aesKeyProvisioned"] = runtimeConfig.aesKeyPresent;
+    lora["keyId"] = runtimeConfig.aesKeyId;
+    lora["lastDownlinkCommandId"] = runtimeConfig.lastDownlinkCommandId;
 
     JsonObject dataset = doc.createNestedObject("dataset");
     dataset["state"] = datasetStateName();
@@ -524,7 +626,7 @@ void rebootAfterAckIfRequested(bool reboot) {
 }
 
 void onSetAppConfigJson(const char* payload) {
-    StaticJsonDocument<768> doc;
+    StaticJsonDocument<1024> doc;
     if (deserializeJson(doc, payload)) {
         emitCommandAck("SET_APP_CONFIG", "error", "invalid json", false);
         return;
@@ -546,10 +648,27 @@ void onSetAppConfigJson(const char* payload) {
     const char* topicRoot = doc["topicRoot"].as<const char*>();
     if (topicRoot == nullptr) topicRoot = runtimeConfig.topicRoot;
     const bool reboot = doc["reboot"] | true;
+    const bool clearAesKey = doc["clearAesKey"] | false;
+    const char* aesKeyHex = doc["aesKeyHex"].as<const char*>();
+    if (aesKeyHex == nullptr) aesKeyHex = doc["gldAes128KeyHex"].as<const char*>();
+    if (aesKeyHex == nullptr) aesKeyHex = doc["GLD_AES128_KEY_HEX"].as<const char*>();
+    const bool aesKeyProvided = aesKeyHex != nullptr && strlen(aesKeyHex) > 0;
+    uint8_t parsedAesKey[16]{};
+    const uint8_t requestedKeyId = static_cast<uint8_t>(doc["keyId"] | runtimeConfig.aesKeyId);
 
     if (strlen(ssid) == 0 || strlen(mqttHost) == 0 || strlen(topicRoot) == 0 || mqttPort == 0) {
         emitCommandAck("SET_APP_CONFIG", "rejected", "ssid, mqttHost, mqttPort, and topicRoot are required", false);
         return;
+    }
+    if (aesKeyProvided) {
+        if (requestedKeyId == 0) {
+            emitCommandAck("SET_APP_CONFIG", "rejected", "keyId must be 1..255 when aesKeyHex is provided", false);
+            return;
+        }
+        if (!parseAesKeyHex(aesKeyHex, parsedAesKey)) {
+            emitCommandAck("SET_APP_CONFIG", "rejected", "aesKeyHex must contain exactly 16 bytes / 32 hex chars", false);
+            return;
+        }
     }
 
     copyBounded(runtimeConfig.wifiSsid, sizeof(runtimeConfig.wifiSsid), ssid);
@@ -559,6 +678,16 @@ void onSetAppConfigJson(const char* payload) {
     copyBounded(runtimeConfig.mqttUser, sizeof(runtimeConfig.mqttUser), mqttUser);
     copyBounded(runtimeConfig.mqttPass, sizeof(runtimeConfig.mqttPass), mqttPass);
     copyBounded(runtimeConfig.topicRoot, sizeof(runtimeConfig.topicRoot), topicRoot);
+    if (clearAesKey) {
+        clearRuntimeAesKey();
+        runtimeConfig.lastDownlinkCommandId = 0;
+    }
+    if (aesKeyProvided) {
+        runtimeConfig.aesKeyId = requestedKeyId;
+        memcpy(runtimeConfig.aesKey, parsedAesKey, sizeof(runtimeConfig.aesKey));
+        runtimeConfig.aesKeyPresent = true;
+        runtimeConfig.lastDownlinkCommandId = 0;
+    }
     buildRuntimeTopics();
 
     if (!saveRuntimeConfig()) {
@@ -566,11 +695,13 @@ void onSetAppConfigJson(const char* payload) {
         return;
     }
 
-    logPrintf("GLD_APP_CONFIG_SAVE=OK ssid=%s mqttHost=%s mqttPort=%u topicRoot=%s reboot=%u\n",
+    logPrintf("GLD_APP_CONFIG_SAVE=OK ssid=%s mqttHost=%s mqttPort=%u topicRoot=%s aesKey=%u keyId=%u reboot=%u\n",
               runtimeConfig.wifiSsid,
               runtimeConfig.mqttHost,
               runtimeConfig.mqttPort,
               runtimeConfig.topicRoot,
+              runtimeConfig.aesKeyPresent ? 1 : 0,
+              runtimeConfig.aesKeyId,
               reboot ? 1 : 0);
     emitCommandAck("SET_APP_CONFIG", "ok", reboot ? "app config saved; rebooting" : "app config saved", reboot);
     if (!reboot) {
@@ -1394,8 +1525,14 @@ void openLoRaRxWindow() {
         logPrintf("GLD_LORA_DOWNLINK_RX state=%d len=%u\n", rxState, static_cast<unsigned>(rxLen));
         if (rxState == RADIOLIB_ERR_NONE) {
             pgl::gld::GldMode newMode;
-            if (pgl::gld::parseLoRaDownlinkCmd(rxBuf, rxLen, runtimeConfig.nodeId, newMode)) {
+            if (pgl::gld::parseLoRaDownlinkCmd(rxBuf, rxLen,
+                                               runtimeConfig.nodeId,
+                                               runtimeConfig.aesKey,
+                                               runtimeConfig.aesKeyPresent,
+                                               runtimeConfig.lastDownlinkCommandId,
+                                               newMode)) {
                 logPrintf("GLD_LORA_DOWNLINK_CMD mode=%s\n", pgl::gld::gldModeName(newMode));
+                saveDownlinkReplayState();
                 onModeCmd(newMode);
             }
         }
@@ -1404,12 +1541,20 @@ void openLoRaRxWindow() {
 }
 
 void transmitOnce() {
+    if (!runtimeConfig.aesKeyPresent || runtimeConfig.aesKeyId == 0) {
+        lastLoraTxState = -32767;
+        lastLoraTxOk = false;
+        logPrintln("GLD_SECURITY_NOT_PROVISIONED aesKey=0 txBlocked=1");
+        logPrintln("GLD_LORA_TX_RESULT=FAIL");
+        return;
+    }
+
     const pgl::gld::GldPowerReading power = pgl::gld::readGldPower();
     const uint16_t batteryMv = power.batteryValid ? power.batteryMv
                                                    : pgl::protocol::GLD_BATTERY_MV_INVALID;
     pgl::gld::GldFrameBuilderConfig config{
         runtimeConfig.nodeId, static_cast<uint16_t>(GLD_CH_ID),
-        pgl::gld::selftest::KEY_ID,  pgl::gld::selftest::AES_KEY,
+        runtimeConfig.aesKeyId, runtimeConfig.aesKey,
         power.externalPower, pgl::protocol::GLD_LEL_THRESHOLD_PERCENT,
     };
     pgl::gld::GldFrameBuildInput input{

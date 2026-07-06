@@ -417,18 +417,20 @@ Syarat frame:
 
 - AppFrame valid.
 - `dstId` sama dengan GLD node ID `0xF001`.
-- Payload minimal 2 byte.
-- Payload byte 0 adalah `cmdType`.
-- Untuk mode switch, `cmdType = 0x01`.
-- Payload byte 1 adalah mode.
+- Payload harus 8 byte.
+- Payload byte 0 adalah authenticated `cmdType = 0x81`.
+- Payload byte 1 adalah mode `0|1|2`.
+- Payload byte 2..3 adalah `commandId:uint16BE`.
+- Payload byte 4..7 adalah 4 byte pertama AES-CMAC.
+- CMAC input: CH `srcId` + GLD `dstId` + AppFrame seq + payload byte 0..3.
 
 Payload mode switch:
 
-| Tujuan | Payload hex |
+| Tujuan | Payload |
 |---|---|
-| Set `inference` | `0100` |
-| Set `dataset` | `0101` |
-| Set `nulling` | `0102` |
+| Set `inference` | gunakan Node-RED `build authenticated node command` |
+| Set `dataset` | gunakan Node-RED `build authenticated node command` |
+| Set `nulling` | gunakan Node-RED `build authenticated node command` |
 
 Setelah GLD menerima downlink valid, log yang diharapkan:
 
@@ -456,15 +458,18 @@ Alarm:
 - Jika uplink GLD adalah alarm, CH mengirim compact ACK lebih dulu.
 - Setelah ACK alarm, CH baru mengirim pending `NODE_DOWNLINK`.
 
-### 4.5 MQTT ke Gateway untuk Command LoRa
+### 4.5 MQTT ke Server untuk Command LoRa
 
-Gateway subscribe:
+Operator/server publish high-level command ke Node-RED:
 
 ```text
-gld/gateway/cmd/node
+gld/server/cmd/node
 ```
 
-Payload JSON yang dipakai Gateway:
+Node-RED `build authenticated node command` akan menambahkan `hex`
+authenticated, lalu publish hasilnya ke Gateway topic `gld/gateway/cmd/node`.
+
+Payload JSON high-level:
 
 ```json
 {
@@ -472,7 +477,7 @@ Payload JSON yang dipakai Gateway:
   "node": "0xF001",
   "id": 1,
   "ttl": 600,
-  "hex": "0101"
+  "mode": "dataset"
 }
 ```
 
@@ -483,13 +488,14 @@ Field:
 | `cluster` | CH target, default `0x0064` |
 | `node` | GLD target, default `0xF001` |
 | `id` | command ID |
-| `ttl` | TTL detik menurut Gateway payload |
-| `hex` | command payload untuk GLD, contoh `0101` set mode dataset |
+| `ttl` | TTL detik untuk pending downlink di CH |
+| `mode` | `inference`/`running`, `dataset`, atau `nulling` |
+| `hex` | advanced only pada Gateway topic; harus `0x81 + mode + commandId + cmacTag4`, bukan payload lama `0101` |
 
 Contoh publish:
 
 ```powershell
-mosquitto_pub -h CHANGE_ME_MQTT_HOST -p 1884 -u <mqtt-user> -P <mqtt-pass> -t "gld/gateway/cmd/node" -m "{\"cluster\":\"0x0064\",\"node\":\"0xF001\",\"id\":1,\"ttl\":600,\"hex\":\"0101\"}"
+mosquitto_pub -h CHANGE_ME_MQTT_HOST -p 1884 -u <mqtt-user> -P <mqtt-pass> -t "gld/server/cmd/node" -m "{\"cluster\":\"0x0064\",\"node\":\"0xF001\",\"id\":1,\"ttl\":600,\"mode\":\"dataset\"}"
 ```
 
 Expected Gateway log:
@@ -503,7 +509,7 @@ Expected CH log:
 
 ```text
 CH_MESH_RX state=0 len=...
-CH_DOWNLINK_STORED nodeId=0xF001 commandId=1 ttlSec=600 payloadLen=2
+CH_DOWNLINK_STORED nodeId=0xF001 commandId=1 ttlSec=600 payloadLen=8
 CH_NODE_DOWNLINK_TX nodeId=0xF001 encStatus=0 frameSize=...
 ```
 
@@ -773,7 +779,7 @@ Validasi jalur Gateway -> CH -> GLD dengan urutan log:
 ```text
 GW_MQTT_CMD topic=gld/gateway/cmd/node
 GW_MESH_TX purpose=node-command
-CH_DOWNLINK_STORED nodeId=0xF001 commandId=1 ttlSec=600 payloadLen=2
+CH_DOWNLINK_STORED nodeId=0xF001 commandId=1 ttlSec=600 payloadLen=8
 CH_NODE_DOWNLINK_TX nodeId=0xF001
 GLD_LORA_DOWNLINK_CMD mode=...
 GLD_MODE_SWITCH current=... new=...
@@ -822,19 +828,19 @@ mosquitto_sub -h CHANGE_ME_MQTT_HOST -p 1884 -u <mqtt-user> -P <mqtt-pass> -t "g
 Set GLD to dataset through Gateway/CH, intended final payload:
 
 ```powershell
-mosquitto_pub -h CHANGE_ME_MQTT_HOST -p 1884 -u <mqtt-user> -P <mqtt-pass> -t "gld/gateway/cmd/node" -m "{\"cluster\":\"0x0064\",\"node\":\"0xF001\",\"id\":1,\"ttl\":600,\"hex\":\"0101\"}"
+mosquitto_pub -h CHANGE_ME_MQTT_HOST -p 1884 -u <mqtt-user> -P <mqtt-pass> -t "gld/server/cmd/node" -m "{\"cluster\":\"0x0064\",\"node\":\"0xF001\",\"id\":1,\"ttl\":600,\"mode\":\"dataset\"}"
 ```
 
 Set GLD to inference through Gateway/CH:
 
 ```powershell
-mosquitto_pub -h CHANGE_ME_MQTT_HOST -p 1884 -u <mqtt-user> -P <mqtt-pass> -t "gld/gateway/cmd/node" -m "{\"cluster\":\"0x0064\",\"node\":\"0xF001\",\"id\":2,\"ttl\":600,\"hex\":\"0100\"}"
+mosquitto_pub -h CHANGE_ME_MQTT_HOST -p 1884 -u <mqtt-user> -P <mqtt-pass> -t "gld/server/cmd/node" -m "{\"cluster\":\"0x0064\",\"node\":\"0xF001\",\"id\":2,\"ttl\":600,\"mode\":\"inference\"}"
 ```
 
 Set GLD to nulling through Gateway/CH:
 
 ```powershell
-mosquitto_pub -h CHANGE_ME_MQTT_HOST -p 1884 -u <mqtt-user> -P <mqtt-pass> -t "gld/gateway/cmd/node" -m "{\"cluster\":\"0x0064\",\"node\":\"0xF001\",\"id\":3,\"ttl\":600,\"hex\":\"0102\"}"
+mosquitto_pub -h CHANGE_ME_MQTT_HOST -p 1884 -u <mqtt-user> -P <mqtt-pass> -t "gld/server/cmd/node" -m "{\"cluster\":\"0x0064\",\"node\":\"0xF001\",\"id\":3,\"ttl\":600,\"mode\":\"nulling\"}"
 ```
 
 Current note: validate the full Gateway -> CH -> GLD LoRa mode switch path on

@@ -4,15 +4,16 @@ sequenceDiagram
     participant CH as CH (0x0064)
     participant GLD as GLD (0xF001)
 
-    NR->>GW: MQTT cmd/node\n{"cluster":"0x0064","node":"0xF001","id":1,"ttl":600,"hex":"0101"}
-
+    NR->>NR: MQTT gld/server/cmd/node\n{"cluster":"0x0064","node":"0xF001","id":1,"ttl":600,"mode":"dataset"}
+    NR->>NR: Build authenticated hex\n0x81+mode+commandId+cmacTag4
+    NR->>GW: MQTT gld/gateway/cmd/node\nsigned hex command
     GW->>GW: Parse JSON
     GW->>GW: Build MSG_SERVER_NODE_COMMAND\nnodeId(2)+commandId(2)+ttlSec(2)+commandLen(1)+bytes
 
     GW->>CH: LoRa MESH TX\nMSG_SERVER_NODE_COMMAND\ndstId=0x0064
 
-    CH->>CH: Parse frame (⚠ï¸ CH parser skip ttlSec field)
-    CH->>CH: Simpan di PendingDownlink[0xF001]\nTTL 1800s
+    CH->>CH: Parse frame and store ttlSec
+    CH->>CH: Simpan di PendingDownlink[0xF001]\nTTL from command
 
     alt GLD External Power
         CH->>GLD: LoRa STAR TX immediate\nMSG_NODE_DOWNLINK\npayload=command bytes
@@ -22,6 +23,6 @@ sequenceDiagram
         CH->>GLD: LoRa STAR TX dalam RX window\nMSG_NODE_DOWNLINK\npayload=command bytes
     end
 
-    GLD->>GLD: Parse downlink\nbyte[0]=0x01 → SET_MODE\nbyte[1]=mode (0|1|2)
+    GLD->>GLD: Parse downlink\nbyte[0]=0x81 SET_MODE_AUTH\nCMAC + commandId replay guard
     GLD->>GLD: Simpan mode ke NVS
     GLD->>GLD: Restart ESP

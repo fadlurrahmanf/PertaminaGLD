@@ -54,6 +54,13 @@
 // dataset/nulling dan payload JSON yang dipublish.
 #define GLD_MQTT_BUFFER_SIZE     1024
 
+// Default produksi: GLD tidak boleh memakai AES self-test key secara diam-diam.
+// Untuk bench/selftest runtime sementara, build eksplisit dengan
+// -DGLD_ALLOW_SELFTEST_AES_FALLBACK=1.
+#ifndef GLD_ALLOW_SELFTEST_AES_FALLBACK
+#define GLD_ALLOW_SELFTEST_AES_FALLBACK 0
+#endif
+
 // -----------------------------------------------------------------------------
 // Derived / aliases
 // -----------------------------------------------------------------------------

@@ -41,4 +41,10 @@ GldCryptoStatus decryptGldPayload(
     uint8_t recordFlags,
     GldPlainPayload& out);
 
+GldCryptoStatus computeAesCmac128(
+    const uint8_t key[GLD_AES_KEY_SIZE],
+    const uint8_t* message,
+    size_t messageLen,
+    uint8_t out[16]);
+
 }  // namespace pgl::protocol

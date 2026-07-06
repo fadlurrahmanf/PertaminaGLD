@@ -44,6 +44,7 @@ Current generated `pertamina-gld-server.flow.json` contains broker node `pgl_mqt
 | `gld/gateway/status` | Gateway | Node-RED/operator | Gateway status JSON |
 | `gld/gateway/cmd/pull` | Node-RED/server | Gateway | pull command JSON |
 | `gld/gateway/cmd/node` | Node-RED/server | Gateway | node command JSON |
+| `gld/server/cmd/node` | operator/server | Node-RED | high-level node command JSON before signing |
 
 Node-RED also subscribes debug/compat inputs:
 
@@ -117,7 +118,7 @@ Gateway accepts `requestId` or `id`, and `hopList`/`hop_list`/`hops`. It builds 
 Node-RED/Gateway command topic accepts:
 
 ```json
-{"cluster":"0x0064","node":"0xF001","id":1,"ttl":600,"hex":"0101"}
+{"cluster":"0x0064","node":"0xF001","id":1,"ttl":600,"mode":"dataset"}
 ```
 
 Gateway encodes and CH parses the same wire payload:
@@ -127,6 +128,11 @@ nodeId:uint16BE + commandId:uint16BE + ttlSec:uint16BE + commandLen:uint8 + comm
 ```
 
 `ttlSec` controls the CH pending-downlink expiry; `0` falls back to the CH default pending TTL.
+The Node-RED `build authenticated node command` function subscribes to
+`gld/server/cmd/node`, converts `mode` into
+`commandBytes = 0x81 + mode + commandId + cmacTag4` using
+`GLD_AES128_KEY_HEX`, then publishes the signed command to
+`gld/gateway/cmd/node`.
 
 ## Topology Boundary
 

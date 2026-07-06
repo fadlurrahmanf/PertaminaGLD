@@ -154,6 +154,7 @@ constexpr uint8_t TCA9548A_ADDR = 0x71;
 constexpr uint8_t MCP4725_ADDR = 0x60;
 constexpr uint16_t GLD_DAC_CODE_MIN = 0;
 constexpr uint16_t GLD_DAC_CODE_MAX = 4095;
-constexpr uint16_t SENSOR_TO_MUX_CH[SENSOR_COUNT] = {7, 6, 5, 4, 3, 2, 0, 1};
+constexpr uint8_t SENSOR_TO_MUX_CH[SENSOR_COUNT] = {7, 6, 5, 4, 3, 2, 1, 0};
+constexpr uint8_t SENSOR_TO_ADS_CH[SENSOR_COUNT] = {0, 1, 2, 7, 6, 5, 4, 3};
 
 }  // namespace pgl::gld::board

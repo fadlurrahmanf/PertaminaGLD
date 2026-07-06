@@ -26,6 +26,10 @@ uint8_t muxSingleEnded(uint8_t channel) {
     return static_cast<uint8_t>(0x0F | (channel << 4));
 }
 
+uint8_t adsInputForSensor(uint8_t sensorChannel) {
+    return pgl::gld::board::SENSOR_TO_ADS_CH[sensorChannel];
+}
+
 bool waitDrdyLow(uint32_t timeoutMs) {
     const uint32_t start = millis();
     while (digitalRead(pgl::gld::board::PIN_ADS1256_DRDY) != LOW) {
@@ -81,7 +85,7 @@ bool GldAds1256Reader::begin(SPIClass& spi) {
     ads_->InitializeADC();
     ads_->setPGA(PGA_64);
     ads_->setDRATE(DRATE_30000SPS);
-    ads_->setMUX(muxSingleEnded(0));
+    ads_->setMUX(muxSingleEnded(adsInputForSensor(0)));
     (void)ads_->readSingle();
 
     for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
@@ -166,7 +170,7 @@ uint8_t GldAds1256Reader::getCurrentGain(uint8_t channel) const {
 void GldAds1256Reader::applyGain(uint8_t channel) {
     ads_->setPGA(PGA_LIB_CONST[pgaIndex_[channel]]);
     delay(20);
-    ads_->setMUX(muxSingleEnded(channel));
+    ads_->setMUX(muxSingleEnded(adsInputForSensor(channel)));
     (void)ads_->readSingle();
 }
 
@@ -175,7 +179,7 @@ float GldAds1256Reader::convertToVoltage(long raw, uint8_t pgaGain) const {
 }
 
 long GldAds1256Reader::readSingleInternal(uint8_t channel) {
-    ads_->setMUX(muxSingleEnded(channel));
+    ads_->setMUX(muxSingleEnded(adsInputForSensor(channel)));
     (void)ads_->readSingle();
     return ads_->readSingle();
 }

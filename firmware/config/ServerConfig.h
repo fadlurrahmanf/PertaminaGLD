@@ -16,7 +16,7 @@
 
 // Host/IP broker MQTT Server Dataset. Dipakai GLD direct MQTT untuk dataset,
 // status, summary, command ack, dan hasil nulling.
-#define PGL_SERVER_DATASET_MQTT_HOST       "CHANGE_ME"
+#define PGL_SERVER_DATASET_MQTT_HOST       "10.217.88.180"
 
 // Port broker MQTT Server Dataset. Bench saat ini memakai 1884.
 #define PGL_SERVER_DATASET_MQTT_PORT       1884

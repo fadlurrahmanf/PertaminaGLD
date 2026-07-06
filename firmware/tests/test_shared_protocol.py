@@ -1063,6 +1063,9 @@ def test_current_design_docs_mirror_live_source_contracts():
     assert "confirm count | 10" in gld_doc
     assert "minimum final voltage | `0.0 V`" in gld_doc
     assert "inference`/`running` and `nulling` call the offline-mode guard" in gld_doc
+    assert "| 3 | MQ5 | 7 | 4 | 3 |" in gld_doc
+    assert "| 7 | MQ2 | 3 | 0 | 7 |" in gld_doc
+    assert "`{0, 1, 2, 7, 6, 5, 4, 3}`" in gld_doc
     assert "`gas-leak-detector/F001/dataset/data`" in gld_doc
     assert "`sensor_voltage`" in gld_doc
     assert "`sensor_gain`" in gld_doc
@@ -1218,9 +1221,13 @@ def test_gld_sensor_selftest_scaffold_present():
     assert "ADS_DRATE_REG" in sensor_main
     assert "status=%s" in sensor_main
     assert "gldAds1256StatusName" in sensor_main
+    assert "SENSOR_TO_ADS_CH" in board_pins
+    assert "{0, 1, 2, 7, 6, 5, 4, 3}" in board_pins
     assert not pathlib.Path("firmware/gld/src/Ads1256Probe.cpp").exists()
     assert not pathlib.Path("firmware/gld/include/Ads1256Probe.h").exists()
     assert "muxSingleEnded" in ads_reader
+    assert "adsInputForSensor" in ads_reader
+    assert "SENSOR_TO_ADS_CH[sensorChannel]" in ads_reader
     assert "#include <ADS1256.h>" in ads_reader
     assert "new ADS1256" in ads_reader
     assert "InitializeADC()" in ads_reader
@@ -1262,7 +1269,7 @@ def test_gld_nulling_selftest_scaffold_present():
     assert "TCA9548A_ADDR = 0x71" in board_pins
     assert "MCP4725_ADDR = 0x60" in board_pins
     assert "SENSOR_TO_MUX_CH" in board_pins
-    assert "{7, 6, 5, 4, 3, 2, 0, 1}" in board_pins
+    assert "{7, 6, 5, 4, 3, 2, 1, 0}" in board_pins
     assert "#include <TCA9548.h>" in dac_src
     assert "#include <MCP4725.h>" in dac_src
     assert "writeDAC(value, false)" in dac_src

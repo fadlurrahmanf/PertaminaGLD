@@ -90,7 +90,7 @@ Current GLD firmware is a unified ESP32-S3 runtime with three persistent modes:
 
 ```text
 Sensors + ADS1256
-    -> moving average / model input remap
+    -> moving average / model input
     -> ML inference
     -> GLD compact payload
     -> AES-GCM encrypted payload
@@ -149,23 +149,21 @@ disabled by the board profile.
 
 ### 5.3 Sensor Order
 
-| Hardware channel | Sensor | TCA mux channel | Model input index |
-|---:|---|---:|---:|
-| 0 | MQ8 | 7 | 0 |
-| 1 | MQ135 | 6 | 2 |
-| 2 | MQ3 | 5 | 5 |
-| 3 | MQ5 | 4 | 3 |
-| 4 | MQ4 | 3 | 4 |
-| 5 | MQ7 | 2 | 6 |
-| 6 | MQ6 | 0 | 1 |
-| 7 | MQ2 | 1 | 7 |
+| Program channel | Sensor | ADS1256 input | TCA/MCP mux channel | Runtime feature index |
+|---:|---|---:|---:|---:|
+| 0 | MQ8 | 0 | 7 | 0 |
+| 1 | MQ135 | 1 | 6 | 1 |
+| 2 | MQ3 | 2 | 5 | 2 |
+| 3 | MQ5 | 7 | 4 | 3 |
+| 4 | MQ4 | 6 | 3 | 4 |
+| 5 | MQ7 | 5 | 2 | 5 |
+| 6 | MQ6 | 4 | 1 | 6 |
+| 7 | MQ2 | 3 | 0 | 7 |
 
-The baseline design repeatedly emphasizes sensor ordering. The current firmware
-keeps the same physical sensor names, but it does use a model-input remap:
-
-```text
-HW_TO_MODEL = {0, 2, 5, 3, 4, 6, 1, 7}
-```
+The board-side ADS order includes AINCOM between AIN2 and AIN7; AINCOM is not a
+sensor channel. Firmware maps the eight MQ sensors to ADS inputs
+`{0, 1, 2, 7, 6, 5, 4, 3}` and keeps runtime arrays, `feature_order`, moving
+average, and model input in the program-channel order above.
 
 ## 6. Power Detection
 

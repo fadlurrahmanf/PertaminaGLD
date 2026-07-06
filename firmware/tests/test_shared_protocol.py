@@ -914,6 +914,11 @@ def test_gld_unified_runtime_scaffolds_present():
     assert "GLD_CMD_ACK_JSON" in unified_src
     assert "disableNetworkForOfflineMode(\"inference_mode\")" in unified_src
     assert "disableNetworkForOfflineMode(\"nulling_mode\")" in unified_src
+    assert "MODE_BATTERY_ALLOWED_TEMP" in unified_src
+    assert "MODE_BLOCKED reason=battery_mode_not_allowed" not in unified_src
+    assert "maintainBatteryWakeLatch();" in unified_src
+    assert "batteryModeTick();" in unified_src
+    assert "runNullingService(ads, dac, nullingLogLine, batteryModeTick)" in unified_src
     assert "WiFi.mode(WIFI_OFF)" in unified_src
     assert "emitCommandAck(\"SET_MODE\", \"ok\", \"mode switch accepted\", true)" in unified_src
     assert "doc[\"targetChId\"] = static_cast<uint16_t>(GLD_CH_ID)" in unified_src

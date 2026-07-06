@@ -781,6 +781,27 @@ void checkSerial() {
     }
 }
 
+void maintainBatteryWakeLatch() {
+    if (!batteryPowerMode) return;
+
+    const uint32_t now = millis();
+    if (now - lastTpl5010KeepaliveMs >= pgl::gld::GLD_TPL5010_KEEPALIVE_INTERVAL_MS) {
+        lastTpl5010KeepaliveMs = now;
+        pgl::gld::pulseGldTpl5010Keepalive();
+    }
+}
+
+void pulseBatteryWakeLatchNow() {
+    if (!batteryPowerMode) return;
+    pgl::gld::pulseGldTpl5010Keepalive();
+    lastTpl5010KeepaliveMs = millis();
+}
+
+void batteryModeTick() {
+    checkSerial();
+    maintainBatteryWakeLatch();
+}
+
 // ---------------------------------------------------------------------------
 // Common hardware init (all modes)
 // ---------------------------------------------------------------------------
@@ -1016,7 +1037,7 @@ bool connectWifi() {
     WiFi.begin(runtimeConfig.wifiSsid, runtimeConfig.wifiPassword);
     const uint32_t t0 = millis();
     while (WiFi.status() != WL_CONNECTED && millis() - t0 < WIFI_TIMEOUT_MS) {
-        checkSerial();
+        batteryModeTick();
         delay(50);
     }
     const bool ok = WiFi.status() == WL_CONNECTED;
@@ -1195,7 +1216,7 @@ bool initNulling(bool runIfMissing) {
     }
     logPrintln("NULLING_NVS_LOAD=empty running_nulling_now");
     const pgl::gld::GldNullingServiceResult result =
-        pgl::gld::runNullingService(ads, dac, nullingLogLine, checkSerial);
+        pgl::gld::runNullingService(ads, dac, nullingLogLine, batteryModeTick);
     logPrintf("NULLING_RUN status=%s successCount=%u\n",
               pgl::gld::gldNullingStatusName(result.status), result.successCount);
     if (result.status != pgl::gld::GldNullingStatus::Ok) return false;
@@ -1718,6 +1739,9 @@ void setup() {
     logPrintf("GLD_POWER mode=%s externalPower=%u batteryMv=%u\n",
               pgl::gld::gldPowerModeName(power.mode),
               power.externalPower ? 1 : 0, power.batteryMv);
+    batteryPowerMode = !power.externalPower;
+    lastTpl5010KeepaliveMs = millis();
+    pulseBatteryWakeLatchNow();
     emitInfoJson();
     emitStatusJson();
 
@@ -1766,22 +1790,8 @@ void setup() {
                           modeDetail);
         runExternalPowerBootSensorSamples(power);
 
-        batteryPowerMode = !power.externalPower;
-        lastTpl5010KeepaliveMs = millis();
         lastScanMs = millis();
         lastTxMs   = millis();
-
-    } else if (!power.externalPower) {
-        // Dataset and Nulling are not allowed on battery power (design.md §7.5/§7.6/§7.7).
-        logPrintf("MODE_BLOCKED reason=battery_mode_not_allowed mode=%s\n",
-                  pgl::gld::gldModeName(currentMode));
-        pgl::gld::writeGldMode(pgl::gld::GldMode::INFERENCE);
-        delay(NULLING_AUTO_RESTART_DELAY_MS);
-        Serial.flush();
-#if defined(ARDUINO_ARCH_ESP32)
-        Serial0.flush();
-#endif
-        ESP.restart();
 
     } else if (currentMode == pgl::gld::GldMode::NULLING && pgl::gld::readGldAlarmLatched()) {
         // Nulling must not run while a prior alarm is still latched/unacknowledged
@@ -1798,11 +1808,20 @@ void setup() {
 
     } else {
         // --- DATASET / NULLING mode init ---
+        if (batteryPowerMode) {
+            logPrintf("MODE_BATTERY_ALLOWED_TEMP mode=%s\n",
+                      pgl::gld::gldModeName(currentMode));
+            pulseBatteryWakeLatchNow();
+        }
         dacReady = dac.begin(Wire);
         logPrintf("DAC_MUX_BEGIN_RESULT=%s\n", dacReady ? "PASS" : "FAIL");
+        pulseBatteryWakeLatchNow();
 
         if (currentMode == pgl::gld::GldMode::DATASET) {
-            if (adsReady && dacReady) initNulling(false);
+            if (adsReady && dacReady) {
+                initNulling(false);
+                pulseBatteryWakeLatchNow();
+            }
             logPrintf("DATASET_READY adsReady=%u dacReady=%u nullingProfileId=%u\n",
                       adsReady ? 1 : 0, dacReady ? 1 : 0, nullingProfileId);
             char modeDetail[96];
@@ -1818,9 +1837,12 @@ void setup() {
                               adsReady && dacReady && nullingProfileId > 0,
                               modeDetail);
             runExternalPowerBootSensorSamples(power);
+            pulseBatteryWakeLatchNow();
             connectWifi();
+            pulseBatteryWakeLatchNow();
             mqtt.setBufferSize(MQTT_BUFFER_SIZE);
             mqttConnect();
+            pulseBatteryWakeLatchNow();
             lastStatusMs = millis();
 
         } else {
@@ -1846,7 +1868,7 @@ void setup() {
                 logPrintln("NULLING_RUN=start");
 
                 const pgl::gld::GldNullingServiceResult result =
-                    pgl::gld::runNullingService(ads, dac, nullingLogLine, checkSerial);
+                    pgl::gld::runNullingService(ads, dac, nullingLogLine, batteryModeTick);
                 logPrintf("NULLING_RUN_DONE status=%s successCount=%u\n",
                           pgl::gld::gldNullingStatusName(result.status), result.successCount);
 
@@ -1898,20 +1920,10 @@ void setup() {
 
 void loop() {
     checkSerial();
+    maintainBatteryWakeLatch();
 
     if (currentMode == pgl::gld::GldMode::INFERENCE) {
         const uint32_t now = millis();
-
-        // Battery mode is powered through the TPL5010 wake latch: a keepalive
-        // pulse on DONE (IO14) is required at least every
-        // GLD_TPL5010_KEEPALIVE_INTERVAL_MS or TPL5010 asserts RSTn and force-resets
-        // the ESP32. This does not power the node off - only pulseGldPowerLatchClear()
-        // (IO38/CLR) does that.
-        if (batteryPowerMode &&
-            now - lastTpl5010KeepaliveMs >= pgl::gld::GLD_TPL5010_KEEPALIVE_INTERVAL_MS) {
-            lastTpl5010KeepaliveMs = now;
-            pgl::gld::pulseGldTpl5010Keepalive();
-        }
 
         if (batteryPowerMode) {
             // One-shot wake cycle: scan + inference + LoRa TX + RX window, then

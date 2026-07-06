@@ -415,10 +415,35 @@ def mqtt_publish_dataset(payload: dict[str, Any]) -> dict[str, Any]:
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
     if username or password:
         client.username_pw_set(username, password)
+    connected = threading.Event()
+    connect_error: dict[str, str] = {}
+
+    def on_connect(_client: Any, _userdata: Any, _flags: Any, reason_code: Any, _properties: Any) -> None:
+        if str(reason_code).lower() == "success" or reason_code == 0:
+            connected.set()
+        else:
+            connect_error["message"] = str(reason_code)
+            connected.set()
+
+    client.on_connect = on_connect
     client.connect(host, port, keepalive=10)
+    client.loop_start()
+    if not connected.wait(timeout=5):
+        client.loop_stop()
+        client.disconnect()
+        raise RuntimeError(f"MQTT connect timeout to {host}:{port}")
+    if connect_error:
+        client.loop_stop()
+        client.disconnect()
+        raise RuntimeError(f"MQTT connect failed: {connect_error['message']}")
     result = client.publish(topic, message, qos=0, retain=False)
     result.wait_for_publish(timeout=5)
+    if not result.is_published():
+        client.loop_stop()
+        client.disconnect()
+        raise RuntimeError(f"MQTT publish timeout to {topic}")
     client.disconnect()
+    client.loop_stop()
     events.emit("mqtt_publish", {"topic": topic, "payload": message})
     return {"ok": True, "topic": topic}
 

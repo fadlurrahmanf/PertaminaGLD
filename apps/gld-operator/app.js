@@ -1511,7 +1511,26 @@ async function publishDatasetCommand(command) {
     if (!state.mock && mode !== "dataset") {
       setDatasetState("Switching Mode", "Sending SET_MODE dataset before MQTT START_DATASET", "SET_MODE dataset before START_DATASET");
       await sendCommand("SET_MODE dataset");
-      await wait(2500);
+      // GLD reboots after SET_MODE; wait for it to reconnect WiFi+MQTT and resubscribe.
+      // Poll GET_STATUS until mode=dataset is confirmed (up to 15s) before publishing START_DATASET.
+      // Without this, START_DATASET can be published before GLD has subscribed → silently lost.
+      await wait(3000);
+      const modeDeadline = Date.now() + 12000;
+      let modeConfirmed = false;
+      while (Date.now() < modeDeadline && !modeConfirmed) {
+        if (String(state.status?.mode || "").toLowerCase() === "dataset") {
+          modeConfirmed = true;
+          break;
+        }
+        await sendCommand("GET_STATUS");
+        await wait(1000);
+        if (String(state.status?.mode || "").toLowerCase() === "dataset") {
+          modeConfirmed = true;
+        }
+      }
+      if (!modeConfirmed) {
+        appendLog("DATASET_MODE_WAIT mode not confirmed as dataset after 15s, publishing START_DATASET anyway", "in");
+      }
     }
   } else {
     setDatasetState("Stopping", "Publishing STOP_DATASET", "STOP_DATASET requested");

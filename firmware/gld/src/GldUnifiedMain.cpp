@@ -1169,10 +1169,11 @@ void handleDatasetTopic(const char* payload, unsigned int length) {
         optionalDigitalWrite(pgl::gld::board::PIN_STATUS_LED, ACTIVE_LOW_OUTPUT_ON);
         publishCmdAck("START_DATASET", "ok");
         publishDatasetStatus("running", currentLabel);
-        logPrintf("DATASET_START label=%s target=%lu interval=%lu\n",
+        logPrintf("DATASET_START label=%s target=%lu interval=%lu fan=%u\n",
                   currentLabel,
                   static_cast<unsigned long>(targetSamples),
-                  static_cast<unsigned long>(sampleIntervalMs));
+                  static_cast<unsigned long>(sampleIntervalMs),
+                  useFanIntake ? 1u : 0u);
     } else if (strcmp(cmd, "STOP_DATASET") == 0) {
         if (datasetState == DatasetState::Running)
             optionalDigitalWrite(pgl::gld::board::PIN_DC_FAN, LOW);
@@ -1643,8 +1644,16 @@ void publishDataRecord() {
     char payload[896];
     const size_t len = serializeJson(doc, payload, sizeof(payload));
     const bool ok = mqtt.publish(topicData, payload, false);
-    logPrintf("DATASET_RECORD seq=%lu ok=%u len=%u\n",
-              static_cast<unsigned long>(datasetSeq), ok ? 1 : 0,
+    bool anyFail = false;
+    for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
+        if (latestSensorStatus[ch] != static_cast<uint8_t>(pgl::gld::GldAds1256Status::Ok)) {
+            anyFail = true;
+            break;
+        }
+    }
+    logPrintf("DATASET_RECORD seq=%lu label=%s ok=%u anyFail=%u len=%u\n",
+              static_cast<unsigned long>(datasetSeq), currentLabel,
+              ok ? 1u : 0u, anyFail ? 1u : 0u,
               static_cast<unsigned>(len));
     ++datasetSeq;
 }

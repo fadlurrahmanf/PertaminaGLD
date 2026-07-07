@@ -138,7 +138,7 @@ CH uses `setPacketReceivedAction()` callbacks on both Radio A (STAR) and Radio B
 
 ### Feature Channel Remapping
 
-`GldUnifiedMain.cpp` applies `HW_TO_MODEL[8] = {0,2,5,3,4,6,1,7}` before normalization. This maps hardware ADS1256 channel index to model input index. The design (`docs/design/gld/design.md` sec 8.6) states "no remap", but the current placeholder model was trained with this mapping — do not remove it until the real trained model is validated against the actual feature order.
+`GldUnifiedMain.cpp` and `GldInferenceMain.cpp` apply `MODEL_FROM_HW[8] = {1,7,2,4,5,3,6,0}` before normalization. `MODEL_FROM_HW[modelIdx]` is the hardware ADS1256 channel index that feeds model input `modelIdx`. Hardware channels are {MQ8,MQ135,MQ3,MQ5,MQ4,MQ7,MQ6,MQ2}; the placeholder model (scaler_params.cpp) was trained expecting {MQ135,MQ2,MQ3,MQ4,MQ7,MQ5,MQ6,MQ8}. Do not remove this remap until the real trained model is validated against the actual feature order.
 
 ### Key Provisioning
 

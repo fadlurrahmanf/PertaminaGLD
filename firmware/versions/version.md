@@ -10,6 +10,30 @@ YYYY-MM-DD HH:mm:ss Asia/Jakarta
 
 ---
 
+## GLD v0.8.13 / CH v0.7.1 / Gateway v0.1.3 - 2026-07-07 Asia/Jakarta
+
+**Summary:** Fix ML inference channel remap and WROOM profile alarm/buzzer pins.
+
+### Changed Files
+
+- firmware/shared/include/FirmwareVersion.h (GLD 0.8.12 -> 0.8.13)
+- firmware/gld/src/GldUnifiedMain.cpp
+- firmware/gld/src/GldInferenceMain.cpp
+- firmware/gld/include/BoardPins.h
+- firmware/versions/version.md
+
+### Behavior
+
+- **ML inference channel remap restored**: `runInference()` in both `GldUnifiedMain.cpp` and `GldInferenceMain.cpp` now applies `MODEL_FROM_HW[8] = {1,7,2,4,5,3,6,0}` before StandardScaler normalization. Hardware channels deliver {MQ8,MQ135,MQ3,MQ5,MQ4,MQ7,MQ6,MQ2}; the placeholder model (scaler_params.cpp) was trained expecting features in order {MQ135,MQ2,MQ3,MQ4,MQ7,MQ5,MQ6,MQ8}. Without the remap each sensor's voltage was normalized with a different sensor's mean/std, producing incorrect inference results.
+- **WROOM profile alarm lamp and buzzer disabled**: `BoardPins.h` WROOM profile (`PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8=1`) now defines `PGL_GLD_PIN_ALARM_LAMP=-1` and `PGL_GLD_PIN_BUZZER=-1`. GPIO1 and GPIO2 are occupied by LoRa DIO1 and RST in the WROOM pinout; the prior values (41, 40) were incorrect and mismatched the final_design.md specification which states these outputs are disabled on the WROOM bench board.
+- No LoRa payload, AES-GCM, dataset schema, WiFi/MQTT, nulling algorithm, or mode-flow behavior changed.
+
+### Test Result
+
+- No PlatformIO build-only, upload, COM port use, or bench run performed for this version yet.
+
+---
+
 ## GLD v0.8.12 / CH v0.7.1 / Gateway v0.1.3 - 2026-06-26 Asia/Jakarta
 
 **Summary:** Source-sync guardrail cleanup. Firmware comments, host tests, and current design mirrors now describe the active unified GLD runtime instead of older scaffold assumptions.

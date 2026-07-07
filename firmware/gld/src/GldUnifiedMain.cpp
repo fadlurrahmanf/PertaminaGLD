@@ -1490,10 +1490,12 @@ void runInference(const float mavVoltage[8]) {
     if (!mlReady || !network->isInitialized()) return;
     float* modelInput = network->getInputBuffer();
     if (!modelInput) return;
-    // Channel n is fed directly as feature n (no remap - hardware channel order
-    // matches model feature order).
-    for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
-        modelInput[ch] = (mavVoltage[ch] - feature_means[ch]) / feature_stds[ch];
+    // Hardware channels: {MQ8,MQ135,MQ3,MQ5,MQ4,MQ7,MQ6,MQ2}
+    // Model feature order (scaler_params): {MQ135,MQ2,MQ3,MQ4,MQ7,MQ5,MQ6,MQ8}
+    // MODEL_FROM_HW[modelIdx] = hwChannelIdx that provides that model feature.
+    static constexpr uint8_t MODEL_FROM_HW[8] = {1, 7, 2, 4, 5, 3, 6, 0};
+    for (uint8_t m = 0; m < pgl::gld::board::SENSOR_COUNT; ++m) {
+        modelInput[m] = (mavVoltage[MODEL_FROM_HW[m]] - feature_means[m]) / feature_stds[m];
     }
     float confidenceFloat = 0.0f;
     const int predicted = network->predict(confidenceFloat);

@@ -69,6 +69,8 @@ const state = {
   nullingLogs: [],
   mockNullingStep: 0,
   history: [],
+  exportHistory: [],
+  modeAckCallbacks: [],
   info: null,
   status: null,
   alarmActive: false,
@@ -196,8 +198,12 @@ function appendLog(line, direction = "in") {
   const prefix = direction === "out" ? ">>" : "<<";
   const entry = `${nowText()} ${prefix} ${line}`;
   state.logs.push(entry);
-  if (state.logs.length > 3000) state.logs.splice(0, state.logs.length - 3000);
-  elements.serialLog.textContent = state.logs.join("\n");
+  if (state.logs.length > 3000) {
+    state.logs.splice(0, state.logs.length - 3000);
+    elements.serialLog.textContent = state.logs.join("\n");
+  } else {
+    elements.serialLog.insertAdjacentText("beforeend", (state.logs.length > 1 ? "\n" : "") + entry);
+  }
   elements.serialLog.scrollTop = elements.serialLog.scrollHeight;
 }
 
@@ -533,6 +539,9 @@ function handleLine(rawLine) {
       if (ack.mode) state.mode = ack.mode;
       if (ack.deviceId) setText("deviceId", ack.deviceId);
       if (ack.cmd === "SET_DEVICE_ID" && ack.status === "ok") setText("deviceId", ack.deviceId);
+      if (ack.cmd === "SET_MODE" && state.modeAckCallbacks.length) {
+        state.modeAckCallbacks.splice(0).forEach((cb) => cb(ack));
+      }
       setBadge(elements.protocolLabel, `${ack.cmd}: ${ack.status}`, ack.status === "ok" ? "ok" : "warn");
       syncDeviceSummary();
       return;
@@ -643,6 +652,7 @@ function playAlarmBeep() {
     if (!AudioContextClass) return;
     const context = state.alarmAudioContext || new AudioContextClass();
     state.alarmAudioContext = context;
+    if (context.state === "suspended") context.resume();
     const oscillator = context.createOscillator();
     const gain = context.createGain();
     oscillator.type = "square";
@@ -664,7 +674,7 @@ function maybeAppendTelemetry(status) {
   if (!telemetry || !telemetry.valid || !Array.isArray(telemetry.sensorVoltage)) return;
 
   const ts = Date.now();
-  state.history.push({
+  const point = {
     ts,
     deviceId: status.deviceId || state.info?.deviceId || "",
     mode: status.mode || state.mode,
@@ -675,7 +685,10 @@ function maybeAppendTelemetry(status) {
     sensorVoltage: telemetry.sensorVoltage.slice(0, 8),
     sensorGain: Array.isArray(telemetry.sensorGain) ? telemetry.sensorGain.slice(0, 8) : [],
     featureOrder: Array.isArray(telemetry.featureOrder) ? telemetry.featureOrder.slice(0, 8) : []
-  });
+  };
+  state.history.push(point);
+  state.exportHistory.push(point);
+  if (state.exportHistory.length > 10000) state.exportHistory.shift();
   pruneHistory();
   drawChart();
   maybeCaptureDatasetTelemetry(status);
@@ -810,7 +823,8 @@ function handleDatasetMqttEvent(payload) {
 
 function addDatasetRecord(raw, source) {
   const record = normalizeDatasetRecord(raw, source);
-  const key = record.seq !== "" ? `${record.source}:${record.device_id}:${record.seq}` : `${record.source}:${record.timestamp_ms}:${state.dataset.rows.length}`;
+  const sessionKey = state.dataset.startedAt || Date.now();
+  const key = record.seq !== "" ? `${sessionKey}:${record.source}:${record.device_id}:${record.seq}` : `${record.source}:${record.timestamp_ms}:${state.dataset.rows.length}`;
   if (state.dataset.rowKeys.has(key)) return;
   state.dataset.rowKeys.add(key);
   state.dataset.rows.push(record);
@@ -1121,6 +1135,7 @@ function drawChart() {
   canvas.style.height = `${cssHeight}px`;
 
   const ctx = canvas.getContext("2d");
+  if (!ctx) return;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, cssWidth, cssHeight);
   ctx.fillStyle = "#0a100f";
@@ -1409,7 +1424,7 @@ function normalizePortName(value) {
 
 function ensureManualPortOption(select = true) {
   const manual = normalizePortName(elements.manualPortInput.value);
-  if (!/^COM\d+$/i.test(manual)) {
+  if (!/^(COM\d+|\/dev\/(tty|cu)\S+)$/i.test(manual)) {
     appendLog(`MANUAL_PORT_REJECTED invalid COM port: ${elements.manualPortInput.value}`, "in");
     return "";
   }
@@ -1510,8 +1525,12 @@ async function publishDatasetCommand(command) {
     const mode = String(state.status?.mode || state.info?.mode || state.mode || "").toLowerCase();
     if (!state.mock && mode !== "dataset") {
       setDatasetState("Switching Mode", "Sending SET_MODE dataset before MQTT START_DATASET", "SET_MODE dataset before START_DATASET");
+      const ackPromise = new Promise((resolve) => {
+        const timer = setTimeout(() => resolve(null), 5000);
+        state.modeAckCallbacks.push((ack) => { clearTimeout(timer); resolve(ack); });
+      });
       await sendCommand("SET_MODE dataset");
-      await wait(2500);
+      await ackPromise;
     }
   } else {
     setDatasetState("Stopping", "Publishing STOP_DATASET", "STOP_DATASET requested");
@@ -1610,14 +1629,21 @@ async function useLocalhost() {
 function saveForm() {
   const ids = ["datasetLabel", "targetSamples", "sampleIntervalMs", "maxDurationMs", "fanOnMs", "postFanSettleMs", "wifiSsid", "mqttHost", "mqttPort", "mqttUser", "topicRoot", "firmwareEnv", "targetDeviceId", "manualPortInput"];
   const data = Object.fromEntries(ids.map((id) => [id, $(id).value]));
+  data.datasetNullingFirst = $("datasetNullingFirst").checked;
   localStorage.setItem("gldOperatorWeb.form", JSON.stringify(data));
+  localStorage.setItem("gldOperatorWeb.lastPort", elements.portSelect.value || "");
 }
 
 function loadForm() {
   try {
     const data = JSON.parse(localStorage.getItem("gldOperatorWeb.form") || "{}");
     Object.entries(data).forEach(([id, value]) => {
-      if ($(id)) $(id).value = value;
+      if (id === "datasetNullingFirst") {
+        const el = $("datasetNullingFirst");
+        if (el) el.checked = Boolean(value);
+      } else if ($(id)) {
+        $(id).value = value;
+      }
     });
   } catch {}
 }
@@ -1648,7 +1674,8 @@ function exportCsv() {
     "alarm",
     ...SENSOR_NAMES
   ];
-  const rows = state.history.map((point) => [
+  const source = state.exportHistory.length ? state.exportHistory : state.history;
+  const rows = source.map((point) => [
     new Date(point.ts).toISOString(),
     point.deviceId,
     point.mode,
@@ -1823,8 +1850,9 @@ async function refreshPorts(bridgeAlreadyChecked = false) {
       elements.portSelect.append(option);
     }
     const manual = ensureManualPortOption(false);
-    const preferred = ports.find((port) => port.path === "COM10")
-      || (manual ? { path: manual } : null)
+    const lastPort = localStorage.getItem("gldOperatorWeb.lastPort") || "";
+    const preferred = (lastPort && ports.find((port) => port.path === lastPort))
+      || (manual ? (ports.find((port) => port.path.toUpperCase() === manual) || { path: manual }) : null)
       || ports[0];
     elements.portSelect.value = preferred.path;
     elements.portLabel.textContent = preferred.path;
@@ -2075,6 +2103,7 @@ function setupEvents() {
   });
   $("clearChartBtn").addEventListener("click", () => {
     state.history = [];
+    state.exportHistory = [];
     drawChart();
   });
   $("exportCsvBtn").addEventListener("click", exportCsv);
@@ -2132,12 +2161,13 @@ function setupEvents() {
     button.addEventListener("click", () => switchTab(button.dataset.tab));
   });
   document.querySelectorAll("input").forEach((input) => {
-    if (input.id !== "datasetNullingFirst") input.addEventListener("change", saveForm);
+    input.addEventListener("change", saveForm);
   });
   window.addEventListener("keydown", (event) => {
     if (event.key === "Escape") setSetupOpen(false);
   });
-  window.addEventListener("resize", drawChart);
+  let _resizeTimer;
+  window.addEventListener("resize", () => { clearTimeout(_resizeTimer); _resizeTimer = setTimeout(drawChart, 80); });
 }
 
 async function bootstrap() {

@@ -88,6 +88,7 @@ class SerialBridge:
         self._lock = threading.Lock()
         self._reader_thread: threading.Thread | None = None
         self._stop = threading.Event()
+        self._ready_queue: queue.Queue[str] = queue.Queue(maxsize=200)
         self.port = ""
         self.baud = 115200
 
@@ -182,6 +183,10 @@ class SerialBridge:
                 line = raw.decode("utf-8", errors="replace").strip("\r")
                 if line:
                     self.events.emit("serial_line", {"line": line})
+                    try:
+                        self._ready_queue.put_nowait(line)
+                    except queue.Full:
+                        pass
         self.events.emit("serial_status", {"connected": False})
 
 
@@ -283,6 +288,9 @@ class DatasetMqttMonitor:
 dataset_monitor = DatasetMqttMonitor(events)
 
 
+_MAX_REQUEST_BODY = 2 * 1024 * 1024  # 2 MB
+
+
 def json_response(handler: SimpleHTTPRequestHandler, payload: Any, status: HTTPStatus = HTTPStatus.OK) -> None:
     body = json.dumps(payload).encode("utf-8")
     handler.send_response(status)
@@ -297,6 +305,8 @@ def read_json(handler: SimpleHTTPRequestHandler) -> dict[str, Any]:
     length = int(handler.headers.get("Content-Length", "0") or "0")
     if length <= 0:
         return {}
+    if length > _MAX_REQUEST_BODY:
+        raise RuntimeError(f"request body too large ({length} bytes)")
     raw = handler.rfile.read(length)
     return json.loads(raw.decode("utf-8"))
 
@@ -497,9 +507,27 @@ def firmware_upload(payload: dict[str, Any]) -> dict[str, Any]:
             code = proc.wait()
             events.emit("upload_done", {"code": code})
             if code == 0 and re.match(r"^[0-9A-F]{4}$", target_id) and target_id != "0000":
-                time.sleep(2.5)
+                time.sleep(2.0)
                 serial_bridge.connect(port, 115200)
-                time.sleep(1.0)
+                # drain any stale lines before waiting
+                while not serial_bridge._ready_queue.empty():
+                    try:
+                        serial_bridge._ready_queue.get_nowait()
+                    except queue.Empty:
+                        break
+                events.emit("upload_line", {"line": "Waiting for GLD ready signal (up to 8 s)..."})
+                deadline = time.monotonic() + 8.0
+                found = False
+                while time.monotonic() < deadline:
+                    try:
+                        line = serial_bridge._ready_queue.get(timeout=0.5)
+                        if any(tok in line for tok in ("GLD_INFO_JSON", "GLD_CMD_ACK_JSON", "GLD_MODE=")):
+                            found = True
+                            break
+                    except queue.Empty:
+                        continue
+                if not found:
+                    events.emit("upload_line", {"line": "GLD ready signal not detected; injecting ID anyway"})
                 serial_bridge.write_line(f'SET_DEVICE_ID_JSON {{"deviceId":"{target_id}","reboot":true}}')
         except Exception as exc:
             events.emit("upload_error", {"message": str(exc)})
@@ -521,7 +549,9 @@ class Handler(SimpleHTTPRequestHandler):
             pass
 
     def end_headers(self) -> None:
-        self.send_header("Access-Control-Allow-Origin", "*")
+        origin = self.headers.get("Origin", "")
+        cors_origin = origin if origin.startswith("http://127.0.0.1") else "null"
+        self.send_header("Access-Control-Allow-Origin", cors_origin)
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.send_header("Cross-Origin-Opener-Policy", "same-origin")
@@ -557,7 +587,9 @@ class Handler(SimpleHTTPRequestHandler):
                 return json_response(self, {"error": str(exc)}, HTTPStatus.INTERNAL_SERVER_ERROR)
         if path == "/api/network":
             try:
-                return json_response(self, network_info())
+                info = network_info()
+                info.pop("password", None)
+                return json_response(self, info)
             except Exception as exc:
                 return json_response(self, {"error": str(exc)}, HTTPStatus.INTERNAL_SERVER_ERROR)
         if path == "/api/dataset/output-dir":

@@ -118,7 +118,10 @@ uint32_t nextNullingRetryMs = 0;
 bool     lastAlarm       = false;
 uint8_t  nullingProfileId = 0;
 uint8_t  nullingAttemptCount = 0;
-pgl::gld::GldClassifyResult lastResult{pgl::protocol::GLD_GAS_CLEAR, 100};
+// GLD_GAS_ANOMALY + confidence 0 is the "not classifying" sentinel (no ML
+// result available yet / ML unavailable), so a dead classifier never looks
+// like a genuine "clear air, 100%" reading. See runScan().
+pgl::gld::GldClassifyResult lastResult{pgl::protocol::GLD_GAS_ANOMALY, 0};
 bool     debugEnabled    = true;
 int16_t  lastLoraBeginState = 0;
 int16_t  lastLoraTxState = 0;
@@ -1450,17 +1453,22 @@ struct NonceCtx { uint32_t counter; };
 bool nonceProvider(uint8_t nonce[pgl::protocol::GLD_AES_GCM_NONCE_SIZE], void* ctx) {
     if (!ctx) return false;
     auto* nc = static_cast<NonceCtx*>(ctx);
-    for (size_t i = 0; i < pgl::protocol::GLD_AES_GCM_NONCE_SIZE; ++i)
-        nonce[i] = pgl::gld::selftest::NONCE[i];
-    const uint32_t r = esp_random();
-    nonce[4]  = static_cast<uint8_t>((r >> 24) & 0xFF);
-    nonce[5]  = static_cast<uint8_t>((r >> 16) & 0xFF);
-    nonce[6]  = static_cast<uint8_t>((r >>  8) & 0xFF);
-    nonce[7]  = static_cast<uint8_t>( r         & 0xFF);
-    nonce[8]  = static_cast<uint8_t>((nc->counter >> 24) & 0xFF);
-    nonce[9]  = static_cast<uint8_t>((nc->counter >> 16) & 0xFF);
-    nonce[10] = static_cast<uint8_t>((nc->counter >>  8) & 0xFF);
-    nonce[11] = static_cast<uint8_t>( nc->counter        & 0xFF);
+    // Full 96-bit random nonce (esp_random() is a HW TRNG on ESP32), plus a
+    // per-boot counter mixed into the last 4 bytes as defense in depth against
+    // a short random collision. The leading bytes must not be a fixed
+    // constant: a fixed prefix collapses effective nonce entropy and weakens
+    // the AES-GCM uniqueness guarantee for every device sharing the fleet key.
+    for (size_t i = 0; i < pgl::protocol::GLD_AES_GCM_NONCE_SIZE; i += 4) {
+        const uint32_t r = esp_random();
+        nonce[i]     = static_cast<uint8_t>((r >> 24) & 0xFF);
+        nonce[i + 1] = static_cast<uint8_t>((r >> 16) & 0xFF);
+        nonce[i + 2] = static_cast<uint8_t>((r >>  8) & 0xFF);
+        nonce[i + 3] = static_cast<uint8_t>( r         & 0xFF);
+    }
+    nonce[8]  ^= static_cast<uint8_t>((nc->counter >> 24) & 0xFF);
+    nonce[9]  ^= static_cast<uint8_t>((nc->counter >> 16) & 0xFF);
+    nonce[10] ^= static_cast<uint8_t>((nc->counter >>  8) & 0xFF);
+    nonce[11] ^= static_cast<uint8_t>( nc->counter        & 0xFF);
     ++nc->counter;
     return true;
 }
@@ -1487,17 +1495,28 @@ uint8_t modelClassToGasClass(int predicted) {
 }
 
 void runInference(const float mavVoltage[8]) {
-    if (!mlReady || !network->isInitialized()) return;
+    if (!mlReady || !network->isInitialized()) {
+        lastResult = {pgl::protocol::GLD_GAS_ANOMALY, 0};
+        return;
+    }
     float* modelInput = network->getInputBuffer();
-    if (!modelInput) return;
+    if (!modelInput) {
+        lastResult = {pgl::protocol::GLD_GAS_ANOMALY, 0};
+        return;
+    }
     // Channel n is fed directly as feature n (no remap - hardware channel order
-    // matches model feature order).
+    // matches model feature order). feature_means/feature_stds in
+    // scaler_params.cpp must be stored in this same physical channel order.
     for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
         modelInput[ch] = (mavVoltage[ch] - feature_means[ch]) / feature_stds[ch];
     }
     float confidenceFloat = 0.0f;
     const int predicted = network->predict(confidenceFloat);
-    if (predicted < 0) { logPrintln("GLD_ML_PREDICT_ERROR"); return; }
+    if (predicted < 0) {
+        logPrintln("GLD_ML_PREDICT_ERROR");
+        lastResult = {pgl::protocol::GLD_GAS_ANOMALY, 0};
+        return;
+    }
     lastResult = {modelClassToGasClass(predicted),
                   static_cast<uint8_t>(confidenceFloat * 100.0f)};
     logPrintf("GLD_ML_RESULT predictedClass=%d gasClass=%u(%s) confidence=%u\n",
@@ -1521,7 +1540,15 @@ void runScan() {
     }
     latestTelemetryValid = true;
     const bool primed = primedChannels >= pgl::gld::board::SENSOR_COUNT;
-    if (primed) runInference(mavVoltage);
+    if (primed && mlReady) {
+        runInference(mavVoltage);
+    } else {
+        // No classification available this scan (sensors not primed yet, or
+        // ML stack failed init). Report the anomaly/unknown sentinel instead
+        // of silently re-sending the last (or default) result, so a dead
+        // classifier never looks like a genuine "clear air" reading.
+        lastResult = {pgl::protocol::GLD_GAS_ANOMALY, 0};
+    }
     const bool alarm = lastResult.gasClass != pgl::protocol::GLD_GAS_CLEAR &&
                        lastResult.confidence >= ML_CONFIDENCE_THRESHOLD;
     logPrintf("GLD_SENSOR_SCAN seq=%lu allValid=%u primed=%u gasClass=%u(%s) confidence=%u alarm=%u\n",

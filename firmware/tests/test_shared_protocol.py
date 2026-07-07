@@ -1356,3 +1356,119 @@ def test_lora_link_selftest_scaffold_present():
     assert "LoRaNormalPayload" not in gld_tx
     assert "LoRaAlarmPayload" not in gld_tx
     assert "LoRaHealthPayload" not in gld_tx
+
+
+def test_scaler_params_stay_in_physical_channel_order():
+    # Regression guard for audit finding C1: scaler_params.cpp feature_means/
+    # feature_stds must be indexed in physical hardware channel order
+    # (BoardPins.h SENSOR_NAMES), not in whatever order the training pipeline
+    # happened to export its columns in. Six of eight channels were silently
+    # standardized with another sensor's statistics before this was caught.
+    board_pins = pathlib.Path("firmware/gld/include/BoardPins.h").read_text(encoding="utf-8")
+    scaler_src = pathlib.Path("firmware/gld/model/scaler_params.cpp").read_text(encoding="utf-8")
+
+    sensor_names_match = re.search(r'SENSOR_NAMES\[SENSOR_COUNT\]\s*=\s*\{([^}]*)\}', board_pins)
+    assert sensor_names_match, "could not find SENSOR_NAMES array in BoardPins.h"
+    physical_order = re.findall(r'"(\w+)"', sensor_names_match.group(1))
+    assert physical_order == ["MQ8", "MQ135", "MQ3", "MQ5", "MQ4", "MQ7", "MQ6", "MQ2"]
+
+    for array_name in ("feature_means", "feature_stds"):
+        block_match = re.search(array_name + r'\[8\]\s*=\s*\{(.*?)\}', scaler_src, re.S)
+        assert block_match, f"could not find {array_name} in scaler_params.cpp"
+        labels = re.findall(r'//\s*ch(\d+)\s+(\w+?)V', block_match.group(1))
+        assert len(labels) == 8, f"{array_name} must have exactly 8 labeled entries"
+        for ch_str, sensor in labels:
+            ch = int(ch_str)
+            assert sensor == physical_order[ch], (
+                f"{array_name} index {ch} is labeled {sensor}V but physical "
+                f"channel {ch} is {physical_order[ch]} per BoardPins.h "
+                f"SENSOR_NAMES - this is exactly the C1 ordering bug"
+            )
+
+
+def test_ch_mesh_relay_sends_hop_by_hop_alarm_ack_to_child():
+    # Regression test for audit finding H1: when an intermediate CH relays a
+    # child CH's alarm push toward its own parent, it must ACK the child
+    # immediately (hop-by-hop), not rely on an ACK from the far-end gateway.
+    # Without this, any CH at mesh depth >= 2 times out waiting for an ACK
+    # that never reaches it, retries repeatedly, and eventually fails over/
+    # restarts while a real gas alarm is active.
+    child_ch_id = 0x0064   # CH-B: depth-2 CH relaying its GLD's alarm
+    parent_ch_id = 0x0001  # CH-A: depth-1 CH, child's immediate parent
+    grandparent_id = 0x006F  # Gateway: parent_ch_id's own parent
+
+    alarm, _, gld_alarm_frame = build_gld_frame(GLD_GAS_METHANE, 90, 3600, 0x33, external_power=False)
+    assert alarm
+
+    # CH-B receives the GLD's STAR uplink and queues it as an AlarmPush push
+    # toward its own parent, CH-A - this is the exact wire frame CH-A
+    # receives over MESH (srcId is CH-B's own CH_ID, per
+    # buildSingleRecordSensorPushFrame, not the GLD's node id).
+    entries = [CacheEntry() for _ in range(2)]
+    uplink = parse_ch_gld_uplink(gld_alarm_frame)
+    status, index, should_ack, _ = update_cache(entries, uplink, now_ms=1000)
+    assert status == "Inserted"
+    assert should_ack
+    entry = entries[index]
+    child_mesh_seq = 0x07
+    mesh_frame_at_parent = build_single_record_push_frame(child_ch_id, parent_ch_id, child_mesh_seq, entry)
+
+    decoded = decode_app_frame(mesh_frame_at_parent)
+    assert decoded["dst_id"] == parent_ch_id
+    assert decoded["src_id"] == child_ch_id
+    assert decoded["type_flags"] & 0x3F == MSG_SENSOR_DATA
+    assert decoded["type_flags"] & FLAG_ALARM_ACK
+
+    # CH-A's uplink-relay handling (ChStarMeshRuntimeMain.cpp): re-encode
+    # toward its own parent with its own CH_ID as srcId, and - the H1 fix -
+    # also send a compact alarm ACK straight back to the child.
+    relay_frame = encode_app_frame(
+        decoded["type_flags"], parent_ch_id, grandparent_id, decoded["seq"], decoded["payload"],
+        max_payload=MESH_MAX_PAYLOAD,
+    )
+    decoded_relay = decode_app_frame(relay_frame)
+    assert decoded_relay["src_id"] == parent_ch_id
+    assert decoded_relay["dst_id"] == grandparent_id
+    assert decoded_relay["payload"] == decoded["payload"]
+
+    is_alarm_sensor_data = decoded["type_flags"] & 0x3F == MSG_SENSOR_DATA and decoded["type_flags"] & FLAG_ALARM_ACK
+    assert is_alarm_sensor_data
+    child_ack = build_compact_alarm_ack(parent_ch_id, decoded["src_id"], decoded["seq"])
+
+    decoded_ack = decode_app_frame(child_ack)
+    assert decoded_ack["src_id"] == parent_ch_id
+    assert decoded_ack["dst_id"] == child_ch_id
+    assert decoded_ack["seq"] == child_mesh_seq
+    assert decoded_ack["payload_len"] == 0
+    assert decoded_ack["type_flags"] == TYPE_GLD_ALARM_BATTERY
+
+    # CH-B's own ACK-acceptance check (handleMeshPacketReceived): the ACK
+    # must look like it came from CH-B's configured parent, addressed to
+    # CH-B itself, with the alarm flag set - exactly what this ACK provides.
+    assert decoded_ack["src_id"] == parent_ch_id  # == CH-B's parentId
+    assert decoded_ack["dst_id"] == child_ch_id   # == CH-B's own CH_ID
+    assert bool(decoded_ack["type_flags"] & FLAG_ALARM_ACK)
+
+
+def test_ch_mesh_relay_does_not_ack_non_alarm_uplink():
+    # The H1 fix must be gated on the alarm flag - a normal (non-alarm)
+    # relayed sensor push should not trigger a downstream ACK at all.
+    child_ch_id = 0x0064
+    parent_ch_id = 0x0001
+
+    _, _, gld_normal_frame = build_gld_frame(GLD_GAS_CLEAR, 100, 3700, 0x10, external_power=False)
+    entries = [CacheEntry() for _ in range(2)]
+    uplink = parse_ch_gld_uplink(gld_normal_frame)
+    status, index, should_ack, _ = update_cache(entries, uplink, now_ms=2000)
+    assert status == "Inserted"
+    assert not should_ack
+    entry = entries[index]
+    assert not entry.alarm
+
+    mesh_frame_at_parent = build_single_record_push_frame(child_ch_id, parent_ch_id, 0x01, entry)
+    decoded = decode_app_frame(mesh_frame_at_parent)
+    assert decoded["type_flags"] & 0x3F == MSG_SENSOR_DATA
+    assert not (decoded["type_flags"] & FLAG_ALARM_ACK)
+
+    would_ack = decoded["type_flags"] & 0x3F == MSG_SENSOR_DATA and decoded["type_flags"] & FLAG_ALARM_ACK
+    assert not would_ack

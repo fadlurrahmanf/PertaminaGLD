@@ -30,6 +30,17 @@ channel order; re-validate classification against a fresh labeled capture
 before field deployment, since the two in-repo dataset CSVs are empty and
 cannot serve as a regression check (see `04-minor-style.md`, closing note).
 
+**Follow-up hardening (this session, post-merge):** added automated regression
+guards for C1 and H1 to `firmware/tests/test_shared_protocol.py` (both
+verified to actually fail against the pre-fix code, not just tautologically
+pass), and a best-effort host-side validation of C1 against the real,
+extracted, trained TFLite model — see `01-critical-bugs.md` for the honest
+result (the bug's real-world impact is confirmed; the fix's directionality
+relative to the actual training pipeline is still not fully closed out from
+source alone, and still needs either the training script or a real hardware
+capture). The two empty `dataset/F001_clear_air_test_*.csv` files were left in
+place — deleting them was outside what was explicitly authorized.
+
 ## Severity counts
 
 | Severity | Count | IDs | Status |

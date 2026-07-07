@@ -132,3 +132,45 @@ layer expects physical order. Confirm against the training notebook/script:
 Either way, re-validate classification on a labeled capture after the change; the
 two `dataset/F001_clear_air_test_*.csv` files are empty and cannot serve as a
 regression check.
+
+### Post-fix host-side validation (no physical hardware available)
+
+There is no GLD hardware attached in this environment, so the closest
+available substitute was built and run:
+`firmware/tools/validate_c1_scaler_order.py` extracts the **real, trained**
+TFLite model bytes embedded in `firmware/gld/model/model_data.cpp` (8 input →
+64 ReLU → 4 output dense network, confirmed non-trivial/trained weights, not a
+placeholder) and replays both the pre-fix and post-fix scaler orderings
+through it in Python, using `tflite-runtime`.
+
+**What this confirms:**
+- The fix is a verified pure reorder — same mean/std values, only index order
+  changed (asserted in the script, not just eyeballed).
+- The bug was real and had teeth on the actual deployed model: with every
+  sensor sitting exactly at its own true baseline (the most literal "nothing
+  is happening" input), the old ordering injects spurious z-scores up to
+  **±4.84** into channels that should read exactly 0, flipping the top
+  prediction from LPG (48%, fixed) to propane (95.5%, buggy) for the *same
+  physical sensor reading*.
+- A 2000-sample noisy-baseline batch shows the old ordering pushes
+  classification away from "clear" in 97.5% of samples vs. 88.2% under the
+  fix — directionally consistent with the fix helping, though both numbers
+  are inflated by an unrelated caveat (see below).
+
+**What this does NOT confirm, and why the directionality risk from the
+paragraph above still stands:** one synthetic scenario (a single-channel
+methane-sensor spike, isolated with all other channels held at baseline)
+produces a result that favors the OLD ordering — the fixed ordering predicts
+LPG (99.8%) while the buggy ordering predicts methane (78.4%, matching the
+"expected" ground truth better). This does not mean the fix is wrong; it means
+single-channel synthetic spikes are not a realistic proxy for real MQ-sensor
+cross-sensitivity, and it is exactly the kind of ambiguous signal that makes
+source-only verification insufficient. It also does not fully resolve the open
+question of whether the external "ApplyGasleak" training pipeline actually fit
+the model on physical channel order. **The two things that would conclusively
+close this out — the training script/notebook, or a real labeled hardware
+capture run through both orderings — are still required and still not
+available in this environment.**
+
+Run it yourself: `pip install tflite-runtime "numpy<2"` then
+`python3 firmware/tools/validate_c1_scaler_order.py` from the repo root.

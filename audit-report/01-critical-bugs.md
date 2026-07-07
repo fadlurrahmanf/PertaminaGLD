@@ -6,6 +6,14 @@ Continues from `00-summary.md`. One confirmed critical defect.
 
 ## C1 — ML feature standardization applies the wrong mean/std to 6 of 8 sensors
 
+**Status: FIXED** — `firmware/gld/model/scaler_params.cpp` reordered so index
+`i` holds channel `i`'s statistics (physical order), matching option A below.
+`GldUnifiedMain.cpp`'s `runInference`/`runScan` were left as the "no remap"
+path since that is the order the design and `feature_order` field mandate.
+**Still required before field deployment:** validate against a fresh labeled
+capture (see `04-minor-style.md` closing note) — this fix could not be
+verified against the actual training pipeline from source alone.
+
 **Severity:** Critical — corrupts every on-device inference and therefore every
 alarm/gas-class decision made in the field.
 

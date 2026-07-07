@@ -6,6 +6,13 @@ Continues from `01-critical-bugs.md` (C1). Two high-severity findings.
 
 ## H1 — Multi-hop alarm ACK chain is broken: any CH at mesh depth ≥ 2 never receives an alarm ACK
 
+**Status: FIXED** — `firmware/ch/src/ChStarMeshRuntimeMain.cpp`'s uplink-relay
+branch now sends a hop-by-hop compact alarm ACK back to the child CH
+immediately after the relay is queued, mirroring the gateway's existing
+`sendGatewayAckIfNeeded`. Applied as the "smallest correct change" (hop-by-hop
+ACK) option below, not the alternative (relaying as `AlarmPush` for end-to-end
+retry).
+
 **Severity:** High — alarms still reach the server, but every alarm from a
 depth-2+ CH is retransmitted 5×, and repeated alarms drive the CH into
 `PARENT_FAILOVER` and eventually a full `RECOVERY` restart, destabilizing the
@@ -99,6 +106,12 @@ depth-2 chain: child alarm → relay → assert child receives an ACK.
 ---
 
 ## H2 — A dead classifier silently reports "clear air, 100% confidence" over LoRa
+
+**Status: FIXED** — `lastResult` now initializes to `{GLD_GAS_ANOMALY, 0}`
+(`GldUnifiedMain.cpp`), and `runScan()`/`runInference()` reset to that sentinel
+whenever the sensors aren't primed, `mlReady` is false, the input buffer is
+unavailable, or `predict()` fails — instead of leaving the previous (or
+default "clear") value in place.
 
 **Severity:** High — a GLD whose ML stack failed to initialize (or whose sensors
 never prime) keeps transmitting healthy-looking "no gas" uplinks indefinitely,

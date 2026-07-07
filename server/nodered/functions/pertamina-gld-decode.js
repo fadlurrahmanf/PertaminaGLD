@@ -409,8 +409,14 @@ function parseAppFrame(buf) {
         };
         let offset = 6;
         for (let i = 0; i < outer.response.recordCount; i++) {
+            if (offset + 5 > payload.length) {
+                throw new Error(`CLUSTER_DATA_RESPONSE record ${i} header truncated at offset ${offset}`);
+            }
             const payloadLenAtRecord = payload[offset + 4];
             const len = 5 + payloadLenAtRecord;
+            if (offset + len > payload.length) {
+                throw new Error(`CLUSTER_DATA_RESPONSE record ${i} body truncated: need ${len} bytes at offset ${offset}, have ${payload.length - offset}`);
+            }
             records.push(parseGldRecord(payload.subarray(offset, offset + len)));
             offset += len;
         }

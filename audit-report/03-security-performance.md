@@ -10,6 +10,11 @@ The items here are about surrounding hygiene and a data-loss bug in tooling.
 
 ## S1 — GCM nonce is largely deterministic; the first 4 bytes are a fixed constant
 
+**Status: FIXED** — `nonceProvider` in `GldUnifiedMain.cpp` now fills all 12
+bytes from `esp_random()` (three draws) and XORs the per-boot counter into the
+last 4 bytes as defense in depth, instead of seeding bytes `[0..3]` with the
+self-test constant.
+
 **Severity:** Medium — weakens, but does not immediately break, AES-GCM
 confidentiality/integrity for GLD uplinks.
 
@@ -73,6 +78,16 @@ reboot cannot rewind the counter half of the nonce.
 
 ## S2 — Wi-Fi/MQTT credentials and a broker IP are committed in cleartext
 
+**Status: FIXED (partial, by design)** — `firmware/config/ServerConfig.h`'s
+`PGL_SERVER_SITE_WIFI_SSID/PASSWORD` and `MQTT_USER/PASS` are now `CHANGE_ME`
+placeholders, matching the dataset-side convention. The two broker IPs were
+left as-is, matching how the dataset broker host was already treated in this
+repo (a private-LAN address, not an auth secret) — revisit if that
+distinction isn't acceptable for this deployment.
+**Not done by this fix, and still required:** rotate the exposed Wi-Fi
+(`Fshares`/`kayabiasa`) and MQTT (`deviot`/`deviot`) credentials on the actual
+network/broker, since they remain in git history regardless of this commit.
+
 **Severity:** Medium — secret leakage via version control.
 
 ### What breaks
@@ -107,6 +122,10 @@ function; it is a disclosure-hygiene fix.
 ---
 
 ## S3 — Gateway MQTT command endpoints are unauthenticated by design; only mode-switch downlinks are signed
+
+**Status: no code change** — informational by design (trusted-LAN broker
+assumption). Left for a deployment/ops decision: enable broker auth/TLS and
+consider a CH-side rate limit on stored node-commands, as described below.
 
 **Severity:** Medium — informational/by-design, documented here so it is a
 conscious decision rather than an oversight.
@@ -144,6 +163,11 @@ boundary is explicit.
 ---
 
 ## P1 — Dataset recorder truncates its CSV on every restart and drops half its DB rows on the pymysql path
+
+**Status: FIXED** — `csv_init()` now appends and only writes the header when
+the file is new/empty; `ensure_db()`'s liveness check now guards
+`is_connected()` behind `hasattr` instead of assuming the `mysql.connector`
+API on whichever driver imported.
 
 **Severity:** Medium — silent data loss in the dataset-collection tool
 (`server/nodered/gld_dataset_recorder.py`).
@@ -204,6 +228,11 @@ drivers.
 ---
 
 ## S4 — Operator bridge sends `Access-Control-Allow-Origin: *`, letting any website read the Wi-Fi password and drive firmware upload / serial writes
+
+**Status: FIXED** — `bridge.py`'s `end_headers` now echoes
+`Access-Control-Allow-Origin` only for origins in a small allowlist derived
+from the bridge's own `--host`/`--port` (127.0.0.1/localhost on that port),
+and omits the header entirely otherwise, instead of sending `*`.
 
 **Severity:** Medium — local-network / drive-by exposure via the operator's own
 browser (`apps/gld-operator/bridge.py`).

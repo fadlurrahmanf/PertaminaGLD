@@ -59,7 +59,13 @@ def ensure_db():
     if not HAS_MYSQL:
         return False
     try:
-        if db_conn is None or not db_conn.is_connected():
+        # is_connected() is a mysql.connector-only method; pymysql connections
+        # don't have it, so guard with hasattr instead of assuming the
+        # mysql.connector API on whichever driver actually imported.
+        alive = db_conn is not None and (
+            not hasattr(db_conn, "is_connected") or db_conn.is_connected()
+        )
+        if not alive:
             if hasattr(_mc, "connect"):
                 db_conn = _mc.connect(host=MYSQL_HOST, port=MYSQL_PORT,
                                       user=MYSQL_USER, password=MYSQL_PASS,
@@ -128,10 +134,14 @@ csv_lock = threading.Lock()
 def csv_init():
     with csv_lock:
         try:
-            with open(CSV_PATH, "w", newline="", encoding="utf-8") as f:
-                w = csv.writer(f)
-                w.writerow(COLS)
-            print(f"[CSV] Header written to {CSV_PATH}", flush=True)
+            # Append rather than truncate: restarting the recorder (crash,
+            # reboot, re-run) must not erase previously captured rows. Only
+            # write the header when the file is new/empty.
+            is_new = not os.path.exists(CSV_PATH) or os.path.getsize(CSV_PATH) == 0
+            with open(CSV_PATH, "a", newline="", encoding="utf-8") as f:
+                if is_new:
+                    csv.writer(f).writerow(COLS)
+            print(f"[CSV] {'Header written to' if is_new else 'Appending to existing'} {CSV_PATH}", flush=True)
         except Exception as e:
             print(f"[CSV] init error: {e}", flush=True)
 
@@ -195,7 +205,10 @@ def read_packet(sock):
         raise ConnectionError("connection closed")
     rem = 0; mul = 1
     while True:
-        b = sock.recv(1)[0]; rem += (b & 0x7F) * mul; mul <<= 7
+        chunk = sock.recv(1)
+        if not chunk:
+            raise ConnectionError("connection closed mid-header")
+        b = chunk[0]; rem += (b & 0x7F) * mul; mul <<= 7
         if not (b & 0x80): break
     data = b""
     while len(data) < rem:

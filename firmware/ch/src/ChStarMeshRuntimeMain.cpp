@@ -1245,6 +1245,34 @@ void handleMeshPacketReceived() {
         const bool queued = enqueueRelayFrame(decoded, parentId, "uplink-to-parent");
         logPrintf("CH_UPLINK_RELAY msgType=0x%02X from=0x%04X parent=0x%04X queued=%u\n",
                   msgType, decoded.srcId, parentId, queued ? 1 : 0);
+
+        // Hop-by-hop alarm ACK: decoded.srcId here is the child CH that pushed
+        // this alarm (its own CH_ID is the AppFrame srcId - see
+        // buildSingleRecordSensorPushFrame), and that child is waiting for an
+        // ACK from its immediate parent, i.e. this CH - not from the far-end
+        // gateway. Without this, every alarm relayed through a CH at mesh
+        // depth >= 2 times out upstream of here even though it was actually
+        // delivered, driving the child through repeated retries and eventual
+        // parent failover/restart. Mirrors the gateway's own
+        // sendGatewayAckIfNeeded, one hop down; fire-and-forget like that path.
+        if (queued && msgType == pgl::protocol::MSG_SENSOR_DATA &&
+            pgl::protocol::hasAlarmAckFlag(decoded.typeFlags)) {
+            uint8_t childAck[pgl::protocol::APPFRAME_OVERHEAD]{};
+            const pgl::protocol::FrameEncodeResult childAckEnc = pgl::protocol::encodeAppFrame(
+                pgl::protocol::TYPE_ALARM_ACK_COMPACT,
+                CH_ID,
+                decoded.srcId,
+                decoded.seq,
+                nullptr,
+                0,
+                childAck,
+                sizeof(childAck),
+                pgl::protocol::MESH_MAX_PAYLOAD);
+            if (childAckEnc.status == pgl::protocol::FrameStatus::Ok) {
+                transmitRadio(meshRadio, MESH_PINS, childAck, childAckEnc.size, "MESH_CHILD_ACK");
+            }
+        }
+
         if (chState == ChState::JOINED) drainTxQueue();
         startMeshReceive("after-uplink-relay");
         return;

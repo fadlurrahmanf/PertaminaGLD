@@ -67,10 +67,9 @@ def required_file(project_dir: pathlib.Path, build_dir: pathlib.Path, name: str)
     for path in candidates:
         if path.exists():
             return path
-    if not path.exists():
-        raise FileNotFoundError(
-            f"Missing {name}. Checked: {', '.join(str(candidate) for candidate in candidates)}"
-        )
+    raise FileNotFoundError(
+        f"Missing {name}. Checked: {', '.join(str(candidate) for candidate in candidates)}"
+    )
 
 
 def parse_args() -> argparse.Namespace:

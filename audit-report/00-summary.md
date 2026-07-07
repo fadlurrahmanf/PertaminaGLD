@@ -18,28 +18,32 @@ framing and the AES-CMAC authenticated-downlink path match byte-for-byte between
 the GLD firmware, the CH relay, and the Node-RED decoder/command builder — that
 cross-layer agreement is the strongest part of the codebase.
 
-**One confirmed critical defect dominates the verdict:** the ML feature
-standardization in the GLD inference path feeds the wrong per-sensor mean/std to
-6 of 8 channels, because `scaler_params.cpp` is stored in a different sensor order
-than the firmware reads and than the design's §8.6 "Feature Order Alignment"
-mandates. Every inference on real hardware is affected. Everything else found is
-containable.
+**One confirmed critical defect dominated the verdict:** the ML feature
+standardization in the GLD inference path fed the wrong per-sensor mean/std to
+6 of 8 channels, because `scaler_params.cpp` was stored in a different sensor
+order than the firmware reads and than the design's §8.6 "Feature Order
+Alignment" mandates. Every inference on real hardware was affected.
 
-**Ship gate:** do not trust field classification/alarm decisions until the
-scaler ordering (C1) is fixed and re-validated against the training pipeline.
+**Status: all findings below have since been fixed in this branch** (see the
+"Fixed" marker on each finding). `scaler_params.cpp` is reordered to physical
+channel order; re-validate classification against a fresh labeled capture
+before field deployment, since the two in-repo dataset CSVs are empty and
+cannot serve as a regression check (see `04-minor-style.md`, closing note).
 
 ## Severity counts
 
-| Severity | Count | IDs |
-|---|---:|---|
-| Critical | 1 | C1 |
-| High | 2 | H1, H2 |
-| Medium (security / performance) | 5 | S1, S2, S3, S4, P1 |
-| Minor / style | 6 | M1–M6 |
+| Severity | Count | IDs | Status |
+|---|---:|---|---|
+| Critical | 1 | C1 | Fixed |
+| High | 2 | H1, H2 | Fixed |
+| Medium (security / performance) | 5 | S1, S2, S3, S4, P1 | Fixed (S3 informational, no code change) |
+| Minor / style | 6 | M1–M6 | M1, M2, M4, M5 fixed; M3, M6 left as-is (style/dead-code, not bugs) |
 
 Findings are numbered once here and carried forward; later files continue the
 sequence rather than repeating earlier detail. Each finding gives **what breaks**,
-**trigger**, **root cause**, and **exact fix**, with `file:line` anchors.
+**trigger**, **root cause**, and **exact fix**, with `file:line` anchors. Fixes
+were applied directly on top of these reports in the same branch; the original
+analysis is left intact below each fix marker for traceability.
 
 - `01-critical-bugs.md` — C1
 - `02-high-priority.md` — H1, H2

@@ -47,6 +47,28 @@ APP_DIR = Path(__file__).resolve().parent
 REPO_ROOT = APP_DIR.parents[1]
 FIRMWARE_DIR = REPO_ROOT / "firmware"
 DATASET_OUTPUT_DIR = APP_DIR / "output" / "datasets"
+
+# Populated at startup from the actual --host/--port the bridge binds to.
+# The documented launch path (run-gld-operator.bat) serves the static UI and
+# this API from the same origin, so same-origin requests never need a CORS
+# header at all; this allowlist only covers the same machine reachable via
+# 127.0.0.1/localhost, never an arbitrary remote origin. Do not widen this to
+# "*" - the bridge exposes serial writes, MQTT publish, firmware flashing, and
+# a WiFi-password lookup, and a wildcard lets any page open in the operator's
+# browser call all of that cross-origin.
+BRIDGE_ALLOWED_ORIGINS: set[str] = set()
+
+
+def _register_allowed_origins(host: str, port: int) -> None:
+    BRIDGE_ALLOWED_ORIGINS.update(
+        {
+            f"http://{host}:{port}",
+            f"http://127.0.0.1:{port}",
+            f"http://localhost:{port}",
+        }
+    )
+
+
 VERSION = "0.2.3-lite-bridge"
 
 
@@ -521,7 +543,10 @@ class Handler(SimpleHTTPRequestHandler):
             pass
 
     def end_headers(self) -> None:
-        self.send_header("Access-Control-Allow-Origin", "*")
+        origin = self.headers.get("Origin", "")
+        if origin and origin in BRIDGE_ALLOWED_ORIGINS:
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Vary", "Origin")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.send_header("Cross-Origin-Opener-Policy", "same-origin")
@@ -629,6 +654,7 @@ def main() -> int:
     parser.add_argument("--no-open", action="store_true")
     args = parser.parse_args()
 
+    _register_allowed_origins(args.host, args.port)
     httpd = ThreadingHTTPServer((args.host, args.port), Handler)
     url = f"http://{args.host}:{args.port}/"
     print(f"GLD Operator Lite bridge: {url}")

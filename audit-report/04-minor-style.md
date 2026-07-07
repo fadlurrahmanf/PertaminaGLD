@@ -8,6 +8,12 @@ a cleanup pass. Nothing here should trigger a rewrite of working code.
 
 ## M1 — Misleading "no remap" comment survives even after C1 is fixed
 
+**Status: FIXED (comment updated only)** — C1 was resolved by reordering
+`scaler_params.cpp` to physical order, so the "no remap" statement is now true
+and was kept, with an added line noting the scaler must stay in this order.
+The suggested boot-time size/order self-check was not added (would require a
+new runtime assertion, judged unnecessary scope beyond the audited defect).
+
 `firmware/gld/src/GldUnifiedMain.cpp:1493`
 ```cpp
 // Channel n is fed directly as feature n (no remap - hardware channel order
@@ -26,6 +32,11 @@ mismatch instead of silently mis-scaling.
 ---
 
 ## M2 — `decodeGldPlainPayload` is called on GCM output but its range check is redundant / the CLUSTER response record loop is unbounded
+
+**Status: FIXED (part a)** — `pertamina-gld-decode.js`'s
+`MSG_CLUSTER_DATA_RESPONSE` loop now bounds-checks the record header and body
+before reading, throwing a clear `truncated` error instead of a confusing
+`NaN`-length crash. Part (b) required no change (firmware already safe).
 
 Two small robustness gaps in the decode paths:
 
@@ -54,6 +65,10 @@ strictly. No change needed on-device; this is a JS-only hardening note.
 
 ## M3 — `ClusterResponse` size-skip logic is dead code
 
+**Status: left as-is** — harmless dead code, not a bug; simplifying it is a
+"rewrite working code" style change outside this fix pass. Revisit if
+variable-length records are ever planned, per the note below.
+
 `firmware/ch/src/ClusterResponse.cpp:151`
 ```cpp
 if (used + recordSize > maxPayload) {
@@ -72,6 +87,10 @@ confusing intent. Simplify to a plain `break` on first non-fit, and drop the
 ---
 
 ## M4 — `read_packet` in the recorder crashes on a cleanly-closed socket mid-header
+
+**Status: FIXED** — guarded the empty-`recv` case and now raises a clear
+`ConnectionError("connection closed mid-header")`, matching the existing
+pattern used elsewhere in the same function.
 
 `server/nodered/gld_dataset_recorder.py:199`
 ```python
@@ -94,6 +113,9 @@ matching the pattern already used correctly at `:194-196`.
 
 ## M5 — `package_firmware_release.required_file` has an unreachable fallthrough
 
+**Status: FIXED** — replaced the dead `if not path.exists(): raise ...` tail
+with an unconditional `raise FileNotFoundError(...)` after the loop.
+
 `firmware/tools/package_firmware_release.py:67`
 ```python
 for path in candidates:
@@ -112,6 +134,10 @@ clarity and to remove the latent unbound-name path.
 ---
 
 ## M6 — Duplicated big-endian and idHex helpers across layers; version drift risk
+
+**Status: left as-is** — style/maintainability note, not a bug; all existing
+copies are byte-identical and correct today. Left for a future consolidation
+pass rather than bundled into this fix commit.
 
 `writeU16Be`/`readU16Be` are re-implemented independently in at least five files
 (`AppFrame.cpp:7`, `GldRecord.cpp:7`, `GldPayload.cpp:7`, `ClusterResponse.cpp:11`,

@@ -122,8 +122,15 @@ GldAds1256Reading GldAds1256Reader::readChannel(uint8_t channel) {
         return {GldAds1256Status::InvalidChannel, 0, 0.0f, GLD_ADS1256_DEFAULT_GAIN, false};
     }
 
+    ads_->clearDrdyTimeout();
     gainCalibrate(channel);
+    if (ads_->isDrdyTimedOut()) {
+        return {GldAds1256Status::DrdyTimeout, 0, 0.0f, getCurrentGain(channel), false};
+    }
     const long raw = readSingleInternal(channel);
+    if (ads_->isDrdyTimedOut()) {
+        return {GldAds1256Status::DrdyTimeout, 0, 0.0f, getCurrentGain(channel), false};
+    }
     const uint8_t gain = getCurrentGain(channel);
     const float voltage = convertToVoltage(raw, gain);
     const float maxVoltage = GLD_ADS1256_VREF_VOLTS / static_cast<float>(gain);
@@ -138,7 +145,7 @@ void GldAds1256Reader::gainCalibrate(uint8_t channel) {
     const float maxVoltage = GLD_ADS1256_VREF_VOLTS / static_cast<float>(gain);
     const float ratio = fabsf(voltage) / maxVoltage;
 
-    const bool needDown = ratio >= ADS1256_AGC_SATURATION_RATIO || ratio >= ADS1256_AGC_GAIN_DOWN_RATIO;
+    const bool needDown = ratio >= ADS1256_AGC_GAIN_DOWN_RATIO;
     const bool needUp = ratio < ADS1256_AGC_GAIN_UP_RATIO && pgaIndex_[channel] > 0;
 
     if (needDown && pgaIndex_[channel] < 6) {

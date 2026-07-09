@@ -149,11 +149,17 @@ public:
 	//Stop AD
 	void stopConversion();
 	
+	bool isDrdyTimedOut() const { return _drdyTimedOut; }
+	void clearDrdyTimeout() { _drdyTimedOut = false; }
+
 private:
-	
+
 SPIClass* _spi; //Pointer to an SPIClass object
 
-void waitForLowDRDY(); // Block until DRDY is low
+static constexpr uint32_t DRDY_TIMEOUT_MS = 200;
+bool _drdyTimedOut = false;
+
+void waitForLowDRDY(); // Block until DRDY low; sets _drdyTimedOut on timeout
 void waitForHighDRDY(); // Block until DRDY is high
 void updateMUX(uint8_t muxValue);
 

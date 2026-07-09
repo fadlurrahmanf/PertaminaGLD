@@ -101,7 +101,13 @@ void ADS1256::InitializeADC()
 
 void ADS1256::waitForLowDRDY()
 {
-	while (digitalRead(_DRDY_pin) == HIGH) {}
+	const uint32_t deadline = millis() + DRDY_TIMEOUT_MS;
+	while (digitalRead(_DRDY_pin) == HIGH) {
+		if (millis() >= deadline) {
+			_drdyTimedOut = true;
+			return;
+		}
+	}
 }
 
 void ADS1256::waitForHighDRDY()

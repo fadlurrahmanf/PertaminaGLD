@@ -583,7 +583,7 @@ Important current serial log tokens:
 | `NULLING_RUNTIME_RESULT=PASS` | Complete nulling profile saved. |
 | `NULLING_RUNTIME_RESULT=PARTIAL_RETRY` | Partial nulling result, retry scheduled. |
 | `NULLING_RUNTIME_RESULT=FAIL_RETRY` | Failed nulling result, retry scheduled. |
-| `GLD_SENSOR_SCAN` | Inference scan result. |
+| `GLD_SENSOR_SCAN` | Inference scan result. `validCh=N/8` shows per-scan channel success count. |
 | `GLD_ML_RESULT` | Model prediction result. |
 | `GLD_TX_HEADER` | Built uplink frame metadata. |
 | `GLD_LORA_TX_RESULT=PASS/FAIL` | LoRa TX result. |

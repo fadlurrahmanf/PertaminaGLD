@@ -1510,10 +1510,12 @@ void runInference(const float mavVoltage[8]) {
 void runScan() {
     float mavVoltage[8] = {};
     uint8_t primedChannels = 0;
+    uint8_t validChannels = 0;
     for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
         const pgl::gld::GldAds1256Reading r = ads.readChannel(ch);
         latestSensorGain[ch] = r.gain;
         latestSensorStatus[ch] = static_cast<uint8_t>(r.status);
+        if (r.status == pgl::gld::GldAds1256Status::Ok) ++validChannels;
         mavVoltage[ch] = (r.status == pgl::gld::GldAds1256Status::Ok)
                           ? movingAvg.add(ch, r.voltage)
                           : movingAvg.value(ch);
@@ -1525,9 +1527,10 @@ void runScan() {
     if (primed) runInference(mavVoltage);
     const bool alarm = lastResult.gasClass != pgl::protocol::GLD_GAS_CLEAR &&
                        lastResult.confidence >= ML_CONFIDENCE_THRESHOLD;
-    logPrintf("GLD_SENSOR_SCAN seq=%lu allValid=%u primed=%u gasClass=%u(%s) confidence=%u alarm=%u\n",
+    logPrintf("GLD_SENSOR_SCAN seq=%lu validCh=%u/%u primed=%u gasClass=%u(%s) confidence=%u alarm=%u\n",
               static_cast<unsigned long>(txCounter),
-              adsReady ? 1 : 0, primed ? 1 : 0,
+              validChannels, static_cast<unsigned>(pgl::gld::board::SENSOR_COUNT),
+              primed ? 1 : 0,
               lastResult.gasClass, pgl::gld::gldGasClassName(lastResult.gasClass),
               lastResult.confidence, alarm ? 1 : 0);
     updateAlarmOutputs(alarm);

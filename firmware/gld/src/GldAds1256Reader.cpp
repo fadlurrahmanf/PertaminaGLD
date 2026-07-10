@@ -13,6 +13,7 @@ constexpr uint8_t REG_STATUS = 0x00;
 constexpr uint8_t REG_MUX = 0x01;
 constexpr uint8_t REG_ADCON = 0x02;
 constexpr uint8_t REG_DRATE = 0x03;
+constexpr uint8_t ADS1256_CMD_RESET = 0xFE;
 constexpr float ADS1256_AGC_SATURATION_RATIO = 0.95f;
 constexpr float ADS1256_AGC_GAIN_DOWN_RATIO = 0.85f;
 constexpr float ADS1256_AGC_GAIN_UP_RATIO = 0.20f;
@@ -76,6 +77,9 @@ bool GldAds1256Reader::begin(SPIClass& spi) {
         pgl::gld::board::PIN_SPI_SCK,
         pgl::gld::board::PIN_SPI_MISO,
         pgl::gld::board::PIN_SPI_MOSI);
+
+    ads_->sendDirectCommand(ADS1256_CMD_RESET);
+    delay(20);
 
     if (!waitDrdyLow(1500)) {
         initialized_ = false;

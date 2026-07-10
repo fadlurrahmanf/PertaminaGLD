@@ -81,6 +81,8 @@ constexpr uint8_t  PARENT_NVS_STABLE_SCANS = pgl::config::ch::PARENT_NVS_STABLE_
 constexpr uint32_t PENDING_TTL_MS          = pgl::config::ch::PENDING_TTL_MS;
 constexpr uint32_t HOUSEKEEPING_INTERVAL_MS= pgl::config::ch::HOUSEKEEPING_INTERVAL_MS;
 constexpr uint32_t CACHE_EXPIRE_MS         = pgl::config::ch::CACHE_EXPIRE_MS;
+constexpr uint32_t CH_EXTERNAL_WDT_KEEPALIVE_INTERVAL_MS = 10000;
+constexpr uint32_t CH_EXTERNAL_WDT_KEEPALIVE_PULSE_MS = 5;
 
 // ─── State machine ──────────────────────────────────────────────────────────
 
@@ -222,6 +224,8 @@ static uint32_t joiningStartMs    = 0;
 static uint32_t failoverEnteredMs = 0;
 static bool     bootHelloPending = true;
 static uint32_t lastBootHelloAttemptMs = 0;
+static uint32_t lastExternalWdtKeepaliveMs = 0;
+static bool     taskWdtReady = false;
 
 // ─── Battery ────────────────────────────────────────────────────────────────
 
@@ -255,6 +259,48 @@ void logPrintf(const char* fmt, ...) {
     vsnprintf(buffer, sizeof(buffer), fmt, args);
     va_end(args);
     logPrint(buffer);
+}
+
+// External WDT keepalive on IO47, independent from the ESP32 task WDT.
+void setupExternalWdtKeepalivePin() {
+    pinMode(pgl::ch::board::PIN_WDT_KEEPALIVE, OUTPUT);
+    digitalWrite(pgl::ch::board::PIN_WDT_KEEPALIVE, LOW);
+}
+
+void pulseExternalWdtKeepaliveNow() {
+    digitalWrite(pgl::ch::board::PIN_WDT_KEEPALIVE, HIGH);
+    delay(CH_EXTERNAL_WDT_KEEPALIVE_PULSE_MS);
+    digitalWrite(pgl::ch::board::PIN_WDT_KEEPALIVE, LOW);
+    lastExternalWdtKeepaliveMs = millis();
+}
+
+void maintainExternalWdtKeepalive() {
+    const uint32_t now = millis();
+    if (now - lastExternalWdtKeepaliveMs >= CH_EXTERNAL_WDT_KEEPALIVE_INTERVAL_MS) {
+        pulseExternalWdtKeepaliveNow();
+    }
+}
+
+void resetTaskWdtIfReady() {
+    if (taskWdtReady) {
+        esp_task_wdt_reset();
+    }
+}
+
+void serviceTick() {
+    resetTaskWdtIfReady();
+    maintainExternalWdtKeepalive();
+}
+
+void serviceDelay(uint32_t durationMs) {
+    const uint32_t startedMs = millis();
+    while (millis() - startedMs < durationMs) {
+        serviceTick();
+        const uint32_t elapsedMs = millis() - startedMs;
+        const uint32_t remainingMs = durationMs > elapsedMs ? durationMs - elapsedMs : 0;
+        delay(remainingMs > 50 ? 50 : remainingMs);
+    }
+    serviceTick();
 }
 
 // ─── State machine ──────────────────────────────────────────────────────────
@@ -657,10 +703,10 @@ void setupRadioPinsSafe() {
 void releaseRadioReset() {
     digitalWrite(pgl::ch::board::PIN_RADIO_A_RST, LOW);
     digitalWrite(pgl::ch::board::PIN_RADIO_B_RST, LOW);
-    delay(50);
+    serviceDelay(50);
     digitalWrite(pgl::ch::board::PIN_RADIO_A_RST, HIGH);
     digitalWrite(pgl::ch::board::PIN_RADIO_B_RST, HIGH);
-    delay(500);
+    serviceDelay(500);
 }
 
 bool beginRadio(SX1262*& radio, Module*& module, const RadioPins& pins,
@@ -788,9 +834,11 @@ void reportCachePeriodic() {
 bool transmitRadio(SX1262* radio, const RadioPins& pins,
                    const uint8_t* frame, size_t frameSize, const char* tag) {
     if (radio == nullptr || frame == nullptr || frameSize == 0) return false;
+    serviceTick();
     const int16_t st = radio->transmit(frame, frameSize);
     digitalWrite(pins.rxen, LOW);
     digitalWrite(pins.txen, LOW);
+    serviceTick();
     logPrintf("CH_%s_TX state=%d len=%u\n", tag, st, static_cast<unsigned>(frameSize));
     return st == RADIOLIB_ERR_NONE;
 }
@@ -988,7 +1036,7 @@ void sendConfigRequest() {
         pgl::protocol::MSG_CH_CONFIG_REQUEST, CH_ID, BROADCAST_ID, cfgReqSeq++,
         payload, sizeof(payload), frame, sizeof(frame), pgl::protocol::MESH_MAX_PAYLOAD);
     if (enc.status != pgl::protocol::FrameStatus::Ok) return;
-    delay(20 + ((CH_ID & 0x000F) * 30) + (millis() % 40));
+    serviceDelay(20 + ((CH_ID & 0x000F) * 30) + (millis() % 40));
     transmitRadio(meshRadio, MESH_PINS, frame, enc.size, "MESH_CFG_REQ");
     startMeshReceive("after-cfg-req");
     logPrintf("CH_CONFIG_REQUEST_TX parentId=0x%04X\n", parentId);
@@ -1026,7 +1074,7 @@ void sendConfigResponse(uint16_t requesterId, uint8_t requestSeq) {
     const uint8_t responseSlot = static_cast<uint8_t>(CH_ID % slotCount);
     const uint32_t responseDelayMs = CFG_RESPONSE_BASE_DELAY_MS +
                                      (static_cast<uint32_t>(responseSlot) * CFG_RESPONSE_SLOT_GAP_MS);
-    delay(responseDelayMs);
+    serviceDelay(responseDelayMs);
     transmitRadio(meshRadio, MESH_PINS, frame, enc.size, "MESH_CFG_RESP");
     startMeshReceive("after-cfg-resp-tx");
     logPrintf("CH_CONFIG_RESPONSE_TX requester=0x%04X parent=0x%04X depth=%u battMv=%u slot=%u delayMs=%lu slotGapMs=%lu\n",
@@ -1341,7 +1389,7 @@ void handleWaitBatt() {
     } else {
         battStableCount = 0;
     }
-    delay(1000);
+    serviceDelay(1000);
 }
 
 void handleRadioInit() {
@@ -1471,7 +1519,7 @@ void handleJoined() {
         setState(ChState::LOW_POWER, "batt-low");
     }
 
-    delay(20);
+    serviceDelay(20);
 }
 
 void handleParentFailover() {
@@ -1519,7 +1567,7 @@ void handleLowPower() {
     if (batteryMv < BATT_CRITICAL_MV || millis() - lowPowerEnteredMs >= 300000UL) {
         setState(ChState::RECOVERY, "low-power-timeout");
     }
-    delay(1000);
+    serviceDelay(1000);
 }
 
 }  // namespace
@@ -1531,10 +1579,13 @@ void setup() {
 #if defined(ARDUINO_ARCH_ESP32)
     Serial0.begin(115200);
 #endif
-    delay(1000);
+    setupExternalWdtKeepalivePin();
+    pulseExternalWdtKeepaliveNow();
+    serviceDelay(1000);
 
     esp_task_wdt_init(60, true);
     esp_task_wdt_add(NULL);
+    taskWdtReady = true;
     logPrintln("CH_WDT_INIT ok");
 
     setupRadioPinsSafe();
@@ -1550,7 +1601,7 @@ void setup() {
 }
 
 void loop() {
-    esp_task_wdt_reset();
+    serviceTick();
 
     switch (chState) {
         case ChState::BOOT:
@@ -1576,7 +1627,7 @@ void loop() {
             break;
         case ChState::RECOVERY:
             logPrintln("CH_RECOVERY_RESTART");
-            delay(500);
+            serviceDelay(500);
             ESP.restart();
             break;
     }

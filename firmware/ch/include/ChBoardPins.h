@@ -23,5 +23,6 @@ constexpr uint8_t PIN_RADIO_B_RST = 41;
 constexpr uint8_t PIN_RADIO_B_DIO1 = 42;
 
 constexpr uint8_t PIN_BATMON = 4;
+constexpr uint8_t PIN_WDT_KEEPALIVE = 47;
 
 }  // namespace pgl::ch::board

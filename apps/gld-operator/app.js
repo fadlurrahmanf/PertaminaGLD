@@ -21,12 +21,14 @@ const CHART_COLORS = [
 ];
 
 const SENSOR_NAMES = ["MQ8", "MQ135", "MQ3", "MQ5", "MQ4", "MQ7", "MQ6", "MQ2"];
+const SENSOR_MUX_CHANNELS = [7, 6, 5, 4, 3, 2, 1, 0];
 const SENSOR_STATUS_NAMES = {
   0: "Ok",
   1: "NotReady",
   2: "DrdyTimeout",
   3: "InvalidChannel"
 };
+const SERIAL_RESPONSE_TIMEOUT_MS = 5000;
 
 function initialDatasetSession() {
   return {
@@ -65,8 +67,15 @@ const state = {
   eventSource: null,
   buffer: "",
   logs: [],
+  pendingSerialRequest: null,
   dataset: initialDatasetSession(),
   nullingLogs: [],
+  bootDiagnostics: {
+    reportSeen: false,
+    bootRows: {},
+    probes: {},
+    lastLine: ""
+  },
   mockNullingStep: 0,
   history: [],
   info: null,
@@ -124,6 +133,8 @@ const elements = {
   nullingChannels: $("nullingChannels"),
   sensorCheckSummary: $("sensorCheckSummary"),
   sensorCheckMeta: $("sensorCheckMeta"),
+  bootReportSummary: $("bootReportSummary"),
+  bootReportGrid: $("bootReportGrid"),
   sensorCheckChannels: $("sensorCheckChannels"),
   topDeviceStatus: $("topDeviceStatus"),
   topModeStatus: $("topModeStatus"),
@@ -199,6 +210,29 @@ function appendLog(line, direction = "in") {
   if (state.logs.length > 3000) state.logs.splice(0, state.logs.length - 3000);
   elements.serialLog.textContent = state.logs.join("\n");
   elements.serialLog.scrollTop = elements.serialLog.scrollHeight;
+}
+
+function serialCommandName(command) {
+  return String(command || "").trim().split(/\s+/)[0] || "COMMAND";
+}
+
+function clearSerialResponseWatch() {
+  if (!state.pendingSerialRequest) return;
+  clearTimeout(state.pendingSerialRequest.timer);
+  state.pendingSerialRequest = null;
+}
+
+function startSerialResponseWatch(command) {
+  clearSerialResponseWatch();
+  const cmd = serialCommandName(command);
+  const startedAt = Date.now();
+  const timer = setTimeout(() => {
+    if (!state.pendingSerialRequest || state.pendingSerialRequest.startedAt !== startedAt) return;
+    appendLog(`NO_RESPONSE ${cmd} after ${SERIAL_RESPONSE_TIMEOUT_MS}ms`, "in");
+    setBadge(elements.protocolLabel, `${cmd}: no response`, "warn");
+    state.pendingSerialRequest = null;
+  }, SERIAL_RESPONSE_TIMEOUT_MS);
+  state.pendingSerialRequest = { cmd, startedAt, timer };
 }
 
 function appendNulling(line) {
@@ -375,15 +409,25 @@ function sensorPresenceFromStatus(status = state.status) {
   const explicit = boot.sensorPresent || boot.mqPresent || boot.sensorInstalled || status?.sensorPresent;
   const health = boot.sensorHealth || boot.mqHealth || status?.sensorHealth;
   const adsReady = boot.adsReady === true;
+  const adsKnown = boot.adsReady === true || boot.adsReady === false;
   const mcpOkCount = Number(boot.mcpOkCount);
+  const mcpOkArray = Array.isArray(boot.mcpOk) ? boot.mcpOk : null;
+  const mcpAddrMaskArray = Array.isArray(boot.mcpAddrMask) ? boot.mcpAddrMask : null;
+  const mcpControlOkArray = boot.mcpControlTested === true && Array.isArray(boot.mcpControlOk)
+    ? boot.mcpControlOk
+    : null;
 
   return Array.from({ length: 8 }, (_, index) => {
     const sensor = featureOrder[index] || SENSOR_NAMES[index] || `CH${index + 1}`;
+    const muxChannel = SENSOR_MUX_CHANNELS[index] ?? "?";
     const voltage = voltages[index];
     const gain = gains[index];
     const explicitValue = Array.isArray(explicit) ? explicit[index] : undefined;
     const healthValue = Array.isArray(health) ? health[index] : undefined;
     const adsStatus = statuses[index];
+    const mcpOk = boolArrayItem(mcpOkArray, index);
+    const mcpAddrMask = Array.isArray(mcpAddrMaskArray) ? Number(mcpAddrMaskArray[index]) : NaN;
+    const mcpControlOk = boolArrayItem(mcpControlOkArray, index);
     const adsStatusNumber = Number(adsStatus);
     const adsStatusName = SENSOR_STATUS_NAMES[adsStatusNumber] || (adsStatus == null ? "" : `Status ${adsStatus}`);
     const voltageNumber = Number(voltage);
@@ -404,6 +448,23 @@ function sensorPresenceFromStatus(status = state.status) {
       stage = "Fault";
       tone = "fail";
       detail = "Firmware reports sensor fault";
+      showReading = false;
+    } else if (mcpOk === false) {
+      stage = "MCP Not OK";
+      tone = "fail";
+      detail = Number.isFinite(mcpAddrMask) && mcpAddrMask > 0
+        ? `MCP4725 not at 0x60 on TCA mux ${muxChannel}; addr mask 0x${mcpAddrMask.toString(16).padStart(2, "0")}`
+        : `No MCP4725 ACK on TCA mux ${muxChannel}`;
+      showReading = false;
+    } else if (mcpControlOk === false) {
+      stage = "DAC Fault";
+      tone = "fail";
+      detail = `MCP4725 ACK/write failed on TCA mux ${muxChannel}`;
+      showReading = false;
+    } else if (adsKnown && !adsReady) {
+      stage = "ADS Blocked";
+      tone = "active";
+      detail = `MCP path ${mcpOk === true ? "OK" : "unknown"}; waiting for ADS1256 ready`;
       showReading = false;
     } else if (telemetry.valid === true && adsStatusNumber === 0) {
       stage = "Present";
@@ -438,7 +499,7 @@ function sensorPresenceFromStatus(status = state.status) {
       stage = "Read Only";
       tone = "active";
       detail = "Voltage seen, ADS health not ready";
-    } else if (Number.isFinite(mcpOkCount) && mcpOkCount < index + 1) {
+    } else if (!mcpOkArray && Number.isFinite(mcpOkCount) && mcpOkCount < index + 1) {
       stage = "Check";
       tone = "active";
       detail = "MCP ready count is below this channel";
@@ -456,6 +517,308 @@ function sensorPresenceFromStatus(status = state.status) {
   });
 }
 
+function bootTone(ok, known = true) {
+  if (!known) return "idle";
+  return ok ? "pass" : "fail";
+}
+
+function bootToneFromStatus(statusText) {
+  const text = String(statusText || "").toUpperCase();
+  if (text.includes("NOT OK") || text.includes("FAIL") || text.includes("BLOCKED")) return "fail";
+  if (text.includes("OK") || text.includes("PASS") || text.includes("READY")) return "pass";
+  return "active";
+}
+
+function bootTableKey(name) {
+  const text = String(name || "").toUpperCase();
+  if (text.includes("ADS")) return "ads";
+  if (text.includes("TCA") || text.includes("I2C")) return "i2c";
+  if (text.includes("MCP")) return "mcp";
+  if (text.includes("DAC")) return "dac";
+  if (text.includes("LORA") || text.includes("RADIO")) return "lora";
+  if (text.includes("ML") || text.includes("MODEL")) return "ml";
+  if (text.includes("MODE")) return "mode";
+  if (text.includes("POWER")) return "power";
+  return text.toLowerCase().replace(/[^a-z0-9]+/g, "-") || "boot";
+}
+
+function setBootProbe(key, patch) {
+  state.bootDiagnostics.probes[key] = {
+    ...(state.bootDiagnostics.probes[key] || {}),
+    ...patch,
+    updatedAt: Date.now()
+  };
+}
+
+function parsePairs(text) {
+  const pairs = {};
+  for (const match of String(text || "").matchAll(/([A-Za-z][A-Za-z0-9_]*)=([^ ]+)/g)) {
+    pairs[match[1]] = match[2];
+  }
+  return pairs;
+}
+
+function optionalBool(value) {
+  if (value === true || value === 1 || value === "1" || value === "true") return true;
+  if (value === false || value === 0 || value === "0" || value === "false") return false;
+  return undefined;
+}
+
+function boolArrayItem(values, index) {
+  return Array.isArray(values) && index < values.length ? optionalBool(values[index]) : undefined;
+}
+
+function parseBootDiagnosticLine(line) {
+  state.bootDiagnostics.lastLine = line;
+  if (line === "[BOOT_IC_REPORT]") {
+    state.bootDiagnostics.reportSeen = true;
+    renderBootDiagnostics();
+    return;
+  }
+
+  if (line.startsWith("|")) {
+    const parts = line.split("|").map((part) => part.trim()).filter(Boolean);
+    if (parts.length >= 4 && parts[0] !== "IC/Fungsi" && !parts[0].startsWith("-")) {
+      const key = bootTableKey(parts[0]);
+      state.bootDiagnostics.bootRows[key] = {
+        label: parts[0],
+        check: parts[1],
+        status: parts[2],
+        detail: parts.slice(3).join(" | "),
+        tone: bootToneFromStatus(parts[2])
+      };
+      renderBootDiagnostics();
+    }
+    return;
+  }
+
+  const adsBegin = /^ADS_BEGIN_RESULT=(PASS|FAIL)/.exec(line);
+  if (adsBegin) {
+    setBootProbe("ads", {
+      label: "ADS1256",
+      stage: adsBegin[1] === "PASS" ? "OK" : "Fail",
+      tone: adsBegin[1] === "PASS" ? "pass" : "fail",
+      detail: adsBegin[1] === "PASS"
+        ? "ADS SPI begin passed"
+        : "ADS SPI begin failed; check ADS power, SPI pins, CS, DRDY, SYNC, and board profile"
+    });
+    renderBootDiagnostics();
+    return;
+  }
+
+  if (line.startsWith("BOOT_PROBE_ADS=done")) {
+    const pairs = parsePairs(line);
+    const ok = pairs.adsReady === "1";
+    setBootProbe("ads", {
+      label: "ADS1256",
+      stage: ok ? "OK" : "Fail",
+      tone: bootTone(ok),
+      detail: ok
+        ? `DRDY ${pairs.drdy ?? "?"}, status ${pairs.status ?? "?"}, mux ${pairs.mux ?? "?"}, drate ${pairs.drate ?? "?"}`
+        : `ADS not ready (${pairs.reason ?? "unknown"}); DRDY ${pairs.drdy ?? "?"}, pull ${pairs.pd ?? "?"}/${pairs.pu ?? "?"}, MISO pull ${pairs.misoPD ?? "?"}/${pairs.misoPU ?? "?"}, status ${pairs.status ?? "?"}. Check ADS power/reference/clock/SPI/CS/DRDY/SYNC`
+    });
+    renderBootDiagnostics();
+    return;
+  }
+
+  if (line.startsWith("BOOT_PROBE_I2C=done")) {
+    const pairs = parsePairs(line);
+    const ok = pairs.tcaOk === "1";
+    const mcp = pairs.mcpOkCount || "?/8";
+    setBootProbe("i2c", {
+      label: "I2C/TCA9548A",
+      stage: ok ? "OK" : "Fail",
+      tone: bootTone(ok),
+      detail: ok
+        ? `TCA OK, MCP ${mcp}`
+        : `TCA not responding; check SDA/SCL, 3V3, GND, TCA address, or stuck I2C bus`
+    });
+    setBootProbe("mcp", {
+      label: "MCP4725 Mux",
+      stage: mcp === "8/8" ? "OK" : mcp,
+      tone: mcp === "8/8" ? "pass" : "fail",
+      detail: `MCP detected ${mcp}${pairs.mcpMask ? `, mask ${pairs.mcpMask}` : ""}; check TCA channels and MCP4725 power/address if below 8/8`
+    });
+    renderBootDiagnostics();
+    return;
+  }
+
+  if (line.startsWith("BOOT_PROBE_MCP_CONTROL=done")) {
+    const pairs = parsePairs(line);
+    const ok = pairs.dacReady === "1" && pairs.writeOkCount === "8/8";
+    setBootProbe("dac", {
+      label: "DAC Control",
+      stage: ok ? "OK" : "Fail",
+      tone: bootTone(ok),
+      detail: ok
+        ? "DAC write low/high passed on all channels"
+        : `DAC ready ${pairs.dacReady ?? "?"}, write ${pairs.writeOkCount ?? "?"}${pairs.writeMask ? `, mask ${pairs.writeMask}` : ""}; check DAC mux, MCP4725 control wiring, and external power`
+    });
+    renderBootDiagnostics();
+    return;
+  }
+
+  const loraBegin = /^GLD_STAR_BEGIN_STATE=(-?\d+)/.exec(line);
+  if (loraBegin) {
+    const ok = Number(loraBegin[1]) === 0;
+    setBootProbe("lora", {
+      label: "LoRa",
+      stage: ok ? "OK" : "Fail",
+      tone: bootTone(ok),
+      detail: ok ? "SX1262 begin passed" : `RadioLib state ${loraBegin[1]}; check LoRa SPI, CS, DIO1, RST, BUSY, TCXO/XTAL`
+    });
+    renderBootDiagnostics();
+    return;
+  }
+
+  const mlInit = /^GLD_ML_INIT initialized=(\d+) outputSize=(-?\d+)/.exec(line);
+  if (mlInit) {
+    const ok = mlInit[1] === "1";
+    setBootProbe("ml", {
+      label: "ML Model",
+      stage: ok ? "OK" : "Fail",
+      tone: bootTone(ok),
+      detail: ok ? `Output size ${mlInit[2]}` : "ML model did not initialize; check model data and PSRAM"
+    });
+    renderBootDiagnostics();
+    return;
+  }
+
+  const sensorBlocked = /^BOOT_SENSOR_SAMPLE_BLOCKED reason=(.+)/.exec(line);
+  if (sensorBlocked) {
+    setBootProbe("sensor", {
+      label: "Sensor Read",
+      stage: "Blocked",
+      tone: "fail",
+      detail: `Sensor sample blocked: ${sensorBlocked[1]}`
+    });
+    renderBootDiagnostics();
+  }
+}
+
+function statusBootCard(key, label, stage, tone, detail) {
+  return { key, label, stage, tone, detail };
+}
+
+function bootCardsFromCurrentState() {
+  const boot = state.status?.bootHealth || {};
+  const telemetry = state.status?.telemetry || {};
+  const lora = state.status?.lora || {};
+  const probes = state.bootDiagnostics.probes;
+  const rows = state.bootDiagnostics.bootRows;
+
+  const cards = [];
+  const adsKnown = boot.adsReady === true || boot.adsReady === false;
+  cards.push(probes.ads || rows.ads || statusBootCard(
+    "ads",
+    "ADS1256",
+    adsKnown ? (boot.adsReady ? "OK" : "Fail") : "Unknown",
+    bootTone(boot.adsReady === true, adsKnown),
+    adsKnown
+      ? (boot.adsReady
+        ? `ADS ready; status 0x${Number(boot.adsStatus || 0).toString(16).padStart(2, "0")}`
+        : `ADS not ready${boot.adsReason ? ` (${boot.adsReason})` : ""}; DRDY ${boot.adsDrdyLevel ?? "?"}, pull ${boot.adsDrdyPulldownLevel ?? "?"}/${boot.adsDrdyPullupLevel ?? "?"}, MISO pull ${boot.adsMisoPulldownLevel ?? "?"}/${boot.adsMisoPullupLevel ?? "?"}, status 0x${Number(boot.adsStatus || 0).toString(16).padStart(2, "0")}`)
+      : "Waiting for ADS boot evidence"
+  ));
+
+  const mcpCount = Number(boot.mcpOkCount);
+  const mcpKnown = Number.isFinite(mcpCount);
+  cards.push(probes.i2c || rows.i2c || statusBootCard(
+    "i2c",
+    "I2C/TCA9548A",
+    mcpKnown && mcpCount > 0 ? "OK" : mcpKnown ? "Check" : "Unknown",
+    mcpKnown && mcpCount > 0 ? "pass" : mcpKnown ? "active" : "idle",
+    mcpKnown && mcpCount > 0 ? "At least one muxed device responded" : "Waiting for TCA/I2C boot evidence"
+  ));
+  const mcpAllOk = mcpKnown && mcpCount === 8;
+  cards.push(probes.mcp || rows.mcp || statusBootCard(
+    "mcp",
+    "MCP4725 Mux",
+    mcpKnown ? `${mcpCount}/8` : "Unknown",
+    mcpKnown ? (mcpAllOk ? "pass" : "fail") : "idle",
+    mcpKnown ? `MCP detected ${mcpCount}/8; failed channels are marked below${Array.isArray(boot.mcpAddrMask) ? " with address masks" : ""}` : "Waiting for MCP channel evidence"
+  ));
+
+  const mcpControlCount = Number(boot.mcpControlOkCount);
+  const mcpControlKnown = Number.isFinite(mcpControlCount);
+  const dacKnown = boot.dacReady === true || boot.dacReady === false;
+  const dacAllOk = boot.dacReady === true && (!mcpControlKnown || mcpControlCount === 8);
+  cards.push(probes.dac || rows.dac || statusBootCard(
+    "dac",
+    "DAC Control",
+    mcpControlKnown ? `${mcpControlCount}/8` : dacKnown ? (boot.dacReady ? "OK" : "Fail") : "Unknown",
+    mcpControlKnown ? (dacAllOk ? "pass" : "fail") : bootTone(boot.dacReady === true, dacKnown),
+    mcpControlKnown
+      ? (dacAllOk ? "DAC write passed on all channels" : `DAC ready ${boot.dacReady ? "yes" : "no"}; write passed ${mcpControlCount}/8`)
+      : dacKnown ? (boot.dacReady ? "DAC ready" : "DAC not ready; check MCP4725/TCA/external power") : "Waiting for DAC evidence"
+  ));
+
+  const loraKnown = boot.radioReady === true || boot.radioReady === false || Number.isFinite(lora.beginState);
+  const loraOk = boot.radioReady === true || lora.beginState === 0;
+  cards.push(probes.lora || rows.lora || statusBootCard(
+    "lora",
+    "LoRa",
+    loraKnown ? (loraOk ? "OK" : "Fail") : "Unknown",
+    bootTone(loraOk, loraKnown),
+    loraKnown ? (loraOk ? "Radio ready" : `Radio not ready${Number.isFinite(lora.beginState) ? `, state ${lora.beginState}` : ""}`) : "Waiting for LoRa evidence"
+  ));
+
+  const mlKnown = boot.mlReady === true || boot.mlReady === false;
+  cards.push(probes.ml || rows.ml || statusBootCard(
+    "ml",
+    "ML Model",
+    mlKnown ? (boot.mlReady ? "OK" : "Fail") : "Unknown",
+    bootTone(boot.mlReady === true, mlKnown),
+    mlKnown ? (boot.mlReady ? "ML ready" : "ML not ready; check model artifact and PSRAM") : "Waiting for ML evidence"
+  ));
+
+  const sensorOk = telemetry.valid === true
+    && Array.isArray(telemetry.sensorStatus)
+    && telemetry.sensorStatus.length >= 8
+    && telemetry.sensorStatus.every((value) => Number(value) === 0);
+  const sensorKnown = telemetry.valid === true || Boolean(probes.sensor) || boot.adsReady === false || (mcpKnown && !mcpAllOk);
+  cards.push(probes.sensor || statusBootCard(
+    "sensor",
+    "Sensor Read",
+    sensorKnown ? (sensorOk ? "OK" : "Blocked") : "Unknown",
+    sensorKnown ? (sensorOk ? "pass" : "fail") : "idle",
+    sensorKnown ? (sensorOk ? "All 8 sensor readings valid" : "Sensor readings blocked until ADS and MCP boot health are OK") : "Waiting for live telemetry"
+  ));
+
+  return cards;
+}
+
+function renderBootDiagnostics() {
+  if (!elements.bootReportGrid || !elements.bootReportSummary) return;
+  const cards = bootCardsFromCurrentState();
+  const pass = cards.filter((card) => card.tone === "pass").length;
+  const fail = cards.filter((card) => card.tone === "fail").length;
+  const check = cards.filter((card) => card.tone === "active").length;
+  elements.bootReportSummary.textContent = fail
+    ? `${fail} boot ${fail === 1 ? "item" : "items"} not OK.`
+    : pass === cards.length ? "All boot items look OK." : `${pass}/${cards.length} boot items OK${check ? `, ${check} need check` : ""}.`;
+  elements.bootReportGrid.innerHTML = "";
+
+  for (const item of cards) {
+    const card = document.createElement("article");
+    card.className = `channel-card ${item.tone}`.trim();
+    const head = document.createElement("div");
+    head.className = "channel-card-head";
+    const title = document.createElement("strong");
+    title.textContent = item.label;
+    const key = document.createElement("span");
+    key.textContent = item.key.toUpperCase();
+    head.append(title, key);
+    const stage = document.createElement("span");
+    stage.className = "channel-stage";
+    stage.textContent = item.stage;
+    const detail = document.createElement("small");
+    detail.textContent = item.detail;
+    card.append(head, stage, detail);
+    elements.bootReportGrid.append(card);
+  }
+}
+
 function renderSensorCheck() {
   const channels = sensorPresenceFromStatus();
   const present = channels.filter((channel) => channel.tone === "pass").length;
@@ -465,9 +828,11 @@ function renderSensorCheck() {
   const telemetry = state.status?.telemetry || {};
 
   elements.sensorCheckSummary.textContent = fail
-    ? `${fail} MQ sensor channel needs attention.`
+    ? `${fail} MQ sensor ${fail === 1 ? "channel needs" : "channels need"} attention.`
     : present === 8 ? "All 8 MQ sensor channels look present." : `${present}/8 MQ sensor channels confirmed.`;
-  elements.sensorCheckMeta.textContent = `ADS: ${boot.adsReady === true ? "Ready" : boot.adsReady === false ? "Not ready" : "Unknown"} - MCP: ${Number.isFinite(boot.mcpOkCount) ? `${boot.mcpOkCount}/8` : "Unknown"} - Latest telemetry: ${telemetry.valid ? "valid" : "none"}${check ? ` - Check ${check}` : ""}`;
+  const adsReason = boot.adsReason ? ` (${boot.adsReason})` : "";
+  elements.sensorCheckMeta.textContent = `ADS: ${boot.adsReady === true ? "Ready" : boot.adsReady === false ? `Not ready${adsReason}` : "Unknown"} - MCP: ${Number.isFinite(boot.mcpOkCount) ? `${boot.mcpOkCount}/8` : "Unknown"} - Latest telemetry: ${telemetry.valid ? "valid" : "none"}${check ? ` - Check ${check}` : ""}`;
+  renderBootDiagnostics();
   elements.sensorCheckChannels.innerHTML = "";
 
   for (const channel of channels) {
@@ -509,10 +874,12 @@ function handleLine(rawLine) {
   const line = rawLine.trim();
   if (!line) return;
   appendLog(line, "in");
+  parseBootDiagnosticLine(line);
 
   try {
     const info = parseJsonAfter("GLD_INFO_JSON", line);
     if (info) {
+      clearSerialResponseWatch();
       state.info = info;
       state.mode = info.mode || state.mode;
       updateInfo(info);
@@ -521,6 +888,7 @@ function handleLine(rawLine) {
 
     const status = parseJsonAfter("GLD_STATUS_JSON", line);
     if (status) {
+      clearSerialResponseWatch();
       state.status = status;
       state.mode = status.mode || state.mode;
       updateStatus(status);
@@ -530,6 +898,7 @@ function handleLine(rawLine) {
 
     const ack = parseJsonAfter("GLD_CMD_ACK_JSON", line);
     if (ack) {
+      clearSerialResponseWatch();
       if (ack.mode) state.mode = ack.mode;
       if (ack.deviceId) setText("deviceId", ack.deviceId);
       if (ack.cmd === "SET_DEVICE_ID" && ack.status === "ok") setText("deviceId", ack.deviceId);
@@ -1233,20 +1602,9 @@ function renderLegend(labels) {
 
 async function connectSerial() {
   if (state.bridgeAvailable) {
-    const port = elements.portSelect.value;
-    if (!port) {
-      setSetupOpen(true);
-      appendLog("CONNECT_SKIPPED select a COM port first", "in");
-      return;
-    }
     try {
-      resetDeviceSnapshot();
-      await bridgeFetch("/api/serial/connect", {
-        method: "POST",
-        body: JSON.stringify({ port, baud: 115200 })
-      });
-      state.connected = true;
-      updateConnectionUi("connected", "ok");
+      const connected = await connectBridgeSerialOnly({ resetSnapshot: true, openSetupOnMissingPort: true });
+      if (!connected) return;
       await wait(180);
       await sendCommand("APP_PING");
       await wait(120);
@@ -1286,6 +1644,25 @@ async function connectSerial() {
   }
 }
 
+async function connectBridgeSerialOnly({ resetSnapshot = false, openSetupOnMissingPort = false } = {}) {
+  const port = elements.portSelect.value;
+  if (!port) {
+    if (openSetupOnMissingPort) setSetupOpen(true);
+    appendLog("CONNECT_SKIPPED select a COM port first", "in");
+    return false;
+  }
+  if (resetSnapshot) {
+    resetDeviceSnapshot();
+  }
+  await bridgeFetch("/api/serial/connect", {
+    method: "POST",
+    body: JSON.stringify({ port, baud: 115200 })
+  });
+  state.connected = true;
+  updateConnectionUi("connected", "ok");
+  return true;
+}
+
 async function readLoop() {
   try {
     state.reader = state.port.readable.getReader();
@@ -1312,6 +1689,7 @@ function processChunk(text) {
 }
 
 async function disconnectSerial() {
+  clearSerialResponseWatch();
   stopPolling();
   if (state.bridgeAvailable) {
     await bridgeFetch("/api/serial/disconnect", { method: "POST", body: "{}" }).catch((error) => {
@@ -1348,13 +1726,28 @@ async function sendCommand(command) {
 
   if (state.bridgeAvailable) {
     if (!state.connected) {
-      appendLog(`SEND_SKIPPED serial not connected: ${line.trimEnd()}`, "in");
-      return;
+      try {
+        const connected = await connectBridgeSerialOnly();
+        if (!connected) {
+          appendLog(`SEND_SKIPPED serial not connected: ${line.trimEnd()}`, "in");
+          return;
+        }
+        await wait(120);
+      } catch (error) {
+        appendLog(`SEND_ERROR connect failed: ${error.message}`, "in");
+        setBadge(elements.connectionBadge, "serial error", "error");
+        return;
+      }
     }
-    await bridgeFetch("/api/serial/write", {
-      method: "POST",
-      body: JSON.stringify({ line: line.trimEnd() })
-    }).catch((error) => appendLog(`SEND_ERROR ${error.message}`, "in"));
+    try {
+      const result = await bridgeFetch("/api/serial/write", {
+        method: "POST",
+        body: JSON.stringify({ line: line.trimEnd() })
+      });
+      if (result?.ok) startSerialResponseWatch(line);
+    } catch (error) {
+      appendLog(`SEND_ERROR ${error.message}`, "in");
+    }
     return;
   }
 
@@ -1365,6 +1758,7 @@ async function sendCommand(command) {
     return;
   }
   await state.writer.write(encoder.encode(line));
+  startSerialResponseWatch(line);
 }
 
 function updateConnectionUi(text, kind) {
@@ -1741,13 +2135,17 @@ function startBridgeEvents() {
   source.addEventListener("serial_status", (event) => {
     const payload = JSON.parse(event.data);
     state.connected = Boolean(payload.connected);
+    if (!payload.connected) clearSerialResponseWatch();
     updateConnectionUi(payload.connected ? "connected" : "bridge ready", payload.connected ? "ok" : "ok");
     if (payload.port) elements.portLabel.textContent = payload.port;
   });
   source.addEventListener("serial_error", (event) => {
     const payload = JSON.parse(event.data);
+    clearSerialResponseWatch();
+    state.connected = false;
     appendLog(`SERIAL_ERROR ${payload.message}`, "in");
     setBadge(elements.connectionBadge, "serial error", "error");
+    updateConnectionUi("serial error", "error");
   });
   source.addEventListener("upload_start", (event) => {
     const payload = JSON.parse(event.data);
@@ -1880,7 +2278,7 @@ function toggleMock() {
 
 function handleMockCommand(command) {
   if (command === "GET_INFO" || command === "APP_PING") emitMockInfo();
-  if (command === "GET_STATUS") emitMockStatus();
+  if (command === "GET_STATUS" || command === "RUN_BOOT_CHECK") emitMockStatus();
   if (command.startsWith("SET_MODE ")) {
     state.mode = command.slice("SET_MODE ".length);
     handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("SET_MODE", "ok", true))}`);
@@ -2093,6 +2491,12 @@ function setupEvents() {
   $("refreshSensorCheckBtn").addEventListener("click", () => sendCommand("GET_STATUS"));
   $("clearSensorCheckBtn").addEventListener("click", () => {
     state.status = null;
+    state.bootDiagnostics = {
+      reportSeen: false,
+      bootRows: {},
+      probes: {},
+      lastLine: ""
+    };
     renderSensorCheck();
   });
   $("applyConfigBtn").addEventListener("click", applyGldSettings);

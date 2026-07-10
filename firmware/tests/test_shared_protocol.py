@@ -880,6 +880,8 @@ def test_gld_unified_runtime_scaffolds_present():
     unified_src = pathlib.Path("firmware/gld/src/GldUnifiedMain.cpp").read_text(encoding="utf-8")
     radio_header = pathlib.Path("firmware/shared/include/RadioTransport.h").read_text(encoding="utf-8")
     config_header = pathlib.Path("firmware/shared/include/FirmwareConfig.h").read_text(encoding="utf-8")
+    operator_index = pathlib.Path("apps/gld-operator/index.html").read_text(encoding="utf-8")
+    operator_app = pathlib.Path("apps/gld-operator/app.js").read_text(encoding="utf-8")
 
     assert "[env:gld]" in platformio
     assert "[env:gldw]" not in platformio
@@ -906,19 +908,68 @@ def test_gld_unified_runtime_scaffolds_present():
     assert "APP_PING" in command_src
     assert "GET_INFO" in command_src
     assert "GET_STATUS" in command_src
+    assert "RESTART" in command_src
+    assert "RUN_BOOT_CHECK" in command_src
+    assert "GldSerialCommandType::Unknown" in command_src
+    assert "echoTypedChar" in command_src
+    assert "stream.write(static_cast<uint8_t>(c))" in command_src
+    assert 'stream.print("\\b \\b")' in command_src
     assert "GldSerialCommandType::AppPing" in command_src
     assert "GldSerialCommandType::GetInfo" in command_src
     assert "GldSerialCommandType::GetStatus" in command_src
+    assert "Unknown" in command_header
+    assert "Restart" in command_header
+    assert "RunBootCheck" in command_header
+    assert "GldSerialCommandType::Restart" in command_src
+    assert "GldSerialCommandType::RunBootCheck" in command_src
     assert "GLD_INFO_JSON" in unified_src
     assert "GLD_STATUS_JSON" in unified_src
     assert "GLD_CMD_ACK_JSON" in unified_src
+    assert "restartFromSerialCommand" in unified_src
+    assert 'emitCommandAck("RESTART", "ok", "restarting", true)' in unified_src
+    assert "runBootCheckFromSerialCommand" in unified_src
+    assert 'emitCommandAck("RUN_BOOT_CHECK", "ok", "running boot diagnostics", false)' in unified_src
+    assert "runBootHardwareDiagnostics(power.externalPower)" in unified_src
+    assert "RUN_BOOT_CHECK_DONE" in unified_src
+    assert 'caps["runBootCheck"] = true' in unified_src
+    assert "onUnknownSerialCommand" in unified_src
+    assert '" command is unknown"' in unified_src
     assert "disableNetworkForOfflineMode(\"inference_mode\")" in unified_src
     assert "disableNetworkForOfflineMode(\"nulling_mode\")" in unified_src
     assert "MODE_BATTERY_ALLOWED_TEMP" in unified_src
     assert "MODE_BLOCKED reason=battery_mode_not_allowed" not in unified_src
-    assert "maintainBatteryWakeLatch();" in unified_src
-    assert "batteryModeTick();" in unified_src
-    assert "runNullingService(ads, dac, nullingLogLine, batteryModeTick)" in unified_src
+    assert "maintainWdtKeepalive();" in unified_src
+    assert "firmwareServiceTick();" in unified_src
+    assert "BOOT_I2C_TIMEOUT_MS = 50" in unified_src
+    assert "Wire.setTimeOut(BOOT_I2C_TIMEOUT_MS)" in unified_src
+    assert "BOOT_MCP_TEST_EDGE_COUNT = 10" in unified_src
+    assert "BOOT_MCP_TEST_LOW_START = pgl::gld::board::GLD_DAC_CODE_MIN" in unified_src
+    assert "BOOT_MCP_TEST_HIGH_END = pgl::gld::board::GLD_DAC_CODE_MAX" in unified_src
+    assert '"mux=%u addr=0x%02X addrMask=0x%02X write=%u-%u,%u-%u"' in unified_src
+    assert '"write=1,10"' not in unified_src
+    assert "BOOT_PROBE_ADS=start" in unified_src
+    assert '"reason=%s DRDY=%d ST=0x%02X"' in unified_src
+    assert "reason=%s drdy=%d pd=%d pu=%d misoPD=%d misoPU=%d cs=%d sync=%d status=0x%02X" in unified_src
+    assert "BOOT_PROBE_I2C=done tcaOk=%u mcpOkCount=%u/%u" in unified_src
+    assert "mcpMask=0x%02X" in unified_src
+    assert "BOOT_PROBE_MCP_CONTROL=done tested=%u dacReady=%u writeOkCount=%u/%u" in unified_src
+    assert "writeMask=0x%02X" in unified_src
+    assert "BootDiagnosticsResult runBootHardwareDiagnostics" in unified_src
+    assert 'boot["adsReason"] = lastBootAdsReason' in unified_src
+    assert 'boot.createNestedArray("mcpOk")' in unified_src
+    assert 'boot.createNestedArray("mcpAddrMask")' in unified_src
+    assert 'boot.createNestedArray("mcpControlOk")' in unified_src
+    assert "scanMcpAddressMaskOnSelectedMux" in unified_src
+    assert "probeInputPullLevels" in unified_src
+    assert "runNullingService(ads, dac, nullingLogLine, firmwareServiceTick)" in unified_src
+    assert "lastWdtKeepaliveMs" in unified_src
+    assert "maintainBatteryWakeLatch" not in unified_src
+    assert "pulseBatteryWakeLatchNow" not in unified_src
+    assert "batteryModeTick" not in unified_src
+    power_header = pathlib.Path("firmware/gld/include/GldPower.h").read_text(encoding="utf-8")
+    board_pins = pathlib.Path("firmware/gld/include/BoardPins.h").read_text(encoding="utf-8")
+    assert "GLD_WDT_KEEPALIVE_INTERVAL_MS = 10000" in power_header
+    assert "PGL_GLD_PIN_TPL5110_DONE 14" in board_pins
     assert "WiFi.mode(WIFI_OFF)" in unified_src
     assert "emitCommandAck(\"SET_MODE\", \"ok\", \"mode switch accepted\", true)" in unified_src
     assert "doc[\"targetChId\"] = static_cast<uint16_t>(GLD_CH_ID)" in unified_src
@@ -928,6 +979,9 @@ def test_gld_unified_runtime_scaffolds_present():
     assert "featureOrder" in unified_src
     assert "latestTelemetryValid = true" in unified_src
     assert "lastLoraTxState = txState" in unified_src
+    assert 'data-command="RUN_BOOT_CHECK"' in operator_index
+    assert "app.js?v=20260710-1431" in operator_index
+    assert 'command === "GET_STATUS" || command === "RUN_BOOT_CHECK"' in operator_app
     assert "MSG_NODE_DOWNLINK" in command_src
     assert "GLD_SECURITY_NOT_PROVISIONED" in unified_src
     assert "aesKeyHex" in unified_src
@@ -1235,6 +1289,8 @@ def test_gld_sensor_selftest_scaffold_present():
     assert "SENSOR_TO_ADS_CH[sensorChannel]" in ads_reader
     assert "#include <ADS1256.h>" in ads_reader
     assert "new ADS1256" in ads_reader
+    assert "ADS1256_CMD_RESET = 0xFE" in ads_reader
+    assert "ads_->sendDirectCommand(ADS1256_CMD_RESET)" in ads_reader
     assert "InitializeADC()" in ads_reader
     assert "ads_->setPGA(PGA_64)" in ads_reader
     assert "ads_->setDRATE(DRATE_30000SPS)" in ads_reader
@@ -1276,8 +1332,11 @@ def test_gld_nulling_selftest_scaffold_present():
     assert "SENSOR_TO_MUX_CH" in board_pins
     assert "{7, 6, 5, 4, 3, 2, 1, 0}" in board_pins
     assert "#include <TCA9548.h>" in dac_src
-    assert "#include <MCP4725.h>" in dac_src
-    assert "writeDAC(value, false)" in dac_src
+    assert "#include <MCP4725.h>" not in dac_src
+    assert "writeDAC(value, false)" not in dac_src
+    assert "MCP4725_DAC_REGISTER = 0x40" in dac_src
+    assert "DAC_I2C_TIMEOUT_MS = 50" in dac_src
+    assert "return true;" in dac_src
     assert "selectChannel" in dac_src
     assert "GldDacMux" in dac_header
     assert "NULLING_STAGE=BEFORE" in nulling_main
@@ -1318,6 +1377,7 @@ def test_lora_link_selftest_scaffold_present():
     assert "PIN_RADIO_B_TXEN = 40" in ch_pins
     assert "PIN_RADIO_B_RST = 41" in ch_pins
     assert "PIN_RADIO_B_DIO1 = 42" in ch_pins
+    assert "PIN_WDT_KEEPALIVE = 47" in ch_pins
     assert "STAR_SF = 7" in ch_rx
     assert "STAR_CR = 5" in ch_rx
     assert "SPISettings(STAR_SPI_HZ, MSBFIRST, SPI_MODE0)" in ch_rx
@@ -1350,6 +1410,12 @@ def test_lora_link_selftest_scaffold_present():
     assert "setPacketReceivedAction(onMeshPacketReceived)" in ch_runtime
     assert "startStarReceive(\"boot\")" in ch_runtime
     assert "startMeshReceive(\"boot\")" in ch_runtime
+    assert "CH_EXTERNAL_WDT_KEEPALIVE_INTERVAL_MS = 10000" in ch_runtime
+    assert "setupExternalWdtKeepalivePin()" in ch_runtime
+    assert "pulseExternalWdtKeepaliveNow()" in ch_runtime
+    assert "maintainExternalWdtKeepalive()" in ch_runtime
+    assert "serviceDelay(responseDelayMs)" in ch_runtime
+    assert "serviceTick();" in ch_runtime
     assert "receiveStarOnce" not in ch_runtime
     assert "receiveMeshOnce" not in ch_runtime
     assert "CH_STAR_RX_HEX" not in ch_runtime

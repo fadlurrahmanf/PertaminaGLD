@@ -7,12 +7,15 @@ namespace pgl::gld {
 
 enum class GldSerialCommandType : uint8_t {
     None,
+    Unknown,
     SetMode,
     DebugOn,
     DebugOff,
     AppPing,
     GetInfo,
     GetStatus,
+    Restart,
+    RunBootCheck,
     SetAppConfigJson,
     SetDeviceIdJson,
 };
@@ -30,8 +33,11 @@ struct GldSerialCommand {
 // - APP_PING
 // - GET_INFO
 // - GET_STATUS
+// - RESTART
+// - RUN_BOOT_CHECK
 // - SET_APP_CONFIG_JSON {...}
 // - SET_DEVICE_ID_JSON {...}
+// Unknown non-empty lines are returned with type Unknown and the raw text in payload.
 bool parseSerialCommand(GldSerialCommand& outCommand);
 
 // Read Serial for "SET_MODE inference|running|dataset|nulling\n".

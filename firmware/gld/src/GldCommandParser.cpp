@@ -45,6 +45,14 @@ bool decodeLine(const char* line, GldSerialCommand& outCommand) {
         outCommand.type = GldSerialCommandType::GetStatus;
         return true;
     }
+    if (strcmp(line, "RESTART") == 0) {
+        outCommand.type = GldSerialCommandType::Restart;
+        return true;
+    }
+    if (strcmp(line, "RUN_BOOT_CHECK") == 0) {
+        outCommand.type = GldSerialCommandType::RunBootCheck;
+        return true;
+    }
     if (strncmp(line, "SET_APP_CONFIG_JSON ", 20) == 0) {
         outCommand.type = GldSerialCommandType::SetAppConfigJson;
         strncpy(outCommand.payload, line + 20, sizeof(outCommand.payload) - 1);
@@ -57,7 +65,25 @@ bool decodeLine(const char* line, GldSerialCommand& outCommand) {
         outCommand.payload[sizeof(outCommand.payload) - 1] = '\0';
         return true;
     }
+    if (line[0] != '\0') {
+        outCommand.type = GldSerialCommandType::Unknown;
+        strncpy(outCommand.payload, line, sizeof(outCommand.payload) - 1);
+        outCommand.payload[sizeof(outCommand.payload) - 1] = '\0';
+        return true;
+    }
     return false;
+}
+
+void echoTypedChar(Stream& stream, char c) {
+    if (c == '\r' || c == '\n') {
+        stream.println();
+        return;
+    }
+    if (c == '\b' || c == 0x7F) {
+        stream.print("\b \b");
+        return;
+    }
+    stream.write(static_cast<uint8_t>(c));
 }
 
 bool readCommandFrom(Stream& stream, char* buf, uint16_t& pos,
@@ -67,10 +93,18 @@ bool readCommandFrom(Stream& stream, char* buf, uint16_t& pos,
         if (value < 0) break;
         const char c = static_cast<char>(value);
         if (c == '\n' || c == '\r') {
+            if (pos > 0) echoTypedChar(stream, c);
             buf[pos] = '\0';
             pos = 0;
             if (decodeLine(buf, outCommand)) return true;
+        } else if (c == '\b' || c == 0x7F) {
+            if (pos > 0) {
+                --pos;
+                buf[pos] = '\0';
+                echoTypedChar(stream, c);
+            }
         } else if (pos < 511) {
+            echoTypedChar(stream, c);
             buf[pos++] = c;
         }
     }

@@ -72,8 +72,20 @@ constexpr uint16_t MQTT_BUFFER_SIZE   = GLD_MQTT_BUFFER_SIZE;
 constexpr uint8_t  MIN_PRIMED_COUNT   = pgl::gld::GLD_SENSOR_MOVING_AVERAGE_WINDOW;
 constexpr uint8_t  BOOT_SENSOR_SNAPSHOT_COUNT = 5;
 constexpr uint32_t BOOT_DAC_SETTLE_MS = 5;
-constexpr uint16_t BOOT_MCP_TEST_CODE_LOW = 1;
-constexpr uint16_t BOOT_MCP_TEST_CODE_HIGH = 10;
+constexpr uint16_t BOOT_I2C_TIMEOUT_MS = 50;
+constexpr uint8_t  BOOT_MCP_TEST_EDGE_COUNT = 10;
+constexpr uint16_t BOOT_MCP_TEST_LOW_START = pgl::gld::board::GLD_DAC_CODE_MIN;
+constexpr uint16_t BOOT_MCP_TEST_LOW_END =
+    BOOT_MCP_TEST_LOW_START + BOOT_MCP_TEST_EDGE_COUNT - 1U;
+constexpr uint16_t BOOT_MCP_TEST_HIGH_END = pgl::gld::board::GLD_DAC_CODE_MAX;
+constexpr uint16_t BOOT_MCP_TEST_HIGH_START =
+    BOOT_MCP_TEST_HIGH_END - BOOT_MCP_TEST_EDGE_COUNT + 1U;
+constexpr uint32_t ADS1256_SPI_HZ = 1920000;
+constexpr uint8_t ADS1256_RREG_CMD = 0x10;
+constexpr uint8_t ADS1256_REG_STATUS = 0x00;
+constexpr uint8_t ADS1256_REG_MUX = 0x01;
+constexpr uint8_t ADS1256_REG_ADCON = 0x02;
+constexpr uint8_t ADS1256_REG_DRATE = 0x03;
 constexpr uint32_t NULLING_RETRY_DELAY_MS = 5000;
 constexpr uint32_t NULLING_AUTO_RESTART_DELAY_MS = 800;
 
@@ -127,14 +139,27 @@ int16_t  lastLoraBeginState = 0;
 int16_t  lastLoraTxState = 0;
 bool     lastLoraTxOk = false;
 int      lastBootAdsDrdyLevel = -1;
+int      lastBootAdsDrdyPulldownLevel = -1;
+int      lastBootAdsDrdyPullupLevel = -1;
+int      lastBootAdsMisoPulldownLevel = -1;
+int      lastBootAdsMisoPullupLevel = -1;
+int      lastBootAdsCsLevel = -1;
+int      lastBootAdsSyncLevel = -1;
 uint8_t  lastBootAdsStatus = 0;
+uint8_t  lastBootAdsMux = 0;
+uint8_t  lastBootAdsAdcon = 0;
+uint8_t  lastBootAdsDrate = 0;
+const char* lastBootAdsReason = "not_checked";
 bool     lastBootTcaOk = false;
 uint8_t  lastBootMcpOkCount = 0;
+bool     lastBootMcpOk[pgl::gld::board::SENSOR_COUNT]{};
+uint8_t  lastBootMcpAddrMask[pgl::gld::board::SENSOR_COUNT]{};
 bool     lastBootMcpControlTested = false;
 uint8_t  lastBootMcpControlOkCount = 0;
+bool     lastBootMcpControlOk[pgl::gld::board::SENSOR_COUNT]{};
 bool     batteryPowerMode = false;
 bool     batteryCyclePoweredOff = false;
-uint32_t lastTpl5010KeepaliveMs = 0;
+uint32_t lastWdtKeepaliveMs = 0;
 float    latestSensorVoltage[pgl::gld::board::SENSOR_COUNT]{};
 uint8_t  latestSensorGain[pgl::gld::board::SENSOR_COUNT]{};
 uint8_t  latestSensorStatus[pgl::gld::board::SENSOR_COUNT]{};
@@ -482,6 +507,7 @@ void addCapabilities(JsonObject caps) {
     caps["nullingConfig"] = "read_only";
     caps["serialAppConfig"] = true;
     caps["serialDeviceId"] = true;
+    caps["runBootCheck"] = true;
     caps["securityProvisioning"] = "SET_APP_CONFIG_JSON aesKeyHex";
     caps["authenticatedDownlink"] = true;
 }
@@ -538,7 +564,7 @@ void emitInfoJson() {
 
 void emitStatusJson() {
     const pgl::gld::GldPowerReading power = pgl::gld::readGldPower();
-    StaticJsonDocument<1536> doc;
+    StaticJsonDocument<3072> doc;
     doc["deviceId"] = runtimeConfig.deviceId;
     doc["nodeId"] = runtimeConfig.nodeId;
     doc["mode"] = pgl::gld::gldModeName(currentMode);
@@ -556,11 +582,33 @@ void emitStatusJson() {
     JsonObject boot = doc.createNestedObject("bootHealth");
     boot["adsReady"] = adsReady;
     boot["adsDrdyLevel"] = lastBootAdsDrdyLevel;
+    boot["adsDrdyPulldownLevel"] = lastBootAdsDrdyPulldownLevel;
+    boot["adsDrdyPullupLevel"] = lastBootAdsDrdyPullupLevel;
+    boot["adsMisoPulldownLevel"] = lastBootAdsMisoPulldownLevel;
+    boot["adsMisoPullupLevel"] = lastBootAdsMisoPullupLevel;
+    boot["adsCsLevel"] = lastBootAdsCsLevel;
+    boot["adsSyncLevel"] = lastBootAdsSyncLevel;
     boot["adsStatus"] = lastBootAdsStatus;
+    boot["adsMux"] = lastBootAdsMux;
+    boot["adsAdcon"] = lastBootAdsAdcon;
+    boot["adsDrate"] = lastBootAdsDrate;
+    boot["adsReason"] = lastBootAdsReason;
     boot["tcaOk"] = lastBootTcaOk;
     boot["mcpOkCount"] = lastBootMcpOkCount;
+    JsonArray mcpOk = boot.createNestedArray("mcpOk");
+    for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
+        mcpOk.add(lastBootMcpOk[ch]);
+    }
+    JsonArray mcpAddrMask = boot.createNestedArray("mcpAddrMask");
+    for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
+        mcpAddrMask.add(lastBootMcpAddrMask[ch]);
+    }
     boot["mcpControlTested"] = lastBootMcpControlTested;
     boot["mcpControlOkCount"] = lastBootMcpControlOkCount;
+    JsonArray mcpControlOk = boot.createNestedArray("mcpControlOk");
+    for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
+        mcpControlOk.add(lastBootMcpControlOk[ch]);
+    }
     boot["dacReady"] = dacReady;
     boot["radioReady"] = radioReady;
     boot["mlReady"] = mlReady;
@@ -604,6 +652,9 @@ void emitStatusJson() {
 // Mode command handler — NVS write + reboot
 // ---------------------------------------------------------------------------
 
+void serviceDelay(uint32_t durationMs);
+void runBootCheckFromSerialCommand();
+
 void onModeCmd(pgl::gld::GldMode newMode) {
     emitCommandAck("SET_MODE", "ok", "mode switch accepted", true);
     logPrintf("GLD_MODE_SWITCH current=%s new=%s\n",
@@ -624,8 +675,23 @@ void onDebugCmd(bool enabled) {
 
 void rebootAfterAckIfRequested(bool reboot) {
     if (!reboot) return;
-    delay(250);
+    serviceDelay(250);
     ESP.restart();
+}
+
+void restartFromSerialCommand() {
+    emitCommandAck("RESTART", "ok", "restarting", true);
+    serviceDelay(100);
+    Serial.flush();
+#if defined(ARDUINO_ARCH_ESP32)
+    Serial0.flush();
+#endif
+    ESP.restart();
+}
+
+void onUnknownSerialCommand(const char* commandText) {
+    rawPrint(commandText);
+    rawPrintln(" command is unknown");
 }
 
 void onSetAppConfigJson(const char* payload) {
@@ -743,6 +809,9 @@ void onSetDeviceIdJson(const char* payload) {
 
 void handleSerialCommand(const pgl::gld::GldSerialCommand& command) {
     switch (command.type) {
+        case pgl::gld::GldSerialCommandType::Unknown:
+            onUnknownSerialCommand(command.payload);
+            break;
         case pgl::gld::GldSerialCommandType::SetMode:
             onModeCmd(command.mode);
             break;
@@ -760,6 +829,12 @@ void handleSerialCommand(const pgl::gld::GldSerialCommand& command) {
             break;
         case pgl::gld::GldSerialCommandType::GetStatus:
             emitStatusJson();
+            break;
+        case pgl::gld::GldSerialCommandType::Restart:
+            restartFromSerialCommand();
+            break;
+        case pgl::gld::GldSerialCommandType::RunBootCheck:
+            runBootCheckFromSerialCommand();
             break;
         case pgl::gld::GldSerialCommandType::SetAppConfigJson:
             onSetAppConfigJson(command.payload);
@@ -784,25 +859,32 @@ void checkSerial() {
     }
 }
 
-void maintainBatteryWakeLatch() {
-    if (!batteryPowerMode) return;
+void pulseWdtKeepaliveNow() {
+    pgl::gld::pulseGldTpl5010Keepalive();
+    lastWdtKeepaliveMs = millis();
+}
 
+void maintainWdtKeepalive() {
     const uint32_t now = millis();
-    if (now - lastTpl5010KeepaliveMs >= pgl::gld::GLD_TPL5010_KEEPALIVE_INTERVAL_MS) {
-        lastTpl5010KeepaliveMs = now;
-        pgl::gld::pulseGldTpl5010Keepalive();
+    if (now - lastWdtKeepaliveMs >= pgl::gld::GLD_WDT_KEEPALIVE_INTERVAL_MS) {
+        pulseWdtKeepaliveNow();
     }
 }
 
-void pulseBatteryWakeLatchNow() {
-    if (!batteryPowerMode) return;
-    pgl::gld::pulseGldTpl5010Keepalive();
-    lastTpl5010KeepaliveMs = millis();
+void firmwareServiceTick() {
+    checkSerial();
+    maintainWdtKeepalive();
 }
 
-void batteryModeTick() {
-    checkSerial();
-    maintainBatteryWakeLatch();
+void serviceDelay(uint32_t durationMs) {
+    const uint32_t startedMs = millis();
+    while (millis() - startedMs < durationMs) {
+        firmwareServiceTick();
+        const uint32_t elapsedMs = millis() - startedMs;
+        const uint32_t remainingMs = durationMs > elapsedMs ? durationMs - elapsedMs : 0;
+        delay(remainingMs > 50 ? 50 : remainingMs);
+    }
+    firmwareServiceTick();
 }
 
 // ---------------------------------------------------------------------------
@@ -850,13 +932,24 @@ const char* checkedOkNotOk(bool checked, bool ok) {
 
 struct BootAdsReport {
     bool ok = false;
+    const char* reason = "not_checked";
     int drdyLevel = -1;
+    int drdyPulldownLevel = -1;
+    int drdyPullupLevel = -1;
+    int misoPulldownLevel = -1;
+    int misoPullupLevel = -1;
+    int csLevel = -1;
+    int syncLevel = -1;
     uint8_t status = 0;
+    uint8_t mux = 0;
+    uint8_t adcon = 0;
+    uint8_t drate = 0;
 };
 
 struct BootI2cReport {
     bool tcaOk = false;
     bool mcpOk[pgl::gld::board::SENSOR_COUNT]{};
+    uint8_t mcpAddrMask[pgl::gld::board::SENSOR_COUNT]{};
     uint8_t mcpOkCount = 0;
 };
 
@@ -867,40 +960,112 @@ struct BootMcpControlReport {
     bool writeHigh[pgl::gld::board::SENSOR_COUNT]{};
 };
 
+struct BootDiagnosticsResult {
+    BootAdsReport ads;
+    BootI2cReport i2c;
+    BootMcpControlReport mcpControl;
+};
+
+uint8_t bootBoolMask(const bool values[pgl::gld::board::SENSOR_COUNT]);
+
 bool i2cAck(uint8_t addr) {
+    firmwareServiceTick();
     Wire.beginTransmission(addr);
-    return Wire.endTransmission() == 0;
+    const bool ok = Wire.endTransmission() == 0;
+    firmwareServiceTick();
+    return ok;
 }
 
 bool tcaSelect(uint8_t muxChannel) {
     if (muxChannel > 7) return false;
+    firmwareServiceTick();
     Wire.beginTransmission(pgl::gld::board::TCA9548A_ADDR);
     Wire.write(static_cast<uint8_t>(1U << muxChannel));
-    return Wire.endTransmission() == 0;
+    const bool ok = Wire.endTransmission() == 0;
+    firmwareServiceTick();
+    return ok;
 }
 
 void tcaDisableAll() {
+    firmwareServiceTick();
     Wire.beginTransmission(pgl::gld::board::TCA9548A_ADDR);
     Wire.write(static_cast<uint8_t>(0));
     Wire.endTransmission();
+    firmwareServiceTick();
+}
+
+void probeInputPullLevels(int pin, int& pulldownLevel, int& pullupLevel) {
+    pinMode(static_cast<uint8_t>(pin), INPUT_PULLDOWN);
+    delay(2);
+    pulldownLevel = digitalRead(pin);
+    pinMode(static_cast<uint8_t>(pin), INPUT_PULLUP);
+    delay(2);
+    pullupLevel = digitalRead(pin);
+    pinMode(static_cast<uint8_t>(pin), INPUT);
+}
+
+uint8_t readAdsRegisterRawNoWait(uint8_t reg) {
+    firmwareServiceTick();
+    gldSpi.beginTransaction(SPISettings(ADS1256_SPI_HZ, MSBFIRST, SPI_MODE1));
+    digitalWrite(pgl::gld::board::PIN_ADS1256_CS, LOW);
+    delayMicroseconds(5);
+    gldSpi.transfer(static_cast<uint8_t>(ADS1256_RREG_CMD | (reg & 0x0F)));
+    gldSpi.transfer(0x00);
+    delayMicroseconds(5);
+    const uint8_t value = gldSpi.transfer(0xFF);
+    digitalWrite(pgl::gld::board::PIN_ADS1256_CS, HIGH);
+    gldSpi.endTransaction();
+    firmwareServiceTick();
+    return value;
 }
 
 BootAdsReport probeBootAds(bool ok) {
     BootAdsReport report{};
     report.ok = ok;
     report.drdyLevel = digitalRead(pgl::gld::board::PIN_ADS1256_DRDY);
-    report.status = ok ? ads.readStatusRegister() : 0;
+    report.csLevel = digitalRead(pgl::gld::board::PIN_ADS1256_CS);
+    report.syncLevel = digitalRead(pgl::gld::board::PIN_ADS1256_SYNC);
+    report.reason = ok ? "ok" : (report.drdyLevel == HIGH ? "drdy_timeout" : "init_failed");
+    report.status = readAdsRegisterRawNoWait(ADS1256_REG_STATUS);
+    report.mux = readAdsRegisterRawNoWait(ADS1256_REG_MUX);
+    report.adcon = readAdsRegisterRawNoWait(ADS1256_REG_ADCON);
+    report.drate = readAdsRegisterRawNoWait(ADS1256_REG_DRATE);
+    probeInputPullLevels(
+        pgl::gld::board::PIN_ADS1256_DRDY,
+        report.drdyPulldownLevel,
+        report.drdyPullupLevel);
+    probeInputPullLevels(
+        pgl::gld::board::PIN_SPI_MISO,
+        report.misoPulldownLevel,
+        report.misoPullupLevel);
     return report;
+}
+
+uint8_t scanMcpAddressMaskOnSelectedMux() {
+    uint8_t mask = 0;
+    for (uint8_t offset = 0; offset < 8; ++offset) {
+        const uint8_t addr = static_cast<uint8_t>(pgl::gld::board::MCP4725_ADDR + offset);
+        if (i2cAck(addr)) {
+            mask |= static_cast<uint8_t>(1U << offset);
+        }
+    }
+    return mask;
 }
 
 BootI2cReport probeBootI2c() {
     BootI2cReport report{};
     Wire.begin(pgl::gld::board::PIN_I2C_SDA, pgl::gld::board::PIN_I2C_SCL);
+#if defined(ARDUINO_ARCH_ESP32)
+    Wire.setTimeOut(BOOT_I2C_TIMEOUT_MS);
+#endif
+    firmwareServiceTick();
     report.tcaOk = i2cAck(pgl::gld::board::TCA9548A_ADDR);
     for (uint8_t sensor = 0; sensor < pgl::gld::board::SENSOR_COUNT; ++sensor) {
+        firmwareServiceTick();
         const uint8_t muxChannel = static_cast<uint8_t>(pgl::gld::board::SENSOR_TO_MUX_CH[sensor]);
         const bool muxOk = report.tcaOk && tcaSelect(muxChannel);
-        report.mcpOk[sensor] = muxOk && i2cAck(pgl::gld::board::MCP4725_ADDR);
+        report.mcpAddrMask[sensor] = muxOk ? scanMcpAddressMaskOnSelectedMux() : 0;
+        report.mcpOk[sensor] = (report.mcpAddrMask[sensor] & 0x01) != 0;
         if (report.mcpOk[sensor]) ++report.mcpOkCount;
     }
     tcaDisableAll();
@@ -924,16 +1089,105 @@ BootMcpControlReport testBootMcpControl(bool externalPower) {
     }
 
     for (uint8_t sensor = 0; sensor < pgl::gld::board::SENSOR_COUNT; ++sensor) {
-        report.writeLow[sensor] = dac.writeDac(sensor, BOOT_MCP_TEST_CODE_LOW);
-        delay(BOOT_DAC_SETTLE_MS);
-        report.writeHigh[sensor] = dac.writeDac(sensor, BOOT_MCP_TEST_CODE_HIGH);
-        delay(BOOT_DAC_SETTLE_MS);
+        bool lowOk = true;
+        bool highOk = true;
+        for (uint8_t offset = 0; offset < BOOT_MCP_TEST_EDGE_COUNT; ++offset) {
+            const uint16_t lowCode = static_cast<uint16_t>(BOOT_MCP_TEST_LOW_START + offset);
+            lowOk = dac.writeDac(sensor, lowCode) && lowOk;
+            serviceDelay(BOOT_DAC_SETTLE_MS);
+        }
+        for (uint8_t offset = 0; offset < BOOT_MCP_TEST_EDGE_COUNT; ++offset) {
+            const uint16_t highCode = static_cast<uint16_t>(BOOT_MCP_TEST_HIGH_START + offset);
+            highOk = dac.writeDac(sensor, highCode) && highOk;
+            serviceDelay(BOOT_DAC_SETTLE_MS);
+        }
+        report.writeLow[sensor] = lowOk;
+        report.writeHigh[sensor] = highOk;
     }
     return report;
 }
 
+BootDiagnosticsResult runBootHardwareDiagnostics(bool externalPower) {
+    BootDiagnosticsResult result{};
+
+    logPrintln("BOOT_PROBE_ADS=start");
+    adsReady = ads.begin(gldSpi);
+    logPrintf("ADS_BEGIN_RESULT=%s\n", adsReady ? "PASS" : "FAIL");
+    result.ads = probeBootAds(adsReady);
+    logPrintf("BOOT_PROBE_ADS=done adsReady=%u reason=%s drdy=%d pd=%d pu=%d misoPD=%d misoPU=%d cs=%d sync=%d status=0x%02X mux=0x%02X adcon=0x%02X drate=0x%02X\n",
+              adsReady ? 1 : 0,
+              result.ads.reason,
+              result.ads.drdyLevel,
+              result.ads.drdyPulldownLevel,
+              result.ads.drdyPullupLevel,
+              result.ads.misoPulldownLevel,
+              result.ads.misoPullupLevel,
+              result.ads.csLevel,
+              result.ads.syncLevel,
+              result.ads.status,
+              result.ads.mux,
+              result.ads.adcon,
+              result.ads.drate);
+
+    logPrintln("BOOT_PROBE_I2C=start");
+    result.i2c = probeBootI2c();
+    logPrintf("BOOT_PROBE_I2C=done tcaOk=%u mcpOkCount=%u/%u mcpMask=0x%02X\n",
+              result.i2c.tcaOk ? 1 : 0,
+              result.i2c.mcpOkCount,
+              pgl::gld::board::SENSOR_COUNT,
+              bootBoolMask(result.i2c.mcpOk));
+
+    logPrintln("BOOT_PROBE_MCP_CONTROL=start");
+    result.mcpControl = testBootMcpControl(externalPower);
+
+    lastBootAdsDrdyLevel = result.ads.drdyLevel;
+    lastBootAdsDrdyPulldownLevel = result.ads.drdyPulldownLevel;
+    lastBootAdsDrdyPullupLevel = result.ads.drdyPullupLevel;
+    lastBootAdsMisoPulldownLevel = result.ads.misoPulldownLevel;
+    lastBootAdsMisoPullupLevel = result.ads.misoPullupLevel;
+    lastBootAdsCsLevel = result.ads.csLevel;
+    lastBootAdsSyncLevel = result.ads.syncLevel;
+    lastBootAdsStatus = result.ads.status;
+    lastBootAdsMux = result.ads.mux;
+    lastBootAdsAdcon = result.ads.adcon;
+    lastBootAdsDrate = result.ads.drate;
+    lastBootAdsReason = result.ads.reason;
+    lastBootTcaOk = result.i2c.tcaOk;
+    lastBootMcpOkCount = result.i2c.mcpOkCount;
+    lastBootMcpControlTested = result.mcpControl.tested;
+    lastBootMcpControlOkCount = 0;
+    for (uint8_t sensor = 0; sensor < pgl::gld::board::SENSOR_COUNT; ++sensor) {
+        lastBootMcpOk[sensor] = result.i2c.mcpOk[sensor];
+        lastBootMcpAddrMask[sensor] = result.i2c.mcpAddrMask[sensor];
+        lastBootMcpControlOk[sensor] = result.mcpControl.dacReady &&
+                                       result.mcpControl.writeLow[sensor] &&
+                                       result.mcpControl.writeHigh[sensor];
+        if (lastBootMcpControlOk[sensor]) {
+            ++lastBootMcpControlOkCount;
+        }
+    }
+    logPrintf("BOOT_PROBE_MCP_CONTROL=done tested=%u dacReady=%u writeOkCount=%u/%u writeMask=0x%02X\n",
+              result.mcpControl.tested ? 1 : 0,
+              result.mcpControl.dacReady ? 1 : 0,
+              lastBootMcpControlOkCount,
+              pgl::gld::board::SENSOR_COUNT,
+              bootBoolMask(lastBootMcpControlOk));
+
+    return result;
+}
+
 void bootTableRow(const char* ic, const char* check, const char* status, const char* detail) {
     logPrintf("| %-15s | %-18s | %-9s | %-40s |\n", ic, check, status, detail);
+}
+
+uint8_t bootBoolMask(const bool values[pgl::gld::board::SENSOR_COUNT]) {
+    uint8_t mask = 0;
+    for (uint8_t sensor = 0; sensor < pgl::gld::board::SENSOR_COUNT; ++sensor) {
+        if (values[sensor]) {
+            mask |= static_cast<uint8_t>(1U << sensor);
+        }
+    }
+    return mask;
 }
 
 void printBootIcReport(const pgl::gld::GldPowerReading& power,
@@ -947,7 +1201,7 @@ void printBootIcReport(const pgl::gld::GldPowerReading& power,
                        int mlOutputSize,
                        bool modeReady,
                        const char* modeDetail) {
-    char detail[128];
+    char detail[256];
 
     logPrintln("[BOOT_IC_REPORT]");
     logPrintln("+-----------------+--------------------+-----------+------------------------------------------+");
@@ -966,10 +1220,8 @@ void printBootIcReport(const pgl::gld::GldPowerReading& power,
              pgl::gld::board::PIN_SPI_MISO);
     bootTableRow("SPI_BUS", "pins", "OK", detail);
 
-    snprintf(detail, sizeof(detail), "CS=%d DRDY=%d SYNC=%d drdy=%d status=0x%02X",
-             pgl::gld::board::PIN_ADS1256_CS,
-             pgl::gld::board::PIN_ADS1256_DRDY,
-             pgl::gld::board::PIN_ADS1256_SYNC,
+    snprintf(detail, sizeof(detail), "reason=%s DRDY=%d ST=0x%02X",
+             adsReport.reason,
              adsReport.drdyLevel,
              adsReport.status);
     bootTableRow("ADS1256", "SPI begin", okNotOk(adsReport.ok), detail);
@@ -994,13 +1246,19 @@ void printBootIcReport(const pgl::gld::GldPowerReading& power,
                                  ? (testedOk ? "OK_TESTED" : "NOT_OK")
                                  : okNotOk(i2cReport.mcpOk[sensor]);
         if (mcpControl.tested) {
-            snprintf(detail, sizeof(detail), "mux=%u addr=0x%02X write=1,10",
+            snprintf(detail, sizeof(detail), "mux=%u addr=0x%02X addrMask=0x%02X write=%u-%u,%u-%u",
                      static_cast<unsigned>(pgl::gld::board::SENSOR_TO_MUX_CH[sensor]),
-                     pgl::gld::board::MCP4725_ADDR);
+                     pgl::gld::board::MCP4725_ADDR,
+                     i2cReport.mcpAddrMask[sensor],
+                     static_cast<unsigned>(BOOT_MCP_TEST_LOW_START),
+                     static_cast<unsigned>(BOOT_MCP_TEST_LOW_END),
+                     static_cast<unsigned>(BOOT_MCP_TEST_HIGH_START),
+                     static_cast<unsigned>(BOOT_MCP_TEST_HIGH_END));
         } else {
-            snprintf(detail, sizeof(detail), "mux=%u addr=0x%02X ack only",
+            snprintf(detail, sizeof(detail), "mux=%u addr=0x%02X addrMask=0x%02X ack only",
                      static_cast<unsigned>(pgl::gld::board::SENSOR_TO_MUX_CH[sensor]),
-                     pgl::gld::board::MCP4725_ADDR);
+                     pgl::gld::board::MCP4725_ADDR,
+                     i2cReport.mcpAddrMask[sensor]);
         }
         bootTableRow(icName, mcpControl.tested ? "I2C+DAC write" : "I2C ACK", status, detail);
     }
@@ -1040,8 +1298,7 @@ bool connectWifi() {
     WiFi.begin(runtimeConfig.wifiSsid, runtimeConfig.wifiPassword);
     const uint32_t t0 = millis();
     while (WiFi.status() != WL_CONNECTED && millis() - t0 < WIFI_TIMEOUT_MS) {
-        batteryModeTick();
-        delay(50);
+        serviceDelay(50);
     }
     const bool ok = WiFi.status() == WL_CONNECTED;
     logPrintf(ok ? "WIFI_CONNECTED ip=%s\n" : "WIFI_CONNECT_FAILED\n",
@@ -1219,7 +1476,7 @@ bool initNulling(bool runIfMissing) {
     }
     logPrintln("NULLING_NVS_LOAD=empty running_nulling_now");
     const pgl::gld::GldNullingServiceResult result =
-        pgl::gld::runNullingService(ads, dac, nullingLogLine, batteryModeTick);
+        pgl::gld::runNullingService(ads, dac, nullingLogLine, firmwareServiceTick);
     logPrintf("NULLING_RUN status=%s successCount=%u\n",
               pgl::gld::gldNullingStatusName(result.status), result.successCount);
     if (result.status != pgl::gld::GldNullingStatus::Ok) return false;
@@ -1293,7 +1550,7 @@ void returnToRunningAfterNulling(const pgl::gld::GldNullingProfile& profile) {
               profile.profileId,
               static_cast<unsigned long>(NULLING_AUTO_RESTART_DELAY_MS));
     pgl::gld::writeGldMode(pgl::gld::GldMode::INFERENCE);
-    delay(NULLING_AUTO_RESTART_DELAY_MS);
+    serviceDelay(NULLING_AUTO_RESTART_DELAY_MS);
     Serial.flush();
 #if defined(ARDUINO_ARCH_ESP32)
     Serial0.flush();
@@ -1340,7 +1597,7 @@ bool applySavedNullingProfileOnly() {
     if (!pgl::gld::loadNullingProfile(profile)) {
         if (dacReady) {
             const bool resetOk = dac.writeAll(0);
-            delay(BOOT_DAC_SETTLE_MS);
+            serviceDelay(BOOT_DAC_SETTLE_MS);
             logPrintf("BOOT_NULLING_PROFILE_APPLY=SKIP reason=no_profile dacReset=%s\n",
                       resetOk ? "OK" : "FAIL");
         } else {
@@ -1363,7 +1620,7 @@ bool applySavedNullingProfileOnly() {
     for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
         allApplied = dac.writeDac(ch, profile.dacCode[ch]) && allApplied;
     }
-    delay(BOOT_DAC_SETTLE_MS);
+    serviceDelay(BOOT_DAC_SETTLE_MS);
     if (allApplied) {
         nullingProfileId = profile.profileId;
     }
@@ -1379,6 +1636,7 @@ void printBootSensorSnapshotRow(uint8_t rowNumber) {
         snprintf(line, sizeof(line), "%u. ", static_cast<unsigned>(rowNumber)));
 
     for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT && used < sizeof(line); ++ch) {
+        firmwareServiceTick();
         const pgl::gld::GldAds1256Reading reading = ads.readChannel(ch);
         const char* sep = (ch + 1U < pgl::gld::board::SENSOR_COUNT) ? " | " : "";
         int written = 0;
@@ -1416,8 +1674,70 @@ void runExternalPowerBootSensorSamples(const pgl::gld::GldPowerReading& power) {
     }
 
     for (uint8_t sample = 1; sample <= BOOT_SENSOR_SNAPSHOT_COUNT; ++sample) {
+        firmwareServiceTick();
         printBootSensorSnapshotRow(sample);
     }
+}
+
+void runBootCheckFromSerialCommand() {
+    emitCommandAck("RUN_BOOT_CHECK", "ok", "running boot diagnostics", false);
+
+    const pgl::gld::GldPowerReading power = pgl::gld::readGldPower();
+    batteryPowerMode = !power.externalPower;
+    logPrintf("RUN_BOOT_CHECK_START mode=%s power=%s externalPower=%u\n",
+              pgl::gld::gldModeName(currentMode),
+              pgl::gld::gldPowerModeName(power.mode),
+              power.externalPower ? 1 : 0);
+
+    const BootDiagnosticsResult bootDiagnostics = runBootHardwareDiagnostics(power.externalPower);
+
+    char modeDetail[128];
+    bool modeReady = false;
+    bool radioChecked = false;
+    bool mlChecked = false;
+    bool radioOk = false;
+    bool mlOk = false;
+    int mlOutputSize = -1;
+
+    if (currentMode == pgl::gld::GldMode::INFERENCE) {
+        radioChecked = true;
+        mlChecked = true;
+        radioOk = radioReady;
+        mlOk = mlReady;
+        mlOutputSize = network != nullptr ? network->getOutputSize() : -1;
+        modeReady = adsReady && radioReady && mlReady;
+        snprintf(modeDetail, sizeof(modeDetail), "ads=%s mcp=%u/%u lora=%s ml=%s rerun=1",
+                 passFail(adsReady),
+                 bootDiagnostics.i2c.mcpOkCount,
+                 pgl::gld::board::SENSOR_COUNT,
+                 passFail(radioReady),
+                 passFail(mlReady));
+    } else if (currentMode == pgl::gld::GldMode::DATASET) {
+        modeReady = adsReady && dacReady && nullingProfileId > 0;
+        snprintf(modeDetail, sizeof(modeDetail), "ads=%s mcp=%u/%u dac=%s nullingProfileId=%u rerun=1",
+                 passFail(adsReady),
+                 bootDiagnostics.i2c.mcpOkCount,
+                 pgl::gld::board::SENSOR_COUNT,
+                 passFail(dacReady),
+                 nullingProfileId);
+    } else {
+        modeReady = adsReady && dacReady;
+        snprintf(modeDetail, sizeof(modeDetail), "ads=%s mcp=%u/%u dac=%s nullingRetry=%u rerun=1",
+                 passFail(adsReady),
+                 bootDiagnostics.i2c.mcpOkCount,
+                 pgl::gld::board::SENSOR_COUNT,
+                 passFail(dacReady),
+                 nullingRetryArmed ? 1 : 0);
+    }
+
+    printBootIcReport(power, bootDiagnostics.ads, bootDiagnostics.i2c, bootDiagnostics.mcpControl,
+                      radioChecked, radioOk,
+                      mlChecked, mlOk, mlOutputSize,
+                      modeReady,
+                      modeDetail);
+    runExternalPowerBootSensorSamples(power);
+    emitStatusJson();
+    logPrintln("RUN_BOOT_CHECK_DONE");
 }
 
 // ---------------------------------------------------------------------------
@@ -1565,7 +1885,9 @@ void openLoRaRxWindow() {
     loraRadio->setPacketReceivedAction(onLoRaRxDone);
     loraRadio->startReceive();
     const uint32_t t0 = millis();
-    while (!loraRxFlag && millis() - t0 < LORA_RX_WINDOW_MS) delay(5);
+    while (!loraRxFlag && millis() - t0 < LORA_RX_WINDOW_MS) {
+        serviceDelay(5);
+    }
     if (loraRxFlag) {
         uint8_t rxBuf[pgl::protocol::APPFRAME_OVERHEAD + pgl::protocol::STAR_MAX_PAYLOAD]{};
         const size_t rxLen = loraRadio->getPacketLength();
@@ -1741,10 +2063,11 @@ void setup() {
 #if defined(ARDUINO_ARCH_ESP32)
     Serial0.begin(115200);
 #endif
-    delay(1000);
+    pgl::gld::beginGldPowerPins();
+    pulseWdtKeepaliveNow();
+    serviceDelay(1000);
     loadRuntimeConfig();
     setupPins();
-    pgl::gld::beginGldPowerPins();
     movingAvg.reset();
 
     currentMode = pgl::gld::readGldMode();
@@ -1767,29 +2090,14 @@ void setup() {
               pgl::gld::gldPowerModeName(power.mode),
               power.externalPower ? 1 : 0, power.batteryMv);
     batteryPowerMode = !power.externalPower;
-    lastTpl5010KeepaliveMs = millis();
-    pulseBatteryWakeLatchNow();
+    pulseWdtKeepaliveNow();
     emitInfoJson();
     emitStatusJson();
 
-    adsReady = ads.begin(gldSpi);
-    logPrintf("ADS_BEGIN_RESULT=%s\n", adsReady ? "PASS" : "FAIL");
-    const BootAdsReport bootAds = probeBootAds(adsReady);
-    const BootI2cReport bootI2c = probeBootI2c();
-    const BootMcpControlReport bootMcpControl = testBootMcpControl(power.externalPower);
-    lastBootAdsDrdyLevel = bootAds.drdyLevel;
-    lastBootAdsStatus = bootAds.status;
-    lastBootTcaOk = bootI2c.tcaOk;
-    lastBootMcpOkCount = bootI2c.mcpOkCount;
-    lastBootMcpControlTested = bootMcpControl.tested;
-    lastBootMcpControlOkCount = 0;
-    for (uint8_t sensor = 0; sensor < pgl::gld::board::SENSOR_COUNT; ++sensor) {
-        if (bootMcpControl.dacReady &&
-            bootMcpControl.writeLow[sensor] &&
-            bootMcpControl.writeHigh[sensor]) {
-            ++lastBootMcpControlOkCount;
-        }
-    }
+    const BootDiagnosticsResult bootDiagnostics = runBootHardwareDiagnostics(power.externalPower);
+    const BootAdsReport& bootAds = bootDiagnostics.ads;
+    const BootI2cReport& bootI2c = bootDiagnostics.i2c;
+    const BootMcpControlReport& bootMcpControl = bootDiagnostics.mcpControl;
 
     if (currentMode == pgl::gld::GldMode::INFERENCE) {
         // --- INFERENCE mode init ---
@@ -1826,7 +2134,7 @@ void setup() {
         // (button hold / IO38 CLR) before switching into Nulling mode again.
         logPrintln("MODE_BLOCKED reason=alarm_latched mode=nulling");
         pgl::gld::writeGldMode(pgl::gld::GldMode::INFERENCE);
-        delay(NULLING_AUTO_RESTART_DELAY_MS);
+        serviceDelay(NULLING_AUTO_RESTART_DELAY_MS);
         Serial.flush();
 #if defined(ARDUINO_ARCH_ESP32)
         Serial0.flush();
@@ -1838,16 +2146,16 @@ void setup() {
         if (batteryPowerMode) {
             logPrintf("MODE_BATTERY_ALLOWED_TEMP mode=%s\n",
                       pgl::gld::gldModeName(currentMode));
-            pulseBatteryWakeLatchNow();
+            pulseWdtKeepaliveNow();
         }
         dacReady = dac.begin(Wire);
         logPrintf("DAC_MUX_BEGIN_RESULT=%s\n", dacReady ? "PASS" : "FAIL");
-        pulseBatteryWakeLatchNow();
+        pulseWdtKeepaliveNow();
 
         if (currentMode == pgl::gld::GldMode::DATASET) {
             if (adsReady && dacReady) {
                 initNulling(false);
-                pulseBatteryWakeLatchNow();
+                pulseWdtKeepaliveNow();
             }
             logPrintf("DATASET_READY adsReady=%u dacReady=%u nullingProfileId=%u\n",
                       adsReady ? 1 : 0, dacReady ? 1 : 0, nullingProfileId);
@@ -1864,12 +2172,12 @@ void setup() {
                               adsReady && dacReady && nullingProfileId > 0,
                               modeDetail);
             runExternalPowerBootSensorSamples(power);
-            pulseBatteryWakeLatchNow();
+            pulseWdtKeepaliveNow();
             connectWifi();
-            pulseBatteryWakeLatchNow();
+            pulseWdtKeepaliveNow();
             mqtt.setBufferSize(MQTT_BUFFER_SIZE);
             mqttConnect();
-            pulseBatteryWakeLatchNow();
+            pulseWdtKeepaliveNow();
             lastStatusMs = millis();
 
         } else {
@@ -1895,7 +2203,7 @@ void setup() {
                 logPrintln("NULLING_RUN=start");
 
                 const pgl::gld::GldNullingServiceResult result =
-                    pgl::gld::runNullingService(ads, dac, nullingLogLine, batteryModeTick);
+                    pgl::gld::runNullingService(ads, dac, nullingLogLine, firmwareServiceTick);
                 logPrintf("NULLING_RUN_DONE status=%s successCount=%u\n",
                           pgl::gld::gldNullingStatusName(result.status), result.successCount);
 
@@ -1946,8 +2254,7 @@ void setup() {
 }
 
 void loop() {
-    checkSerial();
-    maintainBatteryWakeLatch();
+    firmwareServiceTick();
 
     if (currentMode == pgl::gld::GldMode::INFERENCE) {
         const uint32_t now = millis();
@@ -1992,7 +2299,7 @@ void loop() {
                 publishDatasetStatus("running", currentLabel);
         }
         runDatasetStateMachine();
-        delay(10);
+        serviceDelay(10);
 
     } else {
         // NULLING mode: offline calibration; Serial commands are checked at loop start.
@@ -2000,6 +2307,6 @@ void loop() {
             static_cast<int32_t>(millis() - nextNullingRetryMs) >= 0) {
             runNullingRetryAttempt();
         }
-        delay(100);
+        serviceDelay(100);
     }
 }

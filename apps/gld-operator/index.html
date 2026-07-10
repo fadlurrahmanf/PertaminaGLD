@@ -154,11 +154,20 @@
                 <h2>MQ Sensor Check</h2>
                 <div class="toolbar">
                   <button id="refreshSensorCheckBtn" type="button">Refresh Status</button>
+                  <button data-command="RUN_BOOT_CHECK" type="button">Run Boot Check</button>
                   <button id="clearSensorCheckBtn" type="button">Clear</button>
                 </div>
               </div>
               <div id="sensorCheckSummary" class="status-line">Waiting for GLD status.</div>
               <div id="sensorCheckMeta" class="status-line">ADS: Unknown - MCP: Unknown - Latest telemetry: none</div>
+              <div class="section-title inner">
+                <h3>Boot IC Report</h3>
+              </div>
+              <div id="bootReportSummary" class="status-line">Waiting for boot report.</div>
+              <div id="bootReportGrid" class="channel-grid boot-report-grid" aria-label="Boot IC report"></div>
+              <div class="section-title inner">
+                <h3>MQ Channels</h3>
+              </div>
               <div id="sensorCheckChannels" class="channel-grid" aria-label="MQ sensor presence"></div>
             </div>
           </section>
@@ -367,6 +376,6 @@
       </section>
     </main>
 
-    <script src="./app.js?v=20260701-1606"></script>
+    <script src="./app.js?v=20260710-1431"></script>
   </body>
 </html>

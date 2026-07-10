@@ -39,13 +39,14 @@ bool readGldExternalPower();
 GldPowerReading readGldPower();
 const char* gldPowerModeName(GldPowerMode mode);
 
-// TPL5010 wake/keepalive/sleep cycle (battery mode only):
-// - pulseGldTpl5010Keepalive() must be called at least every
-//   GLD_TPL5010_KEEPALIVE_INTERVAL_MS while the node is doing work, or the
-//   TPL5010 will assert RSTn and force-reset the ESP32.
+// WDT/TPL5010 wake/keepalive/sleep cycle on IO14:
+// - pulseGldTpl5010Keepalive() emits the short DONE/keepalive pulse.
+// - The runtime services IO14 frequently in every mode while the node is doing
+//   work, or the external WDT can assert RSTn and force-reset the ESP32.
 // - pulseGldPowerLatchClear() clears the SN74AUP1G74 power latch once all
 //   work for the wake cycle is complete, cutting ESP32 power (real sleep).
-constexpr uint32_t GLD_TPL5010_KEEPALIVE_INTERVAL_MS = 10000;
+constexpr uint32_t GLD_WDT_KEEPALIVE_INTERVAL_MS = 10000;
+constexpr uint32_t GLD_TPL5010_KEEPALIVE_INTERVAL_MS = GLD_WDT_KEEPALIVE_INTERVAL_MS;
 constexpr uint32_t GLD_TPL5010_KEEPALIVE_PULSE_MS = 5;
 constexpr uint32_t GLD_POWER_LATCH_CLEAR_PULSE_MS = 5;
 void pulseGldTpl5010Keepalive();

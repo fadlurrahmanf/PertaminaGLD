@@ -432,11 +432,28 @@ Algorithm shape:
 
 1. For each sensor channel, write DAC code 0.
 2. Baseline prescan tries codes `0..10`.
-3. Exponential search starts at code 1 and doubles step up to 2048 until delta reaches threshold.
-4. Binary search narrows the valid range.
-5. Confirm window checks candidate codes around the selected range.
-6. Final code is written and the channel is read again.
-7. Channel passes only when final read is valid and final voltage is non-negative.
+3. Exponential search doubles the DAC code until the reading crosses up to
+   (near) absolute zero volts — not until it merely differs from baseline.
+   A channel with a deep negative baseline needs a large compensation swing
+   before it reaches zero; targeting "delta from baseline exceeds threshold"
+   locks onto baseline-adjacent noise long before the real crossing.
+4. Binary search narrows to the precise code of that zero crossing.
+5. Confirm window scans candidate codes around the crossing (10 codes for a
+   baseline >= 0 channel, 20 for baseline < 0 — 10 before + 10 after the
+   binary search result) and re-verifies every non-negative candidate with a
+   second independent read, smallest-voltage-first, discarding any that flip
+   negative on reconfirmation (the reading can swing several hundred
+   microvolts to a few millivolts per DAC LSB right at the crossing, so a
+   single sample set closest to zero is not reliable enough on its own). If
+   no candidate reconfirms non-negative, falls back to the first candidate
+   clearing the configured minimum final voltage.
+6. Final code is written and the channel is read again (a third independent
+   read). If that still comes back negative, the code is nudged up one DAC
+   LSB at a time (re-checking each time, up to `final check max bumps`)
+   instead of failing the channel outright — the priority is a positive
+   final result, not the exact code the confirm stage picked.
+7. Channel passes only when the final read is valid and at or above the
+   configured minimum final voltage.
 
 Key constants:
 
@@ -447,10 +464,28 @@ Key constants:
 | baseline prescan max DAC code | 10 |
 | exponential initial step | 1 |
 | exponential max step | 2048 |
-| confirm window | 10 |
+| confirm window (baseline >= 0) | 10 (5 before + 5 after selected) |
+| confirm window (baseline < 0) | 20 (10 before + 10 after selected) |
+| final check max bumps | 20 |
 | settle delay | 5 ms |
-| delta threshold | `0.0001 V` |
-| minimum final voltage | `0.0 V` |
+| stage transition pause | 2000 ms |
+| delta threshold (default, configurable) | `0.0001 V` |
+| minimum final voltage (default, configurable) | `0.0 V` |
+
+`delta threshold` and `minimum final voltage` are runtime-tunable via
+`SET_NULLING_CONFIG_JSON {"thresholdV":<V>,"minFinalV":<V>}`, persisted to NVS
+namespace `gld-nullcfg`, and loaded back into defaults on boot.
+`GLD_STATUS_JSON.nulling` reports the currently active `thresholdV`/`minFinalV`,
+and `GLD_INFO_JSON.capabilities.nullingConfig` advertises the command. With
+`minFinalV` left at its `0.0 V` default, verified 8/8 success on a reference
+board where several channels have a deep negative ADC baseline (down to
+-15 mV), all landing at a small positive residual (roughly 0.1-3 mV) after
+the crossing-search + reconfirm + final-bump changes above.
+Between each algorithm phase (baseline -> exponential -> binary search ->
+confirm) the firmware pauses `stage transition pause` (2000 ms, ticking the
+WDT/serial in the background) and logs `NULLING_STAGE_TRANSITION`, so an app
+polling the serial log can visibly show each phase instead of the whole
+channel flashing by.
 
 Nulling runtime behavior:
 

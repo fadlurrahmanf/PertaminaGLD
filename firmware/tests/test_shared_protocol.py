@@ -961,7 +961,11 @@ def test_gld_unified_runtime_scaffolds_present():
     assert 'boot.createNestedArray("mcpControlOk")' in unified_src
     assert "scanMcpAddressMaskOnSelectedMux" in unified_src
     assert "probeInputPullLevels" in unified_src
-    assert "runNullingService(ads, dac, nullingLogLine, firmwareServiceTick)" in unified_src
+    assert "runNullingService(ads, dac, nullingLogLine, firmwareServiceTick, nullingConfig)" in unified_src
+    assert "runNullingService(ads, dac, nullingLogLine, checkSerial, nullingConfig)" in unified_src
+    assert 'caps["nullingConfig"] = "SET_NULLING_CONFIG_JSON thresholdV,minFinalV"' in unified_src
+    assert "onSetNullingConfigJson" in unified_src
+    assert "GldSerialCommandType::SetNullingConfigJson" in unified_src
     assert "lastWdtKeepaliveMs" in unified_src
     assert "maintainBatteryWakeLatch" not in unified_src
     assert "pulseBatteryWakeLatchNow" not in unified_src
@@ -980,8 +984,12 @@ def test_gld_unified_runtime_scaffolds_present():
     assert "latestTelemetryValid = true" in unified_src
     assert "lastLoraTxState = txState" in unified_src
     assert 'data-command="RUN_BOOT_CHECK"' in operator_index
-    assert "app.js?v=20260710-1431" in operator_index
+    assert "app.js?v=20260710-1630" in operator_index
     assert 'command === "GET_STATUS" || command === "RUN_BOOT_CHECK"' in operator_app
+    assert "SET_NULLING_CONFIG_JSON" in operator_app
+    assert 'id="applyNullingConfigBtn"' in operator_index
+    assert 'id="nullingThresholdV"' in operator_index
+    assert 'id="nullingMinFinalV"' in operator_index
     assert "MSG_NODE_DOWNLINK" in command_src
     assert "GLD_SECURITY_NOT_PROVISIONED" in unified_src
     assert "aesKeyHex" in unified_src
@@ -1120,7 +1128,8 @@ def test_current_design_docs_mirror_live_source_contracts():
     assert "| Frequency | 921.0 MHz |" in gw_doc
 
     assert "confirm count | 10" in gld_doc
-    assert "minimum final voltage | `0.0 V`" in gld_doc
+    assert "minimum final voltage (default, configurable) | `0.0 V`" in gld_doc
+    assert "SET_NULLING_CONFIG_JSON" in gld_doc
     assert "inference`/`running` and `nulling` call the offline-mode guard" in gld_doc
     assert "| 3 | MQ5 | 7 | 4 | 3 |" in gld_doc
     assert "| 7 | MQ2 | 3 | 0 | 7 |" in gld_doc

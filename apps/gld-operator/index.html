@@ -294,6 +294,30 @@
               </div>
               <pre id="nullingLog" class="terminal compact-log"></pre>
             </div>
+
+            <div class="panel">
+              <div class="section-title wrap">
+                <h2>Nulling Thresholds</h2>
+                <div class="toolbar">
+                  <button id="applyNullingConfigBtn" type="button">Apply Thresholds</button>
+                  <button id="refreshNullingConfigBtn" type="button">Refresh from GLD</button>
+                </div>
+              </div>
+              <div class="status-line">
+                A channel whose sensor sits below zero on the ADC (a per-channel wiring
+                property, not a fault) can never pass a 0.0V minimum final voltage check.
+                Lower "Minimum Final Voltage" for those channels instead of leaving them
+                permanently failed. Values apply on the next nulling run and persist on the GLD.
+              </div>
+              <div class="form-grid">
+                <label>Delta Threshold (V)
+                  <input id="nullingThresholdV" type="number" step="0.00001" min="0.00001" max="2.497" value="0.0001">
+                </label>
+                <label>Minimum Final Voltage (V)
+                  <input id="nullingMinFinalV" type="number" step="0.001" min="-2.497" max="2.497" value="0">
+                </label>
+              </div>
+            </div>
           </section>
 
           <section id="log" class="view">
@@ -376,6 +400,6 @@
       </section>
     </main>
 
-    <script src="./app.js?v=20260710-1431"></script>
+    <script src="./app.js?v=20260710-1630"></script>
   </body>
 </html>

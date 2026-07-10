@@ -18,6 +18,7 @@ enum class GldSerialCommandType : uint8_t {
     RunBootCheck,
     SetAppConfigJson,
     SetDeviceIdJson,
+    SetNullingConfigJson,
 };
 
 struct GldSerialCommand {
@@ -37,6 +38,7 @@ struct GldSerialCommand {
 // - RUN_BOOT_CHECK
 // - SET_APP_CONFIG_JSON {...}
 // - SET_DEVICE_ID_JSON {...}
+// - SET_NULLING_CONFIG_JSON {"thresholdV":0.0001,"minFinalV":0.0}
 // Unknown non-empty lines are returned with type Unknown and the raw text in payload.
 bool parseSerialCommand(GldSerialCommand& outCommand);
 

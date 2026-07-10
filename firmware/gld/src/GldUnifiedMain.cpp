@@ -130,6 +130,7 @@ uint32_t nextNullingRetryMs = 0;
 bool     lastAlarm       = false;
 uint8_t  nullingProfileId = 0;
 uint8_t  nullingAttemptCount = 0;
+pgl::gld::GldNullingConfig nullingConfig{};
 // GLD_GAS_ANOMALY + confidence 0 is the "not classifying" sentinel (no ML
 // result available yet / ML unavailable), so a dead classifier never looks
 // like a genuine "clear air, 100%" reading. See runScan().
@@ -504,7 +505,7 @@ void addCapabilities(JsonObject caps) {
     caps["runningTelemetry"] = true;
     caps["modeSwitchReboots"] = true;
     caps["datasetControlPath"] = "mqtt";
-    caps["nullingConfig"] = "read_only";
+    caps["nullingConfig"] = "SET_NULLING_CONFIG_JSON thresholdV,minFinalV";
     caps["serialAppConfig"] = true;
     caps["serialDeviceId"] = true;
     caps["runBootCheck"] = true;
@@ -641,6 +642,8 @@ void emitStatusJson() {
     nulling["retryArmed"] = nullingRetryArmed;
     nulling["attemptCount"] = nullingAttemptCount;
     nulling["nextRetryMs"] = nextNullingRetryMs;
+    nulling["thresholdV"] = nullingConfig.thresholdV;
+    nulling["minFinalV"] = nullingConfig.minFinalV;
 
     JsonObject telemetry = doc.createNestedObject("telemetry");
     addTelemetry(telemetry);
@@ -807,6 +810,37 @@ void onSetDeviceIdJson(const char* payload) {
     rebootAfterAckIfRequested(reboot);
 }
 
+void onSetNullingConfigJson(const char* payload) {
+    StaticJsonDocument<128> doc;
+    if (deserializeJson(doc, payload)) {
+        emitCommandAck("SET_NULLING_CONFIG", "error", "invalid json", false);
+        return;
+    }
+    const float thresholdV = doc["thresholdV"] | nullingConfig.thresholdV;
+    const float minFinalV  = doc["minFinalV"] | nullingConfig.minFinalV;
+
+    if (!(thresholdV > 0.0f) || thresholdV > pgl::gld::GLD_ADS1256_VREF_VOLTS) {
+        emitCommandAck("SET_NULLING_CONFIG", "rejected", "thresholdV must be > 0 and <= VREF", false);
+        return;
+    }
+    if (minFinalV < -pgl::gld::GLD_ADS1256_VREF_VOLTS || minFinalV > pgl::gld::GLD_ADS1256_VREF_VOLTS) {
+        emitCommandAck("SET_NULLING_CONFIG", "rejected", "minFinalV out of ADS1256 VREF range", false);
+        return;
+    }
+
+    pgl::gld::GldNullingConfig updated{};
+    updated.thresholdV = thresholdV;
+    updated.minFinalV  = minFinalV;
+    if (!pgl::gld::saveNullingConfig(updated)) {
+        emitCommandAck("SET_NULLING_CONFIG", "error", "failed to save nulling config", false);
+        return;
+    }
+    nullingConfig = updated;
+    logPrintf("GLD_NULLING_CONFIG_SAVE=OK thresholdV=%.6f minFinalV=%.6f\n",
+              nullingConfig.thresholdV, nullingConfig.minFinalV);
+    emitCommandAck("SET_NULLING_CONFIG", "ok", "nulling config saved; applies on next nulling run", false);
+}
+
 void handleSerialCommand(const pgl::gld::GldSerialCommand& command) {
     switch (command.type) {
         case pgl::gld::GldSerialCommandType::Unknown:
@@ -842,6 +876,9 @@ void handleSerialCommand(const pgl::gld::GldSerialCommand& command) {
         case pgl::gld::GldSerialCommandType::SetDeviceIdJson:
             onSetDeviceIdJson(command.payload);
             break;
+        case pgl::gld::GldSerialCommandType::SetNullingConfigJson:
+            onSetNullingConfigJson(command.payload);
+            break;
         case pgl::gld::GldSerialCommandType::None:
         default:
             break;
@@ -849,14 +886,26 @@ void handleSerialCommand(const pgl::gld::GldSerialCommand& command) {
 }
 
 // Check Serial every loop tick for operator/app commands.
+// Guarded against re-entrancy: long-running command handlers (e.g. RUN_BOOT_CHECK)
+// call firmwareServiceTick() internally to keep the WDT fed and stay responsive,
+// which would otherwise let a newly arrived command dispatch itself from deep
+// inside an already-executing handler and blow the loopTask stack. While a
+// command is being handled, any serial bytes that arrive stay queued in the
+// UART buffer and are picked up on the next non-reentrant call.
 void checkSerial() {
+    static bool inProgress = false;
+    if (inProgress) {
+        return;
+    }
+    inProgress = true;
     for (uint8_t i = 0; i < 8; ++i) {
         pgl::gld::GldSerialCommand command{};
         if (!pgl::gld::parseSerialCommand(command)) {
-            return;
+            break;
         }
         handleSerialCommand(command);
     }
+    inProgress = false;
 }
 
 void pulseWdtKeepaliveNow() {
@@ -1476,7 +1525,7 @@ bool initNulling(bool runIfMissing) {
     }
     logPrintln("NULLING_NVS_LOAD=empty running_nulling_now");
     const pgl::gld::GldNullingServiceResult result =
-        pgl::gld::runNullingService(ads, dac, nullingLogLine, firmwareServiceTick);
+        pgl::gld::runNullingService(ads, dac, nullingLogLine, firmwareServiceTick, nullingConfig);
     logPrintf("NULLING_RUN status=%s successCount=%u\n",
               pgl::gld::gldNullingStatusName(result.status), result.successCount);
     if (result.status != pgl::gld::GldNullingStatus::Ok) return false;
@@ -1572,7 +1621,7 @@ void runNullingRetryAttempt() {
     }
 
     const pgl::gld::GldNullingServiceResult result =
-        pgl::gld::runNullingService(ads, dac, nullingLogLine, checkSerial);
+        pgl::gld::runNullingService(ads, dac, nullingLogLine, checkSerial, nullingConfig);
     logPrintf("NULLING_RETRY_DONE status=%s successCount=%u\n",
               pgl::gld::gldNullingStatusName(result.status), result.successCount);
 
@@ -2067,6 +2116,9 @@ void setup() {
     pulseWdtKeepaliveNow();
     serviceDelay(1000);
     loadRuntimeConfig();
+    if (!pgl::gld::loadNullingConfig(nullingConfig)) {
+        nullingConfig = pgl::gld::GldNullingConfig{};
+    }
     setupPins();
     movingAvg.reset();
 
@@ -2203,7 +2255,7 @@ void setup() {
                 logPrintln("NULLING_RUN=start");
 
                 const pgl::gld::GldNullingServiceResult result =
-                    pgl::gld::runNullingService(ads, dac, nullingLogLine, firmwareServiceTick);
+                    pgl::gld::runNullingService(ads, dac, nullingLogLine, firmwareServiceTick, nullingConfig);
                 logPrintf("NULLING_RUN_DONE status=%s successCount=%u\n",
                           pgl::gld::gldNullingStatusName(result.status), result.successCount);
 

@@ -28,14 +28,21 @@ using GldNullingTickFn = void (*)();
 // Run the nulling algorithm on all 8 sensor channels.
 // ads and dac must be initialized (begin() called) before calling.
 // The profile dacCodes are applied to the DAC hardware after each channel.
+// config controls the convergence delta threshold and the minimum accepted
+// final voltage; defaults match the original fixed constants.
 GldNullingServiceResult runNullingService(GldAds1256Reader& ads,
                                           GldDacMux& dac,
                                           GldNullingLogFn logFn = nullptr,
-                                          GldNullingTickFn tickFn = nullptr);
+                                          GldNullingTickFn tickFn = nullptr,
+                                          const GldNullingConfig& config = GldNullingConfig{});
 
 // NVS persistence via ESP32 Preferences.
 bool saveNullingProfile(const GldNullingProfile& profile);
 bool loadNullingProfile(GldNullingProfile& out);
+
+// NVS persistence for tunable nulling thresholds (separate namespace from the profile).
+bool saveNullingConfig(const GldNullingConfig& config);
+bool loadNullingConfig(GldNullingConfig& out);
 
 const char* gldNullingStatusName(GldNullingStatus s);
 

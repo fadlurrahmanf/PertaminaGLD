@@ -277,8 +277,29 @@ function channelIndexFromLog(line) {
   return Number.isFinite(parsed) && parsed >= 0 && parsed < 8 ? parsed : undefined;
 }
 
+const NULLING_FAIL_REASON_TEXT = {
+  dac_zero_write_failed: "Could not zero the DAC before the baseline scan",
+  baseline_no_valid_samples: "No valid ADC samples during the baseline scan",
+  exponential_range_not_found: "Exponential search never crossed the delta threshold",
+  confirm_failed: "No code in the confirm window met the threshold/minimum-voltage",
+  dac_final_write_failed: "Could not write the final DAC code",
+  after_read_invalid: "Final voltage read was invalid",
+  after_voltage_negative: "Final voltage was below the configured minimum",
+  none: "Unknown failure"
+};
+
+function nullingStageLabel(stage) {
+  const labels = { zero: "Start", baseline: "Baseline", exponential: "Exponential", binary: "Binary", confirm: "Confirm", final_write: "Final write", after_read: "After-read", final_check: "Final check" };
+  return labels[stage] || stage || "Unknown";
+}
+
 function nullingDetail(line) {
   if (line.startsWith("NULLING_CH_START")) return "Channel started";
+  if (line.startsWith("NULLING_STAGE_TRANSITION")) {
+    const from = tokenValue(line, "from");
+    const to = tokenValue(line, "to");
+    return `Moving from ${nullingStageLabel(from)} to ${nullingStageLabel(to)}...`;
+  }
   if (line.startsWith("NULLING_BASELINE_START")) return "Searching baseline";
   if (line.startsWith("NULLING_EXP_START")) return "Finding exponential range";
   if (line.startsWith("NULLING_EXP_RANGE")) return "Range locked";
@@ -287,7 +308,12 @@ function nullingDetail(line) {
   if (line.startsWith("NULLING_CONFIRM_START")) return "Confirmation window";
   if (line.startsWith("NULLING_CONFIRM_OK")) return "Confirmation OK";
   if (line.startsWith("NULLING_CH_OK")) return "Channel OK";
-  if (line.startsWith("NULLING_CH_FAIL")) return tokenValue(line, "message") || "Channel failed";
+  if (line.startsWith("NULLING_CH_FAIL")) {
+    const stage = tokenValue(line, "stage");
+    const reason = tokenValue(line, "reason");
+    const reasonText = NULLING_FAIL_REASON_TEXT[reason] || reason || "Unknown failure";
+    return `Failed at ${nullingStageLabel(stage)}: ${reasonText}`;
+  }
 
   const delta = tokenValue(line, "delta");
   const low = tokenValue(line, "low");
@@ -351,7 +377,8 @@ function nullingChannelsFromLogs(logs, featureOrder = SENSOR_NAMES) {
       channel.stage = "Done";
       channel.tone = "pass";
     } else if (line.startsWith("NULLING_CH_FAIL") || status === "FAIL" || status === "ERROR") {
-      channel.stage = "Failed";
+      const failStage = tokenValue(line, "stage");
+      channel.stage = failStage ? `Failed (${nullingStageLabel(failStage)})` : "Failed";
       channel.tone = "fail";
     }
 
@@ -868,6 +895,26 @@ function updateNullingMeta() {
   const attempts = Number.isFinite(nulling.attemptCount) ? nulling.attemptCount : 0;
   const suffix = nulling.done === true ? " - Done" : nulling.running === true ? " - Running" : "";
   elements.nullingMeta.textContent = `Retry armed: ${retry} - Attempts: ${attempts}${suffix}`;
+  if (Number.isFinite(nulling.thresholdV) && document.activeElement !== $("nullingThresholdV")) {
+    $("nullingThresholdV").value = nulling.thresholdV;
+  }
+  if (Number.isFinite(nulling.minFinalV) && document.activeElement !== $("nullingMinFinalV")) {
+    $("nullingMinFinalV").value = nulling.minFinalV;
+  }
+}
+
+async function applyNullingConfig() {
+  const thresholdV = numberField("nullingThresholdV");
+  const minFinalV = numberField("nullingMinFinalV");
+  if (!Number.isFinite(thresholdV) || thresholdV <= 0) {
+    appendLog("NULLING_CONFIG_REJECTED thresholdV must be > 0", "in");
+    return;
+  }
+  if (!Number.isFinite(minFinalV)) {
+    appendLog("NULLING_CONFIG_REJECTED minFinalV must be a number", "in");
+    return;
+  }
+  await sendCommand(`SET_NULLING_CONFIG_JSON ${JSON.stringify({ thresholdV, minFinalV })}`);
 }
 
 function handleLine(rawLine) {
@@ -2294,6 +2341,14 @@ function handleMockCommand(command) {
   if (command.startsWith("SET_APP_CONFIG_JSON ")) {
     handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("SET_APP_CONFIG", "ok", true))}`);
   }
+  if (command.startsWith("SET_NULLING_CONFIG_JSON ")) {
+    const payload = safeJson(command.slice("SET_NULLING_CONFIG_JSON ".length));
+    state.mockNullingConfig = {
+      thresholdV: payload?.thresholdV ?? state.mockNullingConfig?.thresholdV ?? 0.0001,
+      minFinalV: payload?.minFinalV ?? state.mockNullingConfig?.minFinalV ?? 0
+    };
+    handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("SET_NULLING_CONFIG", "ok", false))}`);
+  }
 }
 
 function safeJson(text) {
@@ -2357,7 +2412,9 @@ function emitMockStatus() {
       running: state.mode === "nulling" && state.mockNullingStep < 48,
       done: state.mockNullingStep >= 48,
       retryArmed: false,
-      attemptCount: 0
+      attemptCount: 0,
+      thresholdV: state.mockNullingConfig?.thresholdV ?? 0.0001,
+      minFinalV: state.mockNullingConfig?.minFinalV ?? 0
     },
     telemetry: {
       valid: true,
@@ -2404,7 +2461,7 @@ function emitMockNullingProgress() {
     handleLine(`NULLING_BIN_DONE ch=${channel} sensor=${sensor} selected=${baseCode}`);
   } else if (stage === 4) {
     handleLine(`NULLING_CONFIRM_START ch=${channel} sensor=${sensor} start=${baseCode - 5} end=${baseCode + 4}`);
-    handleLine(`NULLING_CONFIRM_STEP ch=${channel} sensor=${sensor} code=${baseCode} voltage=${voltage} delta=${delta} valid=1 positive=1 write=1`);
+    handleLine(`NULLING_CONFIRM_STEP ch=${channel} sensor=${sensor} code=${baseCode} voltage=${voltage} delta=${delta} valid=1 aboveMin=1 write=1`);
     handleLine(`NULLING_CONFIRM_OK ch=${channel} sensor=${sensor} code=${baseCode}`);
   } else {
     handleLine(`NULLING_CH_OK ch=${channel} sensor=${sensor} dac=${baseCode} baseline=${(Number(voltage) - 0.0009).toFixed(6)} after=${voltage}`);
@@ -2500,6 +2557,8 @@ function setupEvents() {
     renderSensorCheck();
   });
   $("applyConfigBtn").addEventListener("click", applyGldSettings);
+  $("applyNullingConfigBtn").addEventListener("click", applyNullingConfig);
+  $("refreshNullingConfigBtn").addEventListener("click", () => sendCommand("GET_STATUS"));
   $("switchDatasetBtn").addEventListener("click", () => sendCommand("SET_MODE dataset"));
   $("startDatasetBtn").addEventListener("click", () => publishDatasetCommand("START_DATASET"));
   $("stopDatasetBtn").addEventListener("click", () => publishDatasetCommand("STOP_DATASET"));

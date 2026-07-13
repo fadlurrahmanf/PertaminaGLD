@@ -150,19 +150,19 @@ disabled by the board profile.
 
 | Program channel | Sensor | ADS1256 input | TCA/MCP mux channel | Runtime feature index |
 |---:|---|---:|---:|---:|
-| 0 | MQ8 | 0 | 7 | 0 |
-| 1 | MQ135 | 1 | 6 | 1 |
-| 2 | MQ3 | 2 | 5 | 2 |
-| 3 | MQ5 | 7 | 4 | 3 |
-| 4 | MQ4 | 6 | 3 | 4 |
-| 5 | MQ7 | 5 | 2 | 5 |
-| 6 | MQ6 | 4 | 1 | 6 |
-| 7 | MQ2 | 3 | 0 | 7 |
+| 0 | MQ8 | 0 | 0 | 0 |
+| 1 | MQ135 | 1 | 1 | 1 |
+| 2 | MQ3 | 2 | 2 | 2 |
+| 3 | MQ5 | 3 | 7 | 3 |
+| 4 | MQ4 | 4 | 6 | 4 |
+| 5 | MQ7 | 5 | 5 | 5 |
+| 6 | MQ6 | 6 | 4 | 6 |
+| 7 | MQ2 | 7 | 3 | 7 |
 
-The board-side ADS order includes AINCOM between AIN2 and AIN7; AINCOM is not a
-sensor channel. Firmware maps the eight MQ sensors to ADS inputs
-`{0, 1, 2, 7, 6, 5, 4, 3}` and keeps runtime arrays, `feature_order`, moving
-average, and model input in the program-channel order above.
+Firmware maps the eight MQ sensors to ADS inputs
+`{0, 1, 2, 3, 4, 5, 6, 7}` and TCA/MCP mux channels
+`{0, 1, 2, 7, 6, 5, 4, 3}` while keeping runtime arrays, `feature_order`,
+moving average, and model input in the program-channel order above.
 
 ## 6. Power Detection
 

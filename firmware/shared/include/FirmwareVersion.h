@@ -6,7 +6,7 @@ constexpr const char* GLD_FIRMWARE_NAME = "PertaminaGLD-GLD";
 constexpr const char* CH_FIRMWARE_NAME = "PertaminaGLD-CH";
 constexpr const char* GATEWAY_FIRMWARE_NAME = "PertaminaGLD-Gateway";
 
-constexpr const char* GLD_FIRMWARE_VERSION = "0.8.12";
+constexpr const char* GLD_FIRMWARE_VERSION = "0.8.13";
 constexpr const char* CH_FIRMWARE_VERSION = "0.7.1";
 constexpr const char* GATEWAY_FIRMWARE_VERSION = "0.1.3";
 

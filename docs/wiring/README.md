@@ -8,6 +8,26 @@ pin configuration with the actual bench hardware.
 | File | Source | Format | Notes |
 |---|---|---|---|
 | `SCH_GasLeakIntegratedVer3_2026-06-25.json` | `C:\Users\asus\Downloads\SCH_GasLeakIntegratedVer3_2026-06-25.json` | EasyEDA schematic JSON, editor `6.5.54` | Title `GasLeakIntegratedVer3`; contains `Sheet_1` and `Sheet_2`. |
+| `gld-project-ver2-2026-07-01/` | `C:\Users\asus\Downloads\GLD_Project.zip` | EasyEDA schematic + PCB JSON, original ZIP preserved | Title `GasLeakIntegratedVer2`; contains schematic, PCB, and import note. |
+
+## ADS To TCA/MCP Board Mapping
+
+Both the existing Ver3 schematic and the newly imported Ver2 board ZIP show the
+same local analog-block mapping:
+
+| ADS1256 input label | TCA/MCP mux branch shown by schematic |
+|---:|---:|
+| AIN0 | 7 |
+| AIN1 | 6 |
+| AIN2 | 5 |
+| AIN3 | 0 |
+| AIN4 | 1 |
+| AIN5 | 2 |
+| AIN6 | 3 |
+| AIN7 | 4 |
+
+This is now the firmware mapping in `firmware/gld/include/BoardPins.h`:
+`SENSOR_TO_MUX_CH = {7, 6, 5, 0, 1, 2, 3, 4}` with identity ADS mapping.
 
 ## Current GLD Bench Wiring
 

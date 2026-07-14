@@ -10,6 +10,58 @@ YYYY-MM-DD HH:mm:ss Asia/Jakarta
 
 ---
 
+## GLD v0.8.13 / CH v0.7.1 / Gateway v0.1.3 - 2026-07-14 Asia/Jakarta
+
+**Summary:** Nulling threshold now follows each channel baseline. The active
+unified GLD nulling algorithm uses
+`dynamicThreshold = max(abs(baselineV) * 0.5, thresholdV)` and confirms/final
+checks against `baselineV + dynamicThreshold` instead of requiring a
+non-negative/absolute-zero final voltage.
+
+### Changed Files
+
+- firmware/shared/include/FirmwareVersion.h (GLD 0.8.12 -> 0.8.13)
+- firmware/gld/include/GldNullingProfile.h
+- firmware/gld/include/GldNullingService.h
+- firmware/gld/include/GldCommandParser.h
+- firmware/gld/src/GldNullingService.cpp
+- firmware/gld/src/GldNullingSelfTestMain.cpp
+- firmware/tests/test_shared_protocol.py
+- apps/gld-operator/index.html
+- apps/gld-operator/js/nulling.js
+- apps/gld-operator/js/mock.js
+- apps/gld-operator/design.md
+- firmware/README.md
+- docs/design/gld/final_design.md
+- docs/design/gld/design.current-firmware.draft.md
+- firmware/versions/version.md
+
+### Behavior
+
+- `thresholdV` is now the minimum dynamic-threshold floor, defaulting to
+  `0.00001 V`.
+- For a `0.002 V` baseline, the effective threshold is about `0.001 V`, so the
+  target is about `0.003 V`.
+- For a `0.00001 V` baseline, the effective threshold is `0.00001 V`, so the
+  target is about `0.00002 V`.
+- Exponential search, binary search, confirm, and final check all use the same
+  baseline-relative target.
+- `minFinalV` remains in config/status for command compatibility but no longer
+  gates unified nulling success.
+
+### Test Result
+
+- `node --check apps/gld-operator/js/nulling.js` -> pass.
+- `node --check apps/gld-operator/js/mock.js` -> pass.
+- `python firmware/tests/run_tests.py` -> `34/34 tests passed`.
+- `git diff --check` -> pass with existing CRLF normalization warnings only.
+- `pio run -d firmware -e gld -t upload --upload-port COM9` -> success.
+- Serial verification on COM9 reported firmware `0.8.13` and
+  `GLD_NULLING_CONFIG_SAVE=OK thresholdV=0.000010 minFinalV=0.000000`.
+- No bench nulling run was performed after upload.
+
+---
+
 ## GLD v0.8.12 / CH v0.7.1 / Gateway v0.1.3 - 2026-06-26 Asia/Jakarta
 
 **Summary:** Source-sync guardrail cleanup. Firmware comments, host tests, and current design mirrors now describe the active unified GLD runtime instead of older scaffold assumptions.

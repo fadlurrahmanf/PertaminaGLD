@@ -16,6 +16,8 @@ enum class GldSerialCommandType : uint8_t {
     GetStatus,
     Restart,
     RunBootCheck,
+    RunAdsMcpSweep,
+    SleepNow,
     SetAppConfigJson,
     SetDeviceIdJson,
     SetNullingConfigJson,
@@ -36,9 +38,11 @@ struct GldSerialCommand {
 // - GET_STATUS
 // - RESTART
 // - RUN_BOOT_CHECK
+// - RUN_ADS_MCP_SWEEP
+// - SLEEP_NOW
 // - SET_APP_CONFIG_JSON {...}
 // - SET_DEVICE_ID_JSON {...}
-// - SET_NULLING_CONFIG_JSON {"thresholdV":0.0001,"minFinalV":0.0}
+// - SET_NULLING_CONFIG_JSON {"thresholdV":0.00001,"minFinalV":0.0}
 // Unknown non-empty lines are returned with type Unknown and the raw text in payload.
 bool parseSerialCommand(GldSerialCommand& outCommand);
 

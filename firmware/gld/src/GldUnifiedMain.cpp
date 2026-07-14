@@ -80,6 +80,10 @@ constexpr uint16_t BOOT_MCP_TEST_LOW_END =
 constexpr uint16_t BOOT_MCP_TEST_HIGH_END = pgl::gld::board::GLD_DAC_CODE_MAX;
 constexpr uint16_t BOOT_MCP_TEST_HIGH_START =
     BOOT_MCP_TEST_HIGH_END - BOOT_MCP_TEST_EDGE_COUNT + 1U;
+constexpr uint16_t DIAG_SWEEP_DAC_CODE_LOW = pgl::gld::board::GLD_DAC_CODE_MIN;
+constexpr uint16_t DIAG_SWEEP_DAC_CODE_HIGH = 4000;
+constexpr uint8_t  DIAG_SWEEP_SAMPLE_COUNT = 5;
+constexpr uint32_t DIAG_SWEEP_SETTLE_MS = 250;
 constexpr uint32_t ADS1256_SPI_HZ = 1920000;
 constexpr uint8_t ADS1256_RREG_CMD = 0x10;
 constexpr uint8_t ADS1256_REG_STATUS = 0x00;
@@ -509,6 +513,8 @@ void addCapabilities(JsonObject caps) {
     caps["serialAppConfig"] = true;
     caps["serialDeviceId"] = true;
     caps["runBootCheck"] = true;
+    caps["adsMcpSweep"] = "RUN_ADS_MCP_SWEEP";
+    caps["sleepNow"] = "SLEEP_NOW";
     caps["securityProvisioning"] = "SET_APP_CONFIG_JSON aesKeyHex";
     caps["authenticatedDownlink"] = true;
 }
@@ -657,6 +663,8 @@ void emitStatusJson() {
 
 void serviceDelay(uint32_t durationMs);
 void runBootCheckFromSerialCommand();
+void runAdsMcpSweepFromSerialCommand();
+void sleepNowFromSerialCommand();
 
 void onModeCmd(pgl::gld::GldMode newMode) {
     emitCommandAck("SET_MODE", "ok", "mode switch accepted", true);
@@ -690,6 +698,21 @@ void restartFromSerialCommand() {
     Serial0.flush();
 #endif
     ESP.restart();
+}
+
+void sleepNowFromSerialCommand() {
+    const pgl::gld::GldPowerReading power = pgl::gld::readGldPower();
+    emitCommandAck("SLEEP_NOW", "ok", "clearing power latch via CLR", false);
+    logPrintf("GLD_SERIAL_SLEEP_NOW power_off mode=%s externalPower=%u batteryMv=%u clr=HIGH_LOW_HIGH\n",
+              pgl::gld::gldPowerModeName(power.mode),
+              power.externalPower ? 1 : 0,
+              power.batteryMv);
+    serviceDelay(100);
+    Serial.flush();
+#if defined(ARDUINO_ARCH_ESP32)
+    Serial0.flush();
+#endif
+    pgl::gld::pulseGldPowerLatchClear();
 }
 
 void onUnknownSerialCommand(const char* commandText) {
@@ -869,6 +892,12 @@ void handleSerialCommand(const pgl::gld::GldSerialCommand& command) {
             break;
         case pgl::gld::GldSerialCommandType::RunBootCheck:
             runBootCheckFromSerialCommand();
+            break;
+        case pgl::gld::GldSerialCommandType::RunAdsMcpSweep:
+            runAdsMcpSweepFromSerialCommand();
+            break;
+        case pgl::gld::GldSerialCommandType::SleepNow:
+            sleepNowFromSerialCommand();
             break;
         case pgl::gld::GldSerialCommandType::SetAppConfigJson:
             onSetAppConfigJson(command.payload);
@@ -1789,6 +1818,125 @@ void runBootCheckFromSerialCommand() {
     logPrintln("RUN_BOOT_CHECK_DONE");
 }
 
+struct DiagnosticAdsAverage {
+    pgl::gld::GldAds1256Status status = pgl::gld::GldAds1256Status::NotReady;
+    int32_t raw = 0;
+    float voltage = 0.0f;
+    uint8_t gain = 0;
+};
+
+DiagnosticAdsAverage readDiagnosticAverage(uint8_t ch) {
+    DiagnosticAdsAverage out{};
+    float voltageSum = 0.0f;
+    int64_t rawSum = 0;
+    bool ok = true;
+    pgl::gld::GldAds1256Status lastStatus = pgl::gld::GldAds1256Status::Ok;
+    uint8_t lastGain = 0;
+
+    for (uint8_t sample = 0; sample < DIAG_SWEEP_SAMPLE_COUNT; ++sample) {
+        firmwareServiceTick();
+        const pgl::gld::GldAds1256Reading reading = ads.readChannel(ch);
+        lastStatus = reading.status;
+        lastGain = reading.gain;
+        if (reading.status != pgl::gld::GldAds1256Status::Ok) {
+            ok = false;
+        }
+        voltageSum += reading.voltage;
+        rawSum += reading.raw;
+    }
+    firmwareServiceTick();
+
+    out.status = ok ? pgl::gld::GldAds1256Status::Ok : lastStatus;
+    out.voltage = voltageSum / static_cast<float>(DIAG_SWEEP_SAMPLE_COUNT);
+    out.raw = static_cast<int32_t>(rawSum / static_cast<int64_t>(DIAG_SWEEP_SAMPLE_COUNT));
+    out.gain = lastGain;
+    return out;
+}
+
+void runAdsMcpSweepFromSerialCommand() {
+    emitCommandAck("RUN_ADS_MCP_SWEEP", "ok", "running ADS/MCP sweep", false);
+
+    if (!adsReady) {
+        adsReady = ads.begin(gldSpi);
+        logPrintf("ADS_MCP_SWEEP_ADS_BEGIN=%s\n", passFail(adsReady));
+    }
+    if (!dacReady) {
+        dacReady = dac.begin(Wire);
+        logPrintf("ADS_MCP_SWEEP_DAC_BEGIN=%s\n", passFail(dacReady));
+    }
+
+    if (!adsReady || !dacReady) {
+        logPrintf("ADS_MCP_SWEEP_BLOCKED adsReady=%u dacReady=%u\n",
+                  adsReady ? 1 : 0, dacReady ? 1 : 0);
+        logPrintln("ADS_MCP_SWEEP_DONE status=blocked");
+        return;
+    }
+
+    pgl::gld::GldNullingProfile profile{};
+    const bool profileLoaded = pgl::gld::loadNullingProfile(profile);
+    logPrintf("ADS_MCP_SWEEP_START codeLow=%u codeHigh=%u samples=%u settleMs=%lu restore=%s\n",
+              static_cast<unsigned>(DIAG_SWEEP_DAC_CODE_LOW),
+              static_cast<unsigned>(DIAG_SWEEP_DAC_CODE_HIGH),
+              static_cast<unsigned>(DIAG_SWEEP_SAMPLE_COUNT),
+              static_cast<unsigned long>(DIAG_SWEEP_SETTLE_MS),
+              profileLoaded ? "profile" : "zero");
+
+    for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
+        firmwareServiceTick();
+        const uint8_t adsInput = pgl::gld::board::SENSOR_TO_ADS_CH[ch];
+        const uint8_t muxChannel = pgl::gld::board::SENSOR_TO_MUX_CH[ch];
+
+        const bool writeLow = dac.writeDac(ch, DIAG_SWEEP_DAC_CODE_LOW);
+        serviceDelay(DIAG_SWEEP_SETTLE_MS);
+        const DiagnosticAdsAverage low = readDiagnosticAverage(ch);
+
+        const bool writeHigh = dac.writeDac(ch, DIAG_SWEEP_DAC_CODE_HIGH);
+        serviceDelay(DIAG_SWEEP_SETTLE_MS);
+        const DiagnosticAdsAverage high = readDiagnosticAverage(ch);
+
+        const uint16_t restoreCode = profileLoaded
+                                         ? profile.dacCode[ch]
+                                         : DIAG_SWEEP_DAC_CODE_LOW;
+        const bool restoreOk = dac.writeDac(ch, restoreCode);
+        serviceDelay(BOOT_DAC_SETTLE_MS);
+
+        const bool ok = writeLow &&
+                        writeHigh &&
+                        restoreOk &&
+                        low.status == pgl::gld::GldAds1256Status::Ok &&
+                        high.status == pgl::gld::GldAds1256Status::Ok;
+        const float delta = high.voltage - low.voltage;
+
+        logPrintf("ADS_MCP_SWEEP_RESULT ch=%u sensor=%s ads=%u mux=%u "
+                  "v0=%.9f v4000=%.9f delta=%.9f st0=%s st4000=%s ok=%u\n",
+                  static_cast<unsigned>(ch),
+                  pgl::gld::board::SENSOR_NAMES[ch],
+                  static_cast<unsigned>(adsInput),
+                  static_cast<unsigned>(muxChannel),
+                  low.voltage,
+                  high.voltage,
+                  delta,
+                  pgl::gld::gldAds1256StatusName(low.status),
+                  pgl::gld::gldAds1256StatusName(high.status),
+                  ok ? 1 : 0);
+        logPrintf("ADS_MCP_SWEEP_DETAIL ch=%u code0=%u code4000=%u write0=%u write4000=%u "
+                  "raw0=%ld raw4000=%ld gain0=%u gain4000=%u restoreCode=%u restoreOk=%u\n",
+                  static_cast<unsigned>(ch),
+                  static_cast<unsigned>(DIAG_SWEEP_DAC_CODE_LOW),
+                  static_cast<unsigned>(DIAG_SWEEP_DAC_CODE_HIGH),
+                  writeLow ? 1 : 0,
+                  writeHigh ? 1 : 0,
+                  static_cast<long>(low.raw),
+                  static_cast<long>(high.raw),
+                  static_cast<unsigned>(low.gain),
+                  static_cast<unsigned>(high.gain),
+                  static_cast<unsigned>(restoreCode),
+                  restoreOk ? 1 : 0);
+    }
+
+    logPrintln("ADS_MCP_SWEEP_DONE status=ok");
+}
+
 // ---------------------------------------------------------------------------
 // LoRa (inference mode)
 // ---------------------------------------------------------------------------
@@ -2114,7 +2262,10 @@ void setup() {
 #endif
     pgl::gld::beginGldPowerPins();
     pulseWdtKeepaliveNow();
-    serviceDelay(1000);
+    // Give USB serial time to settle, but do not dispatch queued operator
+    // commands before the boot banner is visible. A queued SLEEP_NOW must not
+    // clear the power latch before the operator can see firmware startup.
+    delay(1000);
     loadRuntimeConfig();
     if (!pgl::gld::loadNullingConfig(nullingConfig)) {
         nullingConfig = pgl::gld::GldNullingConfig{};

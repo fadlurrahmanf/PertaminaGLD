@@ -79,7 +79,7 @@ Firmware identifiers:
 | Field | Value |
 |---|---|
 | firmware name | `PertaminaGLD-GLD` |
-| firmware version | `0.8.12` |
+| firmware version | `0.8.13` |
 | protocol version | `0.1.0` |
 | config schema version | `0.1.0` |
 
@@ -150,18 +150,18 @@ disabled by the board profile.
 
 | Program channel | Sensor | ADS1256 input | TCA/MCP mux channel | Runtime feature index |
 |---:|---|---:|---:|---:|
-| 0 | MQ8 | 0 | 0 | 0 |
-| 1 | MQ135 | 1 | 1 | 1 |
-| 2 | MQ3 | 2 | 2 | 2 |
-| 3 | MQ5 | 3 | 7 | 3 |
-| 4 | MQ4 | 4 | 6 | 4 |
-| 5 | MQ7 | 5 | 5 | 5 |
-| 6 | MQ6 | 6 | 4 | 6 |
-| 7 | MQ2 | 7 | 3 | 7 |
+| 0 | MQ8 | 0 | 7 | 0 |
+| 1 | MQ135 | 1 | 6 | 1 |
+| 2 | MQ3 | 2 | 5 | 2 |
+| 3 | MQ5 | 3 | 0 | 3 |
+| 4 | MQ4 | 4 | 1 | 4 |
+| 5 | MQ7 | 5 | 2 | 5 |
+| 6 | MQ6 | 6 | 3 | 6 |
+| 7 | MQ2 | 7 | 4 | 7 |
 
 Firmware maps the eight MQ sensors to ADS inputs
 `{0, 1, 2, 3, 4, 5, 6, 7}` and TCA/MCP mux channels
-`{0, 1, 2, 7, 6, 5, 4, 3}` while keeping runtime arrays, `feature_order`,
+`{7, 6, 5, 0, 1, 2, 3, 4}` while keeping runtime arrays, `feature_order`,
 moving average, and model input in the program-channel order above.
 
 ## 6. Power Detection
@@ -432,28 +432,23 @@ Algorithm shape:
 
 1. For each sensor channel, write DAC code 0.
 2. Baseline prescan tries codes `0..10`.
-3. Exponential search doubles the DAC code until the reading crosses up to
-   (near) absolute zero volts — not until it merely differs from baseline.
-   A channel with a deep negative baseline needs a large compensation swing
-   before it reaches zero; targeting "delta from baseline exceeds threshold"
-   locks onto baseline-adjacent noise long before the real crossing.
-4. Binary search narrows to the precise code of that zero crossing.
-5. Confirm window scans candidate codes around the crossing (10 codes for a
-   baseline >= 0 channel, 20 for baseline < 0 — 10 before + 10 after the
-   binary search result) and re-verifies every non-negative candidate with a
-   second independent read, smallest-voltage-first, discarding any that flip
-   negative on reconfirmation (the reading can swing several hundred
-   microvolts to a few millivolts per DAC LSB right at the crossing, so a
-   single sample set closest to zero is not reliable enough on its own). If
-   no candidate reconfirms non-negative, falls back to the first candidate
-   clearing the configured minimum final voltage.
-6. Final code is written and the channel is read again (a third independent
-   read). If that still comes back negative, the code is nudged up one DAC
-   LSB at a time (re-checking each time, up to `final check max bumps`)
-   instead of failing the channel outright — the priority is a positive
-   final result, not the exact code the confirm stage picked.
-7. Channel passes only when the final read is valid and at or above the
-   configured minimum final voltage.
+3. The per-channel dynamic threshold is calculated from the measured baseline:
+   `max(abs(baselineV) * 0.5, thresholdV)`. With the default minimum
+   `thresholdV=0.00001 V`, a `0.002 V` baseline targets about `0.003 V`, and a
+   `0.00001 V` baseline targets about `0.00002 V`.
+4. Exponential search doubles the DAC code until the reading crosses
+   `baselineV + dynamicThreshold`.
+5. Binary search narrows to the precise code of that baseline-relative
+   threshold crossing.
+6. Confirm window scans candidate codes around the crossing (10 codes for a
+   baseline >= 0 channel, 20 for baseline < 0 - 10 before + 10 after the
+   binary search result) and re-verifies every threshold-crossing candidate
+   with a second independent read, smallest-overshoot-first.
+7. Final code is written and the channel is read again. If that independent
+   final read falls back under the baseline-relative threshold, the code is
+   nudged up one DAC LSB at a time and re-checked, up to `final check max bumps`.
+8. Channel passes only when the final read is valid and still crosses
+   `baselineV + dynamicThreshold`.
 
 Key constants:
 
@@ -469,18 +464,18 @@ Key constants:
 | final check max bumps | 20 |
 | settle delay | 5 ms |
 | stage transition pause | 2000 ms |
-| delta threshold (default, configurable) | `0.0001 V` |
-| minimum final voltage (default, configurable) | `0.0 V` |
+| minimum delta threshold (default, configurable) | `0.00001 V` |
+| baseline threshold ratio | `0.5` |
+| minimum final voltage (legacy config/status field) | `0.0 V` |
 
-`delta threshold` and `minimum final voltage` are runtime-tunable via
+`minimum delta threshold` and `minimum final voltage` are runtime-tunable via
 `SET_NULLING_CONFIG_JSON {"thresholdV":<V>,"minFinalV":<V>}`, persisted to NVS
 namespace `gld-nullcfg`, and loaded back into defaults on boot.
 `GLD_STATUS_JSON.nulling` reports the currently active `thresholdV`/`minFinalV`,
-and `GLD_INFO_JSON.capabilities.nullingConfig` advertises the command. With
-`minFinalV` left at its `0.0 V` default, verified 8/8 success on a reference
-board where several channels have a deep negative ADC baseline (down to
--15 mV), all landing at a small positive residual (roughly 0.1-3 mV) after
-the crossing-search + reconfirm + final-bump changes above.
+and `GLD_INFO_JSON.capabilities.nullingConfig` advertises the command. Current
+unified nulling success is based on the baseline-relative threshold crossing;
+`minFinalV` is retained for command/status compatibility with older panels and
+historical logs.
 Between each algorithm phase (baseline -> exponential -> binary search ->
 confirm) the firmware pauses `stage transition pause` (2000 ms, ticking the
 WDT/serial in the background) and logs `NULLING_STAGE_TRANSITION`, so an app

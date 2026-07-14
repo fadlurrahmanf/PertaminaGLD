@@ -28,8 +28,8 @@ using GldNullingTickFn = void (*)();
 // Run the nulling algorithm on all 8 sensor channels.
 // ads and dac must be initialized (begin() called) before calling.
 // The profile dacCodes are applied to the DAC hardware after each channel.
-// config controls the convergence delta threshold and the minimum accepted
-// final voltage; defaults match the original fixed constants.
+// config.thresholdV is the minimum floor for the dynamic baseline-relative
+// threshold used by range search, binary search, confirm, and final check.
 GldNullingServiceResult runNullingService(GldAds1256Reader& ads,
                                           GldDacMux& dac,
                                           GldNullingLogFn logFn = nullptr,

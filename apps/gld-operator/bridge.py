@@ -22,7 +22,7 @@ from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 try:
     import serial
@@ -55,6 +55,7 @@ APP_DIR = Path(__file__).resolve().parent
 REPO_ROOT = APP_DIR.parents[1]
 FIRMWARE_DIR = REPO_ROOT / "firmware"
 DATASET_OUTPUT_DIR = APP_DIR / "output" / "datasets"
+SESSION_LOG_DIR = APP_DIR / "output" / "logs"
 
 # Populated at startup from the actual --host/--port the bridge binds to.
 # The documented launch path (run-gld-operator.bat) serves the static UI and
@@ -77,7 +78,7 @@ def _register_allowed_origins(host: str, port: int) -> None:
     )
 
 
-VERSION = "0.2.4-lite-bridge"
+VERSION = "0.4.0-lite-bridge"
 
 
 class EventHub:
@@ -112,14 +113,18 @@ class EventHub:
 
 
 class SerialBridge:
-    def __init__(self, events: EventHub) -> None:
+    def __init__(self, events: EventHub, slot: int = 1) -> None:
         self.events = events
+        self.slot = slot
         self._serial: Any = None
         self._lock = threading.Lock()
         self._reader_thread: threading.Thread | None = None
         self._stop = threading.Event()
         self.port = ""
         self.baud = 115200
+
+    def _emit(self, event: str, payload: dict[str, Any]) -> None:
+        self.events.emit(event, {**payload, "slot": self.slot})
 
     def list_ports(self) -> list[dict[str, Any]]:
         if list_ports is None:
@@ -162,7 +167,7 @@ class SerialBridge:
             self._stop.clear()
         self._reader_thread = threading.Thread(target=self._read_loop, name="gld-serial-reader", daemon=True)
         self._reader_thread.start()
-        self.events.emit("serial_status", {"connected": True, "port": port, "baud": baud})
+        self._emit("serial_status", {"connected": True, "port": port, "baud": baud})
         return {"connected": True, "port": port, "baud": baud}
 
     def disconnect(self) -> dict[str, Any]:
@@ -175,8 +180,13 @@ class SerialBridge:
                 ser.close()
             except Exception:
                 pass
-        self.events.emit("serial_status", {"connected": False})
+        self._emit("serial_status", {"connected": False})
         return {"connected": False}
+
+    def status(self) -> dict[str, Any]:
+        with self._lock:
+            ser = self._serial
+            return {"connected": ser is not None and getattr(ser, "is_open", False), "port": self.port, "baud": self.baud}
 
     def write_line(self, line: str, require_connected: bool = True) -> dict[str, Any]:
         if not line.endswith("\n"):
@@ -189,7 +199,7 @@ class SerialBridge:
             raise RuntimeError("serial port is not connected")
         ser.write(line.encode("utf-8", errors="replace"))
         ser.flush()
-        self.events.emit("serial_tx", {"line": line.rstrip("\r\n")})
+        self._emit("serial_tx", {"line": line.rstrip("\r\n")})
         return {"ok": True}
 
     def _read_loop(self) -> None:
@@ -202,7 +212,7 @@ class SerialBridge:
             try:
                 chunk = ser.read(512)
             except Exception as exc:
-                self.events.emit("serial_error", {"message": str(exc)})
+                self._emit("serial_error", {"message": str(exc)})
                 break
             if not chunk:
                 continue
@@ -211,22 +221,58 @@ class SerialBridge:
                 raw, pending = pending.split(b"\n", 1)
                 line = raw.decode("utf-8", errors="replace").strip("\r")
                 if line:
-                    self.events.emit("serial_line", {"line": line})
-        self.events.emit("serial_status", {"connected": False})
+                    self._emit("serial_line", {"line": line})
+        self._emit("serial_status", {"connected": False})
 
+
+MAX_SLOTS = 8
 
 events = EventHub()
-serial_bridge = SerialBridge(events)
+serial_bridges: dict[int, "SerialBridge"] = {}
+dataset_monitors: dict[int, "DatasetMqttMonitor"] = {}
 local_mqtt_broker: Any = None
 local_mqtt_broker_error = ""
 
 
+def parse_slot(value: Any) -> int:
+    try:
+        slot = int(value)
+    except (TypeError, ValueError):
+        return 1
+    return slot if 1 <= slot <= MAX_SLOTS else 1
+
+
+def get_serial_bridge(slot: int) -> "SerialBridge":
+    if slot not in serial_bridges:
+        serial_bridges[slot] = SerialBridge(events, slot=slot)
+    return serial_bridges[slot]
+
+
+def get_dataset_monitor(slot: int) -> "DatasetMqttMonitor":
+    if slot not in dataset_monitors:
+        dataset_monitors[slot] = DatasetMqttMonitor(events, slot=slot)
+    return dataset_monitors[slot]
+
+
+def connected_slots_summary() -> dict[str, Any]:
+    summary = {}
+    for slot, bridge in serial_bridges.items():
+        status = bridge.status()
+        if status["connected"]:
+            summary[str(slot)] = status
+    return summary
+
+
 class DatasetMqttMonitor:
-    def __init__(self, events: EventHub) -> None:
+    def __init__(self, events: EventHub, slot: int = 1) -> None:
         self.events = events
+        self.slot = slot
         self._lock = threading.Lock()
         self._client: Any = None
         self.config: dict[str, Any] = {}
+
+    def _emit(self, event: str, payload: dict[str, Any]) -> None:
+        self.events.emit(event, {**payload, "slot": self.slot})
 
     def start(self, config: dict[str, Any]) -> dict[str, Any]:
         if mqtt is None:
@@ -255,7 +301,7 @@ class DatasetMqttMonitor:
         def on_connect(client_obj: Any, _userdata: Any, _flags: Any, reason_code: Any, _properties: Any) -> None:
             for topic in topics:
                 client_obj.subscribe(topic, qos=0)
-            self.events.emit(
+            self._emit(
                 "dataset_monitor",
                 {"status": "subscribed", "host": host, "port": port, "deviceId": device_id, "topics": topics, "reason": str(reason_code)},
             )
@@ -266,7 +312,7 @@ class DatasetMqttMonitor:
                 parsed: Any = json.loads(text)
             except Exception:
                 parsed = None
-            self.events.emit(
+            self._emit(
                 "dataset_mqtt",
                 {"topic": msg.topic, "kind": self._kind(msg.topic), "payload": text, "json": parsed},
             )
@@ -279,7 +325,7 @@ class DatasetMqttMonitor:
         with self._lock:
             self._client = client
             self.config = {"deviceId": device_id, "topicRoot": topic_root, "host": host, "port": port, "topics": topics}
-        self.events.emit("dataset_monitor", {"status": "started", "host": host, "port": port, "deviceId": device_id})
+        self._emit("dataset_monitor", {"status": "started", "host": host, "port": port, "deviceId": device_id})
         return {"started": True, "topics": topics}
 
     def stop(self, emit: bool = True) -> dict[str, Any]:
@@ -296,7 +342,7 @@ class DatasetMqttMonitor:
             except Exception:
                 pass
         if emit:
-            self.events.emit("dataset_monitor", {"status": "stopped"})
+            self._emit("dataset_monitor", {"status": "stopped"})
         return {"stopped": True}
 
     @staticmethod
@@ -310,9 +356,6 @@ class DatasetMqttMonitor:
         if topic.endswith("/cmd/ack"):
             return "ack"
         return "message"
-
-
-dataset_monitor = DatasetMqttMonitor(events)
 
 
 def json_response(handler: SimpleHTTPRequestHandler, payload: Any, status: HTTPStatus = HTTPStatus.OK) -> None:
@@ -417,6 +460,27 @@ def save_dataset_csv(payload: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
+def safe_log_filename(value: str, fallback: str = "session.log") -> str:
+    name = re.sub(r"[^A-Za-z0-9_.-]+", "_", value.strip())
+    name = name.strip("._")
+    if not name:
+        name = fallback
+    if not name.lower().endswith(".log"):
+        name += ".log"
+    return name[:120]
+
+
+def save_session_log(payload: dict[str, Any]) -> dict[str, Any]:
+    text = str(payload.get("text") or "")
+    if not text.strip():
+        raise RuntimeError("log text is empty")
+    filename = safe_log_filename(str(payload.get("filename") or "session.log"))
+    SESSION_LOG_DIR.mkdir(parents=True, exist_ok=True)
+    path = SESSION_LOG_DIR / filename
+    path.write_text(text, encoding="utf-8", newline="")
+    return {"ok": True, "path": str(path), "filename": filename, "bytes": path.stat().st_size}
+
+
 def open_dataset_folder() -> dict[str, Any]:
     DATASET_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     if os.name == "nt":
@@ -428,7 +492,7 @@ def open_dataset_folder() -> dict[str, Any]:
     return {"ok": True, "path": str(DATASET_OUTPUT_DIR)}
 
 
-def mqtt_publish_dataset(payload: dict[str, Any]) -> dict[str, Any]:
+def mqtt_publish_dataset(payload: dict[str, Any], slot: int = 1) -> dict[str, Any]:
     if mqtt is None:
         raise RuntimeError(f"paho-mqtt unavailable: {MQTT_IMPORT_ERROR}")
     device_id = str(payload.get("deviceId") or "").strip()
@@ -440,6 +504,7 @@ def mqtt_publish_dataset(payload: dict[str, Any]) -> dict[str, Any]:
     command = str(payload.get("command") or "START_DATASET")
     if not device_id:
         raise RuntimeError("deviceId is required")
+    dataset_monitor = get_dataset_monitor(slot)
     dataset_payload = payload.get("dataset") or {"cmd": command}
     if command == "START_DATASET":
         dataset_monitor.start(payload)
@@ -490,6 +555,74 @@ def mqtt_publish_dataset(payload: dict[str, Any]) -> dict[str, Any]:
     return {"ok": True, "topic": topic}
 
 
+def slot_holding_port(port: str) -> int | None:
+    for slot, bridge in serial_bridges.items():
+        status = bridge.status()
+        if status["connected"] and status["port"] == port:
+            return slot
+    return None
+
+
+def probe_port(port: str) -> dict[str, Any]:
+    if not port:
+        raise RuntimeError("port is required")
+    holder = slot_holding_port(port)
+    if holder is not None:
+        return {
+            "port": port,
+            "free": True,
+            "lockedByApp": True,
+            "message": f"Connected by this app (slot {holder}); will disconnect automatically before upload.",
+        }
+    if serial is None:
+        raise RuntimeError(f"pyserial unavailable: {SERIAL_IMPORT_ERROR}")
+    try:
+        probe = serial.Serial()
+        probe.port = port
+        probe.timeout = 0.2
+        probe.open()
+        probe.close()
+        return {"port": port, "free": True, "lockedByApp": False, "message": "Port opened and closed cleanly."}
+    except Exception as exc:
+        return {"port": port, "free": False, "lockedByApp": False, "message": str(exc)}
+
+
+def mqtt_reachability(payload: dict[str, Any]) -> dict[str, Any]:
+    if mqtt is None:
+        raise RuntimeError(f"paho-mqtt unavailable: {MQTT_IMPORT_ERROR}")
+    host = str(payload.get("host") or "127.0.0.1")
+    port = int(payload.get("port") or 1884)
+    username = str(payload.get("username") or "")
+    password = str(payload.get("password") or "")
+    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+    if username or password:
+        client.username_pw_set(username, password)
+    connected = threading.Event()
+    connect_error: dict[str, str] = {}
+    started = time.monotonic()
+
+    def on_connect(_client: Any, _userdata: Any, _flags: Any, reason_code: Any, _properties: Any) -> None:
+        if str(reason_code).lower() != "success" and reason_code != 0:
+            connect_error["message"] = str(reason_code)
+        connected.set()
+
+    client.on_connect = on_connect
+    try:
+        client.connect(host, port, keepalive=5)
+        client.loop_start()
+        ok = connected.wait(timeout=4)
+        latency_ms = round((time.monotonic() - started) * 1000, 1)
+        client.loop_stop()
+        client.disconnect()
+        if not ok:
+            return {"ok": False, "host": host, "port": port, "message": "connect timeout"}
+        if connect_error:
+            return {"ok": False, "host": host, "port": port, "message": connect_error["message"]}
+        return {"ok": True, "host": host, "port": port, "latencyMs": latency_ms}
+    except Exception as exc:
+        return {"ok": False, "host": host, "port": port, "message": str(exc)}
+
+
 def validate_firmware_manifest(manifest: Any, env: str, target_id: str) -> None:
     if manifest in (None, ""):
         return
@@ -509,7 +642,7 @@ def validate_firmware_manifest(manifest: Any, env: str, target_id: str) -> None:
         raise RuntimeError("manifest flashFiles must be a list")
 
 
-def firmware_upload(payload: dict[str, Any]) -> dict[str, Any]:
+def firmware_upload(payload: dict[str, Any], slot: int = 1) -> dict[str, Any]:
     env = str(payload.get("env") or "gld").strip()
     port = str(payload.get("port") or "").strip()
     target_id = str(payload.get("targetDeviceId") or "").strip().upper()
@@ -518,7 +651,17 @@ def firmware_upload(payload: dict[str, Any]) -> dict[str, Any]:
     if not port:
         raise RuntimeError("port is required")
     validate_firmware_manifest(payload.get("manifest"), env, target_id)
-    serial_bridge.disconnect()
+    holder = slot_holding_port(port)
+    upload_bridge = get_serial_bridge(holder if holder is not None else slot)
+    upload_bridge.disconnect()
+    if not bool(payload.get("skipPreflight")):
+        time.sleep(0.3)
+        preflight = probe_port(port)
+        if not preflight["free"]:
+            raise RuntimeError(
+                f"COM port {port} is still busy after disconnect ({preflight['message']}). "
+                "Close other serial monitors, unplug/replug the GLD USB, then retry."
+            )
 
     def worker() -> None:
         cmd = ["pio", "run", "-e", env, "-t", "upload", "--upload-port", port]
@@ -540,9 +683,9 @@ def firmware_upload(payload: dict[str, Any]) -> dict[str, Any]:
             events.emit("upload_done", {"code": code})
             if code == 0 and re.match(r"^[0-9A-F]{4}$", target_id) and target_id != "0000":
                 time.sleep(2.5)
-                serial_bridge.connect(port, 115200)
+                upload_bridge.connect(port, 115200)
                 time.sleep(1.0)
-                serial_bridge.write_line(f'SET_DEVICE_ID_JSON {{"deviceId":"{target_id}","reboot":true}}')
+                upload_bridge.write_line(f'SET_DEVICE_ID_JSON {{"deviceId":"{target_id}","reboot":true}}')
         except Exception as exc:
             events.emit("upload_error", {"message": str(exc)})
 
@@ -606,11 +749,13 @@ class Handler(SimpleHTTPRequestHandler):
                         "mqtt": MQTT_IMPORT_ERROR,
                         "mqttBroker": local_mqtt_broker_error or MQTT_BROKER_IMPORT_ERROR,
                     },
+                    "maxSlots": MAX_SLOTS,
+                    "slots": connected_slots_summary(),
                 },
             )
         if path == "/api/ports":
             try:
-                return json_response(self, {"ports": serial_bridge.list_ports()})
+                return json_response(self, {"ports": get_serial_bridge(1).list_ports()})
             except Exception as exc:
                 return json_response(self, {"error": str(exc)}, HTTPStatus.INTERNAL_SERVER_ERROR)
         if path == "/api/network":
@@ -623,6 +768,13 @@ class Handler(SimpleHTTPRequestHandler):
                 return json_response(self, dataset_output_info())
             except Exception as exc:
                 return json_response(self, {"error": str(exc)}, HTTPStatus.INTERNAL_SERVER_ERROR)
+        if path == "/api/serial/port-status":
+            query = parse_qs(urlparse(self.path).query)
+            port = (query.get("port") or [""])[0]
+            try:
+                return json_response(self, probe_port(port))
+            except Exception as exc:
+                return json_response(self, {"error": str(exc)}, HTTPStatus.INTERNAL_SERVER_ERROR)
         if path == "/api/events":
             return self._serve_events()
         return super().do_GET()
@@ -631,22 +783,31 @@ class Handler(SimpleHTTPRequestHandler):
         try:
             path = urlparse(self.path).path
             payload = read_json(self)
+            slot = parse_slot(payload.get("slot"))
             if path == "/api/serial/connect":
-                result = serial_bridge.connect(str(payload.get("port") or ""), int(payload.get("baud") or 115200))
+                port = str(payload.get("port") or "")
+                holder = slot_holding_port(port)
+                if holder is not None and holder != slot:
+                    raise RuntimeError(f"{port} is already connected on slot {holder}")
+                result = get_serial_bridge(slot).connect(port, int(payload.get("baud") or 115200))
             elif path == "/api/serial/disconnect":
-                result = serial_bridge.disconnect()
+                result = get_serial_bridge(slot).disconnect()
             elif path == "/api/serial/write":
-                result = serial_bridge.write_line(str(payload.get("line") or ""), require_connected=False)
+                result = get_serial_bridge(slot).write_line(str(payload.get("line") or ""), require_connected=False)
             elif path == "/api/mqtt/dataset":
-                result = mqtt_publish_dataset(payload)
+                result = mqtt_publish_dataset(payload, slot)
             elif path == "/api/mqtt/dataset-monitor/stop":
-                result = dataset_monitor.stop()
+                result = get_dataset_monitor(slot).stop()
+            elif path == "/api/mqtt/test":
+                result = mqtt_reachability(payload)
             elif path == "/api/dataset/save":
                 result = save_dataset_csv(payload)
+            elif path == "/api/session/log":
+                result = save_session_log(payload)
             elif path == "/api/dataset/open-folder":
                 result = open_dataset_folder()
             elif path == "/api/firmware/upload":
-                result = firmware_upload(payload)
+                result = firmware_upload(payload, slot)
             else:
                 return json_response(self, {"error": "not found"}, HTTPStatus.NOT_FOUND)
             return json_response(self, result)
@@ -712,8 +873,10 @@ def main() -> int:
     except KeyboardInterrupt:
         pass
     finally:
-        dataset_monitor.stop(emit=False)
-        serial_bridge.disconnect()
+        for monitor in dataset_monitors.values():
+            monitor.stop(emit=False)
+        for bridge in serial_bridges.values():
+            bridge.disconnect()
         if local_mqtt_broker is not None:
             local_mqtt_broker.stop()
         httpd.server_close()

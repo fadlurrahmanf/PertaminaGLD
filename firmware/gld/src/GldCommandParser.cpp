@@ -53,6 +53,14 @@ bool decodeLine(const char* line, GldSerialCommand& outCommand) {
         outCommand.type = GldSerialCommandType::RunBootCheck;
         return true;
     }
+    if (strcmp(line, "RUN_ADS_MCP_SWEEP") == 0) {
+        outCommand.type = GldSerialCommandType::RunAdsMcpSweep;
+        return true;
+    }
+    if (strcmp(line, "SLEEP_NOW") == 0) {
+        outCommand.type = GldSerialCommandType::SleepNow;
+        return true;
+    }
     if (strncmp(line, "SET_APP_CONFIG_JSON ", 20) == 0) {
         outCommand.type = GldSerialCommandType::SetAppConfigJson;
         strncpy(outCommand.payload, line + 20, sizeof(outCommand.payload) - 1);

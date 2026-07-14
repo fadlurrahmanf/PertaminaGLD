@@ -877,11 +877,19 @@ def test_gld_unified_runtime_scaffolds_present():
     mode_header = pathlib.Path("firmware/gld/include/GldModeManager.h").read_text(encoding="utf-8")
     mode_src = pathlib.Path("firmware/gld/src/GldModeManager.cpp").read_text(encoding="utf-8")
     nulling_header = pathlib.Path("firmware/gld/include/GldNullingService.h").read_text(encoding="utf-8")
+    power_src = pathlib.Path("firmware/gld/src/GldPower.cpp").read_text(encoding="utf-8")
     unified_src = pathlib.Path("firmware/gld/src/GldUnifiedMain.cpp").read_text(encoding="utf-8")
     radio_header = pathlib.Path("firmware/shared/include/RadioTransport.h").read_text(encoding="utf-8")
     config_header = pathlib.Path("firmware/shared/include/FirmwareConfig.h").read_text(encoding="utf-8")
     operator_index = pathlib.Path("apps/gld-operator/index.html").read_text(encoding="utf-8")
-    operator_app = pathlib.Path("apps/gld-operator/app.js").read_text(encoding="utf-8")
+    # The operator frontend was rebuilt as native ES modules under js/ (see
+    # apps/gld-operator/design.md); concatenate them so the assertions below
+    # still verify the same literal contracts regardless of which module now
+    # owns a given piece of logic.
+    operator_app = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted(pathlib.Path("apps/gld-operator/js").glob("*.js"))
+    )
     operator_bridge = pathlib.Path("apps/gld-operator/bridge.py").read_text(encoding="utf-8")
 
     assert "[env:gld]" in platformio
@@ -911,6 +919,8 @@ def test_gld_unified_runtime_scaffolds_present():
     assert "GET_STATUS" in command_src
     assert "RESTART" in command_src
     assert "RUN_BOOT_CHECK" in command_src
+    assert "RUN_ADS_MCP_SWEEP" in command_src
+    assert "SLEEP_NOW" in command_src
     assert "GldSerialCommandType::Unknown" in command_src
     assert "echoTypedChar" in command_src
     assert "stream.write(static_cast<uint8_t>(c))" in command_src
@@ -921,8 +931,12 @@ def test_gld_unified_runtime_scaffolds_present():
     assert "Unknown" in command_header
     assert "Restart" in command_header
     assert "RunBootCheck" in command_header
+    assert "RunAdsMcpSweep" in command_header
+    assert "SleepNow" in command_header
     assert "GldSerialCommandType::Restart" in command_src
     assert "GldSerialCommandType::RunBootCheck" in command_src
+    assert "GldSerialCommandType::RunAdsMcpSweep" in command_src
+    assert "GldSerialCommandType::SleepNow" in command_src
     assert "GLD_INFO_JSON" in unified_src
     assert "GLD_STATUS_JSON" in unified_src
     assert "GLD_CMD_ACK_JSON" in unified_src
@@ -933,6 +947,18 @@ def test_gld_unified_runtime_scaffolds_present():
     assert "runBootHardwareDiagnostics(power.externalPower)" in unified_src
     assert "RUN_BOOT_CHECK_DONE" in unified_src
     assert 'caps["runBootCheck"] = true' in unified_src
+    assert "runAdsMcpSweepFromSerialCommand" in unified_src
+    assert 'emitCommandAck("RUN_ADS_MCP_SWEEP", "ok", "running ADS/MCP sweep", false)' in unified_src
+    assert 'caps["adsMcpSweep"] = "RUN_ADS_MCP_SWEEP"' in unified_src
+    assert "sleepNowFromSerialCommand" in unified_src
+    assert 'emitCommandAck("SLEEP_NOW", "ok", "clearing power latch via CLR", false)' in unified_src
+    assert 'caps["sleepNow"] = "SLEEP_NOW"' in unified_src
+    assert "GLD_SERIAL_SLEEP_NOW power_off" in unified_src
+    assert "pgl::gld::pulseGldPowerLatchClear();" in unified_src
+    assert power_src.index("digitalWrite(pgl::gld::board::PIN_POWER_LATCH_CLR, HIGH);") < power_src.index("pinMode(pgl::gld::board::PIN_POWER_LATCH_CLR, OUTPUT);")
+    assert "ADS_MCP_SWEEP_RESULT ch=%u sensor=%s ads=%u mux=%u " in unified_src
+    assert "ADS_MCP_SWEEP_DETAIL ch=%u code0=%u code4000=%u" in unified_src
+    assert "DIAG_SWEEP_DAC_CODE_HIGH = 4000" in unified_src
     assert "onUnknownSerialCommand" in unified_src
     assert '" command is unknown"' in unified_src
     assert "disableNetworkForOfflineMode(\"inference_mode\")" in unified_src
@@ -985,9 +1011,9 @@ def test_gld_unified_runtime_scaffolds_present():
     assert "latestTelemetryValid = true" in unified_src
     assert "lastLoraTxState = txState" in unified_src
     assert 'data-command="RUN_BOOT_CHECK"' in operator_index
-    assert "app.js?v=20260713-1615" in operator_index
+    assert "js/main.js?v=20260714-2600" in operator_index
     assert 'command === "GET_STATUS" || command === "RUN_BOOT_CHECK"' in operator_app
-    assert "SENSOR_MUX_CHANNELS = [0, 1, 2, 7, 6, 5, 4, 3]" in operator_app
+    assert "SENSOR_MUX_CHANNELS = [7, 6, 5, 0, 1, 2, 3, 4]" in operator_app
     assert "function setBootProbe(key, patch)" in operator_app
     assert "state.bootDiagnostics.probes[key] = {\n    key," in operator_app
     assert "DATASET_RUNTIME_READY_TIMEOUT_MS = 40000" in operator_app
@@ -1107,8 +1133,8 @@ def test_current_design_docs_mirror_live_source_contracts():
     server_doc = pathlib.Path("docs/design/server/design.md").read_text(encoding="utf-8")
     command_header = pathlib.Path("firmware/gld/include/GldCommandParser.h").read_text(encoding="utf-8")
 
-    assert "GLD_FIRMWARE_VERSION = \"0.8.12\"" in pathlib.Path("firmware/shared/include/FirmwareVersion.h").read_text(encoding="utf-8")
-    assert "| firmware version | `0.8.12` |" in gld_doc
+    assert "GLD_FIRMWARE_VERSION = \"0.8.13\"" in pathlib.Path("firmware/shared/include/FirmwareVersion.h").read_text(encoding="utf-8")
+    assert "| firmware version | `0.8.13` |" in gld_doc
     assert "| firmware version | `0.7.1` |" in ch_doc
     assert "| firmware version | `0.1.3` |" in gw_doc
 
@@ -1144,13 +1170,15 @@ def test_current_design_docs_mirror_live_source_contracts():
     assert "| Frequency | 921.0 MHz |" in gw_doc
 
     assert "confirm count | 10" in gld_doc
-    assert "minimum final voltage (default, configurable) | `0.0 V`" in gld_doc
+    assert "minimum delta threshold (default, configurable) | `0.00001 V`" in gld_doc
+    assert "baseline threshold ratio | `0.5`" in gld_doc
+    assert "minimum final voltage (legacy config/status field) | `0.0 V`" in gld_doc
     assert "SET_NULLING_CONFIG_JSON" in gld_doc
     assert "inference`/`running` and `nulling` call the offline-mode guard" in gld_doc
-    assert "| 3 | MQ5 | 3 | 7 | 3 |" in gld_doc
-    assert "| 7 | MQ2 | 7 | 3 | 7 |" in gld_doc
+    assert "| 3 | MQ5 | 3 | 0 | 3 |" in gld_doc
+    assert "| 7 | MQ2 | 7 | 4 | 7 |" in gld_doc
     assert "`{0, 1, 2, 3, 4, 5, 6, 7}`" in gld_doc
-    assert "`{0, 1, 2, 7, 6, 5, 4, 3}`" in gld_doc
+    assert "`{7, 6, 5, 0, 1, 2, 3, 4}`" in gld_doc
     assert "`gas-leak-detector/F001/dataset/data`" in gld_doc
     assert "`sensor_voltage`" in gld_doc
     assert "`sensor_gain`" in gld_doc
@@ -1234,7 +1262,7 @@ def test_version_constants_format():
     for version in versions:
         assert re.fullmatch(r"\d+\.\d+\.\d+", version), version
 
-    assert 'GLD_FIRMWARE_VERSION = "0.8.12"' in header
+    assert 'GLD_FIRMWARE_VERSION = "0.8.13"' in header
     assert 'CH_FIRMWARE_VERSION = "0.7.1"' in header
     assert 'GATEWAY_FIRMWARE_VERSION = "0.1.3"' in header
     assert 'PROTOCOL_VERSION = "0.1.0"' in header
@@ -1360,7 +1388,7 @@ def test_gld_nulling_selftest_scaffold_present():
     assert "MCP4725_ADDR = 0x60" in board_pins
     assert "SENSOR_TO_MUX_CH" in board_pins
     assert re.search(
-        r"SENSOR_TO_MUX_CH\[SENSOR_COUNT\]\s*=\s*\{0, 1, 2, 7, 6, 5, 4, 3\}",
+        r"SENSOR_TO_MUX_CH\[SENSOR_COUNT\]\s*=\s*\{7, 6, 5, 0, 1, 2, 3, 4\}",
         board_pins,
     )
     assert "#include <TCA9548.h>" in dac_src
@@ -1372,9 +1400,9 @@ def test_gld_nulling_selftest_scaffold_present():
     assert "selectChannel" in dac_src
     assert "GldDacMux" in dac_header
     assert "NULLING_STAGE=BEFORE" in nulling_main
-    assert "NULLING_THRESHOLD_V = 0.0001f" in nulling_main
+    assert "NULLING_THRESHOLD_V = 0.00001f" in nulling_main
     assert "NULLING_MIN_FINAL_V = 0.0f" in nulling_main
-    assert "positive=%u" in nulling_main
+    assert "crossed=%u" in nulling_main
     assert "NULLING_STAGE=AFTER" in nulling_main
     assert "NULLING_RESULT ch=%u" in nulling_main
     assert "NULLING_SELFTEST_RESULT=PASS" in nulling_main

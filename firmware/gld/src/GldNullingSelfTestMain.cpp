@@ -24,7 +24,8 @@ constexpr uint16_t NULLING_EXP_INIT_STEP = 1;
 constexpr uint16_t NULLING_EXP_MAX_STEP = 2048;
 constexpr uint16_t NULLING_CONFIRM_WINDOW = 10;
 constexpr uint32_t NULLING_SETTLE_MS = 5;
-constexpr float NULLING_THRESHOLD_V = 0.0001f;
+constexpr float NULLING_THRESHOLD_V = 0.00001f;
+constexpr float NULLING_BASELINE_THRESHOLD_RATIO = 0.5f;
 constexpr float NULLING_MIN_FINAL_V = 0.0f;
 constexpr uint8_t ACTIVE_LOW_OUTPUT_OFF = HIGH;
 
@@ -46,6 +47,14 @@ struct NullingResult {
     bool success;
     uint8_t errorCode;
 };
+
+float dynamicThresholdForBaseline(float baselineVoltage) {
+    return fmaxf(fabsf(baselineVoltage) * NULLING_BASELINE_THRESHOLD_RATIO, NULLING_THRESHOLD_V);
+}
+
+bool crossedBaselineThreshold(float voltage, float baselineVoltage) {
+    return (voltage - baselineVoltage) >= dynamicThresholdForBaseline(baselineVoltage);
+}
 
 void beginLogPorts() {
     Serial.begin(115200);
@@ -167,6 +176,8 @@ bool findRange(uint8_t channel, float baselineVoltage, uint16_t& low, uint16_t& 
     uint16_t step = NULLING_EXP_INIT_STEP;
     uint16_t previous = 0;
     uint16_t current = 1;
+    const float threshold = dynamicThresholdForBaseline(baselineVoltage);
+    const float target = baselineVoltage + threshold;
 
     while (current <= pgl::gld::board::GLD_DAC_CODE_MAX) {
         if (!dac.writeDac(channel, current)) {
@@ -174,14 +185,16 @@ bool findRange(uint8_t channel, float baselineVoltage, uint16_t& low, uint16_t& 
         }
         delay(NULLING_SETTLE_MS);
         const NullingSnapshot snapshot = readAverage(channel, NULLING_AVG_COUNT);
-        const float delta = fabsf(snapshot.voltage - baselineVoltage);
-        logPrintf("NULLING_EXP ch=%u dac=%u voltage=%.6f deltaV=%.6f\n",
+        const float delta = snapshot.voltage - baselineVoltage;
+        logPrintf("NULLING_EXP ch=%u dac=%u voltage=%.6f deltaV=%.6f threshold=%.6f target=%.6f\n",
                   channel,
                   current,
                   snapshot.voltage,
-                  delta);
+                  delta,
+                  threshold,
+                  target);
 
-        if (snapshot.valid && delta >= NULLING_THRESHOLD_V) {
+        if (snapshot.valid && crossedBaselineThreshold(snapshot.voltage, baselineVoltage)) {
             low = previous;
             high = current;
             logPrintf("NULLING_RANGE ch=%u low=%u high=%u\n", channel, low, high);
@@ -203,20 +216,24 @@ bool findRange(uint8_t channel, float baselineVoltage, uint16_t& low, uint16_t& 
 }
 
 uint16_t binarySearch(uint8_t channel, float baselineVoltage, uint16_t low, uint16_t high) {
+    const float threshold = dynamicThresholdForBaseline(baselineVoltage);
+    const float target = baselineVoltage + threshold;
     while (low + 1 < high) {
         const uint16_t mid = static_cast<uint16_t>((low + high) / 2);
         dac.writeDac(channel, mid);
         delay(NULLING_SETTLE_MS);
         const NullingSnapshot snapshot = readAverage(channel, NULLING_AVG_COUNT);
-        const float delta = fabsf(snapshot.voltage - baselineVoltage);
-        logPrintf("NULLING_BINARY ch=%u mid=%u voltage=%.6f deltaV=%.6f low=%u high=%u\n",
+        const float delta = snapshot.voltage - baselineVoltage;
+        logPrintf("NULLING_BINARY ch=%u mid=%u voltage=%.6f deltaV=%.6f threshold=%.6f target=%.6f low=%u high=%u\n",
                   channel,
                   mid,
                   snapshot.voltage,
                   delta,
+                  threshold,
+                  target,
                   low,
                   high);
-        if (delta < NULLING_THRESHOLD_V) {
+        if (!snapshot.valid || !crossedBaselineThreshold(snapshot.voltage, baselineVoltage)) {
             low = mid;
         } else {
             high = mid;
@@ -237,19 +254,23 @@ bool confirmCode(uint8_t channel, float baselineVoltage, uint16_t& dacCode) {
         start = max<int>(pgl::gld::board::GLD_DAC_CODE_MIN, end - static_cast<int>(NULLING_CONFIRM_WINDOW) + 1);
     }
 
+    const float threshold = dynamicThresholdForBaseline(baselineVoltage);
+    const float target = baselineVoltage + threshold;
     for (int code = start; code <= end; ++code) {
         const bool writeOk = dac.writeDac(channel, static_cast<uint16_t>(code));
         delay(NULLING_SETTLE_MS);
         const NullingSnapshot snapshot = readAverage(channel, NULLING_CONFIRM_COUNT);
-        const float delta = fabsf(snapshot.voltage - baselineVoltage);
-        const bool nonNegative = snapshot.voltage >= NULLING_MIN_FINAL_V;
-        const bool changed = writeOk && snapshot.valid && nonNegative && delta >= NULLING_THRESHOLD_V;
-        logPrintf("NULLING_CONFIRM ch=%u dac=%d voltage=%.9f deltaV=%.6f positive=%u write=%u changed=%u\n",
+        const float delta = snapshot.voltage - baselineVoltage;
+        const bool crossed = crossedBaselineThreshold(snapshot.voltage, baselineVoltage);
+        const bool changed = writeOk && snapshot.valid && crossed;
+        logPrintf("NULLING_CONFIRM ch=%u dac=%d voltage=%.9f deltaV=%.6f threshold=%.6f target=%.6f crossed=%u write=%u changed=%u\n",
                   channel,
                   code,
                   snapshot.voltage,
                   delta,
-                  nonNegative ? 1 : 0,
+                  threshold,
+                  target,
+                  crossed ? 1 : 0,
                   writeOk ? 1 : 0,
                   changed ? 1 : 0);
         if (changed) {
@@ -319,7 +340,7 @@ NullingResult nullOne(uint8_t channel, const NullingSnapshot& before) {
     result.dacCode = selected;
     result.afterVoltage = after.voltage;
     result.deltaVoltage = after.voltage - result.baselineVoltage;
-    result.success = after.valid && after.voltage >= NULLING_MIN_FINAL_V;
+    result.success = after.valid && crossedBaselineThreshold(after.voltage, result.baselineVoltage);
     result.errorCode = !after.valid ? 6 : (result.success ? 0 : 7);
     return result;
 }

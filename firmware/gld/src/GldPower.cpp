@@ -62,11 +62,11 @@ BatteryAdcReading readBatteryAdc() {
 void beginGldPowerPins() {
     pinMode(pgl::gld::board::PIN_BATTERY_VOLTAGE, INPUT);
     pinMode(pgl::gld::board::PIN_24V_POWER_GOOD, INPUT);
-    pinMode(pgl::gld::board::PIN_TPL5110_DONE, OUTPUT);
     digitalWrite(pgl::gld::board::PIN_TPL5110_DONE, LOW);
+    pinMode(pgl::gld::board::PIN_TPL5110_DONE, OUTPUT);
     // CLR is active-low; idle HIGH means "not clearing" (latch stays set / power stays on).
-    pinMode(pgl::gld::board::PIN_POWER_LATCH_CLR, OUTPUT);
     digitalWrite(pgl::gld::board::PIN_POWER_LATCH_CLR, HIGH);
+    pinMode(pgl::gld::board::PIN_POWER_LATCH_CLR, OUTPUT);
 #if defined(ARDUINO_ARCH_ESP32)
     analogReadResolution(12);
     analogSetPinAttenuation(pgl::gld::board::PIN_BATTERY_VOLTAGE, ADC_11db);

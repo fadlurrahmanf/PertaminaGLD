@@ -21,14 +21,15 @@ inline bool isNullingProfileValid(const GldNullingProfile& p) {
 
 constexpr uint8_t NULLING_CONFIG_VALID_MAGIC = 0x5A;
 
-constexpr float NULLING_CONFIG_DEFAULT_THRESHOLD_V = 0.0001f;
+constexpr float NULLING_CONFIG_DEFAULT_THRESHOLD_V = 0.00001f;
 constexpr float NULLING_CONFIG_DEFAULT_MIN_FINAL_V  = 0.0f;
 
-// Tunable nulling thresholds. minFinalV is intentionally allowed to be
-// negative: sensor channels whose ADC baseline sits below zero (a wiring/
-// polarity property of that channel, not a fault) can never pass a
-// non-negative confirm check, so the operator must be able to relax it
-// per-deployment instead of the firmware hard-failing every nulling run.
+// Tunable nulling thresholds. thresholdV is the minimum floor for the dynamic
+// baseline-relative threshold:
+//   dynamicThreshold = max(abs(baselineV) * 0.5, thresholdV)
+// Current unified nulling confirms against baseline + dynamicThreshold.
+// minFinalV is retained in the config/status command for compatibility with
+// older operator panels and historical logs, but no longer gates success.
 struct GldNullingConfig {
     uint8_t validMagic = NULLING_CONFIG_VALID_MAGIC;
     float   thresholdV = NULLING_CONFIG_DEFAULT_THRESHOLD_V;

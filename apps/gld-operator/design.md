@@ -1,6 +1,6 @@
 # GLD Operator Lite Design
 
-Last updated: 2026-07-01
+Last updated: 2026-07-14 (frontend rebuilt from scratch, see §27)
 
 ## 1. Ringkasan
 
@@ -9,9 +9,10 @@ aktif melalui serial COM dan MQTT dataset. Aplikasi ini menggantikan versi
 Electron yang terlalu besar dengan stack ringan:
 
 - `index.html` untuk struktur UI.
-- `style.css` untuk industrial dark theme.
-- `app.js` untuk state UI, parser serial, chart, dataset/nulling workflow, mock,
-  dan command orchestration.
+- `style.css` (entry) + `css/*.css` untuk instrument-panel theme (lihat §27).
+- `js/*.js` (native ES modules, tanpa build step) untuk state UI, parser
+  serial, chart, dataset/nulling workflow, mock, dan command orchestration
+  (lihat §27 untuk peta modul; sebelumnya satu file `app.js`).
 - `bridge.py` untuk fitur lokal yang tidak bisa diakses langsung oleh browser:
   scan COM, serial native, MQTT TCP, WiFi/IP lookup Windows, penyimpanan CSV,
   buka folder output, dan PlatformIO upload orchestration.
@@ -41,28 +42,37 @@ Non-goal V1:
 - Bukan aplikasi Electron/desktop bundling besar.
 - Bukan database server.
 - Bukan Node-RED editor/deployer.
-- Bukan MQTT broker.
+- Bukan MQTT broker penuh untuk produksi (bridge membundel broker QoS0 minimal
+  di `local_mqtt_broker.py` khusus untuk bench testing tanpa Node-RED/Mosquitto
+  aktif, bukan pengganti broker produksi).
 - Bukan compiler firmware custom; upload memakai PlatformIO existing.
-- Belum mendukung fleet 1-8 GLD paralel di UI lite saat ini. UI sekarang adalah
-  satu active GLD slot.
+- Fleet 1-8 GLD slot didukung sebagai layer ringan (lihat §26): setiap slot
+  punya koneksi serial + dataset MQTT sendiri di bridge, tetapi UI tetap
+  menampilkan detail penuh hanya untuk satu "active slot" agar operator tidak
+  kewalahan mengoperasikan banyak dashboard sekaligus.
 
 ## 3. Lokasi File
 
 ```text
 apps/gld-operator/
   index.html              UI structure
-  style.css               Industrial dark styling
-  app.js                  Browser-side app logic
+  style.css               Entry point, @imports css/*.css
+  css/                    tokens.css, base.css, layout.css, components.css, nulling.css
+  js/                     Native ES modules (browser-side app logic), see §27
   bridge.py               Local Python bridge and static file server
   requirements.txt        pyserial and paho-mqtt dependencies
   run-gld-operator.bat    Windows launcher
   README.md               Quick run instructions
   design.md               This document
   output/datasets/        Runtime CSV output, gitignored
+  output/logs/            Per-session serial/nulling logs, gitignored
 ```
 
 File lama Electron/React/TypeScript sudah dihapus dari working tree untuk
 mengecilkan ukuran aplikasi. Penghapusan itu memang bagian dari arah lite app.
+Per 2026-07-14, `app.js` (satu file monolitik ~3300 baris) juga sudah
+dihapus dan digantikan oleh modul-modul di `js/` (lihat §27) — riwayat git
+tetap menyimpan versi lama bila diperlukan referensi.
 
 ## 4. Cara Menjalankan
 
@@ -184,7 +194,10 @@ Topbar menampilkan:
 
 Sidebar berisi:
 
-- Fleet panel: satu active GLD slot.
+- Fleet panel: kartu "Active GLD" untuk slot yang sedang aktif, ditambah
+  daftar dinamis slot lain (1-8 total, lihat §26) dengan ringkasan
+  device/port/mode/alarm, tombol "Make Active" dan "Remove" per slot, dan
+  tombol "+ Add Slot".
 - Commands: `Ping`, `Info`, `Status`, `Poll 1s`.
 - Mode: `Running`, `Dataset`, `Nulling`.
 
@@ -715,6 +728,32 @@ fail
 Mock GLD mengemulasi proses nulling bertahap untuk semua 8 channel agar UI bisa
 dites tanpa hardware.
 
+### 12.1 Per-Channel Stage Detail (added 2026-07-14)
+
+Setiap channel card punya `<details>` "Stage detail" (collapsed by default,
+expand state persists across re-render via `state.nullingExpandedChannels`)
+yang menjabarkan tiap tahap secara terpisah, bukan hanya satu baris ringkasan:
+
+- **Baseline**: jumlah sample rata-rata per code, rentang code yang di-scan,
+  jumlah step yang tercatat, nilai baseline akhir, jumlah sample valid.
+- **Exponential**: baseline referensi, threshold target, jumlah step
+  (doubling code), code terakhir yang dicoba, dan bracket `[low, high]` yang
+  ditemukan (atau pesan FAILED dengan code terakhir/maksimum jika gagal).
+- **Binary search**: bracket awal, jumlah step penyempitan, code terpilih.
+- **Confirm**: jendela code yang di-scan (`start`-`end`, wide/normal),
+  jumlah kandidat threshold ditemukan, code+voltage terpilih, dan penjelasan
+  mode (`baseline_threshold_verified`) dalam bahasa biasa.
+- **DAC source**: baris eksplisit menandai dari tahap mana kode DAC final
+  berasal, misalnya "Confirm stage chose code 451 (baseline-relative threshold,
+  re-verified) -> final DAC code 451", termasuk jumlah *final bump* (+1 LSB)
+  jika firmware melakukan penyesuaian setelah confirm.
+
+Semua data ini diparse dari field yang sudah dikirim firmware
+(`GldNullingService.cpp`) tapi sebelumnya tidak ditampilkan terstruktur di
+UI, hanya ada di Raw Nulling Log mentah. Mock GLD tidak mengirim semua field
+(mis. `threshold`, `baseline` di `NULLING_EXP_START`), jadi field yang hilang
+tampil sebagai `?` saat mode mock — ini normal, bukan bug.
+
 ## 13. Expert Terminal
 
 Expert terminal menyediakan raw command input.
@@ -928,9 +967,31 @@ Request:
 {
   "env": "gld",
   "port": "COM10",
-  "targetDeviceId": "F001"
+  "targetDeviceId": "F001",
+  "slot": 1
 }
 ```
+
+### 15.14 GET `/api/serial/port-status?port=COM10`
+
+Preflight check: returns `{port, free, lockedByApp, message}`. Used before
+firmware upload and by the Firmware tab's "Check COM Lock" button.
+
+### 15.15 POST `/api/mqtt/test`
+
+Body `{host, port, username, password}`. Attempts a short-lived MQTT connect
+and reports `{ok, host, port, latencyMs}` or `{ok:false, message}`.
+
+### 15.16 POST `/api/session/log`
+
+Body `{filename, text}`. Appends a session's accumulated serial or nulling log
+to `output/logs/<filename>`. Called automatically when a dataset session ends
+and when nulling reports a final result; also available via the Log tab's
+"Save Log to Disk" button.
+
+Endpoints marked in §15.6-§15.13 as acting on serial/MQTT/firmware all accept
+an optional `slot` field (default `1`) — see §26 for the multi-slot bridge
+architecture.
 
 ## 16. Local Storage
 
@@ -952,13 +1013,21 @@ firmwareEnv
 targetDeviceId
 ```
 
+Also stored (added 2026-07-14):
+
+- `gldOperatorWeb.pinHash` — SHA-256 hex of the local Expert/Firmware PIN
+  (never the PIN itself).
+- `gldOperatorWeb.timeouts` — JSON `{serialResponseMs, datasetReadyMs,
+  datasetStuckMs}` overrides for the Timeout Settings panel (Expert tab).
+
 Not stored:
 
 - WiFi password.
 - MQTT password.
 - `Run nulling before dataset` checkbox.
-- Serial logs.
+- Serial logs (persisted to disk per-session instead, see §15.16).
 - Dataset rows.
+- Expert/Firmware unlock state (PIN must be re-entered each page load).
 
 ## 17. Mock GLD
 
@@ -990,24 +1059,36 @@ Current safety controls:
 - Firmware upload asks browser `confirm()`.
 - Firmware upload validates loaded manifest against selected env, target ID,
   chip family, and `flashFiles` shape.
+- Firmware upload preflight: disconnects serial, re-probes the target COM
+  port, and aborts with guidance if it is still busy after disconnect (§15.14,
+  §20.4).
 - Apply GLD settings asks browser `confirm()`.
 - Inject ID asks browser `confirm()`.
-- Expert terminal disabled until local `Unlock`.
+- Expert terminal and Firmware Upload/Inject ID are locked behind a local PIN
+  (SHA-256 hash in `localStorage`, set on first use, re-verified every page
+  load — see §16). Not enterprise auth, a deterrent against accidental bench
+  mistakes.
 - Dataset nulling-first default OFF to avoid unintended nulling.
+- Cross-slot COM port conflicts are rejected by the bridge (§26): two slots
+  cannot claim the same physical port.
 
 Known safety gaps:
 
-- Expert unlock has no PIN yet.
 - Bridge has permissive CORS and is intended for localhost bench only.
 - MQTT credentials are not encrypted; password fields are not persisted.
-- No authentication on local bridge.
+- No authentication on local bridge (the PIN lock is UI-side only; the bridge
+  REST API itself still trusts any same-origin caller).
+- Firmware manifest validation checks shape/identity fields, not actual flash
+  file checksums.
 
 Recommended production hardening:
 
 - Bind bridge to `127.0.0.1` only, keep current default.
-- Add one-time local admin PIN for Expert/Firmware.
 - Reject upload if manifest device profile does not match connected GLD.
-- Add visible COM lock/release state before upload.
+- Add checksum validation of manifest `flashFiles` against the actual files
+  on disk.
+- Consider bridge-level auth (e.g. a session token) if the bridge is ever
+  exposed beyond localhost.
 
 ## 19. Operational Flows
 
@@ -1246,42 +1327,54 @@ Requires explicit operator approval and free COM10:
 
 ## 22. Current Known State
 
-As of 2026-07-01:
+As of 2026-07-14:
 
-- Bridge can run and `/api/ports` returns COM10 when bridge is alive.
-- App source has dataset/nulling UX improvements.
-- Firmware source has dataset auto-nulling disabled by default.
-- Firmware host tests passed.
-- Upload to real GLD was attempted but not completed because COM10 became
-  unavailable/busy after flash failure.
-- `firmware.bin` was generated during upload attempt, but hardware must be
-  reflashed successfully before firmware behavior change is active on the GLD.
+- Bridge can run and `/api/ports` returns COM9/COM10 (bench-dependent) when
+  bridge is alive; verified live against a real GLD on COM9.
+- Bridge is now multi-slot (see §26): `serial_bridges`/`dataset_monitors` are
+  keyed by slot id 1-8 instead of a single global instance. Slot 1 remains the
+  default for all existing single-device flows.
+- Bridge status indicator, Expert/Firmware PIN lock, upload preflight + COM
+  lock visibility, dataset session ID + per-session log persistence,
+  configurable timeouts, MQTT reachability test, and a real Fleet panel
+  (add/remove/switch up to 8 slots) are implemented (§23 High/Medium priority
+  items below are now done).
+- Firmware host tests pass 34/34.
 
 ## 23. Roadmap
 
-High priority:
+Done (2026-07-14 overhaul):
 
-- Add bridge status indicator that can restart/reconnect after bridge downtime.
-- Add explicit COM lock status before upload.
-- Add upload preflight: disconnect serial, verify `mode COMx`, then upload.
-- Add stricter manifest validation against actual flash files/checksums.
-- Add Expert/Firmware PIN lock.
-- Add visible `reject_no_profile` action button: "Run Nulling Now".
+- Bridge status indicator with reconnect-after-downtime (topbar `bridge: ok /
+  unreachable / reconnecting` badge, auto re-init on recovery).
+- Explicit COM lock status before upload (`GET /api/serial/port-status`,
+  "Check COM Lock" button on Firmware tab).
+- Upload preflight: disconnect serial, re-probe the port, abort with guidance
+  if still busy.
+- Expert/Firmware PIN lock (local SHA-256 PIN via `window.prompt`, gates
+  Expert terminal unlock and Firmware Upload/Inject ID).
+- Visible `reject_no_profile` action button: "Run Nulling Now" on the Dataset
+  tab, switches to Nulling and sends `SET_MODE nulling`.
+- Persist raw serial/nulling logs per session to disk (`POST /api/session/log`
+  -> `output/logs/`).
+- Session ID added to dataset CSV rows and the `START_DATASET` MQTT payload
+  (`session_id`, additive field).
+- MQTT broker reachability test button (`POST /api/mqtt/test`) on the Dataset
+  tab.
+- Multi-device architecture for 1-8 GLD slots (§26): bridge-side real,
+  frontend uses a lightweight Fleet registry + single "active slot" detail
+  view rather than N parallel dashboards, by design (see §26 rationale).
 
-Medium priority:
+Remaining / not yet done:
 
-- Persist raw serial logs per session to disk via bridge.
-- Add session ID to dataset output.
-- Add MQTT broker reachability test button.
-- Add firmware upload retry guidance inside UI.
-- Add multi-device architecture for 1-8 GLD slots.
-
-Low priority:
-
+- Stricter manifest validation against actual flash files/checksums (still
+  only validates env/deviceId/chip/flashFiles shape, not checksums).
 - Package as portable folder with Python runtime optional.
 - Add service wrapper for bridge.
 - Add richer chart downsampling for very long sessions.
 - Add app-side settings export/import.
+- Firmware upload retry guidance is partially covered by the preflight error
+  message; a dedicated in-UI retry wizard is not implemented.
 
 ## 24. Design Decisions
 
@@ -1310,3 +1403,163 @@ V1 lite is acceptable when:
 - Expert terminal can send manual commands after unlock.
 - Firmware tab can launch PlatformIO upload when COM port is free.
 - Documentation describes current limitations honestly.
+
+## 26. Multi-Device Architecture (1-8 GLD Slots)
+
+Added 2026-07-14. Two design options were considered: (a) a full rewrite where
+every tab renders N independent GLD dashboards side by side, or (b) keep the
+existing single-detail-view UX and back it with a slot-indexed connection
+layer. Option (b) was chosen: rendering 8 full dashboards at once would work
+against the "efficient, not rumit" requirement this overhaul was scoped
+around, and a full state-model rewrite of `app.js` (one flat global `state`
+object touched by ~150 functions) carried much higher regression risk for a
+tool that bench operators depend on daily, with only one physical GLD unit
+available to validate against.
+
+### Bridge (`bridge.py`)
+
+- `SerialBridge` and `DatasetMqttMonitor` are no longer module-level
+  singletons. `serial_bridges: dict[int, SerialBridge]` and
+  `dataset_monitors: dict[int, DatasetMqttMonitor]` hold one instance per slot
+  (1-8), created lazily via `get_serial_bridge(slot)` / `get_dataset_monitor(slot)`.
+- Every event a `SerialBridge`/`DatasetMqttMonitor` emits is tagged with
+  `"slot": <id>` so the frontend can demux `/api/events` SSE traffic per slot.
+- REST endpoints that act on serial/MQTT/firmware (`/api/serial/connect`,
+  `/api/serial/disconnect`, `/api/serial/write`, `/api/mqtt/dataset`,
+  `/api/mqtt/dataset-monitor/stop`, `/api/firmware/upload`) accept an optional
+  `slot` field in the JSON body, defaulting to `1` for backward compatibility.
+- `/api/serial/connect` rejects connecting a second slot to a COM port already
+  held by another slot (`"<port> is already connected on slot <n>"`).
+- `/api/health` reports `maxSlots: 8` and `slots: {"<id>": {...status}}` for
+  every currently-connected slot.
+- `firmware_upload` resolves whichever slot currently holds the target port
+  (falling back to the requesting slot) so upload preflight/reconnect acts on
+  the right serial instance.
+
+### Frontend (`app.js`)
+
+- The existing flat `state` object is unchanged and continues to represent
+  the currently **active slot** exactly as before Phase 4 — every existing
+  render/parse function keeps working against it with zero modification.
+- A separate, lightweight `state.fleet[slot] = {port, deviceId, mode, gas,
+  alarm, connected}` registry tracks summary info for every slot the operator
+  has added, including backgrounded ones.
+- `serial_line`/`serial_status`/`serial_tx`/`serial_error` SSE listeners check
+  the event's `slot` field: events for the active slot flow through the full
+  existing pipeline (`handleLine`, etc.) unchanged; events for background
+  slots update only `state.fleet` via the lightweight `updateFleetFromLine()`.
+- The sidebar Fleet panel (`index.html`) shows the active slot's existing
+  "Active GLD" card plus a dynamic list of other slots with a
+  device/port/mode/alarm summary, a "Make Active" button (calls
+  `setActiveSlot()`, which resets the detail view via the existing
+  `resetDeviceSnapshot()` and re-requests `GET_INFO`/`GET_STATUS` for the new
+  active slot), and a "Remove" button. "+ Add Slot" (up to 8) creates a new
+  slot, makes it active, and opens Port Setup so the operator can connect a
+  GLD to it.
+- A background slot's alarm is visually surfaced (`.fleet-card.alarm`, red
+  accent) in the sidebar even while a different slot is active, so an alarm
+  on a backgrounded GLD is not missed.
+- Only one physical GLD unit was available to validate this against; slot 1
+  was exercised against real hardware on COM9, and additional-slot behavior
+  (fleet rendering, active-slot switching, alarm surfacing, cross-slot port
+  conflict rejection) was verified via direct function calls and a second
+  bridge-level connect attempt to the same port, not a second physical unit.
+
+## 27. Frontend Rebuild From Scratch (2026-07-14)
+
+The user asked for the frontend (`index.html`/`app.js`/`style.css`) to be
+rebuilt from zero with a distinctive visual design, keeping full feature
+parity with everything above (§1-§26) and the exact same `bridge.py` REST/SSE
+contract. `bridge.py`, `local_mqtt_broker.py`, `requirements.txt`, and
+`run-gld-operator.bat` were **not** touched — only the browser-side code and
+its visual language changed.
+
+### 27.1 Why a new visual design
+
+The previous theme (near-black background + a single acid-green accent) is
+one of the generic "AI-default" looks — not wrong, but not motivated by this
+app's actual subject. The rebuild instead draws from real gas-detector
+instrument panels and lab oscilloscopes, since this is literally a bench
+diagnostic console for a gas-leak sensor:
+
+- **Color** — warm near-black chassis (`--panel-black #14110d`), amber
+  phosphor accent for live/active state (`--phosphor-amber #ffa400`, the
+  color of 7-segment gas meters and CRT phosphor), a cool cyan for passive
+  data (`--signal-cyan #4fd8e0`), and `--hazard-red #ff3b30` reserved
+  **exclusively** for alarms — never used decoratively, so the operator's
+  eye stays trained to react to it (mirrors real safety-equipment
+  convention: red = alarm only).
+- **Type** — `Bahnschrift` for display/labels (a condensed variable font that
+  ships with every Windows 10/11 machine, this app's documented target OS —
+  distinctive and zero-cost, no bundled/CDN fonts), `Cascadia Mono`/
+  `ui-monospace` for telemetry/DAC-code readouts (tabular figures, reads like
+  a real instrument display), system `Segoe UI` for body chrome.
+- **Signature element** — each Nulling channel card has a "sweep meter": a
+  live horizontal bar showing the DAC code's position within its current
+  search bracket (exponential range / binary bisection / confirm window),
+  with a thin amber needle at the most recently tried code. This visualizes
+  the actual binary-search algorithm rather than decorating the card; see
+  `.sweep-meter` in `css/nulling.css` and `sweepMeterState()`/
+  `renderSweepMeter()` in `js/nulling.js`.
+- Everything else stays disciplined: hairline borders, no gradients/
+  glassmorphism, motion limited to the alarm-badge pulse and the sweep meter
+  itself.
+
+### 27.2 Why native ES modules, no build step
+
+The "keep it light, no build tooling, stays easy to `git push`" constraint
+from the earlier overhaul carried over. Browsers load `<script type="module">`
+and `import`/`export` natively; `bridge.py`'s `SimpleHTTPRequestHandler`
+already serves any static path under `APP_DIR`, so a `js/` and `css/`
+subfolder needed zero backend changes. No `npm install`/build step exists or
+is required to run the app.
+
+### 27.3 Module map
+
+```text
+apps/gld-operator/js/
+  state.js             Central mutable `state`/`elements` + shared constants (single source of truth)
+  ui.js                $, setText/setBadge, showBanner/hideBanner, withBusy, tab switching, form save/load
+  bridge-client.js      bridgeFetch, SSE wiring, health poll+reconnect, port scan/select, connect/disconnect
+  security.js           Local PIN lock (SHA-256, gates Expert + Firmware actions)
+  serial-protocol.js    handleLine + JSONL/legacy parsing, boot diagnostics, Sensor Check rendering, alarm, sendCommand/poll
+  chart.js              Canvas telemetry chart, legend, CSV export
+  nulling.js            Nulling log parsing, per-stage detail, signature sweep meter
+  dataset.js            Dataset session state machine, CSV building, MQTT publish, session log persistence
+  firmware.js           Manifest load/validate, upload flow, COM-lock preflight, device ID injection
+  fleet.js              Multi-slot state.fleet registry, Fleet panel rendering, slot add/switch/remove
+  mock.js               Mock GLD simulator (feature parity; not used to verify this rebuild)
+  main.js               Entry point (`type="module"`): wires DOM events, bootstrap()
+```
+
+Every module exports what other modules need and imports `state`/`elements`
+from `state.js` (both are plain objects, so the same reference is shared
+everywhere they're imported). Several module pairs import each other
+(e.g. `bridge-client.js` <-> `serial-protocol.js`, `serial-protocol.js` <->
+`nulling.js`/`dataset.js`) — this is safe in ES modules as long as the
+circular bindings are only used inside function bodies, never at a module's
+top-level evaluation, which holds throughout this codebase (every export here
+is a function declaration or a plain data constant).
+
+The rebuild ported existing, already-proven logic (serial JSONL parsing,
+dataset state machine, nulling log parsing, PIN hashing, multi-slot wiring)
+into its new module home essentially verbatim — the actual rebuild effort
+went into module boundaries, `index.html` markup, and the new `css/*.css`
+design system, not reinventing business logic. `firmware/tests/test_shared_
+protocol.py::test_gld_unified_runtime_scaffolds_present` hardcodes literal
+snippets from the old `app.js`; it now concatenates every file under `js/` so
+the same contract checks still hold regardless of which module owns a given
+line.
+
+### 27.4 Verification
+
+Every milestone was verified against the **real GLD on COM9** (per explicit
+user instruction, not Mock GLD): bridge health/port scan/connect/disconnect,
+live Running-tab telemetry and boot health, Sensor Check tab, a full 8-channel
+real nulling run (sweep meter + stage detail confirmed against genuine
+firmware output), a real dataset start/stop cycle with session ID + auto-
+saved CSV/log, PIN lock set/verify/reject, raw Expert command with real ACK,
+timeout settings persistence, Firmware tab's COM-lock preflight (upload
+itself intentionally not exercised, to avoid an unnecessary reflash), and
+multi-slot add/switch/remove/alarm-surfacing mechanics. `python firmware/
+tests/run_tests.py` stayed at 34/34 throughout.

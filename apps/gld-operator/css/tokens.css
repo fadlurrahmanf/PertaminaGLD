@@ -1,0 +1,51 @@
+/*
+  Design tokens for the GLD Operator console.
+
+  Palette is modeled on real gas-detector/instrument panels rather than a
+  generic dashboard: warm near-black chassis, amber phosphor readouts for
+  live/active state, a cool cyan for passive/info data, and hazard red
+  reserved exclusively for alarms (never used decoratively) so an operator's
+  eye stays trained to react to it.
+*/
+
+:root {
+  color-scheme: dark;
+
+  /* Chassis */
+  --panel-black: #14110d;
+  --panel-steel: #1e1a14;
+  --panel-steel-raised: #241f17;
+  --hairline: #35301f;
+  --hairline-strong: #4a4327;
+
+  /* Signal colors */
+  --phosphor-amber: #ffa400;
+  --phosphor-amber-dim: #7a5200;
+  --signal-cyan: #4fd8e0;
+  --signal-cyan-dim: #235c60;
+  --hazard-red: #ff3b30;
+  --hazard-red-dim: #5c1712;
+  --status-ok: #6bd47a;
+
+  /* Text */
+  --paper: #ede6d6;
+  --ink-muted: #8a8272;
+  --ink-faint: #5f5842;
+
+  --shadow: rgba(0, 0, 0, 0.45);
+
+  /* Type */
+  --font-display: Bahnschrift, "Segoe UI Semibold", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", Consolas, "SFMono-Regular", Menlo, monospace;
+
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  --radius: 3px;
+}

@@ -80,7 +80,7 @@ Firmware identifiers:
 | Field | Value |
 |---|---|
 | Firmware name | `PertaminaGLD-GLD` |
-| Firmware version | `0.8.12` |
+| Firmware version | `0.8.13` |
 | Protocol version | `0.1.0` |
 | Config schema version | `0.1.0` |
 
@@ -151,18 +151,18 @@ disabled by the board profile.
 
 | Program channel | Sensor | ADS1256 input | TCA/MCP mux channel | Runtime feature index |
 |---:|---|---:|---:|---:|
-| 0 | MQ8 | 0 | 0 | 0 |
-| 1 | MQ135 | 1 | 1 | 1 |
-| 2 | MQ3 | 2 | 2 | 2 |
-| 3 | MQ5 | 3 | 7 | 3 |
-| 4 | MQ4 | 4 | 6 | 4 |
-| 5 | MQ7 | 5 | 5 | 5 |
-| 6 | MQ6 | 6 | 4 | 6 |
-| 7 | MQ2 | 7 | 3 | 7 |
+| 0 | MQ8 | 0 | 7 | 0 |
+| 1 | MQ135 | 1 | 6 | 1 |
+| 2 | MQ3 | 2 | 5 | 2 |
+| 3 | MQ5 | 3 | 0 | 3 |
+| 4 | MQ4 | 4 | 1 | 4 |
+| 5 | MQ7 | 5 | 2 | 5 |
+| 6 | MQ6 | 6 | 3 | 6 |
+| 7 | MQ2 | 7 | 4 | 7 |
 
 Firmware maps the eight MQ sensors to ADS inputs
 `{0, 1, 2, 3, 4, 5, 6, 7}` and TCA/MCP mux channels
-`{0, 1, 2, 7, 6, 5, 4, 3}` while keeping runtime arrays, `feature_order`,
+`{7, 6, 5, 0, 1, 2, 3, 4}` while keeping runtime arrays, `feature_order`,
 moving average, and model input in the program-channel order above.
 
 ## 6. Power Detection
@@ -427,11 +427,15 @@ Algorithm shape:
 
 1. For each sensor channel, write DAC code 0.
 2. Baseline prescan tries codes `0..10`.
-3. Exponential search starts at code 1 and doubles step up to 2048 until delta reaches threshold.
-4. Binary search narrows the valid range.
-5. Confirm window checks candidate codes around the selected range.
-6. Final code is written and the channel is read again.
-7. Channel passes only when final read is valid and final voltage is non-negative.
+3. Dynamic threshold is `max(abs(baselineV) * 0.5, thresholdV)`.
+4. Exponential search starts at code 1 and doubles step up to 2048 until the
+   reading crosses `baselineV + dynamicThreshold`.
+5. Binary search narrows the valid range around that baseline-relative target.
+6. Confirm window checks and re-verifies threshold-crossing candidates around
+   the selected range.
+7. Final code is written and the channel is read again.
+8. Channel passes only when the final read is valid and still crosses
+   `baselineV + dynamicThreshold`.
 
 Key constants:
 
@@ -444,8 +448,9 @@ Key constants:
 | exponential max step | 2048 |
 | confirm window | 10 |
 | settle delay | 5 ms |
-| delta threshold | `0.0001 V` |
-| minimum final voltage | `0.0 V` |
+| minimum delta threshold | `0.00001 V` |
+| baseline threshold ratio | `0.5` |
+| minimum final voltage | legacy config/status field, default `0.0 V` |
 
 Nulling runtime behavior:
 

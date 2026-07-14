@@ -28,8 +28,11 @@ Bridge features:
 - Windows WiFi SSID/password and local IPv4 lookup for `Use this PC`.
 - Visual alarm badge plus local sound/mute. Mute is local only and does not send
   an alarm clear command to GLD.
-- Dataset MQTT command publish when `paho-mqtt` is installed and a broker is
-  reachable.
+- Local bench MQTT broker on port `1884` from `run-gld-operator.bat`, so
+  dataset START/STOP does not require Node-RED. Bind address is `0.0.0.0` so a
+  GLD on the same WiFi can connect to this PC's IPv4 address.
+- Dataset MQTT command publish when `paho-mqtt` is installed and the local
+  broker is reachable.
 - Dataset session monitor subscribes to MQTT `cmd/ack`, `dataset/status`,
   `dataset/data`, and `dataset/summary` for the selected GLD. It also shows
   serial fallback events such as `DATASET_START`, `DATASET_RECORD`,
@@ -45,6 +48,8 @@ D:\PertaminaGLD\apps\gld-operator\output\datasets
 ```
 
   Use the Dataset tab `Save CSV`, `Download CSV`, and `Open Folder` controls.
+- For GLD app config, set `mqttHost` to the WiFi IPv4 shown by `Use this PC`
+  and keep `mqttPort` as `1884`.
 - Firmware upload orchestration through installed PlatformIO:
 
 ```powershell

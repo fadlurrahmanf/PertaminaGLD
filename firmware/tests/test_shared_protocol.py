@@ -882,6 +882,7 @@ def test_gld_unified_runtime_scaffolds_present():
     config_header = pathlib.Path("firmware/shared/include/FirmwareConfig.h").read_text(encoding="utf-8")
     operator_index = pathlib.Path("apps/gld-operator/index.html").read_text(encoding="utf-8")
     operator_app = pathlib.Path("apps/gld-operator/app.js").read_text(encoding="utf-8")
+    operator_bridge = pathlib.Path("apps/gld-operator/bridge.py").read_text(encoding="utf-8")
 
     assert "[env:gld]" in platformio
     assert "[env:gldw]" not in platformio
@@ -984,8 +985,23 @@ def test_gld_unified_runtime_scaffolds_present():
     assert "latestTelemetryValid = true" in unified_src
     assert "lastLoraTxState = txState" in unified_src
     assert 'data-command="RUN_BOOT_CHECK"' in operator_index
-    assert "app.js?v=20260710-1630" in operator_index
+    assert "app.js?v=20260713-1615" in operator_index
     assert 'command === "GET_STATUS" || command === "RUN_BOOT_CHECK"' in operator_app
+    assert "SENSOR_MUX_CHANNELS = [0, 1, 2, 7, 6, 5, 4, 3]" in operator_app
+    assert "function setBootProbe(key, patch)" in operator_app
+    assert "state.bootDiagnostics.probes[key] = {\n    key," in operator_app
+    assert "DATASET_RUNTIME_READY_TIMEOUT_MS = 40000" in operator_app
+    assert "waitForDatasetRuntimeReady" in operator_app
+    assert "MQTT_CONNECT_RESULT=OK" in operator_app
+    assert "function publishMqttModeFallback(command, reason)" in operator_app
+    assert 'command: "SET_MODE",' in operator_app
+    assert 'knownMode === "dataset" || (mode === "inference"' in operator_app
+    assert "MQTT_SET_MODE_SENT mode=" in operator_app
+    assert "GLD acknowledged MQTT SET_MODE" in operator_app
+    assert 'if command == "START_DATASET":\n        dataset_monitor.start(payload)\n        topic = f"{topic_root}/{device_id}/dataset"' in operator_bridge
+    assert 'topic = f"{topic_root}/{device_id}/cmd"' in operator_bridge
+    assert 'dataset_payload = {"cmd": "SET_MODE", "mode": mode}' in operator_bridge
+    assert 'self.send_header("Cache-Control", "no-store")' in operator_bridge
     assert "SET_NULLING_CONFIG_JSON" in operator_app
     assert 'id="applyNullingConfigBtn"' in operator_index
     assert 'id="nullingThresholdV"' in operator_index

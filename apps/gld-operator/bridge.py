@@ -42,6 +42,14 @@ except Exception as exc:  # pragma: no cover - MQTT is optional
 else:
     MQTT_IMPORT_ERROR = ""
 
+try:
+    from local_mqtt_broker import LocalMqttBroker
+except Exception as exc:  # pragma: no cover - surfaced in /api/health
+    LocalMqttBroker = None  # type: ignore[assignment]
+    MQTT_BROKER_IMPORT_ERROR = str(exc)
+else:
+    MQTT_BROKER_IMPORT_ERROR = ""
+
 
 APP_DIR = Path(__file__).resolve().parent
 REPO_ROOT = APP_DIR.parents[1]
@@ -69,7 +77,7 @@ def _register_allowed_origins(host: str, port: int) -> None:
     )
 
 
-VERSION = "0.2.3-lite-bridge"
+VERSION = "0.2.4-lite-bridge"
 
 
 class EventHub:
@@ -209,6 +217,8 @@ class SerialBridge:
 
 events = EventHub()
 serial_bridge = SerialBridge(events)
+local_mqtt_broker: Any = None
+local_mqtt_broker_error = ""
 
 
 class DatasetMqttMonitor:
@@ -430,10 +440,20 @@ def mqtt_publish_dataset(payload: dict[str, Any]) -> dict[str, Any]:
     command = str(payload.get("command") or "START_DATASET")
     if not device_id:
         raise RuntimeError("deviceId is required")
+    dataset_payload = payload.get("dataset") or {"cmd": command}
     if command == "START_DATASET":
         dataset_monitor.start(payload)
-    topic = f"{topic_root}/{device_id}/dataset"
-    message = json.dumps(payload.get("dataset") or {"cmd": command})
+        topic = f"{topic_root}/{device_id}/dataset"
+    elif command == "SET_MODE":
+        mode = str(payload.get("mode") or dataset_payload.get("mode") or "").strip()
+        if not mode:
+            raise RuntimeError("mode is required")
+        dataset_monitor.start(payload)
+        topic = f"{topic_root}/{device_id}/cmd"
+        dataset_payload = {"cmd": "SET_MODE", "mode": mode}
+    else:
+        topic = f"{topic_root}/{device_id}/dataset"
+    message = json.dumps(dataset_payload)
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
     if username or password:
         client.username_pw_set(username, password)
@@ -547,6 +567,8 @@ class Handler(SimpleHTTPRequestHandler):
         if origin and origin in BRIDGE_ALLOWED_ORIGINS:
             self.send_header("Access-Control-Allow-Origin", origin)
             self.send_header("Vary", "Origin")
+        if not urlparse(self.path).path.startswith("/api/"):
+            self.send_header("Cache-Control", "no-store")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.send_header("Cross-Origin-Opener-Policy", "same-origin")
@@ -559,6 +581,7 @@ class Handler(SimpleHTTPRequestHandler):
     def do_GET(self) -> None:  # noqa: N802
         path = urlparse(self.path).path
         if path == "/api/health":
+            broker_running = bool(local_mqtt_broker and local_mqtt_broker.running)
             return json_response(
                 self,
                 {
@@ -568,11 +591,21 @@ class Handler(SimpleHTTPRequestHandler):
                         "serial": serial is not None,
                         "mqtt": mqtt is not None,
                         "datasetMonitor": mqtt is not None,
+                        "mqttBroker": broker_running,
                         "datasetOutput": True,
                         "networkInfo": os.name == "nt",
                         "firmwareUpload": True,
                     },
-                    "errors": {"serial": SERIAL_IMPORT_ERROR, "mqtt": MQTT_IMPORT_ERROR},
+                    "mqttBroker": {
+                        "running": broker_running,
+                        "host": getattr(local_mqtt_broker, "host", ""),
+                        "port": getattr(local_mqtt_broker, "port", 0),
+                    },
+                    "errors": {
+                        "serial": SERIAL_IMPORT_ERROR,
+                        "mqtt": MQTT_IMPORT_ERROR,
+                        "mqttBroker": local_mqtt_broker_error or MQTT_BROKER_IMPORT_ERROR,
+                    },
                 },
             )
         if path == "/api/ports":
@@ -648,13 +681,28 @@ class Handler(SimpleHTTPRequestHandler):
 
 
 def main() -> int:
+    global local_mqtt_broker, local_mqtt_broker_error
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", default=5173, type=int)
+    parser.add_argument("--mqtt-broker-host", default="0.0.0.0")
+    parser.add_argument("--mqtt-broker-port", default=0, type=int)
     parser.add_argument("--no-open", action="store_true")
     args = parser.parse_args()
 
     _register_allowed_origins(args.host, args.port)
+    if args.mqtt_broker_port:
+        if LocalMqttBroker is None:
+            local_mqtt_broker_error = f"local MQTT broker unavailable: {MQTT_BROKER_IMPORT_ERROR}"
+            print(local_mqtt_broker_error)
+        else:
+            try:
+                local_mqtt_broker = LocalMqttBroker(args.mqtt_broker_host, args.mqtt_broker_port)
+                local_mqtt_broker.start()
+            except Exception as exc:
+                local_mqtt_broker = None
+                local_mqtt_broker_error = str(exc)
+                print(f"MQTT_BROKER_START_FAILED {local_mqtt_broker_error}")
     httpd = ThreadingHTTPServer((args.host, args.port), Handler)
     url = f"http://{args.host}:{args.port}/"
     print(f"GLD Operator Lite bridge: {url}")
@@ -666,6 +714,8 @@ def main() -> int:
     finally:
         dataset_monitor.stop(emit=False)
         serial_bridge.disconnect()
+        if local_mqtt_broker is not None:
+            local_mqtt_broker.stop()
         httpd.server_close()
     return 0
 

@@ -21,7 +21,7 @@ const CHART_COLORS = [
 ];
 
 const SENSOR_NAMES = ["MQ8", "MQ135", "MQ3", "MQ5", "MQ4", "MQ7", "MQ6", "MQ2"];
-const SENSOR_MUX_CHANNELS = [7, 6, 5, 4, 3, 2, 1, 0];
+const SENSOR_MUX_CHANNELS = [0, 1, 2, 7, 6, 5, 4, 3];
 const SENSOR_STATUS_NAMES = {
   0: "Ok",
   1: "NotReady",
@@ -29,6 +29,7 @@ const SENSOR_STATUS_NAMES = {
   3: "InvalidChannel"
 };
 const SERIAL_RESPONSE_TIMEOUT_MS = 5000;
+const DATASET_RUNTIME_READY_TIMEOUT_MS = 40000;
 
 function initialDatasetSession() {
   return {
@@ -68,6 +69,12 @@ const state = {
   buffer: "",
   logs: [],
   pendingSerialRequest: null,
+  datasetRuntime: {
+    mode: false,
+    ready: false,
+    mqtt: false
+  },
+  datasetReadyWaiters: [],
   dataset: initialDatasetSession(),
   nullingLogs: [],
   bootDiagnostics: {
@@ -85,6 +92,7 @@ const state = {
   alarmAudioContext: null,
   alarmLastBeep: 0,
   mode: "unknown",
+  pendingMqttMode: "",
   expertUnlocked: false,
   manifest: null
 };
@@ -571,6 +579,7 @@ function bootTableKey(name) {
 
 function setBootProbe(key, patch) {
   state.bootDiagnostics.probes[key] = {
+    key,
     ...(state.bootDiagnostics.probes[key] || {}),
     ...patch,
     updatedAt: Date.now()
@@ -608,9 +617,11 @@ function parseBootDiagnosticLine(line) {
     if (parts.length >= 4 && parts[0] !== "IC/Fungsi" && !parts[0].startsWith("-")) {
       const key = bootTableKey(parts[0]);
       state.bootDiagnostics.bootRows[key] = {
+        key,
         label: parts[0],
         check: parts[1],
         status: parts[2],
+        stage: parts[2],
         detail: parts.slice(3).join(" | "),
         tone: bootToneFromStatus(parts[2])
       };
@@ -921,6 +932,7 @@ function handleLine(rawLine) {
   const line = rawLine.trim();
   if (!line) return;
   appendLog(line, "in");
+  trackDatasetRuntimeLine(line);
   parseBootDiagnosticLine(line);
 
   try {
@@ -1124,6 +1136,56 @@ function setDatasetState(nextState, phase, eventText, isError = false) {
   renderDatasetSession();
 }
 
+function resetDatasetRuntimeReadiness() {
+  state.datasetRuntime = { mode: false, ready: false, mqtt: false };
+}
+
+function datasetRuntimeIsReady() {
+  return state.datasetRuntime.mode && state.datasetRuntime.ready && state.datasetRuntime.mqtt;
+}
+
+function resolveDatasetReadyWaiters(value) {
+  const waiters = state.datasetReadyWaiters.splice(0);
+  for (const waiter of waiters) {
+    clearTimeout(waiter.timer);
+    waiter.resolve(value);
+  }
+}
+
+function notifyDatasetRuntimeReady() {
+  if (datasetRuntimeIsReady()) resolveDatasetReadyWaiters(true);
+}
+
+function trackDatasetRuntimeLine(line) {
+  if (line.startsWith("GLD_MODE=dataset") || line.includes('"mode":"dataset"')) {
+    state.datasetRuntime.mode = true;
+  }
+  if (line.startsWith("DATASET_READY")) {
+    state.datasetRuntime.ready = true;
+  }
+  if (line.startsWith("MQTT_CONNECT_RESULT=OK")) {
+    state.datasetRuntime.mqtt = true;
+  }
+  if (line.startsWith("GLD_MODE=inference") || line.startsWith("WIFI_OFF mode=inference")) {
+    resetDatasetRuntimeReadiness();
+  }
+  notifyDatasetRuntimeReady();
+}
+
+function waitForDatasetRuntimeReady(timeoutMs = DATASET_RUNTIME_READY_TIMEOUT_MS) {
+  if (datasetRuntimeIsReady()) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    const waiter = {
+      resolve,
+      timer: setTimeout(() => {
+        state.datasetReadyWaiters = state.datasetReadyWaiters.filter((item) => item !== waiter);
+        resolve(false);
+      }, timeoutMs)
+    };
+    state.datasetReadyWaiters.push(waiter);
+  });
+}
+
 function markDatasetDone(reason) {
   if (!state.dataset.endedAt) state.dataset.endedAt = Date.now();
   state.dataset.active = false;
@@ -1214,9 +1276,17 @@ function handleDatasetMqttEvent(payload) {
     const ok = /ok|accepted|success/i.test(String(result));
     const noProfile = /reject_no_profile/i.test(String(result));
     const rejected = /reject|error|fail/i.test(String(result));
+    if (ok && String(cmd).toUpperCase() === "SET_MODE" && state.pendingMqttMode) {
+      state.mode = state.pendingMqttMode;
+      setText("modeValue", state.pendingMqttMode);
+      elements.topModeStatus.textContent = state.pendingMqttMode;
+      syncDeviceSummary();
+      state.pendingMqttMode = "";
+    }
     const phase = noProfile
       ? "No nulling profile in GLD. Run nulling once, then start dataset again."
-      : ok ? "GLD acknowledged dataset command" : "GLD command response";
+      : ok && String(cmd).toUpperCase() === "SET_MODE" ? "GLD acknowledged MQTT SET_MODE"
+        : ok ? "GLD acknowledged dataset command" : "GLD command response";
     setDatasetState(ok ? "Command ACK" : noProfile ? "Needs Nulling" : "Command response", phase, `MQTT ack ${cmd} ${result}`, !ok && rejected);
     return;
   }
@@ -1762,11 +1832,55 @@ async function disconnectSerial() {
   updateConnectionUi("disconnected", "");
 }
 
+function parseSetModeCommand(command) {
+  const match = /^SET_MODE\s+([A-Za-z0-9_-]+)$/i.exec(String(command || "").trim());
+  return match ? match[1].toLowerCase() : "";
+}
+
+function currentKnownMode() {
+  return String(state.status?.mode || state.info?.mode || state.mode || "").toLowerCase();
+}
+
+async function publishMqttModeFallback(command, reason) {
+  const mode = parseSetModeCommand(command);
+  if (!mode || !state.bridgeAvailable || state.mock) return false;
+  const knownMode = currentKnownMode();
+  const shouldAttempt = knownMode === "dataset" || (mode === "inference" && (!knownMode || knownMode === "unknown"));
+  if (!shouldAttempt) return false;
+
+  const deviceId = state.info?.deviceId || $("targetDeviceId").value.trim().toUpperCase();
+  if (!deviceId) return false;
+
+  try {
+    await bridgeFetch("/api/mqtt/dataset", {
+      method: "POST",
+      body: JSON.stringify({
+        command: "SET_MODE",
+        mode,
+        deviceId,
+        host: getField("mqttHost"),
+        port: numberField("mqttPort"),
+        username: getField("mqttUser"),
+        password: $("mqttPass").value,
+        topicRoot: getField("topicRoot")
+      })
+    });
+    state.pendingMqttMode = mode;
+    appendLog(`MQTT_SET_MODE_SENT mode=${mode} reason=${reason}`, "in");
+    setBadge(elements.connectionBadge, "mqtt mode sent", "ok");
+    return true;
+  } catch (error) {
+    appendLog(`MQTT_SET_MODE_ERROR ${error.message}`, "in");
+    return false;
+  }
+}
+
 async function sendCommand(command) {
   const line = command.endsWith("\n") ? command : `${command}\n`;
+  const trimmedLine = line.trimEnd();
 
   if (state.mock) {
-    appendLog(line.trimEnd(), "out");
+    appendLog(trimmedLine, "out");
     handleMockCommand(line.trim());
     return;
   }
@@ -1776,11 +1890,13 @@ async function sendCommand(command) {
       try {
         const connected = await connectBridgeSerialOnly();
         if (!connected) {
-          appendLog(`SEND_SKIPPED serial not connected: ${line.trimEnd()}`, "in");
+          if (await publishMqttModeFallback(trimmedLine, "serial not connected")) return;
+          appendLog(`SEND_SKIPPED serial not connected: ${trimmedLine}`, "in");
           return;
         }
         await wait(120);
       } catch (error) {
+        if (await publishMqttModeFallback(trimmedLine, "serial connect failed")) return;
         appendLog(`SEND_ERROR connect failed: ${error.message}`, "in");
         setBadge(elements.connectionBadge, "serial error", "error");
         return;
@@ -1789,16 +1905,17 @@ async function sendCommand(command) {
     try {
       const result = await bridgeFetch("/api/serial/write", {
         method: "POST",
-        body: JSON.stringify({ line: line.trimEnd() })
+        body: JSON.stringify({ line: trimmedLine })
       });
       if (result?.ok) startSerialResponseWatch(line);
     } catch (error) {
+      if (await publishMqttModeFallback(trimmedLine, "serial write failed")) return;
       appendLog(`SEND_ERROR ${error.message}`, "in");
     }
     return;
   }
 
-  appendLog(line.trimEnd(), "out");
+  appendLog(trimmedLine, "out");
 
   if (!state.connected || !state.writer) {
     appendLog("SEND_SKIPPED serial not connected", "in");
@@ -1950,9 +2067,15 @@ async function publishDatasetCommand(command) {
     }
     const mode = String(state.status?.mode || state.info?.mode || state.mode || "").toLowerCase();
     if (!state.mock && mode !== "dataset") {
-      setDatasetState("Switching Mode", "Sending SET_MODE dataset before MQTT START_DATASET", "SET_MODE dataset before START_DATASET");
+      resetDatasetRuntimeReadiness();
+      setDatasetState("Switching Mode", "Waiting for GLD dataset WiFi/MQTT readiness", "SET_MODE dataset before START_DATASET");
       await sendCommand("SET_MODE dataset");
-      await wait(2500);
+      const ready = await waitForDatasetRuntimeReady();
+      if (!ready) {
+        setDatasetState("Error", "Timed out waiting for DATASET_READY and MQTT_CONNECT_RESULT=OK", "DATASET_RUNTIME_READY_TIMEOUT", true);
+        return;
+      }
+      setDatasetState("Runtime Ready", "GLD dataset MQTT is ready; publishing START_DATASET", "DATASET_RUNTIME_READY");
     }
   } else {
     setDatasetState("Stopping", "Publishing STOP_DATASET", "STOP_DATASET requested");
@@ -2142,6 +2265,11 @@ async function initBridge() {
     await initDatasetOutputDir();
     if (!state.bridgeFeatures.mqtt) {
       appendLog(`MQTT bridge unavailable: ${health.errors?.mqtt || "paho-mqtt not installed"}`, "in");
+    }
+    if (state.bridgeFeatures.mqttBroker) {
+      appendLog(`MQTT_BROKER_READY ${health.mqttBroker?.host || "0.0.0.0"}:${health.mqttBroker?.port || 1884}`, "in");
+    } else if (health.errors?.mqttBroker) {
+      appendLog(`MQTT broker unavailable: ${health.errors.mqttBroker}`, "in");
     }
   } catch {
     state.bridgeAvailable = false;

@@ -64,6 +64,7 @@ constexpr uint32_t LORA_RX_WINDOW_MS = GLD_LORA_RX_WINDOW_MS;
 // Timing from GldConfig.h
 // ---------------------------------------------------------------------------
 constexpr uint32_t SCAN_INTERVAL_MS   = GLD_SCAN_INTERVAL_MS;
+constexpr uint32_t DATASET_MIN_SAMPLE_INTERVAL_MS = GLD_DATASET_MIN_SAMPLE_INTERVAL_MS;
 constexpr uint32_t TX_INTERVAL_MS     = GLD_TX_INTERVAL_MS;
 constexpr uint32_t WIFI_TIMEOUT_MS    = GLD_WIFI_TIMEOUT_MS;
 constexpr uint32_t MQTT_RETRY_MS      = GLD_MQTT_RETRY_MS;
@@ -84,6 +85,13 @@ constexpr uint16_t DIAG_SWEEP_DAC_CODE_LOW = pgl::gld::board::GLD_DAC_CODE_MIN;
 constexpr uint16_t DIAG_SWEEP_DAC_CODE_HIGH = 4000;
 constexpr uint8_t  DIAG_SWEEP_SAMPLE_COUNT = 5;
 constexpr uint32_t DIAG_SWEEP_SETTLE_MS = 250;
+constexpr uint8_t  DATASET_QUEUE_CAPACITY = 16;
+constexpr size_t   DATASET_PAYLOAD_BYTES = 896;
+constexpr uint8_t  DATASET_QUEUE_FLUSH_PER_LOOP = 2;
+constexpr uint32_t ADS_RECOVERY_RETRY_MS = 5000;
+constexpr uint8_t  ADS_READ_FAIL_RECOVERY_THRESHOLD = 3;
+constexpr uint32_t BOOT_RECOVERY_DELAY_MS = 60000;
+constexpr uint8_t  BOOT_RECOVERY_MAX_RESTARTS = 1;
 constexpr uint32_t ADS1256_SPI_HZ = 1920000;
 constexpr uint8_t ADS1256_RREG_CMD = 0x10;
 constexpr uint8_t ADS1256_REG_STATUS = 0x00;
@@ -135,6 +143,40 @@ bool     lastAlarm       = false;
 uint8_t  nullingProfileId = 0;
 uint8_t  nullingAttemptCount = 0;
 pgl::gld::GldNullingConfig nullingConfig{};
+
+struct DatasetQueuedPayload {
+    char payload[DATASET_PAYLOAD_BYTES]{};
+    size_t len = 0;
+    uint32_t seq = 0;
+};
+
+DatasetQueuedPayload datasetQueue[DATASET_QUEUE_CAPACITY];
+uint8_t datasetQueueHead = 0;
+uint8_t datasetQueueCount = 0;
+uint32_t datasetQueueEnqueued = 0;
+uint32_t datasetQueueDropped = 0;
+uint32_t datasetPublishFailCount = 0;
+uint32_t datasetQueueRetryCount = 0;
+uint32_t datasetQueueRetryFailCount = 0;
+
+uint32_t wifiReconnectCount = 0;
+uint32_t wifiReconnectFailCount = 0;
+uint32_t mqttReconnectCount = 0;
+uint32_t mqttConnectFailCount = 0;
+int lastMqttState = 0;
+uint32_t adsRecoveryCount = 0;
+uint32_t adsRecoveryFailCount = 0;
+uint32_t lastAdsRecoveryAttemptMs = 0;
+uint8_t adsReadFailStreak = 0;
+char lastRecoveryReason[48] = "none";
+uint32_t lastRecoveryMs = 0;
+bool bootRecoveryArmed = false;
+bool bootRecoveryRestartAllowed = false;
+bool bootRecoveryNonAdsFailure = false;
+uint32_t bootRecoveryDueMs = 0;
+char bootRecoveryReason[64] = "none";
+RTC_DATA_ATTR uint8_t bootRecoveryRestartCount = 0;
+
 // GLD_GAS_ANOMALY + confidence 0 is the "not classifying" sentinel (no ML
 // result available yet / ML unavailable), so a dead classifier never looks
 // like a genuine "clear air, 100%" reading. See runScan().
@@ -179,6 +221,7 @@ struct RuntimeConfig {
     uint8_t ctrlword = 0x00;
     char deviceId[17]{};
     uint16_t nodeId = DEFAULT_NODE_ID;
+    uint16_t chId = static_cast<uint16_t>(GLD_CH_ID);
     char wifiSsid[33]{};
     char wifiPassword[65]{};
     char mqttHost[65]{};
@@ -217,7 +260,7 @@ uint32_t     datasetSeq     = 0;
 uint32_t     sessionStartMs = 0;
 uint32_t     stepStartMs    = 0;
 uint32_t     targetSamples  = 0;
-uint32_t     sampleIntervalMs = 1000;
+uint32_t     sampleIntervalMs = DATASET_MIN_SAMPLE_INTERVAL_MS;
 uint32_t     maxDurationMs  = 0;
 bool         useFanIntake   = true;
 uint32_t     fanOnMs        = 1000;
@@ -358,6 +401,7 @@ void buildRuntimeTopics() {
 void resetRuntimeConfigDefaults() {
     copyBounded(runtimeConfig.deviceId, sizeof(runtimeConfig.deviceId), DEFAULT_DEVICE_ID_STR);
     runtimeConfig.nodeId = DEFAULT_NODE_ID;
+    runtimeConfig.chId = static_cast<uint16_t>(GLD_CH_ID);
     copyBounded(runtimeConfig.wifiSsid, sizeof(runtimeConfig.wifiSsid), DEFAULT_WIFI_SSID);
     copyBounded(runtimeConfig.wifiPassword, sizeof(runtimeConfig.wifiPassword), DEFAULT_WIFI_PASSWORD);
     copyBounded(runtimeConfig.mqttHost, sizeof(runtimeConfig.mqttHost), DEFAULT_MQTT_HOST);
@@ -379,7 +423,8 @@ void loadRuntimeConfig() {
     }
     String value = prefs.getString("deviceId", runtimeConfig.deviceId);
     copyBounded(runtimeConfig.deviceId, sizeof(runtimeConfig.deviceId), value.c_str());
-    runtimeConfig.nodeId = prefs.getUShort("nodeId", nodeIdFromDeviceId(runtimeConfig.deviceId, DEFAULT_NODE_ID));
+    runtimeConfig.nodeId = nodeIdFromDeviceId(runtimeConfig.deviceId, DEFAULT_NODE_ID);
+    runtimeConfig.chId = prefs.getUShort("chId", runtimeConfig.chId);
     value = prefs.getString("wifiSsid", runtimeConfig.wifiSsid);
     copyBounded(runtimeConfig.wifiSsid, sizeof(runtimeConfig.wifiSsid), value.c_str());
     value = prefs.getString("wifiPass", runtimeConfig.wifiPassword);
@@ -409,10 +454,11 @@ void loadRuntimeConfig() {
         applySelfTestAesFallbackIfAllowed();
     }
     buildRuntimeTopics();
-    logPrintf("GLD_APP_CONFIG_LOAD=%s deviceId=%s nodeId=0x%04X ssid=%s mqttHost=%s mqttPort=%u topicRoot=%s aesKey=%u keyId=%u lastCmdId=%u\n",
+    logPrintf("GLD_APP_CONFIG_LOAD=%s deviceId=%s nodeId=0x%04X chId=0x%04X ssid=%s mqttHost=%s mqttPort=%u topicRoot=%s aesKey=%u keyId=%u lastCmdId=%u\n",
               runtimeConfigValid() ? "OK" : "DEFAULT_UNCONFIGURED",
               runtimeConfig.deviceId,
               runtimeConfig.nodeId,
+              runtimeConfig.chId,
               runtimeConfig.wifiSsid,
               runtimeConfig.mqttHost,
               runtimeConfig.mqttPort,
@@ -429,6 +475,7 @@ bool saveRuntimeConfig() {
     prefs.putUChar("ctrlword", runtimeConfig.ctrlword);
     prefs.putString("deviceId", runtimeConfig.deviceId);
     prefs.putUShort("nodeId", runtimeConfig.nodeId);
+    prefs.putUShort("chId", runtimeConfig.chId);
     prefs.putString("wifiSsid", runtimeConfig.wifiSsid);
     prefs.putString("wifiPass", runtimeConfig.wifiPassword);
     prefs.putString("mqttHost", runtimeConfig.mqttHost);
@@ -468,6 +515,24 @@ bool validDeviceId(const char* deviceId) {
     return nodeIdFromDeviceId(deviceId, 0) != 0;
 }
 
+// Root Gateway node ID. Must match PGL_CH_ROOT_GATEWAY_ID in firmware/config/ChConfig.h.
+// A GLD may never target the Gateway directly as its Cluster Head.
+constexpr uint16_t GLD_RESERVED_GATEWAY_ID = 0x006F;
+
+// Rejects CH addresses that cannot possibly be a valid Cluster Head: the
+// broadcast/unset values 0x0000 and 0xFFFF, the reserved Gateway ID, and the
+// GLD's own node ID (a GLD cannot be its own Cluster Head).
+bool validChId(uint16_t chId) {
+    if (chId == 0x0000 || chId == 0xFFFF) return false;
+    if (chId == GLD_RESERVED_GATEWAY_ID) return false;
+    if (chId == runtimeConfig.nodeId) return false;
+    return true;
+}
+
+void formatHex4(uint16_t value, char* out, size_t outSize) {
+    snprintf(out, outSize, "%04X", value);
+}
+
 void nullingLogLine(const char* text) {
     logPrintln(text);
 }
@@ -487,11 +552,127 @@ const char* sampleStepName() {
     }
 }
 
+void setRecoveryReason(const char* reason) {
+    copyBounded(lastRecoveryReason, sizeof(lastRecoveryReason), reason != nullptr ? reason : "unknown");
+    lastRecoveryMs = millis();
+}
+
+bool bootRecoveryDelayActive() {
+    return bootRecoveryArmed &&
+           static_cast<int32_t>(millis() - bootRecoveryDueMs) < 0;
+}
+
+uint8_t datasetQueueTail() {
+    return static_cast<uint8_t>((datasetQueueHead + datasetQueueCount) % DATASET_QUEUE_CAPACITY);
+}
+
+void enqueueDatasetPayload(const char* payload, size_t len, uint32_t seq) {
+    if (payload == nullptr || len == 0) return;
+    if (datasetQueueCount >= DATASET_QUEUE_CAPACITY) {
+        logPrintf("DATASET_QUEUE_DROP seq=%lu reason=full\n",
+                  static_cast<unsigned long>(datasetQueue[datasetQueueHead].seq));
+        datasetQueueHead = static_cast<uint8_t>((datasetQueueHead + 1U) % DATASET_QUEUE_CAPACITY);
+        --datasetQueueCount;
+        ++datasetQueueDropped;
+    }
+
+    DatasetQueuedPayload& slot = datasetQueue[datasetQueueTail()];
+    const size_t maxCopy = sizeof(slot.payload) - 1U;
+    const size_t copyLen = len < maxCopy ? len : maxCopy;
+    memcpy(slot.payload, payload, copyLen);
+    slot.payload[copyLen] = '\0';
+    slot.len = copyLen;
+    slot.seq = seq;
+    ++datasetQueueCount;
+    ++datasetQueueEnqueued;
+    logPrintf("DATASET_QUEUE_ENQUEUE seq=%lu pending=%u len=%u\n",
+              static_cast<unsigned long>(seq),
+              static_cast<unsigned>(datasetQueueCount),
+              static_cast<unsigned>(copyLen));
+}
+
+bool publishDatasetPayload(const char* payload, uint32_t seq, bool retry) {
+    const bool ok = mqtt.connected() && mqtt.publish(topicData, payload, false);
+    if (retry) {
+        if (ok) {
+            ++datasetQueueRetryCount;
+            logPrintf("DATASET_QUEUE_RETRY seq=%lu ok=1 pending=%u\n",
+                      static_cast<unsigned long>(seq),
+                      static_cast<unsigned>(datasetQueueCount > 0 ? datasetQueueCount - 1U : 0U));
+        } else {
+            ++datasetQueueRetryFailCount;
+            logPrintf("DATASET_QUEUE_RETRY seq=%lu ok=0 pending=%u\n",
+                      static_cast<unsigned long>(seq),
+                      static_cast<unsigned>(datasetQueueCount));
+        }
+    } else if (!ok) {
+        ++datasetPublishFailCount;
+    }
+    return ok;
+}
+
+void flushDatasetQueue() {
+    if (datasetQueueCount == 0 || !mqtt.connected()) return;
+    for (uint8_t i = 0; i < DATASET_QUEUE_FLUSH_PER_LOOP && datasetQueueCount > 0; ++i) {
+        DatasetQueuedPayload& slot = datasetQueue[datasetQueueHead];
+        if (!publishDatasetPayload(slot.payload, slot.seq, true)) {
+            break;
+        }
+        datasetQueueHead = static_cast<uint8_t>((datasetQueueHead + 1U) % DATASET_QUEUE_CAPACITY);
+        --datasetQueueCount;
+    }
+}
+
+void noteAdsReadHealth(uint8_t okCount, const char* context) {
+    if (okCount > 0) {
+        adsReadFailStreak = 0;
+        return;
+    }
+    if (adsReadFailStreak < 255) ++adsReadFailStreak;
+    logPrintf("ADS_READ_HEALTH context=%s okCount=0 streak=%u\n",
+              context != nullptr ? context : "unknown",
+              static_cast<unsigned>(adsReadFailStreak));
+    if (adsReadFailStreak >= ADS_READ_FAIL_RECOVERY_THRESHOLD) {
+        adsReady = false;
+        setRecoveryReason("ads_all_channels_failed");
+        logPrintf("ADS_RECOVERY_ARM reason=all_channels_failed context=%s\n",
+                  context != nullptr ? context : "unknown");
+    }
+}
+
+void maintainAdsRecovery(const char* reason) {
+    if (adsReady) return;
+    if (bootRecoveryDelayActive()) return;
+    const uint32_t now = millis();
+    if (lastAdsRecoveryAttemptMs != 0 && now - lastAdsRecoveryAttemptMs < ADS_RECOVERY_RETRY_MS) {
+        return;
+    }
+    lastAdsRecoveryAttemptMs = now;
+    setRecoveryReason(reason != nullptr ? reason : "ads_not_ready");
+    logPrintf("ADS_RECOVERY_ATTEMPT reason=%s\n", lastRecoveryReason);
+    const bool ok = ads.begin(gldSpi);
+    adsReady = ok;
+    if (ok) {
+        ++adsRecoveryCount;
+        adsReadFailStreak = 0;
+        movingAvg.reset();
+        logPrintf("ADS_RECOVERY_RESULT=OK count=%lu\n",
+                  static_cast<unsigned long>(adsRecoveryCount));
+    } else {
+        ++adsRecoveryFailCount;
+        logPrintf("ADS_RECOVERY_RESULT=FAIL failCount=%lu\n",
+                  static_cast<unsigned long>(adsRecoveryFailCount));
+    }
+}
+
 void emitCommandAck(const char* cmd, const char* status,
                     const char* message, bool rebootExpected) {
     StaticJsonDocument<256> doc;
+    char chIdHex[5];
+    formatHex4(runtimeConfig.chId, chIdHex, sizeof(chIdHex));
     doc["deviceId"] = runtimeConfig.deviceId;
     doc["nodeId"] = runtimeConfig.nodeId;
+    doc["chId"] = chIdHex;
     doc["cmd"] = cmd;
     doc["status"] = status;
     doc["message"] = message;
@@ -512,6 +693,7 @@ void addCapabilities(JsonObject caps) {
     caps["nullingConfig"] = "SET_NULLING_CONFIG_JSON thresholdV,minFinalV";
     caps["serialAppConfig"] = true;
     caps["serialDeviceId"] = true;
+    caps["serialChAddress"] = "SET_CH_ADDRESS_JSON chId";
     caps["runBootCheck"] = true;
     caps["adsMcpSweep"] = "RUN_ADS_MCP_SWEEP";
     caps["sleepNow"] = "SLEEP_NOW";
@@ -540,10 +722,13 @@ void addTelemetry(JsonObject telemetry) {
 }
 
 void emitInfoJson() {
-    StaticJsonDocument<1024> doc;
+    static StaticJsonDocument<1280> doc;
+    doc.clear();
+    char chIdHex[5];
+    formatHex4(runtimeConfig.chId, chIdHex, sizeof(chIdHex));
     doc["deviceId"] = runtimeConfig.deviceId;
     doc["nodeId"] = runtimeConfig.nodeId;
-    doc["targetChId"] = static_cast<uint16_t>(GLD_CH_ID);
+    doc["targetChId"] = chIdHex;
     doc["firmwareName"] = pgl::firmware::GLD_FIRMWARE_NAME;
     doc["firmwareVersion"] = pgl::firmware::GLD_FIRMWARE_VERSION;
     doc["protocolVersion"] = pgl::firmware::PROTOCOL_VERSION;
@@ -552,6 +737,12 @@ void emitInfoJson() {
     doc["baud"] = 115200;
     doc["sensorCount"] = pgl::gld::board::SENSOR_COUNT;
     doc["mqttTopicRoot"] = runtimeConfig.topicRoot;
+    JsonObject starLora = doc.createNestedObject("starLora");
+    starLora["freqMHz"] = STAR_FREQ_MHZ;
+    starLora["bwKHz"] = STAR_BW_KHZ;
+    starLora["sf"] = STAR_SF;
+    starLora["cr"] = STAR_CR;
+    starLora["syncWord"] = STAR_SYNC_WORD;
     JsonObject appConfig = doc.createNestedObject("appConfig");
     appConfig["wifiSsid"] = runtimeConfig.wifiSsid;
     appConfig["mqttHost"] = runtimeConfig.mqttHost;
@@ -571,9 +762,13 @@ void emitInfoJson() {
 
 void emitStatusJson() {
     const pgl::gld::GldPowerReading power = pgl::gld::readGldPower();
-    StaticJsonDocument<3072> doc;
+    static StaticJsonDocument<4096> doc;
+    doc.clear();
+    char chIdHex[5];
+    formatHex4(runtimeConfig.chId, chIdHex, sizeof(chIdHex));
     doc["deviceId"] = runtimeConfig.deviceId;
     doc["nodeId"] = runtimeConfig.nodeId;
+    doc["targetChId"] = chIdHex;
     doc["mode"] = pgl::gld::gldModeName(currentMode);
     doc["uptimeMs"] = static_cast<uint32_t>(millis());
     doc["debugEnabled"] = debugEnabled;
@@ -629,6 +824,9 @@ void emitStatusJson() {
     lora["aesKeyProvisioned"] = runtimeConfig.aesKeyPresent;
     lora["keyId"] = runtimeConfig.aesKeyId;
     lora["lastDownlinkCommandId"] = runtimeConfig.lastDownlinkCommandId;
+    lora["freqMHz"] = STAR_FREQ_MHZ;
+    lora["bwKHz"] = STAR_BW_KHZ;
+    lora["sf"] = STAR_SF;
 
     JsonObject dataset = doc.createNestedObject("dataset");
     dataset["state"] = datasetStateName();
@@ -642,6 +840,30 @@ void emitStatusJson() {
     dataset["fanOnMs"] = fanOnMs;
     dataset["postFanSettleMs"] = postFanSettleMs;
     dataset["nullingProfileId"] = nullingProfileId;
+    dataset["queuePending"] = datasetQueueCount;
+    dataset["queueCapacity"] = DATASET_QUEUE_CAPACITY;
+    dataset["queueEnqueued"] = datasetQueueEnqueued;
+    dataset["queueDropped"] = datasetQueueDropped;
+    dataset["publishFailCount"] = datasetPublishFailCount;
+    dataset["retryCount"] = datasetQueueRetryCount;
+    dataset["retryFailCount"] = datasetQueueRetryFailCount;
+
+    JsonObject recovery = doc.createNestedObject("recovery");
+    recovery["wifiReconnectCount"] = wifiReconnectCount;
+    recovery["wifiReconnectFailCount"] = wifiReconnectFailCount;
+    recovery["mqttReconnectCount"] = mqttReconnectCount;
+    recovery["mqttConnectFailCount"] = mqttConnectFailCount;
+    recovery["lastMqttState"] = lastMqttState;
+    recovery["adsRecoveryCount"] = adsRecoveryCount;
+    recovery["adsRecoveryFailCount"] = adsRecoveryFailCount;
+    recovery["adsReadFailStreak"] = adsReadFailStreak;
+    recovery["lastReason"] = lastRecoveryReason;
+    recovery["lastRecoveryMs"] = lastRecoveryMs;
+    recovery["bootRecoveryArmed"] = bootRecoveryArmed;
+    recovery["bootRecoveryDueMs"] = bootRecoveryDueMs;
+    recovery["bootRecoveryReason"] = bootRecoveryReason;
+    recovery["bootRecoveryNonAdsFailure"] = bootRecoveryNonAdsFailure;
+    recovery["bootRecoveryRestartCount"] = bootRecoveryRestartCount;
 
     JsonObject nulling = doc.createNestedObject("nulling");
     nulling["done"] = nullDone;
@@ -820,8 +1042,25 @@ void onSetDeviceIdJson(const char* payload) {
         emitCommandAck("SET_DEVICE_ID", "rejected", "deviceId must be 4 hex chars, for example F001", false);
         return;
     }
+    const uint16_t derivedNodeId = nodeIdFromDeviceId(deviceId, DEFAULT_NODE_ID);
+    if (!doc["nodeId"].isNull()) {
+        uint16_t explicitNodeId = 0;
+        const char* nodeIdText = doc["nodeId"].as<const char*>();
+        if (nodeIdText != nullptr && nodeIdText[0] != '\0') {
+            explicitNodeId = nodeIdFromDeviceId(nodeIdText, 0);
+        } else {
+            const uint32_t nodeIdNumber = doc["nodeId"] | 0u;
+            if (nodeIdNumber <= 0xFFFFU) {
+                explicitNodeId = static_cast<uint16_t>(nodeIdNumber);
+            }
+        }
+        if (explicitNodeId != derivedNodeId) {
+            emitCommandAck("SET_DEVICE_ID", "rejected", "nodeId must match deviceId; omit nodeId unless it is identical", false);
+            return;
+        }
+    }
     copyBounded(runtimeConfig.deviceId, sizeof(runtimeConfig.deviceId), deviceId);
-    runtimeConfig.nodeId = doc["nodeId"] | nodeIdFromDeviceId(runtimeConfig.deviceId, DEFAULT_NODE_ID);
+    runtimeConfig.nodeId = derivedNodeId;
     buildRuntimeTopics();
     if (!saveRuntimeConfig()) {
         emitCommandAck("SET_DEVICE_ID", "error", "failed to save device id", false);
@@ -830,6 +1069,32 @@ void onSetDeviceIdJson(const char* payload) {
     logPrintf("GLD_DEVICE_ID_SAVE=OK deviceId=%s nodeId=0x%04X reboot=%u\n",
               runtimeConfig.deviceId, runtimeConfig.nodeId, reboot ? 1 : 0);
     emitCommandAck("SET_DEVICE_ID", "ok", reboot ? "device id saved; rebooting" : "device id saved", reboot);
+    rebootAfterAckIfRequested(reboot);
+}
+
+void onSetChAddressJson(const char* payload) {
+    StaticJsonDocument<128> doc;
+    if (deserializeJson(doc, payload)) {
+        emitCommandAck("SET_CH_ADDRESS", "error", "invalid json", false);
+        return;
+    }
+    const char* chIdStr = doc["chId"].as<const char*>();
+    if (chIdStr == nullptr) chIdStr = doc["chAddress"].as<const char*>();
+    if (chIdStr == nullptr) chIdStr = "";
+    const bool reboot = doc["reboot"] | true;
+    const uint16_t parsedChId = nodeIdFromDeviceId(chIdStr, 0);
+    if (parsedChId == 0 || !validChId(parsedChId)) {
+        emitCommandAck("SET_CH_ADDRESS", "rejected",
+            "chId must be 4 hex chars, not 0000/FFFF, and not the Gateway or GLD's own ID", false);
+        return;
+    }
+    runtimeConfig.chId = parsedChId;
+    if (!saveRuntimeConfig()) {
+        emitCommandAck("SET_CH_ADDRESS", "error", "failed to save CH address", false);
+        return;
+    }
+    logPrintf("GLD_CH_ADDRESS_SAVE=OK chId=0x%04X reboot=%u\n", runtimeConfig.chId, reboot ? 1 : 0);
+    emitCommandAck("SET_CH_ADDRESS", "ok", reboot ? "CH address saved; rebooting" : "CH address saved", reboot);
     rebootAfterAckIfRequested(reboot);
 }
 
@@ -904,6 +1169,9 @@ void handleSerialCommand(const pgl::gld::GldSerialCommand& command) {
             break;
         case pgl::gld::GldSerialCommandType::SetDeviceIdJson:
             onSetDeviceIdJson(command.payload);
+            break;
+        case pgl::gld::GldSerialCommandType::SetChAddressJson:
+            onSetChAddressJson(command.payload);
             break;
         case pgl::gld::GldSerialCommandType::SetNullingConfigJson:
             onSetNullingConfigJson(command.payload);
@@ -1045,6 +1313,138 @@ struct BootDiagnosticsResult {
 };
 
 uint8_t bootBoolMask(const bool values[pgl::gld::board::SENSOR_COUNT]);
+
+const char* bootReportFailureReason(const BootAdsReport& adsReport,
+                                    const BootI2cReport& i2cReport,
+                                    const BootMcpControlReport& mcpControl,
+                                    bool radioChecked,
+                                    bool radioOk,
+                                    bool mlChecked,
+                                    bool mlOk) {
+    if (!adsReport.ok) return "ads_boot_fail";
+    if (!i2cReport.tcaOk) return "tca_boot_fail";
+    for (uint8_t sensor = 0; sensor < pgl::gld::board::SENSOR_COUNT; ++sensor) {
+        const bool mcpOk = mcpControl.tested
+                               ? i2cReport.mcpOk[sensor] &&
+                                     mcpControl.dacReady &&
+                                     mcpControl.writeLow[sensor] &&
+                                     mcpControl.writeHigh[sensor]
+                               : i2cReport.mcpOk[sensor];
+        if (!mcpOk) return "mcp_boot_fail";
+    }
+    if (radioChecked && !radioOk) return "lora_boot_fail";
+    if (mlChecked && !mlOk) return "ml_boot_fail";
+    return nullptr;
+}
+
+bool bootReportHasNonAdsFailure(const BootI2cReport& i2cReport,
+                                const BootMcpControlReport& mcpControl,
+                                bool radioChecked,
+                                bool radioOk,
+                                bool mlChecked,
+                                bool mlOk) {
+    if (!i2cReport.tcaOk) return true;
+    for (uint8_t sensor = 0; sensor < pgl::gld::board::SENSOR_COUNT; ++sensor) {
+        const bool mcpOk = mcpControl.tested
+                               ? i2cReport.mcpOk[sensor] &&
+                                     mcpControl.dacReady &&
+                                     mcpControl.writeLow[sensor] &&
+                                     mcpControl.writeHigh[sensor]
+                               : i2cReport.mcpOk[sensor];
+        if (!mcpOk) return true;
+    }
+    if (radioChecked && !radioOk) return true;
+    if (mlChecked && !mlOk) return true;
+    return false;
+}
+
+void armBootReportRecoveryIfNeeded(const BootAdsReport& adsReport,
+                                   const BootI2cReport& i2cReport,
+                                   const BootMcpControlReport& mcpControl,
+                                   bool radioChecked,
+                                   bool radioOk,
+                                   bool mlChecked,
+                                   bool mlOk) {
+    const char* reason = bootReportFailureReason(adsReport, i2cReport, mcpControl,
+                                                 radioChecked, radioOk, mlChecked, mlOk);
+    if (reason == nullptr) {
+        bootRecoveryArmed = false;
+        bootRecoveryRestartAllowed = false;
+        bootRecoveryNonAdsFailure = false;
+        bootRecoveryRestartCount = 0;
+        copyBounded(bootRecoveryReason, sizeof(bootRecoveryReason), "none");
+        return;
+    }
+
+    bootRecoveryArmed = true;
+    bootRecoveryNonAdsFailure = bootReportHasNonAdsFailure(i2cReport, mcpControl,
+                                                           radioChecked, radioOk,
+                                                           mlChecked, mlOk);
+    bootRecoveryRestartAllowed = bootRecoveryNonAdsFailure || !adsReport.ok;
+    bootRecoveryDueMs = millis() + BOOT_RECOVERY_DELAY_MS;
+    copyBounded(bootRecoveryReason, sizeof(bootRecoveryReason), reason);
+    setRecoveryReason(reason);
+    logPrintf("BOOT_RECOVERY_ARM reason=%s delayMs=%lu restartCount=%u maxRestart=%u\n",
+              bootRecoveryReason,
+              static_cast<unsigned long>(BOOT_RECOVERY_DELAY_MS),
+              static_cast<unsigned>(bootRecoveryRestartCount),
+              static_cast<unsigned>(BOOT_RECOVERY_MAX_RESTARTS));
+}
+
+void maintainBootReportRecovery() {
+    if (!bootRecoveryArmed) return;
+    if (static_cast<int32_t>(millis() - bootRecoveryDueMs) < 0) return;
+
+    bootRecoveryArmed = false;
+    logPrintf("BOOT_RECOVERY_DUE reason=%s adsReady=%u restartCount=%u\n",
+              bootRecoveryReason,
+              adsReady ? 1 : 0,
+              static_cast<unsigned>(bootRecoveryRestartCount));
+
+    if (!adsReady) {
+        setRecoveryReason("boot_report_ads_retry");
+        logPrintln("BOOT_RECOVERY_RETRY target=ADS1256");
+        const bool ok = ads.begin(gldSpi);
+        adsReady = ok;
+        if (ok) {
+            ++adsRecoveryCount;
+            adsReadFailStreak = 0;
+            logPrintf("BOOT_RECOVERY_RETRY_RESULT target=ADS1256 result=OK count=%lu\n",
+                      static_cast<unsigned long>(adsRecoveryCount));
+            if (!bootRecoveryNonAdsFailure) {
+                bootRecoveryRestartAllowed = false;
+                copyBounded(bootRecoveryReason, sizeof(bootRecoveryReason), "none");
+                logPrintln("BOOT_RECOVERY_CLEAR reason=ads_retry_ok");
+                return;
+            }
+        } else {
+            ++adsRecoveryFailCount;
+            logPrintf("BOOT_RECOVERY_RETRY_RESULT target=ADS1256 result=FAIL failCount=%lu\n",
+                      static_cast<unsigned long>(adsRecoveryFailCount));
+        }
+    }
+
+    if (!bootRecoveryRestartAllowed) return;
+    if (!bootRecoveryNonAdsFailure && adsReady) return;
+    if (bootRecoveryRestartCount >= BOOT_RECOVERY_MAX_RESTARTS) {
+        logPrintf("BOOT_RECOVERY_RESTART_SUPPRESSED reason=%s restartCount=%u maxRestart=%u\n",
+                  bootRecoveryReason,
+                  static_cast<unsigned>(bootRecoveryRestartCount),
+                  static_cast<unsigned>(BOOT_RECOVERY_MAX_RESTARTS));
+        return;
+    }
+
+    ++bootRecoveryRestartCount;
+    logPrintf("BOOT_RECOVERY_RESTART reason=%s restartCount=%u delayMs=%lu\n",
+              bootRecoveryReason,
+              static_cast<unsigned>(bootRecoveryRestartCount),
+              static_cast<unsigned long>(BOOT_RECOVERY_DELAY_MS));
+    Serial.flush();
+#if defined(ARDUINO_ARCH_ESP32)
+    Serial0.flush();
+#endif
+    ESP.restart();
+}
 
 bool i2cAck(uint8_t addr) {
     firmwareServiceTick();
@@ -1371,6 +1771,8 @@ void disableNetworkForOfflineMode(const char* reason) {
 }
 
 bool connectWifi() {
+    ++wifiReconnectCount;
+    setRecoveryReason("wifi_connect");
     logPrintf("WIFI_CONNECT ssid=%s\n", runtimeConfig.wifiSsid);
     WiFi.mode(WIFI_STA);
     WiFi.begin(runtimeConfig.wifiSsid, runtimeConfig.wifiPassword);
@@ -1379,6 +1781,10 @@ bool connectWifi() {
         serviceDelay(50);
     }
     const bool ok = WiFi.status() == WL_CONNECTED;
+    if (!ok) {
+        ++wifiReconnectFailCount;
+        setRecoveryReason("wifi_connect_failed");
+    }
     logPrintf(ok ? "WIFI_CONNECTED ip=%s\n" : "WIFI_CONNECT_FAILED\n",
               ok ? WiFi.localIP().toString().c_str() : "");
     return ok;
@@ -1397,11 +1803,22 @@ bool mqttConnect() {
     const uint32_t now = millis();
     if (now - lastMqttAttemptMs < MQTT_RETRY_MS) return false;
     lastMqttAttemptMs = now;
+    ++mqttReconnectCount;
+    setRecoveryReason("mqtt_connect");
     mqtt.setServer(runtimeConfig.mqttHost, runtimeConfig.mqttPort);
     mqtt.setCallback(mqttCallback);
     logPrintf("MQTT_CONNECT host=%s port=%u\n", runtimeConfig.mqttHost, runtimeConfig.mqttPort);
     const bool ok = mqtt.connect(mqttClientId, runtimeConfig.mqttUser, runtimeConfig.mqttPass);
-    logPrintf("MQTT_CONNECT_RESULT=%s state=%d\n", ok ? "OK" : "FAIL", mqtt.state());
+    lastMqttState = mqtt.state();
+    if (!ok) {
+        ++mqttConnectFailCount;
+        setRecoveryReason("mqtt_connect_failed");
+    }
+    logPrintf("MQTT_CONNECT_RESULT=%s state=%d attempt=%lu failCount=%lu\n",
+              ok ? "OK" : "FAIL",
+              lastMqttState,
+              static_cast<unsigned long>(mqttReconnectCount),
+              static_cast<unsigned long>(mqttConnectFailCount));
     if (ok) {
         mqtt.subscribe(topicCmd);
         if (currentMode == pgl::gld::GldMode::DATASET) {
@@ -1434,25 +1851,31 @@ void publishCmdAck(const char* cmd, const char* result) {
 }
 
 void publishDatasetStatus(const char* state, const char* detail) {
-    StaticJsonDocument<128> doc;
+    StaticJsonDocument<256> doc;
     doc["device_id"] = runtimeConfig.deviceId;
     doc["stage"] = "DATASET";
     doc["state"] = state;
     doc["detail"] = detail;
-    char buf[128];
+    doc["queue_pending"] = datasetQueueCount;
+    doc["queue_dropped"] = datasetQueueDropped;
+    doc["publish_fail_count"] = datasetPublishFailCount;
+    char buf[256];
     serializeJson(doc, buf, sizeof(buf));
     mqtt.publish(topicStatus, buf, false);
 }
 
 void publishDatasetSummary() {
-    StaticJsonDocument<192> doc;
+    StaticJsonDocument<256> doc;
     doc["device_id"] = runtimeConfig.deviceId;
     doc["stage"] = "DATASET";
     doc["label"] = currentLabel;
     doc["total_samples"] = datasetSeq;
     doc["duration_ms"] = static_cast<uint32_t>(millis() - sessionStartMs);
     doc["nulling_profile_id"] = nullingProfileId;
-    char buf[192];
+    doc["queue_pending"] = datasetQueueCount;
+    doc["queue_dropped"] = datasetQueueDropped;
+    doc["publish_fail_count"] = datasetPublishFailCount;
+    char buf[256];
     serializeJson(doc, buf, sizeof(buf));
     mqtt.publish(topicSummary, buf, false);
 }
@@ -1494,7 +1917,11 @@ void handleDatasetTopic(const char* payload, unsigned int length) {
         strncpy(currentLabel, label, sizeof(currentLabel) - 1);
         currentLabel[sizeof(currentLabel) - 1] = '\0';
         targetSamples    = doc["target_samples"]     | 0u;
-        sampleIntervalMs = doc["sample_interval_ms"] | 1000u;
+        const uint32_t requestedSampleIntervalMs =
+            doc["sample_interval_ms"] | DATASET_MIN_SAMPLE_INTERVAL_MS;
+        sampleIntervalMs = requestedSampleIntervalMs < DATASET_MIN_SAMPLE_INTERVAL_MS
+                               ? DATASET_MIN_SAMPLE_INTERVAL_MS
+                               : requestedSampleIntervalMs;
         maxDurationMs    = doc["max_duration_ms"]    | 0u;
         useFanIntake     = doc["use_fan_intake"]     | true;
         fanOnMs          = doc["fan_on_ms"]          | 1000u;
@@ -1582,10 +2009,14 @@ const char* nullingRetryReason(pgl::gld::GldNullingStatus status) {
 void armNullingRetry(const char* reason) {
     nullDone = false;
     nullingRetryArmed = true;
-    nextNullingRetryMs = millis() + NULLING_RETRY_DELAY_MS;
+    const uint32_t now = millis();
+    const uint32_t delayMs = bootRecoveryDelayActive()
+                                 ? static_cast<uint32_t>(bootRecoveryDueMs - now)
+                                 : NULLING_RETRY_DELAY_MS;
+    nextNullingRetryMs = now + delayMs;
     logPrintf("NULLING_RETRY_SCHEDULED reason=%s delayMs=%lu\n",
               reason,
-              static_cast<unsigned long>(NULLING_RETRY_DELAY_MS));
+              static_cast<unsigned long>(delayMs));
 }
 
 bool ensureNullingHardwareReady() {
@@ -1951,6 +2382,14 @@ bool beginLoraRadio() {
             gldSpi);
     }
     if (!loraRadio) loraRadio = new SX1262(loraModule);
+    logPrintf("GLD_STAR_CONFIG freqMHz=%.1f bwKHz=%.1f sf=%u cr=%u sync=0x%02X power=%d preamble=%u\n",
+              STAR_FREQ_MHZ,
+              STAR_BW_KHZ,
+              STAR_SF,
+              STAR_CR,
+              STAR_SYNC_WORD,
+              STAR_TX_POWER,
+              STAR_PREAMBLE);
     int16_t state = loraRadio->begin(STAR_FREQ_MHZ, STAR_BW_KHZ, STAR_SF, STAR_CR,
                                      STAR_SYNC_WORD, STAR_TX_POWER, STAR_PREAMBLE, LORA_TCXO_V);
     if (state == RADIOLIB_ERR_SPI_CMD_FAILED) {
@@ -2045,19 +2484,23 @@ void runInference(const float mavVoltage[8]) {
 void runScan() {
     float mavVoltage[8] = {};
     uint8_t primedChannels = 0;
+    uint8_t okChannels = 0;
     for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
         const pgl::gld::GldAds1256Reading r = ads.readChannel(ch);
         latestSensorGain[ch] = r.gain;
         latestSensorStatus[ch] = static_cast<uint8_t>(r.status);
+        if (r.status == pgl::gld::GldAds1256Status::Ok) ++okChannels;
         mavVoltage[ch] = (r.status == pgl::gld::GldAds1256Status::Ok)
                           ? movingAvg.add(ch, r.voltage)
                           : movingAvg.value(ch);
         latestSensorVoltage[ch] = mavVoltage[ch];
         if (movingAvg.count(ch) >= MIN_PRIMED_COUNT) ++primedChannels;
     }
-    latestTelemetryValid = true;
+    noteAdsReadHealth(okChannels, "runScan");
+    const bool allValid = okChannels == pgl::gld::board::SENSOR_COUNT;
+    latestTelemetryValid = allValid;
     const bool primed = primedChannels >= pgl::gld::board::SENSOR_COUNT;
-    if (primed && mlReady) {
+    if (allValid && primed && mlReady) {
         runInference(mavVoltage);
     } else {
         // No classification available this scan (sensors not primed yet, or
@@ -2070,7 +2513,7 @@ void runScan() {
                        lastResult.confidence >= ML_CONFIDENCE_THRESHOLD;
     logPrintf("GLD_SENSOR_SCAN seq=%lu allValid=%u primed=%u gasClass=%u(%s) confidence=%u alarm=%u\n",
               static_cast<unsigned long>(txCounter),
-              adsReady ? 1 : 0, primed ? 1 : 0,
+              allValid ? 1 : 0, primed ? 1 : 0,
               lastResult.gasClass, pgl::gld::gldGasClassName(lastResult.gasClass),
               lastResult.confidence, alarm ? 1 : 0);
     updateAlarmOutputs(alarm);
@@ -2120,7 +2563,7 @@ void transmitOnce() {
     const uint16_t batteryMv = power.batteryValid ? power.batteryMv
                                                    : pgl::protocol::GLD_BATTERY_MV_INVALID;
     pgl::gld::GldFrameBuilderConfig config{
-        runtimeConfig.nodeId, static_cast<uint16_t>(GLD_CH_ID),
+        runtimeConfig.nodeId, runtimeConfig.chId,
         runtimeConfig.aesKeyId, runtimeConfig.aesKey,
         power.externalPower, pgl::protocol::GLD_LEL_THRESHOLD_PERCENT,
     };
@@ -2175,22 +2618,34 @@ void publishDataRecord() {
     doc["nulling_profile_id"] = nullingProfileId;
     JsonArray svArr  = doc.createNestedArray("sensor_voltage");
     JsonArray gainArr = doc.createNestedArray("sensor_gain");
+    JsonArray statusArr = doc.createNestedArray("sensor_status");
     JsonArray foArr  = doc.createNestedArray("feature_order");
+    uint8_t okChannels = 0;
     for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
         const pgl::gld::GldAds1256Reading r = ads.readChannel(ch);
         latestSensorVoltage[ch] = r.voltage;
         latestSensorGain[ch] = r.gain;
         latestSensorStatus[ch] = static_cast<uint8_t>(r.status);
+        if (r.status == pgl::gld::GldAds1256Status::Ok) ++okChannels;
         svArr.add(r.voltage);
         gainArr.add(r.gain);
+        statusArr.add(static_cast<uint8_t>(r.status));
         foArr.add(pgl::gld::board::SENSOR_NAMES[ch]);
     }
-    latestTelemetryValid = true;
-    char payload[896];
+    noteAdsReadHealth(okChannels, "dataset");
+    latestTelemetryValid = okChannels == pgl::gld::board::SENSOR_COUNT;
+    char payload[DATASET_PAYLOAD_BYTES];
     const size_t len = serializeJson(doc, payload, sizeof(payload));
-    const bool ok = mqtt.publish(topicData, payload, false);
-    logPrintf("DATASET_RECORD seq=%lu ok=%u len=%u\n",
+    const size_t termIndex = len < (sizeof(payload) - 1U) ? len : (sizeof(payload) - 1U);
+    payload[termIndex] = '\0';
+    const bool ok = publishDatasetPayload(payload, datasetSeq, false);
+    if (!ok) {
+        enqueueDatasetPayload(payload, len, datasetSeq);
+    }
+    logPrintf("DATASET_RECORD seq=%lu ok=%u queued=%u pending=%u len=%u\n",
               static_cast<unsigned long>(datasetSeq), ok ? 1 : 0,
+              ok ? 0 : 1,
+              static_cast<unsigned>(datasetQueueCount),
               static_cast<unsigned>(len));
     ++datasetSeq;
 }
@@ -2327,6 +2782,9 @@ void setup() {
                           adsReady && radioReady && mlReady,
                           modeDetail);
         runExternalPowerBootSensorSamples(power);
+        armBootReportRecoveryIfNeeded(bootAds, bootI2c, bootMcpControl,
+                                      true, radioReady,
+                                      true, mlReady);
 
         lastScanMs = millis();
         lastTxMs   = millis();
@@ -2375,6 +2833,9 @@ void setup() {
                               adsReady && dacReady && nullingProfileId > 0,
                               modeDetail);
             runExternalPowerBootSensorSamples(power);
+            armBootReportRecoveryIfNeeded(bootAds, bootI2c, bootMcpControl,
+                                          false, false,
+                                          false, false);
             pulseWdtKeepaliveNow();
             connectWifi();
             pulseWdtKeepaliveNow();
@@ -2401,6 +2862,9 @@ void setup() {
                                   false,
                                   modeDetail);
                 runExternalPowerBootSensorSamples(power);
+                armBootReportRecoveryIfNeeded(bootAds, bootI2c, bootMcpControl,
+                                              false, false,
+                                              false, false);
                 armNullingRetry("hardware_not_ready");
             } else {
                 logPrintln("NULLING_RUN=start");
@@ -2428,6 +2892,9 @@ void setup() {
                                       true,
                                       modeDetail);
                     runExternalPowerBootSensorSamples(power);
+                    armBootReportRecoveryIfNeeded(bootAds, bootI2c, bootMcpControl,
+                                                  false, false,
+                                                  false, false);
                     returnToRunningAfterNulling(toSave);
                 } else {
                     const bool partial = result.status == pgl::gld::GldNullingStatus::PartialSuccess;
@@ -2449,6 +2916,9 @@ void setup() {
                                       false,
                                       modeDetail);
                     runExternalPowerBootSensorSamples(power);
+                    armBootReportRecoveryIfNeeded(bootAds, bootI2c, bootMcpControl,
+                                                  false, false,
+                                                  false, false);
                     armNullingRetry(fullOk ? "nvs_save_failed" : nullingRetryReason(result.status));
                 }
             }
@@ -2458,9 +2928,11 @@ void setup() {
 
 void loop() {
     firmwareServiceTick();
+    maintainBootReportRecovery();
 
     if (currentMode == pgl::gld::GldMode::INFERENCE) {
         const uint32_t now = millis();
+        maintainAdsRecovery("inference_ads_not_ready");
 
         if (batteryPowerMode) {
             // One-shot wake cycle: scan + inference + LoRa TX + RX window, then
@@ -2495,6 +2967,8 @@ void loop() {
     } else if (currentMode == pgl::gld::GldMode::DATASET) {
         maintainWifi();
         maintainMqtt();
+        flushDatasetQueue();
+        maintainAdsRecovery("dataset_ads_not_ready");
         const uint32_t now = millis();
         if (now - lastStatusMs >= STATUS_INTERVAL_MS) {
             lastStatusMs = now;

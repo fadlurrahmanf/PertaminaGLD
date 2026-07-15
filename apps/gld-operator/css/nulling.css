@@ -1,7 +1,8 @@
 /*
   Nulling tab signature element: a sweep meter per channel that visualizes
   the binary-search bracket narrowing toward the DAC code that zeroes the
-  channel. This encodes the real algorithm state, not decoration.
+  channel. This encodes the real algorithm state, not decoration - kept
+  unchanged in spirit across every visual revision of this app.
 */
 
 .sweep-meter {
@@ -10,7 +11,7 @@
   margin-top: 2px;
   border: 1px solid var(--hairline);
   border-radius: var(--radius);
-  background: var(--panel-black);
+  background: var(--surface-2);
   overflow: hidden;
 }
 
@@ -23,7 +24,7 @@
   position: absolute;
   top: 0;
   bottom: 0;
-  background: var(--signal-cyan-dim);
+  background: var(--accent-2-soft);
   transition: left 160ms ease, width 160ms ease;
 }
 
@@ -32,25 +33,27 @@
   top: 0;
   bottom: 0;
   width: 2px;
-  background: var(--phosphor-amber);
-  box-shadow: 0 0 6px 1px rgba(255, 164, 0, 0.7);
+  background: var(--accent);
+  box-shadow: 0 0 6px 1px color-mix(in srgb, var(--accent) 70%, transparent);
   transition: left 160ms ease;
 }
 
 .sweep-meter-needle.pass {
-  background: var(--status-ok);
-  box-shadow: 0 0 6px 1px rgba(107, 212, 122, 0.7);
+  background: var(--ok);
+  box-shadow: 0 0 6px 1px color-mix(in srgb, var(--ok) 70%, transparent);
 }
 
 .sweep-meter-caption {
   margin-top: 3px;
-  color: var(--ink-faint);
+  color: var(--text-faint);
   font-family: var(--font-mono);
   font-size: 10px;
   letter-spacing: 0.03em;
 }
 
 /* ---- Per-channel stage detail ---- */
+/* Compact label/value rows (reuses the .kv pattern) instead of long
+   sentences, so the breakdown reads at a glance. */
 
 .nulling-stage-detail {
   grid-column: 1 / -1;
@@ -59,14 +62,27 @@
   border-top: 1px solid var(--hairline);
 }
 
-.nulling-stage-detail small {
-  display: block;
-  margin-top: 5px;
-  font-family: var(--font-mono);
+.nulling-stage-detail .kv {
+  gap: 6px;
+}
+
+.nulling-stage-detail .kv dt,
+.nulling-stage-detail .kv dd {
+  font-size: 13.5px;
+}
+
+.nulling-stage-detail .kv div.fail dd {
+  color: var(--alarm);
 }
 
 .nulling-stage-detail .nulling-dac-source {
-  margin-top: var(--space-2);
-  color: var(--phosphor-amber);
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--hairline);
+}
+
+.nulling-stage-detail .nulling-dac-source dt,
+.nulling-stage-detail .nulling-dac-source dd {
+  color: var(--accent);
   font-weight: 600;
 }

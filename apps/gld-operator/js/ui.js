@@ -60,9 +60,74 @@ export function appendLog(line, direction = "in") {
   elements.serialLog.scrollTop = elements.serialLog.scrollHeight;
 }
 
+export function setPanelOpen(panel, open) {
+  if (!panel) return;
+  panel.classList.toggle("open", open);
+  panel.setAttribute("aria-hidden", open ? "false" : "true");
+}
+
 export function setSetupOpen(open) {
-  elements.setupPanel.classList.toggle("open", open);
-  elements.setupPanel.setAttribute("aria-hidden", open ? "false" : "true");
+  setPanelOpen(elements.setupPanel, open);
+}
+
+// ---- app modal (centered popup - replaces window.alert/window.confirm) ----
+
+let modalResolve = null;
+
+function modalEls() {
+  return {
+    modal: $("appModal"),
+    title: $("appModalTitle"),
+    message: $("appModalMessage"),
+    cancelBtn: $("appModalCancelBtn"),
+    okBtn: $("appModalOkBtn")
+  };
+}
+
+function closeModal(result) {
+  const { modal } = modalEls();
+  setPanelOpen(modal, false);
+  if (modalResolve) {
+    const resolve = modalResolve;
+    modalResolve = null;
+    resolve(result);
+  }
+}
+
+function openModal({ title, message, kind, showCancel, okLabel, cancelLabel }) {
+  const els = modalEls();
+  els.title.textContent = title;
+  els.title.className = `modal-title--${kind}`;
+  els.message.textContent = message;
+  els.cancelBtn.hidden = !showCancel;
+  els.cancelBtn.textContent = cancelLabel;
+  els.okBtn.textContent = okLabel;
+  setPanelOpen(els.modal, true);
+  els.okBtn.focus();
+  return new Promise((resolve) => {
+    modalResolve = resolve;
+  });
+}
+
+// One-button notice popup, replaces window.alert(). Resolves once dismissed.
+export function showAlert(message, kind = "info", title) {
+  const defaultTitle = { ok: "Success", warn: "Warning", error: "Error", info: "Notice" }[kind] || "Notice";
+  return openModal({ title: title || defaultTitle, message, kind, showCancel: false, okLabel: "OK" }).then(() => {});
+}
+
+// Confirm/cancel popup, replaces window.confirm(). Resolves true/false.
+export function showConfirm(message, kind = "warn", title = "Confirm") {
+  return openModal({ title, message, kind, showCancel: true, okLabel: "Confirm", cancelLabel: "Cancel" });
+}
+
+export function initAppModal() {
+  const { modal, cancelBtn, okBtn } = modalEls();
+  okBtn.addEventListener("click", () => closeModal(true));
+  cancelBtn.addEventListener("click", () => closeModal(false));
+  modal.querySelector("[data-modal-dismiss]").addEventListener("click", () => closeModal(false));
+  window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && modal.classList.contains("open")) closeModal(false);
+  });
 }
 
 export function switchTab(tabId) {
@@ -115,7 +180,7 @@ export function exportLog() {
   downloadText(`GLD_serial_${stamp()}.log`, `${state.logs.join("\n")}\n`);
 }
 
-const FORM_STORAGE_IDS = ["datasetLabel", "targetSamples", "sampleIntervalMs", "maxDurationMs", "fanOnMs", "postFanSettleMs", "wifiSsid", "mqttHost", "mqttPort", "mqttUser", "topicRoot", "firmwareEnv", "targetDeviceId", "manualPortInput"];
+const FORM_STORAGE_IDS = ["datasetLabel", "targetSamples", "sampleIntervalMs", "maxDurationMs", "fanOnMs", "postFanSettleMs", "wifiSsid", "mqttHost", "mqttPort", "mqttUser", "topicRoot", "firmwareEnv", "targetDeviceId", "targetChAddress", "manualPortInput", "pollIntervalMs", "chartYAxisMin", "chartYAxisMax"];
 
 export function saveForm() {
   const data = Object.fromEntries(FORM_STORAGE_IDS.map((id) => [id, $(id).value]));

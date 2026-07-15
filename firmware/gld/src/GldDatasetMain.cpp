@@ -19,6 +19,9 @@
 
 namespace {
 
+// Standalone dataset runtime kept as a maintenance mirror. The active
+// production GLD env builds GldUnifiedMain.cpp and excludes this file.
+
 // ---- Network config ----
 constexpr const char* WIFI_SSID      = GLD_WIFI_SSID;
 constexpr const char* WIFI_PASSWORD  = GLD_WIFI_PASSWORD;
@@ -38,6 +41,13 @@ constexpr const char* TOPIC_DATA      = GLD_TOPIC_DATA;
 constexpr const char* TOPIC_STATUS    = GLD_TOPIC_STATUS;
 constexpr const char* TOPIC_SUMMARY   = GLD_TOPIC_SUMMARY;
 constexpr const char* TOPIC_ACK       = GLD_TOPIC_ACK;
+
+constexpr uint32_t DATASET_MIN_SAMPLE_INTERVAL_MS = GLD_DATASET_MIN_SAMPLE_INTERVAL_MS;
+constexpr uint8_t  DATASET_QUEUE_CAPACITY = 16;
+constexpr size_t   DATASET_PAYLOAD_BYTES = 896;
+constexpr uint8_t  DATASET_QUEUE_FLUSH_PER_LOOP = 2;
+constexpr uint32_t ADS_RECOVERY_RETRY_MS = 5000;
+constexpr uint8_t  ADS_READ_FAIL_RECOVERY_THRESHOLD = 3;
 
 // ---- Timing ----
 constexpr uint32_t WIFI_TIMEOUT_MS    = GLD_WIFI_TIMEOUT_MS;
@@ -71,9 +81,35 @@ uint8_t      nullingProfileId  = 0;
 bool         adsReady          = false;
 bool         dacReady          = false;
 
+struct DatasetQueuedPayload {
+    char payload[DATASET_PAYLOAD_BYTES]{};
+    size_t len = 0;
+    uint32_t seq = 0;
+};
+
+DatasetQueuedPayload datasetQueue[DATASET_QUEUE_CAPACITY];
+uint8_t datasetQueueHead = 0;
+uint8_t datasetQueueCount = 0;
+uint32_t datasetQueueEnqueued = 0;
+uint32_t datasetQueueDropped = 0;
+uint32_t datasetPublishFailCount = 0;
+uint32_t datasetQueueRetryCount = 0;
+uint32_t datasetQueueRetryFailCount = 0;
+uint32_t wifiReconnectCount = 0;
+uint32_t wifiReconnectFailCount = 0;
+uint32_t mqttReconnectCount = 0;
+uint32_t mqttConnectFailCount = 0;
+int lastMqttState = 0;
+uint32_t adsRecoveryCount = 0;
+uint32_t adsRecoveryFailCount = 0;
+uint32_t lastAdsRecoveryAttemptMs = 0;
+uint8_t adsReadFailStreak = 0;
+char lastRecoveryReason[48] = "none";
+uint32_t lastRecoveryMs = 0;
+
 // Session params (filled from START_DATASET command)
 uint32_t     targetSamples     = 0;     // 0 = unlimited
-uint32_t     sampleIntervalMs  = 1000;
+uint32_t     sampleIntervalMs  = DATASET_MIN_SAMPLE_INTERVAL_MS;
 uint32_t     maxDurationMs     = 0;     // 0 = unlimited
 bool         useFanIntake      = true;
 uint32_t     fanOnMs           = 1000;
@@ -100,6 +136,113 @@ void logPrintln(const char* text) {
 #if defined(ARDUINO_ARCH_ESP32)
     Serial0.println(text);
 #endif
+}
+
+void setRecoveryReason(const char* reason) {
+    strncpy(lastRecoveryReason, reason != nullptr ? reason : "unknown", sizeof(lastRecoveryReason) - 1);
+    lastRecoveryReason[sizeof(lastRecoveryReason) - 1] = '\0';
+    lastRecoveryMs = millis();
+}
+
+uint8_t datasetQueueTail() {
+    return static_cast<uint8_t>((datasetQueueHead + datasetQueueCount) % DATASET_QUEUE_CAPACITY);
+}
+
+void enqueueDatasetPayload(const char* payload, size_t len, uint32_t seq) {
+    if (payload == nullptr || len == 0) return;
+    if (datasetQueueCount >= DATASET_QUEUE_CAPACITY) {
+        logPrintf("DATASET_QUEUE_DROP seq=%lu reason=full\n",
+                  static_cast<unsigned long>(datasetQueue[datasetQueueHead].seq));
+        datasetQueueHead = static_cast<uint8_t>((datasetQueueHead + 1U) % DATASET_QUEUE_CAPACITY);
+        --datasetQueueCount;
+        ++datasetQueueDropped;
+    }
+
+    DatasetQueuedPayload& slot = datasetQueue[datasetQueueTail()];
+    const size_t maxCopy = sizeof(slot.payload) - 1U;
+    const size_t copyLen = len < maxCopy ? len : maxCopy;
+    memcpy(slot.payload, payload, copyLen);
+    slot.payload[copyLen] = '\0';
+    slot.len = copyLen;
+    slot.seq = seq;
+    ++datasetQueueCount;
+    ++datasetQueueEnqueued;
+    logPrintf("DATASET_QUEUE_ENQUEUE seq=%lu pending=%u len=%u\n",
+              static_cast<unsigned long>(seq),
+              static_cast<unsigned>(datasetQueueCount),
+              static_cast<unsigned>(copyLen));
+}
+
+bool publishDatasetPayload(const char* payload, uint32_t seq, bool retry) {
+    const bool ok = mqtt.connected() && mqtt.publish(TOPIC_DATA, payload, false);
+    if (retry) {
+        if (ok) {
+            ++datasetQueueRetryCount;
+            logPrintf("DATASET_QUEUE_RETRY seq=%lu ok=1 pending=%u\n",
+                      static_cast<unsigned long>(seq),
+                      static_cast<unsigned>(datasetQueueCount > 0 ? datasetQueueCount - 1U : 0U));
+        } else {
+            ++datasetQueueRetryFailCount;
+            logPrintf("DATASET_QUEUE_RETRY seq=%lu ok=0 pending=%u\n",
+                      static_cast<unsigned long>(seq),
+                      static_cast<unsigned>(datasetQueueCount));
+        }
+    } else if (!ok) {
+        ++datasetPublishFailCount;
+    }
+    return ok;
+}
+
+void flushDatasetQueue() {
+    if (datasetQueueCount == 0 || !mqtt.connected()) return;
+    for (uint8_t i = 0; i < DATASET_QUEUE_FLUSH_PER_LOOP && datasetQueueCount > 0; ++i) {
+        DatasetQueuedPayload& slot = datasetQueue[datasetQueueHead];
+        if (!publishDatasetPayload(slot.payload, slot.seq, true)) {
+            break;
+        }
+        datasetQueueHead = static_cast<uint8_t>((datasetQueueHead + 1U) % DATASET_QUEUE_CAPACITY);
+        --datasetQueueCount;
+    }
+}
+
+void noteAdsReadHealth(uint8_t okCount, const char* context) {
+    if (okCount > 0) {
+        adsReadFailStreak = 0;
+        return;
+    }
+    if (adsReadFailStreak < 255) ++adsReadFailStreak;
+    logPrintf("ADS_READ_HEALTH context=%s okCount=0 streak=%u\n",
+              context != nullptr ? context : "unknown",
+              static_cast<unsigned>(adsReadFailStreak));
+    if (adsReadFailStreak >= ADS_READ_FAIL_RECOVERY_THRESHOLD) {
+        adsReady = false;
+        setRecoveryReason("ads_all_channels_failed");
+        logPrintf("ADS_RECOVERY_ARM reason=all_channels_failed context=%s\n",
+                  context != nullptr ? context : "unknown");
+    }
+}
+
+void maintainAdsRecovery(const char* reason) {
+    if (adsReady) return;
+    const uint32_t now = millis();
+    if (lastAdsRecoveryAttemptMs != 0 && now - lastAdsRecoveryAttemptMs < ADS_RECOVERY_RETRY_MS) {
+        return;
+    }
+    lastAdsRecoveryAttemptMs = now;
+    setRecoveryReason(reason != nullptr ? reason : "ads_not_ready");
+    logPrintf("ADS_RECOVERY_ATTEMPT reason=%s\n", lastRecoveryReason);
+    const bool ok = ads.begin(gldSpi);
+    adsReady = ok;
+    if (ok) {
+        ++adsRecoveryCount;
+        adsReadFailStreak = 0;
+        logPrintf("ADS_RECOVERY_RESULT=OK count=%lu\n",
+                  static_cast<unsigned long>(adsRecoveryCount));
+    } else {
+        ++adsRecoveryFailCount;
+        logPrintf("ADS_RECOVERY_RESULT=FAIL failCount=%lu\n",
+                  static_cast<unsigned long>(adsRecoveryFailCount));
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -164,6 +307,8 @@ bool initNulling(bool runIfMissing) {
 // ---------------------------------------------------------------------------
 
 bool connectWifi() {
+    ++wifiReconnectCount;
+    setRecoveryReason("wifi_connect");
     logPrintf("WIFI_CONNECT ssid=%s\n", WIFI_SSID);
     WiFi.mode(WIFI_STA);
     WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -172,6 +317,10 @@ bool connectWifi() {
         delay(200);
     }
     const bool ok = WiFi.status() == WL_CONNECTED;
+    if (!ok) {
+        ++wifiReconnectFailCount;
+        setRecoveryReason("wifi_connect_failed");
+    }
     logPrintf(ok ? "WIFI_CONNECTED ip=%s\n" : "WIFI_CONNECT_FAILED\n",
               ok ? WiFi.localIP().toString().c_str() : "");
     return ok;
@@ -182,12 +331,20 @@ bool connectWifi() {
 // ---------------------------------------------------------------------------
 
 void publishStatus(const char* state, const char* detail) {
-    StaticJsonDocument<128> doc;
+    StaticJsonDocument<384> doc;
     doc["device_id"] = DEVICE_ID_STR;
     doc["stage"]     = "DATASET";
     doc["state"]     = state;
     doc["detail"]    = detail;
-    char buf[128];
+    doc["queue_pending"] = datasetQueueCount;
+    doc["queue_dropped"] = datasetQueueDropped;
+    doc["publish_fail_count"] = datasetPublishFailCount;
+    doc["mqtt_reconnect_count"] = mqttReconnectCount;
+    doc["mqtt_connect_fail_count"] = mqttConnectFailCount;
+    doc["ads_recovery_count"] = adsRecoveryCount;
+    doc["ads_recovery_fail_count"] = adsRecoveryFailCount;
+    doc["last_recovery_reason"] = lastRecoveryReason;
+    char buf[384];
     serializeJson(doc, buf, sizeof(buf));
     mqtt.publish(TOPIC_STATUS, buf, false);
 }
@@ -204,14 +361,21 @@ void publishCmdAck(const char* cmd, const char* result) {
 }
 
 void publishSummary() {
-    StaticJsonDocument<192> doc;
+    StaticJsonDocument<384> doc;
     doc["device_id"]          = DEVICE_ID_STR;
     doc["stage"]              = "DATASET";
     doc["label"]              = currentLabel;
     doc["total_samples"]      = datasetSeq;
     doc["duration_ms"]        = static_cast<uint32_t>(millis() - sessionStartMs);
     doc["nulling_profile_id"] = nullingProfileId;
-    char buf[192];
+    doc["queue_pending"] = datasetQueueCount;
+    doc["queue_dropped"] = datasetQueueDropped;
+    doc["publish_fail_count"] = datasetPublishFailCount;
+    doc["retry_count"] = datasetQueueRetryCount;
+    doc["retry_fail_count"] = datasetQueueRetryFailCount;
+    doc["ads_recovery_count"] = adsRecoveryCount;
+    doc["ads_recovery_fail_count"] = adsRecoveryFailCount;
+    char buf[384];
     serializeJson(doc, buf, sizeof(buf));
     mqtt.publish(TOPIC_SUMMARY, buf, false);
 }
@@ -249,7 +413,11 @@ void handleCmd(const char* payload, unsigned int length) {
         currentLabel[sizeof(currentLabel) - 1] = '\0';
 
         targetSamples    = doc["target_samples"]    | 0u;
-        sampleIntervalMs = doc["sample_interval_ms"] | 1000u;
+        const uint32_t requestedSampleIntervalMs =
+            doc["sample_interval_ms"] | DATASET_MIN_SAMPLE_INTERVAL_MS;
+        sampleIntervalMs = requestedSampleIntervalMs < DATASET_MIN_SAMPLE_INTERVAL_MS
+                               ? DATASET_MIN_SAMPLE_INTERVAL_MS
+                               : requestedSampleIntervalMs;
         maxDurationMs    = doc["max_duration_ms"]   | 0u;
         useFanIntake     = doc["use_fan_intake"]    | true;
         fanOnMs          = doc["fan_on_ms"]         | 1000u;
@@ -300,14 +468,23 @@ bool mqttConnect() {
     const uint32_t now = millis();
     if (now - lastMqttAttemptMs < MQTT_RETRY_MS) return false;
     lastMqttAttemptMs = now;
+    ++mqttReconnectCount;
+    setRecoveryReason("mqtt_connect");
 
     logPrintf("MQTT_CONNECT host=%s port=%u\n", MQTT_HOST, MQTT_PORT);
     mqtt.setServer(MQTT_HOST, MQTT_PORT);
     mqtt.setCallback(mqttCallback);
     const bool ok = mqtt.connect(MQTT_CLIENT_ID, MQTT_USER, MQTT_PASS);
-    logPrintf("MQTT_CONNECT_RESULT=%s state=%d ip=%s rssi=%ld\n",
+    lastMqttState = mqtt.state();
+    if (!ok) {
+        ++mqttConnectFailCount;
+        setRecoveryReason("mqtt_connect_failed");
+    }
+    logPrintf("MQTT_CONNECT_RESULT=%s state=%d attempt=%lu failCount=%lu ip=%s rssi=%ld\n",
               ok ? "OK" : "FAIL",
-              mqtt.state(),
+              lastMqttState,
+              static_cast<unsigned long>(mqttReconnectCount),
+              static_cast<unsigned long>(mqttConnectFailCount),
               WiFi.localIP().toString().c_str(),
               static_cast<long>(WiFi.RSSI()));
     if (ok) {
@@ -337,26 +514,38 @@ void publishDataRecord() {
 
     JsonArray svArr   = doc.createNestedArray("sensor_voltage");
     JsonArray gainArr = doc.createNestedArray("sensor_gain");
+    JsonArray statusArr = doc.createNestedArray("sensor_status");
     JsonArray foArr   = doc.createNestedArray("feature_order");
 
     bool anyFail = false;
+    uint8_t okChannels = 0;
     for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
         const pgl::gld::GldAds1256Reading r = ads.readChannel(ch);
         const bool ok = r.status == pgl::gld::GldAds1256Status::Ok;
         svArr.add(r.voltage);
         gainArr.add(r.gain);
+        statusArr.add(static_cast<uint8_t>(r.status));
         foArr.add(pgl::gld::board::SENSOR_NAMES[ch]);
+        if (ok) ++okChannels;
         if (!ok) anyFail = true;
     }
+    noteAdsReadHealth(okChannels, "dataset");
 
-    char payload[896];
+    char payload[DATASET_PAYLOAD_BYTES];
     const size_t len = serializeJson(doc, payload, sizeof(payload));
+    const size_t termIndex = len < (sizeof(payload) - 1U) ? len : (sizeof(payload) - 1U);
+    payload[termIndex] = '\0';
 
-    const bool pubOk = mqtt.publish(TOPIC_DATA, payload, false);
-    logPrintf("DATASET_RECORD seq=%lu label=%s ok=%u anyFail=%u len=%u\n",
+    const bool pubOk = publishDatasetPayload(payload, datasetSeq, false);
+    if (!pubOk) {
+        enqueueDatasetPayload(payload, len, datasetSeq);
+    }
+    logPrintf("DATASET_RECORD seq=%lu label=%s ok=%u queued=%u pending=%u anyFail=%u len=%u\n",
               static_cast<unsigned long>(datasetSeq),
               currentLabel,
               pubOk ? 1 : 0,
+              pubOk ? 0 : 1,
+              static_cast<unsigned>(datasetQueueCount),
               anyFail ? 1 : 0,
               static_cast<unsigned>(len));
     ++datasetSeq;
@@ -452,6 +641,8 @@ void loop() {
     } else {
         mqtt.loop();
     }
+    flushDatasetQueue();
+    maintainAdsRecovery("dataset_ads_not_ready");
 
     const uint32_t now = millis();
 

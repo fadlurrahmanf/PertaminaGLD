@@ -1,41 +1,57 @@
 /*
-  Design tokens for the GLD Operator console.
+  Design tokens - "Manifold" (see design.md for the full rationale).
 
-  Palette is modeled on real gas-detector/instrument panels rather than a
-  generic dashboard: warm near-black chassis, amber phosphor readouts for
-  live/active state, a cool cyan for passive/info data, and hazard red
-  reserved exclusively for alarms (never used decoratively) so an operator's
-  eye stays trained to react to it.
+  Grounded in the actual subject: a Pertamina gas-pipeline instrument
+  cluster, not a generic dashboard. Deep pipeline-coating ink, a
+  safety-marking amber-orange primary accent, a pipe-marking teal secondary
+  accent, and hazard red reserved exclusively for an active gas alarm.
+
+  `:root` is the light default. `[data-theme="dark"]` (set by the in-app
+  toggle, js/theme.js) overrides it, and `prefers-color-scheme: dark`
+  provides the same override before the user has chosen explicitly.
 */
 
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 
-  /* Chassis */
-  --panel-black: #14110d;
-  --panel-steel: #1e1a14;
-  --panel-steel-raised: #241f17;
-  --hairline: #35301f;
-  --hairline-strong: #4a4327;
+  /* Surfaces */
+  --ink: #f5f3ee;
+  --surface: #ffffff;
+  --surface-2: #eee9df;
+  --hairline: #ddd6c7;
+  --hairline-strong: #c7bda6;
+  --backdrop: rgba(20, 16, 8, 0.35);
+  --shadow: rgba(30, 24, 10, 0.12);
 
-  /* Signal colors */
-  --phosphor-amber: #ffa400;
-  --phosphor-amber-dim: #7a5200;
-  --signal-cyan: #4fd8e0;
-  --signal-cyan-dim: #235c60;
-  --hazard-red: #ff3b30;
-  --hazard-red-dim: #5c1712;
-  --status-ok: #6bd47a;
+  /* Accent */
+  --accent: #e0630f;
+  --accent-soft: #fbe6d5;
+  --accent-soft-hover: #f6d6b8;
+  --accent-2: #177a7c;
+  --accent-2-soft: #d9eeee;
+
+  /* Semantic status */
+  --alarm: #d5271a;
+  --alarm-soft: #fbe1de;
+  --ok: #1f8f5c;
+  --ok-soft: #e2f3e9;
+  --warn: #a15b06;
+  --warn-soft: #fbedd6;
 
   /* Text */
-  --paper: #ede6d6;
-  --ink-muted: #8a8272;
-  --ink-faint: #5f5842;
+  --text: #16211f;
+  --text-muted: #5c6b66;
+  --text-faint: #8a9691;
 
-  --shadow: rgba(0, 0, 0, 0.45);
+  --selection-ring: rgba(224, 99, 15, 0.25);
+
+  /* Fixed instrument-readout accent (terminal/log panels, both themes) */
+  --terminal-bg: #0b1418;
+  --terminal-border: #1c2b2e;
+  --terminal-fg: #ffb020;
 
   /* Type */
-  --font-display: Bahnschrift, "Segoe UI Semibold", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --font-eyebrow: Bahnschrift, "Segoe UI Semibold", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
   --font-body: "Segoe UI", ui-sans-serif, system-ui, sans-serif;
   --font-mono: ui-monospace, "Cascadia Mono", Consolas, "SFMono-Regular", Menlo, monospace;
 
@@ -47,5 +63,74 @@
   --space-5: 24px;
   --space-6: 32px;
 
-  --radius: 3px;
+  --radius: 10px;
+  --strip-height: 60px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --ink: #0b1418;
+    --surface: #121e24;
+    --surface-2: #16262d;
+    --hairline: rgba(255, 255, 255, 0.09);
+    --hairline-strong: rgba(255, 255, 255, 0.17);
+    --backdrop: rgba(0, 0, 0, 0.6);
+    --shadow: rgba(0, 0, 0, 0.4);
+
+    --accent: #ff7a1f;
+    --accent-soft: #2c1c0d;
+    --accent-soft-hover: #3a2711;
+    --accent-2: #2bb3b6;
+    --accent-2-soft: #0f2c2d;
+
+    --alarm: #ff4d3d;
+    --alarm-soft: #351210;
+    --ok: #3ecf8e;
+    --ok-soft: #0f2a20;
+    --warn: #f5b342;
+    --warn-soft: #332708;
+
+    --text: #eef2f0;
+    --text-muted: #8fa39d;
+    --text-faint: #5b6a65;
+
+    --selection-ring: rgba(255, 122, 31, 0.3);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --ink: #0b1418;
+  --surface: #121e24;
+  --surface-2: #16262d;
+  --hairline: rgba(255, 255, 255, 0.09);
+  --hairline-strong: rgba(255, 255, 255, 0.17);
+  --backdrop: rgba(0, 0, 0, 0.6);
+  --shadow: rgba(0, 0, 0, 0.4);
+
+  --accent: #ff7a1f;
+  --accent-soft: #2c1c0d;
+  --accent-soft-hover: #3a2711;
+  --accent-2: #2bb3b6;
+  --accent-2-soft: #0f2c2d;
+
+  --alarm: #ff4d3d;
+  --alarm-soft: #351210;
+  --ok: #3ecf8e;
+  --ok-soft: #0f2a20;
+  --warn: #f5b342;
+  --warn-soft: #332708;
+
+  --text: #eef2f0;
+  --text-muted: #8fa39d;
+  --text-faint: #5b6a65;
+
+  --selection-ring: rgba(255, 122, 31, 0.3);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
 }

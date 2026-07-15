@@ -1,11 +1,117 @@
 // Dataset capture workflow: parameters -> SET_MODE dataset handshake ->
 // MQTT START_DATASET/STOP_DATASET -> row capture -> CSV + session log.
 
-import { $, elements, state, SENSOR_NAMES, DATASET_RUNTIME_READY_TIMEOUT_MS, DATASET_WAITING_STUCK_MS, initialDatasetSession } from "./state.js";
-import { appendLog, getField, numberField, saveForm, downloadText, csvCell, stamp, nowText, switchTab } from "./ui.js";
+import { $, elements, state, SENSOR_NAMES, DATASET_RUNTIME_READY_TIMEOUT_MS, DATASET_WAITING_STUCK_MS, DATASET_WIZARD_LABELS, initialDatasetSession } from "./state.js";
+import { appendLog, getField, numberField, saveForm, downloadText, csvCell, stamp, nowText, switchTab, showConfirm, showBanner, wait } from "./ui.js";
 import { bridgeFetch } from "./bridge-client.js";
-import { tokenValue, handleLine, sendCommand } from "./serial-protocol.js";
+import { tokenValue, handleLine, sendCommand, applyAndAlert } from "./serial-protocol.js";
 import { emitMockInfo, emitMockStatus } from "./mock.js";
+import { drawChart } from "./chart.js";
+
+// ---- 6-step capture wizard (Mode -> Confirm -> Start -> Capturing -> Stop -> Save) ----
+// A visual progress tracker layered on top of the existing dataset workflow.
+// It observes the same events the workflow already produces (mode switch,
+// session start/done, save/download) rather than gating them, so an operator
+// who jumps ahead (e.g. clicks Start Dataset directly) still gets a
+// sensible in-order picture instead of a stuck indicator.
+
+export function initDatasetWizard() {
+  state.datasetWizard = ["pending", "pending", "pending", "pending", "pending", "pending"];
+  renderDatasetWizard();
+}
+
+function setWizardStep(index, status) {
+  if (state.datasetWizard[index] === status) return;
+  state.datasetWizard[index] = status;
+  renderDatasetWizard();
+}
+
+// Marks every step up to (but not including) `index` as done, for when the
+// operator skips ahead (e.g. Start Dataset without using Switch to Dataset
+// first) - the indicator should read as "already past this" rather than
+// stuck on gray.
+function fastForwardWizardTo(index) {
+  for (let i = 0; i < index; i += 1) {
+    if (state.datasetWizard[i] !== "done") state.datasetWizard[i] = "done";
+  }
+  renderDatasetWizard();
+}
+
+export function renderDatasetWizard() {
+  if (!elements.datasetWizard) return;
+  elements.datasetWizard.innerHTML = "";
+  state.datasetWizard.forEach((status, index) => {
+    const step = document.createElement("div");
+    step.className = `wizard-step wizard-step--${status}`;
+    const dot = document.createElement("span");
+    dot.className = "wizard-dot";
+    dot.textContent = String(index + 1);
+    const label = document.createElement("span");
+    label.className = "wizard-label";
+    label.textContent = DATASET_WIZARD_LABELS[index];
+    step.append(dot, label);
+    elements.datasetWizard.append(step);
+  });
+}
+
+function paramSummaryText() {
+  return [
+    `Label: ${getField("datasetLabel")}`,
+    `Target Samples: ${numberField("targetSamples")}`,
+    `Interval Ms: ${numberField("sampleIntervalMs")}`,
+    `Max Duration Ms: ${numberField("maxDurationMs")}`,
+    `Fan On Ms: ${numberField("fanOnMs")}`,
+    `Post Fan Settle Ms: ${numberField("postFanSettleMs")}`,
+    `Run nulling first: ${elements.datasetNullingFirst.checked ? "yes" : "no"}`
+  ].join("\n");
+}
+
+async function waitForModeDataset(timeoutMs = 6000) {
+  const start = Date.now();
+  if (String(state.mode || "").toLowerCase() === "dataset") return true;
+  while (Date.now() - start < timeoutMs) {
+    await wait(400);
+    if (String(state.mode || "").toLowerCase() === "dataset") return true;
+    await sendCommand("GET_STATUS");
+  }
+  return String(state.mode || "").toLowerCase() === "dataset";
+}
+
+// Step 1 + 2: switch the GLD to dataset mode, then have the operator verify
+// the capture parameters before Start Dataset (step 3) becomes the natural
+// next click. Wired to the "Switch to Dataset" button in main.js.
+export async function beginDatasetSwitch() {
+  setWizardStep(0, "active");
+  await sendCommand("SET_MODE dataset");
+  const confirmed = await waitForModeDataset();
+  if (!confirmed) {
+    setWizardStep(0, "pending");
+    showBanner("Could not confirm the GLD switched to dataset mode.", "warn");
+    return;
+  }
+  setWizardStep(0, "done");
+  setWizardStep(1, "active");
+  const ok = await showConfirm(paramSummaryText(), "warn", "Confirm Dataset Parameters");
+  if (!ok) {
+    setWizardStep(1, "pending");
+    return;
+  }
+  setWizardStep(1, "done");
+  setWizardStep(2, "active");
+}
+
+// Step 3: called when Start Dataset is actually clicked, regardless of
+// whether the operator went through steps 1-2 first.
+export function markDatasetWizardStarted() {
+  fastForwardWizardTo(2);
+  setWizardStep(2, "done");
+  setWizardStep(3, "active");
+}
+
+// Step 6: called after a successful Save CSV or Download CSV.
+export function markDatasetWizardSaved() {
+  setWizardStep(5, "done");
+}
 
 function safeJson(text) {
   try { return JSON.parse(text); } catch { return null; }
@@ -39,6 +145,34 @@ function formatNumber(value) {
   return Number.isFinite(number) ? number.toFixed(6) : "";
 }
 
+function metricValue(source, ...keys) {
+  for (const key of keys) {
+    const number = Number(source?.[key]);
+    if (Number.isFinite(number)) return number;
+  }
+  return null;
+}
+
+function datasetQueueText(source) {
+  const pending = metricValue(source, "queuePending", "queue_pending", "pending");
+  const dropped = metricValue(source, "queueDropped", "queue_dropped", "dropped");
+  const failed = metricValue(source, "publishFailCount", "publish_fail_count", "failCount");
+  const parts = [];
+  if (pending !== null && (pending > 0 || dropped > 0 || failed > 0)) parts.push(`pending ${pending}`);
+  if (dropped !== null && dropped > 0) parts.push(`dropped ${dropped}`);
+  if (failed !== null && failed > 0) parts.push(`publish fail ${failed}`);
+  return parts.length ? `Queue ${parts.join(", ")}` : "";
+}
+
+function queueTextFromSerial(line) {
+  const pending = tokenValue(line, "pending");
+  const seq = tokenValue(line, "seq");
+  if (line.startsWith("DATASET_QUEUE_DROP")) return seq ? `Queue full, dropped seq ${seq}` : "Queue full, dropped oldest sample";
+  if (line.startsWith("DATASET_QUEUE_ENQUEUE")) return `Queue ${pending ? `pending ${pending}` : "sample buffered"}`;
+  if (line.startsWith("DATASET_QUEUE_RETRY")) return `Queue retry ${line.includes("ok=1") ? "sent" : "waiting"}${pending ? `, pending ${pending}` : ""}`;
+  return "Dataset queue event";
+}
+
 // ---- session lifecycle ----
 
 function startDatasetSession(dataset, deviceId) {
@@ -59,6 +193,7 @@ function startDatasetSession(dataset, deviceId) {
   session.lastEvent = `START_DATASET prepared for ${session.deviceId}`;
   state.dataset = session;
   renderDatasetSession();
+  drawChart();
 }
 
 export function setDatasetState(nextState, phase, eventText, isError = false) {
@@ -125,7 +260,12 @@ function markDatasetDone(reason) {
   state.dataset.state = "Done";
   state.dataset.phase = reason || "Capture complete";
   state.dataset.lastEvent = `${nowText()} ${reason || "Dataset complete"}`;
+  fastForwardWizardTo(4);
+  setWizardStep(3, "done");
+  setWizardStep(4, "done");
+  setWizardStep(5, "active");
   renderDatasetSession();
+  drawChart();
   maybeAutoSaveDataset();
   saveSessionLog(state.dataset.sessionId || stamp(), "serial");
 }
@@ -165,14 +305,22 @@ export function handleDatasetSerialLine(line) {
   if (line.startsWith("DATASET_RECORD")) {
     state.dataset.active = true;
     const seq = Number.parseInt(tokenValue(line, "seq") || "", 10);
+    const queueText = datasetQueueText({
+      pending: tokenValue(line, "pending"),
+      failCount: line.includes("ok=0") ? 1 : 0
+    });
     if (Number.isFinite(seq)) {
-      state.dataset.phase = `Serial record ${seq} seen`;
+      state.dataset.phase = queueText ? `Serial record ${seq} seen, ${queueText.toLowerCase()}` : `Serial record ${seq} seen`;
     } else {
-      state.dataset.phase = "Serial dataset record seen";
+      state.dataset.phase = queueText ? `Serial dataset record seen, ${queueText.toLowerCase()}` : "Serial dataset record seen";
     }
     state.dataset.lastSampleAt = Date.now();
     state.dataset.lastEvent = `${nowText()} ${line}`;
     renderDatasetSession();
+    return;
+  }
+  if (line.startsWith("DATASET_QUEUE_")) {
+    setDatasetState(state.dataset.state, queueTextFromSerial(line), line);
     return;
   }
   if (line.startsWith("DATASET_AUTOSTOP")) {
@@ -200,16 +348,19 @@ export function handleDatasetMqttEvent(payload) {
   }
   if (kind === "status") {
     const sampleCount = Number(data.sample_count ?? data.samples ?? data.total ?? data.seq);
+    const queueText = datasetQueueText(data);
     if (Number.isFinite(sampleCount) && sampleCount >= 0) state.dataset.phase = `Status samples ${sampleCount}`;
     const remoteState = String(data.state || data.status || "").trim();
+    const remoteIdleWhileWaiting = state.dataset.active && state.dataset.rows.length === 0 && /^idle$/i.test(remoteState);
     if (remoteState) {
-      if (state.dataset.active && state.dataset.rows.length === 0 && /^idle$/i.test(remoteState)) {
+      if (remoteIdleWhileWaiting) {
         state.dataset.state = "Waiting Data";
         state.dataset.phase = "GLD reports dataset idle. Check START_DATASET ACK, device ID/topic, and nulling profile.";
       } else {
         state.dataset.state = remoteState;
       }
     }
+    if (queueText && !remoteIdleWhileWaiting) state.dataset.phase = queueText;
     state.dataset.lastEvent = `${nowText()} MQTT status ${text}`;
     renderDatasetSession();
     return;
@@ -321,8 +472,12 @@ export function updateDatasetFromStatus(status) {
       }
     }
     const count = Number(dataset.samples ?? dataset.sampleCount ?? dataset.total);
+    const queueText = datasetQueueText(dataset);
     if (Number.isFinite(count) && !remoteIdleWhileWaiting) state.dataset.phase = `Status samples ${count}`;
-    state.dataset.lastEvent = `${nowText()} GLD dataset status updated`;
+    if (queueText && !remoteIdleWhileWaiting) state.dataset.phase = queueText;
+    state.dataset.lastEvent = queueText
+      ? `${nowText()} GLD dataset status updated (${queueText})`
+      : `${nowText()} GLD dataset status updated`;
   }
   renderDatasetSession();
 }
@@ -373,6 +528,7 @@ export async function saveDatasetCsv() {
     state.dataset.outputPath = "Downloaded by browser";
     state.dataset.saved = true;
     renderDatasetSession();
+    markDatasetWizardSaved();
     return;
   }
   try {
@@ -385,6 +541,7 @@ export async function saveDatasetCsv() {
     state.dataset.saved = true;
     state.dataset.lastEvent = `${nowText()} Dataset CSV saved`;
     renderDatasetSession();
+    markDatasetWizardSaved();
   } catch (error) {
     setDatasetState("Error", "CSV save failed", `DATASET_SAVE_ERROR ${error.message}`, true);
   }
@@ -407,6 +564,7 @@ export function downloadDatasetCsv() {
   }
   const filename = state.dataset.fileName || datasetFileName(state.dataset.deviceId, state.dataset.label);
   downloadText(filename, datasetCsv(), "text/csv");
+  markDatasetWizardSaved();
 }
 
 export async function openDatasetFolder() {
@@ -425,7 +583,9 @@ export async function openDatasetFolder() {
 
 export function clearDatasetSession() {
   state.dataset = initialDatasetSession();
+  initDatasetWizard();
   renderDatasetSession();
+  drawChart();
 }
 
 function datasetHint(session) {
@@ -534,8 +694,8 @@ export async function applyGldSettings() {
     return;
   }
   saveForm();
-  if (!window.confirm("Apply WiFi/MQTT settings to GLD and reboot it?")) return;
-  await sendCommand(`SET_APP_CONFIG_JSON ${JSON.stringify(payload)}`);
+  if (!(await showConfirm("Apply WiFi/MQTT settings to GLD and reboot it?", "warn", "Apply GLD Settings"))) return;
+  await applyAndAlert(`SET_APP_CONFIG_JSON ${JSON.stringify(payload)}`, "SET_APP_CONFIG", "Apply GLD Settings");
 }
 
 export async function publishDatasetCommand(command) {

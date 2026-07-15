@@ -16,6 +16,8 @@ export const CHART_COLORS = [
 ];
 
 export const SENSOR_NAMES = ["MQ8", "MQ135", "MQ3", "MQ5", "MQ4", "MQ7", "MQ6", "MQ2"];
+
+export const DATASET_WIZARD_LABELS = ["Switch Mode", "Confirm Config", "Start", "Capturing", "Stop", "Save"];
 export const SENSOR_MUX_CHANNELS = [7, 6, 5, 0, 1, 2, 3, 4];
 export const SENSOR_STATUS_NAMES = {
   0: "Ok",
@@ -23,6 +25,12 @@ export const SENSOR_STATUS_NAMES = {
   2: "DrdyTimeout",
   3: "InvalidChannel"
 };
+
+// Default poll interval matches the firmware's own sensor scan cadence
+// (GLD_SCAN_INTERVAL_MS in firmware/config/GldConfig.h), not an arbitrary
+// round number - polling faster than the GLD actually samples just repeats
+// stale GET_STATUS replies.
+export const DEFAULT_POLL_INTERVAL_MS = 500;
 
 export let SERIAL_RESPONSE_TIMEOUT_MS = 5000;
 export let DATASET_RUNTIME_READY_TIMEOUT_MS = 40000;
@@ -102,6 +110,7 @@ export const state = {
   },
   datasetReadyWaiters: [],
   dataset: initialDatasetSession(),
+  datasetWizard: ["pending", "pending", "pending", "pending", "pending", "pending"],
   nullingLogs: [],
   nullingExpandedChannels: new Set(),
   bootDiagnostics: {
@@ -176,6 +185,12 @@ export const elements = {
   bootReportSummary: $("bootReportSummary"),
   bootReportGrid: $("bootReportGrid"),
   sensorCheckChannels: $("sensorCheckChannels"),
+  sensorChannelsLeft: $("sensorChannelsLeft"),
+  sensorChannelsRight: $("sensorChannelsRight"),
+  datasetChart: $("datasetChart"),
+  datasetRangeSelect: $("datasetRangeSelect"),
+  datasetLegend: $("datasetLegend"),
+  datasetWizard: $("datasetWizard"),
   topDeviceStatus: $("topDeviceStatus"),
   topModeStatus: $("topModeStatus"),
   topGasStatus: $("topGasStatus"),

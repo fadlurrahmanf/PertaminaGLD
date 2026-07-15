@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Design 5 — Retro Terminal CRT</title>
+<style>
+  :root{
+    --bg:#001100;
+    --green:#33ff33;
+    --green-dim:#1a802e;
+    --red:#ff3333;
+    --border:#1a5c1a;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--bg);color:var(--green);font-family:'Consolas','Courier New',monospace;}
+  .scanlines{
+    position:fixed;inset:0;pointer-events:none;
+    background:repeating-linear-gradient(0deg,rgba(0,0,0,.15) 0px,rgba(0,0,0,.15) 1px,transparent 1px,transparent 3px);
+  }
+  .shell{max-width:1000px;margin:0 auto;padding:1.5rem;}
+  .titlebar{border:2px solid var(--green);padding:.5rem 1rem;margin-bottom:1rem;display:flex;justify-content:space-between;font-size:13px;}
+  .titlebar .blink{animation:blink 1s steps(2) infinite;}
+  @keyframes blink{50%{opacity:0;}}
+  .box{border:1px solid var(--border);margin-bottom:1rem;}
+  .box .bar{border-bottom:1px solid var(--border);padding:.4rem .8rem;font-size:12px;letter-spacing:.05em;}
+  .box .bar::before{content:"[ ";}
+  .box .bar::after{content:" ]";}
+  .box .body{padding:.8rem 1rem;font-size:13px;}
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:1px solid var(--border);margin-bottom:1rem;}
+  .cell{border-right:1px solid var(--border);padding:.8rem 1rem;font-size:12.5px;}
+  .cell:last-child{border-right:none;}
+  .cell .lbl{color:var(--green-dim);}
+  .cell .val{font-size:20px;margin:4px 0;}
+  .ascii-chart{white-space:pre;line-height:1.15;font-size:12px;overflow-x:auto;}
+  .ch-list{font-size:13px;line-height:1.7;}
+  .barfill{color:var(--green);}
+  .barempty{color:var(--green-dim);}
+  .st-pass{color:var(--green);}
+  .st-mid{color:#ffff33;}
+  .st-wait{color:var(--green-dim);}
+  a.cmd{color:var(--green);text-decoration:underline;}
+</style>
+</head>
+<body>
+<div class="scanlines"></div>
+<div class="shell">
+  <div class="titlebar">
+    <span>GLD-OPERATOR v0.9 :: BENCH TERMINAL</span>
+    <span>COM10 115200 <span class="blink">_</span></span>
+  </div>
+
+  <div class="grid">
+    <div class="cell"><div class="lbl">DEVICE</div><div class="val">F001</div></div>
+    <div class="cell"><div class="lbl">MODE</div><div class="val">RUNNING</div></div>
+    <div class="cell"><div class="lbl">GAS</div><div class="val">N/A</div></div>
+    <div class="cell"><div class="lbl">CONF</div><div class="val">--%</div></div>
+  </div>
+
+  <div class="box">
+    <div class="bar">SENSOR TELEMETRY — MQ8/MQ135/MQ3</div>
+    <div class="body ascii-chart">MQ8   0.8 |############............|
+MQ135 1.1 |################........|
+MQ3   0.6 |#########...............|
+      +--------------------------+
+        0V                     2.5V</div>
+  </div>
+
+  <div class="box">
+    <div class="bar">NULLING CHANNELS 1-8</div>
+    <div class="body ch-list">
+CH1 [<span class="barfill">########</span>] <span class="st-pass">PASS</span>&nbsp;&nbsp; dac=451 baseline=1.02V
+CH2 [<span class="barfill">########</span>] <span class="st-pass">PASS</span>&nbsp;&nbsp; dac=388 baseline=0.88V
+CH3 [<span class="barfill">#####</span><span class="barempty">###</span>] <span class="st-mid">BINARY</span> bracket=[200,600]
+CH4 [<span class="barempty">########</span>] <span class="st-wait">WAIT</span>&nbsp;&nbsp; queued
+CH5 [<span class="barempty">########</span>] <span class="st-wait">WAIT</span>&nbsp;&nbsp; queued
+CH6 [<span class="barempty">########</span>] <span class="st-wait">WAIT</span>&nbsp;&nbsp; queued
+CH7 [<span class="barempty">########</span>] <span class="st-wait">WAIT</span>&nbsp;&nbsp; queued
+CH8 [<span class="barempty">########</span>] <span class="st-wait">WAIT</span>&nbsp;&nbsp; queued
+    </div>
+  </div>
+
+  <div class="box">
+    <div class="bar">COMMAND LINE</div>
+    <div class="body">
+      &gt; <a class="cmd">APP_PING</a> &nbsp; <a class="cmd">GET_STATUS</a> &nbsp; <a class="cmd">SET_MODE dataset</a> &nbsp; <a class="cmd">SET_MODE nulling</a><span class="blink">_</span>
+    </div>
+  </div>
+</div>
+</body>
+</html>

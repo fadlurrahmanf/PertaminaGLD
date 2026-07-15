@@ -5,7 +5,7 @@
 
 import { $, elements, state, SENSOR_NAMES } from "./state.js";
 import { appendLog, numberField, stamp } from "./ui.js";
-import { tokenValue, channelIndexFromLog, sendCommand } from "./serial-protocol.js";
+import { tokenValue, channelIndexFromLog, applyAndAlert } from "./serial-protocol.js";
 import { saveSessionLog } from "./dataset.js";
 
 const DAC_CODE_MAX = 4095;
@@ -219,70 +219,84 @@ function nullingChannelsFromLogs(logs, featureOrder = SENSOR_NAMES) {
   return channels;
 }
 
-const CONFIRM_MODE_TEXT = {
-  baseline_threshold_verified: "baseline-relative threshold, re-verified on an independent read",
-  positive_verified: "positive reading, re-verified on an independent read",
-  fallback_above_min: "no positive candidate reconfirmed; used the closest code that still cleared the configured minimum"
+const CONFIRM_MODE_TAG = {
+  baseline_threshold_verified: "verified",
+  positive_verified: "verified",
+  fallback_above_min: "fallback"
 };
 
-function nullingStageDetailLines(stages) {
-  const lines = [];
+// Short label/value rows instead of long sentences - one row per stage,
+// meant to be scanned at a glance rather than read like a report. Each row
+// keeps only the number a technician actually checks (step count, the
+// resulting code/voltage, or the failure reason).
+function nullingStageDetailRows(stages) {
+  const rows = [];
+
   const b = stages.baseline;
   if (b.started) {
-    lines.push(
-      b.done
-        ? `Baseline: averaged ${b.avgCount ?? "?"} sample(s) per code across codes ${b.codeMin ?? "0"}-${b.codeMax ?? "?"} (${b.steps} step(s) logged) -> ${b.value ?? "?"} V from ${b.validSamples ?? "?"} valid sample(s).`
-        : `Baseline: scanning codes ${b.codeMin ?? "0"}-${b.codeMax ?? "?"}, ${b.steps} step(s) so far.`
-    );
+    rows.push({
+      label: "Baseline",
+      value: b.done ? `${b.value ?? "?"} V (${b.steps} steps)` : `scanning... (${b.steps} steps)`
+    });
   }
+
   const e = stages.exponential;
-  if (e.started) {
-    if (e.done) {
-      lines.push(`Exponential: searched from baseline ${e.baselineRef ?? "?"} V to target ${e.target ?? "?"} V (dynamic threshold ${e.threshold ?? "?"} V) in ${e.steps} step(s), code doubling up to ${e.lastCode ?? "?"} -> found bracket [${e.low ?? "?"}, ${e.high ?? "?"}] at ${e.lastVoltage ?? "?"} V.`);
-    } else if (e.failed) {
-      lines.push(`Exponential: FAILED after ${e.steps} step(s) - never crossed the threshold up to code ${e.failCode ?? "?"} (max ${e.maxCode ?? "?"}).`);
-    } else {
-      lines.push(`Exponential: searching, ${e.steps} step(s) so far, last code ${e.lastCode ?? "?"} at ${e.lastVoltage ?? "?"} V (delta ${e.lastDelta ?? "?"}).`);
-    }
+  if (e.started && (e.threshold != null || e.target != null)) {
+    rows.push({
+      label: "Threshold",
+      value: `target ${e.target ?? "?"} V (delta ${e.threshold ?? "?"} V)`
+    });
   }
+
+  if (e.started) {
+    rows.push({
+      label: "Exponential",
+      value: e.done
+        ? `range ${e.low ?? "?"}-${e.high ?? "?"} (${e.steps} steps)`
+        : e.failed
+          ? `failed (${e.steps} steps)`
+          : `searching... (${e.steps} steps)`,
+      fail: e.failed
+    });
+  }
+
   const bi = stages.binary;
   if (bi.started) {
-    lines.push(
-      bi.done
-        ? `Binary search: narrowed bracket [${bi.initialLow ?? "?"}, ${bi.initialHigh ?? "?"}] in ${bi.steps} step(s) -> selected code ${bi.selected ?? "?"}.`
-        : `Binary search: narrowing bracket [${bi.initialLow ?? "?"}, ${bi.initialHigh ?? "?"}], ${bi.steps} step(s) so far.`
-    );
+    rows.push({
+      label: "Binary search",
+      value: bi.done ? `code ${bi.selected} (${bi.steps} steps)` : `narrowing... (${bi.steps} steps)`
+    });
   }
+
   const c = stages.confirm;
   if (c.started) {
-    const windowText = `window [${c.start ?? "?"}, ${c.end ?? "?"}] (${c.wide ? "wide" : "normal"} search, target ${c.target ?? "?"} V, threshold ${c.threshold ?? "?"} V)`;
-    if (c.done) {
-      const modeText = CONFIRM_MODE_TEXT[c.okMode] || c.okMode || "unknown mode";
-      const bumpText = c.bumps > 0
-        ? ` -> ${c.bumps} final bump(s) of +1 DAC code because the independent final read was still below threshold`
-        : "";
-      lines.push(`Confirm: scanned ${c.steps} code(s) in ${windowText}, ${c.thresholdCount} threshold candidate(s) found -> chose code ${c.okCode ?? "?"} at ${c.okVoltage ?? "?"} V (${modeText})${bumpText}.`);
-    } else if (c.failed) {
-      lines.push(`Confirm: FAILED after scanning ${c.steps} code(s) in ${windowText} - no candidate reconfirmed the baseline-relative threshold.`);
-    } else {
-      lines.push(`Confirm: scanning ${windowText}, ${c.steps} code(s) checked so far, ${c.thresholdCount} threshold candidate(s).`);
-    }
+    rows.push({
+      label: "Confirm",
+      value: c.done
+        ? `code ${c.okCode} @ ${c.okVoltage ?? "?"} V (${CONFIRM_MODE_TAG[c.okMode] || "ok"})`
+        : c.failed
+          ? "failed"
+          : `checking... (${c.steps} codes)`,
+      fail: c.failed
+    });
   }
+
   if (stages.failStage) {
-    const reasonText = NULLING_FAIL_REASON_TEXT[stages.failReason] || stages.failReason || "unknown reason";
-    lines.push(`Failed at stage "${nullingStageLabel(stages.failStage)}": ${reasonText}.`);
+    rows.push({
+      label: "Failed at",
+      value: `${nullingStageLabel(stages.failStage)} - ${NULLING_FAIL_REASON_TEXT[stages.failReason] || stages.failReason || "unknown reason"}`,
+      fail: true
+    });
   }
-  return lines;
+
+  return rows;
 }
 
-function nullingDacSourceText(channel) {
+function nullingDacSourceRow(channel) {
   const c = channel.stages.confirm;
-  if (channel.stage !== "Done" || !c.done) return "";
-  const modeText = CONFIRM_MODE_TEXT[c.okMode] || c.okMode || "unknown mode";
-  if (c.bumps > 0) {
-    return `DAC source: Confirm stage chose code ${c.okCode} (${modeText}), then +${c.bumps} final bump(s) -> final DAC code ${channel.dac}.`;
-  }
-  return `DAC source: Confirm stage chose code ${c.okCode} (${modeText}) -> final DAC code ${channel.dac}.`;
+  if (channel.stage !== "Done" || !c.done) return null;
+  const bumpText = c.bumps > 0 ? ` (+${c.bumps} bump)` : "";
+  return { label: "Final DAC", value: `${channel.dac}${bumpText}` };
 }
 
 // ---- signature element: sweep meter ----
@@ -390,9 +404,9 @@ export function renderNullingChannels() {
       card.append(extraLine);
     }
 
-    const stageLines = nullingStageDetailLines(channel.stages);
-    const sourceText = nullingDacSourceText(channel);
-    if (stageLines.length || sourceText) {
+    const stageRows = nullingStageDetailRows(channel.stages);
+    const sourceRow = nullingDacSourceRow(channel);
+    if (stageRows.length || sourceRow) {
       const disclosure = document.createElement("details");
       disclosure.className = "disclosure nulling-stage-detail";
       disclosure.open = state.nullingExpandedChannels.has(channel.index);
@@ -403,17 +417,30 @@ export function renderNullingChannels() {
       const summary = document.createElement("summary");
       summary.textContent = "Stage detail";
       disclosure.append(summary);
-      for (const line of stageLines) {
-        const p = document.createElement("small");
-        p.textContent = line;
-        disclosure.append(p);
+
+      const kv = document.createElement("dl");
+      kv.className = "kv";
+      for (const row of stageRows) {
+        const item = document.createElement("div");
+        if (row.fail) item.className = "fail";
+        const dt = document.createElement("dt");
+        dt.textContent = row.label;
+        const dd = document.createElement("dd");
+        dd.textContent = row.value;
+        item.append(dt, dd);
+        kv.append(item);
       }
-      if (sourceText) {
-        const sourceLine = document.createElement("small");
-        sourceLine.className = "nulling-dac-source";
-        sourceLine.textContent = sourceText;
-        disclosure.append(sourceLine);
+      if (sourceRow) {
+        const item = document.createElement("div");
+        item.className = "nulling-dac-source";
+        const dt = document.createElement("dt");
+        dt.textContent = sourceRow.label;
+        const dd = document.createElement("dd");
+        dd.textContent = sourceRow.value;
+        item.append(dt, dd);
+        kv.append(item);
       }
+      disclosure.append(kv);
       card.append(disclosure);
     }
 
@@ -461,5 +488,5 @@ export async function applyNullingConfig() {
     appendLog("NULLING_CONFIG_REJECTED minFinalV must be a number", "in");
     return;
   }
-  await sendCommand(`SET_NULLING_CONFIG_JSON ${JSON.stringify({ thresholdV, minFinalV })}`);
+  await applyAndAlert(`SET_NULLING_CONFIG_JSON ${JSON.stringify({ thresholdV, minFinalV })}`, "SET_NULLING_CONFIG", "Apply Thresholds");
 }

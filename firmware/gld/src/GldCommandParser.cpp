@@ -73,6 +73,12 @@ bool decodeLine(const char* line, GldSerialCommand& outCommand) {
         outCommand.payload[sizeof(outCommand.payload) - 1] = '\0';
         return true;
     }
+    if (strncmp(line, "SET_CH_ADDRESS_JSON ", 20) == 0) {
+        outCommand.type = GldSerialCommandType::SetChAddressJson;
+        strncpy(outCommand.payload, line + 20, sizeof(outCommand.payload) - 1);
+        outCommand.payload[sizeof(outCommand.payload) - 1] = '\0';
+        return true;
+    }
     if (strncmp(line, "SET_NULLING_CONFIG_JSON ", 24) == 0) {
         outCommand.type = GldSerialCommandType::SetNullingConfigJson;
         strncpy(outCommand.payload, line + 24, sizeof(outCommand.payload) - 1);

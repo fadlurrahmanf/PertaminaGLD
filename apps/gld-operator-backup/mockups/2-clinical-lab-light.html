@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Design 2 — Clinical Lab Light</title>
+<style>
+  :root{
+    --bg:#f4f7f9;
+    --panel:#ffffff;
+    --border:#e1e7eb;
+    --blue:#2f6fed;
+    --blue-soft:#eaf1fe;
+    --green:#1a9c6d;
+    --red:#e0303f;
+    --text:#1c2733;
+    --muted:#64748b;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;}
+  .shell{display:flex;min-height:100vh;}
+  .nav{width:180px;background:var(--panel);border-right:1px solid var(--border);padding:1.25rem 0;}
+  .nav .logo{padding:0 1.25rem 1.25rem;font-weight:700;font-size:16px;border-bottom:1px solid var(--border);margin-bottom:.75rem;}
+  .nav .logo small{display:block;font-weight:400;font-size:11px;color:var(--muted);margin-top:2px;}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:10px 1.25rem;font-size:13.5px;color:var(--muted);cursor:pointer;border-left:3px solid transparent;}
+  .nav-item.active{color:var(--blue);background:var(--blue-soft);border-left-color:var(--blue);font-weight:600;}
+  .nav-item .dot{width:7px;height:7px;border-radius:50%;background:currentColor;}
+  .content{flex:1;padding:1.5rem 2rem;}
+  .header{display:flex;align-items:center;margin-bottom:1.5rem;}
+  .header h1{font-size:19px;margin:0;font-weight:600;}
+  .header .stamp{margin-left:auto;display:flex;gap:8px;}
+  .pill{font-size:12px;padding:5px 12px;border-radius:20px;background:var(--blue-soft);color:var(--blue);font-weight:600;}
+  .pill.ok{background:#e5f6ef;color:var(--green);}
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:1.5rem;}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:16px;position:relative;box-shadow:0 1px 3px rgba(20,30,40,.04);}
+  .card::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:3px;background:var(--blue);border-radius:2px;}
+  .card.warn::before{background:#eeae2f;}
+  .card .lbl{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
+  .card .val{font-size:23px;font-weight:600;margin:4px 0 2px;}
+  .card .sub{font-size:12px;color:var(--muted);}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:1.25rem;margin-bottom:1.25rem;box-shadow:0 1px 3px rgba(20,30,40,.04);}
+  .panel h3{margin:0 0 1rem;font-size:14.5px;font-weight:600;}
+  .chart-fake{height:190px;border-radius:8px;background:linear-gradient(180deg,#fafcfe,#f4f7f9);border:1px solid var(--border);position:relative;}
+  .chart-fake svg{position:absolute;inset:0;width:100%;height:100%;}
+  .ch-row{display:grid;grid-template-columns:repeat(8,1fr);gap:10px;}
+  .ch{background:#fafcfe;border:1px solid var(--border);border-radius:8px;padding:10px;text-align:center;}
+  .ch .n{font-size:11px;color:var(--muted);}
+  .ch .bar{height:5px;background:var(--border);border-radius:3px;margin:8px 0 4px;overflow:hidden;}
+  .ch .bar i{display:block;height:100%;background:var(--green);}
+  .ch .s{font-size:11px;font-weight:600;color:var(--green);}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="nav">
+    <div class="logo">GLD Operator<small>Bench console</small></div>
+    <div class="nav-item active"><span class="dot"></span>Running</div>
+    <div class="nav-item"><span class="dot"></span>Sensor Check</div>
+    <div class="nav-item"><span class="dot"></span>Dataset</div>
+    <div class="nav-item"><span class="dot"></span>Nulling</div>
+    <div class="nav-item"><span class="dot"></span>Log</div>
+    <div class="nav-item"><span class="dot"></span>Expert</div>
+    <div class="nav-item"><span class="dot"></span>Firmware</div>
+  </div>
+  <div class="content">
+    <div class="header">
+      <h1>Device F001 — Slot 1</h1>
+      <div class="stamp">
+        <span class="pill ok">Connected</span>
+        <span class="pill">COM10 · 115200</span>
+      </div>
+    </div>
+    <div class="cards">
+      <div class="card"><div class="lbl">Gas</div><div class="val">n/a</div><div class="sub">confidence -%</div></div>
+      <div class="card"><div class="lbl">Mode</div><div class="val">Running</div><div class="sub">external power</div></div>
+      <div class="card warn"><div class="lbl">Battery</div><div class="val">92%</div><div class="sub">LoRa linked</div></div>
+      <div class="card"><div class="lbl">Boot health</div><div class="val">8/8</div><div class="sub">ADS ready</div></div>
+    </div>
+    <div class="panel">
+      <h3>Sensor telemetry — last 1 min</h3>
+      <div class="chart-fake">
+        <svg viewBox="0 0 400 190" preserveAspectRatio="none">
+          <polyline fill="none" stroke="#2f6fed" stroke-width="2" points="0,140 40,130 80,145 120,110 160,120 200,90 240,105 280,75 320,90 360,60 400,72"/>
+          <polyline fill="none" stroke="#1a9c6d" stroke-width="2" points="0,160 40,155 80,158 120,148 160,150 200,140 240,145 280,132 320,138 360,124 400,130"/>
+        </svg>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>Nulling channels</h3>
+      <div class="ch-row">
+        <div class="ch"><div class="n">CH1</div><div class="bar"><i style="width:100%"></i></div><div class="s">Pass</div></div>
+        <div class="ch"><div class="n">CH2</div><div class="bar"><i style="width:100%"></i></div><div class="s">Pass</div></div>
+        <div class="ch"><div class="n">CH3</div><div class="bar"><i style="width:60%;background:#eeae2f;"></i></div><div class="s" style="color:#eeae2f;">Binary</div></div>
+        <div class="ch"><div class="n">CH4</div><div class="bar"><i style="width:10%;background:#c7cfd6;"></i></div><div class="s" style="color:var(--muted);">Waiting</div></div>
+        <div class="ch"><div class="n">CH5</div><div class="bar"><i style="width:10%;background:#c7cfd6;"></i></div><div class="s" style="color:var(--muted);">Waiting</div></div>
+        <div class="ch"><div class="n">CH6</div><div class="bar"><i style="width:10%;background:#c7cfd6;"></i></div><div class="s" style="color:var(--muted);">Waiting</div></div>
+        <div class="ch"><div class="n">CH7</div><div class="bar"><i style="width:10%;background:#c7cfd6;"></i></div><div class="s" style="color:var(--muted);">Waiting</div></div>
+        <div class="ch"><div class="n">CH8</div><div class="bar"><i style="width:10%;background:#c7cfd6;"></i></div><div class="s" style="color:var(--muted);">Waiting</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

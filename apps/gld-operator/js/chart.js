@@ -1,11 +1,17 @@
-// Running tab telemetry chart: hand-rolled canvas line chart (kept
-// dependency-free per the "stay lightweight" constraint) + CSV export.
+// Telemetry chart: hand-rolled canvas line chart (kept dependency-free per
+// the "stay lightweight" constraint) + CSV export. Drawn twice from the same
+// state.history feed - once on the Running tab, once on the Dataset tab
+// (with START/STOP session markers overlaid) - via drawOneChart() so both
+// stay pixel-for-pixel consistent.
 
-import { elements, state, CHART_COLORS, SENSOR_NAMES } from "./state.js";
+import { $, elements, state, CHART_COLORS, SENSOR_NAMES } from "./state.js";
 import { csvCell, downloadText, stamp } from "./ui.js";
 
 export function pruneHistory() {
-  const rangeMs = Number(elements.rangeSelect.value) * 1000;
+  const rangeMs = Math.max(
+    Number(elements.rangeSelect?.value) || 0,
+    Number(elements.datasetRangeSelect?.value) || 0
+  ) * 1000;
   const cutoff = Date.now() - rangeMs;
   while (state.history.length && state.history[0].ts < cutoff) state.history.shift();
 }
@@ -35,8 +41,9 @@ function latestFeatureOrder(points) {
   return ["CH1", "CH2", "CH3", "CH4", "CH5", "CH6", "CH7", "CH8"];
 }
 
-export function renderLegend(labels) {
-  elements.legend.innerHTML = "";
+export function renderLegend(labels, legendEl = elements.legend) {
+  if (!legendEl) return;
+  legendEl.innerHTML = "";
   const list = labels.length ? labels : ["CH1", "CH2", "CH3", "CH4", "CH5", "CH6", "CH7", "CH8"];
   list.slice(0, 8).forEach((label, index) => {
     const item = document.createElement("span");
@@ -45,16 +52,21 @@ export function renderLegend(labels) {
     swatch.className = "legend-swatch";
     swatch.style.background = CHART_COLORS[index];
     item.append(swatch, document.createTextNode(label || `CH${index + 1}`));
-    elements.legend.appendChild(item);
+    legendEl.appendChild(item);
   });
 }
 
-export function drawChart() {
-  const canvas = elements.sensorChart;
+// Draws one chart instance into `canvas`, reading its zoom range from
+// `rangeSelect` and its legend into `legendEl`. `markers` is an optional
+// list of { ts, color, label } vertical lines (used for dataset START/STOP).
+function drawOneChart(canvas, rangeSelect, legendEl, markers = []) {
+  if (!canvas || !rangeSelect) return;
   const parent = canvas.parentElement;
   const dpr = window.devicePixelRatio || 1;
   const cssWidth = Math.max(320, parent.clientWidth);
-  const cssHeight = Math.max(280, Math.min(420, Math.round(window.innerHeight * 0.48)));
+  // 0.7x of the previous 700-1050 range (which was itself 2.5x the
+  // original 280-420), dialed back down after the chart read as too tall.
+  const cssHeight = Math.max(490, Math.min(735, Math.round(window.innerHeight * 0.84)));
   canvas.width = Math.round(cssWidth * dpr);
   canvas.height = Math.round(cssHeight * dpr);
   canvas.style.height = `${cssHeight}px`;
@@ -65,49 +77,81 @@ export function drawChart() {
   ctx.fillStyle = "#14110d";
   ctx.fillRect(0, 0, cssWidth, cssHeight);
 
-  const pad = { left: 58, right: 18, top: 18, bottom: 34 };
+  const pad = { left: 58, right: 58, top: 18, bottom: 34 };
   const width = cssWidth - pad.left - pad.right;
   const height = cssHeight - pad.top - pad.bottom;
   const now = Date.now();
-  const rangeMs = Number(elements.rangeSelect.value) * 1000;
-  const visible = state.history.filter((point) => point.ts >= now - rangeMs);
+  const rangeMs = Number(rangeSelect.value) * 1000;
+  const rangeStart = now - rangeMs;
+  const visible = state.history.filter((point) => point.ts >= rangeStart);
 
   drawGrid(ctx, pad, width, height);
 
   if (!visible.length) {
     ctx.fillStyle = "#8a8272";
-    ctx.font = "13px 'Segoe UI', sans-serif";
+    ctx.font = "14px 'Segoe UI', sans-serif";
     ctx.fillText("Waiting for telemetry", pad.left + 12, pad.top + 24);
-    renderLegend([]);
+    renderLegend([], legendEl);
     return;
   }
 
-  let min = Infinity;
-  let max = -Infinity;
-  for (const point of visible) {
-    for (const value of point.sensorVoltage) {
-      if (Number.isFinite(value)) {
-        min = Math.min(min, value);
-        max = Math.max(max, value);
+  // Y-axis: either locked to the operator's Running-settings range (so the
+  // chart stops rescaling as readings move) or auto-fit to what's visible.
+  let min;
+  let max;
+  const fixedAxis = $("chartYAxisFixed")?.checked === true;
+  if (fixedAxis) {
+    const fixedMin = Number($("chartYAxisMin")?.value);
+    const fixedMax = Number($("chartYAxisMax")?.value);
+    min = Number.isFinite(fixedMin) ? fixedMin : 0;
+    max = Number.isFinite(fixedMax) && fixedMax > min ? fixedMax : min + 1;
+  } else {
+    min = Infinity;
+    max = -Infinity;
+    for (const point of visible) {
+      for (const value of point.sensorVoltage) {
+        if (Number.isFinite(value)) {
+          min = Math.min(min, value);
+          max = Math.max(max, value);
+        }
       }
     }
+    if (!Number.isFinite(min) || !Number.isFinite(max)) {
+      min = -0.01;
+      max = 0.01;
+    }
+    if (Math.abs(max - min) < 0.00001) {
+      max += 0.001;
+      min -= 0.001;
+    }
+    const margin = (max - min) * 0.12;
+    min -= margin;
+    max += margin;
   }
-  if (!Number.isFinite(min) || !Number.isFinite(max)) {
-    min = -0.01;
-    max = 0.01;
-  }
-  if (Math.abs(max - min) < 0.00001) {
-    max += 0.001;
-    min -= 0.001;
-  }
-  const margin = (max - min) * 0.12;
-  min -= margin;
-  max += margin;
 
   ctx.fillStyle = "#8a8272";
-  ctx.font = "12px 'Cascadia Mono', monospace";
-  ctx.fillText(max.toFixed(4), 8, pad.top + 5);
+  ctx.font = "13.5px 'Cascadia Mono', monospace";
+  ctx.fillText(max.toFixed(4), 8, pad.top + 6);
   ctx.fillText(min.toFixed(4), 8, pad.top + height);
+
+  // Vertical session markers (dataset START/STOP) drawn under the series
+  // lines so the traces stay legible on top of them.
+  for (const marker of markers) {
+    if (!Number.isFinite(marker.ts) || marker.ts < rangeStart || marker.ts > now) continue;
+    const x = pad.left + ((marker.ts - rangeStart) / rangeMs) * width;
+    ctx.beginPath();
+    ctx.setLineDash([4, 3]);
+    ctx.strokeStyle = marker.color;
+    ctx.lineWidth = 1.5;
+    ctx.moveTo(x, pad.top);
+    ctx.lineTo(x, pad.top + height);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = marker.color;
+    ctx.font = "600 13px 'Cascadia Mono', monospace";
+    ctx.textBaseline = "alphabetic";
+    ctx.fillText(marker.label, x + 4, pad.top + 13);
+  }
 
   const labels = latestFeatureOrder(visible);
   for (let ch = 0; ch < 8; ch += 1) {
@@ -115,10 +159,11 @@ export function drawChart() {
     ctx.lineWidth = 1.8;
     ctx.strokeStyle = CHART_COLORS[ch];
     let started = false;
+    let lastY = null;
     for (const point of visible) {
       const value = point.sensorVoltage[ch];
       if (!Number.isFinite(value)) continue;
-      const x = pad.left + ((point.ts - (now - rangeMs)) / rangeMs) * width;
+      const x = pad.left + ((point.ts - rangeStart) / rangeMs) * width;
       const y = pad.top + (1 - (value - min) / (max - min)) * height;
       if (!started) {
         ctx.moveTo(x, y);
@@ -126,13 +171,44 @@ export function drawChart() {
       } else {
         ctx.lineTo(x, y);
       }
+      lastY = y;
     }
     ctx.stroke();
+
+    // End-of-series label at the chart's right edge, pinned to that
+    // channel's most recent value so it rides up/down with the live line.
+    if (lastY != null) {
+      const label = labels[ch] || `CH${ch + 1}`;
+      ctx.fillStyle = CHART_COLORS[ch];
+      ctx.font = "600 14px 'Cascadia Mono', monospace";
+      ctx.textBaseline = "middle";
+      ctx.fillText(label, pad.left + width + 4, lastY);
+    }
   }
-  renderLegend(labels);
+  ctx.textBaseline = "alphabetic";
+  renderLegend(labels, legendEl);
 }
 
-export function exportCsv() {
+// Dataset session START/STOP markers, sourced from the same session object
+// the Dataset tab's progress cards already read (state.dataset).
+function datasetSessionMarkers() {
+  const session = state.dataset;
+  const markers = [];
+  if (Number.isFinite(session?.startedAt)) {
+    markers.push({ ts: session.startedAt, color: "#3ecf8e", label: "START" });
+  }
+  if (Number.isFinite(session?.endedAt)) {
+    markers.push({ ts: session.endedAt, color: "#ff4d3d", label: "STOP" });
+  }
+  return markers;
+}
+
+export function drawChart() {
+  drawOneChart(elements.sensorChart, elements.rangeSelect, elements.legend, []);
+  drawOneChart(elements.datasetChart, elements.datasetRangeSelect, elements.datasetLegend, datasetSessionMarkers());
+}
+
+function historyToCsv() {
   const headers = [
     "timeIso",
     "deviceId",
@@ -153,6 +229,9 @@ export function exportCsv() {
     point.alarm ? 1 : 0,
     ...Array.from({ length: 8 }, (_, index) => point.sensorVoltage[index] ?? "")
   ]);
-  const csv = [headers, ...rows].map((row) => row.map(csvCell).join(",")).join("\n");
-  downloadText(`GLD_telemetry_${stamp()}.csv`, `${csv}\n`, "text/csv");
+  return [headers, ...rows].map((row) => row.map(csvCell).join(",")).join("\n");
+}
+
+export function exportCsv() {
+  downloadText(`GLD_telemetry_${stamp()}.csv`, `${historyToCsv()}\n`, "text/csv");
 }

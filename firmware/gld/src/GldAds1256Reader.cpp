@@ -19,6 +19,7 @@ constexpr float ADS1256_AGC_GAIN_DOWN_RATIO = 0.85f;
 constexpr float ADS1256_AGC_GAIN_UP_RATIO = 0.20f;
 constexpr uint8_t ADS1256_AGC_GAIN_DOWN_CONFIRM = 1;
 constexpr uint8_t ADS1256_AGC_GAIN_UP_CONFIRM = 5;
+constexpr uint32_t ADS1256_READ_DRDY_TIMEOUT_MS = 5;
 
 constexpr uint8_t PGA_VALUE_TABLE[7] = {64, 32, 16, 8, 4, 2, 1};
 constexpr uint8_t PGA_LIB_CONST[7] = {PGA_64, PGA_32, PGA_16, PGA_8, PGA_4, PGA_2, PGA_1};
@@ -126,8 +127,13 @@ GldAds1256Reading GldAds1256Reader::readChannel(uint8_t channel) {
         return {GldAds1256Status::InvalidChannel, 0, 0.0f, GLD_ADS1256_DEFAULT_GAIN, false};
     }
 
-    gainCalibrate(channel);
-    const long raw = readSingleInternal(channel);
+    if (!gainCalibrate(channel)) {
+        return {GldAds1256Status::DrdyTimeout, 0, 0.0f, getCurrentGain(channel), false};
+    }
+    long raw = 0;
+    if (!readSingleInternal(channel, raw)) {
+        return {GldAds1256Status::DrdyTimeout, 0, 0.0f, getCurrentGain(channel), false};
+    }
     const uint8_t gain = getCurrentGain(channel);
     const float voltage = convertToVoltage(raw, gain);
     const float maxVoltage = GLD_ADS1256_VREF_VOLTS / static_cast<float>(gain);
@@ -135,8 +141,11 @@ GldAds1256Reading GldAds1256Reader::readChannel(uint8_t channel) {
     return {GldAds1256Status::Ok, static_cast<int32_t>(raw), voltage, gain, saturated};
 }
 
-void GldAds1256Reader::gainCalibrate(uint8_t channel) {
-    const long raw = readSingleInternal(channel);
+bool GldAds1256Reader::gainCalibrate(uint8_t channel) {
+    long raw = 0;
+    if (!readSingleInternal(channel, raw)) {
+        return false;
+    }
     const uint8_t gain = getCurrentGain(channel);
     const float voltage = convertToVoltage(raw, gain);
     const float maxVoltage = GLD_ADS1256_VREF_VOLTS / static_cast<float>(gain);
@@ -165,6 +174,7 @@ void GldAds1256Reader::gainCalibrate(uint8_t channel) {
         gainConfirmDown_[channel] = 0;
         gainConfirmUp_[channel] = 0;
     }
+    return true;
 }
 
 uint8_t GldAds1256Reader::getCurrentGain(uint8_t channel) const {
@@ -182,10 +192,17 @@ float GldAds1256Reader::convertToVoltage(long raw, uint8_t pgaGain) const {
     return (static_cast<float>(raw) / 8388607.0f) * (GLD_ADS1256_VREF_VOLTS / static_cast<float>(pgaGain));
 }
 
-long GldAds1256Reader::readSingleInternal(uint8_t channel) {
+bool GldAds1256Reader::readSingleInternal(uint8_t channel, long& raw) {
     ads_->setMUX(muxSingleEnded(adsInputForSensor(channel)));
+    if (!waitDrdyLow(ADS1256_READ_DRDY_TIMEOUT_MS)) {
+        return false;
+    }
     (void)ads_->readSingle();
-    return ads_->readSingle();
+    if (!waitDrdyLow(ADS1256_READ_DRDY_TIMEOUT_MS)) {
+        return false;
+    }
+    raw = ads_->readSingle();
+    return true;
 }
 
 const char* gldAds1256StatusName(GldAds1256Status status) {

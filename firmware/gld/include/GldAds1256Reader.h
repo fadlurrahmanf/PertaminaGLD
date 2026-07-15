@@ -44,11 +44,11 @@ private:
     uint8_t gainConfirmDown_[8]{};
     uint8_t gainConfirmUp_[8]{};
 
-    void gainCalibrate(uint8_t channel);
+    bool gainCalibrate(uint8_t channel);
     uint8_t getCurrentGain(uint8_t channel) const;
     void applyGain(uint8_t channel);
     float convertToVoltage(long raw, uint8_t pgaGain) const;
-    long readSingleInternal(uint8_t channel);
+    bool readSingleInternal(uint8_t channel, long& raw);
 };
 
 const char* gldAds1256StatusName(GldAds1256Status status);

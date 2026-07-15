@@ -1,8 +1,8 @@
 // Serial JSONL/legacy line parsing, boot diagnostics, Sensor Check
 // rendering, alarm state, and command send/response-watch/poll plumbing.
 
-import { $, elements, state, encoder, SENSOR_NAMES, SENSOR_MUX_CHANNELS, SENSOR_STATUS_NAMES, SERIAL_RESPONSE_TIMEOUT_MS } from "./state.js";
-import { setText, setBadge, appendLog, getField, setField, wait } from "./ui.js";
+import { $, elements, state, encoder, SENSOR_NAMES, SENSOR_MUX_CHANNELS, SENSOR_STATUS_NAMES, SERIAL_RESPONSE_TIMEOUT_MS, DEFAULT_POLL_INTERVAL_MS, CHART_COLORS } from "./state.js";
+import { setText, setBadge, appendLog, getField, setField, wait, showAlert } from "./ui.js";
 import { syncDeviceSummary, renderFleetPanel } from "./fleet.js";
 import { pruneHistory, drawChart } from "./chart.js";
 import { renderNullingChannels, latestFeatureOrderForNulling, updateNullingMeta, appendNulling } from "./nulling.js";
@@ -75,6 +75,7 @@ export function resetDeviceSnapshot() {
   state.status = null;
   state.mode = "unknown";
   setText("deviceId", "Unknown");
+  setText("currentChAddress", "Unknown");
   setText("modeValue", "Unknown");
   setText("firmwareValue", "Unknown");
   setText("gasValue", "n/a");
@@ -95,6 +96,7 @@ export function resetDeviceSnapshot() {
 
 function updateInfo(info) {
   setText("deviceId", info.deviceId);
+  setText("currentChAddress", info.targetChId);
   setText("modeValue", info.mode);
   setText("firmwareValue", info.firmwareVersion || info.firmwareName);
   setBadge(elements.protocolLabel, info.protocolVersion || "app serial", "ok");
@@ -110,6 +112,7 @@ function updateInfo(info) {
 
 function updateStatus(status) {
   setText("deviceId", status.deviceId || state.info?.deviceId);
+  if (status.targetChId) setText("currentChAddress", status.targetChId);
   setText("modeValue", status.mode);
 
   const telemetry = status.telemetry || {};
@@ -122,7 +125,10 @@ function updateStatus(status) {
   const power = status.power || {};
   setText("powerMode", power.mode);
   setText("externalPower", power.externalPower === true ? "Yes" : power.externalPower === false ? "No" : "Unknown");
-  const batteryText = Number.isFinite(power.batteryMv) ? `${power.batteryMv} mV` : "Unknown";
+  // batteryValid is false whenever the GLD is on external 24V/5V power (no
+  // battery sensed) - batteryMv is then a sentinel (65535), not a real
+  // reading, so show "-" instead of that raw number.
+  const batteryText = power.batteryValid && Number.isFinite(power.batteryMv) ? `${power.batteryMv} mV` : "-";
   setText("batteryValue", batteryText);
   setText("batteryValueMirror", batteryText);
 
@@ -671,6 +677,69 @@ export function renderSensorCheck() {
     card.append(head, stage, detail, extra);
     elements.sensorCheckChannels.append(card);
   }
+
+  renderSensorChannels(channels);
+}
+
+// PGA gain steps the ADS1256 reader actually cycles through (see
+// PGA_VALUE_TABLE in firmware/gld/src/GldAds1256Reader.cpp) - the value the
+// GLD reports in telemetry.sensorGain is already one of these, not an index.
+const GAIN_STEPS = [1, 2, 4, 8, 16, 32, 64];
+
+// Live per-channel voltage + gain readout for the Running tab: one card per
+// sensor with its current voltage and a 7-step gain ladder highlighting the
+// PGA gain currently in effect for that channel.
+function buildSensorChannelCard(channel) {
+  const card = document.createElement("article");
+  card.className = "channel-card";
+
+  const head = document.createElement("div");
+  head.className = "channel-card-head";
+  const titleWrap = document.createElement("span");
+  titleWrap.className = "channel-card-title";
+  const swatch = document.createElement("i");
+  swatch.className = "legend-swatch";
+  swatch.style.background = CHART_COLORS[channel.index];
+  const title = document.createElement("strong");
+  title.textContent = channel.sensor;
+  titleWrap.append(swatch, title);
+  const key = document.createElement("span");
+  key.textContent = `CH${channel.index + 1}`;
+  head.append(titleWrap, key);
+
+  const voltageEl = document.createElement("span");
+  voltageEl.className = "channel-stage";
+  // Raw reading straight from telemetry, not the toFixed(6) copy Sensor
+  // Check uses - shows every digit the GLD actually reported, no rounding.
+  const rawVoltage = state.status?.telemetry?.sensorVoltage?.[channel.index];
+  const voltageNumber = Number(rawVoltage);
+  voltageEl.textContent = Number.isFinite(voltageNumber) ? `${voltageNumber} V` : "- V";
+
+  const gainValue = channel.gain !== "" ? Number(channel.gain) : null;
+  const ladder = document.createElement("div");
+  ladder.className = "gain-ladder";
+  for (const step of GAIN_STEPS) {
+    const block = document.createElement("span");
+    block.className = `gain-block${step === gainValue ? " active" : ""}`;
+    block.textContent = String(step);
+    ladder.append(block);
+  }
+
+  card.append(head, voltageEl, ladder);
+  return card;
+}
+
+// CH1-CH4 stack to the left of the chart, CH5-CH8 to the right, so the
+// chart itself stays the visual center of the Running tab.
+function renderSensorChannels(channels) {
+  if (!elements.sensorChannelsLeft || !elements.sensorChannelsRight) return;
+  elements.sensorChannelsLeft.innerHTML = "";
+  elements.sensorChannelsRight.innerHTML = "";
+
+  channels.forEach((channel, index) => {
+    const card = buildSensorChannelCard(channel);
+    (index < 4 ? elements.sensorChannelsLeft : elements.sensorChannelsRight).append(card);
+  });
 }
 
 // ---- line dispatch ----
@@ -724,8 +793,14 @@ export function handleLine(rawLine) {
       if (ack.mode) state.mode = ack.mode;
       if (ack.deviceId) setText("deviceId", ack.deviceId);
       if (ack.cmd === "SET_DEVICE_ID" && ack.status === "ok") setText("deviceId", ack.deviceId);
+      if (ack.chId) setText("currentChAddress", ack.chId);
       setBadge(elements.protocolLabel, `${ack.cmd}: ${ack.status}`, ack.status === "ok" ? "ok" : "warn");
       syncDeviceSummary();
+      if (state.pendingAckWait && state.pendingAckWait.cmd === ack.cmd) {
+        const { resolve } = state.pendingAckWait;
+        state.pendingAckWait = null;
+        resolve(ack);
+      }
       return;
     }
   } catch (error) {
@@ -837,7 +912,68 @@ export async function sendCommand(command) {
   startSerialResponseWatch(line);
 }
 
+// Sends a command, waits for its ack, and pops up the app's own centered
+// modal with the outcome so an Apply button always tells the operator
+// whether it actually landed on the device (accepted, rejected by firmware
+// validation, or no response at all) instead of leaving that only in the
+// scrolling log.
+export async function applyAndAlert(command, ackCmd, actionLabel) {
+  try {
+    const ack = await sendCommandAndWaitAck(command, ackCmd);
+    if (ack.status === "ok") {
+      await showAlert(`${actionLabel}: berhasil diterapkan.${ack.message ? `\n${ack.message}` : ""}`, "ok", actionLabel);
+    } else {
+      await showAlert(`${actionLabel}: DITOLAK oleh perangkat.\n${ack.message || ack.status}`, "error", actionLabel);
+    }
+    return ack;
+  } catch (error) {
+    await showAlert(`${actionLabel}: GAGAL - ${error.message}`, "error", actionLabel);
+    return null;
+  }
+}
+
+// Sends a command and waits for the matching GLD_CMD_ACK_JSON (matched by
+// ack.cmd) so callers can show a definitive success/failure popup instead of
+// firing the command and hoping it landed.
+export function sendCommandAndWaitAck(command, ackCmd, timeoutMs = SERIAL_RESPONSE_TIMEOUT_MS) {
+  return new Promise((resolve, reject) => {
+    if (state.pendingAckWait) state.pendingAckWait = null;
+    const timer = setTimeout(() => {
+      if (state.pendingAckWait?.reject === reject) {
+        state.pendingAckWait = null;
+        reject(new Error(`no response for ${ackCmd} after ${timeoutMs}ms`));
+      }
+    }, timeoutMs);
+    state.pendingAckWait = {
+      cmd: ackCmd,
+      resolve: (ack) => { clearTimeout(timer); resolve(ack); },
+      reject
+    };
+    Promise.resolve(sendCommand(command)).catch((error) => {
+      if (state.pendingAckWait?.reject === reject) {
+        clearTimeout(timer);
+        state.pendingAckWait = null;
+        reject(error);
+      }
+    });
+  });
+}
+
 // ---- polling ----
+
+export function pollIntervalMs() {
+  const raw = Number($("pollIntervalMs")?.value);
+  return Number.isFinite(raw) && raw >= 200 ? raw : DEFAULT_POLL_INTERVAL_MS;
+}
+
+// Poll is mirrored on both the Running and Dataset tabs (same shared
+// state.polling/pollTimer) so either button reflects and controls the same
+// recording loop - update every button with this class, not just one.
+function setPollButtonLabel(text) {
+  document.querySelectorAll(".poll-btn").forEach((button) => {
+    button.textContent = text;
+  });
+}
 
 export function togglePolling() {
   if (state.polling) {
@@ -847,16 +983,17 @@ export function togglePolling() {
       appendLog("POLL_SKIPPED serial not connected", "in");
       return;
     }
+    const intervalMs = pollIntervalMs();
     state.polling = true;
-    elements.refreshLoopBtn.textContent = "Stop Poll";
-    state.pollTimer = setInterval(() => sendCommand("GET_STATUS"), 1000);
+    setPollButtonLabel(`Stop Poll (${intervalMs}ms)`);
+    state.pollTimer = setInterval(() => sendCommand("GET_STATUS"), intervalMs);
     sendCommand("GET_STATUS");
   }
 }
 
 export function stopPolling() {
   state.polling = false;
-  elements.refreshLoopBtn.textContent = "Poll 1s";
+  setPollButtonLabel(`Poll ${pollIntervalMs()}ms`);
   if (state.pollTimer) clearInterval(state.pollTimer);
   state.pollTimer = null;
 }

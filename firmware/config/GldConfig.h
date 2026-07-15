@@ -17,18 +17,23 @@
 // Node ID GLD dalam format hex tanpa prefix 0x. Nilai ini menjadi sumber tunggal
 // untuk GLD_NODE_ID numerik, device ID string, MQTT client ID, dan topic per GLD.
 #ifndef GLD_NODE_HEX
-#define GLD_NODE_HEX        F001
+#define GLD_NODE_HEX        F010
 #endif
 
 // Cluster Head target untuk uplink LoRa STAR dari GLD ini. Harus sama dengan
 // CH_ID pada ChConfig.h untuk CH yang menjadi pasangan GLD.
 #ifndef GLD_CH_ID
-#define GLD_CH_ID           0x0064
+#define GLD_CH_ID           0x006B
 #endif
 
-// Interval scan sensor/inference dalam ms. Makin kecil berarti sampling lebih
-// sering, tetapi CPU/power dan beban pipeline naik.
-#define GLD_SCAN_INTERVAL_MS     1000
+// Interval scan sensor/inference dalam ms. Angka 500 ms adalah titik aman dari
+// hasil bench COM9: cukup di atas sweep ADS 8-sensor ~330 ms, tanpa membebani
+// pipeline seperti interval sub-350 ms.
+#define GLD_SCAN_INTERVAL_MS      500
+
+// Batas bawah interval dataset. Command MQTT yang meminta interval lebih kecil
+// tetap dinaikkan ke nilai ini supaya pembacaan ADS 8-sensor tidak overlap.
+#define GLD_DATASET_MIN_SAMPLE_INTERVAL_MS 500
 
 // Interval transmit LoRa STAR untuk payload running/inference dalam ms.
 // Makin kecil berarti data lebih sering dikirim, tetapi airtime dan baterai naik.

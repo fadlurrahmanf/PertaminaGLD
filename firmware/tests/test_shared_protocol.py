@@ -879,6 +879,7 @@ def test_gld_unified_runtime_scaffolds_present():
     nulling_header = pathlib.Path("firmware/gld/include/GldNullingService.h").read_text(encoding="utf-8")
     power_src = pathlib.Path("firmware/gld/src/GldPower.cpp").read_text(encoding="utf-8")
     unified_src = pathlib.Path("firmware/gld/src/GldUnifiedMain.cpp").read_text(encoding="utf-8")
+    dataset_src = pathlib.Path("firmware/gld/src/GldDatasetMain.cpp").read_text(encoding="utf-8")
     radio_header = pathlib.Path("firmware/shared/include/RadioTransport.h").read_text(encoding="utf-8")
     config_header = pathlib.Path("firmware/shared/include/FirmwareConfig.h").read_text(encoding="utf-8")
     operator_index = pathlib.Path("apps/gld-operator/index.html").read_text(encoding="utf-8")
@@ -921,6 +922,7 @@ def test_gld_unified_runtime_scaffolds_present():
     assert "RUN_BOOT_CHECK" in command_src
     assert "RUN_ADS_MCP_SWEEP" in command_src
     assert "SLEEP_NOW" in command_src
+    assert "SET_CH_ADDRESS_JSON" in command_src
     assert "GldSerialCommandType::Unknown" in command_src
     assert "echoTypedChar" in command_src
     assert "stream.write(static_cast<uint8_t>(c))" in command_src
@@ -933,6 +935,7 @@ def test_gld_unified_runtime_scaffolds_present():
     assert "RunBootCheck" in command_header
     assert "RunAdsMcpSweep" in command_header
     assert "SleepNow" in command_header
+    assert "SetChAddressJson" in command_header
     assert "GldSerialCommandType::Restart" in command_src
     assert "GldSerialCommandType::RunBootCheck" in command_src
     assert "GldSerialCommandType::RunAdsMcpSweep" in command_src
@@ -1003,15 +1006,66 @@ def test_gld_unified_runtime_scaffolds_present():
     assert "PGL_GLD_PIN_TPL5110_DONE 14" in board_pins
     assert "WiFi.mode(WIFI_OFF)" in unified_src
     assert "emitCommandAck(\"SET_MODE\", \"ok\", \"mode switch accepted\", true)" in unified_src
-    assert "doc[\"targetChId\"] = static_cast<uint16_t>(GLD_CH_ID)" in unified_src
+    gld_config = pathlib.Path("firmware/config/GldConfig.h").read_text(encoding="utf-8")
+    assert "#define GLD_SCAN_INTERVAL_MS      500" in gld_config
+    assert "#define GLD_DATASET_MIN_SAMPLE_INTERVAL_MS 500" in gld_config
+    assert "#define GLD_NODE_HEX        F010" in gld_config
+    assert "#define GLD_CH_ID           0x006B" in gld_config
+    assert "uint16_t chId = static_cast<uint16_t>(GLD_CH_ID)" in unified_src
+    assert 'caps["serialChAddress"] = "SET_CH_ADDRESS_JSON chId"' in unified_src
+    assert 'doc["targetChId"] = chIdHex' in unified_src
+    assert "static StaticJsonDocument<1280> doc;" in unified_src
+    assert "static StaticJsonDocument<4096> doc;" in unified_src
+    assert 'starLora["freqMHz"] = STAR_FREQ_MHZ' in unified_src
+    assert 'starLora["bwKHz"] = STAR_BW_KHZ' in unified_src
+    assert 'starLora["sf"] = STAR_SF' in unified_src
+    assert "GLD_STAR_CONFIG freqMHz=%.1f bwKHz=%.1f sf=%u" in unified_src
+    assert "runtimeConfig.nodeId, runtimeConfig.chId" in unified_src
+    assert "sampleIntervalMs = DATASET_MIN_SAMPLE_INTERVAL_MS" in unified_src
+    assert "sampleIntervalMs = requestedSampleIntervalMs < DATASET_MIN_SAMPLE_INTERVAL_MS" in unified_src
     assert "bootHealth" in unified_src
     assert "sensorVoltage" in unified_src
     assert "sensorGain" in unified_src
     assert "featureOrder" in unified_src
-    assert "latestTelemetryValid = true" in unified_src
+    assert "const bool allValid = okChannels == pgl::gld::board::SENSOR_COUNT" in unified_src
+    assert "latestTelemetryValid = allValid" in unified_src
+    assert "latestTelemetryValid = okChannels == pgl::gld::board::SENSOR_COUNT" in unified_src
+    assert "allValid ? 1 : 0" in unified_src
+    assert "if (allValid && primed && mlReady)" in unified_src
     assert "lastLoraTxState = txState" in unified_src
+    assert "DATASET_QUEUE_CAPACITY = 16" in unified_src
+    assert "DATASET_QUEUE_CAPACITY = 16" in dataset_src
+    assert "DATASET_QUEUE_ENQUEUE" in unified_src
+    assert "DATASET_QUEUE_RETRY" in unified_src
+    assert "queuePending" in unified_src
+    assert "queue_pending" in dataset_src
+    assert "publishDatasetPayload(payload, datasetSeq, false)" in unified_src
+    assert "publishDatasetPayload(payload, datasetSeq, false)" in dataset_src
+    assert 'doc.createNestedArray("sensor_status")' in unified_src
+    assert 'doc.createNestedArray("sensor_status")' in dataset_src
+    assert "statusArr.add(static_cast<uint8_t>(r.status))" in unified_src
+    assert "statusArr.add(static_cast<uint8_t>(r.status))" in dataset_src
+    assert "flushDatasetQueue();" in unified_src
+    assert "flushDatasetQueue();" in dataset_src
+    assert "ADS_RECOVERY_ATTEMPT" in unified_src
+    assert "ADS_RECOVERY_ATTEMPT" in dataset_src
+    assert "mqttReconnectCount" in unified_src
+    assert "mqttReconnectCount" in dataset_src
+    assert 'recovery["adsRecoveryCount"] = adsRecoveryCount' in unified_src
+    assert "BOOT_RECOVERY_DELAY_MS = 60000" in unified_src
+    assert "BOOT_RECOVERY_MAX_RESTARTS = 1" in unified_src
+    assert "BOOT_RECOVERY_ARM reason=%s delayMs=%lu" in unified_src
+    assert "BOOT_RECOVERY_RETRY target=ADS1256" in unified_src
+    assert "BOOT_RECOVERY_RESTART_SUPPRESSED" in unified_src
+    assert "maintainBootReportRecovery();" in unified_src
+    assert "if (bootRecoveryDelayActive()) return;" in unified_src
+    assert "runtimeConfig.nodeId = nodeIdFromDeviceId(runtimeConfig.deviceId, DEFAULT_NODE_ID)" in unified_src
+    assert "nodeId must match deviceId; omit nodeId unless it is identical" in unified_src
     assert 'data-command="RUN_BOOT_CHECK"' in operator_index
-    assert "js/main.js?v=20260714-2600" in operator_index
+    assert 'id="sampleIntervalMs" type="number" min="500" step="50" value="500"' in operator_index
+    assert re.search(r'js/main\.js\?v=[^"]+', operator_index)
+    assert "js/main.js?v=20260715-1900" not in operator_index
+    assert "js/main.js?v=20260715-manifold-1" in operator_index
     assert 'command === "GET_STATUS" || command === "RUN_BOOT_CHECK"' in operator_app
     assert "SENSOR_MUX_CHANNELS = [7, 6, 5, 0, 1, 2, 3, 4]" in operator_app
     assert "function setBootProbe(key, patch)" in operator_app
@@ -1024,6 +1078,8 @@ def test_gld_unified_runtime_scaffolds_present():
     assert 'knownMode === "dataset" || (mode === "inference"' in operator_app
     assert "MQTT_SET_MODE_SENT mode=" in operator_app
     assert "GLD acknowledged MQTT SET_MODE" in operator_app
+    assert "DATASET_QUEUE_" in operator_app
+    assert "Queue full, dropped seq" in operator_app
     assert 'if command == "START_DATASET":\n        dataset_monitor.start(payload)\n        topic = f"{topic_root}/{device_id}/dataset"' in operator_bridge
     assert 'topic = f"{topic_root}/{device_id}/cmd"' in operator_bridge
     assert 'dataset_payload = {"cmd": "SET_MODE", "mode": mode}' in operator_bridge
@@ -1353,7 +1409,11 @@ def test_gld_sensor_selftest_scaffold_present():
     assert "ads_->setDRATE(DRATE_30000SPS)" in ads_reader
     assert "ads_->readSingle()" in ads_reader
     assert "waitDrdyLow(1500)" in ads_reader
-    assert "gainCalibrate(channel)" in ads_reader
+    assert "ADS1256_READ_DRDY_TIMEOUT_MS = 5" in ads_reader
+    assert "waitDrdyLow(ADS1256_READ_DRDY_TIMEOUT_MS)" in ads_reader
+    assert "!gainCalibrate(channel)" in ads_reader
+    assert "GldAds1256Status::DrdyTimeout" in ads_reader
+    assert "bool GldAds1256Reader::readSingleInternal(uint8_t channel, long& raw)" in ads_reader
     assert "PGA_VALUE_TABLE" in ads_reader
     assert "PGA_LIB_CONST" in ads_reader
     assert "reading.gain" in sensor_main

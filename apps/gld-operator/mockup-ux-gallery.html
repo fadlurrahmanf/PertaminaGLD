@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GLD Operator — UX Mockup Gallery</title>
+<style>
+  :root{
+    --panel-black:#14110d;
+    --panel-2:#1c1812;
+    --panel-3:#24201a;
+    --hairline:rgba(255,255,255,.09);
+    --hairline-strong:rgba(255,255,255,.16);
+    --amber:#ffa400;
+    --amber-dim:#8a5c12;
+    --cyan:#4fd8e0;
+    --red:#ff3b30;
+    --text:#f1ede4;
+    --text-muted:#9a9184;
+    --text-faint:#6b655a;
+    --radius:3px;
+    --font-display:'Bahnschrift','Segoe UI Semibold','Segoe UI',sans-serif;
+    --font-body:'Segoe UI',system-ui,sans-serif;
+    --font-mono:'Cascadia Mono','Consolas',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{background:var(--panel-black);}
+  .gallery{
+    background:var(--panel-black);
+    color:var(--text);
+    font-family:var(--font-body);
+    max-width:960px;
+    margin:0 auto;
+    padding:2rem 1.5rem 4rem;
+    line-height:1.55;
+  }
+  .intro{border-bottom:1px solid var(--hairline-strong);padding-bottom:1.5rem;margin-bottom:2rem;}
+  .eyebrow{
+    font-family:var(--font-mono);
+    font-size:11px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--amber);
+    margin:0 0 .5rem;
+  }
+  h1{
+    font-family:var(--font-display);
+    font-weight:600;
+    font-size:26px;
+    letter-spacing:.01em;
+    margin:0 0 .6rem;
+    text-wrap:balance;
+  }
+  .intro p{color:var(--text-muted);font-size:14px;max-width:62ch;margin:.3rem 0;}
+  .bay{
+    background:var(--panel-2);
+    border:1px solid var(--hairline);
+    border-radius:var(--radius);
+    margin-bottom:1.25rem;
+    overflow:hidden;
+  }
+  .bay-head{
+    display:flex;
+    align-items:baseline;
+    gap:.9rem;
+    padding:1rem 1.25rem .85rem;
+    border-bottom:1px solid var(--hairline);
+  }
+  .bay-num{
+    font-family:var(--font-mono);
+    font-size:13px;
+    color:var(--panel-black);
+    background:var(--amber);
+    padding:2px 8px;
+    border-radius:2px;
+    font-weight:600;
+    flex-shrink:0;
+  }
+  .bay-title{
+    font-family:var(--font-display);
+    font-size:16px;
+    font-weight:600;
+    margin:0;
+    flex-shrink:0;
+  }
+  .bay-tag{
+    font-family:var(--font-mono);
+    font-size:10.5px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--cyan);
+    margin-left:auto;
+    white-space:nowrap;
+  }
+  .bay-body{padding:1.1rem 1.25rem 1.3rem;}
+  .bay-note{font-size:13px;color:var(--text-muted);margin:0 0 1rem;max-width:68ch;}
+  .stage{
+    background:var(--panel-black);
+    border:1px solid var(--hairline);
+    border-radius:var(--radius);
+    padding:1rem;
+    position:relative;
+    min-height:60px;
+  }
+  button.demo-btn{
+    font-family:var(--font-body);
+    font-size:13px;
+    color:var(--text);
+    background:var(--panel-3);
+    border:1px solid var(--hairline-strong);
+    border-radius:var(--radius);
+    padding:7px 13px;
+    cursor:pointer;
+  }
+  button.demo-btn:hover{border-color:var(--amber);color:var(--amber);}
+  button.demo-btn.primary{background:var(--amber);color:#241a02;border-color:var(--amber);font-weight:600;}
+  button.demo-btn.primary:hover{color:#241a02;filter:brightness(1.08);}
+  button.demo-btn.danger{color:var(--red);border-color:var(--red);background:transparent;}
+
+  /* 1. accordion */
+  .acc-item{border:1px solid var(--hairline);border-radius:var(--radius);margin-bottom:8px;overflow:hidden;}
+  .acc-head{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:9px 12px;cursor:pointer;background:var(--panel-3);
+    font-size:13px;font-weight:600;
+  }
+  .acc-head .chev{transition:transform .15s ease;color:var(--text-muted);}
+  .acc-item.open .acc-head .chev{transform:rotate(180deg);color:var(--amber);}
+  .acc-panel{max-height:0;overflow:hidden;transition:max-height .18s ease;}
+  .acc-item.open .acc-panel{max-height:200px;}
+  .acc-panel-inner{padding:10px 12px;font-size:12.5px;color:var(--text-muted);font-family:var(--font-mono);}
+
+  /* 2. command palette */
+  .cmdk-overlay{
+    position:absolute;inset:0;background:rgba(10,8,5,.72);
+    display:none;align-items:flex-start;justify-content:center;padding-top:14px;
+    border-radius:var(--radius);
+  }
+  .cmdk-overlay.show{display:flex;}
+  .cmdk-box{width:min(420px,92%);background:var(--panel-2);border:1px solid var(--hairline-strong);border-radius:var(--radius);}
+  .cmdk-input{
+    width:100%;background:transparent;border:none;border-bottom:1px solid var(--hairline);
+    color:var(--text);font-family:var(--font-mono);font-size:13px;padding:10px 12px;outline:none;
+  }
+  .cmdk-list{max-height:180px;overflow:auto;}
+  .cmdk-row{padding:8px 12px;font-size:13px;display:flex;justify-content:space-between;cursor:pointer;}
+  .cmdk-row:hover,.cmdk-row.active{background:var(--panel-3);}
+  .cmdk-row span.k{color:var(--text-faint);font-family:var(--font-mono);font-size:11px;}
+
+  /* 3. drawer */
+  .drawer-stage{overflow:hidden;position:relative;height:150px;}
+  .drawer{
+    position:absolute;top:0;right:0;bottom:0;width:62%;
+    background:var(--panel-2);border-left:1px solid var(--hairline-strong);
+    transform:translateX(100%);transition:transform .2s ease;padding:12px;
+  }
+  .drawer.open{transform:translateX(0);}
+  .drawer-scrim{position:absolute;inset:0;background:rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:opacity .2s ease;}
+  .drawer-scrim.show{opacity:1;pointer-events:auto;}
+  .drawer h4{margin:0 0 8px;font-family:var(--font-display);font-size:14px;}
+  .field-row{display:flex;flex-direction:column;gap:3px;margin-bottom:8px;}
+  .field-row label{font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;}
+  .field-row input,.field-row select{background:var(--panel-black);border:1px solid var(--hairline-strong);color:var(--text);
+    border-radius:2px;padding:6px 8px;font-size:12.5px;font-family:var(--font-mono);}
+
+  /* 4. sticky strip + sheet */
+  .strip{display:flex;gap:14px;align-items:center;background:var(--panel-3);border:1px solid var(--hairline);border-radius:var(--radius);padding:8px 12px;font-size:12.5px;}
+  .strip .chip{display:flex;flex-direction:column;}
+  .strip .chip span{color:var(--text-faint);font-size:10px;text-transform:uppercase;letter-spacing:.05em;}
+  .strip .chip strong{font-family:var(--font-mono);font-weight:600;}
+  .sheet{max-height:0;overflow:hidden;transition:max-height .2s ease;background:var(--panel-black);border:1px solid var(--hairline);border-top:none;border-radius:0 0 var(--radius) var(--radius);}
+  .sheet.open{max-height:160px;}
+  .sheet-inner{padding:12px;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
+  .gauge-mini{background:var(--panel-3);border:1px solid var(--hairline);border-radius:2px;padding:8px;}
+  .gauge-mini span{font-size:10px;color:var(--text-faint);text-transform:uppercase;}
+  .gauge-mini strong{display:block;font-family:var(--font-mono);font-size:14px;margin-top:2px;}
+
+  /* 5. wizard */
+  .wiz-dots{display:flex;gap:6px;margin-bottom:10px;}
+  .wiz-dot{width:20px;height:3px;background:var(--hairline-strong);border-radius:2px;}
+  .wiz-dot.on{background:var(--amber);}
+  .wiz-step{display:none;}
+  .wiz-step.active{display:block;}
+  .wiz-foot{display:flex;justify-content:space-between;margin-top:12px;}
+
+  /* 6. nulling grid */
+  .ch-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+  .ch-card{background:var(--panel-3);border:1px solid var(--hairline);border-radius:2px;padding:8px;cursor:pointer;font-size:12px;}
+  .ch-card .ch-top{display:flex;justify-content:space-between;font-family:var(--font-mono);}
+  .ch-card .ch-top .status{color:var(--cyan);}
+  .ch-card.pass .ch-top .status{color:#8fd66b;}
+  .ch-detail{max-height:0;overflow:hidden;transition:max-height .15s ease;font-family:var(--font-mono);font-size:11px;color:var(--text-muted);}
+  .ch-card.open .ch-detail{max-height:80px;margin-top:6px;}
+
+  /* 7. confirm popup */
+  .confirm-overlay{position:absolute;inset:0;background:rgba(10,8,5,.72);display:none;align-items:center;justify-content:center;border-radius:var(--radius);}
+  .confirm-overlay.show{display:flex;}
+  .confirm-box{width:min(320px,90%);background:var(--panel-2);border:1px solid var(--hairline-strong);border-radius:var(--radius);padding:14px;}
+  .confirm-box h4{margin:0 0 6px;font-family:var(--font-display);font-size:14px;color:var(--red);}
+  .confirm-cmd{background:var(--panel-black);border:1px solid var(--hairline);border-radius:2px;padding:8px;font-family:var(--font-mono);font-size:11.5px;color:var(--cyan);margin:8px 0;}
+  .confirm-foot{display:flex;gap:8px;justify-content:flex-end;}
+
+  /* 8. fleet popover */
+  .fleet-badge{display:inline-flex;align-items:center;gap:6px;background:var(--panel-3);border:1px solid var(--hairline-strong);border-radius:2px;padding:6px 10px;font-size:12.5px;cursor:pointer;font-family:var(--font-mono);}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--amber);}
+  .fleet-pop{display:none;position:absolute;top:44px;left:1rem;width:220px;background:var(--panel-2);border:1px solid var(--hairline-strong);border-radius:var(--radius);z-index:5;}
+  .fleet-pop.show{display:block;}
+  .fleet-row{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;font-size:12px;border-bottom:1px solid var(--hairline);cursor:pointer;}
+  .fleet-row:last-child{border-bottom:none;}
+  .fleet-row:hover{background:var(--panel-3);}
+  .fleet-row .dot.alarm{background:var(--red);}
+  .fleet-row .dot.off{background:var(--text-faint);}
+
+  .verdict{margin-top:2.5rem;border-top:1px solid var(--hairline-strong);padding-top:1.25rem;font-size:13px;color:var(--text-muted);}
+  .verdict strong{color:var(--text);}
+</style>
+</head>
+<body>
+<div class="gallery">
+  <div class="intro">
+    <p class="eyebrow">GLD Operator — console revision</p>
+    <h1>8 layout candidates, live-tested</h1>
+    <p>Console yang sekarang menampilkan semua modul terbuka sekaligus, jadi satu layar bisa penuh sebelum operator butuh separuhnya. Delapan pola di bawah menyembunyikan detail sampai diminta — accordion, drawer, popover, wizard, sheet — sambil tetap satu klik dari command aslinya. Semua contoh interaktif langsung, coba klik.</p>
+  </div>
+
+  <div class="bay">
+    <div class="bay-head"><span class="bay-num">01</span><h3 class="bay-title">Collapsible module accordion</h3><span class="bay-tag">Running tab</span></div>
+    <div class="bay-body">
+      <p class="bay-note">Ganti "Power and Boot Health details" yang sudah pakai &lt;details&gt; jadi pola accordion konsisten untuk semua modul sekunder (Power, Boot Health, Sensor Check meta). Default collapsed, state per-modul diingat.</p>
+      <div class="stage">
+        <div class="acc-item open" onclick="this.classList.toggle('open')">
+          <div class="acc-head"><span>Sensor Telemetry</span><span class="chev">&#9660;</span></div>
+          <div class="acc-panel"><div class="acc-panel-inner">MQ8 2.41V · MQ135 1.02V · MQ3 0.88V · range 1min</div></div>
+        </div>
+        <div class="acc-item" onclick="this.classList.toggle('open')">
+          <div class="acc-head"><span>Power and Boot Health</span><span class="chev">&#9660;</span></div>
+          <div class="acc-panel"><div class="acc-panel-inner">External: OK · Battery: 92% · ADS: Ready · MCP: 8/8 · DAC: Ready</div></div>
+        </div>
+        <div class="acc-item" onclick="this.classList.toggle('open')">
+          <div class="acc-head"><span>Fleet Summary</span><span class="chev">&#9660;</span></div>
+          <div class="acc-panel"><div class="acc-panel-inner">Slot 1 active · Slot 2 idle · Slot 3 alarm</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bay">
+    <div class="bay-head"><span class="bay-num">02</span><h3 class="bay-title">Command palette popup</h3><span class="bay-tag">Global, any tab</span></div>
+    <div class="bay-body">
+      <p class="bay-note">Satu shortcut (Ctrl+K) untuk semua command: Ping, Info, Status, ganti Mode, ganti slot aktif. Operator berpengalaman tidak perlu pindah sidebar/tab; operator baru tetap bisa pakai tombol biasa.</p>
+      <div class="stage" style="position:relative;">
+        <button class="demo-btn" onclick="document.getElementById('cmdk1').classList.add('show');document.getElementById('cmdki').focus()">Ctrl+K Quick Command</button>
+        <div class="cmdk-overlay" id="cmdk1" onclick="if(event.target===this)this.classList.remove('show')">
+          <div class="cmdk-box">
+            <input class="cmdk-input" id="cmdki" placeholder="Type a command…" oninput="cmdkFilter(this)">
+            <div class="cmdk-list" id="cmdkList">
+              <div class="cmdk-row"><span>Ping device</span><span class="k">APP_PING</span></div>
+              <div class="cmdk-row"><span>Get status</span><span class="k">GET_STATUS</span></div>
+              <div class="cmdk-row"><span>Switch to Dataset mode</span><span class="k">SET_MODE</span></div>
+              <div class="cmdk-row"><span>Switch to Nulling mode</span><span class="k">SET_MODE</span></div>
+              <div class="cmdk-row"><span>Make Slot 2 active</span><span class="k">FLEET</span></div>
+              <div class="cmdk-row"><span>Mute alarm</span><span class="k">LOCAL</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bay">
+    <div class="bay-head"><span class="bay-num">03</span><h3 class="bay-title">Slide-over drawer</h3><span class="bay-tag">Port Setup</span></div>
+    <div class="bay-body">
+      <p class="bay-note">Port Setup sekarang panel tengah yang menutupi seluruh layar. Versi drawer geser dari kanan, masih menutup interaksi lain (fokus disengaja) tapi terasa lebih ringan dan operator masih lihat konteks tab di belakang.</p>
+      <div class="stage drawer-stage">
+        <button class="demo-btn" onclick="document.getElementById('drw').classList.add('open');document.getElementById('drwScrim').classList.add('show')">Open Port Setup</button>
+        <div class="drawer-scrim" id="drwScrim" onclick="document.getElementById('drw').classList.remove('open');this.classList.remove('show')"></div>
+        <div class="drawer" id="drw">
+          <h4>Port Setup</h4>
+          <div class="field-row"><label>Serial Port</label><select><option>COM10</option></select></div>
+          <div class="field-row"><label>Baud</label><input value="115200" readonly></div>
+          <button class="demo-btn primary" style="width:100%;">Connect Serial</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bay">
+    <div class="bay-head"><span class="bay-num">04</span><h3 class="bay-title">Sticky strip + detail sheet</h3><span class="bay-tag">Topbar readout</span></div>
+    <div class="bay-body">
+      <p class="bay-note">Readout strip topbar dipadatkan jadi satu baris ringkas yang selalu terlihat; klik "Details" membuka sheet berisi 4 gauge card penuh tanpa pindah tab, lalu tutup lagi begitu selesai dicek.</p>
+      <div class="stage">
+        <div class="strip">
+          <div class="chip"><span>Gas</span><strong>n/a</strong></div>
+          <div class="chip"><span>Conf</span><strong>-%</strong></div>
+          <div class="chip"><span>Mode</span><strong>Running</strong></div>
+          <button class="demo-btn" style="margin-left:auto;" onclick="document.getElementById('sheet1').classList.toggle('open')">Details</button>
+        </div>
+        <div class="sheet" id="sheet1">
+          <div class="sheet-inner">
+            <div class="gauge-mini"><span>Device</span><strong>F001</strong></div>
+            <div class="gauge-mini"><span>LoRa</span><strong>Linked</strong></div>
+            <div class="gauge-mini"><span>Battery</span><strong>92%</strong></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bay">
+    <div class="bay-head"><span class="bay-num">05</span><h3 class="bay-title">Wizard-step popup</h3><span class="bay-tag">Dataset start</span></div>
+    <div class="bay-body">
+      <p class="bay-note">Dataset tab sekarang satu form panjang (parameter + WiFi/MQTT sekaligus). Versi wizard memecah jadi 3 langkah kecil dalam satu popup, operator tidak scroll form panjang dan urutan pengisian jelas.</p>
+      <div class="stage">
+        <div class="wiz-dots"><span class="wiz-dot on" id="d1"></span><span class="wiz-dot" id="d2"></span><span class="wiz-dot" id="d3"></span></div>
+        <div class="wiz-step active" id="w1"><div class="field-row"><label>Label</label><input value="clear_air_test"></div><div class="field-row"><label>Target Samples</label><input value="100"></div></div>
+        <div class="wiz-step" id="w2"><div class="field-row"><label>MQTT Host</label><input value="127.0.0.1"></div><div class="field-row"><label>Topic Root</label><input value="gas-leak-detector"></div></div>
+        <div class="wiz-step" id="w3"><p style="font-size:12.5px;color:var(--text-muted);margin:0 0 6px;">Review: clear_air_test, 100 samples, 127.0.0.1</p></div>
+        <div class="wiz-foot">
+          <button class="demo-btn" onclick="wizStep(-1)">Back</button>
+          <button class="demo-btn primary" onclick="wizStep(1)" id="wizNext">Next</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bay">
+    <div class="bay-head"><span class="bay-num">06</span><h3 class="bay-title">Expand-on-click channel cards</h3><span class="bay-tag">Nulling grid</span></div>
+    <div class="bay-body">
+      <p class="bay-note">8 kartu channel Nulling saat ini masing-masing punya &lt;details&gt; "Stage detail" yang render terus meski collapsed. Versi ini membuat kartu itu sendiri yang jadi trigger — ringkas saat idle, klik untuk lihat baseline/DAC code, tanpa sub-elemen terpisah.</p>
+      <div class="stage">
+        <div class="ch-grid">
+          <div class="ch-card pass" onclick="this.classList.toggle('open')"><div class="ch-top"><span>CH1</span><span class="status">PASS</span></div><div class="ch-detail">DAC 451 · baseline 1.02V</div></div>
+          <div class="ch-card" onclick="this.classList.toggle('open')"><div class="ch-top"><span>CH2</span><span class="status">BINARY</span></div><div class="ch-detail">bracket [200,600] · step 4</div></div>
+          <div class="ch-card pass" onclick="this.classList.toggle('open')"><div class="ch-top"><span>CH3</span><span class="status">PASS</span></div><div class="ch-detail">DAC 388 · baseline 0.88V</div></div>
+          <div class="ch-card" onclick="this.classList.toggle('open')"><div class="ch-top"><span>CH4</span><span class="status">WAITING</span></div><div class="ch-detail">queued</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bay">
+    <div class="bay-head"><span class="bay-num">07</span><h3 class="bay-title">Unified danger-action popup</h3><span class="bay-tag">Firmware / Inject ID</span></div>
+    <div class="bay-body">
+      <p class="bay-note">Upload Firmware, Inject ID, dan Apply GLD Settings sekarang tiga <code>confirm()</code> browser generik yang tampilannya beda dari aplikasi. Satu komponen popup yang menampilkan command persis yang akan dikirim, konsisten untuk ketiganya.</p>
+      <div class="stage" style="position:relative;">
+        <button class="demo-btn danger" onclick="document.getElementById('cfm').classList.add('show')">Upload Firmware</button>
+        <div class="confirm-overlay" id="cfm" onclick="if(event.target===this)this.classList.remove('show')">
+          <div class="confirm-box">
+            <h4>Confirm firmware upload</h4>
+            <p style="font-size:12.5px;color:var(--text-muted);margin:0;">This flashes COM10 and will disconnect serial during upload.</p>
+            <div class="confirm-cmd">pio run -e gld -t upload --upload-port COM10</div>
+            <div class="confirm-foot">
+              <button class="demo-btn" onclick="document.getElementById('cfm').classList.remove('show')">Cancel</button>
+              <button class="demo-btn danger" onclick="document.getElementById('cfm').classList.remove('show')">Upload</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bay">
+    <div class="bay-head"><span class="bay-num">08</span><h3 class="bay-title">Fleet quick-switch popover</h3><span class="bay-tag">Header badge</span></div>
+    <div class="bay-body">
+      <p class="bay-note">Ganti slot aktif sekarang lewat sidebar Fleet, yang berarti scroll ke bawah dulu kalau lagi di tab lain. Klik badge device di header langsung membuka daftar 8 slot untuk pindah tanpa keluar dari tab yang sedang dibuka.</p>
+      <div class="stage" style="position:relative;">
+        <div class="fleet-badge" onclick="document.getElementById('fleetPop').classList.toggle('show')"><span class="dot"></span>F001 · Slot 1</div>
+        <div class="fleet-pop" id="fleetPop">
+          <div class="fleet-row"><span><span class="dot" style="display:inline-block;margin-right:6px;"></span>Slot 1 · F001</span><span style="color:var(--text-faint);">active</span></div>
+          <div class="fleet-row"><span><span class="dot alarm" style="display:inline-block;margin-right:6px;"></span>Slot 3 · F003</span><span style="color:var(--red);">alarm</span></div>
+          <div class="fleet-row"><span><span class="dot off" style="display:inline-block;margin-right:6px;"></span>Slot 2 · F002</span><span style="color:var(--text-faint);">idle</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="verdict">
+    <strong>Cara pilih:</strong> sebut nomornya saja (misal "pakai 1, 3, dan 7") — masing-masing pola independen, jadi bisa dikombinasikan tanpa bentrok. Semua tetap dalam palet dan font yang sama dengan console yang sudah ada, jadi tidak perlu redesign ulang seluruh app.
+  </div>
+</div>
+
+<script>
+  function cmdkFilter(input){
+    var q=input.value.toLowerCase();
+    document.querySelectorAll('#cmdkList .cmdk-row').forEach(function(r){
+      r.style.display = r.textContent.toLowerCase().indexOf(q)>-1 ? 'flex' : 'none';
+    });
+  }
+  var wizIdx=1;
+  function wizStep(dir){
+    var next=wizIdx+dir;
+    if(next<1||next>3) return;
+    document.getElementById('w'+wizIdx).classList.remove('active');
+    document.getElementById('d'+wizIdx).classList.remove('on');
+    wizIdx=next;
+    document.getElementById('w'+wizIdx).classList.add('active');
+    document.getElementById('d'+wizIdx).classList.add('on');
+    document.getElementById('wizNext').textContent = wizIdx===3 ? 'Start Dataset' : 'Next';
+  }
+</script>
+</body>
+</html>

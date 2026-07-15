@@ -9,8 +9,8 @@
   padding: 0 10px;
   border: 1px solid var(--hairline-strong);
   border-radius: 999px;
-  color: var(--ink-muted);
-  background: var(--panel-black);
+  color: var(--text-muted);
+  background: var(--surface-2);
   font-family: var(--font-mono);
   font-size: 11px;
   letter-spacing: 0.03em;
@@ -24,19 +24,19 @@
 }
 
 .tag--ok {
-  border-color: rgba(107, 212, 122, 0.6);
-  color: #baf7c8;
+  border-color: var(--ok);
+  color: var(--ok);
 }
 
 .tag--warn {
-  border-color: rgba(255, 164, 0, 0.6);
-  color: #ffd699;
+  border-color: var(--warn);
+  color: var(--warn);
 }
 
 .tag--alarm,
 .tag--error {
-  border-color: var(--hazard-red);
-  color: #ffb8b3;
+  border-color: var(--alarm);
+  color: var(--alarm);
 }
 
 .tag--alarm {
@@ -56,11 +56,11 @@
   padding: var(--space-3);
   border: 1px solid var(--hairline);
   border-radius: var(--radius);
-  background: var(--panel-steel-raised);
+  background: var(--surface-2);
 }
 
 .gauge-card > span {
-  color: var(--ink-muted);
+  color: var(--text-muted);
   font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -69,7 +69,7 @@
 .gauge-card > strong {
   min-width: 0;
   overflow: hidden;
-  color: var(--paper);
+  color: var(--text);
   font-family: var(--font-mono);
   font-size: 20px;
   font-weight: 600;
@@ -79,7 +79,7 @@
 }
 
 .gauge-card > small {
-  color: var(--ink-muted);
+  color: var(--text-muted);
   font-family: var(--font-mono);
   font-size: 11px;
 }
@@ -93,19 +93,19 @@
   border: 1px solid var(--hairline);
   border-left: 3px solid var(--hairline-strong);
   border-radius: var(--radius);
-  background: var(--panel-black);
+  background: var(--surface-2);
 }
 
 .fleet-card.active {
-  border-left-color: var(--phosphor-amber);
+  border-left-color: var(--accent);
 }
 
 .fleet-card.alarm {
-  border-left-color: var(--hazard-red);
+  border-left-color: var(--alarm);
 }
 
 .fleet-card > span {
-  color: var(--ink-muted);
+  color: var(--text-muted);
   font-size: 10px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -117,7 +117,7 @@
 }
 
 .fleet-card > small {
-  color: var(--ink-muted);
+  color: var(--text-muted);
   font-family: var(--font-mono);
   font-size: 11px;
 }
@@ -160,8 +160,8 @@ button.is-busy::before {
   width: 13px;
   height: 13px;
   margin-top: -7px;
-  border: 2px solid rgba(237, 230, 214, 0.3);
-  border-top-color: var(--phosphor-amber);
+  border: 2px solid var(--selection-ring);
+  border-top-color: var(--accent);
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }
@@ -174,13 +174,13 @@ button.is-busy::before {
 
 .status-line {
   margin: 0 0 var(--space-2);
-  color: var(--ink-muted);
+  color: var(--text-muted);
   font-size: 12px;
   line-height: 1.5;
 }
 
 .status-line.error {
-  color: #ffb8b3;
+  color: var(--alarm);
 }
 
 .dataset-hint {
@@ -188,8 +188,8 @@ button.is-busy::before {
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--hairline);
   border-radius: var(--radius);
-  background: var(--panel-black);
-  color: var(--ink-muted);
+  background: var(--surface-2);
+  color: var(--text-muted);
   font-size: 12px;
 }
 
@@ -215,7 +215,7 @@ button.is-busy::before {
 }
 
 .option-row small {
-  color: var(--ink-muted);
+  color: var(--text-muted);
 }
 
 /* ---- Progress bar ---- */
@@ -225,7 +225,7 @@ button.is-busy::before {
   height: 8px;
   margin-bottom: var(--space-3);
   border-radius: 999px;
-  background: var(--panel-black);
+  background: var(--surface-2);
   overflow: hidden;
 }
 
@@ -233,21 +233,21 @@ button.is-busy::before {
   position: absolute;
   inset: 0 auto 0 0;
   width: 0%;
-  background: var(--phosphor-amber);
+  background: var(--accent);
   transition: width 200ms ease;
 }
 
-/* ---- Terminal / log ---- */
+/* ---- Terminal / log (fixed instrument-readout look, both themes) ---- */
 
 .terminal {
   min-height: 160px;
   max-height: 46vh;
   margin: 0;
   padding: var(--space-3);
-  border: 1px solid var(--hairline);
+  border: 1px solid var(--terminal-border);
   border-radius: var(--radius);
-  background: var(--panel-black);
-  color: var(--phosphor-amber);
+  background: var(--terminal-bg);
+  color: var(--terminal-fg);
   font-family: var(--font-mono);
   font-size: 12px;
   line-height: 1.5;
@@ -291,7 +291,7 @@ button.is-busy::before {
 }
 
 .kv dt {
-  color: var(--ink-muted);
+  color: var(--text-muted);
   font-size: 12px;
 }
 
@@ -326,7 +326,7 @@ button.is-busy::before {
 }
 
 .data-table th {
-  color: var(--ink-muted);
+  color: var(--text-muted);
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -341,19 +341,19 @@ button.is-busy::before {
   padding: var(--space-3);
   border: 1px solid var(--hairline);
   border-radius: var(--radius);
-  background: var(--panel-black);
+  background: var(--surface-2);
 }
 
 .channel-card.active {
-  border-color: var(--signal-cyan);
+  border-color: var(--accent-2);
 }
 
 .channel-card.pass {
-  border-color: var(--status-ok);
+  border-color: var(--ok);
 }
 
 .channel-card.fail {
-  border-color: var(--hazard-red);
+  border-color: var(--alarm);
 }
 
 .channel-card-head {
@@ -365,19 +365,26 @@ button.is-busy::before {
 
 .channel-card-head strong {
   font-family: var(--font-mono);
-  color: var(--paper);
+  color: var(--text);
+}
+
+.channel-card-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
 }
 
 .channel-stage {
   font-family: var(--font-mono);
   font-weight: 600;
-  color: var(--paper);
+  color: var(--text);
 }
 
 .channel-card-head span,
 .channel-card small {
   min-width: 0;
-  color: var(--ink-muted);
+  color: var(--text-muted);
   font-size: 11px;
   line-height: 1.4;
   overflow-wrap: anywhere;
@@ -390,11 +397,114 @@ button.is-busy::before {
   white-space: nowrap;
 }
 
+/* ---- Gain ladder (per-channel PGA gain indicator, Running tab) ---- */
+
+.gain-ladder {
+  display: flex;
+  gap: 3px;
+}
+
+.gain-block {
+  flex: 1;
+  text-align: center;
+  padding: 3px 0;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.gain-block.active {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff8f0;
+  font-weight: 700;
+}
+
+/* ---- Dataset capture wizard (6-step progress: Mode/Confirm/Start/Capturing/Stop/Save) ---- */
+
+.wizard-steps {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.wizard-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.wizard-dot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid var(--hairline-strong);
+  background: var(--surface-2);
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.wizard-label {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+}
+
+.wizard-step--active .wizard-dot {
+  border-color: var(--warn);
+  background: var(--warn);
+  color: #241a02;
+}
+
+.wizard-step--active .wizard-label {
+  color: var(--warn);
+  font-weight: 600;
+}
+
+.wizard-step--done .wizard-dot {
+  border-color: var(--ok);
+  background: var(--ok);
+  color: #052b16;
+}
+
+.wizard-step--done .wizard-label {
+  color: var(--ok);
+}
+
+@media (max-width: 680px) {
+  .wizard-steps {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
 /* ---- Chart ---- */
+
+.telemetry-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 240px) 1fr minmax(180px, 240px);
+  gap: var(--space-3);
+  align-items: stretch;
+}
+
+.telemetry-row--full {
+  grid-template-columns: 1fr;
+}
 
 .chart-wrap {
   position: relative;
   width: 100%;
+  min-width: 0;
 }
 
 .chart-wrap canvas {
@@ -402,6 +512,25 @@ button.is-busy::before {
   height: auto;
   display: block;
   border-radius: var(--radius);
+}
+
+.sensor-channel-list {
+  display: grid;
+  grid-template-rows: repeat(4, 1fr);
+  gap: var(--space-2);
+  height: 100%;
+  min-width: 0;
+  overflow-y: auto;
+}
+
+.sensor-channel-list .channel-card {
+  min-height: 0;
+}
+
+@media (max-width: 900px) {
+  .telemetry-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 .legend {
@@ -415,7 +544,7 @@ button.is-busy::before {
   display: flex;
   align-items: center;
   gap: 6px;
-  color: var(--ink-muted);
+  color: var(--text-muted);
   font-family: var(--font-mono);
   font-size: 11px;
 }
@@ -436,6 +565,28 @@ button.is-busy::before {
 
 .port-detail {
   margin: 0;
-  color: var(--ink-muted);
+  color: var(--text-muted);
   font-size: 12px;
+}
+
+/* ---- Gear (per-tab settings) button ---- */
+
+.gear-btn {
+  min-height: 28px;
+  min-width: 28px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--text-muted);
+  background: transparent;
+}
+
+.gear-btn:hover:not(:disabled) {
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-color: transparent;
 }

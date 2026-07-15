@@ -2,9 +2,9 @@
 // preflight, and device ID injection.
 
 import { $, elements, state } from "./state.js";
-import { appendLog, getField, switchTab, showBanner } from "./ui.js";
+import { appendLog, getField, switchTab, showBanner, showConfirm } from "./ui.js";
 import { bridgeFetch } from "./bridge-client.js";
-import { sendCommand } from "./serial-protocol.js";
+import { applyAndAlert } from "./serial-protocol.js";
 import { requireUnlock } from "./security.js";
 
 export async function loadManifestFile(file) {
@@ -70,18 +70,19 @@ export async function uploadFirmware() {
   const manifestWarning = validateManifestForUpload(state.manifest, env, targetDeviceId);
   if (manifestWarning) {
     appendLog(`UPLOAD_SKIPPED ${manifestWarning}`, "in");
-    switchTab("firmware");
+    switchTab("expert");
     return;
   }
   const lock = await checkPortLock();
   if (lock && !lock.free) {
-    const proceed = window.confirm(
+    const proceed = await showConfirm(
       `${port} looks busy (${lock.message}). Upload will disconnect this app's serial session and retry once, `
-      + "but if PlatformIO still reports the chip not responding, close other serial monitors and replug the GLD USB. Continue anyway?"
+      + "but if PlatformIO still reports the chip not responding, close other serial monitors and replug the GLD USB. Continue anyway?",
+      "warn", "COM Port Busy"
     );
     if (!proceed) return;
   }
-  if (!window.confirm(`Upload PlatformIO env ${env} to ${port}?`)) return;
+  if (!(await showConfirm(`Upload PlatformIO env ${env} to ${port}?`, "warn", "Confirm Firmware Upload"))) return;
   try {
     await bridgeFetch("/api/firmware/upload", {
       method: "POST",
@@ -101,6 +102,32 @@ export async function injectDeviceId() {
     appendLog("ID_REJECTED target ID must be 4 non-zero hex chars, for example F001", "in");
     return;
   }
-  if (!window.confirm(`Inject GLD ID ${deviceId} and reboot?`)) return;
-  await sendCommand(`SET_DEVICE_ID_JSON ${JSON.stringify({ deviceId, reboot: true })}`);
+  if (!(await showConfirm(`Inject GLD ID ${deviceId} and reboot?`, "warn", "Inject GLD ID"))) return;
+  await applyAndAlert(`SET_DEVICE_ID_JSON ${JSON.stringify({ deviceId, reboot: true })}`, "SET_DEVICE_ID", "Inject GLD ID");
+}
+
+// Node addresses reserved outside the GLD ID space; must stay in sync with
+// firmware/config/ChConfig.h (PGL_CH_ROOT_GATEWAY_ID) and GldUnifiedMain.cpp
+// (GLD_RESERVED_GATEWAY_ID).
+const RESERVED_GATEWAY_ID = "006F";
+
+export function validateChAddress(chId, targetDeviceId) {
+  if (!/^[0-9A-F]{4}$/.test(chId)) return "CH address must be 4 hex chars, for example 0064";
+  if (chId === "0000" || chId === "FFFF") return "CH address cannot be 0000 or FFFF";
+  if (chId === RESERVED_GATEWAY_ID) return `CH address cannot be the Gateway ID (${RESERVED_GATEWAY_ID})`;
+  if (targetDeviceId && chId === targetDeviceId) return "CH address cannot equal the GLD's own ID";
+  return "";
+}
+
+export async function injectChAddress() {
+  if (!(await requireUnlock())) return;
+  const chId = getField("targetChAddress").toUpperCase();
+  const targetDeviceId = getField("targetDeviceId").toUpperCase();
+  const error = validateChAddress(chId, targetDeviceId);
+  if (error) {
+    appendLog(`CH_ADDRESS_REJECTED ${error}`, "in");
+    return;
+  }
+  if (!(await showConfirm(`Apply CH address ${chId} and reboot?`, "warn", "Apply CH Address"))) return;
+  await applyAndAlert(`SET_CH_ADDRESS_JSON ${JSON.stringify({ chId, reboot: true })}`, "SET_CH_ADDRESS", "Apply CH Address");
 }

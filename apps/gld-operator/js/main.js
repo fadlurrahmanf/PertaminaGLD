@@ -93,6 +93,7 @@ function setupEvents() {
   $("switchDatasetBtn").addEventListener("click", () => withBusy($("switchDatasetBtn"), "Switching...", beginDatasetSwitch));
   $("startDatasetBtn").addEventListener("click", () => {
     markDatasetWizardStarted();
+    if (!state.polling) togglePolling();
     withBusy($("startDatasetBtn"), "Starting...", () => publishDatasetCommand("START_DATASET"));
   });
   $("stopDatasetBtn").addEventListener("click", () => withBusy($("stopDatasetBtn"), "Stopping...", () => publishDatasetCommand("STOP_DATASET")));

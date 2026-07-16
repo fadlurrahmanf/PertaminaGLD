@@ -2,7 +2,7 @@
 // MQTT START_DATASET/STOP_DATASET -> row capture -> CSV + session log.
 
 import { $, elements, state, SENSOR_NAMES, DATASET_RUNTIME_READY_TIMEOUT_MS, DATASET_WAITING_STUCK_MS, DATASET_WIZARD_LABELS, initialDatasetSession } from "./state.js";
-import { appendLog, getField, numberField, saveForm, downloadText, csvCell, stamp, nowText, switchTab, showConfirm, showBanner, wait } from "./ui.js";
+import { appendLog, getField, numberField, saveForm, downloadText, csvCell, stamp, nowText, switchTab, showConfirm, showBanner, wait, setPanelOpen } from "./ui.js";
 import { bridgeFetch } from "./bridge-client.js";
 import { tokenValue, handleLine, sendCommand, applyAndAlert } from "./serial-protocol.js";
 import { emitMockInfo, emitMockStatus } from "./mock.js";
@@ -54,16 +54,20 @@ export function renderDatasetWizard() {
   });
 }
 
-function paramSummaryText() {
-  return [
-    `Label: ${getField("datasetLabel")}`,
-    `Target Samples: ${numberField("targetSamples")}`,
-    `Interval Ms: ${numberField("sampleIntervalMs")}`,
-    `Max Duration Ms: ${numberField("maxDurationMs")}`,
-    `Fan On Ms: ${numberField("fanOnMs")}`,
-    `Post Fan Settle Ms: ${numberField("postFanSettleMs")}`,
-    `Run nulling first: ${elements.datasetNullingFirst.checked ? "yes" : "no"}`
-  ].join("\n");
+// Resolves once the given drawer closes, however the operator closes it
+// (Close button, backdrop click, Escape) - reviewing/editing the actual
+// editable settings and then closing is treated as "confirmed", rather than
+// requiring a separate read-only summary popup.
+function waitForDrawerClose(panel) {
+  return new Promise((resolve) => {
+    const observer = new MutationObserver(() => {
+      if (!panel.classList.contains("open")) {
+        observer.disconnect();
+        resolve();
+      }
+    });
+    observer.observe(panel, { attributes: true, attributeFilter: ["class"] });
+  });
 }
 
 async function waitForModeDataset(timeoutMs = 6000) {
@@ -77,7 +81,8 @@ async function waitForModeDataset(timeoutMs = 6000) {
   return String(state.mode || "").toLowerCase() === "dataset";
 }
 
-// Step 1 + 2: switch the GLD to dataset mode, then have the operator verify
+// Step 1 + 2: switch the GLD to dataset mode, then open the actual editable
+// Dataset Settings drawer so the operator can review and, if needed, change
 // the capture parameters before Start Dataset (step 3) becomes the natural
 // next click. Wired to the "Switch to Dataset" button in main.js.
 export async function beginDatasetSwitch() {
@@ -91,11 +96,9 @@ export async function beginDatasetSwitch() {
   }
   setWizardStep(0, "done");
   setWizardStep(1, "active");
-  const ok = await showConfirm(paramSummaryText(), "warn", "Confirm Dataset Parameters");
-  if (!ok) {
-    setWizardStep(1, "pending");
-    return;
-  }
+  const panel = $("datasetSettingsPanel");
+  setPanelOpen(panel, true);
+  await waitForDrawerClose(panel);
   setWizardStep(1, "done");
   setWizardStep(2, "active");
 }

@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GLD Dataset Collector</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  color-scheme: light;
+  --panel-white: #f8f7f5;
+  --panel-surface: #ffffff;
+  --panel-surface-raised: #f0eeea;
+  --hairline: #e0ddd6;
+  --hairline-strong: #c4bfb4;
+  --phosphor-amber: #d97706;
+  --phosphor-amber-dim: #fef3c7;
+  --signal-cyan: #0891b2;
+  --signal-cyan-dim: #cffafe;
+  --hazard-red: #dc2626;
+  --hazard-red-dim: #fef2f2;
+  --status-ok: #16a34a;
+  --paper: #1c1917;
+  --ink-muted: #78716c;
+  --ink-faint: #a8a29e;
+  --shadow: rgba(0,0,0,0.08);
+  --font-display: Bahnschrift, "Segoe UI Semibold", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", Consolas, "SFMono-Regular", Menlo, monospace;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --radius: 3px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-body); background: var(--panel-white); color: var(--paper); min-height: 100vh; }
+h1,h2,h3 { margin: 0; }
+h1 { font-family: var(--font-display); font-size: clamp(22px,2.6vw,30px); font-weight: 600; letter-spacing: 0.01em; }
+h2 { font-family: var(--font-display); font-size: 14px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--paper); }
+h3 { font-family: var(--font-display); font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-muted); }
+
+.rack-header {
+  position: sticky; top: 0; z-index: 20;
+  display: grid; grid-template-columns: minmax(220px,260px) 1fr max-content;
+  align-items: center; gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--hairline);
+  background: rgba(248,247,245,0.98);
+}
+.rack-brand { min-width: 0; }
+.rack-eyebrow {
+  margin: 0 0 4px; color: var(--phosphor-amber);
+  font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+  letter-spacing: 0.18em; text-transform: uppercase;
+}
+.status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.status-dot.on { background: var(--status-ok); }
+.status-dot.off { background: var(--hazard-red); }
+
+.rack-actions { display: flex; align-items: center; gap: var(--space-2); justify-content: flex-end; min-width: max-content; }
+
+.container { max-width: 1200px; margin: 0 auto; padding: var(--space-4) var(--space-5) var(--space-6); display: flex; flex-direction: column; gap: var(--space-4); }
+
+.module {
+  border: 1px solid var(--hairline); border-radius: var(--radius);
+  background: var(--panel-surface); box-shadow: 0 10px 24px var(--shadow);
+  padding: var(--space-4);
+}
+.module-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: var(--space-3); margin-bottom: var(--space-3);
+}
+
+.toolbar { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+
+.tag {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 24px; max-width: 100%; padding: 0 10px;
+  border: 1px solid var(--hairline-strong); border-radius: 999px;
+  color: var(--ink-muted); background: var(--panel-white);
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.03em;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.tag--ok { border-color: rgba(22,163,74,0.4); color: #15803d; }
+.tag--live { border-color: rgba(8,145,178,0.4); color: #0e7490; }
+.tag--warn { border-color: rgba(217,119,6,0.4); color: #b45309; }
+.tag--error { border-color: var(--hazard-red); color: var(--hazard-red); }
+.tag--alarm { animation: tag-pulse 1.1s ease-in-out infinite; }
+@keyframes tag-pulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(220,38,38,0.3); }
+  50% { box-shadow: 0 0 0 5px rgba(220,38,38,0); }
+}
+
+.gauge-row {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr));
+  gap: var(--space-3); margin-bottom: var(--space-4);
+}
+.gauge-card {
+  display: grid; gap: 4px; padding: var(--space-3);
+  border: 1px solid var(--hairline); border-radius: var(--radius);
+  background: var(--panel-surface-raised);
+}
+.gauge-card > span { color: var(--ink-muted); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; }
+.gauge-card > strong {
+  min-width: 0; overflow: hidden; color: var(--paper);
+  font-family: var(--font-mono); font-size: 20px; font-weight: 600;
+  font-variant-numeric: tabular-nums; text-overflow: ellipsis; white-space: nowrap;
+}
+.gauge-card > small { color: var(--ink-muted); font-family: var(--font-mono); font-size: 11px; }
+
+.channel-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(130px,1fr));
+  gap: var(--space-2);
+}
+.channel-card {
+  display: grid; gap: 6px; min-height: 80px; padding: var(--space-3);
+  border: 1px solid var(--hairline); border-radius: var(--radius);
+  background: var(--panel-white);
+}
+.channel-card.active { border-color: var(--signal-cyan); }
+
+select, button, input { font-family: inherit; font-size: 14px; }
+select {
+  background: var(--panel-surface); color: var(--paper);
+  border: 1px solid var(--hairline-strong); border-radius: var(--radius);
+  padding: 0 var(--space-3); min-height: 36px; min-width: 140px;
+  font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+}
+button {
+  min-height: 36px; padding: 0 var(--space-4); cursor: pointer; white-space: nowrap;
+  border: 1px solid var(--hairline-strong); border-radius: var(--radius);
+  color: var(--paper); background: var(--panel-surface);
+  font-family: var(--font-body); font-weight: 600; font-size: 13px;
+  transition: border-color 120ms ease, background 120ms ease;
+}
+button:hover:not(:disabled) { border-color: var(--phosphor-amber); background: var(--panel-surface-raised); }
+button:disabled { cursor: not-allowed; opacity: 0.42; }
+button.primary { border-color: var(--phosphor-amber); background: var(--phosphor-amber-dim); color: var(--paper); }
+button.primary:hover:not(:disabled) { background: #fde68a; }
+button.btn-green { border-color: var(--status-ok); background: #dcfce7; color: #15803d; }
+button.btn-green:hover:not(:disabled) { background: #bbf7d0; }
+button.btn-red { border-color: var(--hazard-red); background: var(--hazard-red-dim); color: var(--hazard-red); }
+button.btn-red:hover:not(:disabled) { background: #fee2e2; }
+button.btn-amber { border-color: var(--phosphor-amber); background: var(--phosphor-amber-dim); color: #92400e; }
+button.btn-amber:hover:not(:disabled) { background: #fde68a; }
+button.btn-outline { background: transparent; color: var(--paper); }
+button.btn-outline:hover:not(:disabled) { background: var(--panel-surface-raised); }
+
+input {
+  width: 100%; min-height: 36px; padding: 0 10px; outline: none;
+  font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+  background: var(--panel-surface); color: var(--paper);
+  border: 1px solid var(--hairline-strong); border-radius: var(--radius);
+}
+input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid var(--signal-cyan); outline-offset: 1px; }
+::selection { background: var(--phosphor-amber-dim); color: var(--paper); }
+
+.chart-wrap { position: relative; height: 320px; width: 100%; }
+
+.terminal {
+  min-height: 160px; max-height: 46vh; margin: 0; padding: var(--space-3);
+  border: 1px solid var(--hairline); border-radius: var(--radius);
+  background: var(--panel-white); color: var(--paper);
+  font-family: var(--font-mono); font-size: 12px; line-height: 1.5;
+  overflow: auto; white-space: pre-wrap; word-break: break-word;
+}
+.terminal .ts { color: var(--ink-faint); }
+
+.kv { display: grid; gap: var(--space-2); }
+.kv div { display: flex; justify-content: space-between; gap: var(--space-2); padding-bottom: var(--space-1); border-bottom: 1px dotted var(--hairline); }
+.kv dt { color: var(--ink-muted); font-size: 12px; }
+.kv dd { font-family: var(--font-mono); font-size: 12px; text-align: right; }
+
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<header class="rack-header">
+  <div class="rack-brand">
+    <p class="rack-eyebrow">PERTAMINA GLD</p>
+    <h1>Dataset Collector</h1>
+  </div>
+
+  <div class="toolbar">
+    <span class="status-dot" id="connDot"></span>
+    <span id="connLabel" style="font-size:13px">Disconnected</span>
+  </div>
+
+  <div class="rack-actions">
+    <button class="btn-amber" id="btnSwitchMode" onclick="switchMode()" disabled title="Switch GLD to running mode for 1 Hz streaming (reboots device)">
+      Set Running Mode
+    </button>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- Connection -->
+  <div class="module">
+    <div class="module-head">
+      <h2>Connection</h2>
+      <span id="connBadge" class="tag">disconnected</span>
+    </div>
+    <div class="toolbar">
+      <select id="portSelect"><option value="">Scan ports...</option></select>
+      <button class="btn-outline" id="btnScan" onclick="scanPorts()">Scan</button>
+      <button class="btn-green" id="btnConnect" onclick="connectPort()" disabled>Connect</button>
+      <button class="btn-red" id="btnDisconnect" onclick="disconnectPort()" disabled>Disconnect</button>
+    </div>
+  </div>
+
+  <!-- Collection Control -->
+  <div class="module">
+    <div class="module-head">
+      <h2>Collection</h2>
+      <span class="collecting-indicator idle" id="collectBadge">IDLE</span>
+    </div>
+    <div class="toolbar" style="margin-bottom:12px">
+      <input type="text" id="datasetTag" placeholder="Dataset tag (optional)" style="max-width:240px" />
+      <button class="btn-green" id="btnStart" onclick="startCollect()" disabled>Start Collecting</button>
+      <button class="btn-red" id="btnStop" onclick="stopCollect()" disabled>Stop &amp; Save</button>
+      <button class="btn-outline" id="btnDownload" onclick="downloadCsv()" disabled>Download Latest CSV</button>
+    </div>
+    <div class="gauge-row">
+      <article class="gauge-card"><span>Samples</span><strong id="sampleCount">0</strong><small>count</small></article>
+      <article class="gauge-card"><span>Rate</span><strong id="sampleRate">0</strong><small>samples/sec</small></article>
+      <article class="gauge-card"><span>Elapsed</span><strong id="elapsed">0s</strong><small>duration</small></article>
+      <article class="gauge-card"><span>Saturated</span><strong id="saturatedCount">0</strong><small>samples flagged</small></article>
+    </div>
+  </div>
+
+  <!-- Air / Gas Status -->
+  <div class="module">
+    <div class="module-head">
+      <h2>Air / Gas Status</h2>
+      <div class="toolbar">
+        <button class="btn-outline" id="btnResetBaseline" onclick="resetBaseline()" disabled title="Reset clean air baseline">Reset Baseline</button>
+      </div>
+    </div>
+    <div class="air-gas-card" id="airGasCard" style="max-width:480px">
+      <div class="air-gas-indicator" id="airGasIndicator"></div>
+      <div>
+        <div class="air-gas-label" id="airGasLabel">Waiting for data...</div>
+        <div class="air-gas-sub" id="airGasSub">Connect to start monitoring</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Live Sensor Voltages -->
+  <div class="module">
+    <div class="module-head">
+      <h2>Sensor Voltages (Live)</h2>
+    </div>
+    <div class="channel-grid" id="sensorGrid"></div>
+  </div>
+
+  <!-- Live Chart -->
+  <div class="module">
+    <div class="module-head">
+      <h2>Live Chart</h2>
+      <div class="toolbar">
+        <button id="clearChartBtn" type="button" onclick="clearChart()">Clear</button>
+      </div>
+    </div>
+    <div class="chart-wrap"><canvas id="liveChart"></canvas></div>
+  </div>
+
+  <!-- Log -->
+  <div class="module">
+    <div class="module-head">
+      <h2>Serial Log</h2>
+      <div class="toolbar">
+        <button onclick="clearLog()">Clear</button>
+      </div>
+    </div>
+    <pre class="terminal" id="logBox"></pre>
+  </div>
+</div>
+
+<style>
+  .collecting-indicator { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; font-family: var(--font-mono); letter-spacing: 0.03em; border: 1px solid var(--hairline-strong); }
+  .collecting-indicator.active { border-color: rgba(22,163,74,0.4); color: #15803d; }
+  .collecting-indicator.live { border-color: rgba(8,145,178,0.4); color: #0e7490; }
+  .collecting-indicator.idle { color: var(--ink-muted); }
+
+  .air-gas-card {
+    display: flex; align-items: center; gap: var(--space-3); padding: var(--space-4);
+    border: 1px solid var(--hairline); border-radius: var(--radius);
+    background: var(--panel-white);
+  }
+  .air-gas-indicator {
+    width: 48px; height: 48px; border-radius: 50%; flex-shrink: 0;
+    border: 2px solid var(--hairline-strong); transition: all 200ms ease;
+  }
+  .air-gas-indicator.clean { background: #dcfce7; border-color: #16a34a; box-shadow: 0 0 8px rgba(22,163,74,0.3); }
+  .air-gas-indicator.gas { background: #fef2f2; border-color: #dc2626; box-shadow: 0 0 12px rgba(220,38,38,0.4); animation: gas-pulse 1.2s ease-in-out infinite; }
+  @keyframes gas-pulse {
+    0%,100% { box-shadow: 0 0 8px rgba(220,38,38,0.3); }
+    50% { box-shadow: 0 0 16px rgba(220,38,38,0.5); }
+  }
+  .air-gas-label { font-size: 16px; font-weight: 700; font-family: var(--font-display); }
+  .air-gas-label.clean { color: #15803d; }
+  .air-gas-label.gas { color: #dc2626; }
+  .air-gas-sub { font-size: 12px; color: var(--ink-muted); margin-top: 2px; }
+
+  .channel-card.saturated {
+    border-color: var(--hazard-red) !important;
+    background: var(--hazard-red-dim) !important;
+  }
+  .sat-badge {
+    display: inline-block; padding: 1px 6px; border-radius: 999px;
+    font-size: 9px; font-weight: 700; font-family: var(--font-mono);
+    color: #dc2626; background: #fef2f2; border: 1px solid #fca5a5;
+    letter-spacing: 0.04em; text-transform: uppercase;
+  }
+</style>
+
+<script>
+const SENSOR_NAMES = ['MQ8','MQ135','MQ3','MQ5','MQ4','MQ7','MQ6','MQ2'];
+const COLORS = ['#0891b2','#16a34a','#d97706','#dc2626','#7c3aed','#db2777','#ea580c','#0284c7'];
+const ADC_SAT_THRESHOLD = 2.49;
+
+let evtSource = null;
+let connected = false;
+let collecting = false;
+let samples = 0;
+let saturatedSamples = 0;
+let startTime = 0;
+let rateSamples = [];
+let gasState = 'unknown'; // 'clean', 'gas', 'unknown'
+let cleanSamples = 0; // consecutive clean samples for auto-recovery
+const CLEAN_RECOVERY_THRESHOLD = 5; // consecutive clean samples to auto-recover
+let chartData = { labels: [], datasets: SENSOR_NAMES.map((n,i) => ({ label: n, data: [], borderColor: COLORS[i], borderWidth: 1.5, pointRadius: 0, tension: 0.3 })) };
+const MAX_POINTS = 120;
+
+const grid = document.getElementById('sensorGrid');
+SENSOR_NAMES.forEach((name, i) => {
+  const cell = document.createElement('div');
+  cell.className = 'channel-card';
+  cell.id = `sensor-${i}`;
+  cell.innerHTML = `<div style="font-size:11px;color:var(--ink-muted);text-transform:uppercase;letter-spacing:0.06em">${name}</div><div style="font-family:var(--font-mono);font-size:20px;font-weight:600;color:${COLORS[i]};font-variant-numeric:tabular-nums">---</div><div style="font-size:10px;color:var(--ink-faint)">V</div><div class="gain-badge" id="gain-${i}" style="font-size:9px;color:#7c3aed;font-family:var(--font-mono);margin-top:2px">PGA ---</div>`;
+  grid.appendChild(cell);
+});
+
+const ctx = document.getElementById('liveChart').getContext('2d');
+const chart = new Chart(ctx, {
+  type: 'line',
+  data: chartData,
+  options: {
+    responsive: true, maintainAspectRatio: false, animation: false,
+    scales: {
+      x: { display: false },
+      y: { grid: { color: '#e0ddd6' }, ticks: { color: '#78716c', callback: v => v.toFixed(3) + 'V', font: { family: 'ui-monospace, Consolas, monospace', size: 11 } } }
+    },
+    plugins: {
+      legend: { labels: { color: '#78716c', boxWidth: 10, padding: 8, font: { size: 11, family: 'ui-monospace, Consolas, monospace' } } }
+    }
+  }
+});
+
+function clearChart() {
+  chartData.labels = [];
+  chartData.datasets.forEach(ds => ds.data = []);
+  chart.update('none');
+}
+
+function clearLog() {
+  document.getElementById('logBox').innerHTML = '';
+}
+
+function connectSSE() {
+  if (evtSource) evtSource.close();
+  evtSource = new EventSource('/api/events');
+  evtSource.addEventListener('sensor_data', e => { onSensorData(JSON.parse(e.data)); });
+  evtSource.addEventListener('serial_rx', e => { addLog(JSON.parse(e.data).line); });
+  evtSource.addEventListener('serial_status', e => { connected = JSON.parse(e.data).connected; updateUI(); });
+  evtSource.addEventListener('serial_error', e => { addLog('ERROR: ' + JSON.parse(e.data).message); });
+}
+connectSSE();
+
+function onSensorData(d) {
+  if (!d.v) return;
+
+  // Update sensor cards with saturation detection + gain
+  let anySaturated = false;
+  d.v.forEach((v, i) => {
+    const cell = document.getElementById(`sensor-${i}`);
+    if (!cell) return;
+    const isSat = v >= ADC_SAT_THRESHOLD;
+    if (isSat) anySaturated = true;
+    cell.classList.toggle('saturated', isSat);
+    // Update value display
+    cell.children[1].textContent = v.toFixed(4);
+    // Add/remove saturation badge
+    let badge = cell.querySelector('.sat-badge');
+    if (isSat && !badge) {
+      badge = document.createElement('span');
+      badge.className = 'sat-badge';
+      badge.textContent = 'SAT';
+      cell.appendChild(badge);
+    } else if (!isSat && badge) {
+      badge.remove();
+    }
+    // Update gain display
+    const gainEl = document.getElementById(`gain-${i}`);
+    if (gainEl && d.g && d.g[i] !== undefined) {
+      const g = d.g[i];
+      const maxV = (2.5 / g).toFixed(2);
+      gainEl.textContent = `PGA ${g}x (${maxV}V)`;
+      // Color code: high gain = green (sensitive), low gain = orange (wide range)
+      if (g >= 16) gainEl.style.color = '#16a34a';
+      else if (g >= 4) gainEl.style.color = '#7c3aed';
+      else gainEl.style.color = '#d97706';
+    }
+  });
+
+  // Auto-detect gas state with recovery
+  if (d.gasDetected) {
+    gasState = 'gas';
+    cleanSamples = 0;
+  } else if (gasState === 'gas' && d.deltaMax !== undefined) {
+    if (d.deltaMax < 0.02) {
+      cleanSamples++;
+      if (cleanSamples >= CLEAN_RECOVERY_THRESHOLD) {
+        gasState = 'clean';
+        cleanSamples = 0;
+        addLog('Auto-recovered to clean air');
+      }
+    } else {
+      cleanSamples = 0;
+    }
+  } else if (gasState !== 'gas' && d.deltaMax !== undefined) {
+    gasState = d.deltaMax < 0.02 ? 'clean' : 'unknown';
+    cleanSamples = 0;
+  }
+  updateAirGasUI(d);
+
+  // Update chart
+  const label = new Date().toLocaleTimeString();
+  chartData.labels.push(label);
+  d.v.forEach((v, i) => chartData.datasets[i].data.push(v));
+  if (chartData.labels.length > MAX_POINTS) {
+    chartData.labels.shift();
+    chartData.datasets.forEach(ds => ds.data.shift());
+  }
+  chart.update('none');
+
+  // Update collection stats
+  if (collecting) {
+    samples++;
+    if (anySaturated) saturatedSamples++;
+    rateSamples.push(Date.now());
+    const oneSecAgo = Date.now() - 1000;
+    rateSamples = rateSamples.filter(t => t > oneSecAgo);
+    document.getElementById('sampleCount').textContent = samples;
+    document.getElementById('sampleRate').textContent = rateSamples.length;
+    document.getElementById('saturatedCount').textContent = saturatedSamples;
+    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+    document.getElementById('elapsed').textContent = elapsed < 60 ? elapsed + 's' : Math.floor(elapsed/60) + 'm ' + (elapsed%60) + 's';
+  }
+}
+
+function addLog(line) {
+  const box = document.getElementById('logBox');
+  const ts = new Date().toLocaleTimeString();
+  const div = document.createElement('div');
+  div.innerHTML = `<span class="ts">[${ts}]</span> ${escapeHtml(line)}`;
+  box.appendChild(div);
+  if (box.children.length > 200) box.removeChild(box.firstChild);
+  box.scrollTop = box.scrollHeight;
+}
+
+function updateAirGasUI(d) {
+  const indicator = document.getElementById('airGasIndicator');
+  const label = document.getElementById('airGasLabel');
+  const sub = document.getElementById('airGasSub');
+
+  indicator.className = 'air-gas-indicator';
+  label.className = 'air-gas-label';
+
+  if (gasState === 'gas') {
+    indicator.classList.add('gas');
+    label.classList.add('gas');
+    label.textContent = 'GAS DETECTED';
+    sub.textContent = d ? `deltaMax=${(d.deltaMax||0).toFixed(4)}V — auto detected` : 'Auto detected';
+  } else if (gasState === 'clean') {
+    indicator.classList.add('clean');
+    label.classList.add('clean');
+    label.textContent = 'CLEAN AIR';
+    sub.textContent = d ? `deltaMax=${(d.deltaMax||0).toFixed(4)}V — baseline` : 'Baseline';
+  } else {
+    label.textContent = 'Waiting for data...';
+    sub.textContent = 'Connect to start monitoring';
+  }
+}
+
+async function resetBaseline() {
+  await api('POST', '/api/reset_baseline');
+  gasState = 'unknown';
+  cleanSamples = 0;
+  addLog('Baseline reset — recalibrating clean air reference');
+  updateAirGasUI(null);
+}
+
+function escapeHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+async function api(method, path, body) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  return (await fetch(path, opts)).json();
+}
+
+async function scanPorts() {
+  const ports = await api('GET', '/api/ports');
+  const sel = document.getElementById('portSelect');
+  sel.innerHTML = '';
+  if (!ports.length) { sel.innerHTML = '<option>No ports found</option>'; return; }
+  ports.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.path;
+    opt.textContent = `${p.path} — ${p.description}`;
+    sel.appendChild(opt);
+  });
+  document.getElementById('btnConnect').disabled = false;
+}
+
+async function connectPort() {
+  const port = document.getElementById('portSelect').value;
+  if (!port) return;
+  await api('POST', '/api/serial/connect', { port });
+  addLog(`Connected to ${port} — live streaming started`);
+}
+
+async function disconnectPort() {
+  await api('POST', '/api/serial/disconnect');
+  gasState = 'unknown';
+  addLog('Disconnected');
+  updateAirGasUI(null);
+}
+
+async function switchMode() {
+  if (!confirm('Switch GLD to running mode for 1 Hz sensor streaming? Device will reboot.')) return;
+  await api('POST', '/api/switch_mode', { mode: 'running' });
+  addLog('Sent SET_MODE running — device rebooting...');
+  connected = false;
+  updateUI();
+  setTimeout(async () => {
+    addLog('Waiting for reboot...');
+    const port = document.getElementById('portSelect').value;
+    if (port) {
+      await api('POST', '/api/serial/connect', { port });
+      addLog('Reconnected after reboot');
+    }
+  }, 4000);
+}
+
+async function startCollect() {
+  const tag = document.getElementById('datasetTag').value.trim();
+  const r = await api('POST', '/api/collect/start', { device_id: 'F001', tag });
+  if (r.started) {
+    collecting = true;
+    samples = 0;
+    saturatedSamples = 0;
+    startTime = Date.now();
+    rateSamples = [];
+    document.getElementById('saturatedCount').textContent = '0';
+    addLog(`Collecting → ${r.filename}`);
+    updateUI();
+  }
+}
+
+async function stopCollect() {
+  const r = await api('POST', '/api/collect/stop');
+  if (r.stopped) {
+    collecting = false;
+    addLog(`Saved ${r.samples} samples → ${r.filename}`);
+    document.getElementById('btnDownload').disabled = false;
+    updateUI();
+  }
+}
+
+function downloadCsv() { window.location.href = '/api/download_csv'; }
+
+function updateUI() {
+  const connDot = document.getElementById('connDot');
+  const connLabel = document.getElementById('connLabel');
+  connDot.className = 'status-dot ' + (connected ? 'on' : 'off');
+  connLabel.textContent = connected ? `Connected ${document.getElementById('portSelect').value || ''}` : 'Disconnected';
+
+  const badge = document.getElementById('connBadge');
+  badge.className = connected ? 'tag tag--ok' : 'tag';
+  badge.textContent = connected ? 'connected' : 'disconnected';
+
+  document.getElementById('btnConnect').disabled = connected;
+  document.getElementById('btnDisconnect').disabled = !connected;
+  document.getElementById('btnSwitchMode').disabled = !connected;
+  document.getElementById('btnStart').disabled = !connected || collecting;
+  document.getElementById('btnStop').disabled = !collecting;
+  document.getElementById('btnResetBaseline').disabled = !connected;
+
+  const cbadge = document.getElementById('collectBadge');
+  if (collecting) {
+    cbadge.className = 'collecting-indicator active';
+    cbadge.textContent = 'RECORDING';
+  } else if (connected) {
+    cbadge.className = 'collecting-indicator live';
+    cbadge.textContent = 'LIVE';
+  } else {
+    cbadge.className = 'collecting-indicator idle';
+    cbadge.textContent = 'IDLE';
+  }
+}
+
+scanPorts();
+</script>
+</body>
+</html>

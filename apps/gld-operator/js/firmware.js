@@ -4,7 +4,7 @@
 import { $, elements, state } from "./state.js";
 import { appendLog, getField, switchTab, showBanner, showConfirm } from "./ui.js";
 import { bridgeFetch } from "./bridge-client.js";
-import { applyAndAlert } from "./serial-protocol.js";
+import { applyAndAlert, sendCommand } from "./serial-protocol.js";
 import { requireUnlock } from "./security.js";
 
 export async function loadManifestFile(file) {
@@ -130,4 +130,55 @@ export async function injectChAddress() {
   }
   if (!(await showConfirm(`Apply CH address ${chId} and reboot?`, "warn", "Apply CH Address"))) return;
   await applyAndAlert(`SET_CH_ADDRESS_JSON ${JSON.stringify({ chId, reboot: true })}`, "SET_CH_ADDRESS", "Apply CH Address");
+}
+
+function parseSyncWord(raw) {
+  const text = String(raw || "").trim();
+  if (!text) return NaN;
+  const base = /^0x/i.test(text) || /[a-f]/i.test(text) ? 16 : 10;
+  return Number.parseInt(text.replace(/^0x/i, ""), base);
+}
+
+function validateLoraPayload(payload) {
+  if (!(payload.freqMHz >= 920 && payload.freqMHz <= 923)) return "Frequency must be 920.0..923.0 MHz";
+  if (![7.8, 10.4, 15.6, 20.8, 31.25, 41.7, 62.5, 125, 250, 500].includes(payload.bwKHz)) return "Bandwidth is not supported by SX1262";
+  if (!(payload.sf >= 5 && payload.sf <= 12)) return "Spreading Factor must be 5..12";
+  if (!(payload.cr >= 5 && payload.cr <= 8)) return "Coding Rate must be 5..8";
+  if (!(payload.syncWord >= 0 && payload.syncWord <= 255)) return "Sync Word must be 0..255 or 0x00..0xFF";
+  if (!(payload.txPowerDbm >= -9 && payload.txPowerDbm <= 22)) return "TX power must be -9..22 dBm";
+  if (!(payload.preamble >= 6 && payload.preamble <= 65535)) return "Preamble must be 6..65535";
+  const allowedTcxo = [0, 1.6, 1.7, 1.8, 2.2, 2.4, 2.7, 3.0, 3.3];
+  if (!allowedTcxo.includes(payload.tcxoVoltage)) return "TCXO voltage is not supported";
+  if (!allowedTcxo.includes(payload.xtalVoltage)) return "XTAL fallback voltage is not supported";
+  return "";
+}
+
+export async function applyLoraConfig() {
+  const payload = {
+    freqMHz: Number($("loraFreqMHz").value),
+    bwKHz: Number($("loraBwKHz").value),
+    sf: Number($("loraSf").value),
+    cr: Number($("loraCr").value),
+    syncWord: parseSyncWord($("loraSyncWord").value),
+    txPowerDbm: Number($("loraTxPowerDbm").value),
+    preamble: Number($("loraPreamble").value),
+    tcxoVoltage: Number($("loraTcxoVoltage").value),
+    xtalVoltage: Number($("loraXtalVoltage").value),
+    reboot: false
+  };
+  const error = validateLoraPayload(payload);
+  if (error) {
+    appendLog(`LORA_CONFIG_REJECTED ${error}`, "in");
+    return;
+  }
+  if (!(await showConfirm(
+    "Apply LoRa STAR settings now? The CH STAR radio must use the same values or the link will stop passing data.",
+    "warn",
+    "Apply LoRa"
+  ))) return;
+  const ack = await applyAndAlert(`SET_LORA_CONFIG_JSON ${JSON.stringify(payload)}`, "SET_LORA_CONFIG", "Apply LoRa");
+  if (ack?.status === "ok") {
+    await sendCommand("GET_INFO");
+    await sendCommand("GET_STATUS");
+  }
 }

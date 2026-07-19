@@ -130,6 +130,52 @@ function datasetFileName(deviceId, label) {
   return `${safeDevice}_${safeLabel}_${stamp()}.csv`;
 }
 
+// File created on Confirm Config uses just label+timestamp (no device
+// prefix) per the operator-facing naming this feature was asked for - the
+// device id is still recorded as a column inside every row.
+function confirmedDatasetFileName(label) {
+  return `${safeFilePart(label || "dataset")}_${stamp()}.csv`;
+}
+
+const DATASET_CSV_HEADERS = [
+  "timeIso",
+  "session_id",
+  "source",
+  "device_id",
+  "node_id",
+  "mode",
+  "seq",
+  "timestamp_ms",
+  "label",
+  "nulling_profile_id",
+  ...SENSOR_NAMES.map((name) => `sv_${name}`),
+  ...SENSOR_NAMES.map((name) => `gain_${name}`),
+  ...Array.from({ length: 8 }, (_, index) => `feature_${index + 1}`)
+];
+
+function datasetCsvHeaderLine() {
+  return DATASET_CSV_HEADERS.map(csvCell).join(",");
+}
+
+function datasetRowCsvLine(row, sessionId) {
+  const cells = [
+    row.timeIso,
+    sessionId,
+    row.source,
+    row.device_id,
+    row.node_id,
+    row.mode,
+    row.seq,
+    row.timestamp_ms,
+    row.label,
+    row.nulling_profile_id,
+    ...row.sensor_voltage,
+    ...row.sensor_gain,
+    ...row.feature_order
+  ];
+  return cells.map(csvCell).join(",");
+}
+
 function formatDuration(start, end) {
   if (!start) return "00:00";
   const seconds = Math.max(0, Math.floor(((end || Date.now()) - start) / 1000));
@@ -178,20 +224,76 @@ function queueTextFromSerial(line) {
 
 // ---- session lifecycle ----
 
+// Step 2 of the wizard, now an explicit action instead of "drawer closed =
+// confirmed": creates the CSV file on disk immediately (header row only) so
+// it exists before any recording starts. Every sample captured afterward is
+// appended to this same file in real time (see appendDatasetRowToFile), so a
+// sudden crash/disconnect mid-session still leaves every reading recorded up
+// to that point on disk - Start Dataset stays disabled until this succeeds.
+export async function confirmDatasetConfig() {
+  if (!state.datasetGldConfigApplied) {
+    const status = $("datasetConfirmStatus");
+    if (status) status.textContent = "Apply WiFi/MQTT settings above first - Confirm Config unlocks once that succeeds.";
+    setDatasetState(state.dataset.state, "Apply GLD Settings (WiFi/MQTT) first", "DATASET_CONFIRM_BLOCKED wifi/mqtt not applied", true);
+    return;
+  }
+  const label = getField("datasetLabel") || "dataset";
+  saveForm();
+  if (!state.bridgeAvailable) {
+    const status = $("datasetConfirmStatus");
+    if (status) status.textContent = "Local bridge required to create the live CSV file.";
+    setDatasetState(state.dataset.state, "Bridge required to create the live CSV file", "DATASET_CONFIRM_SKIPPED bridge unavailable", true);
+    return;
+  }
+  const filename = confirmedDatasetFileName(label);
+  try {
+    const result = await bridgeFetch("/api/dataset/create", {
+      method: "POST",
+      body: JSON.stringify({ filename, header: datasetCsvHeaderLine() })
+    });
+    state.dataset.label = label;
+    state.dataset.fileName = result.filename || filename;
+    state.dataset.outputName = result.filename || filename;
+    state.dataset.outputPath = result.path || "Created";
+    state.dataset.configConfirmed = true;
+    state.dataset.lastEvent = `${nowText()} Confirmed config, created ${state.dataset.fileName}`;
+    const status = $("datasetConfirmStatus");
+    if (status) status.textContent = `Confirmed - recording will write live to ${state.dataset.fileName}.`;
+    setWizardStep(1, "done");
+    setWizardStep(2, "active");
+    renderDatasetSession();
+    updateStartDatasetAvailability();
+    setPanelOpen($("datasetSettingsPanel"), false);
+  } catch (error) {
+    const status = $("datasetConfirmStatus");
+    if (status) status.textContent = `Failed to create file: ${error.message}`;
+    setDatasetState("Error", "Failed to create dataset CSV", `DATASET_CONFIRM_ERROR ${error.message}`, true);
+  }
+}
+
+function updateStartDatasetAvailability() {
+  const button = $("startDatasetBtn");
+  if (button) button.disabled = !state.dataset.configConfirmed;
+}
+
 function startDatasetSession(dataset, deviceId) {
-  const label = dataset.label || getField("datasetLabel") || "dataset";
+  const label = dataset.label || state.dataset.label || getField("datasetLabel") || "dataset";
+  const confirmedFile = {
+    fileName: state.dataset.fileName,
+    outputName: state.dataset.outputName,
+    outputPath: state.dataset.outputPath,
+    configConfirmed: state.dataset.configConfirmed
+  };
   const session = initialDatasetSession();
+  Object.assign(session, confirmedFile);
   session.active = true;
   session.state = "Starting";
   session.phase = "Publishing START_DATASET";
   session.sessionId = dataset.session_id || crypto.randomUUID();
   session.label = label;
   session.deviceId = deviceId || state.info?.deviceId || "F001";
-  session.target = Number(dataset.target_samples) || 0;
+  session.target = 0; // recording is unbounded - only Stop Dataset ends it
   session.startedAt = Date.now();
-  session.fileName = datasetFileName(session.deviceId, label);
-  session.outputName = session.fileName;
-  session.outputPath = "Will save to app output/datasets";
   session.nullingFirst = dataset.run_nulling_first === true;
   session.lastEvent = `START_DATASET prepared for ${session.deviceId}`;
   state.dataset = session;
@@ -263,13 +365,19 @@ function markDatasetDone(reason) {
   state.dataset.state = "Done";
   state.dataset.phase = reason || "Capture complete";
   state.dataset.lastEvent = `${nowText()} ${reason || "Dataset complete"}`;
+  // The file was already written live throughout the session (every row
+  // appended as it was captured), so there is nothing left to save here -
+  // just reflect that and require a fresh Confirm Config (new file) before
+  // the operator can start another take.
+  state.dataset.saved = true;
+  state.dataset.configConfirmed = false;
   fastForwardWizardTo(4);
   setWizardStep(3, "done");
   setWizardStep(4, "done");
-  setWizardStep(5, "active");
+  markDatasetWizardSaved();
   renderDatasetSession();
   drawChart();
-  maybeAutoSaveDataset();
+  updateStartDatasetAvailability();
   saveSessionLog(state.dataset.sessionId || stamp(), "serial");
 }
 
@@ -418,6 +526,23 @@ function normalizeDatasetRecord(raw, source) {
   };
 }
 
+// Pushes the row straight to the CSV file on disk as it's captured (not
+// awaited by the caller - a slow/failed write must never stall live
+// capture) so a sudden crash mid-session still leaves every reading up to
+// that point safely on disk, not just whatever made it into memory.
+async function appendDatasetRowToFile(record) {
+  if (!state.bridgeAvailable || !state.dataset.fileName) return;
+  const line = datasetRowCsvLine(record, state.dataset.sessionId);
+  try {
+    await bridgeFetch("/api/dataset/append", {
+      method: "POST",
+      body: JSON.stringify({ filename: state.dataset.fileName, lines: [line] })
+    });
+  } catch (error) {
+    appendLog(`DATASET_APPEND_ERROR ${error.message}`, "in");
+  }
+}
+
 function addDatasetRecord(raw, source) {
   const record = normalizeDatasetRecord(raw, source);
   const key = record.seq !== "" ? `${record.source}:${record.device_id}:${record.seq}` : `${record.source}:${record.timestamp_ms}:${state.dataset.rows.length}`;
@@ -429,10 +554,11 @@ function addDatasetRecord(raw, source) {
   }
   state.dataset.active = true;
   state.dataset.state = "Capturing";
-  state.dataset.phase = state.dataset.target ? `Captured ${state.dataset.rows.length} of ${state.dataset.target}` : `Captured ${state.dataset.rows.length} rows`;
+  state.dataset.phase = `Recording - ${state.dataset.rows.length} rows captured`;
   state.dataset.lastSampleAt = Date.now();
   if (!state.dataset.startedAt) state.dataset.startedAt = Date.now();
   renderDatasetSession();
+  appendDatasetRowToFile(record);
 }
 
 export function maybeCaptureDatasetTelemetry(status) {
@@ -486,80 +612,14 @@ export function updateDatasetFromStatus(status) {
 }
 
 function datasetCsv() {
-  const headers = [
-    "timeIso",
-    "session_id",
-    "source",
-    "device_id",
-    "node_id",
-    "mode",
-    "seq",
-    "timestamp_ms",
-    "label",
-    "nulling_profile_id",
-    ...SENSOR_NAMES.map((name) => `sv_${name}`),
-    ...SENSOR_NAMES.map((name) => `gain_${name}`),
-    ...Array.from({ length: 8 }, (_, index) => `feature_${index + 1}`)
-  ];
-  const rows = state.dataset.rows.map((row) => [
-    row.timeIso,
-    state.dataset.sessionId,
-    row.source,
-    row.device_id,
-    row.node_id,
-    row.mode,
-    row.seq,
-    row.timestamp_ms,
-    row.label,
-    row.nulling_profile_id,
-    ...row.sensor_voltage,
-    ...row.sensor_gain,
-    ...row.feature_order
-  ]);
-  return [headers, ...rows].map((row) => row.map(csvCell).join(",")).join("\n") + "\n";
+  const lines = state.dataset.rows.map((row) => datasetRowCsvLine(row, state.dataset.sessionId));
+  return [datasetCsvHeaderLine(), ...lines].join("\n") + "\n";
 }
 
-export async function saveDatasetCsv() {
-  if (!state.dataset.rows.length) {
-    setDatasetState(state.dataset.state, "No rows to save", "DATASET_SAVE_SKIPPED no rows", true);
-    return;
-  }
-  const filename = state.dataset.fileName || datasetFileName(state.dataset.deviceId, state.dataset.label);
-  if (!state.bridgeAvailable) {
-    downloadText(filename, datasetCsv(), "text/csv");
-    state.dataset.outputName = filename;
-    state.dataset.outputPath = "Downloaded by browser";
-    state.dataset.saved = true;
-    renderDatasetSession();
-    markDatasetWizardSaved();
-    return;
-  }
-  try {
-    const result = await bridgeFetch("/api/dataset/save", {
-      method: "POST",
-      body: JSON.stringify({ filename, csv: datasetCsv() })
-    });
-    state.dataset.outputName = result.filename || filename;
-    state.dataset.outputPath = result.path || "Saved";
-    state.dataset.saved = true;
-    state.dataset.lastEvent = `${nowText()} Dataset CSV saved`;
-    renderDatasetSession();
-    markDatasetWizardSaved();
-  } catch (error) {
-    setDatasetState("Error", "CSV save failed", `DATASET_SAVE_ERROR ${error.message}`, true);
-  }
-}
-
-function maybeAutoSaveDataset() {
-  if (!state.dataset.rows.length || state.dataset.saved) return;
-  if (!state.bridgeAvailable) {
-    state.dataset.outputPath = "Bridge unavailable - use Download CSV";
-    renderDatasetSession();
-    return;
-  }
-  saveDatasetCsv();
-}
-
+// The authoritative file is written in real time to disk by the bridge as
+// each row is captured (see appendDatasetRowToFile) - this is only a
+// convenience client-side snapshot of whatever rows are currently held in
+// the browser's in-memory buffer, for a quick look without leaving the app.
 export function downloadDatasetCsv() {
   if (!state.dataset.rows.length) {
     setDatasetState(state.dataset.state, "No rows to download", "DATASET_DOWNLOAD_SKIPPED no rows", true);
@@ -567,7 +627,6 @@ export function downloadDatasetCsv() {
   }
   const filename = state.dataset.fileName || datasetFileName(state.dataset.deviceId, state.dataset.label);
   downloadText(filename, datasetCsv(), "text/csv");
-  markDatasetWizardSaved();
 }
 
 export async function openDatasetFolder() {
@@ -587,6 +646,9 @@ export async function openDatasetFolder() {
 export function clearDatasetSession() {
   state.dataset = initialDatasetSession();
   initDatasetWizard();
+  updateStartDatasetAvailability();
+  const status = $("datasetConfirmStatus");
+  if (status) status.textContent = "Not confirmed yet - confirming creates the CSV file immediately (with header), before any recording starts.";
   renderDatasetSession();
   drawChart();
 }
@@ -599,14 +661,17 @@ function datasetHint(session) {
   if (session.state === "Nulling First") {
     return "Nulling-first is enabled. The app switched GLD to nulling mode and did not publish START_DATASET yet. Wait for PASS, then start dataset again with the option off.";
   }
+  if (!session.configConfirmed && !session.active && session.state === "Idle") {
+    return "Confirm the dataset config (creates the CSV file) before Start Dataset becomes available.";
+  }
   if (session.active && session.rows.length === 0) {
     return "No dataset samples yet. Confirm GLD is in dataset mode, device ID/topic root match, MQTT host is this PC, and START_DATASET was acknowledged.";
   }
   if (session.rows.length > 0 && session.active) {
-    return "Dataset capture is receiving samples. Use Save CSV when done, or Stop Dataset to finish early.";
+    return "Recording - every row is being written live to the CSV file as it's captured. Click Stop Dataset when done.";
   }
   if (session.state === "Done") {
-    return "Dataset session is complete. Save CSV or open the output folder to inspect the file.";
+    return "Dataset session is complete. The CSV file already has every row - open the output folder to inspect it.";
   }
   return "No active dataset session.";
 }
@@ -641,11 +706,11 @@ export function renderDatasetSession() {
   elements.runNullingNowBtn.hidden = session.state !== "Needs Nulling";
   elements.datasetElapsedValue.textContent = `Elapsed ${formatDuration(session.startedAt, session.endedAt || Date.now())}`;
   elements.datasetLastSampleValue.textContent = session.lastSampleAt ? `Last ${formatDatasetTime(session.lastSampleAt)}` : "No samples";
-  const target = Number(session.target) || 0;
-  const progressText = target > 0 ? `${session.rows.length} / ${target}` : `${session.rows.length} / unlimited`;
-  elements.datasetProgressValue.textContent = progressText;
-  const percent = target > 0 ? Math.max(0, Math.min(100, (session.rows.length / target) * 100)) : session.rows.length ? 100 : 0;
-  elements.datasetProgressBar.style.width = `${percent}%`;
+  // Recording is unbounded (Start/Stop only, like a recorder) - there is no
+  // target to show progress against, just a running row count and a simple
+  // active/idle indicator bar.
+  elements.datasetProgressValue.textContent = `${session.rows.length} row${session.rows.length === 1 ? "" : "s"}`;
+  elements.datasetProgressBar.style.width = session.active ? "100%" : session.rows.length ? "100%" : "0%";
   renderDatasetRows();
 }
 
@@ -698,19 +763,45 @@ export async function applyGldSettings() {
   }
   saveForm();
   if (!(await showConfirm("Apply WiFi/MQTT settings to GLD and reboot it?", "warn", "Apply GLD Settings"))) return;
-  await applyAndAlert(`SET_APP_CONFIG_JSON ${JSON.stringify(payload)}`, "SET_APP_CONFIG", "Apply GLD Settings");
+  const ack = await applyAndAlert(`SET_APP_CONFIG_JSON ${JSON.stringify(payload)}`, "SET_APP_CONFIG", "Apply GLD Settings");
+  if (ack?.status === "ok") {
+    state.datasetGldConfigApplied = true;
+    const status = $("datasetGldConfigStatus");
+    if (status) status.textContent = "Applied - GLD is rebooting with these WiFi/MQTT settings. Confirm Config is now unlocked.";
+    updateConfirmDatasetConfigAvailability();
+  }
+}
+
+function updateConfirmDatasetConfigAvailability() {
+  const button = $("confirmDatasetConfigBtn");
+  if (button) {
+    button.disabled = !state.datasetGldConfigApplied;
+    button.title = state.datasetGldConfigApplied ? "" : "Apply GLD Settings (WiFi/MQTT) first";
+  }
+  const status = $("datasetConfirmStatus");
+  if (status && !state.dataset.configConfirmed) {
+    status.textContent = state.datasetGldConfigApplied
+      ? "Not confirmed yet - confirming creates the CSV file immediately (with header), before any recording starts."
+      : "Apply WiFi/MQTT settings above first - Confirm Config unlocks once that succeeds.";
+  }
 }
 
 export async function publishDatasetCommand(command) {
   const deviceId = state.info?.deviceId || $("targetDeviceId").value.trim().toUpperCase();
+  if (command === "START_DATASET" && !state.dataset.configConfirmed) {
+    setDatasetState(state.dataset.state, "Confirm the dataset config first (creates the CSV file)", "DATASET_START_BLOCKED config not confirmed", true);
+    return;
+  }
   const dataset = command === "START_DATASET"
     ? {
         cmd: "START_DATASET",
         session_id: state.dataset.sessionId || crypto.randomUUID(),
         label: getField("datasetLabel"),
-        target_samples: numberField("targetSamples"),
+        // Unbounded, start/stop-only recording (like a video/audio recorder) -
+        // 0 means "no limit" to the firmware for both fields.
+        target_samples: 0,
         sample_interval_ms: numberField("sampleIntervalMs"),
-        max_duration_ms: numberField("maxDurationMs"),
+        max_duration_ms: 0,
         run_nulling_first: elements.datasetNullingFirst.checked === true,
         use_fan_intake: true,
         fan_on_ms: numberField("fanOnMs"),

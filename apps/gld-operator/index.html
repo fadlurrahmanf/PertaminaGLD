@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>GLD Operator</title>
-    <link rel="stylesheet" href="./style.css?v=20260715-manifold-1">
+    <link rel="stylesheet" href="./style.css?v=20260716-mq-qc-analysis-1">
   </head>
   <body>
     <div class="shell">
@@ -20,17 +20,12 @@
           <span class="strip-gauge"><span>Port</span><strong id="portLabel">browser selected</strong></span>
           <span class="strip-gauge"><span>ID</span><strong id="topDeviceStatus">Unknown</strong></span>
           <span class="strip-gauge"><span>Mode</span><strong id="topModeStatus">Unknown</strong></span>
-          <span class="strip-gauge"><span>Gas</span><strong id="topGasStatus">n/a</strong></span>
-          <span class="strip-gauge"><span>Conf</span><strong id="topConfidenceStatus">-%</strong></span>
-          <span id="alarmBadge" class="tag tag--ok">No active alarms</span>
         </div>
 
         <div class="strip-actions">
           <button id="opsPanelBtn" type="button">Ops Panel</button>
           <button id="themeToggleBtn" type="button">Dark Mode</button>
           <button id="portSetupBtn" type="button">Port Setup</button>
-          <button id="alarmMuteBtn" type="button">Mute Alarm</button>
-          <button id="mockBtn" type="button">Mock GLD</button>
         </div>
       </header>
 
@@ -44,6 +39,7 @@
           <button class="tab active" data-tab="running" type="button">Running</button>
           <button class="tab" data-tab="dataset" type="button">Dataset</button>
           <button class="tab" data-tab="nulling" type="button">Nulling</button>
+          <button class="tab" data-tab="qc" type="button">QC</button>
           <button class="tab" data-tab="log" type="button">Log</button>
           <button class="tab" data-tab="expert" type="button">Expert</button>
         </div>
@@ -133,7 +129,7 @@
               <h2>Dataset Session</h2>
               <div class="toolbar">
                 <button id="switchDatasetBtn" type="button">Switch to Dataset</button>
-                <button id="startDatasetBtn" type="button">Start Dataset</button>
+                <button id="startDatasetBtn" type="button" disabled title="Confirm the dataset config first">Start Dataset</button>
                 <button id="stopDatasetBtn" type="button">Stop Dataset</button>
                 <button id="datasetSettingsBtn" class="gear-btn" type="button" title="Dataset settings" aria-label="Dataset settings">&#9881;</button>
               </div>
@@ -146,8 +142,8 @@
                 <small id="datasetPhaseValue">No active session</small>
               </article>
               <article class="gauge-card">
-                <span>Progress</span>
-                <strong id="datasetProgressValue">0 / 0</strong>
+                <span>Recorded</span>
+                <strong id="datasetProgressValue">0 rows</strong>
                 <small id="datasetElapsedValue">Elapsed 00:00</small>
               </article>
               <article class="gauge-card">
@@ -199,8 +195,7 @@
             <div class="module-head module-head--wrap">
               <h3>Latest Rows</h3>
               <div class="toolbar">
-                <button id="saveDatasetCsvBtn" type="button">Save CSV</button>
-                <button id="downloadDatasetCsvBtn" type="button">Download CSV</button>
+                <button id="downloadDatasetCsvBtn" type="button" title="Downloads a browser-side snapshot of the rows shown here - the real file on disk is already being written live during recording">Download Snapshot</button>
                 <button id="openDatasetFolderBtn" type="button">Open Folder</button>
                 <button id="clearDatasetSessionBtn" type="button">Clear Session</button>
               </div>
@@ -251,11 +246,33 @@
           </div>
         </section>
 
+        <section id="qc" class="view">
+          <div class="module">
+            <div class="module-head module-head--wrap">
+              <h2>Sensor QC</h2>
+              <div class="toolbar">
+                <button id="qcLatchBtn" type="button" title="Show live sensor graphs for the operator to judge PASS/FAIL by eye">QC-OFF</button>
+              </div>
+            </div>
+            <nav class="segmented-nav qc-groupnav" aria-label="QC category">
+              <div class="segmented-nav-track" id="qcGroupNavTrack"></div>
+            </nav>
+            <div id="qcMqGroup" class="qc-group active">
+              <nav class="segmented-nav qc-subnav" aria-label="QC channel views">
+                <div class="segmented-nav-track" id="qcSubnavTrack"></div>
+              </nav>
+              <div id="qcPanels"></div>
+            </div>
+            <div id="qcTplGroup" class="qc-group"></div>
+          </div>
+        </section>
+
         <section id="log" class="view">
           <div class="module">
             <div class="module-head module-head--wrap">
               <h2>Serial Log</h2>
               <div class="toolbar">
+                <button id="pauseLogBtn" type="button">Pause</button>
                 <button id="downloadLogBtn" type="button">Download Log</button>
                 <button id="saveSessionLogBtn" type="button">Save Log to Disk</button>
                 <button id="clearLogBtn" type="button">Clear</button>
@@ -344,6 +361,7 @@
               <button data-command="APP_PING" type="button">Ping</button>
               <button data-command="GET_INFO" type="button">Info</button>
               <button data-command="GET_STATUS" type="button">Status</button>
+              <button id="restartGldBtn" type="button">Restart GLD</button>
             </div>
           </section>
 
@@ -441,6 +459,63 @@
           <div id="chAddressStatus" class="status-line">CH address must be 4 hex chars, not 0000/FFFF, and not the Gateway ID (006F) or the GLD's own ID.</div>
 
           <div class="module-head module-head--inner">
+            <h3>LoRa STAR</h3>
+            <div class="toolbar">
+              <button id="applyLoraConfigBtn" type="button">Apply LoRa</button>
+              <button data-command="GET_INFO" type="button">Refresh LoRa</button>
+            </div>
+          </div>
+          <div class="form-grid">
+            <label>Frequency MHz<input id="loraFreqMHz" type="number" min="920" max="923" step="0.1" value="920.0"></label>
+            <label>Bandwidth kHz
+              <select id="loraBwKHz">
+                <option value="7.8">7.8</option>
+                <option value="10.4">10.4</option>
+                <option value="15.6">15.6</option>
+                <option value="20.8">20.8</option>
+                <option value="31.25">31.25</option>
+                <option value="41.7">41.7</option>
+                <option value="62.5">62.5</option>
+                <option value="125" selected>125</option>
+                <option value="250">250</option>
+                <option value="500">500</option>
+              </select>
+            </label>
+            <label>Spreading Factor<input id="loraSf" type="number" min="5" max="12" step="1" value="7"></label>
+            <label>Coding Rate<input id="loraCr" type="number" min="5" max="8" step="1" value="5"></label>
+            <label>Sync Word<input id="loraSyncWord" value="0x12" maxlength="4"></label>
+            <label>TX Power dBm<input id="loraTxPowerDbm" type="number" min="-9" max="22" step="1" value="17"></label>
+            <label>Preamble<input id="loraPreamble" type="number" min="6" max="65535" step="1" value="8"></label>
+            <label>TCXO Voltage
+              <select id="loraTcxoVoltage">
+                <option value="0">0.0</option>
+                <option value="1.6" selected>1.6</option>
+                <option value="1.7">1.7</option>
+                <option value="1.8">1.8</option>
+                <option value="2.2">2.2</option>
+                <option value="2.4">2.4</option>
+                <option value="2.7">2.7</option>
+                <option value="3.0">3.0</option>
+                <option value="3.3">3.3</option>
+              </select>
+            </label>
+            <label>XTAL Fallback Voltage
+              <select id="loraXtalVoltage">
+                <option value="0" selected>0.0</option>
+                <option value="1.6">1.6</option>
+                <option value="1.7">1.7</option>
+                <option value="1.8">1.8</option>
+                <option value="2.2">2.2</option>
+                <option value="2.4">2.4</option>
+                <option value="2.7">2.7</option>
+                <option value="3.0">3.0</option>
+                <option value="3.3">3.3</option>
+              </select>
+            </label>
+          </div>
+          <div id="loraConfigStatus" class="status-line">LoRa STAR values must match the CH STAR radio before the link will pass data.</div>
+
+          <div class="module-head module-head--inner">
             <h3>MQ Sensor Check</h3>
             <div class="toolbar">
               <button id="refreshSensorCheckBtn" type="button">Refresh Status</button>
@@ -470,29 +545,11 @@
             <button type="button" data-close-dialog="datasetSettingsPanel">Close</button>
           </div>
 
-          <h3>Capture Parameters</h3>
-          <div class="form-grid">
-            <label>Label<input id="datasetLabel" value="clear_air_test"></label>
-            <label>Target Samples<input id="targetSamples" type="number" min="1" value="100"></label>
-            <label>Interval Ms<input id="sampleIntervalMs" type="number" min="500" step="50" value="500"></label>
-            <label>Max Duration Ms<input id="maxDurationMs" type="number" min="0" value="0"></label>
-            <label>Fan On Ms<input id="fanOnMs" type="number" min="0" value="1000"></label>
-            <label>Post Fan Settle Ms<input id="postFanSettleMs" type="number" min="0" value="0"></label>
-          </div>
-          <label class="option-row">
-            <input id="datasetNullingFirst" type="checkbox">
-            <span>
-              <strong>Run nulling before dataset</strong>
-              <small>Default off. Enable only when this GLD needs a fresh nulling profile before capturing data.</small>
-            </span>
-          </label>
-
-          <div class="module-head module-head--inner">
-            <h3>WiFi and MQTT</h3>
-            <div class="toolbar">
-              <button id="useThisPcBtn" type="button">Use this PC</button>
-              <button id="testMqttBtn" type="button">Test Broker</button>
-            </div>
+          <h3>WiFi and MQTT</h3>
+          <p class="status-line">Dataset capture is delivered over MQTT, so this must be applied and succeed first - Confirm Config below stays locked until it does.</p>
+          <div class="toolbar">
+            <button id="useThisPcBtn" type="button">Use this PC</button>
+            <button id="testMqttBtn" type="button">Test Broker</button>
           </div>
           <div id="mqttTestStatus" class="status-line">Broker reachability not tested yet.</div>
           <div class="form-grid">
@@ -505,6 +562,31 @@
             <label>Topic Root<input id="topicRoot" value="gas-leak-detector"></label>
           </div>
           <button id="applyConfigBtn" type="button" class="primary">Apply GLD Settings</button>
+          <p id="datasetGldConfigStatus" class="status-line">Not applied yet this session.</p>
+
+          <div class="module-head module-head--inner">
+            <h3>Capture Parameters</h3>
+          </div>
+          <p class="status-line">Recording is manual, like a video/audio recorder: it only starts on Start Dataset and only stops on Stop Dataset - there is no sample-count or duration limit.</p>
+          <div class="form-grid">
+            <label>Label<input id="datasetLabel" value="clear_air_test"></label>
+            <label>Interval Ms<input id="sampleIntervalMs" type="number" min="500" step="50" value="500"></label>
+            <label>Fan On Ms<input id="fanOnMs" type="number" min="0" value="1000"></label>
+            <label>Post Fan Settle Ms<input id="postFanSettleMs" type="number" min="0" value="0"></label>
+          </div>
+          <label class="option-row">
+            <input id="datasetNullingFirst" type="checkbox">
+            <span>
+              <strong>Run nulling before dataset</strong>
+              <small>Default off. Enable only when this GLD needs a fresh nulling profile before capturing data.</small>
+            </span>
+          </label>
+
+          <div class="module-head module-head--inner">
+            <h3>Confirm</h3>
+          </div>
+          <p id="datasetConfirmStatus" class="status-line">Apply WiFi/MQTT settings above first - Confirm Config unlocks once that succeeds.</p>
+          <button id="confirmDatasetConfigBtn" type="button" class="primary" disabled title="Apply GLD Settings (WiFi/MQTT) first">Confirm Config &amp; Create File</button>
         </aside>
       </section>
 
@@ -545,8 +627,32 @@
           </div>
         </div>
       </div>
+
+      <div id="fullScaleSweepModal" class="modal" aria-hidden="true">
+        <div class="modal-backdrop" data-close-dialog="fullScaleSweepModal"></div>
+        <div class="modal-box modal-box--wide" role="dialog" aria-modal="true" aria-labelledby="fullScaleSweepTitle">
+          <h2 id="fullScaleSweepTitle">Full Scale MCP Sweep</h2>
+          <p id="fullScaleSweepStatus" class="status-line">Click Start to sweep MCP min to max.</p>
+          <div class="chart-wrap">
+            <canvas id="fullScaleSweepChart" width="1200" height="420"></canvas>
+          </div>
+          <div class="fullscale-table-wrap">
+            <table class="fullscale-table">
+              <thead>
+                <tr><th>Sensor</th><th>MCP</th><th>Voltage</th></tr>
+              </thead>
+              <tbody id="fullScaleSweepTableBody"></tbody>
+            </table>
+          </div>
+          <div class="modal-actions">
+            <button id="fullScaleSweepExportBtn" type="button" disabled>Export CSV</button>
+            <button id="fullScaleSweepStartBtn" type="button" class="primary">Start</button>
+            <button type="button" data-close-dialog="fullScaleSweepModal">Close</button>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <script type="module" src="./js/main.js?v=20260715-manifold-1"></script>
+    <script type="module" src="./js/main.js?v=20260716-fullscale-sweep-1"></script>
   </body>
 </html>

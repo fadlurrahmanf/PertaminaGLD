@@ -51,13 +51,50 @@ export async function withBusy(button, busyLabel, fn) {
   }
 }
 
+// Lets other modules (e.g. the QC TPL panel) mirror a filtered view of the
+// serial log without re-parsing raw serial data themselves - appendLog is
+// the single place every outgoing command and incoming line passes through.
+const logSubscribers = [];
+
+export function onAppendLog(fn) {
+  logSubscribers.push(fn);
+}
+
 export function appendLog(line, direction = "in") {
   const prefix = direction === "out" ? ">>" : "<<";
   const entry = `${nowText()} ${prefix} ${line}`;
   state.logs.push(entry);
   if (state.logs.length > 3000) state.logs.splice(0, state.logs.length - 3000);
-  elements.serialLog.textContent = state.logs.join("\n");
-  elements.serialLog.scrollTop = elements.serialLog.scrollHeight;
+  if (state.logPaused) {
+    state.logPausedCount += 1;
+    applyLogPauseVisibility();
+  } else {
+    elements.serialLog.textContent = state.logs.join("\n");
+    elements.serialLog.scrollTop = elements.serialLog.scrollHeight;
+  }
+  logSubscribers.forEach((fn) => fn(entry, line, direction));
+}
+
+// Pausing the Log tab only stops re-rendering the <pre> - every line still
+// lands in state.logs (see appendLog above), so nothing is lost and Resume
+// can flush the full backlog straight away.
+export function applyLogPauseVisibility() {
+  const btn = $("pauseLogBtn");
+  if (!btn) return;
+  btn.textContent = state.logPaused
+    ? `Resume${state.logPausedCount ? ` (${state.logPausedCount} new)` : ""}`
+    : "Pause";
+  btn.classList.toggle("primary", state.logPaused);
+}
+
+export function togglePauseLog() {
+  state.logPaused = !state.logPaused;
+  if (!state.logPaused) {
+    state.logPausedCount = 0;
+    elements.serialLog.textContent = state.logs.join("\n");
+    elements.serialLog.scrollTop = elements.serialLog.scrollHeight;
+  }
+  applyLogPauseVisibility();
 }
 
 export function setPanelOpen(panel, open) {
@@ -138,6 +175,7 @@ export function switchTab(tabId) {
     view.classList.toggle("active", view.id === tabId);
   });
   drawChart();
+  saveUiSession({ activeTab: tabId });
 }
 
 export function getField(id) {
@@ -180,10 +218,16 @@ export function exportLog() {
   downloadText(`GLD_serial_${stamp()}.log`, `${state.logs.join("\n")}\n`);
 }
 
-const FORM_STORAGE_IDS = ["datasetLabel", "targetSamples", "sampleIntervalMs", "maxDurationMs", "fanOnMs", "postFanSettleMs", "wifiSsid", "mqttHost", "mqttPort", "mqttUser", "topicRoot", "firmwareEnv", "targetDeviceId", "targetChAddress", "manualPortInput", "pollIntervalMs", "chartYAxisMin", "chartYAxisMax"];
+const FORM_STORAGE_IDS = [
+  "datasetLabel", "sampleIntervalMs", "fanOnMs", "postFanSettleMs",
+  "wifiSsid", "mqttHost", "mqttPort", "mqttUser", "topicRoot", "firmwareEnv",
+  "targetDeviceId", "targetChAddress", "manualPortInput", "pollIntervalMs", "chartYAxisMin", "chartYAxisMax",
+  "loraFreqMHz", "loraBwKHz", "loraSf", "loraCr", "loraSyncWord", "loraTxPowerDbm",
+  "loraPreamble", "loraTcxoVoltage", "loraXtalVoltage"
+];
 
 export function saveForm() {
-  const data = Object.fromEntries(FORM_STORAGE_IDS.map((id) => [id, $(id).value]));
+  const data = Object.fromEntries(FORM_STORAGE_IDS.filter((id) => $(id)).map((id) => [id, $(id).value]));
   localStorage.setItem("gldOperatorWeb.form", JSON.stringify(data));
 }
 
@@ -194,4 +238,25 @@ export function loadForm() {
       if ($(id)) $(id).value = value;
     });
   } catch {}
+}
+
+// ---- UI session (survives a page refresh: active tab, port, polling) ----
+// Not a full replay of everything that happened before the refresh - the
+// GLD itself doesn't buffer historical telemetry/nulling logs for replay -
+// but it puts the operator back where they were (same tab, same sub-tab,
+// reconnected to the same port, polling resumed) instead of a blank reset.
+
+const UI_SESSION_STORAGE_KEY = "gldOperatorWeb.uiSession";
+
+export function loadUiSession() {
+  try {
+    return JSON.parse(localStorage.getItem(UI_SESSION_STORAGE_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+export function saveUiSession(patch) {
+  const current = loadUiSession();
+  localStorage.setItem(UI_SESSION_STORAGE_KEY, JSON.stringify({ ...current, ...patch }));
 }

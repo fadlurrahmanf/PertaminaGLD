@@ -10,9 +10,12 @@ enum class GldMode : uint8_t {
     NULLING   = 2,
 };
 
+// readGldMode consumes a one-shot boot intent. Dataset/nulling can be requested
+// by SET_MODE, but the stored default is immediately returned to INFERENCE so
+// the next normal boot always starts in running mode.
 GldMode     readGldMode();
 void        writeGldMode(GldMode mode);
-void        switchGldMode(GldMode mode);   // writeGldMode + ESP.restart()
+void        switchGldMode(GldMode mode);   // write one-shot boot intent + ESP.restart()
 const char* gldModeName(GldMode mode);
 GldMode     gldModeFromString(const char* str);  // unknown → INFERENCE
 

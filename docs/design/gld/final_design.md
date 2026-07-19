@@ -477,10 +477,9 @@ unified nulling success is based on the baseline-relative threshold crossing;
 `minFinalV` is retained for command/status compatibility with older panels and
 historical logs.
 Between each algorithm phase (baseline -> exponential -> binary search ->
-confirm) the firmware pauses `stage transition pause` (2000 ms, ticking the
-WDT/serial in the background) and logs `NULLING_STAGE_TRANSITION`, so an app
-polling the serial log can visibly show each phase instead of the whole
-channel flashing by.
+confirm) the firmware logs `NULLING_STAGE_TRANSITION` with `pauseMs=0`. There
+is no deliberate inter-stage pause; DAC/ADC settling remains handled by the
+per-write settle path.
 
 Nulling runtime behavior:
 

@@ -21,7 +21,16 @@ enum class GldSerialCommandType : uint8_t {
     SetAppConfigJson,
     SetDeviceIdJson,
     SetChAddressJson,
+    SetLoraConfigJson,
     SetNullingConfigJson,
+    SetQcResultJson,
+    GetQcStatus,
+    RunNullingSingleJson,
+    ResetQcResultJson,
+    ResetQcAll,
+    RunFullScaleSweepJson,
+    InjectTplDone,
+    InjectTplClr,
 };
 
 struct GldSerialCommand {
@@ -44,7 +53,18 @@ struct GldSerialCommand {
 // - SET_APP_CONFIG_JSON {...}
 // - SET_DEVICE_ID_JSON {...}
 // - SET_CH_ADDRESS_JSON {"chId":"0064","reboot":true}
+// - SET_LORA_CONFIG_JSON {"freqMHz":920.0,"bwKHz":125,"sf":7,"cr":5,"syncWord":18}
 // - SET_NULLING_CONFIG_JSON {"thresholdV":0.00001,"minFinalV":0.0}
+// - SET_QC_RESULT_JSON {"channel":0,"pass":true,"timestamp":"2026-07-16T09:30:00"}
+// - GET_QC_STATUS
+// - RUN_NULLING_SINGLE_JSON {"channel":0}
+// - RESET_QC_RESULT_JSON {"channel":0}
+// - RESET_QC_ALL
+// - RUN_FULLSCALE_SWEEP_JSON {"channel":0}
+// - INJECT_TPL_DONE  (QC bench: pulse the TPL5010 DONE pin once, same pulse
+//   as the automatic keepalive)
+// - INJECT_TPL_CLR   (QC bench: pulse the power-latch CLR pin once, same
+//   HIGH-LOW-HIGH pulse as SLEEP_NOW - this cuts board power)
 // Unknown non-empty lines are returned with type Unknown and the raw text in payload.
 bool parseSerialCommand(GldSerialCommand& outCommand);
 

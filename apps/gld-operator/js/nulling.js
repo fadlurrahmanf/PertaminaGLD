@@ -7,8 +7,9 @@ import { $, elements, state, SENSOR_NAMES } from "./state.js";
 import { appendLog, numberField, stamp } from "./ui.js";
 import { tokenValue, channelIndexFromLog, applyAndAlert } from "./serial-protocol.js";
 import { saveSessionLog } from "./dataset.js";
+import { renderQcNullingViews } from "./qc.js";
 
-const DAC_CODE_MAX = 4095;
+export const DAC_CODE_MAX = 4095;
 
 export function latestFeatureOrderForNulling() {
   const statusOrder = state.status?.telemetry?.featureOrder;
@@ -216,6 +217,20 @@ function nullingChannelsFromLogs(logs, featureOrder = SENSOR_NAMES) {
     }
   }
 
+  // A channel with no log lines this session ("Waiting") doesn't mean the
+  // GLD was never nulled - the nulling result lives in the GLD's own NVS and
+  // survives app reconnects/refreshes. GET_QC_STATUS reports that persisted
+  // truth (state.qc.channels[i].nullingOk); when this session's logs are
+  // silent for a channel, fall back to it instead of showing a stale
+  // "Waiting/No nulling data" for a channel that is actually already OK.
+  for (const channel of channels) {
+    if (channel.tone === "idle" && state.qc.channels[channel.index]?.nullingOk) {
+      channel.stage = "Done (saved)";
+      channel.tone = "pass";
+      channel.detail = "Nulling OK - saved on the GLD from a previous run";
+    }
+  }
+
   return channels;
 }
 
@@ -369,10 +384,17 @@ function renderSweepMeter(channel) {
 
 // ---- rendering ----
 
-export function renderNullingChannels() {
+// `container` defaults to the Nulling tab's own grid; the QC tab reuses this
+// same rendering (cards, sweep meter, expandable stage detail) by passing
+// its own grid elements. `channelFilter` (array of indices) restricts which
+// channels get a card - the QC tab's per-sensor sub-tabs pass a single index
+// so only that channel's nulling progress shows there.
+export function renderNullingChannels(container = elements.nullingChannels, channelFilter = null) {
+  if (!container) return;
   const featureOrder = latestFeatureOrderForNulling();
-  const channels = nullingChannelsFromLogs(state.nullingLogs, featureOrder);
-  elements.nullingChannels.innerHTML = "";
+  const allChannels = nullingChannelsFromLogs(state.nullingLogs, featureOrder);
+  const channels = channelFilter ? allChannels.filter((c) => channelFilter.includes(c.index)) : allChannels;
+  container.innerHTML = "";
   for (const channel of channels) {
     const card = document.createElement("article");
     card.className = `channel-card ${channel.tone}`.trim();
@@ -444,7 +466,7 @@ export function renderNullingChannels() {
       card.append(disclosure);
     }
 
-    elements.nullingChannels.append(card);
+    container.append(card);
   }
 }
 
@@ -458,6 +480,7 @@ export function appendNulling(line) {
   elements.nullingLog.scrollTop = elements.nullingLog.scrollHeight;
   elements.nullingSummary.textContent = summarizeNulling(line);
   renderNullingChannels();
+  renderQcNullingViews();
   if (line.startsWith("NULLING_SERVICE_DONE") || line.startsWith("NULLING_RUNTIME_RESULT")) {
     saveSessionLog(stamp(), "nulling");
   }

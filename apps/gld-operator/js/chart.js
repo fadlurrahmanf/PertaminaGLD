@@ -41,17 +41,21 @@ function latestFeatureOrder(points) {
   return ["CH1", "CH2", "CH3", "CH4", "CH5", "CH6", "CH7", "CH8"];
 }
 
-export function renderLegend(labels, legendEl = elements.legend) {
+// `channelIndices` (default all 8) restricts which channels get a legend
+// entry - used by the QC tab's single-channel charts, which only ever show
+// one series.
+export function renderLegend(labels, legendEl = elements.legend, channelIndices = null) {
   if (!legendEl) return;
   legendEl.innerHTML = "";
   const list = labels.length ? labels : ["CH1", "CH2", "CH3", "CH4", "CH5", "CH6", "CH7", "CH8"];
-  list.slice(0, 8).forEach((label, index) => {
+  const indices = channelIndices || list.map((_, index) => index);
+  indices.forEach((index) => {
     const item = document.createElement("span");
     item.className = "legend-item";
     const swatch = document.createElement("i");
     swatch.className = "legend-swatch";
     swatch.style.background = CHART_COLORS[index];
-    item.append(swatch, document.createTextNode(label || `CH${index + 1}`));
+    item.append(swatch, document.createTextNode(list[index] || `CH${index + 1}`));
     legendEl.appendChild(item);
   });
 }
@@ -59,7 +63,10 @@ export function renderLegend(labels, legendEl = elements.legend) {
 // Draws one chart instance into `canvas`, reading its zoom range from
 // `rangeSelect` and its legend into `legendEl`. `markers` is an optional
 // list of { ts, color, label } vertical lines (used for dataset START/STOP).
-function drawOneChart(canvas, rangeSelect, legendEl, markers = []) {
+// `channelIndices` (default all 8) restricts which sensor series get drawn -
+// the QC tab's per-sensor sub-tabs pass a single-element array so only that
+// channel's line appears, while its "All Sensor" view passes all 8.
+export function drawOneChart(canvas, rangeSelect, legendEl, markers = [], channelIndices = null) {
   if (!canvas || !rangeSelect) return;
   const parent = canvas.parentElement;
   const dpr = window.devicePixelRatio || 1;
@@ -77,6 +84,7 @@ function drawOneChart(canvas, rangeSelect, legendEl, markers = []) {
   ctx.fillStyle = "#14110d";
   ctx.fillRect(0, 0, cssWidth, cssHeight);
 
+  const channels = channelIndices || [0, 1, 2, 3, 4, 5, 6, 7];
   const pad = { left: 58, right: 58, top: 18, bottom: 34 };
   const width = cssWidth - pad.left - pad.right;
   const height = cssHeight - pad.top - pad.bottom;
@@ -91,12 +99,15 @@ function drawOneChart(canvas, rangeSelect, legendEl, markers = []) {
     ctx.fillStyle = "#8a8272";
     ctx.font = "14px 'Segoe UI', sans-serif";
     ctx.fillText("Waiting for telemetry", pad.left + 12, pad.top + 24);
-    renderLegend([], legendEl);
+    renderLegend([], legendEl, channelIndices);
     return;
   }
 
   // Y-axis: either locked to the operator's Running-settings range (so the
-  // chart stops rescaling as readings move) or auto-fit to what's visible.
+  // chart stops rescaling as readings move) or auto-fit to what's visible -
+  // auto-fit only considers the channels actually being drawn, so a
+  // single-channel QC chart zooms to that sensor's own range instead of
+  // being flattened by the other 7 channels' scale.
   let min;
   let max;
   const fixedAxis = $("chartYAxisFixed")?.checked === true;
@@ -109,7 +120,8 @@ function drawOneChart(canvas, rangeSelect, legendEl, markers = []) {
     min = Infinity;
     max = -Infinity;
     for (const point of visible) {
-      for (const value of point.sensorVoltage) {
+      for (const ch of channels) {
+        const value = point.sensorVoltage[ch];
         if (Number.isFinite(value)) {
           min = Math.min(min, value);
           max = Math.max(max, value);
@@ -154,7 +166,7 @@ function drawOneChart(canvas, rangeSelect, legendEl, markers = []) {
   }
 
   const labels = latestFeatureOrder(visible);
-  for (let ch = 0; ch < 8; ch += 1) {
+  for (const ch of channels) {
     ctx.beginPath();
     ctx.lineWidth = 1.8;
     ctx.strokeStyle = CHART_COLORS[ch];
@@ -186,7 +198,76 @@ function drawOneChart(canvas, rangeSelect, legendEl, markers = []) {
     }
   }
   ctx.textBaseline = "alphabetic";
-  renderLegend(labels, legendEl);
+  renderLegend(labels, legendEl, channelIndices);
+}
+
+// Full Scale MCP Sweep popup chart: X axis is DAC/MCP code (0..codeMax), Y axis
+// is measured voltage - unlike drawOneChart's time-indexed X axis, this plots
+// one channel's voltage-vs-DAC-code response curve as a sweep streams in.
+export function drawFullScaleSweepChart(canvas, points, codeMax, color = "#3ecf8e") {
+  if (!canvas) return;
+  const parent = canvas.parentElement;
+  const dpr = window.devicePixelRatio || 1;
+  const cssWidth = Math.max(320, parent.clientWidth);
+  const cssHeight = Math.max(320, Math.min(480, Math.round(window.innerHeight * 0.5)));
+  canvas.width = Math.round(cssWidth * dpr);
+  canvas.height = Math.round(cssHeight * dpr);
+  canvas.style.height = `${cssHeight}px`;
+
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, cssWidth, cssHeight);
+  ctx.fillStyle = "#14110d";
+  ctx.fillRect(0, 0, cssWidth, cssHeight);
+
+  const pad = { left: 66, right: 20, top: 18, bottom: 34 };
+  const width = cssWidth - pad.left - pad.right;
+  const height = cssHeight - pad.top - pad.bottom;
+  drawGrid(ctx, pad, width, height);
+
+  if (!points.length) {
+    ctx.fillStyle = "#8a8272";
+    ctx.font = "14px 'Segoe UI', sans-serif";
+    ctx.fillText("Click Start to sweep MCP min to max", pad.left + 12, pad.top + 24);
+    return;
+  }
+
+  let min = Infinity;
+  let max = -Infinity;
+  for (const point of points) {
+    if (!Number.isFinite(point.voltage)) continue;
+    min = Math.min(min, point.voltage);
+    max = Math.max(max, point.voltage);
+  }
+  if (!Number.isFinite(min) || !Number.isFinite(max)) { min = -0.01; max = 0.01; }
+  if (Math.abs(max - min) < 0.00001) { max += 0.001; min -= 0.001; }
+  const margin = (max - min) * 0.12;
+  min -= margin;
+  max += margin;
+
+  ctx.fillStyle = "#8a8272";
+  ctx.font = "13.5px 'Cascadia Mono', monospace";
+  ctx.fillText(max.toFixed(4), 8, pad.top + 6);
+  ctx.fillText(min.toFixed(4), 8, pad.top + height);
+  ctx.fillText("0", pad.left, pad.top + height + 18);
+  ctx.fillText(String(codeMax), pad.left + width - 24, pad.top + height + 18);
+
+  ctx.beginPath();
+  ctx.lineWidth = 1.8;
+  ctx.strokeStyle = color;
+  let started = false;
+  for (const point of points) {
+    if (!Number.isFinite(point.voltage)) continue;
+    const x = pad.left + (point.code / codeMax) * width;
+    const y = pad.top + (1 - (point.voltage - min) / (max - min)) * height;
+    if (!started) {
+      ctx.moveTo(x, y);
+      started = true;
+    } else {
+      ctx.lineTo(x, y);
+    }
+  }
+  ctx.stroke();
 }
 
 // Dataset session START/STOP markers, sourced from the same session object

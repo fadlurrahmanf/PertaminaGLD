@@ -87,6 +87,21 @@ void pulseGldPowerLatchClear() {
     digitalWrite(pgl::gld::board::PIN_POWER_LATCH_CLR, HIGH);
 }
 
+void pulseGldTpl5010DoneThenPowerLatchClear() {
+    digitalWrite(pgl::gld::board::PIN_TPL5110_DONE, LOW);
+    delayMicroseconds(1);
+    digitalWrite(pgl::gld::board::PIN_TPL5110_DONE, HIGH);
+    delayMicroseconds(GLD_TPL5010_DONE_PULSE_US);
+    digitalWrite(pgl::gld::board::PIN_TPL5110_DONE, LOW);
+    delayMicroseconds(GLD_DONE_TO_CLR_DELAY_US);
+
+    digitalWrite(pgl::gld::board::PIN_POWER_LATCH_CLR, HIGH);
+    delayMicroseconds(1);
+    digitalWrite(pgl::gld::board::PIN_POWER_LATCH_CLR, LOW);
+    delayMicroseconds(GLD_POWER_LATCH_CLEAR_PULSE_US);
+    digitalWrite(pgl::gld::board::PIN_POWER_LATCH_CLR, HIGH);
+}
+
 uint16_t readGldBatteryMv() {
     return readBatteryAdc().batteryMv;
 }

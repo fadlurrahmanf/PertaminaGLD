@@ -79,10 +79,59 @@ bool decodeLine(const char* line, GldSerialCommand& outCommand) {
         outCommand.payload[sizeof(outCommand.payload) - 1] = '\0';
         return true;
     }
+    if (strncmp(line, "SET_LORA_CONFIG_JSON ", 21) == 0) {
+        outCommand.type = GldSerialCommandType::SetLoraConfigJson;
+        strncpy(outCommand.payload, line + 21, sizeof(outCommand.payload) - 1);
+        outCommand.payload[sizeof(outCommand.payload) - 1] = '\0';
+        return true;
+    }
     if (strncmp(line, "SET_NULLING_CONFIG_JSON ", 24) == 0) {
         outCommand.type = GldSerialCommandType::SetNullingConfigJson;
         strncpy(outCommand.payload, line + 24, sizeof(outCommand.payload) - 1);
         outCommand.payload[sizeof(outCommand.payload) - 1] = '\0';
+        return true;
+    }
+    if (strncmp(line, "SET_QC_RESULT_JSON ", 19) == 0) {
+        outCommand.type = GldSerialCommandType::SetQcResultJson;
+        strncpy(outCommand.payload, line + 19, sizeof(outCommand.payload) - 1);
+        outCommand.payload[sizeof(outCommand.payload) - 1] = '\0';
+        return true;
+    }
+    if (strcmp(line, "GET_QC_STATUS") == 0) {
+        outCommand.type = GldSerialCommandType::GetQcStatus;
+        return true;
+    }
+    if (strncmp(line, "RUN_NULLING_SINGLE_JSON ", 24) == 0) {
+        outCommand.type = GldSerialCommandType::RunNullingSingleJson;
+        strncpy(outCommand.payload, line + 24, sizeof(outCommand.payload) - 1);
+        outCommand.payload[sizeof(outCommand.payload) - 1] = '\0';
+        return true;
+    }
+    if (strncmp(line, "RESET_QC_RESULT_JSON ", 21) == 0) {
+        outCommand.type = GldSerialCommandType::ResetQcResultJson;
+        strncpy(outCommand.payload, line + 21, sizeof(outCommand.payload) - 1);
+        outCommand.payload[sizeof(outCommand.payload) - 1] = '\0';
+        return true;
+    }
+    if (strcmp(line, "RESET_QC_ALL") == 0) {
+        outCommand.type = GldSerialCommandType::ResetQcAll;
+        return true;
+    }
+    {
+        constexpr size_t kFullScaleSweepPrefixLen = sizeof("RUN_FULLSCALE_SWEEP_JSON ") - 1;
+        if (strncmp(line, "RUN_FULLSCALE_SWEEP_JSON ", kFullScaleSweepPrefixLen) == 0) {
+            outCommand.type = GldSerialCommandType::RunFullScaleSweepJson;
+            strncpy(outCommand.payload, line + kFullScaleSweepPrefixLen, sizeof(outCommand.payload) - 1);
+            outCommand.payload[sizeof(outCommand.payload) - 1] = '\0';
+            return true;
+        }
+    }
+    if (strcmp(line, "INJECT_TPL_DONE") == 0) {
+        outCommand.type = GldSerialCommandType::InjectTplDone;
+        return true;
+    }
+    if (strcmp(line, "INJECT_TPL_CLR") == 0) {
+        outCommand.type = GldSerialCommandType::InjectTplClr;
         return true;
     }
     if (line[0] != '\0') {

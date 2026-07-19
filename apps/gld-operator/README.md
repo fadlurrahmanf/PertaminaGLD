@@ -3,20 +3,43 @@
 Lightweight GLD operator console. The UI is plain HTML/CSS/JS. Full desktop-like
 features are provided by a small local Python bridge instead of Electron.
 
-## Recommended Run
+## Recommended Run (zero-install)
 
-Use the bridge for full features:
+Copy the whole `apps/gld-operator` folder to the target Windows PC (including
+`python-embed/`, which bundles Python 3.12 with `pyserial` and `paho-mqtt`
+already installed) and double-click:
 
-```powershell
-cd D:\PertaminaGLD\apps\gld-operator
-python -m pip install -r requirements.txt
-.\run-gld-operator.bat
+```text
+run-gld-operator.bat
 ```
+
+No system Python, `pip install`, or any other setup is required - the batch
+file launches the bundled `python-embed\python.exe` directly. It only falls
+back to a `python` on the system PATH if `python-embed\` is missing (e.g. a
+checkout that hasn't fetched the bundle).
 
 Open:
 
 ```text
 http://127.0.0.1:5173/
+```
+
+### Rebuilding python-embed (maintainers only)
+
+`python-embed/` is a committed, ready-to-run Python distribution, not
+generated at install time. Rebuild it only when `requirements.txt` changes:
+
+```powershell
+cd D:\PertaminaGLD\apps\gld-operator
+Remove-Item -Recurse -Force python-embed
+Invoke-WebRequest https://www.python.org/ftp/python/3.12.7/python-3.12.7-embed-amd64.zip -OutFile python-embed.zip
+Expand-Archive python-embed.zip -DestinationPath python-embed
+Remove-Item python-embed.zip
+# Uncomment "import site" in python-embed\python312._pth, then:
+Invoke-WebRequest https://bootstrap.pypa.io/get-pip.py -OutFile python-embed\get-pip.py
+.\python-embed\python.exe .\python-embed\get-pip.py --no-warn-script-location
+.\python-embed\python.exe -m pip install --no-warn-script-location -r requirements.txt
+Remove-Item python-embed\get-pip.py
 ```
 
 Bridge features:
@@ -62,7 +85,9 @@ family, and `flashFiles` shape before starting the upload.
 
 ## Fallback HTML-Only Run
 
-If the bridge is not running, the app falls back to browser Web Serial:
+If you want to serve the static UI without any bridge features at all (no
+serial, no MQTT, no firmware upload), a plain static server also works - this
+path needs a system Python since it does not go through `run-gld-operator.bat`:
 
 ```powershell
 cd D:\PertaminaGLD\apps\gld-operator
@@ -71,10 +96,13 @@ python -m http.server 5173 --bind 127.0.0.1
 
 In fallback mode the browser must show a COM permission dialog, cannot read the
 Windows WiFi password, cannot publish MQTT TCP directly, and cannot run
-PlatformIO/esptool.
+PlatformIO/esptool. Only one GLD (one serial port) can be connected at a time
+in this mode - the multi-GLD Fleet feature (Ops Panel) requires the bridge.
 
 ## Size Target
 
-The checked-in app files are tiny. Runtime size depends on installed Python,
-Chrome/Edge WebView/browser, PlatformIO, and optional Python packages rather
-than bundled Electron/Chromium.
+The checked-in app files are tiny; `python-embed/` (bundled interpreter plus
+`pyserial`/`paho-mqtt`) adds roughly 30 MB so `run-gld-operator.bat` needs
+nothing pre-installed on the target PC. PlatformIO (for the Firmware Upload
+tab) and a Chrome/Edge browser are still expected to already be on the
+machine - only the Python side of the bridge is bundled.

@@ -70,6 +70,7 @@ export function initialDatasetSession() {
     outputName: "Not saved",
     outputPath: "Waiting for session",
     fileName: "",
+    configConfirmed: false,
     saved: false,
     nullingFirst: false,
     lastEvent: "No dataset command sent.",
@@ -99,9 +100,12 @@ export const state = {
   polling: false,
   bridgeAvailable: false,
   bridgeFeatures: {},
+  bridgeSlots: {},
   eventSource: null,
   buffer: "",
   logs: [],
+  logPaused: false,
+  logPausedCount: 0,
   pendingSerialRequest: null,
   datasetRuntime: {
     mode: false,
@@ -109,6 +113,11 @@ export const state = {
     mqtt: false
   },
   datasetReadyWaiters: [],
+  // Dataset capture is delivered over MQTT, so Apply GLD Settings (WiFi/MQTT)
+  // must succeed at least once this session before Confirm Config unlocks -
+  // this is not part of initialDatasetSession() because it should survive
+  // Clear Session (re-applying WiFi/MQTT on every take would be tedious).
+  datasetGldConfigApplied: false,
   dataset: initialDatasetSession(),
   datasetWizard: ["pending", "pending", "pending", "pending", "pending", "pending"],
   nullingLogs: [],
@@ -120,6 +129,15 @@ export const state = {
     lastLine: ""
   },
   mockNullingStep: 0,
+  qc: {
+    channels: Array.from({ length: 8 }, (_, index) => ({
+      channel: index, sensor: SENSOR_NAMES[index], nullingOk: false, tested: false, pass: false, timestamp: ""
+    })),
+    activeTab: "all",
+    activeGroup: "mq",
+    latchOn: false,
+    tplAutoInject: false
+  },
   history: [],
   info: null,
   status: null,
@@ -142,14 +160,11 @@ export const encoder = new TextEncoder();
 export const decoder = new TextDecoder();
 
 export const elements = {
-  alarmBadge: $("alarmBadge"),
-  alarmMuteBtn: $("alarmMuteBtn"),
   portSetupBtn: $("portSetupBtn"),
   closeSetupBtn: $("closeSetupBtn"),
   setupPanel: $("setupPanel"),
   connectBtn: $("connectBtn"),
   disconnectBtn: $("disconnectBtn"),
-  mockBtn: $("mockBtn"),
   connectionBadge: $("connectionBadge"),
   portLabel: $("portLabel"),
   protocolLabel: $("protocolLabel"),
@@ -193,8 +208,6 @@ export const elements = {
   datasetWizard: $("datasetWizard"),
   topDeviceStatus: $("topDeviceStatus"),
   topModeStatus: $("topModeStatus"),
-  topGasStatus: $("topGasStatus"),
-  topConfidenceStatus: $("topConfidenceStatus"),
   sideDeviceSummary: $("sideDeviceSummary"),
   sidePortSummary: $("sidePortSummary"),
   bridgeBadge: $("bridgeBadge"),
@@ -210,5 +223,7 @@ export const elements = {
   fleetCountBadge: $("fleetCountBadge"),
   fleetExtra: $("fleetExtra"),
   addSlotBtn: $("addSlotBtn"),
-  activeSlotLabel: $("activeSlotLabel")
+  activeSlotLabel: $("activeSlotLabel"),
+  qcSubnavTrack: $("qcSubnavTrack"),
+  qcPanels: $("qcPanels")
 };

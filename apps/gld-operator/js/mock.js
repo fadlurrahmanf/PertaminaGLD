@@ -6,6 +6,14 @@ import { state, SENSOR_NAMES } from "./state.js";
 import { getField, numberField } from "./ui.js";
 import { handleLine, resetDeviceSnapshot } from "./serial-protocol.js";
 import { updateConnectionUi } from "./bridge-client.js";
+import { DAC_CODE_MAX } from "./nulling.js";
+
+// Matches the firmware's real step size (every code, 0..4095) - batched a
+// few codes per timer tick purely so the mock animation doesn't take minutes
+// to finish; real hardware still emits one FULLSCALE_STEP line per code.
+const FULLSCALE_SWEEP_STEP = 1;
+const FULLSCALE_SWEEP_CODES_PER_TICK = 16;
+const FULLSCALE_SWEEP_INTERVAL_MS = 20;
 
 function safeJson(text) {
   try { return JSON.parse(text); } catch { return null; }
@@ -24,7 +32,27 @@ function mockAck(cmd, status, rebootExpected) {
   };
 }
 
+function mockLoraConfig() {
+  const syncText = String(getField("loraSyncWord") || "0x12").trim();
+  const syncBase = /^0x/i.test(syncText) || /[a-f]/i.test(syncText) ? 16 : 10;
+  const syncWord = Number.parseInt(syncText.replace(/^0x/i, ""), syncBase);
+  const tcxoVoltage = numberField("loraTcxoVoltage");
+  const xtalVoltage = numberField("loraXtalVoltage");
+  return {
+    freqMHz: numberField("loraFreqMHz") || 920,
+    bwKHz: numberField("loraBwKHz") || 125,
+    sf: numberField("loraSf") || 7,
+    cr: numberField("loraCr") || 5,
+    syncWord: Number.isFinite(syncWord) ? syncWord : 0x12,
+    txPowerDbm: numberField("loraTxPowerDbm") || 17,
+    preamble: numberField("loraPreamble") || 8,
+    tcxoVoltage: Number.isFinite(tcxoVoltage) ? tcxoVoltage : 1.6,
+    xtalVoltage: Number.isFinite(xtalVoltage) ? xtalVoltage : 0
+  };
+}
+
 export function emitMockInfo() {
+  const lora = mockLoraConfig();
   const info = {
     deviceId: state.info?.deviceId || "F001",
     nodeId: 0xF001,
@@ -34,6 +62,7 @@ export function emitMockInfo() {
     boardProfile: "GLDW-WROOM-1U-N16R8",
     mode: state.mode === "unknown" ? "inference" : state.mode,
     baud: 115200,
+    starLora: { ...lora, runtime: true },
     appConfig: {
       wifiSsid: getField("wifiSsid"),
       mqttHost: getField("mqttHost"),
@@ -47,7 +76,9 @@ export function emitMockInfo() {
       getStatus: true,
       serialAppConfig: true,
       serialDeviceId: true,
-      serialChAddress: "SET_CH_ADDRESS_JSON chId"
+      serialChAddress: "SET_CH_ADDRESS_JSON chId",
+      serialLoraConfig: "SET_LORA_CONFIG_JSON freqMHz,bwKHz,sf,cr,syncWord,txPowerDbm,preamble,tcxoVoltage,xtalVoltage",
+      liveLoraReinit: true
     }
   };
   handleLine(`GLD_INFO_JSON ${JSON.stringify(info)}`);
@@ -59,13 +90,15 @@ export function emitMockStatus() {
     return 0.08 * Math.sin(t * (0.35 + index * 0.04) + index) + index * 0.012;
   });
   const alarm = Math.random() > 0.98;
+  const lora = mockLoraConfig();
   const status = {
     deviceId: state.info?.deviceId || "F001",
     nodeId: 0xF001,
     mode: state.mode === "unknown" ? "inference" : state.mode,
+    uptimeMs: Math.floor(performance.now()),
     power: { mode: "24v", externalPower: true, batteryMv: 3560, batteryValid: true },
     bootHealth: { adsReady: true, mcpOkCount: 8, dacReady: true, mlReady: true },
-    lora: { beginState: 0, lastTxOk: true },
+    lora: { beginState: 0, lastTxOk: true, ...lora },
     nulling: {
       running: state.mode === "nulling" && state.mockNullingStep < 48,
       done: state.mockNullingStep >= 48,
@@ -107,6 +140,8 @@ function emitMockNullingProgress() {
   const voltage = (baseline + stage * threshold * 0.35).toFixed(9);
   const delta = (Number(voltage) - baseline).toFixed(6);
 
+  state.mockNullingChannelOk = state.mockNullingChannelOk || Array(8).fill(false);
+
   if (stage === 0) {
     handleLine(`NULLING_CH_START ch=${channel} sensor=${sensor}`);
   } else if (stage === 1) {
@@ -126,6 +161,7 @@ function emitMockNullingProgress() {
     handleLine(`NULLING_CONFIRM_OK ch=${channel} sensor=${sensor} code=${baseCode} voltage=${target.toFixed(9)} delta=${threshold.toFixed(6)} threshold=${threshold.toFixed(6)} target=${target.toFixed(6)} mode=baseline_threshold_verified`);
   } else {
     handleLine(`NULLING_CH_OK ch=${channel} sensor=${sensor} dac=${baseCode} baseline=${(Number(voltage) - 0.0009).toFixed(6)} after=${voltage}`);
+    state.mockNullingChannelOk[channel] = true;
   }
 
   state.mockNullingStep += 1;
@@ -142,6 +178,11 @@ function emitMockNullingProgress() {
 export function handleMockCommand(command) {
   if (command === "GET_INFO" || command === "APP_PING") emitMockInfo();
   if (command === "GET_STATUS" || command === "RUN_BOOT_CHECK") emitMockStatus();
+  if (command === "RESTART") {
+    handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("RESTART", "ok", true))}`);
+    state.mode = "inference";
+    emitMockInfo();
+  }
   if (command.startsWith("SET_MODE ")) {
     state.mode = command.slice("SET_MODE ".length);
     handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("SET_MODE", "ok", true))}`);
@@ -163,6 +204,11 @@ export function handleMockCommand(command) {
   if (command.startsWith("SET_APP_CONFIG_JSON ")) {
     handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("SET_APP_CONFIG", "ok", true))}`);
   }
+  if (command.startsWith("SET_LORA_CONFIG_JSON ")) {
+    handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("SET_LORA_CONFIG", "ok", false))}`);
+    emitMockInfo();
+    emitMockStatus();
+  }
   if (command.startsWith("SET_NULLING_CONFIG_JSON ")) {
     const payload = safeJson(command.slice("SET_NULLING_CONFIG_JSON ".length));
     state.mockNullingConfig = {
@@ -171,6 +217,102 @@ export function handleMockCommand(command) {
     };
     handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("SET_NULLING_CONFIG", "ok", false))}`);
   }
+  if (command === "GET_QC_STATUS") emitMockQcStatus();
+  if (command.startsWith("RUN_NULLING_SINGLE_JSON ")) {
+    const payload = safeJson(command.slice("RUN_NULLING_SINGLE_JSON ".length));
+    const channel = Number(payload?.channel);
+    if (Number.isInteger(channel) && channel >= 0 && channel < 8) {
+      const sensor = SENSOR_NAMES[channel] || `MQ${channel + 1}`;
+      state.mockNullingChannelOk = state.mockNullingChannelOk || Array(8).fill(false);
+      handleLine(`NULLING_CH_START ch=${channel} sensor=${sensor}`);
+      handleLine(`NULLING_CH_OK ch=${channel} sensor=${sensor} dac=140 baseline=0.294000 after=0.294500`);
+      state.mockNullingChannelOk[channel] = true;
+      handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("RUN_NULLING_SINGLE", "ok", false))}`);
+    } else {
+      handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("RUN_NULLING_SINGLE", "rejected", false))}`);
+    }
+  }
+  if (command.startsWith("RESET_QC_RESULT_JSON ")) {
+    const payload = safeJson(command.slice("RESET_QC_RESULT_JSON ".length));
+    const channel = Number(payload?.channel);
+    if (Number.isInteger(channel) && channel >= 0 && channel < 8) {
+      state.mockQcProfile = state.mockQcProfile || mockQcProfileDefault();
+      state.mockQcProfile[channel] = { tested: false, pass: false, timestamp: "" };
+      handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("RESET_QC_RESULT", "ok", false))}`);
+    } else {
+      handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("RESET_QC_RESULT", "rejected", false))}`);
+    }
+  }
+  if (command === "RESET_QC_ALL") {
+    state.mockQcProfile = mockQcProfileDefault();
+    handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("RESET_QC_ALL", "ok", false))}`);
+  }
+  if (command.startsWith("RUN_FULLSCALE_SWEEP_JSON ")) {
+    const payload = safeJson(command.slice("RUN_FULLSCALE_SWEEP_JSON ".length));
+    const channel = Number(payload?.channel);
+    if (Number.isInteger(channel) && channel >= 0 && channel < 8) {
+      handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("RUN_FULLSCALE_SWEEP", "ok", false))}`);
+      runMockFullScaleSweep(channel);
+    } else {
+      handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("RUN_FULLSCALE_SWEEP", "rejected", false))}`);
+    }
+  }
+  if (command.startsWith("SET_QC_RESULT_JSON ")) {
+    const payload = safeJson(command.slice("SET_QC_RESULT_JSON ".length));
+    const channel = Number(payload?.channel);
+    if (Number.isInteger(channel) && channel >= 0 && channel < 8) {
+      state.mockQcProfile = state.mockQcProfile || mockQcProfileDefault();
+      state.mockQcProfile[channel] = { tested: true, pass: Boolean(payload.pass), timestamp: payload.timestamp || "" };
+      handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("SET_QC_RESULT", "ok", false))}`);
+    } else {
+      handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("SET_QC_RESULT", "rejected", false))}`);
+    }
+  }
+}
+
+// Streams FULLSCALE_STEP lines on a timer (instead of all at once) so the
+// popup's chart/table visibly build up code-by-code in mock mode, the same
+// way they would from real serial data arriving line-by-line.
+function runMockFullScaleSweep(channel) {
+  const sensor = SENSOR_NAMES[channel] || `MQ${channel + 1}`;
+  const codes = [];
+  for (let code = 0; code <= DAC_CODE_MAX; code += FULLSCALE_SWEEP_STEP) codes.push(code);
+  if (codes[codes.length - 1] !== DAC_CODE_MAX) codes.push(DAC_CODE_MAX);
+  const restoreCode = 140 + channel * 4;
+
+  handleLine(`FULLSCALE_START ch=${channel} sensor=${sensor} codeMin=0 codeMax=${DAC_CODE_MAX} step=${FULLSCALE_SWEEP_STEP} avgCount=8`);
+
+  let i = 0;
+  const timer = setInterval(() => {
+    for (let n = 0; n < FULLSCALE_SWEEP_CODES_PER_TICK && i < codes.length; n += 1, i += 1) {
+      const code = codes[i];
+      // Rough MQ-sensor-like response curve: flat near the rail floor at low
+      // codes, rising sharply through mid-range, saturating near the top.
+      const x = code / DAC_CODE_MAX;
+      const voltage = 0.03 + 2.9 / (1 + Math.exp(-12 * (x - 0.45))) + (Math.random() - 0.5) * 0.004;
+      handleLine(`FULLSCALE_STEP ch=${channel} sensor=${sensor} code=${code} voltage=${voltage.toFixed(6)} valid=1 write=1`);
+    }
+    if (i >= codes.length) {
+      clearInterval(timer);
+      handleLine(`FULLSCALE_DONE ch=${channel} sensor=${sensor} status=Ok restoreCode=${restoreCode} restoreOk=1`);
+    }
+  }, FULLSCALE_SWEEP_INTERVAL_MS);
+}
+
+function mockQcProfileDefault() {
+  return Array.from({ length: 8 }, () => ({ tested: false, pass: false, timestamp: "" }));
+}
+
+function emitMockQcStatus() {
+  state.mockQcProfile = state.mockQcProfile || mockQcProfileDefault();
+  state.mockNullingChannelOk = state.mockNullingChannelOk || Array(8).fill(false);
+  const channels = SENSOR_NAMES.map((sensor, index) => ({
+    channel: index,
+    sensor,
+    nullingOk: state.mockNullingChannelOk[index],
+    ...state.mockQcProfile[index]
+  }));
+  handleLine(`GLD_QC_STATUS_JSON ${JSON.stringify({ deviceId: state.info?.deviceId || "F001", nodeId: 0xF001, chId: "0064", channels })}`);
 }
 
 export function toggleMock() {
@@ -187,5 +329,6 @@ export function toggleMock() {
   state.connected = false;
   updateConnectionUi("mock", "ok");
   emitMockInfo();
+  emitMockQcStatus();
   state.mockTimer = setInterval(emitMockStatus, 1000);
 }

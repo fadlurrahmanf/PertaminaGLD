@@ -9,6 +9,7 @@
 
 #include <cstdarg>
 #include <cctype>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -23,6 +24,8 @@
 #include "GldMovingAverage.h"
 #include "GldNullingProfile.h"
 #include "GldNullingService.h"
+#include "GldQcProfile.h"
+#include "GldQcService.h"
 #include "GldPower.h"
 #include "GldSelfTestConfig.h"
 #include "GldThresholdClassifier.h"
@@ -49,16 +52,18 @@ constexpr const char* DEFAULT_TOPIC_ROOT     = PGL_SERVER_DATASET_TOPIC_ROOT;
 // ---------------------------------------------------------------------------
 // LoRa config (STAR) — harus cocok dengan CH, tidak diubah per-node
 // ---------------------------------------------------------------------------
-constexpr float    STAR_FREQ_MHZ    = GLD_STAR_FREQ_MHZ;
-constexpr float    STAR_BW_KHZ      = GLD_STAR_BW_KHZ;
-constexpr uint8_t  STAR_SF          = GLD_STAR_SF;
-constexpr uint8_t  STAR_CR          = GLD_STAR_CR;
-constexpr uint8_t  STAR_SYNC_WORD   = GLD_STAR_SYNC_WORD;
-constexpr int8_t   STAR_TX_POWER    = GLD_STAR_TX_POWER_DBM;
-constexpr uint16_t STAR_PREAMBLE    = GLD_STAR_PREAMBLE;
-constexpr float    LORA_TCXO_V      = GLD_STAR_TCXO_VOLTAGE;
-constexpr float    LORA_XTAL_V      = GLD_STAR_XTAL_VOLTAGE;
+constexpr float    DEFAULT_STAR_FREQ_MHZ    = GLD_STAR_FREQ_MHZ;
+constexpr float    DEFAULT_STAR_BW_KHZ      = GLD_STAR_BW_KHZ;
+constexpr uint8_t  DEFAULT_STAR_SF          = GLD_STAR_SF;
+constexpr uint8_t  DEFAULT_STAR_CR          = GLD_STAR_CR;
+constexpr uint8_t  DEFAULT_STAR_SYNC_WORD   = GLD_STAR_SYNC_WORD;
+constexpr int8_t   DEFAULT_STAR_TX_POWER    = GLD_STAR_TX_POWER_DBM;
+constexpr uint16_t DEFAULT_STAR_PREAMBLE    = GLD_STAR_PREAMBLE;
+constexpr float    DEFAULT_LORA_TCXO_V      = GLD_STAR_TCXO_VOLTAGE;
+constexpr float    DEFAULT_LORA_XTAL_V      = GLD_STAR_XTAL_VOLTAGE;
 constexpr uint32_t LORA_RX_WINDOW_MS = GLD_LORA_RX_WINDOW_MS;
+constexpr float    STAR_RUNTIME_MIN_FREQ_MHZ = 920.0f;
+constexpr float    STAR_RUNTIME_MAX_FREQ_MHZ = 923.0f;
 
 // ---------------------------------------------------------------------------
 // Timing from GldConfig.h
@@ -100,6 +105,7 @@ constexpr uint8_t ADS1256_REG_ADCON = 0x02;
 constexpr uint8_t ADS1256_REG_DRATE = 0x03;
 constexpr uint32_t NULLING_RETRY_DELAY_MS = 5000;
 constexpr uint32_t NULLING_AUTO_RESTART_DELAY_MS = 800;
+constexpr uint32_t BATTERY_FAULT_SERIAL_HOLD_MS = 10000;
 
 #if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8
 constexpr const char* BOARD_PROFILE = "WROOM-1U-N16R8";
@@ -206,6 +212,8 @@ uint8_t  lastBootMcpControlOkCount = 0;
 bool     lastBootMcpControlOk[pgl::gld::board::SENSOR_COUNT]{};
 bool     batteryPowerMode = false;
 bool     batteryCyclePoweredOff = false;
+bool     batteryFaultPowerOffArmed = false;
+uint32_t batteryFaultPowerOffDueMs = 0;
 uint32_t lastWdtKeepaliveMs = 0;
 float    latestSensorVoltage[pgl::gld::board::SENSOR_COUNT]{};
 uint8_t  latestSensorGain[pgl::gld::board::SENSOR_COUNT]{};
@@ -233,9 +241,19 @@ struct RuntimeConfig {
     uint8_t aesKey[16]{};
     bool aesKeyPresent = false;
     uint16_t lastDownlinkCommandId = 0;
+    float loraFreqMHz = DEFAULT_STAR_FREQ_MHZ;
+    float loraBwKHz = DEFAULT_STAR_BW_KHZ;
+    uint8_t loraSf = DEFAULT_STAR_SF;
+    uint8_t loraCr = DEFAULT_STAR_CR;
+    uint8_t loraSyncWord = DEFAULT_STAR_SYNC_WORD;
+    int8_t loraTxPowerDbm = DEFAULT_STAR_TX_POWER;
+    uint16_t loraPreamble = DEFAULT_STAR_PREAMBLE;
+    float loraTcxoVoltage = DEFAULT_LORA_TCXO_V;
+    float loraXtalVoltage = DEFAULT_LORA_XTAL_V;
 };
 
 RuntimeConfig runtimeConfig{};
+bool beginLoraRadio();
 
 bool runtimeConfigValid() {
     return runtimeConfig.ctrlword == GLD_CTRL_WORD_VALUE &&
@@ -371,6 +389,85 @@ bool parseAesKeyHex(const char* text, uint8_t out[16]) {
     return highNibble < 0 && outLen == 16;
 }
 
+void setRejectReason(char* target, size_t targetSize, const char* reason) {
+    if (target == nullptr || targetSize == 0) return;
+    snprintf(target, targetSize, "%s", reason != nullptr ? reason : "invalid config");
+}
+
+bool approxEqual(float a, float b, float tolerance = 0.02f) {
+    return fabsf(a - b) <= tolerance;
+}
+
+bool normalizeLoraBandwidth(float& bwKHz) {
+    constexpr float allowed[] = {7.8f, 10.4f, 15.6f, 20.8f, 31.25f,
+                                 41.7f, 62.5f, 125.0f, 250.0f, 500.0f};
+    for (float allowedBw : allowed) {
+        if (approxEqual(bwKHz, allowedBw, 0.08f)) {
+            bwKHz = allowedBw;
+            return true;
+        }
+    }
+    return false;
+}
+
+bool isAllowedTcxoVoltage(float voltage) {
+    constexpr float allowed[] = {0.0f, 1.6f, 1.7f, 1.8f, 2.2f, 2.4f, 2.7f, 3.0f, 3.3f};
+    for (float allowedVoltage : allowed) {
+        if (approxEqual(voltage, allowedVoltage, 0.01f)) return true;
+    }
+    return false;
+}
+
+bool validateRuntimeLoraConfig(RuntimeConfig& config, char* reason = nullptr, size_t reasonSize = 0) {
+    if (!std::isfinite(config.loraFreqMHz) ||
+        config.loraFreqMHz < STAR_RUNTIME_MIN_FREQ_MHZ ||
+        config.loraFreqMHz > STAR_RUNTIME_MAX_FREQ_MHZ) {
+        setRejectReason(reason, reasonSize, "freqMHz must be 920.0..923.0 for STAR");
+        return false;
+    }
+    if (!std::isfinite(config.loraBwKHz) || !normalizeLoraBandwidth(config.loraBwKHz)) {
+        setRejectReason(reason, reasonSize, "bwKHz must be 7.8,10.4,15.6,20.8,31.25,41.7,62.5,125,250,500");
+        return false;
+    }
+    if (config.loraSf < 5 || config.loraSf > 12) {
+        setRejectReason(reason, reasonSize, "sf must be 5..12");
+        return false;
+    }
+    if (config.loraCr < 5 || config.loraCr > 8) {
+        setRejectReason(reason, reasonSize, "cr must be 5..8");
+        return false;
+    }
+    if (config.loraTxPowerDbm < -9 || config.loraTxPowerDbm > 22) {
+        setRejectReason(reason, reasonSize, "txPowerDbm must be -9..22");
+        return false;
+    }
+    if (config.loraPreamble < 6) {
+        setRejectReason(reason, reasonSize, "preamble must be >= 6");
+        return false;
+    }
+    if (!std::isfinite(config.loraTcxoVoltage) || !isAllowedTcxoVoltage(config.loraTcxoVoltage)) {
+        setRejectReason(reason, reasonSize, "tcxoVoltage must be 0,1.6,1.7,1.8,2.2,2.4,2.7,3.0,3.3");
+        return false;
+    }
+    if (!std::isfinite(config.loraXtalVoltage) || !isAllowedTcxoVoltage(config.loraXtalVoltage)) {
+        setRejectReason(reason, reasonSize, "xtalVoltage must be 0,1.6,1.7,1.8,2.2,2.4,2.7,3.0,3.3");
+        return false;
+    }
+    return true;
+}
+
+void resetRuntimeLoraDefaults() {
+    runtimeConfig.loraFreqMHz = DEFAULT_STAR_FREQ_MHZ;
+    runtimeConfig.loraBwKHz = DEFAULT_STAR_BW_KHZ;
+    runtimeConfig.loraSf = DEFAULT_STAR_SF;
+    runtimeConfig.loraCr = DEFAULT_STAR_CR;
+    runtimeConfig.loraSyncWord = DEFAULT_STAR_SYNC_WORD;
+    runtimeConfig.loraTxPowerDbm = DEFAULT_STAR_TX_POWER;
+    runtimeConfig.loraPreamble = DEFAULT_STAR_PREAMBLE;
+    runtimeConfig.loraTcxoVoltage = DEFAULT_LORA_TCXO_V;
+    runtimeConfig.loraXtalVoltage = DEFAULT_LORA_XTAL_V;
+}
+
 void clearRuntimeAesKey() {
     runtimeConfig.aesKeyId = 0;
     memset(runtimeConfig.aesKey, 0, sizeof(runtimeConfig.aesKey));
@@ -411,6 +508,7 @@ void resetRuntimeConfigDefaults() {
     copyBounded(runtimeConfig.topicRoot, sizeof(runtimeConfig.topicRoot), DEFAULT_TOPIC_ROOT);
     clearRuntimeAesKey();
     runtimeConfig.lastDownlinkCommandId = 0;
+    resetRuntimeLoraDefaults();
     buildRuntimeTopics();
 }
 
@@ -438,6 +536,15 @@ void loadRuntimeConfig() {
     copyBounded(runtimeConfig.mqttPass, sizeof(runtimeConfig.mqttPass), value.c_str());
     value = prefs.getString("topicRoot", runtimeConfig.topicRoot);
     copyBounded(runtimeConfig.topicRoot, sizeof(runtimeConfig.topicRoot), value.c_str());
+    runtimeConfig.loraFreqMHz = prefs.getFloat("loraFreq", runtimeConfig.loraFreqMHz);
+    runtimeConfig.loraBwKHz = prefs.getFloat("loraBw", runtimeConfig.loraBwKHz);
+    runtimeConfig.loraSf = static_cast<uint8_t>(prefs.getUChar("loraSf", runtimeConfig.loraSf));
+    runtimeConfig.loraCr = static_cast<uint8_t>(prefs.getUChar("loraCr", runtimeConfig.loraCr));
+    runtimeConfig.loraSyncWord = static_cast<uint8_t>(prefs.getUChar("loraSync", runtimeConfig.loraSyncWord));
+    runtimeConfig.loraTxPowerDbm = static_cast<int8_t>(prefs.getShort("loraPwr", runtimeConfig.loraTxPowerDbm));
+    runtimeConfig.loraPreamble = prefs.getUShort("loraPre", runtimeConfig.loraPreamble);
+    runtimeConfig.loraTcxoVoltage = prefs.getFloat("loraTcxo", runtimeConfig.loraTcxoVoltage);
+    runtimeConfig.loraXtalVoltage = prefs.getFloat("loraXtal", runtimeConfig.loraXtalVoltage);
     runtimeConfig.ctrlword = static_cast<uint8_t>(prefs.getUChar("ctrlword", runtimeConfig.ctrlword));
     runtimeConfig.aesKeyId = static_cast<uint8_t>(prefs.getUChar("aesKeyId", 0));
     runtimeConfig.aesKeyPresent = prefs.getBool("aesKeySet", false) &&
@@ -453,8 +560,13 @@ void loadRuntimeConfig() {
     if (!runtimeConfig.aesKeyPresent) {
         applySelfTestAesFallbackIfAllowed();
     }
+    char loraReason[120]{};
+    if (!validateRuntimeLoraConfig(runtimeConfig, loraReason, sizeof(loraReason))) {
+        resetRuntimeLoraDefaults();
+        logPrintf("GLD_LORA_CONFIG_LOAD=DEFAULT reason=%s\n", loraReason);
+    }
     buildRuntimeTopics();
-    logPrintf("GLD_APP_CONFIG_LOAD=%s deviceId=%s nodeId=0x%04X chId=0x%04X ssid=%s mqttHost=%s mqttPort=%u topicRoot=%s aesKey=%u keyId=%u lastCmdId=%u\n",
+    logPrintf("GLD_APP_CONFIG_LOAD=%s deviceId=%s nodeId=0x%04X chId=0x%04X ssid=%s mqttHost=%s mqttPort=%u topicRoot=%s aesKey=%u keyId=%u lastCmdId=%u lora=%.3f/%.2f/SF%u/CR%u sync=0x%02X power=%d preamble=%u\n",
               runtimeConfigValid() ? "OK" : "DEFAULT_UNCONFIGURED",
               runtimeConfig.deviceId,
               runtimeConfig.nodeId,
@@ -465,7 +577,14 @@ void loadRuntimeConfig() {
               runtimeConfig.topicRoot,
               runtimeConfig.aesKeyPresent ? 1 : 0,
               runtimeConfig.aesKeyId,
-              runtimeConfig.lastDownlinkCommandId);
+              runtimeConfig.lastDownlinkCommandId,
+              runtimeConfig.loraFreqMHz,
+              runtimeConfig.loraBwKHz,
+              runtimeConfig.loraSf,
+              runtimeConfig.loraCr,
+              runtimeConfig.loraSyncWord,
+              runtimeConfig.loraTxPowerDbm,
+              runtimeConfig.loraPreamble);
 }
 
 bool saveRuntimeConfig() {
@@ -483,6 +602,15 @@ bool saveRuntimeConfig() {
     prefs.putString("mqttUser", runtimeConfig.mqttUser);
     prefs.putString("mqttPass", runtimeConfig.mqttPass);
     prefs.putString("topicRoot", runtimeConfig.topicRoot);
+    prefs.putFloat("loraFreq", runtimeConfig.loraFreqMHz);
+    prefs.putFloat("loraBw", runtimeConfig.loraBwKHz);
+    prefs.putUChar("loraSf", runtimeConfig.loraSf);
+    prefs.putUChar("loraCr", runtimeConfig.loraCr);
+    prefs.putUChar("loraSync", runtimeConfig.loraSyncWord);
+    prefs.putShort("loraPwr", runtimeConfig.loraTxPowerDbm);
+    prefs.putUShort("loraPre", runtimeConfig.loraPreamble);
+    prefs.putFloat("loraTcxo", runtimeConfig.loraTcxoVoltage);
+    prefs.putFloat("loraXtal", runtimeConfig.loraXtalVoltage);
     if (runtimeConfig.aesKeyPresent && runtimeConfig.aesKeyId != 0) {
         prefs.putBool("aesKeySet", true);
         prefs.putUChar("aesKeyId", runtimeConfig.aesKeyId);
@@ -526,6 +654,168 @@ bool validChId(uint16_t chId) {
     if (chId == 0x0000 || chId == 0xFFFF) return false;
     if (chId == GLD_RESERVED_GATEWAY_ID) return false;
     if (chId == runtimeConfig.nodeId) return false;
+    return true;
+}
+
+template <typename TDoc>
+JsonVariant findConfigField(TDoc& doc, const char* key1,
+                            const char* key2 = nullptr,
+                            const char* key3 = nullptr) {
+    JsonVariant value = doc[key1];
+    if (!value.isNull()) return value;
+    if (key2 != nullptr) {
+        value = doc[key2];
+        if (!value.isNull()) return value;
+    }
+    if (key3 != nullptr) {
+        value = doc[key3];
+        if (!value.isNull()) return value;
+    }
+    JsonVariant lora = doc["lora"];
+    if (lora.isNull()) return JsonVariant();
+    value = lora[key1];
+    if (!value.isNull()) return value;
+    if (key2 != nullptr) {
+        value = lora[key2];
+        if (!value.isNull()) return value;
+    }
+    if (key3 != nullptr) {
+        value = lora[key3];
+        if (!value.isNull()) return value;
+    }
+    return JsonVariant();
+}
+
+bool parseFloatJson(JsonVariant value, float& out) {
+    if (value.isNull()) return false;
+    const char* text = value.as<const char*>();
+    if (text != nullptr) {
+        char* end = nullptr;
+        const float parsed = strtof(text, &end);
+        while (end != nullptr && isspace(static_cast<unsigned char>(*end))) ++end;
+        if (end == text || (end != nullptr && *end != '\0') || !std::isfinite(parsed)) return false;
+        out = parsed;
+        return true;
+    }
+    const float parsed = value.as<float>();
+    if (!std::isfinite(parsed)) return false;
+    out = parsed;
+    return true;
+}
+
+bool parseLongJson(JsonVariant value, long& out) {
+    if (value.isNull()) return false;
+    const char* text = value.as<const char*>();
+    if (text != nullptr) {
+        char* end = nullptr;
+        const long parsed = strtol(text, &end, 0);
+        while (end != nullptr && isspace(static_cast<unsigned char>(*end))) ++end;
+        if (end == text || (end != nullptr && *end != '\0')) return false;
+        out = parsed;
+        return true;
+    }
+    out = value.as<long>();
+    return true;
+}
+
+bool readFloatConfigField(JsonDocument& doc, const char* key1, const char* key2,
+                          const char* key3, float& target, bool& sawField,
+                          char* reason, size_t reasonSize) {
+    JsonVariant value = findConfigField(doc, key1, key2, key3);
+    if (value.isNull()) return true;
+    sawField = true;
+    float parsed = target;
+    if (!parseFloatJson(value, parsed)) {
+        char msg[96];
+        snprintf(msg, sizeof(msg), "%s must be numeric", key1);
+        setRejectReason(reason, reasonSize, msg);
+        return false;
+    }
+    target = parsed;
+    return true;
+}
+
+bool readLongConfigField(JsonDocument& doc, const char* key1, const char* key2,
+                         const char* key3, long& target, bool& sawField,
+                         char* reason, size_t reasonSize) {
+    JsonVariant value = findConfigField(doc, key1, key2, key3);
+    if (value.isNull()) return true;
+    sawField = true;
+    long parsed = target;
+    if (!parseLongJson(value, parsed)) {
+        char msg[96];
+        snprintf(msg, sizeof(msg), "%s must be an integer", key1);
+        setRejectReason(reason, reasonSize, msg);
+        return false;
+    }
+    target = parsed;
+    return true;
+}
+
+bool hasRuntimeLoraPatch(JsonDocument& doc) {
+    if (!doc["lora"].isNull()) return true;
+    return !findConfigField(doc, "freqMHz", "loraFreqMHz", "frequencyMHz").isNull() ||
+           !findConfigField(doc, "bwKHz", "loraBwKHz", "bandwidthKHz").isNull() ||
+           !findConfigField(doc, "sf", "loraSf", "spreadingFactor").isNull() ||
+           !findConfigField(doc, "cr", "loraCr", "codingRate").isNull() ||
+           !findConfigField(doc, "syncWord", "loraSyncWord", nullptr).isNull() ||
+           !findConfigField(doc, "txPowerDbm", "txPower", "powerDbm").isNull() ||
+           !findConfigField(doc, "preamble", "preambleLength", "loraPreamble").isNull() ||
+           !findConfigField(doc, "tcxoVoltage", "tcxoV", "loraTcxoVoltage").isNull() ||
+           !findConfigField(doc, "xtalVoltage", "xtalTcxoVoltage", "loraXtalVoltage").isNull();
+}
+
+bool applyRuntimeLoraPatch(JsonDocument& doc, char* reason, size_t reasonSize) {
+    RuntimeConfig updated = runtimeConfig;
+    bool sawField = false;
+    if (!readFloatConfigField(doc, "freqMHz", "loraFreqMHz", "frequencyMHz",
+                              updated.loraFreqMHz, sawField, reason, reasonSize)) return false;
+    if (!readFloatConfigField(doc, "bwKHz", "loraBwKHz", "bandwidthKHz",
+                              updated.loraBwKHz, sawField, reason, reasonSize)) return false;
+    if (!readFloatConfigField(doc, "tcxoVoltage", "tcxoV", "loraTcxoVoltage",
+                              updated.loraTcxoVoltage, sawField, reason, reasonSize)) return false;
+    if (!readFloatConfigField(doc, "xtalVoltage", "xtalTcxoVoltage", "loraXtalVoltage",
+                              updated.loraXtalVoltage, sawField, reason, reasonSize)) return false;
+
+    long sf = updated.loraSf;
+    long cr = updated.loraCr;
+    long syncWord = updated.loraSyncWord;
+    long txPower = updated.loraTxPowerDbm;
+    long preamble = updated.loraPreamble;
+    if (!readLongConfigField(doc, "sf", "loraSf", "spreadingFactor",
+                             sf, sawField, reason, reasonSize)) return false;
+    if (!readLongConfigField(doc, "cr", "loraCr", "codingRate",
+                             cr, sawField, reason, reasonSize)) return false;
+    if (!readLongConfigField(doc, "syncWord", "loraSyncWord", nullptr,
+                             syncWord, sawField, reason, reasonSize)) return false;
+    if (!readLongConfigField(doc, "txPowerDbm", "txPower", "powerDbm",
+                             txPower, sawField, reason, reasonSize)) return false;
+    if (!readLongConfigField(doc, "preamble", "preambleLength", "loraPreamble",
+                             preamble, sawField, reason, reasonSize)) return false;
+    if (!sawField) {
+        setRejectReason(reason, reasonSize, "no LoRa fields provided");
+        return false;
+    }
+    if (sf < 0 || sf > 255 || cr < 0 || cr > 255 || syncWord < 0 || syncWord > 255 ||
+        txPower < -128 || txPower > 127 || preamble < 0 || preamble > 65535) {
+        setRejectReason(reason, reasonSize, "LoRa integer field is out of storage range");
+        return false;
+    }
+    updated.loraSf = static_cast<uint8_t>(sf);
+    updated.loraCr = static_cast<uint8_t>(cr);
+    updated.loraSyncWord = static_cast<uint8_t>(syncWord);
+    updated.loraTxPowerDbm = static_cast<int8_t>(txPower);
+    updated.loraPreamble = static_cast<uint16_t>(preamble);
+    if (!validateRuntimeLoraConfig(updated, reason, reasonSize)) return false;
+    runtimeConfig.loraFreqMHz = updated.loraFreqMHz;
+    runtimeConfig.loraBwKHz = updated.loraBwKHz;
+    runtimeConfig.loraSf = updated.loraSf;
+    runtimeConfig.loraCr = updated.loraCr;
+    runtimeConfig.loraSyncWord = updated.loraSyncWord;
+    runtimeConfig.loraTxPowerDbm = updated.loraTxPowerDbm;
+    runtimeConfig.loraPreamble = updated.loraPreamble;
+    runtimeConfig.loraTcxoVoltage = updated.loraTcxoVoltage;
+    runtimeConfig.loraXtalVoltage = updated.loraXtalVoltage;
     return true;
 }
 
@@ -691,9 +981,15 @@ void addCapabilities(JsonObject caps) {
     caps["modeSwitchReboots"] = true;
     caps["datasetControlPath"] = "mqtt";
     caps["nullingConfig"] = "SET_NULLING_CONFIG_JSON thresholdV,minFinalV";
+    caps["qcTracking"] = "SET_QC_RESULT_JSON channel,pass,timestamp / GET_QC_STATUS";
+    caps["nullingSingleChannel"] = "RUN_NULLING_SINGLE_JSON channel";
+    caps["fullScaleSweep"] = "RUN_FULLSCALE_SWEEP_JSON channel";
+    caps["qcReset"] = "RESET_QC_RESULT_JSON channel / RESET_QC_ALL";
     caps["serialAppConfig"] = true;
     caps["serialDeviceId"] = true;
     caps["serialChAddress"] = "SET_CH_ADDRESS_JSON chId";
+    caps["serialLoraConfig"] = "SET_LORA_CONFIG_JSON freqMHz,bwKHz,sf,cr,syncWord,txPowerDbm,preamble,tcxoVoltage,xtalVoltage";
+    caps["liveLoraReinit"] = true;
     caps["runBootCheck"] = true;
     caps["adsMcpSweep"] = "RUN_ADS_MCP_SWEEP";
     caps["sleepNow"] = "SLEEP_NOW";
@@ -722,7 +1018,7 @@ void addTelemetry(JsonObject telemetry) {
 }
 
 void emitInfoJson() {
-    static StaticJsonDocument<1280> doc;
+    static StaticJsonDocument<1536> doc;
     doc.clear();
     char chIdHex[5];
     formatHex4(runtimeConfig.chId, chIdHex, sizeof(chIdHex));
@@ -738,11 +1034,16 @@ void emitInfoJson() {
     doc["sensorCount"] = pgl::gld::board::SENSOR_COUNT;
     doc["mqttTopicRoot"] = runtimeConfig.topicRoot;
     JsonObject starLora = doc.createNestedObject("starLora");
-    starLora["freqMHz"] = STAR_FREQ_MHZ;
-    starLora["bwKHz"] = STAR_BW_KHZ;
-    starLora["sf"] = STAR_SF;
-    starLora["cr"] = STAR_CR;
-    starLora["syncWord"] = STAR_SYNC_WORD;
+    starLora["freqMHz"] = runtimeConfig.loraFreqMHz;
+    starLora["bwKHz"] = runtimeConfig.loraBwKHz;
+    starLora["sf"] = runtimeConfig.loraSf;
+    starLora["cr"] = runtimeConfig.loraCr;
+    starLora["syncWord"] = runtimeConfig.loraSyncWord;
+    starLora["txPowerDbm"] = runtimeConfig.loraTxPowerDbm;
+    starLora["preamble"] = runtimeConfig.loraPreamble;
+    starLora["tcxoVoltage"] = runtimeConfig.loraTcxoVoltage;
+    starLora["xtalVoltage"] = runtimeConfig.loraXtalVoltage;
+    starLora["runtime"] = true;
     JsonObject appConfig = doc.createNestedObject("appConfig");
     appConfig["wifiSsid"] = runtimeConfig.wifiSsid;
     appConfig["mqttHost"] = runtimeConfig.mqttHost;
@@ -824,9 +1125,15 @@ void emitStatusJson() {
     lora["aesKeyProvisioned"] = runtimeConfig.aesKeyPresent;
     lora["keyId"] = runtimeConfig.aesKeyId;
     lora["lastDownlinkCommandId"] = runtimeConfig.lastDownlinkCommandId;
-    lora["freqMHz"] = STAR_FREQ_MHZ;
-    lora["bwKHz"] = STAR_BW_KHZ;
-    lora["sf"] = STAR_SF;
+    lora["freqMHz"] = runtimeConfig.loraFreqMHz;
+    lora["bwKHz"] = runtimeConfig.loraBwKHz;
+    lora["sf"] = runtimeConfig.loraSf;
+    lora["cr"] = runtimeConfig.loraCr;
+    lora["syncWord"] = runtimeConfig.loraSyncWord;
+    lora["txPowerDbm"] = runtimeConfig.loraTxPowerDbm;
+    lora["preamble"] = runtimeConfig.loraPreamble;
+    lora["tcxoVoltage"] = runtimeConfig.loraTcxoVoltage;
+    lora["xtalVoltage"] = runtimeConfig.loraXtalVoltage;
 
     JsonObject dataset = doc.createNestedObject("dataset");
     dataset["state"] = datasetStateName();
@@ -914,7 +1221,15 @@ void rebootAfterAckIfRequested(bool reboot) {
 
 void restartFromSerialCommand() {
     emitCommandAck("RESTART", "ok", "restarting", true);
-    serviceDelay(100);
+    // Deliberately a plain delay(), not serviceDelay(): RESTART is checked
+    // unconditionally in checkSerial(), even reentrant from deep inside a
+    // blocking nulling/full-scale-sweep tick loop, and serviceDelay() calls
+    // firmwareServiceTick() -> checkSerial() again - one more reentrant frame
+    // on top of an already-deep call stack is enough to trip the loopTask
+    // stack canary and panic instead of restarting cleanly. Serial.flush()
+    // below already blocks until the ack bytes are fully transmitted, so no
+    // service ticking is needed here anyway.
+    delay(50);
     Serial.flush();
 #if defined(ARDUINO_ARCH_ESP32)
     Serial0.flush();
@@ -937,13 +1252,95 @@ void sleepNowFromSerialCommand() {
     pgl::gld::pulseGldPowerLatchClear();
 }
 
+// QC bench pin injection - lets the operator app manually exercise the
+// TPL5010 DONE/CLR nets from the QC tab, independent of the automatic
+// keepalive/sleep cycle. See docs/firmware/gld-tpl5010-wake-sleep-com10-report.md.
+void injectTplDoneFromSerialCommand() {
+    emitCommandAck("INJECT_TPL_DONE", "ok", "pulsing TPL5010 DONE pin once", false);
+    logPrintf("GLD_SERIAL_INJECT_TPL_DONE pulse=HIGH_LOW\n");
+    pgl::gld::pulseGldTpl5010Keepalive();
+}
+
+// CLR pulses the same active-low power-latch reset as SLEEP_NOW, so this
+// injection can cut board power and drop the serial connection - flush the
+// ack before pulsing, exactly like sleepNowFromSerialCommand().
+void injectTplClrFromSerialCommand() {
+    const pgl::gld::GldPowerReading power = pgl::gld::readGldPower();
+    emitCommandAck("INJECT_TPL_CLR", "ok", "pulsing power latch CLR once", false);
+    logPrintf("GLD_SERIAL_INJECT_TPL_CLR mode=%s externalPower=%u batteryMv=%u clr=HIGH_LOW_HIGH\n",
+              pgl::gld::gldPowerModeName(power.mode),
+              power.externalPower ? 1 : 0,
+              power.batteryMv);
+    serviceDelay(100);
+    Serial.flush();
+#if defined(ARDUINO_ARCH_ESP32)
+    Serial0.flush();
+#endif
+    pgl::gld::pulseGldPowerLatchClear();
+}
+
 void onUnknownSerialCommand(const char* commandText) {
     rawPrint(commandText);
     rawPrintln(" command is unknown");
 }
 
+void logRuntimeLoraConfig(const char* marker, bool reboot, bool liveApplied) {
+    logPrintf("%s freqMHz=%.3f bwKHz=%.2f sf=%u cr=%u sync=0x%02X power=%d preamble=%u tcxo=%.1f xtal=%.1f reboot=%u liveApplied=%u beginState=%d\n",
+              marker,
+              runtimeConfig.loraFreqMHz,
+              runtimeConfig.loraBwKHz,
+              runtimeConfig.loraSf,
+              runtimeConfig.loraCr,
+              runtimeConfig.loraSyncWord,
+              runtimeConfig.loraTxPowerDbm,
+              runtimeConfig.loraPreamble,
+              runtimeConfig.loraTcxoVoltage,
+              runtimeConfig.loraXtalVoltage,
+              reboot ? 1 : 0,
+              liveApplied ? 1 : 0,
+              static_cast<int>(lastLoraBeginState));
+}
+
+bool applyLoraRuntimeNowIfNeeded(bool reboot, bool& liveApplied) {
+    liveApplied = false;
+    if (reboot || currentMode != pgl::gld::GldMode::INFERENCE) return true;
+    liveApplied = true;
+    radioReady = beginLoraRadio();
+    return radioReady;
+}
+
+void onSetLoraConfigJson(const char* payload) {
+    StaticJsonDocument<512> doc;
+    if (deserializeJson(doc, payload)) {
+        emitCommandAck("SET_LORA_CONFIG", "error", "invalid json", false);
+        return;
+    }
+    const bool reboot = doc["reboot"] | false;
+    char reason[160]{};
+    if (!applyRuntimeLoraPatch(doc, reason, sizeof(reason))) {
+        emitCommandAck("SET_LORA_CONFIG", "rejected", reason, false);
+        return;
+    }
+    if (!saveRuntimeConfig()) {
+        emitCommandAck("SET_LORA_CONFIG", "error", "failed to save lora config", false);
+        return;
+    }
+    bool liveApplied = false;
+    const bool liveOk = applyLoraRuntimeNowIfNeeded(reboot, liveApplied);
+    logRuntimeLoraConfig("GLD_LORA_CONFIG_SAVE=OK", reboot, liveApplied);
+    if (!liveOk) {
+        emitCommandAck("SET_LORA_CONFIG", "error", "lora config saved but radio reinit failed", false);
+        return;
+    }
+    const char* message = reboot
+        ? "lora config saved; rebooting"
+        : liveApplied ? "lora config saved; radio reapplied" : "lora config saved; applies on next running init";
+    emitCommandAck("SET_LORA_CONFIG", "ok", message, reboot);
+    rebootAfterAckIfRequested(reboot);
+}
+
 void onSetAppConfigJson(const char* payload) {
-    StaticJsonDocument<1024> doc;
+    StaticJsonDocument<1536> doc;
     if (deserializeJson(doc, payload)) {
         emitCommandAck("SET_APP_CONFIG", "error", "invalid json", false);
         return;
@@ -972,6 +1369,7 @@ void onSetAppConfigJson(const char* payload) {
     const bool aesKeyProvided = aesKeyHex != nullptr && strlen(aesKeyHex) > 0;
     uint8_t parsedAesKey[16]{};
     const uint8_t requestedKeyId = static_cast<uint8_t>(doc["keyId"] | runtimeConfig.aesKeyId);
+    const bool loraPatch = hasRuntimeLoraPatch(doc);
 
     if (strlen(ssid) == 0 || strlen(mqttHost) == 0 || strlen(topicRoot) == 0 || mqttPort == 0) {
         emitCommandAck("SET_APP_CONFIG", "rejected", "ssid, mqttHost, mqttPort, and topicRoot are required", false);
@@ -984,6 +1382,13 @@ void onSetAppConfigJson(const char* payload) {
         }
         if (!parseAesKeyHex(aesKeyHex, parsedAesKey)) {
             emitCommandAck("SET_APP_CONFIG", "rejected", "aesKeyHex must contain exactly 16 bytes / 32 hex chars", false);
+            return;
+        }
+    }
+    if (loraPatch) {
+        char reason[160]{};
+        if (!applyRuntimeLoraPatch(doc, reason, sizeof(reason))) {
+            emitCommandAck("SET_APP_CONFIG", "rejected", reason, false);
             return;
         }
     }
@@ -1020,6 +1425,15 @@ void onSetAppConfigJson(const char* payload) {
               runtimeConfig.aesKeyPresent ? 1 : 0,
               runtimeConfig.aesKeyId,
               reboot ? 1 : 0);
+    if (loraPatch) {
+        bool liveApplied = false;
+        const bool liveOk = applyLoraRuntimeNowIfNeeded(reboot, liveApplied);
+        logRuntimeLoraConfig("GLD_LORA_CONFIG_SAVE=OK", reboot, liveApplied);
+        if (!liveOk) {
+            emitCommandAck("SET_APP_CONFIG", "error", "app config saved but lora reinit failed", false);
+            return;
+        }
+    }
     emitCommandAck("SET_APP_CONFIG", "ok", reboot ? "app config saved; rebooting" : "app config saved", reboot);
     if (!reboot) {
         mqtt.disconnect();
@@ -1129,6 +1543,209 @@ void onSetNullingConfigJson(const char* payload) {
     emitCommandAck("SET_NULLING_CONFIG", "ok", "nulling config saved; applies on next nulling run", false);
 }
 
+void onSetQcResultJson(const char* payload) {
+    StaticJsonDocument<192> doc;
+    if (deserializeJson(doc, payload)) {
+        emitCommandAck("SET_QC_RESULT", "error", "invalid json", false);
+        return;
+    }
+    if (!doc.containsKey("channel") || !doc.containsKey("pass")) {
+        emitCommandAck("SET_QC_RESULT", "rejected", "channel and pass are required", false);
+        return;
+    }
+    const int channel = doc["channel"].as<int>();
+    if (channel < 0 || channel >= pgl::gld::board::SENSOR_COUNT) {
+        emitCommandAck("SET_QC_RESULT", "rejected", "channel must be 0..7", false);
+        return;
+    }
+    const bool pass = doc["pass"].as<bool>();
+    const char* timestamp = doc["timestamp"].as<const char*>();
+    if (timestamp == nullptr) timestamp = "";
+
+    pgl::gld::GldQcProfile profile{};
+    if (!pgl::gld::loadQcProfile(profile)) {
+        profile = pgl::gld::GldQcProfile{};
+    }
+    profile.validMagic = pgl::gld::QC_PROFILE_VALID_MAGIC;
+    profile.tested[channel] = 1;
+    profile.passed[channel] = pass ? 1u : 0u;
+    strncpy(profile.timestamp[channel], timestamp, pgl::gld::QC_TIMESTAMP_LEN - 1);
+    profile.timestamp[channel][pgl::gld::QC_TIMESTAMP_LEN - 1] = '\0';
+
+    if (!pgl::gld::saveQcProfile(profile)) {
+        emitCommandAck("SET_QC_RESULT", "error", "failed to save qc result", false);
+        return;
+    }
+    logPrintf("GLD_QC_RESULT_SAVE=OK channel=%d pass=%u\n", channel, pass ? 1u : 0u);
+    emitCommandAck("SET_QC_RESULT", "ok", "qc result saved", false);
+}
+
+void onResetQcResultJson(const char* payload) {
+    StaticJsonDocument<64> doc;
+    if (deserializeJson(doc, payload)) {
+        emitCommandAck("RESET_QC_RESULT", "error", "invalid json", false);
+        return;
+    }
+    if (!doc.containsKey("channel")) {
+        emitCommandAck("RESET_QC_RESULT", "rejected", "channel is required", false);
+        return;
+    }
+    const int channel = doc["channel"].as<int>();
+    if (channel < 0 || channel >= pgl::gld::board::SENSOR_COUNT) {
+        emitCommandAck("RESET_QC_RESULT", "rejected", "channel must be 0..7", false);
+        return;
+    }
+
+    pgl::gld::GldQcProfile profile{};
+    if (!pgl::gld::loadQcProfile(profile)) {
+        profile = pgl::gld::GldQcProfile{};
+    }
+    profile.validMagic = pgl::gld::QC_PROFILE_VALID_MAGIC;
+    profile.tested[channel] = 0;
+    profile.passed[channel] = 0;
+    profile.timestamp[channel][0] = '\0';
+
+    if (!pgl::gld::saveQcProfile(profile)) {
+        emitCommandAck("RESET_QC_RESULT", "error", "failed to save qc reset", false);
+        return;
+    }
+    logPrintf("GLD_QC_RESULT_RESET=OK channel=%d\n", channel);
+    emitCommandAck("RESET_QC_RESULT", "ok", "qc result reset", false);
+}
+
+void onResetQcAll() {
+    pgl::gld::GldQcProfile profile{};
+    profile.validMagic = pgl::gld::QC_PROFILE_VALID_MAGIC;
+    if (!pgl::gld::saveQcProfile(profile)) {
+        emitCommandAck("RESET_QC_ALL", "error", "failed to save qc reset", false);
+        return;
+    }
+    logPrintln("GLD_QC_RESULT_RESET_ALL=OK");
+    emitCommandAck("RESET_QC_ALL", "ok", "all qc results reset", false);
+}
+
+void emitQcStatusJson() {
+    pgl::gld::GldQcProfile qcProfile{};
+    const bool qcValid = pgl::gld::loadQcProfile(qcProfile);
+    if (!qcValid) qcProfile = pgl::gld::GldQcProfile{};
+
+    pgl::gld::GldNullingProfile nullingProfile{};
+    const bool nullingValid = pgl::gld::loadNullingProfile(nullingProfile);
+
+    StaticJsonDocument<1024> doc;
+    char chIdHex[5];
+    formatHex4(runtimeConfig.chId, chIdHex, sizeof(chIdHex));
+    doc["deviceId"] = runtimeConfig.deviceId;
+    doc["nodeId"] = runtimeConfig.nodeId;
+    doc["chId"] = chIdHex;
+
+    JsonArray channels = doc.createNestedArray("channels");
+    for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
+        JsonObject c = channels.createNestedObject();
+        c["channel"] = ch;
+        c["sensor"] = pgl::gld::board::SENSOR_NAMES[ch];
+        c["nullingOk"] = nullingValid && nullingProfile.channelOk[ch] != 0;
+        c["tested"] = qcProfile.tested[ch] != 0;
+        c["pass"] = qcProfile.passed[ch] != 0;
+        c["timestamp"] = qcProfile.timestamp[ch];
+    }
+    rawJsonLine("GLD_QC_STATUS_JSON", doc);
+}
+
+// Forward declaration - defined further down near the nulling retry state
+// machine, but the QC tab's single-channel nulling command needs it here.
+bool ensureNullingHardwareReady();
+void checkSerial();
+void firmwareServiceTick();
+
+void onRunNullingSingleJson(const char* payload) {
+    StaticJsonDocument<96> doc;
+    if (deserializeJson(doc, payload)) {
+        emitCommandAck("RUN_NULLING_SINGLE", "error", "invalid json", false);
+        return;
+    }
+    if (!doc.containsKey("channel")) {
+        emitCommandAck("RUN_NULLING_SINGLE", "rejected", "channel is required", false);
+        return;
+    }
+    const int channel = doc["channel"].as<int>();
+    if (channel < 0 || channel >= pgl::gld::board::SENSOR_COUNT) {
+        emitCommandAck("RUN_NULLING_SINGLE", "rejected", "channel must be 0..7", false);
+        return;
+    }
+    if (!ensureNullingHardwareReady()) {
+        emitCommandAck("RUN_NULLING_SINGLE", "error", "ADS/DAC not ready", false);
+        return;
+    }
+
+    const pgl::gld::GldNullingSingleResult result = pgl::gld::runNullingServiceSingleChannel(
+        ads, dac, static_cast<uint8_t>(channel), nullingLogLine, firmwareServiceTick, nullingConfig);
+
+    // Merge into the persisted profile so this channel's result survives
+    // reboots without touching the other 7 channels' saved state - unlike a
+    // full nulling run, a single-channel run does not require every channel
+    // to succeed before it can be saved.
+    pgl::gld::GldNullingProfile existing{};
+    const bool hadExisting = pgl::gld::loadNullingProfile(existing);
+    pgl::gld::GldNullingProfile toSave = hadExisting ? existing : pgl::gld::GldNullingProfile{};
+    toSave.validMagic = pgl::gld::NULLING_PROFILE_VALID_MAGIC;
+    toSave.profileId = static_cast<uint8_t>(hadExisting ? toSave.profileId + 1u : 1u);
+    toSave.dacCode[channel]   = result.dacCode;
+    toSave.baselineV[channel] = result.baselineV;
+    toSave.afterV[channel]    = result.afterV;
+    toSave.channelOk[channel] = result.success ? 1u : 0u;
+
+    if (!pgl::gld::saveNullingProfile(toSave)) {
+        emitCommandAck("RUN_NULLING_SINGLE", "error", "nulling result computed but failed to save profile", false);
+        return;
+    }
+    nullingProfileId = toSave.profileId;
+    if (result.success) dac.writeDac(static_cast<uint8_t>(channel), result.dacCode);
+    logPrintf("GLD_NULLING_SINGLE_SAVE=OK channel=%d success=%u profileId=%u\n",
+              channel, result.success ? 1u : 0u, toSave.profileId);
+    emitCommandAck("RUN_NULLING_SINGLE", result.success ? "ok" : "failed",
+                    result.success ? "channel nulled" : "channel nulling failed - see NULLING_ log for detail", false);
+}
+
+// Diagnostic voltage-vs-DAC-code sweep for one channel, used by the QC tab's
+// "Full Scale Nulling" popup to show the operator the sensor's full response
+// curve. Does not alter the persisted nulling profile - the DAC is restored
+// to that channel's currently-nulled code (or 0 if never nulled) once the
+// sweep finishes.
+void onRunFullScaleSweepJson(const char* payload) {
+    StaticJsonDocument<96> doc;
+    if (deserializeJson(doc, payload)) {
+        emitCommandAck("RUN_FULLSCALE_SWEEP", "error", "invalid json", false);
+        return;
+    }
+    if (!doc.containsKey("channel")) {
+        emitCommandAck("RUN_FULLSCALE_SWEEP", "rejected", "channel is required", false);
+        return;
+    }
+    const int channel = doc["channel"].as<int>();
+    if (channel < 0 || channel >= pgl::gld::board::SENSOR_COUNT) {
+        emitCommandAck("RUN_FULLSCALE_SWEEP", "rejected", "channel must be 0..7", false);
+        return;
+    }
+    if (!ensureNullingHardwareReady()) {
+        emitCommandAck("RUN_FULLSCALE_SWEEP", "error", "ADS/DAC not ready", false);
+        return;
+    }
+
+    pgl::gld::GldNullingProfile existing{};
+    const bool hadExisting = pgl::gld::loadNullingProfile(existing);
+    const uint16_t restoreCode = (hadExisting && existing.channelOk[channel]) ? existing.dacCode[channel] : 0;
+
+    emitCommandAck("RUN_FULLSCALE_SWEEP", "ok", "running full scale sweep", false);
+    // firmwareServiceTick (not bare checkSerial) - a full 4096-code sweep runs
+    // well past the external TPL5010 watchdog's keepalive window, so the tick
+    // function must also pulse the watchdog (see maintainWdtKeepalive) or the
+    // board hard-resets mid-sweep.
+    const pgl::gld::GldFullScaleSweepResult result = pgl::gld::runFullScaleSweep(
+        ads, dac, static_cast<uint8_t>(channel), restoreCode, 1, nullingLogLine, firmwareServiceTick);
+    (void)result;
+}
+
 void handleSerialCommand(const pgl::gld::GldSerialCommand& command) {
     switch (command.type) {
         case pgl::gld::GldSerialCommandType::Unknown:
@@ -1173,8 +1790,35 @@ void handleSerialCommand(const pgl::gld::GldSerialCommand& command) {
         case pgl::gld::GldSerialCommandType::SetChAddressJson:
             onSetChAddressJson(command.payload);
             break;
+        case pgl::gld::GldSerialCommandType::SetLoraConfigJson:
+            onSetLoraConfigJson(command.payload);
+            break;
         case pgl::gld::GldSerialCommandType::SetNullingConfigJson:
             onSetNullingConfigJson(command.payload);
+            break;
+        case pgl::gld::GldSerialCommandType::SetQcResultJson:
+            onSetQcResultJson(command.payload);
+            break;
+        case pgl::gld::GldSerialCommandType::GetQcStatus:
+            emitQcStatusJson();
+            break;
+        case pgl::gld::GldSerialCommandType::RunNullingSingleJson:
+            onRunNullingSingleJson(command.payload);
+            break;
+        case pgl::gld::GldSerialCommandType::ResetQcResultJson:
+            onResetQcResultJson(command.payload);
+            break;
+        case pgl::gld::GldSerialCommandType::ResetQcAll:
+            onResetQcAll();
+            break;
+        case pgl::gld::GldSerialCommandType::RunFullScaleSweepJson:
+            onRunFullScaleSweepJson(command.payload);
+            break;
+        case pgl::gld::GldSerialCommandType::InjectTplDone:
+            injectTplDoneFromSerialCommand();
+            break;
+        case pgl::gld::GldSerialCommandType::InjectTplClr:
+            injectTplClrFromSerialCommand();
             break;
         case pgl::gld::GldSerialCommandType::None:
         default:
@@ -1189,16 +1833,46 @@ void handleSerialCommand(const pgl::gld::GldSerialCommand& command) {
 // inside an already-executing handler and blow the loopTask stack. While a
 // command is being handled, any serial bytes that arrive stay queued in the
 // UART buffer and are picked up on the next non-reentrant call.
+//
+// RESTART is the one exception: it is checked and actioned unconditionally,
+// even from a reentrant call deep inside a multi-minute nulling or full-scale
+// sweep tick loop, so a stuck or very long-running sweep can never leave the
+// board unrecoverable from software until it finishes or is power-cycled -
+// ESP.restart() never returns, so there is no stack to unwind. Any other
+// command parsed while already nested is stashed in a single slot and
+// drained once nesting unwinds, so it is only delayed, never lost.
 void checkSerial() {
     static bool inProgress = false;
+    static pgl::gld::GldSerialCommand pendingCommand{};
+    static bool hasPending = false;
+
+    if (!hasPending) {
+        pgl::gld::GldSerialCommand parsed{};
+        if (pgl::gld::parseSerialCommand(parsed)) {
+            if (parsed.type == pgl::gld::GldSerialCommandType::Restart) {
+                restartFromSerialCommand();
+                return;  // unreachable in practice - ESP.restart() reboots immediately
+            }
+            pendingCommand = parsed;
+            hasPending = true;
+        }
+    }
+
     if (inProgress) {
         return;
     }
     inProgress = true;
     for (uint8_t i = 0; i < 8; ++i) {
         pgl::gld::GldSerialCommand command{};
-        if (!pgl::gld::parseSerialCommand(command)) {
+        if (hasPending) {
+            command = pendingCommand;
+            hasPending = false;
+        } else if (!pgl::gld::parseSerialCommand(command)) {
             break;
+        }
+        if (command.type == pgl::gld::GldSerialCommandType::Restart) {
+            restartFromSerialCommand();
+            return;
         }
         handleSerialCommand(command);
     }
@@ -1206,15 +1880,58 @@ void checkSerial() {
 }
 
 void pulseWdtKeepaliveNow() {
+    if (batteryPowerMode) {
+        lastWdtKeepaliveMs = millis();
+        return;
+    }
     pgl::gld::pulseGldTpl5010Keepalive();
     lastWdtKeepaliveMs = millis();
 }
 
 void maintainWdtKeepalive() {
+    if (batteryPowerMode) return;
     const uint32_t now = millis();
     if (now - lastWdtKeepaliveMs >= pgl::gld::GLD_WDT_KEEPALIVE_INTERVAL_MS) {
         pulseWdtKeepaliveNow();
     }
+}
+
+bool batteryRuntimeReady() {
+    return adsReady && radioReady && mlReady;
+}
+
+const char* batteryRuntimeBlockReason() {
+    if (!adsReady) return "ads_not_ready";
+    if (!radioReady) return "radio_not_ready";
+    if (!mlReady) return "ml_not_ready";
+    return "none";
+}
+
+void armBatteryFaultPowerOff(const char* reason) {
+    if (batteryFaultPowerOffArmed) return;
+    batteryFaultPowerOffArmed = true;
+    batteryFaultPowerOffDueMs = millis() + BATTERY_FAULT_SERIAL_HOLD_MS;
+    logPrintf("GLD_BATTERY_SESSION_WAIT reason=%s delayMs=%lu adsReady=%u radioReady=%u mlReady=%u\n",
+              reason != nullptr ? reason : "hardware_not_ready",
+              static_cast<unsigned long>(BATTERY_FAULT_SERIAL_HOLD_MS),
+              adsReady ? 1 : 0,
+              radioReady ? 1 : 0,
+              mlReady ? 1 : 0);
+}
+
+void completeBatterySessionAndPowerOff(const char* reason) {
+    if (batteryCyclePoweredOff) return;
+    batteryCyclePoweredOff = true;
+    logPrintf("GLD_BATTERY_SESSION_DONE power_off reason=%s done=LOW_HIGH_LOW donePulseUs=%lu doneToClrDelayUs=%lu clr=HIGH_LOW_HIGH clrPulseUs=%lu\n",
+              reason != nullptr ? reason : "session_done",
+              static_cast<unsigned long>(pgl::gld::GLD_TPL5010_DONE_PULSE_US),
+              static_cast<unsigned long>(pgl::gld::GLD_DONE_TO_CLR_DELAY_US),
+              static_cast<unsigned long>(pgl::gld::GLD_POWER_LATCH_CLEAR_PULSE_US));
+    Serial.flush();
+#if defined(ARDUINO_ARCH_ESP32)
+    Serial0.flush();
+#endif
+    pgl::gld::pulseGldTpl5010DoneThenPowerLatchClear();
 }
 
 void firmwareServiceTick() {
@@ -2382,19 +3099,36 @@ bool beginLoraRadio() {
             gldSpi);
     }
     if (!loraRadio) loraRadio = new SX1262(loraModule);
-    logPrintf("GLD_STAR_CONFIG freqMHz=%.1f bwKHz=%.1f sf=%u cr=%u sync=0x%02X power=%d preamble=%u\n",
-              STAR_FREQ_MHZ,
-              STAR_BW_KHZ,
-              STAR_SF,
-              STAR_CR,
-              STAR_SYNC_WORD,
-              STAR_TX_POWER,
-              STAR_PREAMBLE);
-    int16_t state = loraRadio->begin(STAR_FREQ_MHZ, STAR_BW_KHZ, STAR_SF, STAR_CR,
-                                     STAR_SYNC_WORD, STAR_TX_POWER, STAR_PREAMBLE, LORA_TCXO_V);
+    if (radioReady) {
+        loraRadio->standby();
+    }
+    logPrintf("GLD_STAR_CONFIG freqMHz=%.3f bwKHz=%.2f sf=%u cr=%u sync=0x%02X power=%d preamble=%u tcxo=%.1f xtal=%.1f\n",
+              runtimeConfig.loraFreqMHz,
+              runtimeConfig.loraBwKHz,
+              runtimeConfig.loraSf,
+              runtimeConfig.loraCr,
+              runtimeConfig.loraSyncWord,
+              runtimeConfig.loraTxPowerDbm,
+              runtimeConfig.loraPreamble,
+              runtimeConfig.loraTcxoVoltage,
+              runtimeConfig.loraXtalVoltage);
+    int16_t state = loraRadio->begin(runtimeConfig.loraFreqMHz,
+                                     runtimeConfig.loraBwKHz,
+                                     runtimeConfig.loraSf,
+                                     runtimeConfig.loraCr,
+                                     runtimeConfig.loraSyncWord,
+                                     runtimeConfig.loraTxPowerDbm,
+                                     runtimeConfig.loraPreamble,
+                                     runtimeConfig.loraTcxoVoltage);
     if (state == RADIOLIB_ERR_SPI_CMD_FAILED) {
-        state = loraRadio->begin(STAR_FREQ_MHZ, STAR_BW_KHZ, STAR_SF, STAR_CR,
-                                 STAR_SYNC_WORD, STAR_TX_POWER, STAR_PREAMBLE, LORA_XTAL_V);
+        state = loraRadio->begin(runtimeConfig.loraFreqMHz,
+                                 runtimeConfig.loraBwKHz,
+                                 runtimeConfig.loraSf,
+                                 runtimeConfig.loraCr,
+                                 runtimeConfig.loraSyncWord,
+                                 runtimeConfig.loraTxPowerDbm,
+                                 runtimeConfig.loraPreamble,
+                                 runtimeConfig.loraXtalVoltage);
     }
     lastLoraBeginState = state;
     logPrintf("GLD_STAR_BEGIN_STATE=%d\n", state);
@@ -2716,7 +3450,6 @@ void setup() {
     Serial0.begin(115200);
 #endif
     pgl::gld::beginGldPowerPins();
-    pulseWdtKeepaliveNow();
     // Give USB serial time to settle, but do not dispatch queued operator
     // commands before the boot banner is visible. A queued SLEEP_NOW must not
     // clear the power latch before the operator can see firmware startup.
@@ -2935,22 +3668,28 @@ void loop() {
         maintainAdsRecovery("inference_ads_not_ready");
 
         if (batteryPowerMode) {
-            // One-shot wake cycle: scan + inference + LoRa TX + RX window, then
-            // clear the power latch to shut the node down. If an alarm is active,
-            // stay powered (the alarm lamp/buzzer are driven directly by ESP32
-            // GPIO, so cutting power would silence them) and retry each
-            // SCAN_INTERVAL_MS until the alarm clears.
+            // One-shot wake cycle: scan + inference + LoRa TX/RX, then emit one
+            // final DONE pulse followed by CLR. DONE is intentionally not used
+            // as a periodic keepalive in battery mode.
+            if (!batteryRuntimeReady()) {
+                const char* reason = batteryRuntimeBlockReason();
+                armBatteryFaultPowerOff(reason);
+                if (static_cast<int32_t>(now - batteryFaultPowerOffDueMs) >= 0) {
+                    completeBatterySessionAndPowerOff(reason);
+                }
+                return;
+            }
+            batteryFaultPowerOffArmed = false;
+
             if (!batteryCyclePoweredOff && now - lastScanMs >= SCAN_INTERVAL_MS) {
                 lastScanMs = now;
-                if (adsReady) runScan();
-                if (radioReady) transmitOnce();
-                if (!lastAlarm) {
-                    logPrintln("GLD_BATTERY_CYCLE_DONE power_off");
-                    pgl::gld::pulseGldPowerLatchClear();
-                    batteryCyclePoweredOff = true;
-                } else {
-                    logPrintln("GLD_BATTERY_CYCLE_ALARM_ACTIVE staying_awake");
+                runScan();
+                transmitOnce();
+                if (lastAlarm && !lastLoraTxOk) {
+                    logPrintln("GLD_BATTERY_ALARM_TX_RETRY reason=tx_failed");
+                    return;
                 }
+                completeBatterySessionAndPowerOff(lastAlarm ? "alarm_tx_done" : "session_done");
             }
             return;
         }

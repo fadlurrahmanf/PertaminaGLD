@@ -40,16 +40,21 @@ GldPowerReading readGldPower();
 const char* gldPowerModeName(GldPowerMode mode);
 
 // WDT/TPL5010 wake/keepalive/sleep cycle on IO14:
-// - pulseGldTpl5010Keepalive() emits the short DONE/keepalive pulse.
-// - The runtime services IO14 frequently in every mode while the node is doing
-//   work, or the external WDT can assert RSTn and force-reset the ESP32.
-// - pulseGldPowerLatchClear() clears the SN74AUP1G74 power latch once all
-//   work for the wake cycle is complete, cutting ESP32 power (real sleep).
+// - pulseGldTpl5010Keepalive() emits a periodic DONE pulse for external-power
+//   runtime only.
+// - Battery wake sessions must not pulse DONE periodically; they emit one final
+//   DONE pulse, then CLR, after the scan/inference/TX/RX procedure finishes.
+// - pulseGldPowerLatchClear() clears the SN74AUP1G74 power latch without a DONE
+//   pulse, used by explicit service commands such as SLEEP_NOW.
 constexpr uint32_t GLD_WDT_KEEPALIVE_INTERVAL_MS = 10000;
 constexpr uint32_t GLD_TPL5010_KEEPALIVE_INTERVAL_MS = GLD_WDT_KEEPALIVE_INTERVAL_MS;
 constexpr uint32_t GLD_TPL5010_KEEPALIVE_PULSE_MS = 5;
 constexpr uint32_t GLD_POWER_LATCH_CLEAR_PULSE_MS = 5;
+constexpr uint32_t GLD_TPL5010_DONE_PULSE_US = 1000;
+constexpr uint32_t GLD_DONE_TO_CLR_DELAY_US = 500;
+constexpr uint32_t GLD_POWER_LATCH_CLEAR_PULSE_US = GLD_TPL5010_DONE_PULSE_US;
 void pulseGldTpl5010Keepalive();
 void pulseGldPowerLatchClear();
+void pulseGldTpl5010DoneThenPowerLatchClear();
 
 }  // namespace pgl::gld

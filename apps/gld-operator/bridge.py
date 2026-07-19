@@ -42,6 +42,13 @@ except Exception as exc:  # pragma: no cover - MQTT is optional
 else:
     MQTT_IMPORT_ERROR = ""
 
+# The bundled embeddable Python distribution (python-embed/) runs with a
+# python312._pth file, which - unlike a normal CPython install - does not
+# auto-add the launched script's own directory to sys.path. Without this,
+# `import local_mqtt_broker` fails whenever bridge.py is started via the
+# embedded interpreter, even though the file sits right next to bridge.py.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
 try:
     from local_mqtt_broker import LocalMqttBroker
 except Exception as exc:  # pragma: no cover - surfaced in /api/health
@@ -460,6 +467,40 @@ def save_dataset_csv(payload: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
+def create_dataset_csv(payload: dict[str, Any]) -> dict[str, Any]:
+    header_line = str(payload.get("header") or "")
+    if not header_line.strip():
+        raise RuntimeError("header is required")
+    filename = safe_filename(str(payload.get("filename") or "dataset.csv"))
+    DATASET_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    path = DATASET_OUTPUT_DIR / filename
+    text = header_line if header_line.endswith("\n") else header_line + "\n"
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        handle.write(text)
+        handle.flush()
+        os.fsync(handle.fileno())
+    result = {"ok": True, "path": str(path), "filename": filename, "bytes": path.stat().st_size}
+    events.emit("dataset_created", result)
+    return result
+
+
+def append_dataset_csv(payload: dict[str, Any]) -> dict[str, Any]:
+    filename = safe_filename(str(payload.get("filename") or ""))
+    lines = payload.get("lines")
+    if not isinstance(lines, list) or not lines:
+        raise RuntimeError("lines is required")
+    DATASET_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    path = DATASET_OUTPUT_DIR / filename
+    if not path.exists():
+        raise RuntimeError(f"{filename} does not exist - call /api/dataset/create first")
+    text = "".join((line if str(line).endswith("\n") else f"{line}\n") for line in lines)
+    with path.open("a", encoding="utf-8", newline="") as handle:
+        handle.write(text)
+        handle.flush()
+        os.fsync(handle.fileno())
+    return {"ok": True, "path": str(path), "filename": filename, "bytes": path.stat().st_size, "appended": len(lines)}
+
+
 def safe_log_filename(value: str, fallback: str = "session.log") -> str:
     name = re.sub(r"[^A-Za-z0-9_.-]+", "_", value.strip())
     name = name.strip("._")
@@ -802,6 +843,10 @@ class Handler(SimpleHTTPRequestHandler):
                 result = mqtt_reachability(payload)
             elif path == "/api/dataset/save":
                 result = save_dataset_csv(payload)
+            elif path == "/api/dataset/create":
+                result = create_dataset_csv(payload)
+            elif path == "/api/dataset/append":
+                result = append_dataset_csv(payload)
             elif path == "/api/session/log":
                 result = save_session_log(payload)
             elif path == "/api/dataset/open-folder":

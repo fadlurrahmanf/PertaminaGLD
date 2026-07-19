@@ -2,7 +2,7 @@
 // rendering, alarm state, and command send/response-watch/poll plumbing.
 
 import { $, elements, state, encoder, SENSOR_NAMES, SENSOR_MUX_CHANNELS, SENSOR_STATUS_NAMES, SERIAL_RESPONSE_TIMEOUT_MS, DEFAULT_POLL_INTERVAL_MS, CHART_COLORS } from "./state.js";
-import { setText, setBadge, appendLog, getField, setField, wait, showAlert } from "./ui.js";
+import { setText, setBadge, appendLog, getField, setField, wait, showAlert, saveUiSession } from "./ui.js";
 import { syncDeviceSummary, renderFleetPanel } from "./fleet.js";
 import { pruneHistory, drawChart } from "./chart.js";
 import { renderNullingChannels, latestFeatureOrderForNulling, updateNullingMeta, appendNulling } from "./nulling.js";
@@ -10,6 +10,7 @@ import {
   updateDatasetFromStatus, maybeCaptureDatasetTelemetry, trackDatasetRuntimeLine, handleDatasetSerialLine
 } from "./dataset.js";
 import { handleMockCommand } from "./mock.js";
+import { updateQcStatus, resetQcStatus, drawQcCharts, appendFullScaleSweep } from "./qc.js";
 import { bridgeFetch, connectBridgeSerialOnly } from "./bridge-client.js";
 
 // ---- generic parse helpers ----
@@ -41,6 +42,30 @@ export function formatGas(gasClass) {
 function textValue(value, fallback = "Unknown") {
   if (value === "unknown") return fallback;
   return value == null || value === "" ? fallback : String(value);
+}
+
+function formatSyncWord(value) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? `0x${numeric.toString(16).toUpperCase().padStart(2, "0")}` : "0x12";
+}
+
+function syncLoraConfigFields(lora) {
+  if (!lora) return;
+  if (Number.isFinite(Number(lora.freqMHz))) setField("loraFreqMHz", Number(lora.freqMHz).toFixed(1));
+  if (Number.isFinite(Number(lora.bwKHz))) setField("loraBwKHz", String(Number(lora.bwKHz)));
+  if (Number.isFinite(Number(lora.sf))) setField("loraSf", Number(lora.sf));
+  if (Number.isFinite(Number(lora.cr))) setField("loraCr", Number(lora.cr));
+  if (Number.isFinite(Number(lora.syncWord))) setField("loraSyncWord", formatSyncWord(lora.syncWord));
+  if (Number.isFinite(Number(lora.txPowerDbm))) setField("loraTxPowerDbm", Number(lora.txPowerDbm));
+  if (Number.isFinite(Number(lora.preamble))) setField("loraPreamble", Number(lora.preamble));
+  if (Number.isFinite(Number(lora.tcxoVoltage))) setField("loraTcxoVoltage", String(Number(lora.tcxoVoltage)));
+  if (Number.isFinite(Number(lora.xtalVoltage))) setField("loraXtalVoltage", String(Number(lora.xtalVoltage)));
+  const parts = [];
+  if (Number.isFinite(Number(lora.freqMHz))) parts.push(`${Number(lora.freqMHz).toFixed(1)} MHz`);
+  if (Number.isFinite(Number(lora.bwKHz))) parts.push(`${Number(lora.bwKHz)} kHz`);
+  if (Number.isFinite(Number(lora.sf))) parts.push(`SF${Number(lora.sf)}`);
+  if (Number.isFinite(Number(lora.cr))) parts.push(`CR${Number(lora.cr)}`);
+  setText("loraConfigStatus", parts.length ? `Current STAR: ${parts.join(" / ")}. CH STAR must match.` : "Waiting for LoRa config.");
 }
 
 // ---- response watch ----
@@ -91,6 +116,7 @@ export function resetDeviceSnapshot() {
   setText("mlHealth", "Unknown");
   updateAlarmState(false);
   renderSensorCheck();
+  resetQcStatus();
   syncDeviceSummary();
 }
 
@@ -100,6 +126,7 @@ function updateInfo(info) {
   setText("modeValue", info.mode);
   setText("firmwareValue", info.firmwareVersion || info.firmwareName);
   setBadge(elements.protocolLabel, info.protocolVersion || "app serial", "ok");
+  syncLoraConfigFields(info.starLora);
   syncDeviceSummary();
   if (info.appConfig) {
     setField("wifiSsid", info.appConfig.wifiSsid || getField("wifiSsid"));
@@ -141,6 +168,7 @@ function updateStatus(status) {
   const lora = status.lora || {};
   const loraOk = lora.lastTxOk === true || lora.beginState === 0;
   setText("loraValue", loraOk ? "OK" : Number.isFinite(lora.beginState) ? `state ${lora.beginState}` : "Unknown");
+  syncLoraConfigFields(lora);
   syncDeviceSummary();
   updateDatasetFromStatus(status);
   updateNullingMeta();
@@ -163,10 +191,12 @@ function maybeAppendTelemetry(status) {
     alarm: Boolean(telemetry.alarm),
     sensorVoltage: telemetry.sensorVoltage.slice(0, 8),
     sensorGain: Array.isArray(telemetry.sensorGain) ? telemetry.sensorGain.slice(0, 8) : [],
+    sensorStatus: Array.isArray(telemetry.sensorStatus) ? telemetry.sensorStatus.slice(0, 8) : [],
     featureOrder: Array.isArray(telemetry.featureOrder) ? telemetry.featureOrder.slice(0, 8) : []
   });
   pruneHistory();
   drawChart();
+  drawQcCharts();
   maybeCaptureDatasetTelemetry(status);
 }
 
@@ -174,9 +204,6 @@ function maybeAppendTelemetry(status) {
 
 export function updateAlarmState(alarm) {
   state.alarmActive = alarm;
-  setBadge(elements.alarmBadge, alarm ? (state.alarmMuted ? "Alarm muted" : "Active alarm") : "No active alarms", alarm ? "alarm" : "ok");
-  elements.alarmMuteBtn.textContent = state.alarmMuted ? "Unmute Alarm" : "Mute Alarm";
-  elements.alarmMuteBtn.disabled = !alarm && !state.alarmMuted;
   if (alarm && !state.alarmMuted) playAlarmBeep();
 }
 
@@ -755,8 +782,6 @@ function parseLegacyLine(line) {
   if (gas) {
     setText("gasValue", gas[1]);
     setText("confidenceValue", `${gas[2]}%`);
-    elements.topGasStatus.textContent = gas[1];
-    elements.topConfidenceStatus.textContent = `${gas[2]}%`;
   }
 }
 
@@ -787,6 +812,13 @@ export function handleLine(rawLine) {
       return;
     }
 
+    const qcStatus = parseJsonAfter("GLD_QC_STATUS_JSON", line);
+    if (qcStatus) {
+      clearSerialResponseWatch();
+      updateQcStatus(qcStatus);
+      return;
+    }
+
     const ack = parseJsonAfter("GLD_CMD_ACK_JSON", line);
     if (ack) {
       clearSerialResponseWatch();
@@ -811,6 +843,8 @@ export function handleLine(rawLine) {
     handleDatasetSerialLine(line);
   } else if (line.startsWith("NULLING_")) {
     appendNulling(line);
+  } else if (line.startsWith("FULLSCALE_")) {
+    appendFullScaleSweep(line);
   } else {
     parseLegacyLine(line);
   }
@@ -989,6 +1023,7 @@ export function togglePolling() {
     state.pollTimer = setInterval(() => sendCommand("GET_STATUS"), intervalMs);
     sendCommand("GET_STATUS");
   }
+  saveUiSession({ polling: state.polling });
 }
 
 export function stopPolling() {
@@ -996,4 +1031,5 @@ export function stopPolling() {
   setPollButtonLabel(`Poll ${pollIntervalMs()}ms`);
   if (state.pollTimer) clearInterval(state.pollTimer);
   state.pollTimer = null;
+  saveUiSession({ polling: false });
 }

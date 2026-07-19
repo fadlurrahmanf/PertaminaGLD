@@ -55,7 +55,7 @@
 
 .strip-gauge span {
   color: var(--text-muted);
-  font-size: 11.5px;
+  font-size: 13px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
@@ -65,7 +65,7 @@
   overflow: hidden;
   color: var(--text);
   font-family: var(--font-mono);
-  font-size: 12.5px;
+  font-size: 14px;
   font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -136,7 +136,8 @@
   background: var(--surface);
 }
 
-.segmented-nav .tab {
+.segmented-nav .tab,
+.segmented-nav .qc-tab {
   border: none;
   border-radius: 999px;
   padding: 0 20px;
@@ -146,14 +147,52 @@
   font-weight: 600;
 }
 
-.segmented-nav .tab:hover:not(:disabled) {
+.segmented-nav .tab:hover:not(:disabled),
+.segmented-nav .qc-tab:hover:not(:disabled) {
   color: var(--text);
   border-color: transparent;
 }
 
-.segmented-nav .tab.active {
+.segmented-nav .tab.active,
+.segmented-nav .qc-tab.active {
   background: var(--accent);
   color: #fff8f0;
+}
+
+/* Sub-nav nested inside the QC tab (channel picker) - same pill look as the
+   top-level segmented nav, but left-aligned and tighter since it sits inside
+   a module rather than the page header. */
+.qc-subnav {
+  justify-content: flex-start;
+  padding: 0 0 var(--space-3);
+}
+
+.qc-subnav .segmented-nav-track {
+  flex-wrap: wrap;
+  border-radius: var(--radius);
+}
+
+.qc-subview {
+  display: none;
+}
+
+.qc-subview.active {
+  display: block;
+}
+
+/* Top-level QC category split (MQ / TPL) - same pill nav look, sits above
+   the MQ channel sub-nav so the two levels of tabs stay visually distinct. */
+.qc-groupnav {
+  justify-content: flex-start;
+  padding: 0 0 var(--space-3);
+}
+
+.qc-group {
+  display: none;
+}
+
+.qc-group.active {
+  display: block;
 }
 
 /* ---- Workspace ---- */
@@ -401,6 +440,12 @@
 .modal.open .modal-box {
   transform: translateY(0) scale(1);
   opacity: 1;
+}
+
+.modal-box--wide {
+  width: min(900px, 96vw);
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 .modal-box h2 {

@@ -892,11 +892,14 @@ def test_gld_unified_runtime_scaffolds_present():
         for path in sorted(pathlib.Path("apps/gld-operator/js").glob("*.js"))
     )
     operator_bridge = pathlib.Path("apps/gld-operator/bridge.py").read_text(encoding="utf-8")
+    power_header = pathlib.Path("firmware/gld/include/GldPower.h").read_text(encoding="utf-8")
+    board_pins = pathlib.Path("firmware/gld/include/BoardPins.h").read_text(encoding="utf-8")
 
     assert "[env:gld]" in platformio
     assert "[env:gldw]" not in platformio
     assert "board = esp32-s3-devkitc-1" in platformio
     assert "-DPGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8=1" in platformio
+    assert "+<gld/src/GldQcService.cpp>" in platformio
     assert "gld_unified_esp32s3" not in platformio
     assert "gld_unified_wroom_u1_n16r8_esp32s3" not in platformio
     assert "gld_unified_to_ch2_1_esp32s3" not in platformio
@@ -958,7 +961,17 @@ def test_gld_unified_runtime_scaffolds_present():
     assert 'caps["sleepNow"] = "SLEEP_NOW"' in unified_src
     assert "GLD_SERIAL_SLEEP_NOW power_off" in unified_src
     assert "pgl::gld::pulseGldPowerLatchClear();" in unified_src
+    assert "pgl::gld::pulseGldTpl5010DoneThenPowerLatchClear();" in unified_src
+    assert "GLD_BATTERY_SESSION_DONE power_off" in unified_src
+    assert "GLD_BATTERY_SESSION_WAIT reason=%s delayMs=%lu" in unified_src
+    assert "GLD_BATTERY_ALARM_TX_RETRY reason=tx_failed" in unified_src
+    assert "GLD_BATTERY_CYCLE_ALARM_ACTIVE staying_awake" not in unified_src
+    assert "if (batteryPowerMode) return;" in unified_src
     assert power_src.index("digitalWrite(pgl::gld::board::PIN_POWER_LATCH_CLR, HIGH);") < power_src.index("pinMode(pgl::gld::board::PIN_POWER_LATCH_CLR, OUTPUT);")
+    assert "GLD_TPL5010_DONE_PULSE_US = 1000" in power_header
+    assert "GLD_DONE_TO_CLR_DELAY_US = 500" in power_header
+    assert "void pulseGldTpl5010DoneThenPowerLatchClear();" in power_header
+    assert "delayMicroseconds(GLD_DONE_TO_CLR_DELAY_US)" in power_src
     assert "ADS_MCP_SWEEP_RESULT ch=%u sensor=%s ads=%u mux=%u " in unified_src
     assert "ADS_MCP_SWEEP_DETAIL ch=%u code0=%u code4000=%u" in unified_src
     assert "DIAG_SWEEP_DAC_CODE_HIGH = 4000" in unified_src
@@ -996,16 +1009,42 @@ def test_gld_unified_runtime_scaffolds_present():
     assert 'caps["nullingConfig"] = "SET_NULLING_CONFIG_JSON thresholdV,minFinalV"' in unified_src
     assert "onSetNullingConfigJson" in unified_src
     assert "GldSerialCommandType::SetNullingConfigJson" in unified_src
+    assert "SET_QC_RESULT_JSON" in command_src
+    assert "GET_QC_STATUS" in command_src
+    assert "GldSerialCommandType::SetQcResultJson" in command_src
+    assert "GldSerialCommandType::GetQcStatus" in command_src
+    assert "onSetQcResultJson" in unified_src
+    assert "emitQcStatusJson" in unified_src
+    assert "GLD_QC_STATUS_JSON" in unified_src
+    assert 'caps["qcTracking"] = "SET_QC_RESULT_JSON channel,pass,timestamp / GET_QC_STATUS"' in unified_src
+    assert "pgl::gld::saveQcProfile" in unified_src
+    assert "pgl::gld::loadQcProfile" in unified_src
+    assert "RUN_NULLING_SINGLE_JSON" in command_src
+    assert "GldSerialCommandType::RunNullingSingleJson" in command_src
+    assert "onRunNullingSingleJson" in unified_src
+    assert "pgl::gld::runNullingServiceSingleChannel" in unified_src
+    assert 'caps["nullingSingleChannel"] = "RUN_NULLING_SINGLE_JSON channel"' in unified_src
+    assert "runNullingServiceSingleChannel" in nulling_header
+    assert "SingleChannelFailed" in nulling_header
+    assert "RESET_QC_RESULT_JSON" in command_src
+    assert "RESET_QC_ALL" in command_src
+    assert "GldSerialCommandType::ResetQcResultJson" in command_src
+    assert "GldSerialCommandType::ResetQcAll" in command_src
+    assert "onResetQcResultJson" in unified_src
+    assert "onResetQcAll" in unified_src
+    assert 'caps["qcReset"] = "RESET_QC_RESULT_JSON channel / RESET_QC_ALL"' in unified_src
     assert "lastWdtKeepaliveMs" in unified_src
     assert "maintainBatteryWakeLatch" not in unified_src
     assert "pulseBatteryWakeLatchNow" not in unified_src
     assert "batteryModeTick" not in unified_src
-    power_header = pathlib.Path("firmware/gld/include/GldPower.h").read_text(encoding="utf-8")
-    board_pins = pathlib.Path("firmware/gld/include/BoardPins.h").read_text(encoding="utf-8")
     assert "GLD_WDT_KEEPALIVE_INTERVAL_MS = 10000" in power_header
     assert "PGL_GLD_PIN_TPL5110_DONE 14" in board_pins
     assert "WiFi.mode(WIFI_OFF)" in unified_src
     assert "emitCommandAck(\"SET_MODE\", \"ok\", \"mode switch accepted\", true)" in unified_src
+    assert "one-shot boot intent" in mode_header
+    assert "prefs.begin(NVS_NS, false)" in mode_src
+    assert "mode != GldMode::INFERENCE || val > static_cast<uint8_t>(GldMode::NULLING)" in mode_src
+    assert "prefs.putUChar(NVS_KEY, static_cast<uint8_t>(GldMode::INFERENCE))" in mode_src
     gld_config = pathlib.Path("firmware/config/GldConfig.h").read_text(encoding="utf-8")
     assert "#define GLD_SCAN_INTERVAL_MS      500" in gld_config
     assert "#define GLD_DATASET_MIN_SAMPLE_INTERVAL_MS 500" in gld_config
@@ -1014,12 +1053,22 @@ def test_gld_unified_runtime_scaffolds_present():
     assert "uint16_t chId = static_cast<uint16_t>(GLD_CH_ID)" in unified_src
     assert 'caps["serialChAddress"] = "SET_CH_ADDRESS_JSON chId"' in unified_src
     assert 'doc["targetChId"] = chIdHex' in unified_src
-    assert "static StaticJsonDocument<1280> doc;" in unified_src
+    assert "static StaticJsonDocument<1536> doc;" in unified_src
     assert "static StaticJsonDocument<4096> doc;" in unified_src
-    assert 'starLora["freqMHz"] = STAR_FREQ_MHZ' in unified_src
-    assert 'starLora["bwKHz"] = STAR_BW_KHZ' in unified_src
-    assert 'starLora["sf"] = STAR_SF' in unified_src
-    assert "GLD_STAR_CONFIG freqMHz=%.1f bwKHz=%.1f sf=%u" in unified_src
+    assert "float loraFreqMHz = DEFAULT_STAR_FREQ_MHZ" in unified_src
+    assert "uint8_t loraSf = DEFAULT_STAR_SF" in unified_src
+    assert 'starLora["freqMHz"] = runtimeConfig.loraFreqMHz' in unified_src
+    assert 'starLora["bwKHz"] = runtimeConfig.loraBwKHz' in unified_src
+    assert 'starLora["sf"] = runtimeConfig.loraSf' in unified_src
+    assert 'lora["txPowerDbm"] = runtimeConfig.loraTxPowerDbm' in unified_src
+    assert 'caps["serialLoraConfig"] = "SET_LORA_CONFIG_JSON freqMHz,bwKHz,sf,cr,syncWord,txPowerDbm,preamble,tcxoVoltage,xtalVoltage"' in unified_src
+    assert "SET_LORA_CONFIG_JSON " in command_src
+    assert "GldSerialCommandType::SetLoraConfigJson" in unified_src
+    assert "prefs.putFloat(\"loraFreq\", runtimeConfig.loraFreqMHz)" in unified_src
+    assert "prefs.getFloat(\"loraFreq\", runtimeConfig.loraFreqMHz)" in unified_src
+    assert "freqMHz must be 920.0..923.0 for STAR" in unified_src
+    assert "GLD_LORA_CONFIG_SAVE=OK" in unified_src
+    assert "GLD_STAR_CONFIG freqMHz=%.3f bwKHz=%.2f sf=%u" in unified_src
     assert "runtimeConfig.nodeId, runtimeConfig.chId" in unified_src
     assert "sampleIntervalMs = DATASET_MIN_SAMPLE_INTERVAL_MS" in unified_src
     assert "sampleIntervalMs = requestedSampleIntervalMs < DATASET_MIN_SAMPLE_INTERVAL_MS" in unified_src
@@ -1063,10 +1112,16 @@ def test_gld_unified_runtime_scaffolds_present():
     assert "nodeId must match deviceId; omit nodeId unless it is identical" in unified_src
     assert 'data-command="RUN_BOOT_CHECK"' in operator_index
     assert 'id="sampleIntervalMs" type="number" min="500" step="50" value="500"' in operator_index
+    assert 'id="loraFreqMHz" type="number" min="920" max="923"' in operator_index
+    assert 'id="applyLoraConfigBtn"' in operator_index
     assert re.search(r'js/main\.js\?v=[^"]+', operator_index)
     assert "js/main.js?v=20260715-1900" not in operator_index
-    assert "js/main.js?v=20260715-manifold-1" in operator_index
+    assert "js/main.js?v=20260715-manifold-1" not in operator_index
+    assert "js/main.js?v=20260716-mq-qc-analysis-1" in operator_index
     assert 'command === "GET_STATUS" || command === "RUN_BOOT_CHECK"' in operator_app
+    assert "SET_LORA_CONFIG_JSON" in operator_app
+    assert "export async function applyLoraConfig()" in operator_app
+    assert "syncLoraConfigFields" in operator_app
     assert "SENSOR_MUX_CHANNELS = [7, 6, 5, 0, 1, 2, 3, 4]" in operator_app
     assert "function setBootProbe(key, patch)" in operator_app
     assert "state.bootDiagnostics.probes[key] = {\n    key," in operator_app

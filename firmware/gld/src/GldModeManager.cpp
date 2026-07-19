@@ -9,11 +9,16 @@ static constexpr const char* NVS_KEY = "mode";
 
 GldMode readGldMode() {
     Preferences prefs;
-    prefs.begin(NVS_NS, true);
+    prefs.begin(NVS_NS, false);
     const uint8_t val = prefs.getUChar(NVS_KEY, static_cast<uint8_t>(GldMode::INFERENCE));
+    const GldMode mode = val <= static_cast<uint8_t>(GldMode::NULLING)
+        ? static_cast<GldMode>(val)
+        : GldMode::INFERENCE;
+    if (mode != GldMode::INFERENCE || val > static_cast<uint8_t>(GldMode::NULLING)) {
+        prefs.putUChar(NVS_KEY, static_cast<uint8_t>(GldMode::INFERENCE));
+    }
     prefs.end();
-    if (val > static_cast<uint8_t>(GldMode::NULLING)) return GldMode::INFERENCE;
-    return static_cast<GldMode>(val);
+    return mode;
 }
 
 void writeGldMode(GldMode mode) {

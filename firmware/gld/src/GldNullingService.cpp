@@ -27,10 +27,9 @@ constexpr uint8_t  CONFIRM_WINDOW_WIDE  = 20;
 // code still reads below threshold on the separate final verification read.
 constexpr uint8_t  FINAL_CHECK_MAX_BUMPS = 20;
 constexpr uint32_t SETTLE_MS            = 5;
-// Deliberate pause between algorithm phases (baseline -> exponential ->
-// binary search -> confirm) so an app polling/monitoring the serial log can
-// keep up and show each phase instead of the whole channel flashing by.
-constexpr uint32_t STAGE_TRANSITION_DELAY_MS = 2000;
+// No deliberate pause between algorithm phases. The transition log is retained
+// for the operator UI, while the per-write DAC/ADC settle remains separate.
+constexpr uint32_t STAGE_TRANSITION_DELAY_MS = 0;
 
 constexpr const char* NVS_NAMESPACE = "gld-null";
 constexpr const char* NVS_KEY       = "profile";
@@ -516,6 +515,100 @@ GldNullingServiceResult runNullingService(GldAds1256Reader& ads,
     return out;
 }
 
+GldNullingSingleResult runNullingServiceSingleChannel(GldAds1256Reader& ads,
+                                                      GldDacMux& dac,
+                                                      uint8_t channel,
+                                                      GldNullingLogFn logFn,
+                                                      GldNullingTickFn tickFn,
+                                                      const GldNullingConfig& config) {
+    GldNullingSingleResult out{};
+    out.status = GldNullingStatus::Ok;
+
+    if (!ads.ready()) {
+        serviceTick(tickFn);
+        out.status = GldNullingStatus::AdsNotReady;
+        emitLog(logFn, "NULLING_SERVICE_BLOCKED status=%s channel=%u", gldNullingStatusName(out.status), static_cast<unsigned>(channel));
+        return out;
+    }
+    if (!dac.ready()) {
+        serviceTick(tickFn);
+        out.status = GldNullingStatus::DacNotReady;
+        emitLog(logFn, "NULLING_SERVICE_BLOCKED status=%s channel=%u", gldNullingStatusName(out.status), static_cast<unsigned>(channel));
+        return out;
+    }
+
+    serviceTick(tickFn);
+    const ChannelResult cr = nullOneChannel(ads, dac, channel, logFn, tickFn, config);
+    out.dacCode   = cr.dacCode;
+    out.baselineV = cr.baselineV;
+    out.afterV    = cr.afterV;
+    out.success   = cr.success;
+    out.status    = cr.success ? GldNullingStatus::Ok : GldNullingStatus::SingleChannelFailed;
+    return out;
+}
+
+GldFullScaleSweepResult runFullScaleSweep(GldAds1256Reader& ads,
+                                          GldDacMux& dac,
+                                          uint8_t channel,
+                                          uint16_t restoreCode,
+                                          uint16_t stepSize,
+                                          GldNullingLogFn logFn,
+                                          GldNullingTickFn tickFn) {
+    GldFullScaleSweepResult out{};
+    out.success = false;
+    out.status = GldNullingStatus::Ok;
+    out.restoredCode = restoreCode;
+
+    if (!ads.ready()) {
+        serviceTick(tickFn);
+        out.status = GldNullingStatus::AdsNotReady;
+        emitLog(logFn, "FULLSCALE_BLOCKED status=%s channel=%u", gldNullingStatusName(out.status), static_cast<unsigned>(channel));
+        return out;
+    }
+    if (!dac.ready()) {
+        serviceTick(tickFn);
+        out.status = GldNullingStatus::DacNotReady;
+        emitLog(logFn, "FULLSCALE_BLOCKED status=%s channel=%u", gldNullingStatusName(out.status), static_cast<unsigned>(channel));
+        return out;
+    }
+    if (stepSize == 0) stepSize = 1;
+
+    emitLog(logFn, "FULLSCALE_START ch=%u sensor=%s codeMin=%u codeMax=%u step=%u avgCount=%u",
+            static_cast<unsigned>(channel), sensorName(channel),
+            static_cast<unsigned>(board::GLD_DAC_CODE_MIN),
+            static_cast<unsigned>(board::GLD_DAC_CODE_MAX),
+            static_cast<unsigned>(stepSize),
+            static_cast<unsigned>(AVG_COUNT));
+
+    uint32_t code = board::GLD_DAC_CODE_MIN;
+    bool anyValidSample = false;
+    for (;;) {
+        serviceTick(tickFn);
+        const bool writeOk = dac.writeDac(channel, static_cast<uint16_t>(code));
+        settle(tickFn);
+        const Snapshot snap = readAverage(ads, channel, AVG_COUNT, tickFn);
+        emitLog(logFn, "FULLSCALE_STEP ch=%u sensor=%s code=%u voltage=%.6f valid=%u write=%u",
+                static_cast<unsigned>(channel), sensorName(channel),
+                static_cast<unsigned>(code), snap.voltage,
+                snap.valid ? 1u : 0u, writeOk ? 1u : 0u);
+        if (writeOk && snap.valid) anyValidSample = true;
+
+        if (code >= board::GLD_DAC_CODE_MAX) break;
+        const uint32_t next = code + stepSize;
+        code = next > board::GLD_DAC_CODE_MAX ? board::GLD_DAC_CODE_MAX : next;
+    }
+
+    const bool restoreOk = dac.writeDac(channel, restoreCode);
+    settle(tickFn);
+    out.success = anyValidSample && restoreOk;
+    if (!anyValidSample) out.status = GldNullingStatus::SingleChannelFailed;
+    emitLog(logFn, "FULLSCALE_DONE ch=%u sensor=%s status=%s restoreCode=%u restoreOk=%u",
+            static_cast<unsigned>(channel), sensorName(channel),
+            gldNullingStatusName(out.status), static_cast<unsigned>(restoreCode),
+            restoreOk ? 1u : 0u);
+    return out;
+}
+
 bool saveNullingProfile(const GldNullingProfile& profile) {
     Preferences prefs;
     if (!prefs.begin(NVS_NAMESPACE, false)) return false;
@@ -555,6 +648,7 @@ const char* gldNullingStatusName(GldNullingStatus s) {
         case GldNullingStatus::DacNotReady:      return "DacNotReady";
         case GldNullingStatus::AllChannelsFailed:return "AllChannelsFailed";
         case GldNullingStatus::PartialSuccess:   return "PartialSuccess";
+        case GldNullingStatus::SingleChannelFailed: return "SingleChannelFailed";
     }
     return "Unknown";
 }

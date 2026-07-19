@@ -24,8 +24,8 @@ export function syncDeviceSummary() {
 
   elements.topDeviceStatus.textContent = deviceId;
   elements.topModeStatus.textContent = mode;
-  elements.topGasStatus.textContent = gas;
-  elements.topConfidenceStatus.textContent = confidence;
+  if (elements.topGasStatus) elements.topGasStatus.textContent = gas;
+  if (elements.topConfidenceStatus) elements.topConfidenceStatus.textContent = confidence;
   elements.sideDeviceSummary.textContent = deviceId;
   elements.sidePortSummary.textContent = port;
 
@@ -114,6 +114,7 @@ export async function setActiveSlot(slot) {
   if (entry.connected && state.bridgeAvailable) {
     await sendCommand("GET_INFO");
     await sendCommand("GET_STATUS");
+    await sendCommand("GET_QC_STATUS");
   }
 }
 

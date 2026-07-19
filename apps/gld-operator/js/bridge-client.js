@@ -3,7 +3,7 @@
 // bridge.py's REST/SSE surface directly.
 
 import { elements, state, decoder } from "./state.js";
-import { setBadge, setText, appendLog, showBanner, switchTab, setSetupOpen, wait } from "./ui.js";
+import { setBadge, setText, appendLog, showBanner, switchTab, setSetupOpen, wait, saveUiSession } from "./ui.js";
 import { syncDeviceSummary, renderFleetPanel, updateFleetFromLine } from "./fleet.js";
 import { handleLine, clearSerialResponseWatch, sendCommand, resetDeviceSnapshot, stopPolling } from "./serial-protocol.js";
 import { setDatasetState, handleDatasetMqttEvent, renderDatasetSession } from "./dataset.js";
@@ -36,12 +36,22 @@ export async function initBridge() {
     const wasAvailable = state.bridgeAvailable;
     state.bridgeAvailable = Boolean(health.ok);
     state.bridgeFeatures = health.features || {};
+    state.bridgeSlots = health.slots || {};
     setBadge(elements.connectionBadge, "bridge ready", "ok");
     setBadge(elements.bridgeBadge, "bridge: ok", "ok");
     setText("protocolLabel", "bridge");
     elements.protocolLabel.title = `bridge ${health.version}`;
     startBridgeEvents();
     await refreshPorts(true);
+    const activeSlot = state.bridgeSlots?.[String(state.activeSlot)];
+    if (activeSlot?.connected) {
+      state.connected = true;
+      if (activeSlot.port) {
+        elements.portSelect.value = activeSlot.port;
+        updateSelectedPortDetail();
+      }
+      updateConnectionUi("connected", "ok");
+    }
     await initDatasetOutputDir();
     if (!state.bridgeFeatures.mqtt) {
       appendLog(`MQTT bridge unavailable: ${health.errors?.mqtt || "paho-mqtt not installed"}`, "in");
@@ -186,6 +196,7 @@ function startBridgeEvents() {
 
 export async function refreshPorts(bridgeAlreadyChecked = false) {
   const oldText = elements.refreshPortsBtn.textContent;
+  const previousPort = elements.portSelect.value;
   elements.refreshPortsBtn.textContent = "Scanning";
   elements.refreshPortsBtn.disabled = true;
   if (!state.bridgeAvailable && !bridgeAlreadyChecked) {
@@ -214,7 +225,10 @@ export async function refreshPorts(bridgeAlreadyChecked = false) {
       elements.portSelect.append(option);
     }
     const manual = ensureManualPortOption(false);
-    const preferred = ports.find((port) => port.path === "COM10")
+    const activeSlotPort = state.bridgeSlots?.[String(state.activeSlot)]?.port;
+    const preferred = ports.find((port) => port.path === activeSlotPort)
+      || ports.find((port) => port.path === previousPort)
+      || ports.find((port) => port.path === "COM10")
       || (manual ? { path: manual } : null)
       || ports[0];
     elements.portSelect.value = preferred.path;
@@ -282,6 +296,8 @@ export async function connectSerial() {
       await sendCommand("GET_INFO");
       await wait(120);
       await sendCommand("GET_STATUS");
+      await wait(120);
+      await sendCommand("GET_QC_STATUS");
       setSetupOpen(false);
     } catch (error) {
       appendLog(`CONNECT_ERROR ${error.message}`, "in");
@@ -308,6 +324,8 @@ export async function connectSerial() {
     await sendCommand("GET_INFO");
     await wait(120);
     await sendCommand("GET_STATUS");
+    await wait(120);
+    await sendCommand("GET_QC_STATUS");
     setSetupOpen(false);
   } catch (error) {
     setBadge(elements.connectionBadge, "error", "error");
@@ -331,6 +349,7 @@ export async function connectBridgeSerialOnly({ resetSnapshot = false, openSetup
   });
   state.connected = true;
   updateConnectionUi("connected", "ok");
+  saveUiSession({ port, connected: true });
   return true;
 }
 
@@ -362,6 +381,7 @@ function processChunk(text) {
 export async function disconnectSerial() {
   clearSerialResponseWatch();
   stopPolling();
+  saveUiSession({ connected: false });
   if (state.bridgeAvailable) {
     await bridgeFetch("/api/serial/disconnect", { method: "POST", body: JSON.stringify({ slot: state.activeSlot }) }).catch((error) => {
       appendLog(`DISCONNECT_ERROR ${error.message}`, "in");

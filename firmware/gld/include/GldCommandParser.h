@@ -18,6 +18,7 @@ enum class GldSerialCommandType : uint8_t {
     RunBootCheck,
     RunAdsMcpSweep,
     SleepNow,
+    ServiceHoldOff,
     SetAppConfigJson,
     SetDeviceIdJson,
     SetChAddressJson,
@@ -50,6 +51,7 @@ struct GldSerialCommand {
 // - RUN_BOOT_CHECK
 // - RUN_ADS_MCP_SWEEP
 // - SLEEP_NOW
+// - SERVICE_HOLD_OFF
 // - SET_APP_CONFIG_JSON {...}
 // - SET_DEVICE_ID_JSON {...}
 // - SET_CH_ADDRESS_JSON {"chId":"0064","reboot":true}
@@ -82,5 +84,13 @@ bool parseLoRaDownlinkCmd(const uint8_t* frame, size_t frameLen,
                           bool aesKeyPresent,
                           uint16_t& lastCommandId,
                           GldMode& outMode);
+
+// Validate the compact, payload-less alarm ACK emitted by the configured CH.
+// A match requires CRC-valid AppFrame fields plus exact CH, GLD, and uplink
+// sequence IDs. The current STAR protocol does not authenticate compact ACKs.
+bool parseCompactAlarmAck(const uint8_t* frame, size_t frameLen,
+                          uint16_t expectedChId,
+                          uint16_t myNodeId,
+                          uint8_t expectedSeq);
 
 }  // namespace pgl::gld

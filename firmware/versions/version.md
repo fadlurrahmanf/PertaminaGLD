@@ -10,6 +10,54 @@ YYYY-MM-DD HH:mm:ss Asia/Jakarta
 
 ---
 
+## GLD v0.8.14 / CH v0.7.1 / Gateway v0.1.3 - 2026-07-20 Asia/Jakarta
+
+**Summary:** Battery inference now follows a bounded wake procedure and adds a
+persistent CFG/IO16 service hold so the GLD remains powered for firmware upload
+without permitting the power-latch CLR pulse.
+
+### Behavior
+
+- Battery inference warms sensors for 30 seconds after runtime initialization,
+  resets the moving average, and requires 10 complete valid 8-channel batches.
+- Normal uplink uses one TX and the 2-second RX window without requiring ACK.
+- Alarm uplink requires a matching compact CH ACK, uses at most three TX/RX
+  attempts per wake, and persists an unacknowledged alarm for the next wake.
+- A 120-second safety deadline bounds fault cases only; successful sessions
+  power off immediately when their own procedure finishes.
+- CFG is active-low. LOW immediately inhibits CLR; each debounced release after
+  a press toggles the persisted service hold. Enabling hold blinks IO39 twice.
+- A completed held session does not repeat inference/TX. TPL5010 DONE is pulsed
+  periodically during hold, and the next CFG press-release (or
+  `SERVICE_HOLD_OFF`) allows one final DONE-to-CLR power-off sequence.
+- `SLEEP_NOW` and `INJECT_TPL_CLR` are blocked while battery service hold is
+  effective.
+
+### Changed Files
+
+- firmware/shared/include/FirmwareVersion.h (GLD 0.8.13 -> 0.8.14)
+- firmware/config/GldConfig.h
+- firmware/gld/include/GldCommandParser.h
+- firmware/gld/include/GldModeManager.h
+- firmware/gld/src/GldCommandParser.cpp
+- firmware/gld/src/GldModeManager.cpp
+- firmware/gld/src/GldUnifiedMain.cpp
+- firmware/tests/test_shared_protocol.py
+- firmware/README.md
+- docs/design/gld/final_design.md
+- firmware/versions/version.md
+
+### Test Result
+
+- `pio run -d firmware -e gld` -> success; RAM 39.2%, flash 15.2%.
+- `python firmware/tests/run_tests.py` with bundled dependencies -> 34/34 pass.
+- The stale operator asset-version assertion was synchronized with the already
+  active `js/main.js?v=20260716-fullscale-sweep-1` source reference.
+- `git diff --check` -> pass with existing CRLF normalization warnings only.
+- No upload or COM-port access was performed for v0.8.14.
+
+---
+
 ## GLD v0.8.13 / CH v0.7.1 / Gateway v0.1.3 - 2026-07-14 Asia/Jakarta
 
 **Summary:** Nulling threshold now follows each channel baseline. The active

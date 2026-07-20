@@ -41,7 +41,7 @@ below records the important corrections made for the current firmware.
 | EEPROM `boardId`, `modelFilePath`, `wiperArr` config | Current persistence uses ESP32 Preferences/NVS for mode and nulling profile. |
 | CayenneLPP payload | Not used by current GLD uplink. Current payload is compact GLD plaintext encrypted by AES-GCM. |
 | `LoRaPacketType`, `ackStatus`, health packet families | Not present in current GLD uplink contract. Current uplink is `AppFrame` + encrypted GLD payload. |
-| One-shot battery sleep with TPL5110 DONE pulse | Current code initializes `PIN_TPL5110_DONE` LOW but does not implement a full one-shot DONE pulse/sleep loop. |
+| One-shot battery sleep with TPL5010 DONE pulse | Current code runs a warm-up/sample/inference/TX/RX session, then pulses DONE followed by CLR. CFG/IO16 can persistently hold CLR disabled for service upload. |
 | MQTT `START_NULLING` service command | Current MQTT callback handles `SET_MODE`, `START_DATASET`, and `STOP_DATASET`; nulling is entered through `SET_MODE nulling`. |
 | Normal LoRa telemetry 60 seconds | Current `GLD_TX_INTERVAL_MS` is `10000 ms`. |
 | Generic SX127x wording | Current runtime uses SX1262 through RadioLib. |
@@ -79,7 +79,7 @@ Firmware identifiers:
 | Field | Value |
 |---|---|
 | firmware name | `PertaminaGLD-GLD` |
-| firmware version | `0.8.13` |
+| firmware version | `0.8.14` |
 | protocol version | `0.1.0` |
 | config schema version | `0.1.0` |
 
@@ -178,8 +178,21 @@ moving average, and model input in the program-channel order above.
 Battery value is treated invalid when calculated voltage is `<=0.05 V` or
 `>20.0 V`. Invalid battery in the GLD payload becomes `0xFFFF`.
 
-Current firmware initializes `PIN_TPL5110_DONE` LOW. It does not implement the
-baseline one-shot wake, transmit, pulse DONE, and sleep sequence.
+In battery inference mode, current firmware waits 30 seconds after runtime
+initialization, resets the moving-average window, collects at least 10 complete
+and valid 8-channel batches, performs inference, transmits LoRa, and opens the
+2-second RX window. A normal result does not require ACK. An alarm requires a
+matching compact ACK and is attempted at most three times; an unacknowledged
+alarm is retained in NVS for the next wake. The session then pulses TPL5010
+DONE, waits 500 us, pulses the active-low latch CLR, and powers the main rail
+off immediately without padding the ON time to a fixed duration.
+
+CFG/IO16 uses the board pull-up and active-low switch. One debounced
+press-release toggles a persistent service hold. While held, CLR is blocked,
+the status LED on IO39 blinks twice when hold is enabled, completed battery
+sessions do not repeat sampling/TX, and firmware sends periodic DONE pulses so
+TPL5010 does not reset the ESP32 during upload. A second press-release or the
+`SERVICE_HOLD_OFF` serial command re-enables CLR.
 
 ## 7. Runtime Modes
 
@@ -634,7 +647,7 @@ Important current serial log tokens:
 |---|---|
 | Imported design | Keep `docs/design/gld/design.md` immutable; use this draft as adjusted copy. |
 | RS485/Modbus | Baseline describes it, but active GLD envs do not compile it. |
-| TPL5110 | DONE pin exists and is initialized LOW, but no complete sleep-cycle/pulse-DONE loop exists in unified runtime. |
+| TPL5010 + latch | Battery inference has a complete DONE-to-CLR power-off cycle plus a persistent CFG service-hold override. Bench validation is still required for the new production flow. |
 | MQTT nulling result topics | Topic macros exist, but current unified runtime does not publish them. |
 | Nulling partial success | Partial profile is retry-only; it must not be saved as complete production profile. |
 | Dataset start | Requires `nullingProfileId > 0`; otherwise command is rejected. |

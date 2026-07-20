@@ -1,4 +1,5 @@
 #include "GldModeManager.h"
+#include "ProtocolConstants.h"
 #include <Arduino.h>
 #include <Preferences.h>
 
@@ -34,6 +35,10 @@ void switchGldMode(GldMode mode) {
 }
 
 static constexpr const char* NVS_ALARM_KEY = "alarm";
+static constexpr const char* NVS_SERVICE_HOLD_KEY = "svc_hold";
+static constexpr const char* NVS_PENDING_ALARM_KEY = "pending_alarm";
+static constexpr const char* NVS_PENDING_GAS_KEY = "pending_gas";
+static constexpr const char* NVS_PENDING_CONFIDENCE_KEY = "pending_conf";
 
 bool readGldAlarmLatched() {
     Preferences prefs;
@@ -47,6 +52,58 @@ void writeGldAlarmLatched(bool active) {
     Preferences prefs;
     prefs.begin(NVS_NS, false);
     prefs.putBool(NVS_ALARM_KEY, active);
+    prefs.end();
+}
+
+bool readGldServiceHold() {
+    Preferences prefs;
+    prefs.begin(NVS_NS, true);
+    const bool active = prefs.getBool(NVS_SERVICE_HOLD_KEY, false);
+    prefs.end();
+    return active;
+}
+
+void writeGldServiceHold(bool active) {
+    Preferences prefs;
+    prefs.begin(NVS_NS, false);
+    prefs.putBool(NVS_SERVICE_HOLD_KEY, active);
+    prefs.end();
+}
+
+GldPendingAlarm readGldPendingAlarm() {
+    Preferences prefs;
+    prefs.begin(NVS_NS, true);
+    GldPendingAlarm pending{};
+    pending.active = prefs.getBool(NVS_PENDING_ALARM_KEY, false);
+    pending.gasClass = prefs.getUChar(NVS_PENDING_GAS_KEY, 0);
+    pending.confidence = prefs.getUChar(NVS_PENDING_CONFIDENCE_KEY, 0);
+    prefs.end();
+
+    if (!pending.active) {
+        pending.gasClass = 0;
+        pending.confidence = 0;
+        return pending;
+    }
+
+    if (pending.gasClass == pgl::protocol::GLD_GAS_CLEAR ||
+        pending.confidence < pgl::protocol::GLD_LEL_THRESHOLD_PERCENT ||
+        pending.gasClass > pgl::protocol::GLD_GAS_ANOMALY ||
+        pending.confidence > 100) {
+        pending = {};
+        writeGldPendingAlarm(pending);
+    }
+    return pending;
+}
+
+void writeGldPendingAlarm(const GldPendingAlarm& pending) {
+    Preferences prefs;
+    prefs.begin(NVS_NS, false);
+    if (pending.active) {
+        prefs.putUChar(NVS_PENDING_GAS_KEY, pending.gasClass);
+        prefs.putUChar(NVS_PENDING_CONFIDENCE_KEY, pending.confidence);
+    }
+    // Write the validity flag last so a reset cannot expose half-written data.
+    prefs.putBool(NVS_PENDING_ALARM_KEY, pending.active);
     prefs.end();
 }
 

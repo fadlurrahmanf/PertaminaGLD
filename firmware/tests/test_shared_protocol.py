@@ -938,11 +938,18 @@ def test_gld_unified_runtime_scaffolds_present():
     assert "RunBootCheck" in command_header
     assert "RunAdsMcpSweep" in command_header
     assert "SleepNow" in command_header
+    assert "ServiceHoldOff" in command_header
     assert "SetChAddressJson" in command_header
     assert "GldSerialCommandType::Restart" in command_src
     assert "GldSerialCommandType::RunBootCheck" in command_src
     assert "GldSerialCommandType::RunAdsMcpSweep" in command_src
     assert "GldSerialCommandType::SleepNow" in command_src
+    assert "SERVICE_HOLD_OFF" in command_src
+    assert "parseCompactAlarmAck" in command_header
+    assert "decoded.typeFlags == pgl::protocol::TYPE_ALARM_ACK_COMPACT" in command_src
+    assert "decoded.srcId == expectedChId" in command_src
+    assert "decoded.dstId == myNodeId" in command_src
+    assert "decoded.seq == expectedSeq" in command_src
     assert "GLD_INFO_JSON" in unified_src
     assert "GLD_STATUS_JSON" in unified_src
     assert "GLD_CMD_ACK_JSON" in unified_src
@@ -964,9 +971,27 @@ def test_gld_unified_runtime_scaffolds_present():
     assert "pgl::gld::pulseGldTpl5010DoneThenPowerLatchClear();" in unified_src
     assert "GLD_BATTERY_SESSION_DONE power_off" in unified_src
     assert "GLD_BATTERY_SESSION_WAIT reason=%s delayMs=%lu" in unified_src
-    assert "GLD_BATTERY_ALARM_TX_RETRY reason=tx_failed" in unified_src
+    assert "GLD_BATTERY_ALARM_TX_RETRY reason=%s" in unified_src
+    assert "GLD_BATTERY_ALARM_PENDING_SAVE" in unified_src
+    assert "GLD_BATTERY_ALARM_ACK_SUCCESS" in unified_src
     assert "GLD_BATTERY_CYCLE_ALARM_ACTIVE staying_awake" not in unified_src
-    assert "if (batteryPowerMode) return;" in unified_src
+    assert "if (batteryPowerMode && !serviceHoldRequested) return;" in unified_src
+    assert "const bool cfgLowNow = digitalRead(pgl::gld::board::PIN_USER_BUTTON) == LOW;" in unified_src
+    assert "serviceHoldActive || cfgLowNow || !cfgButtonRawHigh || cfgButtonPressArmed" in unified_src
+    assert "GLD_BATTERY_SESSION_POWER_OFF_ABORT" in unified_src
+    assert "GLD_BATTERY_SENSOR_WARMUP_MS" in unified_src
+    assert "runScan(true)" in unified_src
+    assert "batteryValidSampleBatches < BATTERY_VALID_SAMPLE_BATCHES" in unified_src
+    assert "BatterySessionState::CompleteHeld" in unified_src
+    assert "GLD_SERVICE_HOLD_BLOCK_CLR" in unified_src
+    assert "maintainServiceHoldButton();" in unified_src
+    assert "pulseWdtKeepaliveNow();" in unified_src
+    assert "readGldServiceHold" in mode_header
+    assert "writeGldServiceHold" in mode_header
+    assert "readGldPendingAlarm" in mode_header
+    assert "writeGldPendingAlarm" in mode_header
+    assert 'NVS_SERVICE_HOLD_KEY = "svc_hold"' in mode_src
+    assert 'NVS_PENDING_ALARM_KEY = "pending_alarm"' in mode_src
     assert power_src.index("digitalWrite(pgl::gld::board::PIN_POWER_LATCH_CLR, HIGH);") < power_src.index("pinMode(pgl::gld::board::PIN_POWER_LATCH_CLR, OUTPUT);")
     assert "GLD_TPL5010_DONE_PULSE_US = 1000" in power_header
     assert "GLD_DONE_TO_CLR_DELAY_US = 500" in power_header
@@ -1048,6 +1073,11 @@ def test_gld_unified_runtime_scaffolds_present():
     gld_config = pathlib.Path("firmware/config/GldConfig.h").read_text(encoding="utf-8")
     assert "#define GLD_SCAN_INTERVAL_MS      500" in gld_config
     assert "#define GLD_DATASET_MIN_SAMPLE_INTERVAL_MS 500" in gld_config
+    assert "#define GLD_BATTERY_SENSOR_WARMUP_MS       30000" in gld_config
+    assert "#define GLD_BATTERY_VALID_SAMPLE_BATCHES      10" in gld_config
+    assert "#define GLD_BATTERY_ALARM_TX_ATTEMPTS          3" in gld_config
+    assert "#define GLD_BATTERY_SESSION_DEADLINE_MS   120000" in gld_config
+    assert "#define GLD_CFG_BUTTON_DEBOUNCE_MS            50" in gld_config
     assert "#define GLD_NODE_HEX        F010" in gld_config
     assert "#define GLD_CH_ID           0x006B" in gld_config
     assert "uint16_t chId = static_cast<uint16_t>(GLD_CH_ID)" in unified_src
@@ -1117,7 +1147,7 @@ def test_gld_unified_runtime_scaffolds_present():
     assert re.search(r'js/main\.js\?v=[^"]+', operator_index)
     assert "js/main.js?v=20260715-1900" not in operator_index
     assert "js/main.js?v=20260715-manifold-1" not in operator_index
-    assert "js/main.js?v=20260716-mq-qc-analysis-1" in operator_index
+    assert "js/main.js?v=20260716-fullscale-sweep-1" in operator_index
     assert 'command === "GET_STATUS" || command === "RUN_BOOT_CHECK"' in operator_app
     assert "SET_LORA_CONFIG_JSON" in operator_app
     assert "export async function applyLoraConfig()" in operator_app
@@ -1244,8 +1274,8 @@ def test_current_design_docs_mirror_live_source_contracts():
     server_doc = pathlib.Path("docs/design/server/design.md").read_text(encoding="utf-8")
     command_header = pathlib.Path("firmware/gld/include/GldCommandParser.h").read_text(encoding="utf-8")
 
-    assert "GLD_FIRMWARE_VERSION = \"0.8.13\"" in pathlib.Path("firmware/shared/include/FirmwareVersion.h").read_text(encoding="utf-8")
-    assert "| firmware version | `0.8.13` |" in gld_doc
+    assert "GLD_FIRMWARE_VERSION = \"0.8.14\"" in pathlib.Path("firmware/shared/include/FirmwareVersion.h").read_text(encoding="utf-8")
+    assert "| firmware version | `0.8.14` |" in gld_doc
     assert "| firmware version | `0.7.1` |" in ch_doc
     assert "| firmware version | `0.1.3` |" in gw_doc
 
@@ -1373,7 +1403,7 @@ def test_version_constants_format():
     for version in versions:
         assert re.fullmatch(r"\d+\.\d+\.\d+", version), version
 
-    assert 'GLD_FIRMWARE_VERSION = "0.8.13"' in header
+    assert 'GLD_FIRMWARE_VERSION = "0.8.14"' in header
     assert 'CH_FIRMWARE_VERSION = "0.7.1"' in header
     assert 'GATEWAY_FIRMWARE_VERSION = "0.1.3"' in header
     assert 'PROTOCOL_VERSION = "0.1.0"' in header

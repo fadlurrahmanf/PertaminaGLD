@@ -25,4 +25,21 @@ GldMode     gldModeFromString(const char* str);  // unknown → INFERENCE
 bool        readGldAlarmLatched();
 void        writeGldAlarmLatched(bool active);
 
+// Service hold is toggled by one debounced CFG-button press/release while the
+// GLD is on battery power. It is persisted so an ESP reset during firmware
+// upload cannot unexpectedly re-enable the power-latch CLR output.
+bool        readGldServiceHold();
+void        writeGldServiceHold(bool active);
+
+struct GldPendingAlarm {
+    bool active = false;
+    uint8_t gasClass = 0;
+    uint8_t confidence = 0;
+};
+
+// Alarm delivery is retried for a bounded number of attempts per wake. If no
+// matching ACK arrives, retain the alarm in NVS for the following wake cycle.
+GldPendingAlarm readGldPendingAlarm();
+void            writeGldPendingAlarm(const GldPendingAlarm& pending);
+
 }  // namespace pgl::gld

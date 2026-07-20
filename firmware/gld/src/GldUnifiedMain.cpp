@@ -106,6 +106,12 @@ constexpr uint8_t ADS1256_REG_DRATE = 0x03;
 constexpr uint32_t NULLING_RETRY_DELAY_MS = 5000;
 constexpr uint32_t NULLING_AUTO_RESTART_DELAY_MS = 800;
 constexpr uint32_t BATTERY_FAULT_SERIAL_HOLD_MS = 10000;
+constexpr uint32_t BATTERY_SENSOR_WARMUP_MS = GLD_BATTERY_SENSOR_WARMUP_MS;
+constexpr uint8_t BATTERY_VALID_SAMPLE_BATCHES = GLD_BATTERY_VALID_SAMPLE_BATCHES;
+constexpr uint8_t BATTERY_ALARM_TX_ATTEMPTS = GLD_BATTERY_ALARM_TX_ATTEMPTS;
+constexpr uint32_t BATTERY_ALARM_RETRY_DELAY_MS = GLD_BATTERY_ALARM_RETRY_DELAY_MS;
+constexpr uint32_t BATTERY_SESSION_DEADLINE_MS = GLD_BATTERY_SESSION_DEADLINE_MS;
+constexpr uint32_t CFG_BUTTON_DEBOUNCE_MS = GLD_CFG_BUTTON_DEBOUNCE_MS;
 
 #if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8
 constexpr const char* BOARD_PROFILE = "WROOM-1U-N16R8";
@@ -116,6 +122,15 @@ constexpr const char* BOARD_PROFILE = "4D-ESP32S3";
 constexpr uint8_t ML_CONFIDENCE_THRESHOLD = pgl::protocol::GLD_LEL_THRESHOLD_PERCENT;
 constexpr uint8_t ACTIVE_LOW_OUTPUT_ON = LOW;
 constexpr uint8_t ACTIVE_LOW_OUTPUT_OFF = HIGH;
+
+static_assert(BATTERY_VALID_SAMPLE_BATCHES >= pgl::gld::GLD_SENSOR_MOVING_AVERAGE_WINDOW,
+              "Battery inference requires a fully primed moving-average window");
+static_assert(BATTERY_ALARM_TX_ATTEMPTS > 0,
+              "Battery alarm transmission must have at least one attempt");
+#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8
+static_assert(pgl::gld::board::PIN_USER_BUTTON == 16, "Unexpected GLD CFG pin");
+static_assert(pgl::gld::board::PIN_STATUS_LED == 39, "Unexpected GLD status LED pin");
+#endif
 
 // ---------------------------------------------------------------------------
 // Runtime objects
@@ -215,6 +230,44 @@ bool     batteryCyclePoweredOff = false;
 bool     batteryFaultPowerOffArmed = false;
 uint32_t batteryFaultPowerOffDueMs = 0;
 uint32_t lastWdtKeepaliveMs = 0;
+
+enum class BatterySessionState : uint8_t {
+    Inactive = 0,
+    Warmup,
+    Sampling,
+    Transmit,
+    CompleteHeld,
+    PowerOffIssued,
+};
+
+BatterySessionState batterySessionState = BatterySessionState::Inactive;
+uint32_t batterySessionStartedMs = 0;
+uint32_t batteryStateStartedMs = 0;
+uint32_t batteryLastSampleAttemptMs = 0;
+uint32_t batteryNextTxAttemptMs = 0;
+uint8_t batteryValidSampleBatches = 0;
+uint8_t batteryAlarmTxAttempts = 0;
+bool batteryAlarmAckReceived = false;
+char batteryCompletionReason[48] = "session_done";
+pgl::gld::GldPendingAlarm batteryPendingAlarm{};
+
+bool serviceHoldActive = false;
+bool cfgButtonRawHigh = true;
+bool cfgButtonStableHigh = true;
+bool cfgButtonPressArmed = false;
+uint32_t cfgButtonRawChangedMs = 0;
+
+const char* batterySessionStateName(BatterySessionState state) {
+    switch (state) {
+        case BatterySessionState::Inactive: return "inactive";
+        case BatterySessionState::Warmup: return "warmup";
+        case BatterySessionState::Sampling: return "sampling";
+        case BatterySessionState::Transmit: return "transmit";
+        case BatterySessionState::CompleteHeld: return "complete_held";
+        case BatterySessionState::PowerOffIssued: return "power_off_issued";
+    }
+    return "unknown";
+}
 float    latestSensorVoltage[pgl::gld::board::SENSOR_COUNT]{};
 uint8_t  latestSensorGain[pgl::gld::board::SENSOR_COUNT]{};
 uint8_t  latestSensorStatus[pgl::gld::board::SENSOR_COUNT]{};
@@ -993,6 +1046,7 @@ void addCapabilities(JsonObject caps) {
     caps["runBootCheck"] = true;
     caps["adsMcpSweep"] = "RUN_ADS_MCP_SWEEP";
     caps["sleepNow"] = "SLEEP_NOW";
+    caps["batteryServiceHold"] = "CFG press-release toggle / SERVICE_HOLD_OFF";
     caps["securityProvisioning"] = "SET_APP_CONFIG_JSON aesKeyHex";
     caps["authenticatedDownlink"] = true;
 }
@@ -1030,6 +1084,7 @@ void emitInfoJson() {
     doc["protocolVersion"] = pgl::firmware::PROTOCOL_VERSION;
     doc["boardProfile"] = BOARD_PROFILE;
     doc["mode"] = pgl::gld::gldModeName(currentMode);
+    doc["batteryServiceHold"] = serviceHoldActive;
     doc["baud"] = 115200;
     doc["sensorCount"] = pgl::gld::board::SENSOR_COUNT;
     doc["mqttTopicRoot"] = runtimeConfig.topicRoot;
@@ -1081,6 +1136,23 @@ void emitStatusJson() {
     powerObj["batteryValid"] = power.batteryValid;
     powerObj["batteryLow"] = power.batteryLow;
     powerObj["batteryCritical"] = power.batteryCritical;
+    powerObj["serviceHoldActive"] = serviceHoldActive;
+    powerObj["serviceHoldEffective"] = batteryPowerMode &&
+        (serviceHoldActive ||
+         digitalRead(pgl::gld::board::PIN_USER_BUTTON) == LOW ||
+         !cfgButtonRawHigh || cfgButtonPressArmed);
+
+    JsonObject batterySession = doc.createNestedObject("batterySession");
+    batterySession["state"] = batterySessionStateName(batterySessionState);
+    batterySession["startedMs"] = batterySessionStartedMs;
+    batterySession["stateStartedMs"] = batteryStateStartedMs;
+    batterySession["validSampleBatches"] = batteryValidSampleBatches;
+    batterySession["requiredSampleBatches"] = BATTERY_VALID_SAMPLE_BATCHES;
+    batterySession["alarmTxAttempts"] = batteryAlarmTxAttempts;
+    batterySession["alarmTxAttemptLimit"] = BATTERY_ALARM_TX_ATTEMPTS;
+    batterySession["alarmAckReceived"] = batteryAlarmAckReceived;
+    batterySession["pendingAlarm"] = batteryPendingAlarm.active;
+    batterySession["completionReason"] = batteryCompletionReason;
 
     JsonObject boot = doc.createNestedObject("bootHealth");
     boot["adsReady"] = adsReady;
@@ -1194,6 +1266,8 @@ void serviceDelay(uint32_t durationMs);
 void runBootCheckFromSerialCommand();
 void runAdsMcpSweepFromSerialCommand();
 void sleepNowFromSerialCommand();
+bool serviceHoldBlocksClr();
+void setServiceHoldActive(bool active, const char* source);
 
 void onModeCmd(pgl::gld::GldMode newMode) {
     emitCommandAck("SET_MODE", "ok", "mode switch accepted", true);
@@ -1238,6 +1312,11 @@ void restartFromSerialCommand() {
 }
 
 void sleepNowFromSerialCommand() {
+    if (serviceHoldBlocksClr()) {
+        emitCommandAck("SLEEP_NOW", "blocked", "battery service hold is active", false);
+        logPrintln("GLD_SERVICE_HOLD_BLOCK_CLR reason=serial_sleep_now");
+        return;
+    }
     const pgl::gld::GldPowerReading power = pgl::gld::readGldPower();
     emitCommandAck("SLEEP_NOW", "ok", "clearing power latch via CLR", false);
     logPrintf("GLD_SERIAL_SLEEP_NOW power_off mode=%s externalPower=%u batteryMv=%u clr=HIGH_LOW_HIGH\n",
@@ -1249,6 +1328,15 @@ void sleepNowFromSerialCommand() {
 #if defined(ARDUINO_ARCH_ESP32)
     Serial0.flush();
 #endif
+    if (serviceHoldBlocksClr()) {
+        emitCommandAck("SLEEP_NOW", "blocked", "CFG went low before CLR", false);
+        logPrintln("GLD_SERVICE_HOLD_BLOCK_CLR reason=serial_sleep_now_final_guard");
+        Serial.flush();
+#if defined(ARDUINO_ARCH_ESP32)
+        Serial0.flush();
+#endif
+        return;
+    }
     pgl::gld::pulseGldPowerLatchClear();
 }
 
@@ -1265,6 +1353,11 @@ void injectTplDoneFromSerialCommand() {
 // injection can cut board power and drop the serial connection - flush the
 // ack before pulsing, exactly like sleepNowFromSerialCommand().
 void injectTplClrFromSerialCommand() {
+    if (serviceHoldBlocksClr()) {
+        emitCommandAck("INJECT_TPL_CLR", "blocked", "battery service hold is active", false);
+        logPrintln("GLD_SERVICE_HOLD_BLOCK_CLR reason=serial_inject_tpl_clr");
+        return;
+    }
     const pgl::gld::GldPowerReading power = pgl::gld::readGldPower();
     emitCommandAck("INJECT_TPL_CLR", "ok", "pulsing power latch CLR once", false);
     logPrintf("GLD_SERIAL_INJECT_TPL_CLR mode=%s externalPower=%u batteryMv=%u clr=HIGH_LOW_HIGH\n",
@@ -1276,7 +1369,21 @@ void injectTplClrFromSerialCommand() {
 #if defined(ARDUINO_ARCH_ESP32)
     Serial0.flush();
 #endif
+    if (serviceHoldBlocksClr()) {
+        emitCommandAck("INJECT_TPL_CLR", "blocked", "CFG went low before CLR", false);
+        logPrintln("GLD_SERVICE_HOLD_BLOCK_CLR reason=serial_inject_tpl_clr_final_guard");
+        Serial.flush();
+#if defined(ARDUINO_ARCH_ESP32)
+        Serial0.flush();
+#endif
+        return;
+    }
     pgl::gld::pulseGldPowerLatchClear();
+}
+
+void serviceHoldOffFromSerialCommand() {
+    setServiceHoldActive(false, "serial");
+    emitCommandAck("SERVICE_HOLD_OFF", "ok", "battery service hold disabled", false);
 }
 
 void onUnknownSerialCommand(const char* commandText) {
@@ -1781,6 +1888,9 @@ void handleSerialCommand(const pgl::gld::GldSerialCommand& command) {
         case pgl::gld::GldSerialCommandType::SleepNow:
             sleepNowFromSerialCommand();
             break;
+        case pgl::gld::GldSerialCommandType::ServiceHoldOff:
+            serviceHoldOffFromSerialCommand();
+            break;
         case pgl::gld::GldSerialCommandType::SetAppConfigJson:
             onSetAppConfigJson(command.payload);
             break;
@@ -1880,7 +1990,10 @@ void checkSerial() {
 }
 
 void pulseWdtKeepaliveNow() {
-    if (batteryPowerMode) {
+    const bool serviceHoldRequested = serviceHoldActive ||
+        digitalRead(pgl::gld::board::PIN_USER_BUTTON) == LOW ||
+        !cfgButtonRawHigh || cfgButtonPressArmed;
+    if (batteryPowerMode && !serviceHoldRequested) {
         lastWdtKeepaliveMs = millis();
         return;
     }
@@ -1889,15 +2002,134 @@ void pulseWdtKeepaliveNow() {
 }
 
 void maintainWdtKeepalive() {
-    if (batteryPowerMode) return;
+    const bool serviceHoldRequested = serviceHoldActive ||
+        digitalRead(pgl::gld::board::PIN_USER_BUTTON) == LOW ||
+        !cfgButtonRawHigh || cfgButtonPressArmed;
+    if (batteryPowerMode && !serviceHoldRequested) return;
     const uint32_t now = millis();
     if (now - lastWdtKeepaliveMs >= pgl::gld::GLD_WDT_KEEPALIVE_INTERVAL_MS) {
         pulseWdtKeepaliveNow();
     }
 }
 
+bool serviceHoldBlocksClr() {
+    // LOW immediately inhibits CLR, even before the release edge has completed
+    // the persistent toggle. This prevents the board powering off while the
+    // operator is still holding CFG and waiting to release it.
+    const bool cfgLowNow = digitalRead(pgl::gld::board::PIN_USER_BUTTON) == LOW;
+    return batteryPowerMode &&
+           (serviceHoldActive || cfgLowNow || !cfgButtonRawHigh || cfgButtonPressArmed);
+}
+
+void blinkServiceHoldEnabled() {
+#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8
+    // IO39 is the active-low status LED on this production profile. On the
+    // legacy profile GPIO39 is LoRa RST, so this indication is compiled out.
+    for (uint8_t i = 0; i < 2; ++i) {
+        digitalWrite(pgl::gld::board::PIN_STATUS_LED, ACTIVE_LOW_OUTPUT_ON);
+        delay(120);
+        digitalWrite(pgl::gld::board::PIN_STATUS_LED, ACTIVE_LOW_OUTPUT_OFF);
+        delay(120);
+    }
+    digitalWrite(pgl::gld::board::PIN_STATUS_LED,
+                 lastAlarm ? ACTIVE_LOW_OUTPUT_ON : ACTIVE_LOW_OUTPUT_OFF);
+#endif
+}
+
+void setServiceHoldActive(bool active, const char* source) {
+    if (serviceHoldActive == active) {
+        logPrintf("GLD_SERVICE_HOLD state=%s source=%s unchanged=1\n",
+                  active ? "ON" : "OFF", source != nullptr ? source : "unknown");
+        return;
+    }
+
+    serviceHoldActive = active;
+    pgl::gld::writeGldServiceHold(active);
+    logPrintf("GLD_SERVICE_HOLD state=%s source=%s persisted=1 batteryMode=%u session=%s\n",
+              active ? "ON" : "OFF",
+              source != nullptr ? source : "unknown",
+              batteryPowerMode ? 1 : 0,
+              batterySessionStateName(batterySessionState));
+
+    if (active) {
+        blinkServiceHoldEnabled();
+        if (batteryPowerMode) {
+            // Feed TPL5010 immediately, then maintainWdtKeepalive() continues
+            // every 10 seconds while CLR is inhibited for service/upload.
+            pulseWdtKeepaliveNow();
+        }
+    }
+}
+
+void beginServiceHoldButton() {
+    pinMode(pgl::gld::board::PIN_USER_BUTTON, INPUT_PULLUP);
+    const bool initialHigh = digitalRead(pgl::gld::board::PIN_USER_BUTTON) == HIGH;
+    cfgButtonRawHigh = initialHigh;
+    cfgButtonStableHigh = initialHigh;
+    // If the operator deliberately holds CFG through boot, releasing it is the
+    // first valid RISING event. Pin setup runs after the 1-second rail settle,
+    // so the VCC ramp itself cannot arm this path.
+    cfgButtonPressArmed = !initialHigh;
+    cfgButtonRawChangedMs = millis();
+    logPrintf("GLD_CFG_BUTTON_INIT level=%s pressArmed=%u serviceHold=%u\n",
+              initialHigh ? "HIGH" : "LOW",
+              cfgButtonPressArmed ? 1 : 0,
+              serviceHoldActive ? 1 : 0);
+}
+
+void maintainServiceHoldButton() {
+    if (!batteryPowerMode) return;
+
+    const uint32_t now = millis();
+    const bool rawHigh = digitalRead(pgl::gld::board::PIN_USER_BUTTON) == HIGH;
+    if (rawHigh != cfgButtonRawHigh) {
+        cfgButtonRawHigh = rawHigh;
+        cfgButtonRawChangedMs = now;
+        return;
+    }
+    if (rawHigh == cfgButtonStableHigh || now - cfgButtonRawChangedMs < CFG_BUTTON_DEBOUNCE_MS) {
+        return;
+    }
+
+    cfgButtonStableHigh = rawHigh;
+    if (!cfgButtonStableHigh) {
+        cfgButtonPressArmed = true;
+        logPrintln("GLD_CFG_BUTTON event=PRESS level=LOW");
+        return;
+    }
+
+    if (cfgButtonPressArmed) {
+        cfgButtonPressArmed = false;
+        logPrintln("GLD_CFG_BUTTON event=RELEASE level=HIGH rising=1");
+        setServiceHoldActive(!serviceHoldActive, "cfg_release");
+    }
+}
+
 bool batteryRuntimeReady() {
     return adsReady && radioReady && mlReady;
+}
+
+void startBatteryInferenceSession() {
+    const uint32_t now = millis();
+    batterySessionState = BatterySessionState::Warmup;
+    batterySessionStartedMs = now;
+    batteryStateStartedMs = now;
+    batteryLastSampleAttemptMs = now;
+    batteryNextTxAttemptMs = 0;
+    batteryValidSampleBatches = 0;
+    batteryAlarmTxAttempts = 0;
+    batteryAlarmAckReceived = false;
+    batteryCyclePoweredOff = false;
+    snprintf(batteryCompletionReason, sizeof(batteryCompletionReason), "session_running");
+    logPrintf("GLD_BATTERY_SESSION_START warmupMs=%lu validBatches=%u sampleIntervalMs=%lu alarmTxAttempts=%u rxWindowMs=%lu deadlineMs=%lu pendingAlarm=%u serviceHold=%u\n",
+              static_cast<unsigned long>(BATTERY_SENSOR_WARMUP_MS),
+              static_cast<unsigned>(BATTERY_VALID_SAMPLE_BATCHES),
+              static_cast<unsigned long>(SCAN_INTERVAL_MS),
+              static_cast<unsigned>(BATTERY_ALARM_TX_ATTEMPTS),
+              static_cast<unsigned long>(LORA_RX_WINDOW_MS),
+              static_cast<unsigned long>(BATTERY_SESSION_DEADLINE_MS),
+              batteryPendingAlarm.active ? 1 : 0,
+              serviceHoldActive ? 1 : 0);
 }
 
 const char* batteryRuntimeBlockReason() {
@@ -1920,10 +2152,25 @@ void armBatteryFaultPowerOff(const char* reason) {
 }
 
 void completeBatterySessionAndPowerOff(const char* reason) {
-    if (batteryCyclePoweredOff) return;
-    batteryCyclePoweredOff = true;
+    if (batteryCyclePoweredOff || batterySessionState == BatterySessionState::PowerOffIssued) return;
+
+    snprintf(batteryCompletionReason, sizeof(batteryCompletionReason), "%s",
+             reason != nullptr ? reason : "session_done");
+    if (serviceHoldBlocksClr()) {
+        if (batterySessionState != BatterySessionState::CompleteHeld) {
+            batterySessionState = BatterySessionState::CompleteHeld;
+            batteryStateStartedMs = millis();
+            logPrintf("GLD_BATTERY_SESSION_HELD reason=%s clrBlocked=1 holdEffective=1 serviceHold=%u cfgLow=%u\n",
+                      batteryCompletionReason,
+                      serviceHoldActive ? 1 : 0,
+                      cfgButtonRawHigh ? 0 : 1);
+            pulseWdtKeepaliveNow();
+        }
+        return;
+    }
+
     logPrintf("GLD_BATTERY_SESSION_DONE power_off reason=%s done=LOW_HIGH_LOW donePulseUs=%lu doneToClrDelayUs=%lu clr=HIGH_LOW_HIGH clrPulseUs=%lu\n",
-              reason != nullptr ? reason : "session_done",
+              batteryCompletionReason,
               static_cast<unsigned long>(pgl::gld::GLD_TPL5010_DONE_PULSE_US),
               static_cast<unsigned long>(pgl::gld::GLD_DONE_TO_CLR_DELAY_US),
               static_cast<unsigned long>(pgl::gld::GLD_POWER_LATCH_CLEAR_PULSE_US));
@@ -1931,10 +2178,22 @@ void completeBatterySessionAndPowerOff(const char* reason) {
 #if defined(ARDUINO_ARCH_ESP32)
     Serial0.flush();
 #endif
+    if (serviceHoldBlocksClr()) {
+        batterySessionState = BatterySessionState::CompleteHeld;
+        batteryStateStartedMs = millis();
+        logPrintf("GLD_BATTERY_SESSION_POWER_OFF_ABORT reason=%s cfgLowOrHold=1 action=complete_held\n",
+                  batteryCompletionReason);
+        pulseWdtKeepaliveNow();
+        return;
+    }
+    batteryCyclePoweredOff = true;
+    batterySessionState = BatterySessionState::PowerOffIssued;
+    batteryStateStartedMs = millis();
     pgl::gld::pulseGldTpl5010DoneThenPowerLatchClear();
 }
 
 void firmwareServiceTick() {
+    maintainServiceHoldButton();
     checkSerial();
     maintainWdtKeepalive();
 }
@@ -3215,24 +3474,31 @@ void runInference(const float mavVoltage[8]) {
               lastResult.confidence);
 }
 
-void runScan() {
+bool runScan(bool requireCompleteBatch = false) {
+    pgl::gld::GldAds1256Reading readings[pgl::gld::board::SENSOR_COUNT]{};
     float mavVoltage[8] = {};
-    uint8_t primedChannels = 0;
     uint8_t okChannels = 0;
     for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
         const pgl::gld::GldAds1256Reading r = ads.readChannel(ch);
+        readings[ch] = r;
         latestSensorGain[ch] = r.gain;
         latestSensorStatus[ch] = static_cast<uint8_t>(r.status);
         if (r.status == pgl::gld::GldAds1256Status::Ok) ++okChannels;
-        mavVoltage[ch] = (r.status == pgl::gld::GldAds1256Status::Ok)
-                          ? movingAvg.add(ch, r.voltage)
-                          : movingAvg.value(ch);
-        latestSensorVoltage[ch] = mavVoltage[ch];
-        if (movingAvg.count(ch) >= MIN_PRIMED_COUNT) ++primedChannels;
     }
     noteAdsReadHealth(okChannels, "runScan");
     const bool allValid = okChannels == pgl::gld::board::SENSOR_COUNT;
     latestTelemetryValid = allValid;
+
+    uint8_t primedChannels = 0;
+    for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
+        const bool mayCommit = readings[ch].status == pgl::gld::GldAds1256Status::Ok &&
+                               (!requireCompleteBatch || allValid);
+        mavVoltage[ch] = mayCommit ? movingAvg.add(ch, readings[ch].voltage)
+                                   : movingAvg.value(ch);
+        latestSensorVoltage[ch] = mavVoltage[ch];
+        if (movingAvg.count(ch) >= MIN_PRIMED_COUNT) ++primedChannels;
+    }
+
     const bool primed = primedChannels >= pgl::gld::board::SENSOR_COUNT;
     if (allValid && primed && mlReady) {
         runInference(mavVoltage);
@@ -3251,10 +3517,12 @@ void runScan() {
               lastResult.gasClass, pgl::gld::gldGasClassName(lastResult.gasClass),
               lastResult.confidence, alarm ? 1 : 0);
     updateAlarmOutputs(alarm);
+    return allValid;
 }
 
-void openLoRaRxWindow() {
-    if (!radioReady || !loraRadio) return;
+bool openLoRaRxWindow(bool expectAlarmAck, uint8_t expectedSeq) {
+    if (!radioReady || !loraRadio) return false;
+    bool alarmAckMatched = false;
     loraRxFlag = false;
     loraRadio->setPacketReceivedAction(onLoRaRxDone);
     loraRadio->startReceive();
@@ -3268,29 +3536,44 @@ void openLoRaRxWindow() {
         const int16_t rxState = loraRadio->readData(rxBuf, sizeof(rxBuf));
         logPrintf("GLD_LORA_DOWNLINK_RX state=%d len=%u\n", rxState, static_cast<unsigned>(rxLen));
         if (rxState == RADIOLIB_ERR_NONE) {
-            pgl::gld::GldMode newMode;
-            if (pgl::gld::parseLoRaDownlinkCmd(rxBuf, rxLen,
+            if (expectAlarmAck &&
+                pgl::gld::parseCompactAlarmAck(rxBuf, rxLen,
+                                               runtimeConfig.chId,
                                                runtimeConfig.nodeId,
-                                               runtimeConfig.aesKey,
-                                               runtimeConfig.aesKeyPresent,
-                                               runtimeConfig.lastDownlinkCommandId,
-                                               newMode)) {
-                logPrintf("GLD_LORA_DOWNLINK_CMD mode=%s\n", pgl::gld::gldModeName(newMode));
-                saveDownlinkReplayState();
-                onModeCmd(newMode);
+                                               expectedSeq)) {
+                alarmAckMatched = true;
+                logPrintf("GLD_LORA_ALARM_ACK matched=1 chId=0x%04X nodeId=0x%04X seq=%u\n",
+                          runtimeConfig.chId, runtimeConfig.nodeId, expectedSeq);
+            } else {
+                pgl::gld::GldMode newMode;
+                if (pgl::gld::parseLoRaDownlinkCmd(rxBuf, rxLen,
+                                                   runtimeConfig.nodeId,
+                                                   runtimeConfig.aesKey,
+                                                   runtimeConfig.aesKeyPresent,
+                                                   runtimeConfig.lastDownlinkCommandId,
+                                                   newMode)) {
+                    logPrintf("GLD_LORA_DOWNLINK_CMD mode=%s\n", pgl::gld::gldModeName(newMode));
+                    saveDownlinkReplayState();
+                    onModeCmd(newMode);
+                }
             }
         }
     }
     loraRadio->standby();
+    if (expectAlarmAck && !alarmAckMatched) {
+        logPrintf("GLD_LORA_ALARM_ACK matched=0 expectedSeq=%u windowMs=%lu\n",
+                  expectedSeq, static_cast<unsigned long>(LORA_RX_WINDOW_MS));
+    }
+    return alarmAckMatched;
 }
 
-void transmitOnce() {
+bool transmitOnce(bool expectAlarmAck = false) {
     if (!runtimeConfig.aesKeyPresent || runtimeConfig.aesKeyId == 0) {
         lastLoraTxState = -32767;
         lastLoraTxOk = false;
         logPrintln("GLD_SECURITY_NOT_PROVISIONED aesKey=0 txBlocked=1");
         logPrintln("GLD_LORA_TX_RESULT=FAIL");
-        return;
+        return false;
     }
 
     const pgl::gld::GldPowerReading power = pgl::gld::readGldPower();
@@ -3320,10 +3603,11 @@ void transmitOnce() {
         lastLoraTxState = -32768;
         lastLoraTxOk = false;
         logPrintln("GLD_LORA_TX_RESULT=FAIL");
-        return;
+        return false;
     }
 
     digitalWrite(pgl::gld::board::PIN_ADS1256_CS, HIGH);
+    const uint8_t transmittedSeq = txSeq;
     const int16_t txState = loraRadio->transmit(frame.bytes, frame.size);
     lastLoraTxState = txState;
     lastLoraTxOk = txState == RADIOLIB_ERR_NONE;
@@ -3334,7 +3618,139 @@ void transmitOnce() {
     ++txSeq;
 
     // Class A RX window for downlink commands
-    openLoRaRxWindow();
+    return openLoRaRxWindow(expectAlarmAck, transmittedSeq);
+}
+
+void runBatteryInferenceSession() {
+    const uint32_t now = millis();
+
+    if (batterySessionState == BatterySessionState::Inactive ||
+        batterySessionState == BatterySessionState::PowerOffIssued) {
+        return;
+    }
+
+    if (batterySessionState == BatterySessionState::CompleteHeld) {
+        if (!serviceHoldBlocksClr()) {
+            logPrintln("GLD_BATTERY_SESSION_RELEASED serviceHold=0 action=power_off");
+            completeBatterySessionAndPowerOff(batteryCompletionReason);
+        }
+        return;
+    }
+
+    if (now - batterySessionStartedMs >= BATTERY_SESSION_DEADLINE_MS) {
+        logPrintf("GLD_BATTERY_SESSION_DEADLINE elapsedMs=%lu state=%s validBatches=%u txAttempts=%u\n",
+                  static_cast<unsigned long>(now - batterySessionStartedMs),
+                  batterySessionStateName(batterySessionState),
+                  static_cast<unsigned>(batteryValidSampleBatches),
+                  static_cast<unsigned>(batteryAlarmTxAttempts));
+        completeBatterySessionAndPowerOff("hard_deadline");
+        return;
+    }
+
+    switch (batterySessionState) {
+        case BatterySessionState::Warmup:
+            if (now - batteryStateStartedMs < BATTERY_SENSOR_WARMUP_MS) return;
+            movingAvg.reset();
+            batteryValidSampleBatches = 0;
+            batteryLastSampleAttemptMs = 0;
+            batterySessionState = BatterySessionState::Sampling;
+            batteryStateStartedMs = now;
+            logPrintf("GLD_BATTERY_WARMUP_DONE elapsedMs=%lu movingAverageReset=1\n",
+                      static_cast<unsigned long>(now - batterySessionStartedMs));
+            return;
+
+        case BatterySessionState::Sampling: {
+            if (batteryLastSampleAttemptMs != 0 &&
+                now - batteryLastSampleAttemptMs < SCAN_INTERVAL_MS) {
+                return;
+            }
+            batteryLastSampleAttemptMs = now;
+            lastScanMs = now;
+            const bool completeValidBatch = runScan(true);
+            if (completeValidBatch) {
+                uint8_t primedBatchCount = UINT8_MAX;
+                for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
+                    const uint8_t count = movingAvg.count(ch);
+                    if (count < primedBatchCount) primedBatchCount = count;
+                }
+                batteryValidSampleBatches = primedBatchCount;
+            }
+            logPrintf("GLD_BATTERY_SAMPLE valid=%u count=%u required=%u\n",
+                      completeValidBatch ? 1 : 0,
+                      static_cast<unsigned>(batteryValidSampleBatches),
+                      static_cast<unsigned>(BATTERY_VALID_SAMPLE_BATCHES));
+            if (batteryValidSampleBatches < BATTERY_VALID_SAMPLE_BATCHES) return;
+
+            if (batteryPendingAlarm.active) {
+                logPrintf("GLD_BATTERY_PENDING_ALARM_LOAD gasClass=%u confidence=%u currentGasClass=%u currentConfidence=%u\n",
+                          batteryPendingAlarm.gasClass,
+                          batteryPendingAlarm.confidence,
+                          lastResult.gasClass,
+                          lastResult.confidence);
+                lastResult = {batteryPendingAlarm.gasClass, batteryPendingAlarm.confidence};
+                updateAlarmOutputs(true);
+            }
+            batteryAlarmTxAttempts = 0;
+            batteryAlarmAckReceived = false;
+            batteryNextTxAttemptMs = now;
+            batterySessionState = BatterySessionState::Transmit;
+            batteryStateStartedMs = now;
+            logPrintf("GLD_BATTERY_INFERENCE_READY alarm=%u gasClass=%u confidence=%u\n",
+                      lastAlarm ? 1 : 0, lastResult.gasClass, lastResult.confidence);
+            return;
+        }
+
+        case BatterySessionState::Transmit: {
+            if (static_cast<int32_t>(now - batteryNextTxAttemptMs) < 0) return;
+
+            const bool alarm = lastAlarm;
+            const bool alarmAck = transmitOnce(alarm);
+            ++batteryAlarmTxAttempts;
+            if (!alarm) {
+                completeBatterySessionAndPowerOff(lastLoraTxOk
+                    ? "normal_tx_rx_done"
+                    : "normal_tx_failed");
+                return;
+            }
+
+            if (alarmAck) {
+                batteryAlarmAckReceived = true;
+                batteryPendingAlarm = {};
+                pgl::gld::writeGldPendingAlarm(batteryPendingAlarm);
+                logPrintf("GLD_BATTERY_ALARM_ACK_SUCCESS attempts=%u\n",
+                          static_cast<unsigned>(batteryAlarmTxAttempts));
+                completeBatterySessionAndPowerOff("alarm_ack_received");
+                return;
+            }
+
+            if (batteryAlarmTxAttempts < BATTERY_ALARM_TX_ATTEMPTS) {
+                batteryNextTxAttemptMs = millis() + BATTERY_ALARM_RETRY_DELAY_MS;
+                logPrintf("GLD_BATTERY_ALARM_TX_RETRY reason=%s attempt=%u nextAttempt=%u max=%u delayMs=%lu\n",
+                          lastLoraTxOk ? "ack_timeout" : "tx_failed",
+                          static_cast<unsigned>(batteryAlarmTxAttempts),
+                          static_cast<unsigned>(batteryAlarmTxAttempts + 1U),
+                          static_cast<unsigned>(BATTERY_ALARM_TX_ATTEMPTS),
+                          static_cast<unsigned long>(BATTERY_ALARM_RETRY_DELAY_MS));
+                return;
+            }
+
+            batteryPendingAlarm.active = true;
+            batteryPendingAlarm.gasClass = lastResult.gasClass;
+            batteryPendingAlarm.confidence = lastResult.confidence;
+            pgl::gld::writeGldPendingAlarm(batteryPendingAlarm);
+            logPrintf("GLD_BATTERY_ALARM_PENDING_SAVE attempts=%u gasClass=%u confidence=%u sleepNext=1\n",
+                      static_cast<unsigned>(batteryAlarmTxAttempts),
+                      batteryPendingAlarm.gasClass,
+                      batteryPendingAlarm.confidence);
+            completeBatterySessionAndPowerOff("alarm_ack_timeout_pending");
+            return;
+        }
+
+        case BatterySessionState::CompleteHeld:
+        case BatterySessionState::PowerOffIssued:
+        case BatterySessionState::Inactive:
+            return;
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -3458,7 +3874,10 @@ void setup() {
     if (!pgl::gld::loadNullingConfig(nullingConfig)) {
         nullingConfig = pgl::gld::GldNullingConfig{};
     }
+    serviceHoldActive = pgl::gld::readGldServiceHold();
+    batteryPendingAlarm = pgl::gld::readGldPendingAlarm();
     setupPins();
+    beginServiceHoldButton();
     movingAvg.reset();
 
     currentMode = pgl::gld::readGldMode();
@@ -3481,6 +3900,10 @@ void setup() {
               pgl::gld::gldPowerModeName(power.mode),
               power.externalPower ? 1 : 0, power.batteryMv);
     batteryPowerMode = !power.externalPower;
+    if (batteryPowerMode && serviceHoldActive) {
+        logPrintln("GLD_SERVICE_HOLD state=ON source=nvs persisted=1");
+        blinkServiceHoldEnabled();
+    }
     pulseWdtKeepaliveNow();
     emitInfoJson();
     emitStatusJson();
@@ -3521,6 +3944,9 @@ void setup() {
 
         lastScanMs = millis();
         lastTxMs   = millis();
+        if (batteryPowerMode) {
+            startBatteryInferenceSession();
+        }
 
     } else if (currentMode == pgl::gld::GldMode::NULLING && pgl::gld::readGldAlarmLatched()) {
         // Nulling must not run while a prior alarm is still latched/unacknowledged
@@ -3668,9 +4094,14 @@ void loop() {
         maintainAdsRecovery("inference_ads_not_ready");
 
         if (batteryPowerMode) {
-            // One-shot wake cycle: scan + inference + LoRa TX/RX, then emit one
-            // final DONE pulse followed by CLR. DONE is intentionally not used
-            // as a periodic keepalive in battery mode.
+            // One-shot wake cycle: warm-up, 10 complete valid sample batches,
+            // inference, bounded LoRa TX/RX, then final DONE followed by CLR.
+            // While service hold is active, CLR is inhibited and DONE becomes
+            // periodic so the board stays available for firmware upload.
+            if (batterySessionState == BatterySessionState::CompleteHeld) {
+                runBatteryInferenceSession();
+                return;
+            }
             if (!batteryRuntimeReady()) {
                 const char* reason = batteryRuntimeBlockReason();
                 armBatteryFaultPowerOff(reason);
@@ -3680,17 +4111,7 @@ void loop() {
                 return;
             }
             batteryFaultPowerOffArmed = false;
-
-            if (!batteryCyclePoweredOff && now - lastScanMs >= SCAN_INTERVAL_MS) {
-                lastScanMs = now;
-                runScan();
-                transmitOnce();
-                if (lastAlarm && !lastLoraTxOk) {
-                    logPrintln("GLD_BATTERY_ALARM_TX_RETRY reason=tx_failed");
-                    return;
-                }
-                completeBatterySessionAndPowerOff(lastAlarm ? "alarm_tx_done" : "session_done");
-            }
+            runBatteryInferenceSession();
             return;
         }
 

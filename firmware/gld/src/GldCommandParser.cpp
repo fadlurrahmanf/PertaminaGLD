@@ -61,6 +61,10 @@ bool decodeLine(const char* line, GldSerialCommand& outCommand) {
         outCommand.type = GldSerialCommandType::SleepNow;
         return true;
     }
+    if (strcmp(line, "SERVICE_HOLD_OFF") == 0) {
+        outCommand.type = GldSerialCommandType::ServiceHoldOff;
+        return true;
+    }
     if (strncmp(line, "SET_APP_CONFIG_JSON ", 20) == 0) {
         outCommand.type = GldSerialCommandType::SetAppConfigJson;
         strncpy(outCommand.payload, line + 20, sizeof(outCommand.payload) - 1);
@@ -278,6 +282,26 @@ bool parseLoRaDownlinkCmd(const uint8_t* frame, size_t frameLen,
     lastCommandId = commandId;
     outMode = static_cast<GldMode>(modeVal);
     return true;
+}
+
+bool parseCompactAlarmAck(const uint8_t* frame, size_t frameLen,
+                          uint16_t expectedChId,
+                          uint16_t myNodeId,
+                          uint8_t expectedSeq) {
+    if (frame == nullptr || frameLen == 0) return false;
+
+    pgl::protocol::FrameView decoded{};
+    if (pgl::protocol::decodeAppFrame(frame, frameLen, decoded,
+                                      pgl::protocol::STAR_MAX_PAYLOAD)
+        != pgl::protocol::FrameStatus::Ok) {
+        return false;
+    }
+
+    return decoded.typeFlags == pgl::protocol::TYPE_ALARM_ACK_COMPACT &&
+           decoded.srcId == expectedChId &&
+           decoded.dstId == myNodeId &&
+           decoded.seq == expectedSeq &&
+           decoded.payloadLen == 0;
 }
 
 }  // namespace pgl::gld

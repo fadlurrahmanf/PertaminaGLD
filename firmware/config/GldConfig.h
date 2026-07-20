@@ -55,6 +55,22 @@
 // Downlink battery-mode dari CH harus masuk dalam window ini.
 #define GLD_LORA_RX_WINDOW_MS    2000
 
+// Battery inference wake cycle. Warm-up starts after boot/hardware init. Only
+// complete 8-channel ADS batches count toward the moving-average window.
+#define GLD_BATTERY_SENSOR_WARMUP_MS       30000
+#define GLD_BATTERY_VALID_SAMPLE_BATCHES      10
+#define GLD_BATTERY_ALARM_TX_ATTEMPTS          3
+#define GLD_BATTERY_ALARM_RETRY_DELAY_MS     250
+
+// Safety deadline, not a fixed ON duration. A successful session powers off
+// immediately after its own procedure finishes; this only bounds fault cases
+// before the approximately 160-second TPL5010 wake interval.
+#define GLD_BATTERY_SESSION_DEADLINE_MS   120000
+
+// CFG/IO16 is active-low (board pull-up, switch to GND). One fully debounced
+// press-release toggles the persistent battery service hold.
+#define GLD_CFG_BUTTON_DEBOUNCE_MS            50
+
 // Ukuran buffer MQTT PubSubClient GLD dalam byte. Harus cukup untuk command
 // dataset/nulling dan payload JSON yang dipublish.
 #define GLD_MQTT_BUFFER_SIZE     1024

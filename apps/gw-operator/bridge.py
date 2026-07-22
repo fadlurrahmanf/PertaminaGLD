@@ -1,9 +1,20 @@
 #!/usr/bin/env python3
-"""GLD Operator Lite local bridge.
+"""Gateway Operator Lite local bridge.
 
 Serves the static UI and exposes native Windows features that plain browser
-JavaScript cannot access: COM port listing, serial read/write, WiFi/IP lookup,
-MQTT publish for dataset commands, and PlatformIO firmware upload orchestration.
+JavaScript cannot access: COM port listing + Gateway provisioning/boot-log serial
+monitor, MQTT connect/subscribe/publish against the site broker, and
+PlatformIO firmware upload orchestration.
+
+The Gateway firmware exposes only staged network provisioning commands over
+serial; it has no general console or runtime device-id provisioning command,
+because GATEWAY_ID is a compile-time constant (firmware/config/GwConfig.h).
+The gateway bridges LoRa MESH
+frames to MQTT on its own; this app is an MQTT dashboard + command composer
+for the {topicRoot}/uplink, /status, /topology, /cmd/pull, /cmd/node topics
+(see firmware/gateway/src/GatewayMqttMeshMain.cpp and
+server/nodered/README.md), plus a serial provisioning/boot-log viewer and a
+verified firmware flasher for provisioning a new board over USB.
 """
 
 from __future__ import annotations
@@ -43,49 +54,36 @@ else:
 
 try:
     import paho.mqtt.client as mqtt
-except Exception as exc:  # pragma: no cover - MQTT is optional
+except Exception as exc:  # pragma: no cover - surfaced in /api/health
     mqtt = None
     MQTT_IMPORT_ERROR = str(exc)
 else:
     MQTT_IMPORT_ERROR = ""
 
-# The bundled embeddable Python distribution (python-embed/) runs with a
-# python312._pth file, which - unlike a normal CPython install - does not
-# auto-add the launched script's own directory to sys.path. Without this,
-# `import local_mqtt_broker` fails whenever bridge.py is started via the
-# embedded interpreter, even though the file sits right next to bridge.py.
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-
-try:
-    from local_mqtt_broker import LocalMqttBroker
-except Exception as exc:  # pragma: no cover - surfaced in /api/health
-    LocalMqttBroker = None  # type: ignore[assignment]
-    MQTT_BROKER_IMPORT_ERROR = str(exc)
-else:
-    MQTT_BROKER_IMPORT_ERROR = ""
-
 
 APP_DIR = Path(__file__).resolve().parent
 REPO_ROOT = APP_DIR.parents[1]
 FIRMWARE_DIR = REPO_ROOT / "firmware"
-DATASET_OUTPUT_DIR = APP_DIR / "output" / "datasets"
 SESSION_LOG_DIR = APP_DIR / "output" / "logs"
 
 # Populated at startup from the actual --host/--port the bridge binds to.
-# The documented launch path (run-gld-operator.bat) serves the static UI and
+# The documented launch path (run-gw-operator.bat) serves the static UI and
 # this API from the same origin, so same-origin requests never need a CORS
 # header at all; this allowlist only covers the same machine reachable via
 # 127.0.0.1/localhost, never an arbitrary remote origin. Do not widen this to
-# "*" - the bridge exposes serial writes, MQTT publish, firmware flashing, and
-# a WiFi-password lookup, and a wildcard lets any page open in the operator's
+# "*" - the bridge exposes serial reads, MQTT credentials/publish, and
+# firmware flashing, and a wildcard lets any page open in the operator's
 # browser call all of that cross-origin.
 BRIDGE_ALLOWED_ORIGINS: set[str] = set()
 BRIDGE_CSRF_TOKEN = secrets.token_urlsafe(32)
 DEFAULT_JSON_BODY_LIMIT = 2 * 1024 * 1024
 FIRMWARE_JSON_BODY_LIMIT = 16 * 1024 * 1024
+CREATE_NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 SAFE_PACKAGE_FILE_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$")
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$")
+# The Gateway board is always ESP32-S3 (firmware/platformio.ini [env:gw]).
+ALLOWED_CHIPS = {"esp32s3"}
 
 
 def _register_allowed_origins(host: str, port: int) -> None:
@@ -98,7 +96,7 @@ def _register_allowed_origins(host: str, port: int) -> None:
     )
 
 
-VERSION = "0.4.0-lite-bridge"
+VERSION = "0.1.0-gw-lite-bridge"
 
 
 class RequestError(RuntimeError):
@@ -139,6 +137,10 @@ class EventHub:
 
 
 class SerialBridge:
+    """Read-only boot-log monitor. The Gateway has no serial command parser
+    (see GatewayMqttMeshMain.cpp setup()) so writes are exposed but unused by
+    the UI; everything the operator needs comes from MQTT instead."""
+
     def __init__(self, events: EventHub, slot: int = 1) -> None:
         self.events = events
         self.slot = slot
@@ -191,7 +193,7 @@ class SerialBridge:
             self.port = port
             self.baud = baud
             self._stop.clear()
-        self._reader_thread = threading.Thread(target=self._read_loop, name="gld-serial-reader", daemon=True)
+        self._reader_thread = threading.Thread(target=self._read_loop, name="gw-serial-reader", daemon=True)
         self._reader_thread.start()
         self._emit("serial_status", {"connected": True, "port": port, "baud": baud})
         return {"connected": True, "port": port, "baud": baud}
@@ -251,13 +253,134 @@ class SerialBridge:
         self._emit("serial_status", {"connected": False})
 
 
+class GatewayMqttMonitor:
+    """Persistent client to the site MQTT broker: subscribes to the
+    gateway's uplink/status/topology topics and publishes cmd/pull and
+    cmd/node downlinks on the same connection (see GwConfig.h TOPIC_* and
+    server/nodered/README.md for the payload contracts)."""
+
+    def __init__(self, events: EventHub) -> None:
+        self.events = events
+        self._lock = threading.Lock()
+        self._client: Any = None
+        self._connected = False
+        self.config: dict[str, Any] = {}
+
+    def _emit(self, event: str, payload: dict[str, Any]) -> None:
+        self.events.emit(event, payload)
+
+    @staticmethod
+    def _kind(topic: str) -> str:
+        if topic.endswith("/uplink"):
+            return "uplink"
+        if topic.endswith("/status"):
+            return "status"
+        if topic.endswith("/topology"):
+            return "topology"
+        return "message"
+
+    def status(self) -> dict[str, Any]:
+        with self._lock:
+            connected = self._connected
+            return {"connected": connected, **self.config}
+
+    def start(self, config: dict[str, Any]) -> dict[str, Any]:
+        if mqtt is None:
+            raise RuntimeError(f"paho-mqtt unavailable: {MQTT_IMPORT_ERROR}")
+        topic_root = str(config.get("topicRoot") or "gld/gateway").strip("/")
+        host = str(config.get("host") or "").strip()
+        port = int(config.get("port") or 1884)
+        username = str(config.get("username") or "")
+        password = str(config.get("password") or "")
+        if not host:
+            raise RuntimeError("host is required")
+
+        topics = [f"{topic_root}/uplink", f"{topic_root}/status", f"{topic_root}/topology"]
+        self.stop(emit=False)
+
+        client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
+        if username or password:
+            client.username_pw_set(username, password)
+
+        def on_connect(client_obj: Any, _userdata: Any, _flags: Any, reason_code: Any, _properties: Any) -> None:
+            ok = str(reason_code).lower() == "success" or reason_code == 0
+            with self._lock:
+                self._connected = ok
+            if ok:
+                for topic in topics:
+                    client_obj.subscribe(topic, qos=0)
+            self._emit(
+                "mqtt_status",
+                {"connected": ok, "host": host, "port": port, "topicRoot": topic_root, "topics": topics, "reason": str(reason_code)},
+            )
+
+        def on_disconnect(_client_obj: Any, _userdata: Any, *_args: Any) -> None:
+            with self._lock:
+                self._connected = False
+            self._emit("mqtt_status", {"connected": False, "host": host, "port": port, "topicRoot": topic_root})
+
+        def on_message(_client_obj: Any, _userdata: Any, msg: Any) -> None:
+            text = msg.payload.decode("utf-8", errors="replace")
+            try:
+                parsed: Any = json.loads(text)
+            except Exception:
+                parsed = None
+            self._emit(
+                "mqtt_message",
+                {"topic": msg.topic, "kind": self._kind(msg.topic), "payload": text, "json": parsed},
+            )
+
+        client.on_connect = on_connect
+        client.on_disconnect = on_disconnect
+        client.on_message = on_message
+        client.connect(host, port, keepalive=20)
+        client.loop_start()
+
+        with self._lock:
+            self._client = client
+            self.config = {"host": host, "port": port, "topicRoot": topic_root, "topics": topics}
+        return {"started": True, "topics": topics}
+
+    def stop(self, emit: bool = True) -> dict[str, Any]:
+        with self._lock:
+            client = self._client
+            self._client = None
+            self._connected = False
+            config = dict(self.config)
+        if client is not None:
+            try:
+                client.loop_stop()
+            except Exception:
+                pass
+            try:
+                client.disconnect()
+            except Exception:
+                pass
+        if emit:
+            self._emit("mqtt_status", {"connected": False, **config})
+        return {"stopped": True}
+
+    def publish(self, suffix: str, message: dict[str, Any]) -> dict[str, Any]:
+        with self._lock:
+            client = self._client
+            topic_root = self.config.get("topicRoot")
+        if client is None or not topic_root:
+            raise RuntimeError("MQTT is not connected - open Broker Setup and Connect first")
+        topic = f"{topic_root}/cmd/{suffix}"
+        body = json.dumps(message)
+        result = client.publish(topic, body, qos=0, retain=False)
+        result.wait_for_publish(timeout=5)
+        if not result.is_published():
+            raise RuntimeError(f"MQTT publish timeout to {topic}")
+        self._emit("mqtt_publish", {"topic": topic, "payload": body})
+        return {"ok": True, "topic": topic, "payload": message}
+
+
 MAX_SLOTS = 8
 
 events = EventHub()
 serial_bridges: dict[int, "SerialBridge"] = {}
-dataset_monitors: dict[int, "DatasetMqttMonitor"] = {}
-local_mqtt_broker: Any = None
-local_mqtt_broker_error = ""
+mqtt_monitor = GatewayMqttMonitor(events)
 
 
 def parse_slot(value: Any) -> int:
@@ -274,12 +397,6 @@ def get_serial_bridge(slot: int) -> "SerialBridge":
     return serial_bridges[slot]
 
 
-def get_dataset_monitor(slot: int) -> "DatasetMqttMonitor":
-    if slot not in dataset_monitors:
-        dataset_monitors[slot] = DatasetMqttMonitor(events, slot=slot)
-    return dataset_monitors[slot]
-
-
 def connected_slots_summary() -> dict[str, Any]:
     summary = {}
     for slot, bridge in serial_bridges.items():
@@ -287,101 +404,6 @@ def connected_slots_summary() -> dict[str, Any]:
         if status["connected"]:
             summary[str(slot)] = status
     return summary
-
-
-class DatasetMqttMonitor:
-    def __init__(self, events: EventHub, slot: int = 1) -> None:
-        self.events = events
-        self.slot = slot
-        self._lock = threading.Lock()
-        self._client: Any = None
-        self.config: dict[str, Any] = {}
-
-    def _emit(self, event: str, payload: dict[str, Any]) -> None:
-        self.events.emit(event, {**payload, "slot": self.slot})
-
-    def start(self, config: dict[str, Any]) -> dict[str, Any]:
-        if mqtt is None:
-            raise RuntimeError(f"paho-mqtt unavailable: {MQTT_IMPORT_ERROR}")
-        device_id = str(config.get("deviceId") or "").strip()
-        topic_root = str(config.get("topicRoot") or "gas-leak-detector").strip("/")
-        host = str(config.get("host") or "127.0.0.1")
-        port = int(config.get("port") or 1884)
-        username = str(config.get("username") or "")
-        password = str(config.get("password") or "")
-        if not device_id:
-            raise RuntimeError("deviceId is required")
-
-        topics = [
-            f"{topic_root}/{device_id}/cmd/ack",
-            f"{topic_root}/{device_id}/dataset/status",
-            f"{topic_root}/{device_id}/dataset/data",
-            f"{topic_root}/{device_id}/dataset/summary",
-        ]
-        self.stop(emit=False)
-
-        client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
-        if username or password:
-            client.username_pw_set(username, password)
-
-        def on_connect(client_obj: Any, _userdata: Any, _flags: Any, reason_code: Any, _properties: Any) -> None:
-            for topic in topics:
-                client_obj.subscribe(topic, qos=0)
-            self._emit(
-                "dataset_monitor",
-                {"status": "subscribed", "host": host, "port": port, "deviceId": device_id, "topics": topics, "reason": str(reason_code)},
-            )
-
-        def on_message(_client_obj: Any, _userdata: Any, msg: Any) -> None:
-            text = msg.payload.decode("utf-8", errors="replace")
-            try:
-                parsed: Any = json.loads(text)
-            except Exception:
-                parsed = None
-            self._emit(
-                "dataset_mqtt",
-                {"topic": msg.topic, "kind": self._kind(msg.topic), "payload": text, "json": parsed},
-            )
-
-        client.on_connect = on_connect
-        client.on_message = on_message
-        client.connect(host, port, keepalive=20)
-        client.loop_start()
-
-        with self._lock:
-            self._client = client
-            self.config = {"deviceId": device_id, "topicRoot": topic_root, "host": host, "port": port, "topics": topics}
-        self._emit("dataset_monitor", {"status": "started", "host": host, "port": port, "deviceId": device_id})
-        return {"started": True, "topics": topics}
-
-    def stop(self, emit: bool = True) -> dict[str, Any]:
-        with self._lock:
-            client = self._client
-            self._client = None
-        if client is not None:
-            try:
-                client.loop_stop()
-            except Exception:
-                pass
-            try:
-                client.disconnect()
-            except Exception:
-                pass
-        if emit:
-            self._emit("dataset_monitor", {"status": "stopped"})
-        return {"stopped": True}
-
-    @staticmethod
-    def _kind(topic: str) -> str:
-        if topic.endswith("/dataset/data"):
-            return "data"
-        if topic.endswith("/dataset/status"):
-            return "status"
-        if topic.endswith("/dataset/summary"):
-            return "summary"
-        if topic.endswith("/cmd/ack"):
-            return "ack"
-        return "message"
 
 
 def json_response(handler: SimpleHTTPRequestHandler, payload: Any, status: HTTPStatus = HTTPStatus.OK) -> None:
@@ -416,38 +438,6 @@ def read_json(handler: SimpleHTTPRequestHandler, limit: int = DEFAULT_JSON_BODY_
     return parsed
 
 
-def run_text_command(args: list[str], timeout: int = 10) -> str:
-    completed = subprocess.run(
-        args,
-        capture_output=True,
-        text=True,
-        timeout=timeout,
-        encoding="utf-8",
-        errors="replace",
-    )
-    return f"{completed.stdout}\n{completed.stderr}"
-
-
-def active_wifi_ssid() -> str:
-    text = run_text_command(["netsh", "wlan", "show", "interfaces"])
-    for line in text.splitlines():
-        match = re.match(r"^\s*SSID\s*:\s*(.+?)\s*$", line)
-        if match and not line.strip().startswith("BSSID"):
-            return match.group(1).strip()
-    return ""
-
-
-def wifi_password(ssid: str) -> str:
-    if not ssid:
-        return ""
-    text = run_text_command(["netsh", "wlan", "show", "profile", f"name={ssid}", "key=clear"])
-    for line in text.splitlines():
-        match = re.search(r"Key Content\s*:\s*(.+)$", line)
-        if match:
-            return match.group(1).strip()
-    return ""
-
-
 def local_ipv4() -> str:
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -468,70 +458,87 @@ def local_ipv4() -> str:
 
 
 def network_info() -> dict[str, str]:
-    ssid = active_wifi_ssid()
-    return {"ssid": ssid, "password": wifi_password(ssid), "ipv4": local_ipv4()}
+    return {"ipv4": local_ipv4()}
 
 
-def safe_filename(value: str, fallback: str = "dataset.csv") -> str:
-    name = re.sub(r"[^A-Za-z0-9_.-]+", "_", value.strip())
-    name = name.strip("._")
-    if not name:
-        name = fallback
-    if not name.lower().endswith(".csv"):
-        name += ".csv"
-    return name[:120]
+def local_broker_info() -> dict[str, Any]:
+    host = os.environ.get("PGL_OPERATOR_MQTT_HOST", "").strip()
+    username = os.environ.get("PGL_OPERATOR_MQTT_USER", "")
+    password = os.environ.get("PGL_OPERATOR_MQTT_PASSWORD", "")
+    if not host or not username or len(password) < 16:
+        raise RuntimeError("Operator Hub broker credentials are unavailable; restart Operator Hub")
+    return {
+        "host": host,
+        "port": int(os.environ.get("PGL_OPERATOR_MQTT_PORT", "1884")),
+        "username": username,
+        "password": password,
+        "topicRoot": os.environ.get("PGL_OPERATOR_MQTT_TOPIC_ROOT", "gld/gateway"),
+    }
 
 
-def dataset_output_info() -> dict[str, Any]:
-    DATASET_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    return {"path": str(DATASET_OUTPUT_DIR), "exists": DATASET_OUTPUT_DIR.exists()}
+def _netsh_value(output: str, names: set[str]) -> str:
+    wanted = {name.casefold() for name in names}
+    for line in output.splitlines():
+        if ":" not in line:
+            continue
+        key, value = line.split(":", 1)
+        if key.strip().casefold() in wanted:
+            return value.strip()
+    return ""
 
 
-def save_dataset_csv(payload: dict[str, Any]) -> dict[str, Any]:
-    csv_text = str(payload.get("csv") or "")
-    if not csv_text.strip():
-        raise RuntimeError("csv payload is empty")
-    filename = safe_filename(str(payload.get("filename") or "dataset.csv"))
-    DATASET_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    path = DATASET_OUTPUT_DIR / filename
-    path.write_text(csv_text, encoding="utf-8", newline="")
-    result = {"ok": True, "path": str(path), "filename": filename, "bytes": path.stat().st_size}
-    events.emit("dataset_saved", result)
-    return result
+def _connected_wifi_profile(output: str) -> tuple[str, str]:
+    connected: list[tuple[str, str]] = []
+    blocks = re.split(r"(?:\r?\n)\s*(?:\r?\n)", output)
+    for block in blocks:
+        state = _netsh_value(block, {"State", "Status"}).casefold()
+        if state not in {"connected", "tersambung"}:
+            continue
+        ssid = _netsh_value(block, {"SSID"})
+        profile = _netsh_value(block, {"Profile", "Profil"}) or ssid
+        if ssid:
+            connected.append((ssid, profile))
+    if not connected:
+        raise RuntimeError("This PC is not connected to a Wi-Fi network")
+    if len(connected) > 1:
+        raise RuntimeError("More than one Wi-Fi interface is connected; select credentials manually")
+    return connected[0]
 
 
-def create_dataset_csv(payload: dict[str, Any]) -> dict[str, Any]:
-    header_line = str(payload.get("header") or "")
-    if not header_line.strip():
-        raise RuntimeError("header is required")
-    filename = safe_filename(str(payload.get("filename") or "dataset.csv"))
-    DATASET_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    path = DATASET_OUTPUT_DIR / filename
-    text = header_line if header_line.endswith("\n") else header_line + "\n"
-    with path.open("w", encoding="utf-8", newline="") as handle:
-        handle.write(text)
-        handle.flush()
-        os.fsync(handle.fileno())
-    result = {"ok": True, "path": str(path), "filename": filename, "bytes": path.stat().st_size}
-    events.emit("dataset_created", result)
-    return result
+def _run_netsh(*args: str) -> str:
+    completed = subprocess.run(
+        ["netsh", *args],
+        capture_output=True,
+        stdin=subprocess.DEVNULL,
+        text=True,
+        errors="replace",
+        timeout=5,
+        check=False,
+        creationflags=CREATE_NO_WINDOW,
+    )
+    if completed.returncode != 0:
+        raise RuntimeError("Windows Wi-Fi query failed")
+    return completed.stdout
 
 
-def append_dataset_csv(payload: dict[str, Any]) -> dict[str, Any]:
-    filename = safe_filename(str(payload.get("filename") or ""))
-    lines = payload.get("lines")
-    if not isinstance(lines, list) or not lines:
-        raise RuntimeError("lines is required")
-    DATASET_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    path = DATASET_OUTPUT_DIR / filename
-    if not path.exists():
-        raise RuntimeError(f"{filename} does not exist - call /api/dataset/create first")
-    text = "".join((line if str(line).endswith("\n") else f"{line}\n") for line in lines)
-    with path.open("a", encoding="utf-8", newline="") as handle:
-        handle.write(text)
-        handle.flush()
-        os.fsync(handle.fileno())
-    return {"ok": True, "path": str(path), "filename": filename, "bytes": path.stat().st_size, "appended": len(lines)}
+def current_wifi_credentials() -> dict[str, Any]:
+    if os.name != "nt":
+        raise RuntimeError("Wi-Fi autofill is available only on Windows")
+    interfaces = _run_netsh("wlan", "show", "interfaces")
+    ssid, profile_name = _connected_wifi_profile(interfaces)
+    if any(char in profile_name for char in "\r\n\0") or not (1 <= len(profile_name) <= 256):
+        raise RuntimeError("Windows returned an invalid Wi-Fi profile name")
+
+    profile = _run_netsh("wlan", "show", "profile", f"name={profile_name}", "key=clear")
+    password = _netsh_value(profile, {"Key Content", "Konten Kunci", "Isi Kunci"})
+    authentication = _netsh_value(profile, {"Authentication", "Autentikasi"}).casefold()
+    is_open = authentication in {"open", "terbuka"}
+    return {
+        "ssid": ssid,
+        "password": password if password or is_open else None,
+        "passwordAvailable": bool(password) or is_open,
+        "passwordError": "" if password or is_open else "saved_password_unavailable",
+    }
 
 
 def safe_log_filename(value: str, fallback: str = "session.log") -> str:
@@ -555,119 +562,26 @@ def save_session_log(payload: dict[str, Any]) -> dict[str, Any]:
     return {"ok": True, "path": str(path), "filename": filename, "bytes": path.stat().st_size}
 
 
-def open_dataset_folder() -> dict[str, Any]:
-    DATASET_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+def open_log_folder() -> dict[str, Any]:
+    SESSION_LOG_DIR.mkdir(parents=True, exist_ok=True)
     if os.name == "nt":
-        os.startfile(str(DATASET_OUTPUT_DIR))  # type: ignore[attr-defined]
+        os.startfile(str(SESSION_LOG_DIR))  # type: ignore[attr-defined]
     elif sys.platform == "darwin":
-        subprocess.Popen(["open", str(DATASET_OUTPUT_DIR)])
+        subprocess.Popen(["open", str(SESSION_LOG_DIR)])
     else:
-        subprocess.Popen(["xdg-open", str(DATASET_OUTPUT_DIR)])
-    return {"ok": True, "path": str(DATASET_OUTPUT_DIR)}
-
-
-def mqtt_publish_dataset(payload: dict[str, Any], slot: int = 1) -> dict[str, Any]:
-    if mqtt is None:
-        raise RuntimeError(f"paho-mqtt unavailable: {MQTT_IMPORT_ERROR}")
-    device_id = str(payload.get("deviceId") or "").strip()
-    topic_root = str(payload.get("topicRoot") or "gas-leak-detector").strip("/")
-    host = str(payload.get("host") or "127.0.0.1")
-    port = int(payload.get("port") or 1884)
-    username = str(payload.get("username") or "")
-    password = str(payload.get("password") or "")
-    command = str(payload.get("command") or "START_DATASET")
-    if not device_id:
-        raise RuntimeError("deviceId is required")
-    dataset_monitor = get_dataset_monitor(slot)
-    dataset_payload = payload.get("dataset") or {"cmd": command}
-    if command == "START_DATASET":
-        dataset_monitor.start(payload)
-        topic = f"{topic_root}/{device_id}/dataset"
-    elif command == "SET_MODE":
-        mode = str(payload.get("mode") or dataset_payload.get("mode") or "").strip()
-        if not mode:
-            raise RuntimeError("mode is required")
-        dataset_monitor.start(payload)
-        topic = f"{topic_root}/{device_id}/cmd"
-        dataset_payload = {"cmd": "SET_MODE", "mode": mode}
-    else:
-        topic = f"{topic_root}/{device_id}/dataset"
-    message = json.dumps(dataset_payload)
-    client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
-    if username or password:
-        client.username_pw_set(username, password)
-    connected = threading.Event()
-    connect_error: dict[str, str] = {}
-
-    def on_connect(_client: Any, _userdata: Any, _flags: Any, reason_code: Any, _properties: Any) -> None:
-        if str(reason_code).lower() == "success" or reason_code == 0:
-            connected.set()
-        else:
-            connect_error["message"] = str(reason_code)
-            connected.set()
-
-    client.on_connect = on_connect
-    client.connect(host, port, keepalive=10)
-    client.loop_start()
-    if not connected.wait(timeout=5):
-        client.loop_stop()
-        client.disconnect()
-        raise RuntimeError(f"MQTT connect timeout to {host}:{port}")
-    if connect_error:
-        client.loop_stop()
-        client.disconnect()
-        raise RuntimeError(f"MQTT connect failed: {connect_error['message']}")
-    result = client.publish(topic, message, qos=0, retain=False)
-    result.wait_for_publish(timeout=5)
-    if not result.is_published():
-        client.loop_stop()
-        client.disconnect()
-        raise RuntimeError(f"MQTT publish timeout to {topic}")
-    client.disconnect()
-    client.loop_stop()
-    events.emit("mqtt_publish", {"topic": topic, "payload": message})
-    return {"ok": True, "topic": topic}
-
-
-def slot_holding_port(port: str) -> int | None:
-    for slot, bridge in serial_bridges.items():
-        status = bridge.status()
-        if status["connected"] and status["port"] == port:
-            return slot
-    return None
-
-
-def probe_port(port: str) -> dict[str, Any]:
-    if not port:
-        raise RuntimeError("port is required")
-    holder = slot_holding_port(port)
-    if holder is not None:
-        return {
-            "port": port,
-            "free": True,
-            "lockedByApp": True,
-            "message": f"Connected by this app (slot {holder}); will disconnect automatically before upload.",
-        }
-    if serial is None:
-        raise RuntimeError(f"pyserial unavailable: {SERIAL_IMPORT_ERROR}")
-    try:
-        probe = serial.Serial()
-        probe.port = port
-        probe.timeout = 0.2
-        probe.open()
-        probe.close()
-        return {"port": port, "free": True, "lockedByApp": False, "message": "Port opened and closed cleanly."}
-    except Exception as exc:
-        return {"port": port, "free": False, "lockedByApp": False, "message": str(exc)}
+        subprocess.Popen(["xdg-open", str(SESSION_LOG_DIR)])
+    return {"ok": True, "path": str(SESSION_LOG_DIR)}
 
 
 def mqtt_reachability(payload: dict[str, Any]) -> dict[str, Any]:
     if mqtt is None:
         raise RuntimeError(f"paho-mqtt unavailable: {MQTT_IMPORT_ERROR}")
-    host = str(payload.get("host") or "127.0.0.1")
+    host = str(payload.get("host") or "").strip()
     port = int(payload.get("port") or 1884)
     username = str(payload.get("username") or "")
     password = str(payload.get("password") or "")
+    if not host:
+        raise RuntimeError("host is required")
     client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2)
     if username or password:
         client.username_pw_set(username, password)
@@ -695,6 +609,41 @@ def mqtt_reachability(payload: dict[str, Any]) -> dict[str, Any]:
         return {"ok": True, "host": host, "port": port, "latencyMs": latency_ms}
     except Exception as exc:
         return {"ok": False, "host": host, "port": port, "message": str(exc)}
+
+
+def mqtt_publish_pull(payload: dict[str, Any]) -> dict[str, Any]:
+    hop_list = payload.get("hopList")
+    cluster = payload.get("cluster")
+    message: dict[str, Any] = {"requestId": int(payload.get("requestId") or int(time.time()) % 100000)}
+    if isinstance(hop_list, list) and hop_list:
+        message["hopList"] = [str(h).strip().upper() for h in hop_list if str(h).strip()]
+    elif cluster:
+        message["cluster"] = str(cluster).strip().upper()
+    else:
+        raise RuntimeError("hopList or cluster is required")
+    return mqtt_monitor.publish("pull", message)
+
+
+def mqtt_publish_node(payload: dict[str, Any]) -> dict[str, Any]:
+    cluster = str(payload.get("cluster") or "").strip().upper()
+    node = str(payload.get("node") or "").strip().upper()
+    hex_payload = str(payload.get("hex") or "").strip()
+    if not cluster:
+        raise RuntimeError("cluster is required")
+    if not re.fullmatch(r"[0-9A-Fa-f]*", hex_payload):
+        raise RuntimeError("hex must contain only hexadecimal characters")
+    message: dict[str, Any] = {"cluster": cluster, "hex": hex_payload}
+    node_id = payload.get("id")
+    if node:
+        message["node"] = node
+    if node_id not in (None, ""):
+        message["id"] = str(node_id).strip().upper()
+    if payload.get("ttl") not in (None, ""):
+        message["ttl"] = int(payload["ttl"])
+    hop_list = payload.get("hopList")
+    if isinstance(hop_list, list) and hop_list:
+        message["hopList"] = [str(h).strip().upper() for h in hop_list if str(h).strip()]
+    return mqtt_monitor.publish("node", message)
 
 
 def _manifest_flash_set_sha256(flash_files: list[dict[str, Any]]) -> str:
@@ -741,8 +690,8 @@ def validate_firmware_package(
     if not board_profile or len(board_profile) > 128 or any(ord(char) < 32 for char in board_profile):
         raise RuntimeError("manifest boardProfile is invalid")
     chip = str(manifest["chip"]).strip().lower()
-    if chip != "esp32s3":
-        raise RuntimeError(f"manifest chip {chip!r} is not esp32s3")
+    if chip not in ALLOWED_CHIPS:
+        raise RuntimeError(f"manifest chip {chip!r} is not one of {sorted(ALLOWED_CHIPS)}")
     for field in ("firmwareVersion", "protocolVersion", "configSchemaVersion"):
         if not SEMVER_RE.fullmatch(str(manifest[field])):
             raise RuntimeError(f"manifest {field} is not a semantic version")
@@ -845,16 +794,48 @@ def find_platformio_executable() -> str:
     raise RuntimeError("PlatformIO executable is required to run the packaged esptool")
 
 
+def slot_holding_port(port: str) -> int | None:
+    for slot, bridge in serial_bridges.items():
+        status = bridge.status()
+        if status["connected"] and status["port"] == port:
+            return slot
+    return None
+
+
+def probe_port(port: str) -> dict[str, Any]:
+    if not port:
+        raise RuntimeError("port is required")
+    holder = slot_holding_port(port)
+    if holder is not None:
+        return {
+            "port": port,
+            "free": True,
+            "lockedByApp": True,
+            "message": f"Connected by this app (slot {holder}); will disconnect automatically before upload.",
+        }
+    if serial is None:
+        raise RuntimeError(f"pyserial unavailable: {SERIAL_IMPORT_ERROR}")
+    try:
+        probe = serial.Serial()
+        probe.port = port
+        probe.timeout = 0.2
+        probe.open()
+        probe.close()
+        return {"port": port, "free": True, "lockedByApp": False, "message": "Port opened and closed cleanly."}
+    except Exception as exc:
+        return {"port": port, "free": False, "lockedByApp": False, "message": str(exc)}
+
+
 def firmware_upload(payload: dict[str, Any], slot: int = 1) -> dict[str, Any]:
     env = str(payload.get("env") or "").strip()
     port = str(payload.get("port") or "").strip()
     target_id = str(payload.get("targetDeviceId") or "").strip().upper()
-    if not re.match(r"^[A-Za-z0-9_\\-]+$", env):
+    if not re.match(r"^[A-Za-z0-9_\-]+$", env):
         raise RuntimeError("invalid PlatformIO env")
     if not re.fullmatch(r"COM\d+", port, re.IGNORECASE):
-        raise RuntimeError("port must be a Windows COM port such as COM10")
-    if not re.fullmatch(r"[0-9A-F]{4}", target_id) or target_id == "0000":
-        raise RuntimeError("targetDeviceId must be four non-zero hexadecimal digits")
+        raise RuntimeError("port must be a Windows COM port such as COM3")
+    if not re.fullmatch(r"[0-9A-F]{4}", target_id):
+        raise RuntimeError("targetDeviceId must be four hexadecimal digits")
     manifest, verified_files = validate_firmware_package(
         payload.get("manifest"), payload.get("packageFiles"), env, target_id
     )
@@ -867,12 +848,12 @@ def firmware_upload(payload: dict[str, Any], slot: int = 1) -> dict[str, Any]:
         if not preflight["free"]:
             raise RuntimeError(
                 f"COM port {port} is still busy after disconnect ({preflight['message']}). "
-                "Close other serial monitors, unplug/replug the GLD USB, then retry."
+                "Close other serial monitors, unplug/replug the Gateway USB, then retry."
             )
 
     def worker() -> None:
         try:
-            with tempfile.TemporaryDirectory(prefix="gld-verified-flash-") as temp_name:
+            with tempfile.TemporaryDirectory(prefix="gw-verified-flash-") as temp_name:
                 temp_dir = Path(temp_name)
                 esptool_args = [
                     "esptool.py", "--chip", str(manifest["chip"]), "--port", port,
@@ -903,15 +884,13 @@ def firmware_upload(payload: dict[str, Any], slot: int = 1) -> dict[str, Any]:
                     events.emit("upload_line", {"line": line.rstrip("\r\n")})
                 code = proc.wait()
             events.emit("upload_done", {"code": code})
-            if code == 0:
-                time.sleep(2.5)
-                upload_bridge.connect(port, 115200)
-                time.sleep(1.0)
-                upload_bridge.write_line(f'SET_DEVICE_ID_JSON {{"deviceId":"{target_id}","reboot":true}}')
+            # No post-flash provisioning step: GATEWAY_ID is a compile-time
+            # constant (firmware/config/GwConfig.h), unlike CH/GLD which get
+            # a runtime SET_*_ID serial command after flashing.
         except Exception as exc:
             events.emit("upload_error", {"message": str(exc)})
 
-    threading.Thread(target=worker, name="gld-firmware-upload", daemon=True).start()
+    threading.Thread(target=worker, name="gw-firmware-upload", daemon=True).start()
     return {
         "started": True,
         "env": env,
@@ -924,7 +903,7 @@ def firmware_upload(payload: dict[str, Any], slot: int = 1) -> dict[str, Any]:
 
 
 class Handler(SimpleHTTPRequestHandler):
-    server_version = "GLDOperatorLiteBridge/0.2"
+    server_version = "GWOperatorLiteBridge/0.1"
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, directory=str(APP_DIR), **kwargs)
@@ -944,7 +923,7 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_header("Cache-Control", "no-store")
         if origin and origin in BRIDGE_ALLOWED_ORIGINS:
             self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-            self.send_header("Access-Control-Allow-Headers", "Content-Type, X-GLD-Bridge-Token")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type, X-GW-Bridge-Token")
         self.send_header("Cross-Origin-Opener-Policy", "same-origin")
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Referrer-Policy", "no-referrer")
@@ -955,7 +934,7 @@ class Handler(SimpleHTTPRequestHandler):
         return not origin or origin in BRIDGE_ALLOWED_ORIGINS
 
     def _token_allowed(self, path: str) -> bool:
-        supplied = self.headers.get("X-GLD-Bridge-Token", "")
+        supplied = self.headers.get("X-GW-Bridge-Token", "")
         if path == "/api/events" and not supplied:
             supplied = (parse_qs(urlparse(self.path).query).get("token") or [""])[0]
         return bool(supplied) and hmac.compare_digest(supplied, BRIDGE_CSRF_TOKEN)
@@ -978,7 +957,7 @@ class Handler(SimpleHTTPRequestHandler):
             for item in self.headers.get("Access-Control-Request-Headers", "").split(",")
             if item.strip()
         }
-        if not requested_headers.issubset({"content-type", "x-gld-bridge-token"}):
+        if not requested_headers.issubset({"content-type", "x-gw-bridge-token"}):
             return json_response(self, {"error": "requested CORS headers are not allowed"}, HTTPStatus.FORBIDDEN)
         self.send_response(HTTPStatus.NO_CONTENT)
         self.end_headers()
@@ -989,43 +968,34 @@ class Handler(SimpleHTTPRequestHandler):
             if path.startswith("/api/"):
                 self._require_api_access(path, allow_public_health=True)
             if path == "/api/health":
-                broker_running = bool(local_mqtt_broker and local_mqtt_broker.running)
                 return json_response(
                     self,
                     {
-                    "ok": True,
-                    "version": VERSION,
-                    "csrfToken": BRIDGE_CSRF_TOKEN,
-                    "features": {
-                        "serial": serial is not None,
-                        "mqtt": mqtt is not None,
-                        "datasetMonitor": mqtt is not None,
-                        "mqttBroker": broker_running,
-                        "datasetOutput": True,
-                        "networkInfo": os.name == "nt",
-                        "firmwareUpload": True,
-                    },
-                    "mqttBroker": {
-                        "running": broker_running,
-                        "host": getattr(local_mqtt_broker, "host", ""),
-                        "port": getattr(local_mqtt_broker, "port", 0),
-                        "authRequired": bool(getattr(local_mqtt_broker, "username", None)),
-                    },
-                    "errors": {
-                        "serial": SERIAL_IMPORT_ERROR,
-                        "mqtt": MQTT_IMPORT_ERROR,
-                        "mqttBroker": local_mqtt_broker_error or MQTT_BROKER_IMPORT_ERROR,
-                    },
-                    "maxSlots": MAX_SLOTS,
-                    "slots": connected_slots_summary(),
+                        "ok": True,
+                        "version": VERSION,
+                        "csrfToken": BRIDGE_CSRF_TOKEN,
+                        "features": {
+                            "serial": serial is not None,
+                            "mqtt": mqtt is not None,
+                            "firmwareUpload": True,
+                        },
+                        "errors": {
+                            "serial": SERIAL_IMPORT_ERROR,
+                            "mqtt": MQTT_IMPORT_ERROR,
+                        },
+                        "mqtt": mqtt_monitor.status(),
+                        "maxSlots": MAX_SLOTS,
+                        "slots": connected_slots_summary(),
                     },
                 )
-            if path == "/api/ports":
-                return json_response(self, {"ports": get_serial_bridge(1).list_ports()})
             if path == "/api/network":
                 return json_response(self, network_info())
-            if path == "/api/dataset/output-dir":
-                return json_response(self, dataset_output_info())
+            if path == "/api/local-broker":
+                return json_response(self, local_broker_info())
+            if path == "/api/wifi/current":
+                return json_response(self, current_wifi_credentials())
+            if path == "/api/ports":
+                return json_response(self, {"ports": get_serial_bridge(1).list_ports()})
             if path == "/api/serial/port-status":
                 query = parse_qs(urlparse(self.path).query)
                 port = (query.get("port") or [""])[0]
@@ -1055,22 +1025,20 @@ class Handler(SimpleHTTPRequestHandler):
                 result = get_serial_bridge(slot).disconnect()
             elif path == "/api/serial/write":
                 result = get_serial_bridge(slot).write_line(str(payload.get("line") or ""), require_connected=False)
-            elif path == "/api/mqtt/dataset":
-                result = mqtt_publish_dataset(payload, slot)
-            elif path == "/api/mqtt/dataset-monitor/stop":
-                result = get_dataset_monitor(slot).stop()
+            elif path == "/api/mqtt/connect":
+                result = mqtt_monitor.start(payload)
+            elif path == "/api/mqtt/disconnect":
+                result = mqtt_monitor.stop()
             elif path == "/api/mqtt/test":
                 result = mqtt_reachability(payload)
-            elif path == "/api/dataset/save":
-                result = save_dataset_csv(payload)
-            elif path == "/api/dataset/create":
-                result = create_dataset_csv(payload)
-            elif path == "/api/dataset/append":
-                result = append_dataset_csv(payload)
+            elif path == "/api/mqtt/publish/pull":
+                result = mqtt_publish_pull(payload)
+            elif path == "/api/mqtt/publish/node":
+                result = mqtt_publish_node(payload)
             elif path == "/api/session/log":
                 result = save_session_log(payload)
-            elif path == "/api/dataset/open-folder":
-                result = open_dataset_folder()
+            elif path == "/api/log/open-folder":
+                result = open_log_folder()
             elif path == "/api/firmware/upload":
                 result = firmware_upload(payload, slot)
             else:
@@ -1107,50 +1075,25 @@ class Handler(SimpleHTTPRequestHandler):
 
 
 def main() -> int:
-    global local_mqtt_broker, local_mqtt_broker_error
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--host", default="127.0.0.1")
-    parser.add_argument("--port", default=5174, type=int)
-    parser.add_argument("--mqtt-broker-host", default="127.0.0.1")
-    parser.add_argument("--mqtt-broker-port", default=0, type=int)
-    parser.add_argument("--mqtt-broker-user", default=os.environ.get("GLD_BENCH_MQTT_USER", ""))
-    parser.add_argument("--mqtt-broker-password", default=os.environ.get("GLD_BENCH_MQTT_PASSWORD", ""))
+    parser.add_argument("--port", default=5373, type=int)
     parser.add_argument("--no-open", action="store_true")
     args = parser.parse_args()
 
     _register_allowed_origins(args.host, args.port)
-    if args.mqtt_broker_port:
-        if LocalMqttBroker is None:
-            local_mqtt_broker_error = f"local MQTT broker unavailable: {MQTT_BROKER_IMPORT_ERROR}"
-            print(local_mqtt_broker_error)
-        else:
-            try:
-                local_mqtt_broker = LocalMqttBroker(
-                    args.mqtt_broker_host,
-                    args.mqtt_broker_port,
-                    username=args.mqtt_broker_user or None,
-                    password=args.mqtt_broker_password or None,
-                )
-                local_mqtt_broker.start()
-            except Exception as exc:
-                local_mqtt_broker = None
-                local_mqtt_broker_error = str(exc)
-                print(f"MQTT_BROKER_START_FAILED {local_mqtt_broker_error}")
     httpd = ThreadingHTTPServer((args.host, args.port), Handler)
     url = f"http://{args.host}:{args.port}/"
-    print(f"GLD Operator Lite bridge: {url}")
+    print(f"Gateway Operator Lite bridge: {url}")
     print("Press Ctrl+C to stop.")
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
         pass
     finally:
-        for monitor in dataset_monitors.values():
-            monitor.stop(emit=False)
+        mqtt_monitor.stop(emit=False)
         for bridge in serial_bridges.values():
             bridge.disconnect()
-        if local_mqtt_broker is not None:
-            local_mqtt_broker.stop()
         httpd.server_close()
     return 0
 

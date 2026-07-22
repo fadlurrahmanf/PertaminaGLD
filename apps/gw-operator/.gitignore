@@ -1,0 +1,9 @@
+node_modules/
+dist/
+release/
+release-comfix/
+.vite/
+output/
+__pycache__/
+*.log
+python-embed/

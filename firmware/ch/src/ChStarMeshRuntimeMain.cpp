@@ -6,6 +6,7 @@
 
 #include <cstdarg>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 
 #include "AlarmQueue.h"
@@ -34,23 +35,27 @@ namespace {
 // Runtime identity. The build-time value is only the factory/provisioning
 // fallback; the operator app persists the actual CH ID in NVS.
 static uint16_t CH_ID                = pgl::config::ch::CH_ID;
-constexpr uint16_t ROOT_GATEWAY_ID   = pgl::config::ch::ROOT_GATEWAY_ID;
+// Root gateway ID and STAR/MESH LoRa params are also only factory fallbacks;
+// the operator app persists the actual values in NVS (see loadRootGateway(),
+// loadStarLoraConfig(), loadMeshLoraConfig()).
+static uint16_t ROOT_GATEWAY_ID      = pgl::config::ch::ROOT_GATEWAY_ID;
 constexpr uint16_t DEFAULT_PARENT_ID = pgl::config::ch::DEFAULT_PARENT_ID;
 constexpr uint16_t BROADCAST_ID      = 0xFFFF;
 
-constexpr float    STAR_FREQ_MHZ    = pgl::config::ch::STAR_FREQ_MHZ;
-constexpr float    STAR_BW_KHZ      = pgl::config::ch::STAR_BW_KHZ;
-constexpr uint8_t  STAR_SF          = pgl::config::ch::STAR_SF;
-constexpr uint8_t  STAR_CR          = pgl::config::ch::STAR_CR;
-constexpr uint8_t  STAR_SYNC_WORD   = pgl::config::ch::STAR_SYNC_WORD;
+static float    STAR_FREQ_MHZ    = pgl::config::ch::STAR_FREQ_MHZ;
+static float    STAR_BW_KHZ      = pgl::config::ch::STAR_BW_KHZ;
+static uint8_t  STAR_SF          = pgl::config::ch::STAR_SF;
+static uint8_t  STAR_CR          = pgl::config::ch::STAR_CR;
+static uint8_t  STAR_SYNC_WORD   = pgl::config::ch::STAR_SYNC_WORD;
+static int8_t   STAR_TX_POWER_DBM = pgl::config::ch::RADIO_TX_POWER_DBM;
 
-constexpr float    MESH_FREQ_MHZ    = pgl::config::ch::MESH_FREQ_MHZ;
-constexpr float    MESH_BW_KHZ      = pgl::config::ch::MESH_BW_KHZ;
-constexpr uint8_t  MESH_SF          = pgl::config::ch::MESH_SF;
-constexpr uint8_t  MESH_CR          = pgl::config::ch::MESH_CR;
-constexpr uint8_t  MESH_SYNC_WORD   = pgl::config::ch::MESH_SYNC_WORD;
+static float    MESH_FREQ_MHZ    = pgl::config::ch::MESH_FREQ_MHZ;
+static float    MESH_BW_KHZ      = pgl::config::ch::MESH_BW_KHZ;
+static uint8_t  MESH_SF          = pgl::config::ch::MESH_SF;
+static uint8_t  MESH_CR          = pgl::config::ch::MESH_CR;
+static uint8_t  MESH_SYNC_WORD   = pgl::config::ch::MESH_SYNC_WORD;
+static int8_t   MESH_TX_POWER_DBM = pgl::config::ch::RADIO_TX_POWER_DBM;
 
-constexpr int8_t   RADIO_TX_POWER_DBM      = pgl::config::ch::RADIO_TX_POWER_DBM;
 constexpr uint16_t RADIO_PREAMBLE          = pgl::config::ch::RADIO_PREAMBLE;
 constexpr float    RADIO_TCXO_VOLTAGE      = pgl::config::ch::RADIO_TCXO_VOLTAGE;
 constexpr float    RADIO_XTAL_TCXO_VOLTAGE = pgl::config::ch::RADIO_XTAL_TCXO_VOLTAGE;
@@ -158,6 +163,15 @@ struct RadioPins {
     uint8_t cs, dio1, rst, busy, rxen, txen;
 };
 
+struct LoraConfigValues {
+    float   freqMHz;
+    float   bwKHz;
+    uint8_t sf;
+    uint8_t cr;
+    uint8_t syncWord;
+    int8_t  txPowerDbm;
+};
+
 constexpr RadioPins STAR_PINS{
     pgl::ch::board::PIN_RADIO_A_CS,   pgl::ch::board::PIN_RADIO_A_DIO1,
     pgl::ch::board::PIN_RADIO_A_RST,  pgl::ch::board::PIN_RADIO_A_BUSY,
@@ -197,6 +211,7 @@ static PendingDownlink downlinkStore[DOWNLINK_STORE_CAPACITY]{};
 
 static uint8_t  meshSeq           = 0;
 static uint32_t lastCacheReportMs = 0;
+static uint32_t lastBattReadonlyLogMs = 0;
 
 // ─── Runtime config (non-const: meshDstId and chBatteryMv updated at runtime) ──
 
@@ -435,6 +450,119 @@ bool saveChIdentity(uint16_t newId) {
     if (readBack != newId) return false;
 
     return true;
+}
+
+bool isValidGatewayId(uint16_t id) {
+    return pgl::config::isValidNodeId(id) && id != CH_ID;
+}
+
+void loadRootGateway() {
+    Preferences prefs;
+    prefs.begin("ch-cfg", true);
+    const uint16_t stored = prefs.getUShort("rootGw", ROOT_GATEWAY_ID);
+    prefs.end();
+
+    if (isValidGatewayId(stored)) {
+        ROOT_GATEWAY_ID = stored;
+        logPrintf("CH_NVS_ROOTGW_LOAD rootGw=0x%04X\n", ROOT_GATEWAY_ID);
+    } else {
+        logPrintf("CH_NVS_ROOTGW_INVALID stored=0x%04X fallback=0x%04X\n",
+                  stored, ROOT_GATEWAY_ID);
+    }
+}
+
+bool saveRootGateway(uint16_t newId) {
+    if (!isValidGatewayId(newId)) return false;
+
+    Preferences prefs;
+    if (!prefs.begin("ch-cfg", false)) return false;
+    const size_t written = prefs.putUShort("rootGw", newId);
+    prefs.end();
+    if (written != sizeof(uint16_t)) return false;
+
+    Preferences verify;
+    if (!verify.begin("ch-cfg", true)) return false;
+    const uint16_t readBack = verify.getUShort("rootGw", 0);
+    verify.end();
+    if (readBack != newId) return false;
+
+    return true;
+}
+
+bool isValidLoraConfig(const LoraConfigValues& cfg) {
+    return cfg.freqMHz >= 900.0f && cfg.freqMHz <= 930.0f &&
+           cfg.bwKHz >= 1.0f && cfg.bwKHz <= 510.0f &&
+           cfg.sf >= 5 && cfg.sf <= 12 &&
+           cfg.cr >= 5 && cfg.cr <= 8 &&
+           cfg.txPowerDbm >= -9 && cfg.txPowerDbm <= 22;
+}
+
+void loadLoraConfig(const char* keyPrefix, LoraConfigValues& cfg) {
+    char keyFreq[16], keyBw[16], keySf[16], keyCr[16], keySync[16], keyTx[16];
+    snprintf(keyFreq, sizeof(keyFreq), "%sFreq", keyPrefix);
+    snprintf(keyBw,   sizeof(keyBw),   "%sBw",   keyPrefix);
+    snprintf(keySf,   sizeof(keySf),   "%sSf",   keyPrefix);
+    snprintf(keyCr,   sizeof(keyCr),   "%sCr",   keyPrefix);
+    snprintf(keySync, sizeof(keySync), "%sSync", keyPrefix);
+    snprintf(keyTx,   sizeof(keyTx),   "%sTx",   keyPrefix);
+
+    Preferences prefs;
+    prefs.begin("ch-cfg", true);
+    LoraConfigValues stored{
+        prefs.getFloat(keyFreq, cfg.freqMHz),
+        prefs.getFloat(keyBw, cfg.bwKHz),
+        prefs.getUChar(keySf, cfg.sf),
+        prefs.getUChar(keyCr, cfg.cr),
+        prefs.getUChar(keySync, cfg.syncWord),
+        static_cast<int8_t>(prefs.getChar(keyTx, cfg.txPowerDbm)),
+    };
+    prefs.end();
+
+    // Sanity-check before trusting stored values, guarding against a corrupt
+    // or never-written NVS blob.
+    if (isValidLoraConfig(stored)) {
+        cfg = stored;
+        logPrintf("CH_NVS_%s_LORA_LOAD freq=%.3f bw=%.2f sf=%u cr=%u sync=0x%02X tx=%d\n",
+                  keyPrefix, cfg.freqMHz, cfg.bwKHz, cfg.sf, cfg.cr, cfg.syncWord, cfg.txPowerDbm);
+    } else {
+        logPrintf("CH_NVS_%s_LORA_INVALID fallback-to-build-time\n", keyPrefix);
+    }
+}
+
+bool saveLoraConfig(const char* keyPrefix, const LoraConfigValues& cfg) {
+    if (!isValidLoraConfig(cfg)) return false;
+
+    char keyFreq[16], keyBw[16], keySf[16], keyCr[16], keySync[16], keyTx[16];
+    snprintf(keyFreq, sizeof(keyFreq), "%sFreq", keyPrefix);
+    snprintf(keyBw,   sizeof(keyBw),   "%sBw",   keyPrefix);
+    snprintf(keySf,   sizeof(keySf),   "%sSf",   keyPrefix);
+    snprintf(keyCr,   sizeof(keyCr),   "%sCr",   keyPrefix);
+    snprintf(keySync, sizeof(keySync), "%sSync", keyPrefix);
+    snprintf(keyTx,   sizeof(keyTx),   "%sTx",   keyPrefix);
+
+    Preferences prefs;
+    if (!prefs.begin("ch-cfg", false)) return false;
+    bool ok = true;
+    ok = ok && prefs.putFloat(keyFreq, cfg.freqMHz) == sizeof(float);
+    ok = ok && prefs.putFloat(keyBw, cfg.bwKHz) == sizeof(float);
+    ok = ok && prefs.putUChar(keySf, cfg.sf) == sizeof(uint8_t);
+    ok = ok && prefs.putUChar(keyCr, cfg.cr) == sizeof(uint8_t);
+    ok = ok && prefs.putUChar(keySync, cfg.syncWord) == sizeof(uint8_t);
+    ok = ok && prefs.putChar(keyTx, cfg.txPowerDbm) == sizeof(int8_t);
+    prefs.end();
+    if (!ok) return false;
+
+    Preferences verify;
+    if (!verify.begin("ch-cfg", true)) return false;
+    const bool match =
+        verify.getFloat(keyFreq, -1.0f) == cfg.freqMHz &&
+        verify.getFloat(keyBw, -1.0f) == cfg.bwKHz &&
+        verify.getUChar(keySf, 0) == cfg.sf &&
+        verify.getUChar(keyCr, 0) == cfg.cr &&
+        verify.getUChar(keySync, 0) == cfg.syncWord &&
+        verify.getChar(keyTx, 0) == cfg.txPowerDbm;
+    verify.end();
+    return match;
 }
 
 void loadParents() {
@@ -871,7 +999,8 @@ void releaseRadioReset() {
 }
 
 bool beginRadio(SX1262*& radio, Module*& module, const RadioPins& pins,
-                const char* name, float freq, float bw, uint8_t sf, uint8_t cr, uint8_t sync) {
+                const char* name, float freq, float bw, uint8_t sf, uint8_t cr, uint8_t sync,
+                int8_t txPower) {
     if (module == nullptr) {
         module = new Module(pins.cs, pins.dio1, pins.rst, pins.busy,
                             SPI, SPISettings(RADIO_SPI_HZ, MSBFIRST, SPI_MODE0));
@@ -881,11 +1010,11 @@ bool beginRadio(SX1262*& radio, Module*& module, const RadioPins& pins,
     }
     // EBYTE E22-900MM22S uses its own 32 MHz crystal.  Keep the TCXO path
     // only as a diagnostic fallback for a different fitted module.
-    int16_t st = radio->begin(freq, bw, sf, cr, sync, RADIO_TX_POWER_DBM,
+    int16_t st = radio->begin(freq, bw, sf, cr, sync, txPower,
                                RADIO_PREAMBLE, RADIO_XTAL_TCXO_VOLTAGE, false);
     logPrintf("CH_%s_BEGIN_XTAL_STATE=%d\n", name, st);
     if (st == RADIOLIB_ERR_SPI_CMD_INVALID || st == RADIOLIB_ERR_SPI_CMD_FAILED) {
-        st = radio->begin(freq, bw, sf, cr, sync, RADIO_TX_POWER_DBM,
+        st = radio->begin(freq, bw, sf, cr, sync, txPower,
                           RADIO_PREAMBLE, RADIO_TCXO_VOLTAGE, false);
         logPrintf("CH_%s_BEGIN_TCXO16_STATE=%d\n", name, st);
     }
@@ -1574,6 +1703,20 @@ void handleStarPacketReceived() {
               pgl::ch::chRuntimeStatusName(status),
               result.ackBuilt ? 1 : 0, static_cast<unsigned>(result.ackSize),
               result.onwardQueued ? 1 : 0, result.recoveryQueued ? 1 : 0);
+
+    if (status != pgl::ch::ChRuntimeStatus::Ok) {
+        const uint16_t srcId = packetLen >= 4
+                                   ? (static_cast<uint16_t>(frame[2]) << 8) | frame[3]
+                                   : 0;
+        const uint16_t dstId = packetLen >= 6
+                                   ? (static_cast<uint16_t>(frame[4]) << 8) | frame[5]
+                                   : 0;
+        logPrintf("CH_STAR_REJECT status=%s src=0x%04X dst=0x%04X local=0x%04X\n",
+                  pgl::ch::chRuntimeStatusName(status), srcId, dstId, CH_ID);
+        startStarReceive("after-star-reject");
+        return;
+    }
+
     reportCache("star-rx");
 
     if (result.ackBuilt && meshAck.kind == MeshAckKind::Hello) {
@@ -1947,9 +2090,11 @@ void handleRadioInit() {
     pgl::ch::clearChTxQueue(txQueue, TX_QUEUE_CAPACITY);
 
     starReady = beginRadio(starRadio, starModule, STAR_PINS, "STAR",
-                           STAR_FREQ_MHZ, STAR_BW_KHZ, STAR_SF, STAR_CR, STAR_SYNC_WORD);
+                           STAR_FREQ_MHZ, STAR_BW_KHZ, STAR_SF, STAR_CR, STAR_SYNC_WORD,
+                           STAR_TX_POWER_DBM);
     meshReady = beginRadio(meshRadio, meshModule, MESH_PINS, "MESH",
-                           MESH_FREQ_MHZ, MESH_BW_KHZ, MESH_SF, MESH_CR, MESH_SYNC_WORD);
+                           MESH_FREQ_MHZ, MESH_BW_KHZ, MESH_SF, MESH_CR, MESH_SYNC_WORD,
+                           MESH_TX_POWER_DBM);
     logPrintf("CH_RUNTIME_READY star=%u mesh=%u\n", starReady ? 1 : 0, meshReady ? 1 : 0);
 
     if (!starReady || !meshReady) {
@@ -2075,8 +2220,18 @@ void handleJoined() {
     batteryMv                 = readBatteryMv();
     runtimeConfig.chBatteryMv = batteryMv;
     if (VBAT_READ_ONLY) {
-        logPrintf("CH_BATT_READONLY_MV=%u runMinIgnored=%u criticalIgnored=%u\n",
-                  batteryMv, BATT_RUN_MIN_MV, BATT_CRITICAL_MV);
+        // handleJoined() runs every loop() tick for as long as the CH stays
+        // JOINED (its normal steady state), so this must be rate-limited the
+        // same way reportCachePeriodic() above is - logging on every 20 ms
+        // tick printed ~50 unchanging lines/sec over both Serial and Serial0
+        // indefinitely, which is pure serial-port and CPU overhead with zero
+        // added diagnostic value between reports.
+        const uint32_t nowMs = millis();
+        if (nowMs - lastBattReadonlyLogMs >= CACHE_REPORT_INTERVAL_MS) {
+            lastBattReadonlyLogMs = nowMs;
+            logPrintf("CH_BATT_READONLY_MV=%u runMinIgnored=%u criticalIgnored=%u\n",
+                      batteryMv, BATT_RUN_MIN_MV, BATT_CRITICAL_MV);
+        }
         serviceDelay(20);
         return;
     }
@@ -2169,16 +2324,21 @@ void emitInfoJson() {
               CH_ID, ROOT_GATEWAY_ID,
               pgl::firmware::CH_FIRMWARE_NAME, pgl::firmware::CH_FIRMWARE_VERSION,
               pgl::firmware::PROTOCOL_VERSION, caps);
+    // Mirrors CH_ACK_PROFILE (a boot-only log line) so a client that connects
+    // mid-session - after that one-time line has already scrolled past - can
+    // still learn the hello schedule on demand via GET_INFO instead of never
+    // being able to compute a next-hello countdown at all.
+    logPrintf("\"helloProfile\":{\"intervalMs\":%lu,\"jitterMs\":%lu,\"healthTimeoutMs\":%lu,\"fieldTest\":%u},",
+              static_cast<unsigned long>(HELLO_INTERVAL_MS),
+              static_cast<unsigned long>(HELLO_JITTER_MS),
+              static_cast<unsigned long>(PARENT_HEALTH_TIMEOUT_MS),
+              FIELD_TEST_BUILD ? 1 : 0);
     logPrintf("\"starLora\":{\"freqMHz\":%.1f,\"bwKHz\":%.0f,\"sf\":%u,\"cr\":%u,\"syncWord\":%u,\"txPowerDbm\":%d},",
-              static_cast<double>(pgl::config::lora::star::FREQ_MHZ),
-              static_cast<double>(pgl::config::lora::star::BW_KHZ),
-              pgl::config::lora::star::SF, pgl::config::lora::star::CR,
-              pgl::config::lora::star::SYNC_WORD, pgl::config::lora::star::TX_POWER_DBM);
+              static_cast<double>(STAR_FREQ_MHZ), static_cast<double>(STAR_BW_KHZ),
+              STAR_SF, STAR_CR, STAR_SYNC_WORD, STAR_TX_POWER_DBM);
     logPrintf("\"meshLora\":{\"freqMHz\":%.1f,\"bwKHz\":%.0f,\"sf\":%u,\"cr\":%u,\"syncWord\":%u,\"txPowerDbm\":%d}}\n",
-              static_cast<double>(pgl::config::lora::mesh::FREQ_MHZ),
-              static_cast<double>(pgl::config::lora::mesh::BW_KHZ),
-              pgl::config::lora::mesh::SF, pgl::config::lora::mesh::CR,
-              pgl::config::lora::mesh::SYNC_WORD, pgl::config::lora::mesh::TX_POWER_DBM);
+              static_cast<double>(MESH_FREQ_MHZ), static_cast<double>(MESH_BW_KHZ),
+              MESH_SF, MESH_CR, MESH_SYNC_WORD, MESH_TX_POWER_DBM);
 }
 
 void emitStatusJson() {
@@ -2270,6 +2430,78 @@ bool parseChIdentityJson(const char* json, uint16_t& outId) {
     return true;
 }
 
+bool parseGatewayIdJson(const char* json, uint16_t& outId) {
+    if (json == nullptr) return false;
+    const char* key = strstr(json, "\"gatewayId\"");
+    if (key == nullptr) return false;
+    const char* value = strchr(key + 11, ':');
+    if (value == nullptr) return false;
+    ++value;
+    while (*value == ' ' || *value == '\t') ++value;
+    if (*value++ != '"') return false;
+
+    uint16_t parsed = 0;
+    for (uint8_t i = 0; i < 4; ++i) {
+        const int8_t nibble = hexNibble(value[i]);
+        if (nibble < 0) return false;
+        parsed = static_cast<uint16_t>((parsed << 4) | static_cast<uint8_t>(nibble));
+    }
+    if (value[4] != '"' || !isValidGatewayId(parsed)) return false;
+    outId = parsed;
+    return true;
+}
+
+bool jsonFindNumber(const char* json, const char* key, double& outValue) {
+    if (json == nullptr || key == nullptr) return false;
+    char pattern[24];
+    snprintf(pattern, sizeof(pattern), "\"%s\"", key);
+    const char* found = strstr(json, pattern);
+    if (found == nullptr) return false;
+    const char* value = strchr(found + strlen(pattern), ':');
+    if (value == nullptr) return false;
+    ++value;
+    char* endPtr = nullptr;
+    const double parsed = strtod(value, &endPtr);
+    if (endPtr == value) return false;
+    outValue = parsed;
+    return true;
+}
+
+bool parseLoraConfigJson(const char* json, LoraConfigValues& out, const char*& reason) {
+    double freqMHz = 0, bwKHz = 0, sf = 0, cr = 0, syncWord = 0, txPowerDbm = 0;
+    if (!jsonFindNumber(json, "freqMHz", freqMHz) || !(freqMHz >= 900.0 && freqMHz <= 930.0)) {
+        reason = "freqMHz-out-of-range-900-930";
+        return false;
+    }
+    if (!jsonFindNumber(json, "bwKHz", bwKHz) || !(bwKHz >= 1.0 && bwKHz <= 510.0)) {
+        reason = "bwKHz-out-of-range";
+        return false;
+    }
+    if (!jsonFindNumber(json, "sf", sf) || !(sf >= 5.0 && sf <= 12.0)) {
+        reason = "sf-out-of-range-5-12";
+        return false;
+    }
+    if (!jsonFindNumber(json, "cr", cr) || !(cr >= 5.0 && cr <= 8.0)) {
+        reason = "cr-out-of-range-5-8";
+        return false;
+    }
+    if (!jsonFindNumber(json, "syncWord", syncWord) || !(syncWord >= 0.0 && syncWord <= 255.0)) {
+        reason = "syncWord-out-of-range-0-255";
+        return false;
+    }
+    if (!jsonFindNumber(json, "txPowerDbm", txPowerDbm) || !(txPowerDbm >= -9.0 && txPowerDbm <= 22.0)) {
+        reason = "txPowerDbm-out-of-range-minus9-22";
+        return false;
+    }
+    out.freqMHz = static_cast<float>(freqMHz);
+    out.bwKHz = static_cast<float>(bwKHz);
+    out.sf = static_cast<uint8_t>(sf);
+    out.cr = static_cast<uint8_t>(cr);
+    out.syncWord = static_cast<uint8_t>(syncWord);
+    out.txPowerDbm = static_cast<int8_t>(txPowerDbm);
+    return true;
+}
+
 void dispatchSerialCommand(const pgl::ch::ChSerialCommand& cmd) {
     using T = pgl::ch::ChSerialCommandType;
     switch (cmd.type) {
@@ -2321,18 +2553,54 @@ void dispatchSerialCommand(const pgl::ch::ChSerialCommand& cmd) {
             ESP.restart();
             break;
         }
-        case T::SetRootGatewayJson:
-            emitCmdAck("SET_ROOT_GATEWAY_JSON", "unsupported",
-                       "root gateway id is a build-time constant (PGL_CH_ROOT_GATEWAY_ID)");
+        case T::SetRootGatewayJson: {
+            uint16_t requestedGw = 0;
+            if (!parseGatewayIdJson(cmd.payload, requestedGw)) {
+                emitCmdAck("SET_ROOT_GATEWAY_JSON", "error",
+                           "invalid-gatewayId-use-four-hex-node-id-not-chId");
+                break;
+            }
+            if (!saveRootGateway(requestedGw)) {
+                emitCmdAck("SET_ROOT_GATEWAY_JSON", "error", "nvs-write-or-readback-failed");
+                break;
+            }
+            emitCmdAck("SET_ROOT_GATEWAY_JSON", "ok", "saved-verified-restarting");
+            serviceDelay(250);
+            ESP.restart();
             break;
-        case T::SetStarLoraJson:
-            emitCmdAck("SET_STAR_LORA_JSON", "unsupported",
-                       "STAR LoRa params are build-time (LoraStarConfig.h)");
+        }
+        case T::SetStarLoraJson: {
+            LoraConfigValues cfg{};
+            const char* reason = "invalid-json-or-missing-fields";
+            if (!parseLoraConfigJson(cmd.payload, cfg, reason)) {
+                emitCmdAck("SET_STAR_LORA_JSON", "error", reason);
+                break;
+            }
+            if (!saveLoraConfig("star", cfg)) {
+                emitCmdAck("SET_STAR_LORA_JSON", "error", "nvs-write-or-readback-failed");
+                break;
+            }
+            emitCmdAck("SET_STAR_LORA_JSON", "ok", "saved-verified-restarting");
+            serviceDelay(250);
+            ESP.restart();
             break;
-        case T::SetMeshLoraJson:
-            emitCmdAck("SET_MESH_LORA_JSON", "unsupported",
-                       "MESH LoRa params are build-time (LoraMeshConfig.h)");
+        }
+        case T::SetMeshLoraJson: {
+            LoraConfigValues cfg{};
+            const char* reason = "invalid-json-or-missing-fields";
+            if (!parseLoraConfigJson(cmd.payload, cfg, reason)) {
+                emitCmdAck("SET_MESH_LORA_JSON", "error", reason);
+                break;
+            }
+            if (!saveLoraConfig("mesh", cfg)) {
+                emitCmdAck("SET_MESH_LORA_JSON", "error", "nvs-write-or-readback-failed");
+                break;
+            }
+            emitCmdAck("SET_MESH_LORA_JSON", "ok", "saved-verified-restarting");
+            serviceDelay(250);
+            ESP.restart();
             break;
+        }
         case T::Unknown:
             emitCmdAck("UNKNOWN", "error", "unrecognized-command");
             break;
@@ -2374,6 +2642,15 @@ void setup() {
               pgl::ch::board::PIN_SPI_MOSI);
 
     loadChIdentity();
+    loadRootGateway();
+    LoraConfigValues starCfg{STAR_FREQ_MHZ, STAR_BW_KHZ, STAR_SF, STAR_CR, STAR_SYNC_WORD, STAR_TX_POWER_DBM};
+    loadLoraConfig("star", starCfg);
+    STAR_FREQ_MHZ = starCfg.freqMHz; STAR_BW_KHZ = starCfg.bwKHz; STAR_SF = starCfg.sf;
+    STAR_CR = starCfg.cr; STAR_SYNC_WORD = starCfg.syncWord; STAR_TX_POWER_DBM = starCfg.txPowerDbm;
+    LoraConfigValues meshCfg{MESH_FREQ_MHZ, MESH_BW_KHZ, MESH_SF, MESH_CR, MESH_SYNC_WORD, MESH_TX_POWER_DBM};
+    loadLoraConfig("mesh", meshCfg);
+    MESH_FREQ_MHZ = meshCfg.freqMHz; MESH_BW_KHZ = meshCfg.bwKHz; MESH_SF = meshCfg.sf;
+    MESH_CR = meshCfg.cr; MESH_SYNC_WORD = meshCfg.syncWord; MESH_TX_POWER_DBM = meshCfg.txPowerDbm;
     printBootHeader();
     loadParents();
     updateRuntimeParent(parentId);

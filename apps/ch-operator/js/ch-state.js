@@ -41,7 +41,12 @@ export const state = {
 
   // Live device snapshot, assembled from CH_* log lines and/or CH_*_JSON.
   info: { chId: "", rootGatewayId: "", firmwareVersion: "", protocolVersion: "", caps: "" },
-  status: { state: "", stateReason: "", batteryMv: null, uptimeSec: null, parentId: "", parentRssi: null, parentSnr: null, meshDepth: null },
+  status: { state: "", stateReason: "", batteryMv: null, uptimeSec: null, parentId: "", parentRssi: null, parentSnr: null, meshDepth: null,
+    // Approximate last-contact time with the active parent (hello ack or a
+    // fresh CH_PARENT_SELECT), used only to estimate the firmware's own
+    // PARENT_HEALTH_TIMEOUT_MS countdown - not the exact value the firmware
+    // tracks internally, since that also updates on frames this app can't see.
+    parentLastSeenAt: null },
   nodes: new Map(),   // key: nodeId hex -> { nodeId, seq, alarm, extPower, unsent, ageMs, seenAt, rssi, snr }
   parents: new Map(), // key: candidate id hex -> { id, parent, depth, rssi, snr, battMv, caps, seenAt }
   battHistory: [],
@@ -54,10 +59,16 @@ export const state = {
   // intervalMs/jitterMs come from the boot-time CH_ACK_PROFILE line;
   // failureCount/threshold come from CH_HELLO_ACK_REPROBE once the CH has
   // ever missed a hello ack.
-  hello: { lastTxAt: null, nextDueAt: null, intervalMs: null, jitterMs: null, failureCount: 0, threshold: null },
+  // lastResult tracks the outcome of the most recent hello attempt:
+  // "waiting" (sent, ack pending), "ack" (parent answered), or "failed"
+  // (retries exhausted, will reprobe or has triggered failover).
+  hello: { lastTxAt: null, nextDueAt: null, intervalMs: null, jitterMs: null, healthTimeoutMs: null,
+    failureCount: 0, threshold: null, lastResult: null, lastResultAt: null },
   // CH_CONFIG_REQUEST (parent discovery) countdown. Only fires while JOINING
   // or PARENT_FAILOVER - once JOINED there is nothing left to search for.
-  configSearch: { lastTxAt: null, nextDueAt: null, active: false },
+  // lastResult mirrors the most recent CH_PARENT_SELECT outcome: "found"
+  // (a parent was selected) or "no-candidate" (window closed, nobody heard).
+  configSearch: { lastTxAt: null, nextDueAt: null, active: false, lastResult: null, lastResultAt: null, lastResultParent: null },
   // Last MSG_SERVER_PULL_REQUEST this CH observed (served or relayed). This
   // CH never originates one - only the Gateway does - so this is read-only
   // telemetry, not a command the operator can trigger from this app.
@@ -79,9 +90,9 @@ const ELEMENT_IDS = [
   "settingsBtn", "portSetupBtn", "themeToggleBtn",
   "banner", "bannerText", "bannerDismiss",
   "refreshOverviewBtn", "pollToggleBtn",
-  "ovState", "ovStateReason", "ovBatt", "ovUptime", "ovNodeCount", "ovNodeUnsent",
+  "ovStateHeadline", "ovStateDetail", "ovBatt", "ovUptime", "ovNodeCount", "ovNodeUnsent",
   "ovChId", "ovRootGw", "ovFirmware", "ovProtocol", "ovCaps",
-  "ovHelloCountdown", "ovHelloFailures", "ovConfigCountdown",
+  "ovHelloLast", "ovHelloCountdown", "ovHelloFailures", "ovConfigLast", "ovConfigCountdown",
   "ovParent", "ovParentRssi", "ovParentSnr", "ovDepth", "battChart",
   "starBeginStatus", "starFreqValue", "starBwSfCr", "starSyncValue",
   "meshBeginStatus", "meshFreqValue", "meshBwSfCr", "meshSyncValue",

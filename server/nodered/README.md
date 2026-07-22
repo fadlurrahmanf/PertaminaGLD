@@ -44,7 +44,9 @@ Flow menyediakan:
 - `gld/server/decoded`
 - `gld/server/alarm`
 - `gld/server/integrity` untuk record yang gagal autentikasi/validasi
-- `gld/server/replay` untuk duplicate atau sequence di luar replay window
+- `gld/server/replay` hanya untuk encrypted record yang benar-benar identik
+  atau pemakaian ulang nonce AES-GCM; sequence GLD yang turun, sama, wrap, atau
+  reset setelah reboot tetap diterima bila nonce dan ciphertext-nya baru
 - `gld/server/test` untuk input HTTP manual/test yang terautentikasi tetapi
   tidak boleh masuk alarm produksi
 - `gld/gateway/error`
@@ -117,8 +119,10 @@ yang benar-benar terisolasi. Flow tidak lagi membuat broker Aedes anonim.
 Flow wajib menerima `GLD_AES128_KEY_HEX`, `PGL_COMMAND_AUTH_TOKEN`, dan token
 Admin API Node-RED dari environment/secret store. Jika key kosong, decrypt GLD
 dan builder downlink authenticated ditolak eksplisit. Replay state disimpan
-atomik ke `PGL_REPLAY_STATE_PATH` agar restart Node-RED tidak membuka replay
-window kembali. Deploy memakai API v2/revision checking dan tidak menimpa
+atomik ke `PGL_REPLAY_STATE_PATH` agar restart Node-RED tetap mengingat encrypted
+record yang sudah pernah diterima. Sequence 8-bit hanya dipakai sebagai status
+observasi karena restart/wrap tidak boleh membuat data autentik ditolak. Deploy
+memakai API v2/revision checking dan tidak menimpa
 credential node lain; credential baru hanya dikirim inline ke node miliknya.
 
 Gunakan `node server/nodered/apply-pertamina-gld-flow.js --check` dan

@@ -287,7 +287,7 @@ for (const [clusterIdHex, event] of Object.entries(topology.discovery || {})) {
     layerLabel: "Discovery",
     route: [],
     routeText: directGatewayCandidate ? topology.gatewayIdHex + " -> " + clusterIdHex + " (pending)" : "installed route pending",
-    requestPayload: null,
+    requestPayload: directGatewayCandidate ? { requestId: 1, hopList: [clusterIdHex] } : null,
     lastHop: clusterIdHex,
     report: event.report,
     rssi: directGatewayCandidate ? gatewayRssi : undefined,
@@ -388,6 +388,98 @@ for (const node of nodes) {
   }
 }
 
+const gldRequestTimeoutMs = Number(env.get("PGL_GLD_REQUEST_TIMEOUT_MS") || "20000");
+const gldDiscoveryRaw = flow.get("pglGldDiscovery") || {};
+const gldDiscovery = {};
+const nowMsGld = Date.now();
+for (const [chIdHex, entry] of Object.entries(gldDiscoveryRaw)) {
+  const requestedAtMs = Date.parse(entry.requestedAt || "");
+  const requestedAgeSec = Number.isFinite(requestedAtMs) ? Math.round((nowMsGld - requestedAtMs) / 1000) : undefined;
+  const statusDisplay = entry.status === "sent" && requestedAgeSec !== undefined && requestedAgeSec * 1000 > gldRequestTimeoutMs
+    ? "timeout"
+    : (entry.status || "idle");
+  const devices = Object.values(entry.devices || {})
+    .map((device) => {
+      const lastSeenAtMs = Date.parse(device.lastSeenAt || "");
+      return Object.assign({}, device, {
+        lastSeenAgeSec: Number.isFinite(lastSeenAtMs) ? Math.round((nowMsGld - lastSeenAtMs) / 1000) : undefined
+      });
+    })
+    .sort((a, b) => String(a.nodeIdHex).localeCompare(String(b.nodeIdHex)));
+  gldDiscovery[chIdHex] = {
+    ch: chIdHex,
+    status: statusDisplay,
+    requestId: entry.requestId,
+    hopList: entry.hopList || [],
+    requestedAt: entry.requestedAt || null,
+    requestedAgeSec,
+    respondedAt: entry.respondedAt || null,
+    recordCount: entry.recordCount,
+    chBatteryMv: entry.chBatteryMv,
+    responseStatus: entry.responseStatus,
+    deviceCount: devices.length,
+    devices
+  };
+}
+
+const latestGldAttachment = new Map();
+for (const [chIdHex, entry] of Object.entries(gldDiscovery)) {
+  if (!nodeById.has(chIdHex)) continue;
+  for (const device of entry.devices || []) {
+    const key = String(device.nodeIdHex || "");
+    if (!key) continue;
+    const seenMs = Date.parse(device.lastSeenAt || "") || 0;
+    const current = latestGldAttachment.get(key);
+    if (!current || seenMs > current.seenMs) {
+      latestGldAttachment.set(key, { chIdHex, device, seenMs });
+    }
+  }
+}
+
+let gldNodeCount = 0;
+for (const { chIdHex, device } of latestGldAttachment.values()) {
+    const parentNode = nodeById.get(chIdHex);
+    const topologyNodeId = "gld:" + chIdHex + ":" + device.nodeIdHex;
+    const layer = Number.isFinite(Number(parentNode.layer)) ? Number(parentNode.layer) + 1 : null;
+    const node = {
+      id: topologyNodeId,
+      type: "gld",
+      label: "GLD " + device.nodeIdHex,
+      parent: chIdHex,
+      layer,
+      layerLabel: layer === null ? "GLD" : "Layer " + layer + " / GLD",
+      status: device.alarm ? "alarm" : "online",
+      nodeIdHex: device.nodeIdHex,
+      chIdHex,
+      gasClass: device.gasClass,
+      gasName: device.gasName,
+      confidence: device.confidence,
+      batteryMv: device.batteryMv,
+      alarm: Boolean(device.alarm),
+      externalPower: Boolean(device.externalPower),
+      seq: device.seq,
+      decryptOk: device.decryptOk,
+      lastSeenAt: device.lastSeenAt,
+      lastSeenAgeSec: device.lastSeenAgeSec
+    };
+    nodes.push(node);
+    nodeById.set(topologyNodeId, node);
+    edges.push({
+      from: chIdHex,
+      to: topologyNodeId,
+      label: chIdHex + " -> " + device.nodeIdHex,
+      role: "gld"
+    });
+    gldNodeCount++;
+}
+
+nodes.sort((a, b) => {
+  const da = a.layer === null ? 99 : a.layer;
+  const db = b.layer === null ? 99 : b.layer;
+  if (da !== db) return da - db;
+  return String(a.id).localeCompare(String(b.id));
+});
+
 msg.headers = { "content-type": "application/json; charset=utf-8" };
 msg.payload = {
   ok: true,
@@ -403,10 +495,12 @@ msg.payload = {
   alternateEdgeCount: edges.filter((edge) => edge.role === "alternate").length,
   pendingEdgeCount: edges.filter((edge) => edge.role === "pending").length,
   discoveryCount: Object.keys(topology.discovery || {}).length,
+  gldNodeCount,
   nodes,
   edges,
   routes: publicRoutes,
-  discovery: topology.discovery || {}
+  discovery: topology.discovery || {},
+  gldDiscovery
 };
 return msg;`;
 
@@ -429,6 +523,8 @@ const topology = {
   resetAt
 };
 flow.set("pglTopology", topology);
+flow.set("pglGldDiscovery", {});
+flow.set("pglGldRequestIndex", {});
 
 msg.headers = { "content-type": "application/json; charset=utf-8" };
 msg.payload = {
@@ -445,6 +541,7 @@ msg.payload = {
   mainEdgeCount: 0,
   alternateEdgeCount: 0,
   discoveryCount: 0,
+  gldNodeCount: 0,
   nodes: [{
     id: gatewayIdHex,
     label: "GW",
@@ -459,7 +556,8 @@ msg.payload = {
   edges: [],
   routes: {},
   discovery: {},
-  gatewayLinks: {}
+  gatewayLinks: {},
+  gldDiscovery: {}
 };
 return msg;`;
 
@@ -517,22 +615,80 @@ if (!clusterIdHex) {
 }
 
 const topology = flow.get("pglTopology") || {};
-const route = topology.routes && Array.isArray(topology.routes[clusterIdHex]) ? topology.routes[clusterIdHex] : [];
+let route = topology.routes && Array.isArray(topology.routes[clusterIdHex]) ? topology.routes[clusterIdHex] : [];
+if (route.length === 0) {
+  const directGatewayMinRssiDbm = Number(env.get("PGL_GATEWAY_DIRECT_PARENT_MIN_RSSI_DBM") || "-95");
+  const directGatewayMinSnrDb = Number(env.get("PGL_GATEWAY_DIRECT_PARENT_MIN_SNR_DB") || "5");
+  const gatewayLink = (topology.gatewayLinks || {})[clusterIdHex];
+  const isDirectCandidate = gatewayLink &&
+    Number.isFinite(Number(gatewayLink.rssi)) &&
+    Number.isFinite(Number(gatewayLink.snr)) &&
+    Number(gatewayLink.rssi) >= directGatewayMinRssiDbm &&
+    Number(gatewayLink.snr) >= directGatewayMinSnrDb;
+  if (isDirectCandidate) {
+    route = [clusterIdHex];
+  }
+}
 if (route.length === 0) {
   msg.statusCode = 409;
   msg.payload = { ok: false, reason: "route-not-installed", ch: clusterIdHex };
   return [null, msg];
 }
 
-const requestId = Date.now() & 0xFFFF;
+const requestCorrelationTtlMs = Number(env.get("PGL_GLD_REQUEST_CORRELATION_TTL_MS") || "120000");
+const requestIndex = flow.get("pglGldRequestIndex") || {};
+const requestNowMs = Date.now();
+for (const [key, entry] of Object.entries(requestIndex)) {
+  const requestedAtMs = Date.parse(entry && entry.requestedAt || "");
+  if (Number.isFinite(requestedAtMs) && requestNowMs - requestedAtMs > requestCorrelationTtlMs) delete requestIndex[key];
+}
+let requestId = (requestNowMs & 0xFFFF) || 1;
+let requestIdAvailable = false;
+for (let guard = 0; guard < 0xFFFF; guard++) {
+  if (requestId !== 0 && !requestIndex[String(requestId)]) {
+    requestIdAvailable = true;
+    break;
+  }
+  requestId = (requestId + 1) & 0xFFFF;
+  if (requestId === 0) requestId = 1;
+}
+if (!requestIdAvailable) {
+  msg.statusCode = 503;
+  msg.payload = { ok: false, reason: "request-id-pool-exhausted", ch: clusterIdHex };
+  return [null, msg];
+}
+const requestedAt = new Date(requestNowMs).toISOString();
 const command = {
   requestId,
   hopList: route
 };
+requestIndex[String(requestId)] = {
+  requestId,
+  targetChIdHex: clusterIdHex,
+  hopList: route,
+  requestedAt
+};
+flow.set("pglGldRequestIndex", requestIndex);
 const mqttMsg = {
   topic: "gld/gateway/cmd/pull",
   payload: command
 };
+
+const gldDiscovery = flow.get("pglGldDiscovery") || {};
+const existingGldEntry = gldDiscovery[clusterIdHex] || {};
+gldDiscovery[clusterIdHex] = {
+  status: "sent",
+  requestId,
+  hopList: route,
+  requestedAt,
+  respondedAt: existingGldEntry.respondedAt || null,
+  recordCount: existingGldEntry.recordCount,
+  chBatteryMv: existingGldEntry.chBatteryMv,
+  responseStatus: existingGldEntry.responseStatus,
+  devices: existingGldEntry.devices || {}
+};
+flow.set("pglGldDiscovery", gldDiscovery);
+
 msg.headers = { "content-type": "application/json; charset=utf-8" };
 msg.payload = { ok: true, kind: "pgl-topology-request", ch: clusterIdHex, requestId, hopList: route };
 return [mqttMsg, msg];`;
@@ -625,6 +781,18 @@ msg.payload = \`<!doctype html>
       --node-bg: #10202a;
       --layer-pill-bg: rgba(56,189,248,.16);
     }
+    .node.gld {
+      --node-border: #a78bfa;
+      --node-accent: #a78bfa;
+      --node-bg: #1b172b;
+      --layer-pill-bg: rgba(167,139,250,.17);
+      min-height: 190px;
+    }
+    .node.gld.alarm {
+      --node-border: #ef4444;
+      --node-accent: #ef4444;
+      --node-bg: #2a1414;
+    }
     .node.pending {
       outline: 1px solid rgba(245,158,11,.85);
       outline-offset: 1px;
@@ -699,6 +867,7 @@ msg.payload = \`<!doctype html>
       border-top-color: var(--warn);
       border-top-style: dotted;
     }
+    .legend-line.gld { border-top-color: #a78bfa; }
     button {
       border: 1px solid #475569;
       background: #1f2937;
@@ -805,6 +974,146 @@ msg.payload = \`<!doctype html>
       color: var(--muted);
       font-size: 12px;
     }
+    .card-actions {
+      margin-top: 8px;
+      display: flex;
+      justify-content: flex-end;
+    }
+    .card-actions button {
+      padding: 4px 10px;
+      font-size: 11px;
+    }
+    .gld-section {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: minmax(260px, 1fr) minmax(420px, 2fr);
+      gap: 14px;
+    }
+    @media (max-width: 960px) {
+      .gld-section { grid-template-columns: 1fr; }
+    }
+    .gld-panel {
+      border: 1px solid #2b3036;
+      background: #11161c;
+      overflow: hidden;
+    }
+    .gld-panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 14px;
+      border-bottom: 1px solid #2b3036;
+    }
+    .gld-panel-header h2 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 650;
+    }
+    .gld-request-list {
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 420px;
+      overflow-y: auto;
+    }
+    .gld-request-item {
+      border: 1px solid #252b33;
+      border-radius: 8px;
+      padding: 10px 12px;
+      background: #151b22;
+    }
+    .gld-request-item .row1 {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .gld-request-item .ch-id { font-weight: 650; font-size: 13px; }
+    .gld-request-item .meta { color: var(--muted); font-size: 11px; line-height: 1.5; }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 650;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+    .status-badge.sent {
+      color: #93c5fd;
+      background: rgba(59,130,246,.16);
+      border-color: rgba(59,130,246,.4);
+    }
+    .status-badge.received {
+      color: #86efac;
+      background: rgba(34,197,94,.16);
+      border-color: rgba(34,197,94,.4);
+    }
+    .status-badge.timeout {
+      color: #fca5a5;
+      background: rgba(239,68,68,.16);
+      border-color: rgba(239,68,68,.4);
+    }
+    .status-badge.unsolicited,
+    .status-badge.idle {
+      color: var(--muted);
+      background: rgba(148,163,184,.12);
+      border-color: rgba(148,163,184,.3);
+    }
+    .spinner {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      border: 2px solid rgba(147,197,253,.35);
+      border-top-color: #93c5fd;
+      animation: gldSpin .8s linear infinite;
+    }
+    @keyframes gldSpin {
+      to { transform: rotate(360deg); }
+    }
+    .gld-empty {
+      padding: 13px 14px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .gld-table-wrap { overflow-x: auto; }
+    .gld-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      min-width: 760px;
+    }
+    .gld-table th,
+    .gld-table td {
+      padding: 9px 12px;
+      border-bottom: 1px solid #252b33;
+      text-align: left;
+      vertical-align: top;
+    }
+    .gld-table th {
+      color: #d1d5db;
+      background: #151b22;
+      font-weight: 650;
+    }
+    .gld-table td { color: var(--muted); }
+    .gld-table tr:last-child td { border-bottom: 0; }
+    .gld-table .payload-hex {
+      font-family: "Consolas", "Menlo", monospace;
+      font-size: 11px;
+      color: #9ca3af;
+      max-width: 240px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      display: inline-block;
+      vertical-align: bottom;
+    }
+    .gld-table .alarm-yes { color: #fca5a5; font-weight: 650; }
   </style>
 </head>
 <body>
@@ -822,6 +1131,7 @@ msg.payload = \`<!doctype html>
         <span class="legend-item"><span class="legend-line"></span>Main Parent</span>
         <span class="legend-item"><span class="legend-line alt"></span>Alternative Parent</span>
         <span class="legend-item"><span class="legend-line pending"></span>Pending Parent</span>
+        <span class="legend-item"><span class="legend-line gld"></span>CH ke GLD</span>
       </div>
       <div class="actions">
         <button id="refresh">Refresh</button>
@@ -840,6 +1150,22 @@ msg.payload = \`<!doctype html>
       </div>
       <div id="pendingDetails"></div>
     </section>
+    <section class="gld-section">
+      <div class="gld-panel">
+        <div class="gld-panel-header">
+          <h2>Request GLD Discovery</h2>
+          <div class="pending-count" id="gldRequestCount">0 request</div>
+        </div>
+        <div id="gldRequestList" class="gld-request-list"></div>
+      </div>
+      <div class="gld-panel">
+        <div class="gld-panel-header">
+          <h2>GLD Terdiscover</h2>
+          <div class="pending-count" id="gldDeviceCount">0 GLD</div>
+        </div>
+        <div id="gldDeviceDetails"></div>
+      </div>
+    </section>
   </main>
   <script>
     const canvas = document.getElementById("canvas");
@@ -849,6 +1175,10 @@ msg.payload = \`<!doctype html>
     const summaryEl = document.getElementById("summary");
     const pendingDetailsEl = document.getElementById("pendingDetails");
     const pendingCountEl = document.getElementById("pendingCount");
+    const gldRequestListEl = document.getElementById("gldRequestList");
+    const gldRequestCountEl = document.getElementById("gldRequestCount");
+    const gldDeviceDetailsEl = document.getElementById("gldDeviceDetails");
+    const gldDeviceCountEl = document.getElementById("gldDeviceCount");
     const resetButton = document.getElementById("resetRouting");
     const resetLayoutButton = document.getElementById("resetLayout");
     const nodeSignals = new Map();
@@ -1062,7 +1392,7 @@ msg.payload = \`<!doctype html>
         line.setAttribute("y1", anchor.y1);
         line.setAttribute("x2", anchor.x2);
         line.setAttribute("y2", anchor.y2);
-        line.setAttribute("stroke", edge.role === "alternate" ? "#f59e0b" : (edge.role === "pending" ? "#f59e0b" : "#38bdf8"));
+        line.setAttribute("stroke", edge.role === "gld" ? "#a78bfa" : (edge.role === "alternate" ? "#f59e0b" : (edge.role === "pending" ? "#f59e0b" : "#38bdf8")));
         line.setAttribute("stroke-width", edge.role === "main" ? "3" : "2");
         if (edge.role === "alternate") {
           line.setAttribute("stroke-dasharray", "7 7");
@@ -1080,6 +1410,7 @@ msg.payload = \`<!doctype html>
       let pointerStartY = 0;
       div.addEventListener("pointerdown", (event) => {
         if (event.button !== undefined && event.button !== 0) return;
+        if (event.target.closest("button")) return;
         const pos = currentPositions[nodeId];
         if (!pos) return;
         event.preventDefault();
@@ -1140,6 +1471,82 @@ msg.payload = \`<!doctype html>
       return [...groups.entries()].sort((a, b) => a[0] - b[0]);
     }
 
+    function gldStatusLabel(status) {
+      switch (status) {
+        case "sent": return "Mengirim / menunggu respon";
+        case "received": return "Diterima";
+        case "timeout": return "Timeout, tidak ada respon";
+        case "unsolicited": return "Data masuk tanpa request";
+        default: return status || "-";
+      }
+    }
+
+    function renderGldRequests(gldDiscovery) {
+      const entries = Object.values(gldDiscovery || {}).sort((a, b) => {
+        const ta = Date.parse(a.requestedAt || a.respondedAt || 0) || 0;
+        const tb = Date.parse(b.requestedAt || b.respondedAt || 0) || 0;
+        return tb - ta;
+      });
+      gldRequestCountEl.textContent = entries.length + " CH";
+      if (entries.length === 0) {
+        gldRequestListEl.innerHTML = '<div class="gld-empty">Belum ada request GLD dikirim.</div>';
+        return;
+      }
+      gldRequestListEl.innerHTML = entries.map((entry) => {
+        const status = entry.status || "idle";
+        const spinner = status === "sent" ? '<span class="spinner"></span>' : "";
+        return '<div class="gld-request-item">' +
+          '<div class="row1"><span class="ch-id">' + escapeHtml(entry.ch) + '</span>' +
+          '<span class="status-badge ' + escapeHtml(status) + '">' + spinner + escapeHtml(gldStatusLabel(status)) + '</span></div>' +
+          '<div class="meta">Request ID: ' + escapeHtml(entry.requestId ?? "-") + ' | Hop: ' + escapeHtml((entry.hopList || []).join(" -> ") || "-") + '</div>' +
+          '<div class="meta">Dikirim: ' + escapeHtml(entry.requestedAt ? ageLabel(entry.requestedAgeSec) : "-") + '</div>' +
+          '<div class="meta">Direspon: ' + escapeHtml(entry.respondedAt || "-") + (entry.recordCount !== undefined ? " | " + entry.recordCount + " record" : "") + '</div>' +
+          '</div>';
+      }).join("");
+    }
+
+    function renderGldDevices(gldDiscovery) {
+      const latestByNodeId = new Map();
+      for (const entry of Object.values(gldDiscovery || {})) {
+        for (const device of entry.devices || []) {
+          const row = Object.assign({ ch: entry.ch }, device);
+          const nodeIdHex = String(device.nodeIdHex || "");
+          if (!nodeIdHex) continue;
+          const current = latestByNodeId.get(nodeIdHex);
+          const rowSeenMs = Date.parse(row.lastSeenAt || 0) || 0;
+          const currentSeenMs = current ? (Date.parse(current.lastSeenAt || 0) || 0) : -1;
+          if (!current || rowSeenMs > currentSeenMs) latestByNodeId.set(nodeIdHex, row);
+        }
+      }
+      const rows = [...latestByNodeId.values()];
+      rows.sort((a, b) => (Date.parse(b.lastSeenAt || 0) || 0) - (Date.parse(a.lastSeenAt || 0) || 0));
+      gldDeviceCountEl.textContent = rows.length + " GLD";
+      if (rows.length === 0) {
+        gldDeviceDetailsEl.innerHTML = '<div class="gld-empty">Belum ada GLD yang terdiscover.</div>';
+        return;
+      }
+      gldDeviceDetailsEl.innerHTML =
+        '<div class="gld-table-wrap"><table class="gld-table"><thead><tr>' +
+        '<th>CH</th><th>GLD</th><th>Gas</th><th>Confidence</th><th>Battery</th><th>Alarm</th><th>Last Seen</th><th>Decoded Payload</th>' +
+        '</tr></thead><tbody>' +
+        rows.map((device) => {
+          const decodedSummary = device.decryptOk === false
+            ? "gagal decode"
+            : (device.gasName || "-") + " | conf " + (device.confidence ?? "-") + "%";
+          return '<tr>' +
+            '<td>' + escapeHtml(device.ch) + '</td>' +
+            '<td>' + escapeHtml(device.nodeIdHex) + '</td>' +
+            '<td>' + escapeHtml(device.gasName || "-") + '</td>' +
+            '<td>' + escapeHtml(device.confidence ?? "-") + '%</td>' +
+            '<td>' + escapeHtml(device.batteryMv !== undefined && device.batteryMv !== null ? device.batteryMv + " mV" : "-") + '</td>' +
+            '<td>' + (device.alarm ? '<span class="alarm-yes">YA</span>' : "tidak") + '</td>' +
+            '<td>' + escapeHtml(ageLabel(device.lastSeenAgeSec)) + '</td>' +
+            '<td><span class="payload-hex" title="' + escapeHtml(decodedSummary + " | " + (device.plaintextHex || "-")) + '">' + escapeHtml(decodedSummary) + '</span></td>' +
+            '</tr>';
+        }).join("") +
+        '</tbody></table></div>';
+    }
+
     function draw(data) {
       nodesEl.innerHTML = "";
       linksEl.innerHTML = "";
@@ -1148,7 +1555,7 @@ msg.payload = \`<!doctype html>
       const manualLayout = loadManualLayout();
       currentEdges = edges;
       currentPositions = {};
-      summaryEl.textContent = data.nodeCount + " node, " + (data.mainEdgeCount ?? data.edgeCount) + " main link, " + (data.alternateEdgeCount || 0) + " alt link, " + (data.pendingEdgeCount || 0) + " pending link, " + (data.discoveryCount || 0) + " discovery";
+      summaryEl.textContent = data.nodeCount + " node (" + (data.gldNodeCount || 0) + " GLD), " + (data.mainEdgeCount ?? data.edgeCount) + " main link, " + (data.alternateEdgeCount || 0) + " alt link, " + (data.pendingEdgeCount || 0) + " pending link, " + (data.discoveryCount || 0) + " discovery";
       statusEl.textContent = "Topology: " + (data.topologyUpdatedAt || data.updatedAt || "belum ada topology event") +
         " | Live: " + (data.liveUpdatedAt || "belum ada live event");
       if (data.resetAt && nodes.length <= 1) {
@@ -1158,10 +1565,12 @@ msg.payload = \`<!doctype html>
         nodesEl.innerHTML = '<div class="empty">Belum ada CH route. Tunggu CH_CONFIG/CH_HELLO masuk dari Gateway.</div>';
       }
       renderPendingTable(nodes);
+      renderGldRequests(data.gldDiscovery);
+      renderGldDevices(data.gldDiscovery);
 
       const groups = groupByDepth(nodes);
       const width = Math.max(canvas.clientWidth, 760);
-      const rowGap = 270;
+      const rowGap = 360;
       const top = 56;
       for (const [layer, items] of groups) {
         items.sort((a, b) => String(a.id).localeCompare(String(b.id)));
@@ -1190,19 +1599,33 @@ msg.payload = \`<!doctype html>
           const shouldFlash = hasRendered && node.type === "ch" && previousSignal !== undefined && previousSignal !== signal;
           nodeSignals.set(node.id, signal);
           div.className = "node " + node.type + " " + node.status + (shouldFlash ? " updated" : "");
-          applyLayerStyle(div, node);
+          if (node.type !== "gld") applyLayerStyle(div, node);
           div.style.left = x + "px";
           div.style.top = y + "px";
           const metric = node.type === "gateway"
             ? "root"
-            : (node.linkQualityLabel || ("RSSI to Parent: " + (node.rssi ?? "-") + " dBm, SNR " + (node.snr ?? "-") + " dB"));
+            : (node.type === "gld"
+              ? "terdiscover di " + (node.chIdHex || node.parent || "-")
+              : (node.linkQualityLabel || ("RSSI to Parent: " + (node.rssi ?? "-") + " dBm, SNR " + (node.snr ?? "-") + " dB")));
+
           const gatewayMetric = node.type === "gateway"
             ? ""
             : (node.gatewayQualityLabel || "RSSI to Gateway: belum ada");
           const ageMetric = node.type === "gateway"
             ? ""
             : ("last update: " + (node.lastSeenAgeSec !== undefined ? node.lastSeenAgeSec + "s ago" : "belum ada"));
-          div.innerHTML =
+          div.innerHTML = node.type === "gld"
+            ? '<div class="title">' + escapeHtml(node.label || "-") + '</div>' +
+              '<div class="layer">' + escapeHtml(node.layerLabel || "GLD") + '</div>' +
+              '<div class="row">CH: ' + escapeHtml(node.chIdHex || node.parent || "-") + '</div>' +
+              '<div class="row">gas: ' + escapeHtml(node.gasName || "-") + ' (class ' + escapeHtml(node.gasClass ?? "-") + ')</div>' +
+              '<div class="row">confidence: ' + escapeHtml(node.confidence ?? "-") + '%</div>' +
+              '<div class="row">battery: ' + escapeHtml(node.batteryMv !== undefined && node.batteryMv !== null ? node.batteryMv + " mV" : "-") + '</div>' +
+              '<div class="row">power: ' + (node.externalPower ? "external" : "battery") + '</div>' +
+              '<div class="row">alarm: ' + (node.alarm ? "YA" : "tidak") + '</div>' +
+              '<div class="row">seq: ' + escapeHtml(node.seq ?? "-") + ' | decode: ' + (node.decryptOk === false ? "gagal" : "OK") + '</div>' +
+              '<div class="row">last seen: ' + escapeHtml(ageLabel(node.lastSeenAgeSec)) + '</div>'
+            :
             '<div class="title">' + escapeHtml(node.label || "-") + '</div>' +
             '<div class="layer">' + escapeHtml(node.layerLabel || ("Layer " + (node.layer ?? "?"))) + '</div>' +
             '<div class="row">parent: ' + escapeHtml(node.parent || "-") + '</div>' +
@@ -1213,7 +1636,10 @@ msg.payload = \`<!doctype html>
             '<div class="row" title="' + escapeHtml(gatewayMetric) + '">' + escapeHtml(gatewayMetric) + '</div>' +
             '<div class="row" title="' + escapeHtml(ageMetric) + '">' + escapeHtml(ageMetric) + '</div>' +
             '<div class="row">status: ' + escapeHtml(node.status || "-") + '</div>' +
-            '<div class="route">' + escapeHtml(node.routeText || "") + '</div>';
+            '<div class="route">' + escapeHtml(node.routeText || "") + '</div>' +
+            (node.type === "ch"
+              ? '<div class="card-actions"><button class="table-action" data-action="request" data-node-id="' + escapeHtml(node.id || "") + '"' + (node.requestPayload ? "" : " disabled") + '>Request GLD</button></div>'
+              : "");
           attachDrag(div, node.id);
           nodesEl.appendChild(div);
         });
@@ -1286,6 +1712,13 @@ msg.payload = \`<!doctype html>
       }
     }
     document.getElementById("refresh").addEventListener("click", refresh);
+    nodesEl.addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-action][data-node-id]");
+      if (!button) return;
+      if (button.dataset.action === "request") {
+        requestNode(button.dataset.nodeId, button);
+      }
+    });
     pendingDetailsEl.addEventListener("click", (event) => {
       const button = event.target.closest("button[data-action][data-node-id]");
       if (!button) return;
@@ -1664,18 +2097,22 @@ const nodes = [
 const outer = p.outer || {};
 const response = outer.response || {};
 const msgTypeHex = outer.msgType !== undefined ? "0x" + Number(outer.msgType).toString(16).toUpperCase().padStart(2, "0") : undefined;
+const ownerChIdHex = outer.response ? outer.responseTargetChIdHex : outer.srcIdHex;
 const route = outer.srcIdHex && outer.dstIdHex ? outer.srcIdHex + " -> " + outer.dstIdHex : undefined;
 const responseText = msgTypeHex
-  ? msgTypeHex + " " + (outer.srcIdHex || "?") + " -> " + (outer.dstIdHex || "?") + " req=" + (response.requestId ?? "-") + " status=" + (response.status ?? "-") + " records=" + (response.recordCount ?? 0)
+  ? msgTypeHex + " owner=" + (ownerChIdHex || "?") + " via=" + (outer.srcIdHex || "?") + " -> " + (outer.dstIdHex || "?") + " req=" + (response.requestId ?? "-") + " status=" + (response.status ?? "-") + " records=" + (response.recordCount ?? 0)
   : undefined;
 const gasText = p.gasName
   ? p.gasName + " class=" + p.gasClass + " conf=" + p.confidence + "% batt=" + (p.batteryMv ?? "-") + "mV"
   : "no GLD record";
 msg.payload = {
-  summary: "GLD " + (p.nodeIdHex || "-") + " | req=" + (response.requestId ?? "-") + " | " + gasText,
+  summary: "GLD " + (p.nodeIdHex || "-") + " | CH=" + (ownerChIdHex || "-") + " | req=" + (response.requestId ?? "-") + " | " + gasText,
   response: responseText,
   route,
   nodeIdHex: p.nodeIdHex,
+  ownerChIdHex,
+  transportSrcIdHex: outer.srcIdHex,
+  responseCorrelation: outer.responseCorrelation,
   requestId: response.requestId,
   gasName: p.gasName,
   confidence: p.confidence,
@@ -1993,8 +2430,19 @@ if (hopList.some((hop) => hop === null)) {
   return null;
 }
 
+const requestId = Number(p.requestId || p.request_id || 1) & 0xFFFF;
+const requestedAt = new Date().toISOString();
+const requestIndex = flow.get('pglGldRequestIndex') || {};
+requestIndex[String(requestId)] = {
+  requestId,
+  targetChIdHex: hopList[hopList.length - 1],
+  hopList,
+  requestedAt
+};
+flow.set('pglGldRequestIndex', requestIndex);
+
 msg.payload = {
-  requestId: Number(p.requestId || p.request_id || 1),
+  requestId,
   hopList
 };
 return msg;`,
@@ -2223,9 +2671,14 @@ function backupIfExists(file, backupDir, timestamp) {
     throw new Error("Node-RED /flows must return the v2 envelope with rev and flows");
   }
   const currentFlows = current.flows;
+  const replacedTabIds = new Set(currentFlows
+    .filter((node) => node.type === "tab" && node.label === "Pertamina GLD Server")
+    .map((node) => String(node.id || "")));
   const kept = currentFlows.filter((node) => {
     const nodeId = String(node.id || "");
-    return !(nodeId.startsWith("pgl_") || nodeId === broker);
+    const parentTabId = String(node.z || "");
+    return !(nodeId.startsWith("pgl_") || nodeId === broker ||
+      replacedTabIds.has(nodeId) || replacedTabIds.has(parentTabId));
   });
   const merged = kept.concat(nodes);
 

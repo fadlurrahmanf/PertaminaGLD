@@ -95,11 +95,9 @@ ChRuntimeStatus processGldStarFrame(
     size_t ackCapacity,
     ChRuntimeProcessResult& out) {
     out = {};
-    // Caching a GLD's STAR uplink only needs this CH's own id to be valid -
-    // it never touches meshDstId. Whether the CH has joined a MESH parent
-    // yet (meshDstId) is a separate, later concern: it only matters for the
-    // onward relay checked by canRelayToMesh below, so a CH sitting alone on
-    // a bench with no parent still ingests and caches every GLD it hears.
+    // Caching a GLD's STAR uplink only needs this CH's own id to be valid.
+    // Whether the CH has joined a MESH parent yet (meshDstId) is a separate,
+    // later concern: it only matters for onward relay.
     if (!pgl::config::isValidNodeId(config.chId)) {
         out.status = ChRuntimeStatus::InvalidConfig;
         return out.status;
@@ -111,6 +109,14 @@ ChRuntimeStatus processGldStarFrame(
     out.uplinkStatus = parseGldUplinkFrame(frame, frameLen, uplink);
     if (out.uplinkStatus != ChUplinkStatus::Ok) {
         out.status = ChRuntimeStatus::ParseFailed;
+        return out.status;
+    }
+
+    // STAR uses shared radio parameters, so nearby CH devices can physically
+    // hear the same GLD frame. Enforce the AppFrame destination before any
+    // cache, ACK, alarm, downlink, or relay state can be changed.
+    if (uplink.chId != config.chId) {
+        out.status = ChRuntimeStatus::DestinationMismatch;
         return out.status;
     }
 
@@ -358,6 +364,8 @@ const char* chRuntimeStatusName(ChRuntimeStatus status) {
             return "InvalidConfig";
         case ChRuntimeStatus::ParseFailed:
             return "ParseFailed";
+        case ChRuntimeStatus::DestinationMismatch:
+            return "DestinationMismatch";
         case ChRuntimeStatus::CacheFailed:
             return "CacheFailed";
         case ChRuntimeStatus::AlarmQueueFull:

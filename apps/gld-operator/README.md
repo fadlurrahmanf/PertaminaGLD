@@ -21,8 +21,11 @@ checkout that hasn't fetched the bundle).
 Open:
 
 ```text
-http://127.0.0.1:5173/
+http://127.0.0.1:5174/
 ```
+
+To run GLD, CH, and Gateway together behind one switcher UI instead, use
+`apps/operator-hub/run-operator-hub.bat` and open `http://127.0.0.1:5173/`.
 
 ### Rebuilding python-embed (maintainers only)
 
@@ -96,7 +99,7 @@ path needs a system Python since it does not go through `run-gld-operator.bat`:
 
 ```powershell
 cd D:\PertaminaGLD\apps\gld-operator
-python -m http.server 5173 --bind 127.0.0.1
+python -m http.server 5174 --bind 127.0.0.1
 ```
 
 In fallback mode the browser must show a COM permission dialog, cannot read the

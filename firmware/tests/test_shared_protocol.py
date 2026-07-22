@@ -1424,6 +1424,37 @@ def test_cpp_guard_scaffolds_are_present():
     assert "MQTT_UPLINK_QUEUE_CAPACITY" in gw_config
 
 
+def test_ch_runtime_rejects_foreign_star_destination_before_cache_or_actions():
+    runtime_header = pathlib.Path("firmware/ch/include/ChRuntime.h").read_text(encoding="utf-8")
+    runtime_src = pathlib.Path("firmware/ch/src/ChRuntime.cpp").read_text(encoding="utf-8")
+    runtime_main = pathlib.Path("firmware/ch/src/ChStarMeshRuntimeMain.cpp").read_text(encoding="utf-8")
+    simulation = pathlib.Path("firmware/tests/simulation/host_protocol_sim.cpp").read_text(encoding="utf-8")
+
+    assert "DestinationMismatch" in runtime_header
+    destination_guard = "if (uplink.chId != config.chId)"
+    assert destination_guard in runtime_src
+    assert runtime_src.index(destination_guard) < runtime_src.index("snapshotNodeCacheEntry(", runtime_src.index("processGldStarFrame("))
+    assert 'startStarReceive("after-star-reject")' in runtime_main
+    assert "status != pgl::ch::ChRuntimeStatus::Ok" in runtime_main
+    assert "CH_STAR_REJECT status=%s src=0x%04X dst=0x%04X local=0x%04X" in runtime_main
+    assert "CH-B rejects a valid GLD frame addressed to CH-A" in simulation
+    assert "Foreign-destination frame produces no ACK or relay action" in simulation
+
+
+def test_nodered_replay_policy_uses_authenticated_record_identity_not_sequence_order():
+    decoder = pathlib.Path("server/nodered/functions/pertamina-gld-decode.js").read_text(encoding="utf-8")
+
+    assert "REPLAY_STATE_VERSION = 2" in decoder
+    assert 'createHash("sha256")' in decoder
+    assert "event.keyId}:${event.nonceHex}" in decoder
+    assert "exact-encrypted-record-replay" in decoder
+    assert "aes-gcm-nonce-reuse" in decoder
+    assert "new-record-same-sequence" in decoder
+    assert "new-record-lower-sequence-or-restart" in decoder
+    assert "stale-sequence" not in decoder
+    assert "duplicate-sequence" not in decoder
+
+
 def test_invalid_payload_len_rejected_by_contract():
     assert GLD_ENCRYPTED_PAYLOAD_SIZE <= STAR_MAX_PAYLOAD
     assert 65 > STAR_MAX_PAYLOAD
@@ -1438,7 +1469,7 @@ def test_version_constants_format():
         assert re.fullmatch(r"\d+\.\d+\.\d+", version), version
 
     assert 'GLD_FIRMWARE_VERSION = "0.8.14"' in header
-    assert 'CH_FIRMWARE_VERSION = "0.7.2"' in header
+    assert 'CH_FIRMWARE_VERSION = "0.7.3"' in header
     assert 'GATEWAY_FIRMWARE_VERSION = "0.1.4"' in header
     assert 'PROTOCOL_VERSION = "0.2.0"' in header
     assert 'CONFIG_SCHEMA_VERSION = "0.1.0"' in header

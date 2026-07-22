@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
+#include <Preferences.h>
 #include <PubSubClient.h>
 #include <RadioLib.h>
 #include <SPI.h>
@@ -18,12 +19,116 @@
 
 namespace {
 
-constexpr const char* WIFI_SSID = pgl::config::gw::WIFI_SSID;
-constexpr const char* WIFI_PASSWORD = pgl::config::gw::WIFI_PASSWORD;
-constexpr const char* MQTT_HOST = pgl::config::gw::MQTT_HOST;
-constexpr uint16_t MQTT_PORT = pgl::config::gw::MQTT_PORT;
-constexpr const char* MQTT_USER = pgl::config::gw::MQTT_USER;
-constexpr const char* MQTT_PASSWORD = pgl::config::gw::MQTT_PASSWORD;
+// WiFi/MQTT site credentials start from the compile-time ServerConfig.h
+// defaults (loadDefaultNetConfig) but are overridden at boot by whatever was
+// last saved to NVS via SET_WIFI_CONFIG_JSON (loadNetConfig) - the Operator
+// can push new credentials without a reflash. GLD/CH have no equivalent; this
+// is Gateway-only because its WiFi/MQTT were previously reflash-only.
+struct RuntimeNetConfig {
+    char wifiSsid[33];
+    char wifiPassword[65];
+    char mqttHost[65];
+    uint16_t mqttPort;
+    char mqttUser[33];
+    char mqttPassword[65];
+    bool mqttEnabled;
+};
+
+RuntimeNetConfig netConfig{};
+Preferences netPrefs;
+constexpr uint32_t NET_CONFIG_MAGIC = 0x47574E31; // "GWN1"
+constexpr const char* NET_CONFIG_NAMESPACE = "gwnet";
+
+void copyBounded(char* dest, size_t destSize, const char* src) {
+    if (src == nullptr) {
+        dest[0] = '\0';
+        return;
+    }
+    strncpy(dest, src, destSize - 1);
+    dest[destSize - 1] = '\0';
+}
+
+void loadDefaultNetConfig() {
+    copyBounded(netConfig.wifiSsid, sizeof(netConfig.wifiSsid), pgl::config::gw::WIFI_SSID);
+    copyBounded(netConfig.wifiPassword, sizeof(netConfig.wifiPassword), pgl::config::gw::WIFI_PASSWORD);
+    copyBounded(netConfig.mqttHost, sizeof(netConfig.mqttHost), pgl::config::gw::MQTT_HOST);
+    netConfig.mqttPort = pgl::config::gw::MQTT_PORT;
+    copyBounded(netConfig.mqttUser, sizeof(netConfig.mqttUser), pgl::config::gw::MQTT_USER);
+    copyBounded(netConfig.mqttPassword, sizeof(netConfig.mqttPassword), pgl::config::gw::MQTT_PASSWORD);
+    netConfig.mqttEnabled = true;
+}
+
+void loadNetConfig() {
+    loadDefaultNetConfig();
+    netPrefs.begin(NET_CONFIG_NAMESPACE, true);
+    const uint32_t magic = netPrefs.getUInt("magic", 0);
+    if (magic == NET_CONFIG_MAGIC) {
+        const String ssid = netPrefs.getString("ssid", "");
+        const String pass = netPrefs.getString("pass", "");
+        const String host = netPrefs.getString("host", "");
+        const uint16_t port = netPrefs.getUShort("port", 0);
+        const String user = netPrefs.getString("user", "");
+        const String mqttPass = netPrefs.getString("mqttPass", "");
+        if (ssid.length() > 0) {
+            copyBounded(netConfig.wifiSsid, sizeof(netConfig.wifiSsid), ssid.c_str());
+            copyBounded(netConfig.wifiPassword, sizeof(netConfig.wifiPassword), pass.c_str());
+            copyBounded(netConfig.mqttHost, sizeof(netConfig.mqttHost), host.c_str());
+            if (port > 0) {
+                netConfig.mqttPort = port;
+            }
+            copyBounded(netConfig.mqttUser, sizeof(netConfig.mqttUser), user.c_str());
+            copyBounded(netConfig.mqttPassword, sizeof(netConfig.mqttPassword), mqttPass.c_str());
+            netConfig.mqttEnabled = netPrefs.getBool("mqttOn", true);
+        }
+    }
+    netPrefs.end();
+}
+
+bool saveNetConfig() {
+    if (!netPrefs.begin(NET_CONFIG_NAMESPACE, false)) {
+        return false;
+    }
+    netPrefs.putUInt("magic", NET_CONFIG_MAGIC);
+    netPrefs.putString("ssid", netConfig.wifiSsid);
+    netPrefs.putString("pass", netConfig.wifiPassword);
+    netPrefs.putString("host", netConfig.mqttHost);
+    netPrefs.putUShort("port", netConfig.mqttPort);
+    netPrefs.putString("user", netConfig.mqttUser);
+    netPrefs.putString("mqttPass", netConfig.mqttPassword);
+    netPrefs.putBool("mqttOn", netConfig.mqttEnabled);
+    netPrefs.end();
+    return true;
+}
+
+struct RuntimeMeshConfig {
+    float freqMHz;
+    float bwKHz;
+    uint8_t sf;
+    uint8_t cr;
+    uint8_t syncWord;
+    int8_t txPowerDbm;
+};
+
+constexpr uint32_t MESH_CONFIG_MAGIC = 0x47574D31; // "GWM1"
+constexpr const char* MESH_CONFIG_NAMESPACE = "gwmesh";
+
+bool isSupportedMeshBandwidth(float value) {
+    constexpr float supported[] = {7.8f, 10.4f, 15.6f, 20.8f, 31.25f,
+                                   41.7f, 62.5f, 125.0f, 250.0f, 500.0f};
+    for (const float candidate : supported) {
+        const float delta = value > candidate ? value - candidate : candidate - value;
+        if (delta < 0.02f) return true;
+    }
+    return false;
+}
+
+bool isValidMeshConfig(const RuntimeMeshConfig& cfg) {
+    return cfg.freqMHz >= 900.0f && cfg.freqMHz <= 930.0f &&
+           isSupportedMeshBandwidth(cfg.bwKHz) &&
+           cfg.sf >= 5 && cfg.sf <= 12 &&
+           cfg.cr >= 5 && cfg.cr <= 8 &&
+           cfg.txPowerDbm >= -9 && cfg.txPowerDbm <= 22;
+}
 
 constexpr uint16_t GATEWAY_ID = pgl::config::gw::GATEWAY_ID;
 
@@ -34,12 +139,12 @@ constexpr const char* TOPIC_COMMANDS = pgl::config::gw::TOPIC_COMMANDS;
 constexpr const char* TOPIC_PULL = pgl::config::gw::TOPIC_PULL;
 constexpr const char* TOPIC_NODE_COMMAND = pgl::config::gw::TOPIC_NODE_COMMAND;
 
-constexpr float MESH_FREQ_MHZ = pgl::config::gw::MESH_FREQ_MHZ;
-constexpr float MESH_BW_KHZ = pgl::config::gw::MESH_BW_KHZ;
-constexpr uint8_t MESH_SF = pgl::config::gw::MESH_SF;
-constexpr uint8_t MESH_CR = pgl::config::gw::MESH_CR;
-constexpr uint8_t MESH_SYNC_WORD = pgl::config::gw::MESH_SYNC_WORD;
-constexpr int8_t MESH_TX_POWER_DBM = pgl::config::gw::MESH_TX_POWER_DBM;
+float MESH_FREQ_MHZ = pgl::config::gw::MESH_FREQ_MHZ;
+float MESH_BW_KHZ = pgl::config::gw::MESH_BW_KHZ;
+uint8_t MESH_SF = pgl::config::gw::MESH_SF;
+uint8_t MESH_CR = pgl::config::gw::MESH_CR;
+uint8_t MESH_SYNC_WORD = pgl::config::gw::MESH_SYNC_WORD;
+int8_t MESH_TX_POWER_DBM = pgl::config::gw::MESH_TX_POWER_DBM;
 constexpr uint16_t MESH_PREAMBLE = pgl::config::gw::MESH_PREAMBLE;
 constexpr float MESH_TCXO_VOLTAGE = pgl::config::gw::MESH_TCXO_VOLTAGE;
 constexpr float MESH_XTAL_TCXO_VOLTAGE = pgl::config::gw::MESH_XTAL_TCXO_VOLTAGE;
@@ -52,6 +157,69 @@ constexpr size_t MQTT_UPLINK_QUEUE_ITEM_BYTES = pgl::config::gw::MQTT_UPLINK_QUE
 constexpr uint8_t CONFIG_RESPONSE_REPEAT_COUNT = pgl::config::gw::CONFIG_RESPONSE_REPEAT_COUNT;
 constexpr uint16_t CONFIG_RESPONSE_REPEAT_GAP_MS = pgl::config::gw::CONFIG_RESPONSE_REPEAT_GAP_MS;
 
+void logPrintln(const char* text);
+void logPrintf(const char* fmt, ...);
+
+void loadMeshConfig() {
+    RuntimeMeshConfig fallback{MESH_FREQ_MHZ, MESH_BW_KHZ, MESH_SF, MESH_CR,
+                               MESH_SYNC_WORD, MESH_TX_POWER_DBM};
+    Preferences prefs;
+    if (!prefs.begin(MESH_CONFIG_NAMESPACE, true)) return;
+    const uint32_t magic = prefs.getUInt("magic", 0);
+    RuntimeMeshConfig stored{
+        prefs.getFloat("freq", fallback.freqMHz),
+        prefs.getFloat("bw", fallback.bwKHz),
+        prefs.getUChar("sf", fallback.sf),
+        prefs.getUChar("cr", fallback.cr),
+        prefs.getUChar("sync", fallback.syncWord),
+        static_cast<int8_t>(prefs.getChar("tx", fallback.txPowerDbm)),
+    };
+    prefs.end();
+    if (magic != MESH_CONFIG_MAGIC) return;
+    if (!isValidMeshConfig(stored)) {
+        logPrintln("GW_NVS_MESH_LORA_INVALID fallback=build-time");
+        return;
+    }
+    MESH_FREQ_MHZ = stored.freqMHz;
+    MESH_BW_KHZ = stored.bwKHz;
+    MESH_SF = stored.sf;
+    MESH_CR = stored.cr;
+    MESH_SYNC_WORD = stored.syncWord;
+    MESH_TX_POWER_DBM = stored.txPowerDbm;
+    logPrintf("GW_NVS_MESH_LORA_LOAD freq=%.3f bw=%.2f sf=%u cr=%u sync=0x%02X tx=%d\n",
+              MESH_FREQ_MHZ, MESH_BW_KHZ, MESH_SF, MESH_CR,
+              MESH_SYNC_WORD, MESH_TX_POWER_DBM);
+}
+
+bool saveMeshConfig(const RuntimeMeshConfig& cfg) {
+    if (!isValidMeshConfig(cfg)) return false;
+    Preferences prefs;
+    if (!prefs.begin(MESH_CONFIG_NAMESPACE, false)) return false;
+    bool ok = true;
+    ok = ok && prefs.putUInt("magic", MESH_CONFIG_MAGIC) == sizeof(uint32_t);
+    ok = ok && prefs.putFloat("freq", cfg.freqMHz) == sizeof(float);
+    ok = ok && prefs.putFloat("bw", cfg.bwKHz) == sizeof(float);
+    ok = ok && prefs.putUChar("sf", cfg.sf) == sizeof(uint8_t);
+    ok = ok && prefs.putUChar("cr", cfg.cr) == sizeof(uint8_t);
+    ok = ok && prefs.putUChar("sync", cfg.syncWord) == sizeof(uint8_t);
+    ok = ok && prefs.putChar("tx", cfg.txPowerDbm) == sizeof(int8_t);
+    prefs.end();
+    if (!ok) return false;
+
+    Preferences verify;
+    if (!verify.begin(MESH_CONFIG_NAMESPACE, true)) return false;
+    const bool match =
+        verify.getUInt("magic", 0) == MESH_CONFIG_MAGIC &&
+        verify.getFloat("freq", -1.0f) == cfg.freqMHz &&
+        verify.getFloat("bw", -1.0f) == cfg.bwKHz &&
+        verify.getUChar("sf", 0) == cfg.sf &&
+        verify.getUChar("cr", 0) == cfg.cr &&
+        verify.getUChar("sync", 0) == cfg.syncWord &&
+        verify.getChar("tx", -128) == cfg.txPowerDbm;
+    verify.end();
+    return match;
+}
+
 Module* meshModule = nullptr;
 SX1262* meshRadio = nullptr;
 WiFiClient wifiClient;
@@ -63,6 +231,10 @@ uint32_t lastWifiAttemptMs = 0;
 uint32_t lastMqttAttemptMs = 0;
 uint32_t lastStatusMs = 0;
 bool meshReady = false;
+bool mqttSubCommands = false;
+bool mqttSubPull = false;
+bool mqttSubNodeCommand = false;
+char mqttClientId[48]{};
 
 struct PendingMqttPublish {
     bool used;
@@ -436,9 +608,9 @@ bool beginMeshRadio() {
 void beginWifi() {
     WiFi.mode(WIFI_STA);
     WiFi.setSleep(false);
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    WiFi.begin(netConfig.wifiSsid, netConfig.wifiPassword);
     lastWifiAttemptMs = millis();
-    logPrintf("GW_WIFI_CONNECT ssid=%s\n", WIFI_SSID);
+    logPrintf("GW_WIFI_CONNECT ssid=%s\n", netConfig.wifiSsid);
 }
 
 void ensureWifi() {
@@ -451,23 +623,29 @@ void ensureWifi() {
     }
     lastWifiAttemptMs = now;
     WiFi.disconnect();
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-    logPrintf("GW_WIFI_RETRY ssid=%s\n", WIFI_SSID);
+    WiFi.begin(netConfig.wifiSsid, netConfig.wifiPassword);
+    logPrintf("GW_WIFI_RETRY ssid=%s\n", netConfig.wifiSsid);
 }
 
 void mqttCallback(char* topic, uint8_t* payload, unsigned int length);
+bool publishStatus(const char* state);
 
 bool mqttHostConfigured() {
-    return MQTT_HOST != nullptr && MQTT_HOST[0] != '\0' &&
-           strcmp(MQTT_HOST, "CHANGE_ME_MQTT_HOST") != 0;
+    return netConfig.mqttEnabled &&
+           netConfig.mqttHost[0] != '\0' &&
+           strcmp(netConfig.mqttHost, "CHANGE_ME_MQTT_HOST") != 0;
 }
 
 void beginMqtt() {
+    if (!netConfig.mqttEnabled) {
+        logPrintln("GW_MQTT_DISABLED waiting=SET_MQTT_CONFIG_JSON");
+        return;
+    }
     if (!mqttHostConfigured()) {
         logPrintln("GW_CONFIG_ERROR mqttHost=unconfigured action=inject-PGL_SERVER_SITE_MQTT_HOST");
         return;
     }
-    mqtt.setServer(MQTT_HOST, MQTT_PORT);
+    mqtt.setServer(netConfig.mqttHost, netConfig.mqttPort);
     mqtt.setCallback(mqttCallback);
     mqtt.setBufferSize(1024);
 }
@@ -482,39 +660,63 @@ void ensureMqtt() {
     }
     lastMqttAttemptMs = now;
 
-    char clientId[48];
-    snprintf(clientId, sizeof(clientId), "pgl-gateway-%04X-%08lX", GATEWAY_ID, static_cast<unsigned long>(ESP.getEfuseMac()));
-    const bool ok = mqtt.connect(clientId, MQTT_USER, MQTT_PASSWORD);
-    logPrintf("GW_MQTT_CONNECT host=%s port=%u ok=%u\n", MQTT_HOST, MQTT_PORT, ok ? 1 : 0);
+    snprintf(mqttClientId, sizeof(mqttClientId), "pgl-gateway-%04X-%08lX", GATEWAY_ID, static_cast<unsigned long>(ESP.getEfuseMac()));
+    const bool ok = mqtt.connect(mqttClientId, netConfig.mqttUser, netConfig.mqttPassword);
+    logPrintf("GW_MQTT_CONNECT host=%s port=%u ok=%u\n", netConfig.mqttHost, netConfig.mqttPort, ok ? 1 : 0);
     if (!ok) {
         return;
     }
-    const bool subCommands = mqtt.subscribe(TOPIC_COMMANDS);
-    const bool subPull = mqtt.subscribe(TOPIC_PULL);
-    const bool subNodeCommand = mqtt.subscribe(TOPIC_NODE_COMMAND);
-    logPrintf("GW_MQTT_SUB topic=%s ok=%u\n", TOPIC_COMMANDS, subCommands ? 1 : 0);
-    logPrintf("GW_MQTT_SUB topic=%s ok=%u\n", TOPIC_PULL, subPull ? 1 : 0);
-    logPrintf("GW_MQTT_SUB topic=%s ok=%u\n", TOPIC_NODE_COMMAND, subNodeCommand ? 1 : 0);
+    mqttSubCommands = mqtt.subscribe(TOPIC_COMMANDS);
+    mqttSubPull = mqtt.subscribe(TOPIC_PULL);
+    mqttSubNodeCommand = mqtt.subscribe(TOPIC_NODE_COMMAND);
+    logPrintf("GW_MQTT_SUB topic=%s ok=%u\n", TOPIC_COMMANDS, mqttSubCommands ? 1 : 0);
+    logPrintf("GW_MQTT_SUB topic=%s ok=%u\n", TOPIC_PULL, mqttSubPull ? 1 : 0);
+    logPrintf("GW_MQTT_SUB topic=%s ok=%u\n", TOPIC_NODE_COMMAND, mqttSubNodeCommand ? 1 : 0);
     for (uint8_t i = 0; i < 5; ++i) {
         mqtt.loop();
         delay(10);
     }
+    publishStatus("online");
 }
 
 bool publishStatus(const char* state) {
-    StaticJsonDocument<384> doc;
+    StaticJsonDocument<1024> doc;
+    const bool wifiConnected = WiFi.status() == WL_CONNECTED;
+    const bool mqttConnected = mqtt.connected();
     doc["kind"] = "gateway-status";
     doc["gatewayId"] = GATEWAY_ID;
     doc["state"] = state;
-    doc["wifi"] = WiFi.status() == WL_CONNECTED;
-    doc["mqtt"] = mqtt.connected();
+    doc["firmwareVersion"] = pgl::firmware::GATEWAY_FIRMWARE_VERSION;
+    doc["protocolVersion"] = pgl::firmware::PROTOCOL_VERSION;
+    doc["uptimeMs"] = millis();
+    doc["wifi"] = wifiConnected;
+    doc["wifiSsid"] = netConfig.wifiSsid;
+    doc["wifiRssi"] = wifiConnected ? WiFi.RSSI() : 0;
+    doc["wifiChannel"] = wifiConnected ? WiFi.channel() : 0;
+    doc["wifiMac"] = WiFi.macAddress();
+    doc["mqtt"] = mqttConnected;
+    doc["mqttHost"] = netConfig.mqttHost;
+    doc["mqttPort"] = netConfig.mqttPort;
+    doc["mqttAuthConfigured"] = netConfig.mqttUser[0] != '\0' || netConfig.mqttPassword[0] != '\0';
+    doc["mqttState"] = mqtt.state();
+    doc["mqttClientId"] = mqttClientId;
+    doc["mqttSubscriptionsReady"] = mqttConnected && mqttSubCommands && mqttSubPull && mqttSubNodeCommand;
+    doc["topicRoot"] = PGL_SERVER_SITE_TOPIC_ROOT;
     doc["meshReady"] = meshReady;
+    doc["meshFreqMhz"] = MESH_FREQ_MHZ;
+    doc["meshBandwidthKhz"] = MESH_BW_KHZ;
+    doc["meshSpreadingFactor"] = MESH_SF;
+    doc["meshCodingRate"] = MESH_CR;
+    doc["meshSyncWord"] = MESH_SYNC_WORD;
+    doc["meshTxPowerDbm"] = MESH_TX_POWER_DBM;
+    doc["meshPreamble"] = MESH_PREAMBLE;
     doc["mqttQueueDepth"] = mqttQueueDepth();
     doc["mqttQueueDropped"] = mqttQueueDropped;
     doc["mqttQueuePublished"] = mqttQueuePublished;
-    doc["ip"] = WiFi.status() == WL_CONNECTED ? WiFi.localIP().toString() : "";
+    doc["mqttQueueCapacity"] = MQTT_UPLINK_QUEUE_CAPACITY;
+    doc["ip"] = wifiConnected ? WiFi.localIP().toString() : "";
 
-    char json[384];
+    char json[1024];
     const size_t len = serializeJson(doc, json, sizeof(json));
     const bool ok = mqtt.connected() && mqtt.publish(TOPIC_STATUS, reinterpret_cast<const uint8_t*>(json), len);
     logPrintf("GW_MQTT_STATUS state=%s ok=%u\n", state, ok ? 1 : 0);
@@ -1132,6 +1334,226 @@ void printBootHeader() {
               MESH_SYNC_WORD);
 }
 
+// Network provisioning is deliberately staged: WiFi is saved and verified
+// first, then MQTT is enabled with a separate command. The legacy combined
+// fields remain accepted by SET_WIFI_CONFIG_JSON for older operator builds.
+void handleSetWifiConfigJson(const char* payload) {
+    StaticJsonDocument<512> doc;
+    if (deserializeJson(doc, payload)) {
+        logPrintln("GW_CMD_ACK cmd=SET_WIFI_CONFIG status=error message=invalid_json reboot=0");
+        return;
+    }
+    const char* ssid = doc["ssid"] | netConfig.wifiSsid;
+    const char* password = doc["password"] | netConfig.wifiPassword;
+    const bool reboot = doc["reboot"] | true;
+
+    if (strlen(ssid) == 0) {
+        logPrintln("GW_CMD_ACK cmd=SET_WIFI_CONFIG status=rejected message=ssid_required reboot=0");
+        return;
+    }
+
+    copyBounded(netConfig.wifiSsid, sizeof(netConfig.wifiSsid), ssid);
+    copyBounded(netConfig.wifiPassword, sizeof(netConfig.wifiPassword), password);
+    netConfig.mqttEnabled = false;
+
+    // Backward compatibility for the previous combined payload. New clients
+    // omit these fields and must use SET_MQTT_CONFIG_JSON after TEST_WIFI.
+    if (doc.containsKey("mqttHost")) {
+        const char* mqttHost = doc["mqttHost"] | "";
+        const uint16_t mqttPort = doc["mqttPort"] | netConfig.mqttPort;
+        if (strlen(mqttHost) == 0 || mqttPort == 0) {
+            logPrintln("GW_CMD_ACK cmd=SET_WIFI_CONFIG status=rejected message=mqttHost_mqttPort_required reboot=0");
+            return;
+        }
+        copyBounded(netConfig.mqttHost, sizeof(netConfig.mqttHost), mqttHost);
+        netConfig.mqttPort = mqttPort;
+        copyBounded(netConfig.mqttUser, sizeof(netConfig.mqttUser), doc["mqttUser"] | "");
+        copyBounded(netConfig.mqttPassword, sizeof(netConfig.mqttPassword), doc["mqttPass"] | "");
+        netConfig.mqttEnabled = true;
+    }
+
+    if (!saveNetConfig()) {
+        logPrintln("GW_CMD_ACK cmd=SET_WIFI_CONFIG status=error message=nvs_save_failed reboot=0");
+        return;
+    }
+    logPrintf("GW_CMD_ACK cmd=SET_WIFI_CONFIG status=ok message=saved reboot=%u\n", reboot ? 1 : 0);
+    if (reboot) {
+        Serial.flush();
+        delay(200);
+        ESP.restart();
+    }
+}
+
+void handleTestWifi() {
+    const bool connected = WiFi.status() == WL_CONNECTED;
+    const String ip = connected ? WiFi.localIP().toString() : String("");
+    logPrintf("GW_CMD_ACK cmd=TEST_WIFI status=%s connected=%u ip=%s\n",
+              connected ? "ok" : "error",
+              connected ? 1 : 0,
+              connected ? ip.c_str() : "none");
+}
+
+void handleTestMqtt() {
+    const bool connected = mqtt.connected();
+    logPrintf("GW_CMD_ACK cmd=TEST_MQTT status=%s connected=%u state=%d host=%s port=%u auth=%u subscriptions=%u\n",
+              connected ? "ok" : "error",
+              connected ? 1 : 0,
+              mqtt.state(),
+              netConfig.mqttHost,
+              netConfig.mqttPort,
+              (netConfig.mqttUser[0] != '\0' || netConfig.mqttPassword[0] != '\0') ? 1 : 0,
+              (connected && mqttSubCommands && mqttSubPull && mqttSubNodeCommand) ? 1 : 0);
+}
+
+void handleSetMqttConfigJson(const char* payload) {
+    StaticJsonDocument<384> doc;
+    if (deserializeJson(doc, payload)) {
+        logPrintln("GW_CMD_ACK cmd=SET_MQTT_CONFIG status=error message=invalid_json");
+        return;
+    }
+    const char* host = doc["host"] | "";
+    const uint16_t port = doc["port"] | 0;
+    if (strlen(host) == 0 || port == 0) {
+        logPrintln("GW_CMD_ACK cmd=SET_MQTT_CONFIG status=rejected message=host_port_required");
+        return;
+    }
+
+    copyBounded(netConfig.mqttHost, sizeof(netConfig.mqttHost), host);
+    netConfig.mqttPort = port;
+    copyBounded(netConfig.mqttUser, sizeof(netConfig.mqttUser), doc["username"] | "");
+    copyBounded(netConfig.mqttPassword, sizeof(netConfig.mqttPassword), doc["password"] | "");
+    netConfig.mqttEnabled = true;
+    if (!saveNetConfig()) {
+        logPrintln("GW_CMD_ACK cmd=SET_MQTT_CONFIG status=error message=nvs_save_failed");
+        return;
+    }
+
+    mqtt.disconnect();
+    beginMqtt();
+    lastMqttAttemptMs = millis() - MQTT_RETRY_MS;
+    logPrintln("GW_CMD_ACK cmd=SET_MQTT_CONFIG status=ok message=saved_connecting=1");
+}
+
+void handleSetMeshLoraJson(const char* payload) {
+    StaticJsonDocument<256> doc;
+    if (deserializeJson(doc, payload)) {
+        logPrintln("GW_CMD_ACK cmd=SET_MESH_LORA_JSON status=error message=invalid_json");
+        return;
+    }
+    const char* required[] = {"freqMHz", "bwKHz", "sf", "cr", "syncWord", "txPowerDbm"};
+    for (const char* key : required) {
+        if (!doc.containsKey(key) || !doc[key].is<double>()) {
+            logPrintln("GW_CMD_ACK cmd=SET_MESH_LORA_JSON status=error message=missing_required_field");
+            return;
+        }
+    }
+
+    const double freq = doc["freqMHz"].as<double>();
+    const double bw = doc["bwKHz"].as<double>();
+    const double sf = doc["sf"].as<double>();
+    const double cr = doc["cr"].as<double>();
+    const double sync = doc["syncWord"].as<double>();
+    const double tx = doc["txPowerDbm"].as<double>();
+    if (!(freq >= 900.0 && freq <= 930.0)) {
+        logPrintln("GW_CMD_ACK cmd=SET_MESH_LORA_JSON status=error message=freqMHz-out-of-range-900-930");
+        return;
+    }
+    if (!isSupportedMeshBandwidth(static_cast<float>(bw))) {
+        logPrintln("GW_CMD_ACK cmd=SET_MESH_LORA_JSON status=error message=bwKHz-unsupported");
+        return;
+    }
+    if (!(sf >= 5.0 && sf <= 12.0 && sf == static_cast<uint8_t>(sf))) {
+        logPrintln("GW_CMD_ACK cmd=SET_MESH_LORA_JSON status=error message=sf-out-of-range-5-12");
+        return;
+    }
+    if (!(cr >= 5.0 && cr <= 8.0 && cr == static_cast<uint8_t>(cr))) {
+        logPrintln("GW_CMD_ACK cmd=SET_MESH_LORA_JSON status=error message=cr-out-of-range-5-8");
+        return;
+    }
+    if (!(sync >= 0.0 && sync <= 255.0 && sync == static_cast<uint8_t>(sync))) {
+        logPrintln("GW_CMD_ACK cmd=SET_MESH_LORA_JSON status=error message=syncWord-out-of-range-0-255");
+        return;
+    }
+    if (!(tx >= -9.0 && tx <= 22.0 && tx == static_cast<int8_t>(tx))) {
+        logPrintln("GW_CMD_ACK cmd=SET_MESH_LORA_JSON status=error message=txPowerDbm-out-of-range-minus9-22");
+        return;
+    }
+
+    const RuntimeMeshConfig cfg{
+        static_cast<float>(freq), static_cast<float>(bw), static_cast<uint8_t>(sf),
+        static_cast<uint8_t>(cr), static_cast<uint8_t>(sync), static_cast<int8_t>(tx),
+    };
+    if (!saveMeshConfig(cfg)) {
+        logPrintln("GW_CMD_ACK cmd=SET_MESH_LORA_JSON status=error message=nvs-write-or-readback-failed");
+        return;
+    }
+    logPrintln("GW_CMD_ACK cmd=SET_MESH_LORA_JSON status=ok message=saved-verified-restarting");
+    Serial.flush();
+    delay(250);
+    ESP.restart();
+}
+
+void emitMeshLoraJson() {
+    logPrintf("GW_MESH_LORA_JSON {\"freqMHz\":%.3f,\"bwKHz\":%.2f,\"sf\":%u,\"cr\":%u,\"syncWord\":%u,\"txPowerDbm\":%d}\n",
+              MESH_FREQ_MHZ, MESH_BW_KHZ, MESH_SF, MESH_CR,
+              MESH_SYNC_WORD, MESH_TX_POWER_DBM);
+}
+
+void handleSerialLine(const char* line) {
+    constexpr size_t kWifiPrefixLen = sizeof("SET_WIFI_CONFIG_JSON ") - 1;
+    constexpr size_t kMqttPrefixLen = sizeof("SET_MQTT_CONFIG_JSON ") - 1;
+    constexpr size_t kMeshLoraPrefixLen = sizeof("SET_MESH_LORA_JSON ") - 1;
+    if (strncmp(line, "SET_WIFI_CONFIG_JSON ", kWifiPrefixLen) == 0) {
+        handleSetWifiConfigJson(line + kWifiPrefixLen);
+    } else if (strcmp(line, "TEST_WIFI") == 0) {
+        handleTestWifi();
+    } else if (strcmp(line, "TEST_MQTT") == 0) {
+        handleTestMqtt();
+    } else if (strncmp(line, "SET_MQTT_CONFIG_JSON ", kMqttPrefixLen) == 0) {
+        handleSetMqttConfigJson(line + kMqttPrefixLen);
+    } else if (strncmp(line, "SET_MESH_LORA_JSON ", kMeshLoraPrefixLen) == 0) {
+        handleSetMeshLoraJson(line + kMeshLoraPrefixLen);
+    } else if (strcmp(line, "GET_MESH_LORA") == 0) {
+        emitMeshLoraJson();
+    }
+}
+
+// Read from both streams, like GldCommandParser::readCommandFrom does for
+// GLD - on ESP32-S3 boards wired through a CH340, the Operator's COM port is
+// UART0 (Serial0), not the native USB-CDC (Serial); other boards may expose
+// only one. Trying both means the command lands regardless of which the
+// board actually routes to the COM port.
+void pollSerialStream(Stream& stream, char* buf, size_t& len) {
+    while (stream.available() > 0) {
+        const char c = static_cast<char>(stream.read());
+        if (c == '\n' || c == '\r') {
+            if (len > 0) {
+                buf[len] = '\0';
+                handleSerialLine(buf);
+                len = 0;
+            }
+            continue;
+        }
+        if (len + 1 < 600) {
+            buf[len++] = c;
+        }
+    }
+}
+
+char usbSerialLineBuf[600];
+size_t usbSerialLineLen = 0;
+#if defined(ARDUINO_ARCH_ESP32)
+char uart0SerialLineBuf[600];
+size_t uart0SerialLineLen = 0;
+#endif
+
+void pollSerialCommands() {
+    pollSerialStream(Serial, usbSerialLineBuf, usbSerialLineLen);
+#if defined(ARDUINO_ARCH_ESP32)
+    pollSerialStream(Serial0, uart0SerialLineBuf, uart0SerialLineLen);
+#endif
+}
+
 }  // namespace
 
 void setup() {
@@ -1141,6 +1563,8 @@ void setup() {
 #endif
     delay(1000);
     setupPinsSafe();
+    loadNetConfig();
+    loadMeshConfig();
     printBootHeader();
     meshReady = beginMeshRadio();
     beginWifi();
@@ -1148,6 +1572,7 @@ void setup() {
 }
 
 void loop() {
+    pollSerialCommands();
     ensureWifi();
     ensureMqtt();
     mqtt.loop();

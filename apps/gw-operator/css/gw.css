@@ -1,4 +1,6 @@
-/* CH Operator layout + components. Serial-only ClusterHead console. */
+/* Gateway Operator layout + components. MQTT-first console: no serial
+   command protocol, so there is no stepper/quickcmd terminal here — instead
+   uplink/topology tables and a downlink command composer. */
 
 .shell {
   display: flex;
@@ -158,7 +160,7 @@ dl.kv dd { font-family: var(--font-mono); font-variant-numeric: tabular-nums; te
 .hint { color: var(--text-muted); font-size: 12.5px; margin-top: var(--space-2); }
 
 /* ---- Tables ---------------------------------------------------------- */
-.table-wrap { overflow-x: auto; border: 1px solid var(--hairline); border-radius: var(--radius); background: var(--surface); }
+.table-wrap { overflow-x: auto; border: 1px solid var(--hairline); border-radius: var(--radius); background: var(--surface); max-height: 520px; overflow-y: auto; }
 table.data { width: 100%; border-collapse: collapse; font-size: 13px; }
 table.data th, table.data td {
   padding: 9px 12px;
@@ -180,20 +182,21 @@ table.data th {
 }
 table.data tbody tr:hover { background: var(--surface-2); }
 table.data tr.stale td { color: var(--text-faint); }
-table.data tr.alarm td { background: var(--alarm-soft); color: var(--alarm); }
+table.data tr.fresh-flash td { animation: row-flash 1.2s ease; }
 table.data .empty { text-align: center; color: var(--text-muted); padding: 24px; font-family: var(--font-body); }
 
-.pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; }
-.pill.on { background: var(--alarm-soft); color: var(--alarm); }
-.pill.off { background: var(--surface-2); color: var(--text-muted); }
-.pill.battery { background: var(--info-soft); color: var(--info); }
-.pill.ext { background: var(--accent-soft); color: var(--accent); }
-.pill.unsend { background: var(--warn-soft); color: var(--warn); }
-.pill.fresh { background: var(--ok-soft); color: var(--ok); }
-.pill.stale { background: var(--warn-soft); color: var(--warn); }
+@keyframes row-flash {
+  0% { background: var(--accent-soft); }
+  100% { background: transparent; }
+}
 
-/* Alarm indicator: a plain colored dot, no text - green when ok, red when
-   an alarm is active. */
+.pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+.pill.ok { background: var(--ok-soft); color: var(--ok); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); }
+.pill.error { background: var(--alarm-soft); color: var(--alarm); }
+.pill.info { background: var(--info-soft); color: var(--info); }
+.pill.neutral { background: var(--surface-2); color: var(--text-muted); }
+
 .dot {
   display: inline-block;
   width: 10px;
@@ -202,44 +205,9 @@ table.data .empty { text-align: center; color: var(--text-muted); padding: 24px;
   vertical-align: middle;
 }
 .dot.dot-ok { background: var(--ok); }
+.dot.dot-warn { background: var(--warn); }
 .dot.dot-alarm { background: var(--alarm); }
-
-/* ---- Step-by-step request tracker (Gateway pull-request lifecycle) --- */
-.stepper { display: flex; align-items: flex-start; margin: var(--space-2) 0 var(--space-4); }
-.step { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 0 0 auto; width: 100px; text-align: center; }
-.step-dot {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--surface-2);
-  border: 2px solid var(--hairline-strong);
-  transition: background 160ms ease, border-color 160ms ease;
-}
-.step-label {
-  font-family: var(--font-eyebrow);
-  font-size: 10.5px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-muted);
-}
-.step-line { flex: 1 1 auto; height: 2px; background: var(--hairline-strong); margin: 7px 2px 0; }
-
-.step.done .step-dot { background: var(--ok); border-color: var(--ok); }
-.step.done .step-label { color: var(--text); }
-.step.done + .step-line { background: var(--ok); }
-
-.step.active .step-dot { background: var(--accent); border-color: var(--accent); animation: step-pulse 1.2s ease-in-out infinite; }
-.step.active .step-label { color: var(--accent); font-weight: 700; }
-
-.step.skipped .step-dot { background: var(--surface-2); border-color: var(--warn); }
-.step.skipped .step-label { color: var(--warn); }
-.step.skipped + .step-line { background: var(--warn); }
-
-@keyframes step-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 var(--selection-ring); }
-  50% { box-shadow: 0 0 0 5px var(--selection-ring); }
-}
+.dot.dot-off { background: var(--text-faint); }
 
 /* ---- Terminal / log -------------------------------------------------- */
 .terminal {
@@ -262,6 +230,13 @@ table.data .empty { text-align: center; color: var(--text-muted); padding: 24px;
 
 .cmdrow { display: flex; gap: var(--space-2); margin-bottom: var(--space-3); }
 .cmdrow input { font-family: var(--font-mono); }
+
+/* ---- Command composer -------------------------------------------------- */
+.compose-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--space-4);
+}
 
 /* ---- Drawer ---------------------------------------------------------- */
 .drawer-backdrop {
@@ -298,10 +273,15 @@ table.data .empty { text-align: center; color: var(--text-muted); padding: 24px;
 
 fieldset.group { border: 1px solid var(--hairline); border-radius: var(--radius); padding: var(--space-4); margin: 0; }
 fieldset.group legend { font-family: var(--font-eyebrow); text-transform: uppercase; font-size: 11px; letter-spacing: 0.08em; color: var(--accent); padding: 0 6px; }
+.setup-step { transition: opacity 120ms ease, border-color 120ms ease; }
+.setup-step:disabled { opacity: 0.58; border-color: var(--hairline); }
+.setup-step h3 { margin: var(--space-4) 0 var(--space-2); font-size: 14px; }
+.setup-step h3:first-of-type { margin-top: var(--space-2); }
 
 .locked-note { font-size: 12px; color: var(--warn); margin-top: var(--space-2); }
 
 @media (max-width: 720px) {
   .card.span-2 { grid-column: auto; }
   .field-row { grid-template-columns: 1fr; }
+  .compose-grid { grid-template-columns: 1fr; }
 }

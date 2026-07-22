@@ -140,6 +140,7 @@ function applyIds(kv) {
 function applyAckProfile(kv) {
   if (kv.helloIntervalMs != null) state.hello.intervalMs = num(kv.helloIntervalMs);
   if (kv.helloJitterMs != null) state.hello.jitterMs = num(kv.helloJitterMs);
+  if (kv.healthTimeoutMs != null) state.hello.healthTimeoutMs = num(kv.healthTimeoutMs);
   renderOverview();
 }
 
@@ -149,22 +150,36 @@ function applyHelloTx(kv) {
   if (kv.uptimeSec != null) state.status.uptimeSec = num(kv.uptimeSec);
   if (kv.depth != null) state.status.meshDepth = num(kv.depth);
   if (kv.caps) state.info.caps = kv.caps;
-  state.hello.lastTxAt = Date.now();
+  const now = Date.now();
+  state.hello.lastTxAt = now;
   const interval = helloIntervalMsCalc();
-  if (interval != null) state.hello.nextDueAt = state.hello.lastTxAt + interval;
+  if (interval != null) state.hello.nextDueAt = now + interval;
+  // A hello only actually waits for an ack when the firmware requested one
+  // (ackWait=1); otherwise there is nothing pending to report as an outcome.
+  if (kv.ackWait === "1") {
+    state.hello.lastResult = "waiting";
+    state.hello.lastResultAt = now;
+  }
   renderOverview();
 }
 
 function applyHelloAckRecv() {
+  const now = Date.now();
   state.hello.failureCount = 0;
+  state.hello.lastResult = "ack";
+  state.hello.lastResultAt = now;
+  state.status.parentLastSeenAt = now;
   renderOverview();
 }
 
 function applyHelloAckReprobe(kv) {
+  const now = Date.now();
   state.hello.failureCount = num(kv.failure) ?? state.hello.failureCount;
   state.hello.threshold = num(kv.threshold) ?? state.hello.threshold;
+  state.hello.lastResult = "failed";
+  state.hello.lastResultAt = now;
   const dueInMs = num(kv.dueInMs);
-  if (dueInMs != null) state.hello.nextDueAt = Date.now() + dueInMs;
+  if (dueInMs != null) state.hello.nextDueAt = now + dueInMs;
   renderOverview();
 }
 
@@ -176,11 +191,23 @@ function applyConfigRequestTx() {
 }
 
 function applyParentSelect(kv) {
+  const now = Date.now();
+  if (kv.result === "no-candidate") {
+    state.configSearch.lastResult = "no-candidate";
+    state.configSearch.lastResultAt = now;
+    state.configSearch.lastResultParent = null;
+    renderOverview();
+    return;
+  }
   if (kv.parent) state.status.parentId = hex4(kv.parent);
   if (kv.parentRssi != null) state.status.parentRssi = num(kv.parentRssi);
   if (kv.parentSnr != null) state.status.parentSnr = num(kv.parentSnr);
   if (kv.parentDepth != null) state.status.meshDepth = num(kv.parentDepth);
   if (kv.parent && hex4(kv.parent) !== "0000") state.hello.failureCount = 0;
+  state.configSearch.lastResult = "found";
+  state.configSearch.lastResultAt = now;
+  state.configSearch.lastResultParent = hex4(kv.parent);
+  state.status.parentLastSeenAt = now;
   markActiveParent();
   renderOverview();
 }
@@ -348,6 +375,15 @@ function applyInfoJson(json) {
   if (json.caps != null) state.info.caps = String(json.caps);
   state.info.starLora = json.starLora || state.info.starLora;
   state.info.meshLora = json.meshLora || state.info.meshLora;
+  // helloProfile is available on demand (every GET_INFO), unlike the
+  // boot-only CH_ACK_PROFILE log line, so the hello/config countdowns still
+  // work even when the operator connects long after boot and never sees
+  // that one-time line.
+  if (json.helloProfile) {
+    if (json.helloProfile.intervalMs != null) state.hello.intervalMs = num(json.helloProfile.intervalMs);
+    if (json.helloProfile.jitterMs != null) state.hello.jitterMs = num(json.helloProfile.jitterMs);
+    if (json.helloProfile.healthTimeoutMs != null) state.hello.healthTimeoutMs = num(json.helloProfile.healthTimeoutMs);
+  }
   renderOverview();
 }
 
@@ -446,11 +482,71 @@ function fmtUptime(sec) {
   return `${m}m ${sec % 60}s`;
 }
 
+// Plain-language translation of the raw ChState enum (ChStarMeshRuntimeMain.cpp)
+// so an operator doesn't need to know firmware internals to tell "fine" from
+// "in progress" from "a problem" at a glance. kind drives the value's color.
+const STATE_HEADLINES = {
+  BOOT: { text: "Starting up", kind: "" },
+  WAIT_BATT: { text: "Waiting for battery to stabilize", kind: "warn" },
+  RADIO_INIT: { text: "Initializing radios", kind: "warn" },
+  JOINING: { text: "Searching for a parent", kind: "warn" },
+  JOINED: { text: "Connected", kind: "ok" },
+  LOW_POWER: { text: "Battery too low - paused", kind: "error" },
+  PARENT_FAILOVER: { text: "Lost parent - searching for a new one", kind: "warn" },
+  RECOVERY: { text: "Recovering - restarting", kind: "error" },
+};
+
+// Firmware reason strings (setState(..., "reason") calls in
+// ChStarMeshRuntimeMain.cpp) plainly explained. Several success paths use
+// "-timeout" in their name because that's literally the internal wait-window
+// that just elapsed (e.g. "joining-timeout" = the parent-collection window
+// closed and a parent WAS found) - shown raw, that reads as a failure when
+// it's actually the opposite, so translate every one instead of passing the
+// raw string through.
+const REASON_LABELS = {
+  "boot": "power-on",
+  "vbat-read-only": "battery check skipped (bench/test build)",
+  "batt-stable": "battery reading is stable",
+  "radio-ready": "radios finished initializing",
+  "radio-init-failed": "radio failed to initialize - restarting",
+  "joining-timeout": "search window finished - parent found",
+  "failover-timeout": "recovery search finished - new parent found",
+  "hello-ACK-failures": "parent stopped answering hello - re-searching",
+  "alarm-ACK-failures": "parent stopped answering alarm - re-searching",
+  "parent-health-timeout": "parent has been silent too long - re-searching",
+  "weak-bidirectional-gateway": "gateway link too weak - re-searching",
+  "batt-low": "battery below safe threshold",
+  "batt-recovered": "battery recovered",
+  "vbat-read-only-low-power-bypass": "low-battery pause skipped (bench/test build)",
+  "low-power-timeout": "battery stayed too low - restarting",
+  "noAckBurst-threshold": "too many missed acks - restarting",
+  "operator-clear-parent": "parent cleared by operator",
+  "operator-console": "failover forced by operator",
+};
+
+function renderStateHeadline() {
+  const stateName = state.status.state;
+  const headlineEl = elements.ovStateHeadline;
+  if (!headlineEl) return;
+  if (!stateName) {
+    headlineEl.textContent = "—";
+    headlineEl.className = "value small";
+    if (elements.ovStateDetail) elements.ovStateDetail.textContent = "no data yet";
+    return;
+  }
+  const info = STATE_HEADLINES[stateName] || { text: stateName, kind: "" };
+  headlineEl.textContent = info.text;
+  headlineEl.className = `value small ${info.kind}`.trim();
+  const reason = state.status.stateReason;
+  if (elements.ovStateDetail) {
+    elements.ovStateDetail.textContent = reason ? (REASON_LABELS[reason] || reason) : "";
+  }
+}
+
 export function renderOverview() {
   const { info, status } = state;
   const set = (id, v) => { if (elements[id]) elements[id].textContent = v ?? "—"; };
-  set("ovState", status.state || "—");
-  set("ovStateReason", status.stateReason || "waiting");
+  renderStateHeadline();
   set("ovBatt", status.batteryMv != null ? status.batteryMv : "—");
   set("ovUptime", fmtUptime(status.uptimeSec));
   set("ovNodeCount", state.nodes.size || status.nodeUsed || 0);
@@ -486,17 +582,40 @@ function fmtCountdown(dueAt) {
   return `${Math.floor(s / 60)}m ${s % 60}s`;
 }
 
+const HELLO_RESULT_LABELS = { ack: "ACK received", waiting: "sent, waiting for ACK", failed: "no ACK (will retry)" };
+
 function renderHelloConfigTimers() {
   const set = (id, v) => { if (elements[id]) elements[id].textContent = v ?? "—"; };
   const hello = state.hello;
-  set("ovHelloCountdown", hello.lastTxAt == null ? "no hello seen yet" : (fmtCountdown(hello.nextDueAt) ?? "—"));
+
+  if (hello.lastResult == null) {
+    set("ovHelloLast", "no hello seen yet");
+  } else {
+    const label = HELLO_RESULT_LABELS[hello.lastResult] || hello.lastResult;
+    set("ovHelloLast", `${label} (${fmtAge(Date.now() - hello.lastResultAt)})`);
+  }
+  set("ovHelloCountdown", hello.lastTxAt == null ? "not sent yet" : (fmtCountdown(hello.nextDueAt) ?? "—"));
   set("ovHelloFailures", hello.threshold != null ? `${hello.failureCount} / ${hello.threshold}` : `${hello.failureCount}`);
 
   const cfg = state.configSearch;
-  if (!cfg.active) {
-    set("ovConfigCountdown", state.status.state === "JOINED" ? "not searching (CH is JOINED)" : "not searching");
+  if (cfg.lastResult == null) {
+    set("ovConfigLast", "no discovery seen yet");
   } else {
-    set("ovConfigCountdown", cfg.lastTxAt == null ? "starting…" : (fmtCountdown(cfg.nextDueAt) ?? "—"));
+    const label = cfg.lastResult === "found" ? `parent found (0x${cfg.lastResultParent})` : "no candidate found";
+    set("ovConfigLast", `${label} (${fmtAge(Date.now() - cfg.lastResultAt)})`);
+  }
+  if (cfg.active) {
+    set("ovConfigCountdown", cfg.lastTxAt == null ? "starting..." : (fmtCountdown(cfg.nextDueAt) ?? "—"));
+  } else if (state.status.state === "JOINED" && state.status.parentLastSeenAt != null && hello.healthTimeoutMs != null) {
+    // Not actively searching right now - but the firmware will still start a
+    // new search if the current parent goes silent for PARENT_HEALTH_TIMEOUT_MS,
+    // so show that as the next relevant event instead of a dead-end message.
+    const dueAt = state.status.parentLastSeenAt + hello.healthTimeoutMs;
+    set("ovConfigCountdown", `parent health check in ${fmtCountdown(dueAt) ?? "—"}`);
+  } else if (state.status.state === "JOINED") {
+    set("ovConfigCountdown", "not searching (CH is JOINED)");
+  } else {
+    set("ovConfigCountdown", "—");
   }
 }
 
@@ -737,19 +856,44 @@ export function sendCommandAndWaitAck(cmd, ackCmd) {
 
 export function resetDeviceSnapshot() {
   state.info = { chId: "", rootGatewayId: "", firmwareVersion: "", protocolVersion: "", caps: "" };
-  state.status = { state: "", stateReason: "", batteryMv: null, uptimeSec: null, parentId: "", parentRssi: null, parentSnr: null, meshDepth: null };
+  state.status = { state: "", stateReason: "", batteryMv: null, uptimeSec: null, parentId: "", parentRssi: null, parentSnr: null, meshDepth: null, parentLastSeenAt: null };
   state.nodes.clear();
   state.parents.clear();
   state.battHistory = [];
   state.pendingStarSample = null;
-  state.hello = { lastTxAt: null, nextDueAt: null, intervalMs: null, jitterMs: null, failureCount: 0, threshold: null };
-  state.configSearch = { lastTxAt: null, nextDueAt: null, active: false };
+  state.hello = { lastTxAt: null, nextDueAt: null, intervalMs: null, jitterMs: null, healthTimeoutMs: null,
+    failureCount: 0, threshold: null, lastResult: null, lastResultAt: null };
+  state.configSearch = { lastTxAt: null, nextDueAt: null, active: false, lastResult: null, lastResultAt: null, lastResultParent: null };
   if (state.lastPull?.processingTimer) clearTimeout(state.lastPull.processingTimer);
   state.lastPull = null;
   renderOverview();
   renderNodes();
   renderParents();
   renderPullRequest();
+}
+
+// CLEAR_PARENT_NVS only erases the firmware's persisted parentId/parentAlt;
+// it clears the in-RAM candidate table too, but only if the CH happens to be
+// JOINED right when the command lands (that's what triggers the
+// PARENT_FAILOVER transition whose handler wipes it) - if the CH is still
+// JOINING/RADIO_INIT/etc. the firmware's candidate table is left untouched.
+// The app's own candidate table has no equivalent trigger at all, so without
+// this it would keep showing the old (possibly stale) candidates and parent
+// indefinitely. Call this right after sending CLEAR_PARENT_NVS so the UI
+// immediately reflects "parent forgotten" instead of waiting on firmware
+// state and event timing the operator can't see.
+export function resetParentDiscovery() {
+  state.parents.clear();
+  state.status.parentId = "";
+  state.status.parentRssi = null;
+  state.status.parentSnr = null;
+  state.status.meshDepth = null;
+  state.status.parentLastSeenAt = null;
+  state.configSearch.lastResult = null;
+  state.configSearch.lastResultAt = null;
+  state.configSearch.lastResultParent = null;
+  renderOverview();
+  renderParents();
 }
 
 // ---- Polling ---------------------------------------------------------------

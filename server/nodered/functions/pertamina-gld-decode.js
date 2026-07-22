@@ -22,8 +22,9 @@ const NC_FLAG_EXT_POWER = 0x10;
 const GLD_ENCRYPTED_LEN = 29;
 const GLD_RECORD_LEN = 34;
 const DEFAULT_GATEWAY_ID = 0x006F;
-const REPLAY_WINDOW_BITS = 32;
 const REPLAY_STATE_TTL_MS = 24 * 60 * 60 * 1000;
+const REPLAY_STATE_VERSION = 2;
+const REPLAY_STATE_MAX_RECORDS = 8192;
 const REPLAY_STATE_MAX_DEVICES = 2048;
 
 function fail(reason, detail) {
@@ -259,6 +260,118 @@ function isInstalledTopologyReport(report) {
         normalized === "stable-parent";
 }
 
+function getGldDiscoveryState() {
+    return flow.get("pglGldDiscovery") || {};
+}
+
+function resolveGldResponseOwner(outer) {
+    const transportSrcIdHex = outer && outer.srcIdHex;
+    const response = outer && outer.response;
+    if (!response || response.requestId === undefined) return transportSrcIdHex;
+
+    const requestId = Number(response.requestId) & 0xFFFF;
+    const nowMs = Date.now();
+    const correlationTtlMs = envNumber("PGL_GLD_REQUEST_CORRELATION_TTL_MS", 120000);
+    const responseTimeoutMs = envNumber("PGL_GLD_REQUEST_TIMEOUT_MS", 20000);
+    const requestIndex = flow.get("pglGldRequestIndex") || {};
+    const indexed = requestIndex[String(requestId)];
+    let ownerChIdHex;
+    let correlation = "unknown-request-id";
+
+    function validateCandidate(targetChIdHex, hopList, requestedAt) {
+        const requestedAtMs = Date.parse(requestedAt || "");
+        if (!Number.isFinite(requestedAtMs)) return "invalid-request-time";
+        const ageMs = nowMs - requestedAtMs;
+        if (ageMs < 0 || ageMs > correlationTtlMs) return "expired-request-id";
+        if (ageMs > responseTimeoutMs) return "late-response";
+        if (!Array.isArray(hopList) || hopList.length === 0) return "invalid-request-route";
+        if (hopList[hopList.length - 1] !== targetChIdHex) return "target-route-mismatch";
+        if (hopList[0] !== transportSrcIdHex) return "ingress-route-mismatch";
+        return "valid";
+    }
+
+    if (indexed && indexed.targetChIdHex) {
+        correlation = validateCandidate(indexed.targetChIdHex, indexed.hopList, indexed.requestedAt);
+        if (correlation === "valid") {
+            ownerChIdHex = indexed.targetChIdHex;
+            correlation = "request-index";
+        }
+    }
+
+    if (!ownerChIdHex) {
+        const candidates = Object.entries(getGldDiscoveryState())
+            .filter(([, entry]) => Number(entry && entry.requestId) === requestId)
+            .map(([chIdHex, entry]) => ({
+                chIdHex,
+                hopList: entry.hopList,
+                requestedAt: entry.requestedAt,
+                requestedAtMs: Date.parse(entry.requestedAt || "")
+            }))
+            .filter((candidate) => Number.isFinite(candidate.requestedAtMs))
+            .sort((a, b) => b.requestedAtMs - a.requestedAtMs);
+        if (candidates.length > 0 &&
+            (candidates.length === 1 || candidates[0].requestedAtMs > candidates[1].requestedAtMs)) {
+            const candidate = candidates[0];
+            correlation = validateCandidate(candidate.chIdHex, candidate.hopList, candidate.requestedAt);
+            if (correlation === "valid") {
+                ownerChIdHex = candidate.chIdHex;
+                correlation = "discovery-request-id";
+            }
+        } else if (candidates.length > 1) {
+            correlation = "ambiguous-request-id";
+        }
+    }
+
+    outer.responseTransportSrcIdHex = transportSrcIdHex;
+    outer.responseTargetChIdHex = ownerChIdHex;
+    outer.responseCorrelation = correlation;
+    return ownerChIdHex;
+}
+
+function rememberGldResponse(outer) {
+    const chIdHex = resolveGldResponseOwner(outer);
+    if (!chIdHex) return;
+    const response = outer.response || {};
+    const discovery = getGldDiscoveryState();
+    const entry = discovery[chIdHex] || { hopList: [], devices: {} };
+    if (entry.requestId === undefined || Number(entry.requestId) === Number(response.requestId)) {
+        entry.status = "received";
+        entry.requestId = response.requestId;
+        entry.responseStatus = response.status;
+        entry.recordCount = response.recordCount;
+        entry.chBatteryMv = response.chBatteryMv;
+        entry.respondedAt = new Date().toISOString();
+    }
+    entry.devices = entry.devices || {};
+    discovery[chIdHex] = entry;
+    flow.set("pglGldDiscovery", discovery);
+}
+
+function rememberGldDevice(outer, event) {
+    const chIdHex = outer && (outer.responseTargetChIdHex || resolveGldResponseOwner(outer));
+    if (!chIdHex || !event || event.ok !== true) return;
+    const discovery = getGldDiscoveryState();
+    const entry = discovery[chIdHex] || { status: "unsolicited", hopList: [], devices: {} };
+    entry.devices = entry.devices || {};
+    entry.devices[event.nodeIdHex] = {
+        nodeIdHex: event.nodeIdHex,
+        gasClass: event.gasClass,
+        gasName: event.gasName,
+        confidence: event.confidence,
+        batteryMv: event.batteryMv,
+        alarm: event.alarm,
+        externalPower: event.externalPower,
+        seq: event.seq,
+        payloadHex: event.payloadHex,
+        plaintextHex: event.plaintextHex,
+        decryptOk: event.decryptOk,
+        requestId: outer && outer.response ? outer.response.requestId : undefined,
+        lastSeenAt: event.receivedAt
+    };
+    discovery[chIdHex] = entry;
+    flow.set("pglGldDiscovery", discovery);
+}
+
 function decryptGldPayload(record) {
     if (record.payload.length !== GLD_ENCRYPTED_LEN) {
         return {
@@ -388,15 +501,25 @@ function replayPersistence() {
 
 function loadReplayState() {
     const cached = flow.get("pglReplayState");
-    if (cached && typeof cached === "object" && !Array.isArray(cached)) return cached;
+    if (cached && cached.version === REPLAY_STATE_VERSION &&
+        cached.entries && cached.observations) return cached;
     const persistence = replayPersistence();
-    if (!persistence || !persistence.fsModule.existsSync(persistence.filePath)) return {};
+    if (!persistence || !persistence.fsModule.existsSync(persistence.filePath)) {
+        return { version: REPLAY_STATE_VERSION, entries: {}, observations: {} };
+    }
     const parsed = JSON.parse(persistence.fsModule.readFileSync(persistence.filePath, "utf8"));
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
         throw new Error("durable replay state is not a JSON object");
     }
-    flow.set("pglReplayState", parsed);
-    return parsed;
+    // Version 1 stored only an 8-bit sequence window. It cannot distinguish
+    // restart/wrap from a replay after a long pull gap, so intentionally start
+    // an empty exact-record registry when migrating.
+    const normalized = parsed.version === REPLAY_STATE_VERSION &&
+        parsed.entries && parsed.observations
+        ? parsed
+        : { version: REPLAY_STATE_VERSION, entries: {}, observations: {} };
+    flow.set("pglReplayState", normalized);
+    return normalized;
 }
 
 function saveReplayState(all) {
@@ -411,55 +534,95 @@ function saveReplayState(all) {
     flow.set("pglReplayState", all);
 }
 
+function replayFingerprint(event) {
+    const cryptoModule = global.get("crypto") || (typeof crypto !== "undefined" ? crypto : null);
+    if (!cryptoModule || typeof cryptoModule.createHash !== "function") {
+        throw new Error("crypto module is required for replay fingerprinting");
+    }
+    const canonical = [
+        event.ingressClass,
+        event.nodeId,
+        Number(event.seq) & 0xFF,
+        Number(event.flags) & 0xFF,
+        String(event.payloadHex || "").toUpperCase()
+    ].join(":");
+    return cryptoModule.createHash("sha256").update(canonical, "utf8").digest("hex");
+}
+
+function sequenceObservation(lastSeq, seq) {
+    if (!Number.isInteger(lastSeq)) return "first-record";
+    if (seq === lastSeq) return "new-record-same-sequence";
+    const forward = (seq - lastSeq + 256) & 0xFF;
+    if (forward < 128) {
+        return seq < lastSeq ? "new-record-wrap" : "new-record-forward";
+    }
+    return "new-record-lower-sequence-or-restart";
+}
+
 function replayDecision(event) {
     const now = Date.now();
-    const all = loadReplayState();
-    for (const [key, value] of Object.entries(all)) {
+    const state = loadReplayState();
+    state.entries = state.entries || {};
+    state.observations = state.observations || {};
+
+    for (const [key, value] of Object.entries(state.entries)) {
+        if (!value || now - Number(value.firstSeenAt || 0) > REPLAY_STATE_TTL_MS) {
+            delete state.entries[key];
+        }
+    }
+    for (const [key, value] of Object.entries(state.observations)) {
         if (!value || now - Number(value.updatedAt || 0) > REPLAY_STATE_TTL_MS) {
-            delete all[key];
+            delete state.observations[key];
         }
     }
 
-    const key = `${event.ingressClass}:${event.nodeId}`;
+    const nonceKey = `${event.ingressClass}:${event.keyId}:${event.nonceHex}`;
+    const fingerprint = replayFingerprint(event);
+    const existing = state.entries[nonceKey];
+    if (existing) {
+        return {
+            accepted: false,
+            reason: existing.fingerprint === fingerprint
+                ? "exact-encrypted-record-replay"
+                : "aes-gcm-nonce-reuse"
+        };
+    }
+
+    const observationKey = `${event.ingressClass}:${event.nodeId}`;
     const seq = Number(event.seq) & 0xFF;
-    const current = all[key];
-    if (!current) {
-        all[key] = { lastSeq: seq, bitmap: 1, updatedAt: now };
-        const keys = Object.keys(all);
-        if (keys.length > REPLAY_STATE_MAX_DEVICES) {
-            keys.sort((a, b) => Number(all[a].updatedAt || 0) - Number(all[b].updatedAt || 0));
-            for (let i = 0; i < keys.length - REPLAY_STATE_MAX_DEVICES; i++) delete all[keys[i]];
+    const observation = state.observations[observationKey];
+    const reason = sequenceObservation(
+        observation && Number.isInteger(observation.lastSeq) ? observation.lastSeq : null,
+        seq
+    );
+
+    state.entries[nonceKey] = {
+        fingerprint,
+        nodeId: event.nodeId,
+        seq,
+        firstSeenAt: now
+    };
+    state.observations[observationKey] = { lastSeq: seq, updatedAt: now };
+
+    const entryKeys = Object.keys(state.entries);
+    if (entryKeys.length > REPLAY_STATE_MAX_RECORDS) {
+        entryKeys.sort((a, b) =>
+            Number(state.entries[a].firstSeenAt || 0) - Number(state.entries[b].firstSeenAt || 0));
+        for (let i = 0; i < entryKeys.length - REPLAY_STATE_MAX_RECORDS; i++) {
+            delete state.entries[entryKeys[i]];
         }
-        saveReplayState(all);
-        return { accepted: true, reason: "first" };
+    }
+    const observationKeys = Object.keys(state.observations);
+    if (observationKeys.length > REPLAY_STATE_MAX_DEVICES) {
+        observationKeys.sort((a, b) =>
+            Number(state.observations[a].updatedAt || 0) - Number(state.observations[b].updatedAt || 0));
+        for (let i = 0; i < observationKeys.length - REPLAY_STATE_MAX_DEVICES; i++) {
+            delete state.observations[observationKeys[i]];
+        }
     }
 
-    const lastSeq = Number(current.lastSeq) & 0xFF;
-    const forward = (seq - lastSeq + 256) & 0xFF;
-    let bitmap = Number(current.bitmap) >>> 0;
-    if (forward === 0) {
-        return { accepted: false, reason: "duplicate-sequence" };
-    }
-    if (forward < 128) {
-        bitmap = forward >= REPLAY_WINDOW_BITS ? 1 : (((bitmap << forward) | 1) >>> 0);
-        all[key] = { lastSeq: seq, bitmap, updatedAt: now };
-        saveReplayState(all);
-        return { accepted: true, reason: forward < REPLAY_WINDOW_BITS ? "forward" : "forward-reset-window" };
-    }
-
-    const behind = 256 - forward;
-    if (behind >= REPLAY_WINDOW_BITS) {
-        return { accepted: false, reason: "stale-sequence" };
-    }
-    const mask = (1 << behind) >>> 0;
-    if ((bitmap & mask) !== 0) {
-        return { accepted: false, reason: "duplicate-out-of-order-sequence" };
-    }
-    current.bitmap = (bitmap | mask) >>> 0;
-    current.updatedAt = now;
-    all[key] = current;
-    saveReplayState(all);
-    return { accepted: true, reason: "out-of-order" };
+    saveReplayState(state);
+    return { accepted: true, reason };
 }
 
 function quarantineEvent(event, reason, topic) {
@@ -511,6 +674,7 @@ function routeRecords(records, outer, source) {
             continue;
         }
         event.replayStatus = replay.reason;
+        rememberGldDevice(outer, event);
         const nonProduction = event.ingressClass !== "production";
         decodedMsgs.push({
             req: msg.req,
@@ -868,8 +1032,11 @@ try {
         return [null, [{ req: msg.req, res: msg.res, payload: event, topic: "gld/server/topology" }], null, null];
     }
 
-    if (parsed.outer && parsed.outer.msgType === MSG_CLUSTER_DATA_RESPONSE && parsed.outer.dstId !== getGatewayId()) {
-        return [null, null, null, null];
+    if (parsed.outer && parsed.outer.msgType === MSG_CLUSTER_DATA_RESPONSE) {
+        if (parsed.outer.dstId !== getGatewayId()) {
+            return [null, null, null, null];
+        }
+        rememberGldResponse(parsed.outer);
     }
 
     const routed = routeRecords(parsed.records, parsed.outer, "contract");

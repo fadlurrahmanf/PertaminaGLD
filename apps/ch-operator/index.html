@@ -55,7 +55,8 @@
         <div class="grid">
           <div class="card">
             <h3>State</h3>
-            <div class="metric"><span class="value small" id="ovState">—</span><span class="unit" id="ovStateReason">no data yet</span></div>
+            <div class="metric"><span class="value small" id="ovStateHeadline">—</span></div>
+            <p class="hint" id="ovStateDetail">no data yet</p>
           </div>
           <div class="card">
             <h3>Battery</h3>
@@ -89,11 +90,18 @@
             </dl>
           </div>
           <div class="card span-2">
-            <h3>Hello &amp; parent search timers</h3>
+            <h3>CH_HELLO (keepalive to parent)</h3>
             <dl class="kv">
-              <dt>Next CH_HELLO</dt><dd id="ovHelloCountdown">no hello seen yet</dd>
-              <dt>Hello failures</dt><dd id="ovHelloFailures">0</dd>
-              <dt>Next CH_CONFIG</dt><dd id="ovConfigCountdown">not searching</dd>
+              <dt>Last hello</dt><dd id="ovHelloLast">no hello seen yet</dd>
+              <dt>Next hello</dt><dd id="ovHelloCountdown">—</dd>
+              <dt>Failures</dt><dd id="ovHelloFailures">0</dd>
+            </dl>
+          </div>
+          <div class="card span-2">
+            <h3>CH_CONFIG (parent discovery)</h3>
+            <dl class="kv">
+              <dt>Last result</dt><dd id="ovConfigLast">no discovery seen yet</dd>
+              <dt>Next event</dt><dd id="ovConfigCountdown">—</dd>
             </dl>
           </div>
           <div class="card span-2">

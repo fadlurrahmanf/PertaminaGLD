@@ -15,6 +15,7 @@ enum class ChRuntimeStatus : uint8_t {
     Ok = 0,
     InvalidConfig,
     ParseFailed,
+    DestinationMismatch,
     CacheFailed,
     AlarmQueueFull,
     AlarmQueueConflict,

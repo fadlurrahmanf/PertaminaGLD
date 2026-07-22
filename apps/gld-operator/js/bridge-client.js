@@ -8,13 +8,13 @@ import { syncDeviceSummary, renderFleetPanel, updateFleetFromLine } from "./flee
 import { handleLine, clearSerialResponseWatch, sendCommand, resetDeviceSnapshot, stopPolling } from "./serial-protocol.js";
 import { setDatasetState, handleDatasetMqttEvent, renderDatasetSession } from "./dataset.js";
 
-const DEFAULT_BRIDGE_ORIGIN = "http://127.0.0.1:5173";
+const DEFAULT_BRIDGE_ORIGIN = "http://127.0.0.1:5174";
 let bridgeToken = "";
 
 export function bridgeUrl(path) {
   const onBridgeOrigin = location.protocol.startsWith("http")
     && location.hostname === "127.0.0.1"
-    && location.port === "5173";
+    && location.port === "5174";
   return onBridgeOrigin ? path : `${DEFAULT_BRIDGE_ORIGIN}${path}`;
 }
 

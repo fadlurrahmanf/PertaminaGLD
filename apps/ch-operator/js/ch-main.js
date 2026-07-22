@@ -13,7 +13,7 @@ import {
 } from "./ch-bridge.js";
 import {
   handleLine, sendCommand, sendCommandAndWaitAck, togglePolling, tickAges,
-  renderOverview, renderNodes, renderParents, renderPullRequest
+  renderOverview, renderNodes, renderParents, renderPullRequest, resetParentDiscovery
 } from "./ch-protocol.js";
 
 // ---- Command builders (CH Settings drawer) ---------------------------------
@@ -210,7 +210,10 @@ function setupEvents() {
   // Mesh / parent
   elements.sendHelloBtn.addEventListener("click", () => sendCommand("SEND_HELLO"));
   elements.clearParentBtn.addEventListener("click", () => {
-    if (confirm("Clear the stored parent from NVS and force re-discovery?")) sendCommand("CLEAR_PARENT_NVS");
+    if (confirm("Clear the stored parent from NVS and force re-discovery?")) {
+      sendCommand("CLEAR_PARENT_NVS");
+      resetParentDiscovery();
+    }
   });
   elements.forceFailoverBtn.addEventListener("click", () => sendCommand("FORCE_FAILOVER"));
 

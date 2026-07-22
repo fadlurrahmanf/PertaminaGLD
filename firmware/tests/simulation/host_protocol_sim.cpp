@@ -172,8 +172,44 @@ int main(int argc, char** argv) {
     check(builtFrame1.alarm == expectedAlarm, "GLD1 frame alarm flag matches real isGldAlarm() for this input");
     printHex("gld1_star_frame_hex", builtFrame1.bytes, builtFrame1.size);
 
-    // --- CH-B receives GLD1's STAR frame: REAL processGldStarFrame ------------
+    // --- A neighboring CH must drop a valid frame addressed to another CH ---
+    gld::GldFrameBuilderConfig foreignCfg{
+        GLD1_ID, CH_A_ID, /*keyId*/ 1, AES_KEY, /*externalPower*/ false,
+        protocol::GLD_LEL_THRESHOLD_PERCENT};
+    gld::GldFrameBuildInput foreignInput{
+        gld1GasClass, gld1Confidence, gld1BatteryMv, /*seq*/ 0x0F};
+    uint32_t foreignNonceCtr = 2;
+    gld::GldBuiltFrame foreignFrame{};
+    check(gld::buildGldUplinkFrame(
+              foreignCfg, foreignInput, hostNonceProvider, &foreignNonceCtr, foreignFrame) ==
+              gld::GldFrameStatus::Ok,
+          "GLD1 builds a valid frame addressed to neighboring CH-A");
+
     config::ChRuntimeConfig chBConfig{CH_B_ID, CH_A_ID, 3700, 300000};
+    ch::NodeCacheEntry foreignCache[2]{};
+    ch::AlarmQueueItem foreignAlarmQueue[2]{};
+    ch::ChTxItem foreignTxQueue[2]{};
+    uint8_t foreignAck[protocol::APPFRAME_OVERHEAD]{};
+    ch::ChRuntimeProcessResult foreignResult{};
+    const auto foreignStatus = ch::processGldStarFrame(
+        chBConfig, foreignFrame.bytes, foreignFrame.size, /*nowMs*/ 900,
+        /*meshSeq*/ 0, foreignCache, 2, foreignAlarmQueue, 2, foreignTxQueue, 2,
+        foreignAck, sizeof(foreignAck), foreignResult);
+    check(foreignStatus == ch::ChRuntimeStatus::DestinationMismatch,
+          "CH-B rejects a valid GLD frame addressed to CH-A");
+    check(foreignResult.uplinkStatus == ch::ChUplinkStatus::Ok,
+          "Foreign-destination rejection happens after valid frame parsing");
+    check(!foreignCache[0].used && !foreignCache[1].used,
+          "Foreign-destination frame does not change CH-B node cache");
+    check(!foreignAlarmQueue[0].used && !foreignAlarmQueue[1].used,
+          "Foreign-destination frame does not enter CH-B alarm queue");
+    check(ch::isChTxQueueEmpty(foreignTxQueue, 2),
+          "Foreign-destination frame does not enter CH-B mesh TX queue");
+    check(!foreignResult.ackBuilt && foreignResult.ackSize == 0 &&
+              !foreignResult.onwardQueued && !foreignResult.recoveryQueued,
+          "Foreign-destination frame produces no ACK or relay action");
+
+    // --- CH-B receives GLD1's STAR frame: REAL processGldStarFrame ------------
     ch::NodeCacheEntry cacheB[8]{};
     ch::AlarmQueueItem alarmQB[4]{};
     ch::ChTxItem txQB[4]{};

@@ -9,6 +9,7 @@ pin configuration with the actual bench hardware.
 |---|---|---|---|
 | `SCH_GasLeakIntegratedVer3_2026-06-25.json` | `C:\Users\asus\Downloads\SCH_GasLeakIntegratedVer3_2026-06-25.json` | EasyEDA schematic JSON, editor `6.5.54` | Title `GasLeakIntegratedVer3`; contains `Sheet_1` and `Sheet_2`. |
 | `gld-project-ver2-2026-07-01/` | `C:\Users\asus\Downloads\GLD_Project.zip` | EasyEDA schematic + PCB JSON, original ZIP preserved | Title `GasLeakIntegratedVer2`; contains schematic, PCB, and import note. |
+| `ch-dual-radio-e220-ver4-2026-07-21/` | `C:\Users\MSI\Downloads\BackupProjects_mamanbudiman_personal_0_20260721\dualRadioCH_E220Ver4_beb7c925d2fd480bbbdd45ea1f0a42d0.zip` | EasyEDA schematic + PCB JSON, original ZIP preserved | Title `dualRadioCH_E220Ver4`; source reference for the dual E22 CH board. |
 
 ## ADS To TCA/MCP Board Mapping
 

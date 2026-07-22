@@ -149,6 +149,7 @@ export const state = {
   pendingMqttMode: "",
   expertUnlocked: false,
   manifest: null,
+  manifestPackageFiles: new Map(),
   bridgeHealthTimer: null,
   bridgeReconnecting: false,
   activeSlot: 1,

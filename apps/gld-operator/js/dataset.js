@@ -150,6 +150,7 @@ const DATASET_CSV_HEADERS = [
   "nulling_profile_id",
   ...SENSOR_NAMES.map((name) => `sv_${name}`),
   ...SENSOR_NAMES.map((name) => `gain_${name}`),
+  ...SENSOR_NAMES.map((name) => `status_${name}`),
   ...Array.from({ length: 8 }, (_, index) => `feature_${index + 1}`)
 ];
 
@@ -171,6 +172,7 @@ function datasetRowCsvLine(row, sessionId) {
     row.nulling_profile_id,
     ...row.sensor_voltage,
     ...row.sensor_gain,
+    ...row.sensor_status,
     ...row.feature_order
   ];
   return cells.map(csvCell).join(",");
@@ -453,8 +455,11 @@ export function handleDatasetMqttEvent(payload) {
   const text = payload.payload || "";
 
   if (kind === "data" && data.sensor_voltage) {
-    addDatasetRecord(data, "mqtt");
-    setDatasetState("Capturing", "MQTT dataset/data received", `MQTT data seq=${data.seq ?? state.dataset.rows.length}`);
+    if (addDatasetRecord(data, "mqtt")) {
+      setDatasetState("Capturing", "MQTT dataset/data received", `MQTT data seq=${data.seq ?? state.dataset.rows.length}`);
+    } else {
+      setDatasetState("Rejected Data", "Invalid, duplicate, or unhealthy dataset sample was not saved", `MQTT data rejected seq=${data.seq ?? "?"}`, true);
+    }
     return;
   }
   if (kind === "status") {
@@ -508,21 +513,33 @@ function normalizeDatasetRecord(raw, source) {
   const telemetry = raw.telemetry || {};
   const sensorVoltage = raw.sensor_voltage || raw.sensorVoltage || telemetry.sensorVoltage || [];
   const sensorGain = raw.sensor_gain || raw.sensorGain || telemetry.sensorGain || [];
-  const featureOrder = raw.feature_order || raw.featureOrder || telemetry.featureOrder || SENSOR_NAMES;
+  const sensorStatus = raw.sensor_status || raw.sensorStatus || telemetry.sensorStatus || [];
+  const featureOrder = raw.feature_order || raw.featureOrder || telemetry.featureOrder || [];
   const timestampMs = raw.timestamp_ms ?? raw.timestampMs ?? Date.now();
+  const mode = String(raw.mode || state.status?.mode || state.mode || "").toUpperCase();
+  const validVoltage = Array.isArray(sensorVoltage) && sensorVoltage.length === 8
+    && sensorVoltage.every((value) => Number.isFinite(Number(value)));
+  const validGain = Array.isArray(sensorGain) && sensorGain.length === 8
+    && sensorGain.every((value) => [1, 2, 4, 8, 16, 32, 64].includes(Number(value)));
+  const validStatus = Array.isArray(sensorStatus) && sensorStatus.length === 8
+    && sensorStatus.every((value) => Number(value) === 0);
+  const validOrder = Array.isArray(featureOrder) && featureOrder.length === 8
+    && featureOrder.every((value, index) => value === SENSOR_NAMES[index]);
+  if (mode !== "DATASET" || !validVoltage || !validGain || !validStatus || !validOrder) return null;
   return {
     timeIso: new Date(Number(timestampMs) > 100000000000 ? Number(timestampMs) : Date.now()).toISOString(),
     source,
     device_id: raw.device_id || raw.deviceId || state.dataset.deviceId || state.info?.deviceId || "",
     node_id: raw.node_id ?? raw.nodeId ?? state.status?.nodeId ?? state.info?.nodeId ?? "",
-    mode: raw.mode || state.status?.mode || state.mode || "DATASET",
+    mode,
     seq: raw.seq ?? "",
     timestamp_ms: timestampMs,
     label: raw.label || state.dataset.label || getField("datasetLabel"),
     nulling_profile_id: raw.nulling_profile_id ?? raw.nullingProfileId ?? "",
     sensor_voltage: Array.from({ length: 8 }, (_, index) => Number.isFinite(Number(sensorVoltage[index])) ? Number(sensorVoltage[index]) : ""),
     sensor_gain: Array.from({ length: 8 }, (_, index) => sensorGain[index] ?? ""),
-    feature_order: Array.from({ length: 8 }, (_, index) => featureOrder[index] || SENSOR_NAMES[index])
+    sensor_status: Array.from({ length: 8 }, (_, index) => Number(sensorStatus[index])),
+    feature_order: Array.from({ length: 8 }, (_, index) => featureOrder[index])
   };
 }
 
@@ -545,8 +562,12 @@ async function appendDatasetRowToFile(record) {
 
 function addDatasetRecord(raw, source) {
   const record = normalizeDatasetRecord(raw, source);
-  const key = record.seq !== "" ? `${record.source}:${record.device_id}:${record.seq}` : `${record.source}:${record.timestamp_ms}:${state.dataset.rows.length}`;
-  if (state.dataset.rowKeys.has(key)) return;
+  if (!record) {
+    appendLog(`DATASET_RECORD_REJECTED source=${source} invalid mode/voltage/gain/status/feature_order`, "in");
+    return false;
+  }
+  const key = record.seq !== "" ? `${record.device_id}:${record.seq}` : `${record.device_id}:${record.timestamp_ms}`;
+  if (state.dataset.rowKeys.has(key)) return false;
   state.dataset.rowKeys.add(key);
   state.dataset.rows.push(record);
   if (state.dataset.rows.length > 5000) {
@@ -559,10 +580,12 @@ function addDatasetRecord(raw, source) {
   if (!state.dataset.startedAt) state.dataset.startedAt = Date.now();
   renderDatasetSession();
   appendDatasetRowToFile(record);
+  return true;
 }
 
 export function maybeCaptureDatasetTelemetry(status) {
   const mode = String(status.mode || state.mode || "").toLowerCase();
+  if (state.datasetRuntime.mqtt) return;
   if (!state.dataset.active || mode !== "dataset") return;
   const telemetry = status.telemetry;
   if (!telemetry?.valid || !Array.isArray(telemetry.sensorVoltage)) return;

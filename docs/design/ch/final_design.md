@@ -9,7 +9,7 @@ Status: current source mirror, 2026-06-29. Dokumen ini mengikuti CH STAR+MESH ru
 | PlatformIO env | `firmware/platformio.ini` |
 | Main runtime | `firmware/ch/src/ChStarMeshRuntimeMain.cpp` |
 | Config | `firmware/config/ChConfig.h`, `LoraStarConfig.h`, `LoraMeshConfig.h` |
-| Pins | `firmware/ch/include/ChBoardPins.h` |
+| Pins | `firmware/ch/include/ChBoardPinsCh3.h` (latest CH3/CH5 production profile) |
 | STAR parser/ACK | `firmware/ch/include/ChUplink.h`, `firmware/ch/src/ChUplink.cpp` |
 | Node cache | `NodeCache.h`, `NodeCache.cpp` |
 | Alarm queue | `AlarmQueue.h`, `AlarmQueue.cpp` |
@@ -23,9 +23,8 @@ Status: current source mirror, 2026-06-29. Dokumen ini mengikuti CH STAR+MESH ru
 
 | Env | CH ID | Overrides |
 |---|---:|---|
-| `ch1` | default `0x0064` | runtime base/default CH |
-| `ch2` | `0x0065` | `PGL_CH_ID=0x0065`, battery start/run/critical thresholds set to 0 |
-| `ch3` | `0x0066` | `PGL_CH_ID=0x0066` |
+| `ch` | NVS-provisioned; factory fallback `0x0064` | latest CH3/CH5 pins, RF switch, external WDT, reference radio reset |
+| `chFieldtest` | same NVS identity as `ch` | 30 s HELLO, 5 s jitter, battery read-only |
 
 The CH runtime env compiles shared `AppFrame`, `FirmwareConfig`, `GldRecord`; CH `AlarmQueue`, `ChPullRequest`, `ChRuntime`, `ChTxQueue`, `ChUplink`, `ClusterResponse`, `NodeCache`, `ChStarMeshRuntimeMain`. It excludes GLD source, `ChStarRxSelfTestMain`, docs, tests, and versions.
 
@@ -44,10 +43,11 @@ Firmware identifiers:
 |---|---|
 | SPI SCK/MOSI/MISO | GPIO12/GPIO11/GPIO13 |
 | Radio A role | STAR with GLD |
-| Radio A TXEN/RXEN/RST/BUSY/DIO1/CS | GPIO5/GPIO6/GPIO7/GPIO15/GPIO16/GPIO17 |
+| Radio A TXEN/RXEN/RST/BUSY/DIO1/CS | GPIO5/GPIO6/GPIO7/GPIO17/GPIO15/GPIO16 |
 | Radio B role | MESH with CH/Gateway |
-| Radio B CS/BUSY/RXEN/TXEN/RST/DIO1 | GPIO14/GPIO38/GPIO39/GPIO40/GPIO41/GPIO42 |
+| Radio B CS/BUSY/RXEN/TXEN/RST/DIO1 | GPIO42/GPIO41/GPIO39/GPIO40/GPIO1/GPIO2 |
 | Battery monitor ADC | GPIO4 |
+| External WDT wake/keepalive | GPIO14/GPIO21 |
 
 Radio init:
 
@@ -80,7 +80,10 @@ Radio init:
 | pending downlink TTL | 1800000 ms |
 | housekeeping interval | 60000 ms |
 
-Parent ID and alternate parent are runtime values. CH loads them from Preferences namespace `ch-cfg`, keys `parentId` and `parentAlt`, but clears a saved Gateway parent/alternate at boot so Gateway links require fresh RSSI/SNR before reuse.
+CH ID, parent ID, and alternate parent are runtime values. CH ID is provisioned by
+the operator app and stored in Preferences namespace `ch-cfg`, key `chId`.
+Changing it clears `parentId` and `parentAlt`, verifies the NVS readback, and
+reboots so discovery restarts under the new identity.
 
 ## Battery And State Machine
 
@@ -99,7 +102,7 @@ Battery thresholds:
 | run minimum | 3150 mV |
 | critical | 3100 mV |
 
-`ch2` overrides all three thresholds to 0.
+`chFieldtest` keeps the ADC reading for diagnostics but bypasses battery gating.
 
 State machine:
 
@@ -137,7 +140,7 @@ Discovery response from CH:
 | 2..3 | responding CH current parent |
 | 4 | advertised mesh depth |
 | 5..6 | CH battery mV |
-| 7 | route-to-root flag, current value `0x01` |
+| 7 | route/capability flags: route-to-root `0x01`, HELLO ACK v1 `0x02`, alarm ACK node ID v1 `0x04`, routed node command v1 `0x08` |
 
 Gateway responses are described in Gateway docs. CH accepts Gateway reverse-link RSSI/SNR only when Gateway response payload has at least 10 bytes.
 
@@ -294,9 +297,10 @@ Behavior:
 
 ## Downlink To GLD
 
-CH stores pending downlink from `MSG_SERVER_NODE_COMMAND`:
+CH accepts two backward-compatible `MSG_SERVER_NODE_COMMAND` payload forms.
+The direct legacy form remains:
 
-| Current CH parser offset | Field |
+| Legacy offset | Field |
 |---:|---|
 | 0..1 | target GLD node ID |
 | 2..3 | command ID |
@@ -304,14 +308,48 @@ CH stores pending downlink from `MSG_SERVER_NODE_COMMAND`:
 | 6 | command length |
 | 7.. | command bytes, max accepted length 8 |
 
+When the Gateway JSON has an explicit `hopList`/`hop_list`/`hops` array, it
+uses the routed v1 envelope:
+
+| Routed v1 offset | Field |
+|---:|---|
+| 0 | route magic `0xC1` |
+| 1 | route version `0x01` |
+| 2 | hop count |
+| 3..5 | reserved, must be zero |
+| 6 | legacy rejection guard `0xFF` |
+| 7.. | `hopList[]`, each CH ID as `uint16BE` |
+| after hop list | complete legacy command body shown above |
+
+The first hop is the CH directly reachable from the Gateway and the last hop
+is the CH that owns the target GLD. Every CH requires its local ID in the
+unique, non-zero hop list and requires AppFrame `srcId` to equal the previous
+hop (the Gateway ID for hop zero). An intermediate CH keeps the AppFrame seq
+and payload unchanged, rewrites `srcId`/`dstId` for the next hop, and enqueues
+the frame as `RelayFrame`. Only the final CH stores the pending downlink.
+
+The v1 guard is intentionally greater than the legacy maximum command length.
+An older CH therefore rejects a routed payload instead of storing it as a
+bogus legacy command. Direct commands that use only `cluster` keep the legacy
+wire format and continue to work with old and new CH firmware. A routed
+command requires every CH in the explicit hop list to advertise
+`CH_CONFIG_CAP_NODE_COMMAND_ROUTE_V1 (0x08)`. With an 8-byte command and the
+80-byte MESH limit, v1 supports at most 29 CH hops.
+
 If NodeCache says target GLD is external-powered and STAR is ready, CH sends `MSG_NODE_DOWNLINK` immediately. If target GLD is not external-powered, CH waits for the next STAR uplink from that GLD and sends downlink inside the GLD RX window.
 
 Pending downlink store has one active slot per `nodeId` lookup. A new command for the same node reuses the existing slot and overwrites its fields.
 
-CH source parses the same `MSG_SERVER_NODE_COMMAND` payload that Gateway builds: `nodeId + commandId + ttlSec + commandLen + commandBytes`. `ttlSec` becomes the pending downlink expiry; `0` uses the CH default pending TTL.
+CH and Gateway share the same encoder/decoder for both payload forms.
+`ttlSec` becomes the pending downlink expiry; `0` uses the CH default pending
+TTL. Gateway and CH both enforce an 8-byte command maximum; Gateway rejects a
+longer value instead of truncating the command.
 For GLD mode commands, `commandBytes` is the authenticated GLD payload
 `0x81 + mode + commandId + cmacTag4`; CH stores it opaquely and forwards it as
 `MSG_NODE_DOWNLINK` with AppFrame seq `commandId & 0xFF`.
+
+`MSG_SERVER_NODE_COMMAND` remains fire-and-forget on MESH: this route version
+does not add a relay ACK or an end-to-end GLD command-result ACK.
 
 ## Serial Logs
 

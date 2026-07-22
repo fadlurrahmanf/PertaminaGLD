@@ -1,10 +1,33 @@
 #include "NeuralNetwork.h"
+#include "ModelMetadata.h"
 #include "model_data.h"
 #include "tensorflow/lite/micro/micro_error_reporter.h"
 #include "tensorflow/lite/micro/micro_interpreter.h"
 #include "tensorflow/lite/schema/schema_generated.h"
 #include "tensorflow/lite/version.h"
 #include "tensorflow/lite/micro/micro_mutable_op_resolver.h"
+
+#include <cmath>
+#include <limits>
+
+namespace {
+
+int tensorElementCount(const TfLiteTensor* tensor) {
+    if (tensor == nullptr || tensor->dims == nullptr || tensor->dims->size <= 0) {
+        return 0;
+    }
+    int count = 1;
+    for (int i = 0; i < tensor->dims->size; ++i) {
+        const int dimension = tensor->dims->data[i];
+        if (dimension <= 0 || count > std::numeric_limits<int>::max() / dimension) {
+            return 0;
+        }
+        count *= dimension;
+    }
+    return count;
+}
+
+}  // namespace
 
 // Define a static tensor arena for better alignment and to avoid heap fragmentation
 const int kArenaSize = 40 * 1024; // Adjust size as needed
@@ -13,7 +36,7 @@ uint8_t static_tensor_arena[kArenaSize] __attribute__((aligned(16))); // 16-byte
 NeuralNetwork::NeuralNetwork()
     : resolver(nullptr), error_reporter(nullptr), model(nullptr),
       interpreter(nullptr), input(nullptr), output(nullptr),
-      tensor_arena(nullptr), outputSize(0), initialized(false) // Initialize members
+      tensor_arena(nullptr), inputSize(0), outputSize(0), initialized(false) // Initialize members
 {
     error_reporter = new tflite::MicroErrorReporter();
     if (!error_reporter) {
@@ -70,7 +93,26 @@ NeuralNetwork::NeuralNetwork()
         return;
     }
 
-    outputSize = output->dims->data[1];
+    if (input->type != kTfLiteFloat32 || output->type != kTfLiteFloat32) {
+        TF_LITE_REPORT_ERROR(error_reporter, "Model tensors must be float32.");
+        return;
+    }
+
+    inputSize = tensorElementCount(input);
+    outputSize = tensorElementCount(output);
+    if (inputSize != pgl::gld::model::EXPECTED_INPUT_ELEMENTS ||
+        outputSize != pgl::gld::model::EXPECTED_OUTPUT_ELEMENTS) {
+        TF_LITE_REPORT_ERROR(
+            error_reporter,
+            "Model tensor contract mismatch: input=%d output=%d expected=%d/%d.",
+            inputSize,
+            outputSize,
+            pgl::gld::model::EXPECTED_INPUT_ELEMENTS,
+            pgl::gld::model::EXPECTED_OUTPUT_ELEMENTS);
+        inputSize = 0;
+        outputSize = 0;
+        return;
+    }
     initialized = true;
 }
 
@@ -123,9 +165,17 @@ int NeuralNetwork::predict(float &confidence_score) // Now takes a reference to 
 
     // Find class with highest probability
     float max_score = output->data.f[0];
+    if (!std::isfinite(max_score)) {
+        confidence_score = 0.0f;
+        return -1;
+    }
     int max_index = 0;
 
     for (int i = 1; i < outputSize; i++) {
+        if (!std::isfinite(output->data.f[i])) {
+            confidence_score = 0.0f;
+            return -1;
+        }
         if (output->data.f[i] > max_score) {
             max_score = output->data.f[i];
             max_index = i;
@@ -135,6 +185,13 @@ int NeuralNetwork::predict(float &confidence_score) // Now takes a reference to 
     return max_index;
 }
 // <--- END MODIFIED predict FUNCTION --->
+
+int NeuralNetwork::getInputSize() {
+    if (!initialized) {
+        return 0;
+    }
+    return inputSize;
+}
 
 int NeuralNetwork::getOutputSize() {
     if (!initialized) {

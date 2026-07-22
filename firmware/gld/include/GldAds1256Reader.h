@@ -4,8 +4,6 @@
 
 #include <SPI.h>
 
-class ADS1256;
-
 namespace pgl::gld {
 
 constexpr float GLD_ADS1256_VREF_VOLTS = 2.497f;
@@ -38,15 +36,15 @@ public:
 
 private:
     SPIClass* spi_ = nullptr;
-    ADS1256* ads_ = nullptr;
     bool initialized_ = false;
+    uint8_t activePgaIndex_ = 0xFF;
     uint8_t pgaIndex_[8]{};
     uint8_t gainConfirmDown_[8]{};
     uint8_t gainConfirmUp_[8]{};
 
     bool gainCalibrate(uint8_t channel);
     uint8_t getCurrentGain(uint8_t channel) const;
-    void applyGain(uint8_t channel);
+    bool applyGain(uint8_t channel);
     float convertToVoltage(long raw, uint8_t pgaGain) const;
     bool readSingleInternal(uint8_t channel, long& raw);
 };

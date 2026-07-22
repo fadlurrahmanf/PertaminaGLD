@@ -147,18 +147,6 @@ bool decodeLine(const char* line, GldSerialCommand& outCommand) {
     return false;
 }
 
-void echoTypedChar(Stream& stream, char c) {
-    if (c == '\r' || c == '\n') {
-        stream.println();
-        return;
-    }
-    if (c == '\b' || c == 0x7F) {
-        stream.print("\b \b");
-        return;
-    }
-    stream.write(static_cast<uint8_t>(c));
-}
-
 bool readCommandFrom(Stream& stream, char* buf, uint16_t& pos,
                      GldSerialCommand& outCommand) {
     while (stream.available()) {
@@ -166,7 +154,6 @@ bool readCommandFrom(Stream& stream, char* buf, uint16_t& pos,
         if (value < 0) break;
         const char c = static_cast<char>(value);
         if (c == '\n' || c == '\r') {
-            if (pos > 0) echoTypedChar(stream, c);
             buf[pos] = '\0';
             pos = 0;
             if (decodeLine(buf, outCommand)) return true;
@@ -174,10 +161,8 @@ bool readCommandFrom(Stream& stream, char* buf, uint16_t& pos,
             if (pos > 0) {
                 --pos;
                 buf[pos] = '\0';
-                echoTypedChar(stream, c);
             }
         } else if (pos < 511) {
-            echoTypedChar(stream, c);
             buf[pos++] = c;
         }
     }

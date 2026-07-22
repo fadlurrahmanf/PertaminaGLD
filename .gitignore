@@ -1,7 +1,14 @@
 # Environment and secrets
-.env
-.env.*
-!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+config/*.env
+firmware/config/*.env
+!config/*.env.example
+!firmware/config/*.env.example
+**/flows_cred.json
+**/settings.local.js
+**/credentials.local.json
 
 # Local AI agent/session state
 .codex/

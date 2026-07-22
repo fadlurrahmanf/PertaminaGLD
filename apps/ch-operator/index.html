@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CH Operator — Pertamina GLD ClusterHead</title>
+  <link rel="stylesheet" href="./style.css?v=1" />
+</head>
+<body>
+  <div class="shell">
+    <header class="strip">
+      <div class="brand">
+        <span class="eyebrow">Pertamina GLD</span>
+        <h1>ClusterHead Operator</h1>
+      </div>
+      <div class="badges">
+        <span class="badge" id="connectionBadge"><span class="k">link</span> <b>idle</b></span>
+        <span class="badge" id="bridgeBadge"><span class="k">bridge</span> <b>…</b></span>
+        <span class="badge" id="portBadge"><span class="k">port</span> <b>—</b></span>
+        <span class="badge" id="chIdBadge"><span class="k">CH</span> <b>—</b></span>
+        <span class="badge" id="stateBadge"><span class="k">state</span> <b>—</b></span>
+        <span class="badge" id="parentBadge"><span class="k">parent</span> <b>—</b></span>
+        <span class="badge" id="battBadge"><span class="k">batt</span> <b>—</b></span>
+      </div>
+      <div class="strip-actions">
+        <button id="settingsBtn">CH Settings</button>
+        <button id="portSetupBtn">Port Setup</button>
+        <button id="themeToggleBtn">Dark Mode</button>
+      </div>
+    </header>
+
+    <div class="banner" id="banner">
+      <span id="bannerText"></span>
+      <button id="bannerDismiss">Dismiss</button>
+    </div>
+
+    <nav class="tabs" id="tabs">
+      <button class="tab active" data-tab="overview">Overview</button>
+      <button class="tab" data-tab="nodes">Nodes (GLD)</button>
+      <button class="tab" data-tab="mesh">Mesh / Parent</button>
+      <button class="tab" data-tab="log">Log</button>
+      <button class="tab" data-tab="expert">Expert</button>
+    </nav>
+
+    <main class="workspace">
+      <!-- OVERVIEW -->
+      <section class="panel active" data-panel="overview">
+        <div class="section-head">
+          <h2>ClusterHead status</h2>
+          <div class="actions">
+            <button id="refreshOverviewBtn">Refresh</button>
+            <button id="pollToggleBtn">Start polling</button>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="card">
+            <h3>State</h3>
+            <div class="metric"><span class="value small" id="ovState">—</span><span class="unit" id="ovStateReason">no data yet</span></div>
+          </div>
+          <div class="card">
+            <h3>Battery</h3>
+            <div class="metric"><span class="value" id="ovBatt">—</span><span class="unit">mV</span></div>
+          </div>
+          <div class="card">
+            <h3>Uptime</h3>
+            <div class="metric"><span class="value small" id="ovUptime">—</span><span class="unit">since boot</span></div>
+          </div>
+          <div class="card">
+            <h3>Nodes seen</h3>
+            <div class="metric"><span class="value" id="ovNodeCount">0</span><span class="unit" id="ovNodeUnsent">0 unsent</span></div>
+          </div>
+          <div class="card span-2">
+            <h3>Identity</h3>
+            <dl class="kv">
+              <dt>CH ID</dt><dd id="ovChId">—</dd>
+              <dt>Root gateway</dt><dd id="ovRootGw">—</dd>
+              <dt>Firmware</dt><dd id="ovFirmware">—</dd>
+              <dt>Protocol</dt><dd id="ovProtocol">—</dd>
+              <dt>Capabilities</dt><dd id="ovCaps">—</dd>
+            </dl>
+          </div>
+          <div class="card span-2">
+            <h3>Active parent</h3>
+            <dl class="kv">
+              <dt>Parent ID</dt><dd id="ovParent">—</dd>
+              <dt>RSSI</dt><dd id="ovParentRssi">—</dd>
+              <dt>SNR</dt><dd id="ovParentSnr">—</dd>
+              <dt>Mesh depth</dt><dd id="ovDepth">—</dd>
+            </dl>
+          </div>
+          <div class="card span-2">
+            <h3>Hello &amp; parent search timers</h3>
+            <dl class="kv">
+              <dt>Next CH_HELLO</dt><dd id="ovHelloCountdown">no hello seen yet</dd>
+              <dt>Hello failures</dt><dd id="ovHelloFailures">0</dd>
+              <dt>Next CH_CONFIG</dt><dd id="ovConfigCountdown">not searching</dd>
+            </dl>
+          </div>
+          <div class="card span-2">
+            <h3>STAR radio <span class="hint" style="margin:0">— to GLD</span></h3>
+            <dl class="kv">
+              <dt>Begin</dt><dd id="starBeginStatus">—</dd>
+              <dt>Freq</dt><dd id="starFreqValue">—</dd>
+              <dt>BW / SF / CR</dt><dd id="starBwSfCr">—</dd>
+              <dt>Sync word</dt><dd id="starSyncValue">—</dd>
+            </dl>
+          </div>
+          <div class="card span-2">
+            <h3>MESH radio <span class="hint" style="margin:0">— to Gateway</span></h3>
+            <dl class="kv">
+              <dt>Begin</dt><dd id="meshBeginStatus">—</dd>
+              <dt>Freq</dt><dd id="meshFreqValue">—</dd>
+              <dt>BW / SF / CR</dt><dd id="meshBwSfCr">—</dd>
+              <dt>Sync word</dt><dd id="meshSyncValue">—</dd>
+            </dl>
+          </div>
+          <div class="card span-2">
+            <h3>Gateway pull request</h3>
+            <div class="stepper" id="pullStepper">
+              <div class="step pending" id="pullStep1">
+                <div class="step-dot"></div>
+                <div class="step-label">Request received</div>
+              </div>
+              <div class="step-line"></div>
+              <div class="step pending" id="pullStep2">
+                <div class="step-dot"></div>
+                <div class="step-label">Processing</div>
+              </div>
+              <div class="step-line"></div>
+              <div class="step pending" id="pullStep3">
+                <div class="step-dot"></div>
+                <div class="step-label" id="pullStep3Label">Response sent</div>
+              </div>
+            </div>
+            <dl class="kv">
+              <dt>Last requested</dt><dd id="ovPullRequested">never</dd>
+              <dt>GLD data sent</dt><dd id="ovPullData">No pull request seen yet</dd>
+            </dl>
+          </div>
+          <div class="card span-2">
+            <h3>Battery trend</h3>
+            <canvas id="battChart" height="120"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- NODES -->
+      <section class="panel" data-panel="nodes">
+        <div class="section-head">
+          <div>
+            <h2>GLD nodes reporting to this CH</h2>
+            <p class="hint">From the CH RAM NodeCache. "Last update" counts up from the last STAR uplink each GLD sent. Nodes older than 300 s are flagged stale. RSSI/SNR reflect the most recent STAR packet only (not stored by the firmware, so a node that hasn't retransmitted this session shows no reading).</p>
+          </div>
+          <div class="actions">
+            <button id="refreshNodesBtn">Refresh (GET_NODES)</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="data" id="nodesTable">
+            <thead>
+              <tr>
+                <th>Node ID</th>
+                <th>Alarm</th>
+                <th>Power</th>
+                <th>Unsent</th>
+                <th>RSSI</th>
+                <th>SNR</th>
+                <th>Last update</th>
+                <th>Freshness</th>
+              </tr>
+            </thead>
+            <tbody id="nodesBody">
+              <tr><td class="empty" colspan="8">No GLD nodes seen yet. Connect to the CH and wait for STAR uplinks (or run GET_NODES).</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- MESH / PARENT -->
+      <section class="panel" data-panel="mesh">
+        <div class="section-head">
+          <div>
+            <h2>Mesh backbone &amp; parent selection</h2>
+            <p class="hint">Candidate parents the CH has heard over the MESH radio, with link quality. Use the actions to force a hello, reset the stored parent, or trigger failover.</p>
+          </div>
+          <div class="actions">
+            <button id="sendHelloBtn">Send hello</button>
+            <button id="clearParentBtn">Clear parent NVS</button>
+            <button id="forceFailoverBtn">Force failover</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="data" id="parentsTable">
+            <thead>
+              <tr>
+                <th>Candidate</th>
+                <th>Its parent</th>
+                <th>Depth</th>
+                <th>RSSI</th>
+                <th>SNR</th>
+                <th>Batt (mV)</th>
+                <th>Caps</th>
+                <th>Active</th>
+              </tr>
+            </thead>
+            <tbody id="parentsBody">
+              <tr><td class="empty" colspan="8">No parent candidates heard yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="card" style="margin-top:16px">
+          <h3>Last Gateway pull request</h3>
+          <p class="hint">MSG_SERVER_PULL_REQUEST arrives over MESH from the root Gateway (or is relayed downstream to another CH); this CH cannot send one itself, it can only report the last one it saw or served.</p>
+          <dl class="kv">
+            <dt>Seen</dt><dd id="pullSeenAt">no request seen yet</dd>
+            <dt>Request ID</dt><dd id="pullRequestId">—</dd>
+            <dt>Status</dt><dd id="pullStatus">—</dd>
+            <dt>Data status</dt><dd id="pullDataStatus">—</dd>
+            <dt>Records / size</dt><dd id="pullRecords">—</dd>
+            <dt>Queued to parent</dt><dd id="pullOnwardQueued">—</dd>
+          </dl>
+        </div>
+      </section>
+
+      <!-- LOG -->
+      <section class="panel" data-panel="log">
+        <div class="section-head">
+          <h2>Serial log</h2>
+          <div class="actions">
+            <button id="pauseLogBtn">Pause</button>
+            <button id="downloadLogBtn">Download</button>
+            <button id="saveLogBtn">Save to disk</button>
+            <button id="clearLogBtn">Clear</button>
+          </div>
+        </div>
+        <div class="terminal" id="serialLog"></div>
+      </section>
+
+      <!-- EXPERT -->
+      <section class="panel" data-panel="expert">
+        <div class="section-head">
+          <h2>Expert terminal</h2>
+          <div class="actions">
+            <button id="lockBtn">Lock</button>
+          </div>
+        </div>
+        <div class="card">
+          <p class="hint" id="expertLockNote">Raw command console. Send any line to the CH over serial. Locked until you enter the PIN.</p>
+          <div class="cmdrow">
+            <input id="expertInput" type="text" placeholder="e.g. GET_STATUS" autocomplete="off" disabled />
+            <button id="expertSendBtn" class="primary" disabled>Send</button>
+          </div>
+          <div class="btn-row">
+            <button class="quickcmd" data-cmd="APP_PING" disabled>APP_PING</button>
+            <button class="quickcmd" data-cmd="GET_INFO" disabled>GET_INFO</button>
+            <button class="quickcmd" data-cmd="GET_STATUS" disabled>GET_STATUS</button>
+            <button class="quickcmd" data-cmd="GET_NODES" disabled>GET_NODES</button>
+            <button class="quickcmd" data-cmd="GET_PARENTS" disabled>GET_PARENTS</button>
+            <button class="quickcmd" data-cmd="DEBUG_ON" disabled>DEBUG_ON</button>
+            <button class="quickcmd" data-cmd="DEBUG_OFF" disabled>DEBUG_OFF</button>
+            <button class="quickcmd" data-cmd="RESTART" disabled>RESTART</button>
+          </div>
+        </div>
+        <div class="card" style="margin-top:16px">
+          <h3>Firmware upload</h3>
+          <p class="hint">Flash a prebuilt CH package (PlatformIO env <code>ch</code>, chip esp32s3) over this COM port. The target CH ID is provisioned through the app after flashing.</p>
+          <div class="field">
+            <label for="fwTargetId">Target CH ID (4 hex)</label>
+            <input id="fwTargetId" type="text" maxlength="4" placeholder="0064" disabled />
+          </div>
+          <div class="btn-row">
+            <button id="fwPickBtn" disabled>Choose package folder…</button>
+            <button id="fwUploadBtn" class="primary" disabled>Upload &amp; flash</button>
+          </div>
+          <p class="hint" id="fwStatus">No package loaded.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Port Setup drawer -->
+  <div class="drawer-backdrop" id="setupBackdrop"></div>
+  <aside class="drawer" id="setupPanel" aria-label="Port setup">
+    <header>
+      <h2>Port Setup</h2>
+      <button id="closeSetupBtn">Close</button>
+    </header>
+    <div class="body">
+      <div class="field">
+        <label for="baudInput">Baud</label>
+        <input id="baudInput" type="text" value="115200" readonly />
+      </div>
+      <div class="field">
+        <label for="portSelect">Serial port</label>
+        <select id="portSelect"></select>
+      </div>
+      <div class="field">
+        <label for="manualPortInput">Manual COM override</label>
+        <div class="field-row" style="grid-template-columns: 1fr auto">
+          <input id="manualPortInput" type="text" placeholder="COM3" />
+          <button id="useManualPortBtn">Use</button>
+        </div>
+      </div>
+      <p class="hint" id="portDetail">No serial port selected.</p>
+      <div class="btn-row">
+        <button id="refreshPortsBtn">Rescan</button>
+        <button id="connectBtn" class="primary">Connect</button>
+        <button id="disconnectBtn" disabled>Disconnect</button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- CH Settings drawer -->
+  <div class="drawer-backdrop" id="settingsBackdrop"></div>
+  <aside class="drawer" id="settingsPanel" aria-label="CH settings">
+    <header>
+      <h2>CH Settings</h2>
+      <button id="closeSettingsBtn">Close</button>
+    </header>
+    <div class="body">
+      <fieldset class="group">
+        <legend>Identity</legend>
+        <div class="field">
+          <label for="setChId">CH ID (4 hex, not 0000/FFFF/006F)</label>
+          <input id="setChId" type="text" maxlength="4" placeholder="0064" />
+        </div>
+        <div class="field">
+          <label for="setRootGw">Root gateway ID (4 hex)</label>
+          <input id="setRootGw" type="text" maxlength="4" placeholder="006F" />
+        </div>
+        <div class="btn-row">
+          <button id="applyChIdBtn">Apply CH ID (reboot)</button>
+          <button id="applyRootGwBtn">Apply gateway (reboot)</button>
+        </div>
+      </fieldset>
+
+      <fieldset class="group">
+        <legend>STAR radio (to GLD)</legend>
+        <div class="field-row">
+          <div class="field"><label for="starFreq">Freq MHz</label><input id="starFreq" type="text" placeholder="920.0" /></div>
+          <div class="field"><label for="starBw">BW kHz</label><input id="starBw" type="text" placeholder="125" /></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="starSf">SF</label><input id="starSf" type="text" placeholder="7" /></div>
+          <div class="field"><label for="starCr">CR</label><input id="starCr" type="text" placeholder="5" /></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="starSync">Sync word</label><input id="starSync" type="text" placeholder="18" /></div>
+          <div class="field"><label for="starTx">TX dBm</label><input id="starTx" type="text" placeholder="17" /></div>
+        </div>
+        <div class="btn-row"><button id="applyStarLoraBtn">Apply STAR LoRa (reboot)</button></div>
+      </fieldset>
+
+      <fieldset class="group">
+        <legend>MESH radio (to gateway)</legend>
+        <div class="field-row">
+          <div class="field"><label for="meshFreq">Freq MHz</label><input id="meshFreq" type="text" placeholder="921.0" /></div>
+          <div class="field"><label for="meshBw">BW kHz</label><input id="meshBw" type="text" placeholder="125" /></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="meshSf">SF</label><input id="meshSf" type="text" placeholder="9" /></div>
+          <div class="field"><label for="meshCr">CR</label><input id="meshCr" type="text" placeholder="5" /></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label for="meshSync">Sync word</label><input id="meshSync" type="text" placeholder="52" /></div>
+          <div class="field"><label for="meshTx">TX dBm</label><input id="meshTx" type="text" placeholder="17" /></div>
+        </div>
+        <div class="btn-row"><button id="applyMeshLoraBtn">Apply MESH LoRa (reboot)</button></div>
+      </fieldset>
+
+      <fieldset class="group">
+        <legend>Maintenance</legend>
+        <div class="btn-row">
+          <button id="settingsRestartBtn">RESTART</button>
+          <button id="settingsDebugOnBtn">DEBUG_ON</button>
+          <button id="settingsDebugOffBtn">DEBUG_OFF</button>
+        </div>
+      </fieldset>
+    </div>
+  </aside>
+
+  <script type="module" src="./js/ch-main.js?v=1"></script>
+</body>
+</html>

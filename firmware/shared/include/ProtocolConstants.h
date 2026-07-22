@@ -25,6 +25,33 @@ constexpr uint8_t MSG_SERVER_NODE_COMMAND = 0x32;
 constexpr uint8_t MSG_CH_HELLO = 0x33;
 constexpr uint8_t MSG_CH_CONFIG_REQUEST = 0x34;
 constexpr uint8_t MSG_CH_CONFIG_RESPONSE = 0x35;
+constexpr uint8_t MSG_CH_HELLO_ACK = 0x36;
+
+// CH_CONFIG_RESPONSE payload[7]. Unknown capability bits must be ignored so
+// old/new firmware can coexist during a rolling upgrade.
+constexpr uint8_t CH_CONFIG_FLAG_ROUTE_TO_ROOT = 0x01;
+constexpr uint8_t CH_CONFIG_CAP_HELLO_ACK_V1 = 0x02;
+constexpr uint8_t CH_CONFIG_CAP_ALARM_ACK_NODE_ID_V1 = 0x04;
+constexpr uint8_t CH_CONFIG_CAP_NODE_COMMAND_ROUTE_V1 = 0x08;
+
+// CH_HELLO payload[11]. The byte is absent in the legacy 11-byte payload.
+constexpr uint8_t CH_HELLO_FLAG_ACK_REQUEST_V1 = 0x01;
+constexpr size_t CH_HELLO_LEGACY_PAYLOAD_SIZE = 11;
+constexpr size_t CH_HELLO_V1_PAYLOAD_SIZE = 12;
+constexpr size_t CH_HELLO_ACK_V1_PAYLOAD_SIZE = 4;
+constexpr size_t MESH_ALARM_ACK_V1_PAYLOAD_SIZE = 2;
+
+// SERVER_NODE_COMMAND keeps the legacy 7-byte command header for direct
+// Gateway-to-CH delivery.  The routed v1 envelope carries a source route in
+// front of that same command body.  Byte 6 deliberately cannot be a valid
+// legacy command length, so an older CH rejects a routed frame instead of
+// storing a bogus downlink.
+constexpr size_t NODE_DOWNLINK_COMMAND_MAX_SIZE = 8;
+constexpr size_t SERVER_NODE_COMMAND_LEGACY_HEADER_SIZE = 7;
+constexpr uint8_t SERVER_NODE_COMMAND_ROUTE_MAGIC = 0xC1;
+constexpr uint8_t SERVER_NODE_COMMAND_ROUTE_VERSION_V1 = 0x01;
+constexpr size_t SERVER_NODE_COMMAND_ROUTE_V1_HEADER_SIZE = 7;
+constexpr uint8_t SERVER_NODE_COMMAND_ROUTE_LEGACY_GUARD = 0xFF;
 
 constexpr uint8_t TYPE_GLD_NORMAL_BATTERY = MSG_SENSOR_DATA;
 constexpr uint8_t TYPE_GLD_NORMAL_EXTERNAL = MSG_SENSOR_DATA | FLAG_GLD_EXT_POWER;

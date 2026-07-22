@@ -19,6 +19,7 @@
 #include "GldAds1256Reader.h"
 #include "GldCommandParser.h"
 #include "GldDacMux.h"
+#include "GldDatasetValidator.h"
 #include "GldFrameBuilder.h"
 #include "GldModeManager.h"
 #include "GldMovingAverage.h"
@@ -27,14 +28,24 @@
 #include "GldQcProfile.h"
 #include "GldQcService.h"
 #include "GldPower.h"
-#include "GldSelfTestConfig.h"
 #include "GldThresholdClassifier.h"
 #include "GldConfig.h"
+#if GLD_ALLOW_SELFTEST_AES_FALLBACK
+#if !defined(PGL_GLD_FIELDTEST_SELFTEST_BUILD)
+#error "Public AES self-test fallback is allowed only in an explicit nonproduction field-test build"
+#endif
+#include "GldSelfTestConfig.h"
+#endif
 #include "ProtocolConstants.h"
+#include "../model/ModelMetadata.h"
 #include "../model/NeuralNetwork.h"
 #include "../model/scaler_params.h"
 
 namespace {
+
+static_assert(static_cast<uint8_t>(pgl::gld::GldAds1256Status::Ok) ==
+                  pgl::gld::GLD_DATASET_STATUS_OK,
+              "Dataset validator status contract must track ADS1256 Ok");
 
 // ---------------------------------------------------------------------------
 // Resolved from GldConfig.h
@@ -112,6 +123,32 @@ constexpr uint8_t BATTERY_ALARM_TX_ATTEMPTS = GLD_BATTERY_ALARM_TX_ATTEMPTS;
 constexpr uint32_t BATTERY_ALARM_RETRY_DELAY_MS = GLD_BATTERY_ALARM_RETRY_DELAY_MS;
 constexpr uint32_t BATTERY_SESSION_DEADLINE_MS = GLD_BATTERY_SESSION_DEADLINE_MS;
 constexpr uint32_t CFG_BUTTON_DEBOUNCE_MS = GLD_CFG_BUTTON_DEBOUNCE_MS;
+constexpr uint32_t POWER_RECONCILE_INTERVAL_MS = 1000;
+constexpr uint8_t POWER_RECONCILE_STABLE_SAMPLES = 3;
+
+#if defined(PGL_GLD_TFBG_CONTINUOUS_BATTERY)
+constexpr bool TFBG_CONTINUOUS_BATTERY = true;
+#else
+constexpr bool TFBG_CONTINUOUS_BATTERY = false;
+#endif
+
+#if defined(PGL_GLD_FIELDTEST_4CLASS)
+// This field test exists only to exercise the legacy 4-class model pipeline. It
+// must not alter alarm persistence or drive alarm outputs.  Authenticated
+// non-alarm telemetry is permitted; alarm radio frames remain blocked.
+constexpr bool FIELDTEST_MODEL_UNVERIFIED = true;
+#else
+constexpr bool FIELDTEST_MODEL_UNVERIFIED = false;
+#endif
+
+#if defined(PGL_GLD_ALLOW_UNAUTHENTICATED_ALARM_ACK)
+constexpr bool ALLOW_UNAUTHENTICATED_ALARM_ACK = true;
+#else
+// Existing compact ACKs contain only CRC-protected public fields. They are
+// accepted only in an explicitly non-production compatibility build; default
+// firmware never clears a persisted alarm based on a forgeable RF packet.
+constexpr bool ALLOW_UNAUTHENTICATED_ALARM_ACK = false;
+#endif
 
 #if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8
 constexpr const char* BOARD_PROFILE = "WROOM-1U-N16R8";
@@ -119,7 +156,6 @@ constexpr const char* BOARD_PROFILE = "WROOM-1U-N16R8";
 constexpr const char* BOARD_PROFILE = "4D-ESP32S3";
 #endif
 
-constexpr uint8_t ML_CONFIDENCE_THRESHOLD = pgl::protocol::GLD_LEL_THRESHOLD_PERCENT;
 constexpr uint8_t ACTIVE_LOW_OUTPUT_ON = LOW;
 constexpr uint8_t ACTIVE_LOW_OUTPUT_OFF = HIGH;
 
@@ -153,6 +189,10 @@ bool radioReady = false;
 bool mlReady    = false;
 bool nullDone   = false;
 bool nullingRetryArmed = false;
+bool nullingProfileApplied = false;
+bool lastInferenceValid = false;
+bool sensorFaultActive = false;
+bool modelProfileReady = false;
 uint8_t  txSeq           = 0;
 uint32_t txCounter       = 0;
 uint32_t lastScanMs      = 0;
@@ -179,6 +219,14 @@ uint32_t datasetQueueDropped = 0;
 uint32_t datasetPublishFailCount = 0;
 uint32_t datasetQueueRetryCount = 0;
 uint32_t datasetQueueRetryFailCount = 0;
+uint32_t datasetRejectedSamples = 0;
+pgl::gld::GldDatasetRejectReason lastDatasetRejectReason =
+    pgl::gld::GldDatasetRejectReason::None;
+int8_t lastDatasetRejectChannel = -1;
+uint8_t lastDatasetRejectOkFiniteCount = 0;
+uint8_t lastDatasetRejectStatus = 0xFF;
+uint8_t lastDatasetRejectGain = 0;
+bool lastDatasetRejectSaturated = false;
 
 uint32_t wifiReconnectCount = 0;
 uint32_t wifiReconnectFailCount = 0;
@@ -228,8 +276,15 @@ bool     lastBootMcpControlOk[pgl::gld::board::SENSOR_COUNT]{};
 bool     batteryPowerMode = false;
 bool     batteryCyclePoweredOff = false;
 bool     batteryFaultPowerOffArmed = false;
+bool     powerTransitionShutdownPending = false;
+bool     batteryPersistenceFaultHold = false;
+bool     batteryPendingSaveRequired = false;
+uint32_t batteryPersistenceRetryDueMs = 0;
 uint32_t batteryFaultPowerOffDueMs = 0;
 uint32_t lastWdtKeepaliveMs = 0;
+uint32_t lastPowerReconcileMs = 0;
+bool powerModeCandidateBattery = false;
+uint8_t powerModeCandidateCount = 0;
 
 enum class BatterySessionState : uint8_t {
     Inactive = 0,
@@ -244,12 +299,28 @@ BatterySessionState batterySessionState = BatterySessionState::Inactive;
 uint32_t batterySessionStartedMs = 0;
 uint32_t batteryStateStartedMs = 0;
 uint32_t batteryLastSampleAttemptMs = 0;
+uint32_t batteryLastWarmupPrimeMs = 0;
 uint32_t batteryNextTxAttemptMs = 0;
 uint8_t batteryValidSampleBatches = 0;
 uint8_t batteryAlarmTxAttempts = 0;
 bool batteryAlarmAckReceived = false;
 char batteryCompletionReason[48] = "session_done";
 pgl::gld::GldPendingAlarm batteryPendingAlarm{};
+
+struct GldTxSnapshot {
+    bool valid = false;
+    bool alarm = false;
+    uint8_t sequence = 0;
+    uint8_t frameLen = 0;
+    uint8_t frame[pgl::gld::GLD_PENDING_ALARM_FRAME_CAPACITY]{};
+};
+
+GldTxSnapshot batteryTxSnapshot{};
+pgl::gld::GldClassifyResult batteryFreshResult{pgl::protocol::GLD_GAS_ANOMALY, 0};
+bool batteryFreshInferenceValid = false;
+bool batteryFreshAlarm = false;
+bool batterySendingPersistedAlarm = false;
+bool batteryFreshAlarmQueued = false;
 
 bool serviceHoldActive = false;
 bool cfgButtonRawHigh = true;
@@ -306,6 +377,24 @@ struct RuntimeConfig {
 };
 
 RuntimeConfig runtimeConfig{};
+
+enum class RuntimeAesKeySource : uint8_t {
+    None = 0,
+    Nvs,
+    SelfTest,
+};
+
+RuntimeAesKeySource runtimeAesKeySource = RuntimeAesKeySource::None;
+
+const char* runtimeAesKeySourceName() {
+    switch (runtimeAesKeySource) {
+        case RuntimeAesKeySource::None: return "none";
+        case RuntimeAesKeySource::Nvs: return "nvs";
+        case RuntimeAesKeySource::SelfTest: return "selftest";
+    }
+    return "unknown";
+}
+
 bool beginLoraRadio();
 
 bool runtimeConfigValid() {
@@ -525,6 +614,7 @@ void clearRuntimeAesKey() {
     runtimeConfig.aesKeyId = 0;
     memset(runtimeConfig.aesKey, 0, sizeof(runtimeConfig.aesKey));
     runtimeConfig.aesKeyPresent = false;
+    runtimeAesKeySource = RuntimeAesKeySource::None;
 }
 
 void applySelfTestAesFallbackIfAllowed() {
@@ -532,6 +622,7 @@ void applySelfTestAesFallbackIfAllowed() {
     runtimeConfig.aesKeyId = pgl::gld::selftest::KEY_ID;
     memcpy(runtimeConfig.aesKey, pgl::gld::selftest::AES_KEY, sizeof(runtimeConfig.aesKey));
     runtimeConfig.aesKeyPresent = true;
+    runtimeAesKeySource = RuntimeAesKeySource::SelfTest;
     logPrintln("GLD_SECURITY_LOAD=SELFTEST_FALLBACK");
 #else
     logPrintln("GLD_SECURITY_LOAD=UNPROVISIONED");
@@ -570,6 +661,7 @@ void loadRuntimeConfig() {
     Preferences prefs;
     if (!prefs.begin("gld_app", true)) {
         logPrintln("GLD_APP_CONFIG_LOAD=DEFAULT reason=nvs_unavailable");
+        applySelfTestAesFallbackIfAllowed();
         return;
     }
     String value = prefs.getString("deviceId", runtimeConfig.deviceId);
@@ -599,17 +691,33 @@ void loadRuntimeConfig() {
     runtimeConfig.loraTcxoVoltage = prefs.getFloat("loraTcxo", runtimeConfig.loraTcxoVoltage);
     runtimeConfig.loraXtalVoltage = prefs.getFloat("loraXtal", runtimeConfig.loraXtalVoltage);
     runtimeConfig.ctrlword = static_cast<uint8_t>(prefs.getUChar("ctrlword", runtimeConfig.ctrlword));
+    const String storedSchema = prefs.getString("schema", "");
+    if (storedSchema.length() > 0 &&
+        storedSchema != pgl::firmware::CONFIG_SCHEMA_VERSION) {
+        runtimeConfig.ctrlword = 0;
+        logPrintf("GLD_APP_CONFIG_SCHEMA_MISMATCH stored=%s expected=%s\n",
+                  storedSchema.c_str(), pgl::firmware::CONFIG_SCHEMA_VERSION);
+    }
     runtimeConfig.aesKeyId = static_cast<uint8_t>(prefs.getUChar("aesKeyId", 0));
     runtimeConfig.aesKeyPresent = prefs.getBool("aesKeySet", false) &&
                                   runtimeConfig.aesKeyId != 0 &&
                                   prefs.getBytesLength("aesKey") == sizeof(runtimeConfig.aesKey);
     if (runtimeConfig.aesKeyPresent) {
-        prefs.getBytes("aesKey", runtimeConfig.aesKey, sizeof(runtimeConfig.aesKey));
+        if (prefs.getBytes("aesKey", runtimeConfig.aesKey, sizeof(runtimeConfig.aesKey)) !=
+            sizeof(runtimeConfig.aesKey)) {
+            clearRuntimeAesKey();
+        } else {
+            runtimeAesKeySource = RuntimeAesKeySource::Nvs;
+        }
     } else {
         clearRuntimeAesKey();
     }
     runtimeConfig.lastDownlinkCommandId = prefs.getUShort("lastCmdId", 0);
     prefs.end();
+    if (runtimeConfig.ctrlword != GLD_CTRL_WORD_VALUE) {
+        clearRuntimeAesKey();
+        runtimeConfig.lastDownlinkCommandId = 0;
+    }
     if (!runtimeConfig.aesKeyPresent) {
         applySelfTestAesFallbackIfAllowed();
     }
@@ -619,7 +727,7 @@ void loadRuntimeConfig() {
         logPrintf("GLD_LORA_CONFIG_LOAD=DEFAULT reason=%s\n", loraReason);
     }
     buildRuntimeTopics();
-    logPrintf("GLD_APP_CONFIG_LOAD=%s deviceId=%s nodeId=0x%04X chId=0x%04X ssid=%s mqttHost=%s mqttPort=%u topicRoot=%s aesKey=%u keyId=%u lastCmdId=%u lora=%.3f/%.2f/SF%u/CR%u sync=0x%02X power=%d preamble=%u\n",
+    logPrintf("GLD_APP_CONFIG_LOAD=%s deviceId=%s nodeId=0x%04X chId=0x%04X ssid=%s mqttHost=%s mqttPort=%u topicRoot=%s aesKey=%u aesKeySource=%s keyId=%u lastCmdId=%u lora=%.3f/%.2f/SF%u/CR%u sync=0x%02X power=%d preamble=%u\n",
               runtimeConfigValid() ? "OK" : "DEFAULT_UNCONFIGURED",
               runtimeConfig.deviceId,
               runtimeConfig.nodeId,
@@ -629,6 +737,7 @@ void loadRuntimeConfig() {
               runtimeConfig.mqttPort,
               runtimeConfig.topicRoot,
               runtimeConfig.aesKeyPresent ? 1 : 0,
+              runtimeAesKeySourceName(),
               runtimeConfig.aesKeyId,
               runtimeConfig.lastDownlinkCommandId,
               runtimeConfig.loraFreqMHz,
@@ -643,47 +752,65 @@ void loadRuntimeConfig() {
 bool saveRuntimeConfig() {
     Preferences prefs;
     if (!prefs.begin("gld_app", false)) return false;
-    runtimeConfig.ctrlword = GLD_CTRL_WORD_VALUE;
-    prefs.putUChar("ctrlword", runtimeConfig.ctrlword);
-    prefs.putString("deviceId", runtimeConfig.deviceId);
-    prefs.putUShort("nodeId", runtimeConfig.nodeId);
-    prefs.putUShort("chId", runtimeConfig.chId);
-    prefs.putString("wifiSsid", runtimeConfig.wifiSsid);
-    prefs.putString("wifiPass", runtimeConfig.wifiPassword);
-    prefs.putString("mqttHost", runtimeConfig.mqttHost);
-    prefs.putUShort("mqttPort", runtimeConfig.mqttPort);
-    prefs.putString("mqttUser", runtimeConfig.mqttUser);
-    prefs.putString("mqttPass", runtimeConfig.mqttPass);
-    prefs.putString("topicRoot", runtimeConfig.topicRoot);
-    prefs.putFloat("loraFreq", runtimeConfig.loraFreqMHz);
-    prefs.putFloat("loraBw", runtimeConfig.loraBwKHz);
-    prefs.putUChar("loraSf", runtimeConfig.loraSf);
-    prefs.putUChar("loraCr", runtimeConfig.loraCr);
-    prefs.putUChar("loraSync", runtimeConfig.loraSyncWord);
-    prefs.putShort("loraPwr", runtimeConfig.loraTxPowerDbm);
-    prefs.putUShort("loraPre", runtimeConfig.loraPreamble);
-    prefs.putFloat("loraTcxo", runtimeConfig.loraTcxoVoltage);
-    prefs.putFloat("loraXtal", runtimeConfig.loraXtalVoltage);
+    auto putStringChecked = [&prefs](const char* key, const char* value) {
+        prefs.putString(key, value != nullptr ? value : "");
+        return prefs.getString(key, "__pgl_missing__") == String(value != nullptr ? value : "");
+    };
+    auto removeIfPresent = [&prefs](const char* key) {
+        return !prefs.isKey(key) || prefs.remove(key);
+    };
+
+    // Invalidate first and publish the commit marker last. A brownout or any
+    // failed write therefore leaves the config visibly invalid instead of
+    // exposing a mixed old/new record behind a valid ctrlword.
+    bool ok = prefs.putUChar("ctrlword", 0) == sizeof(uint8_t);
+    runtimeConfig.ctrlword = 0;
+    ok = putStringChecked("schema", pgl::firmware::CONFIG_SCHEMA_VERSION) && ok;
+    ok = putStringChecked("deviceId", runtimeConfig.deviceId) && ok;
+    ok = prefs.putUShort("nodeId", runtimeConfig.nodeId) == sizeof(uint16_t) && ok;
+    ok = prefs.putUShort("chId", runtimeConfig.chId) == sizeof(uint16_t) && ok;
+    ok = putStringChecked("wifiSsid", runtimeConfig.wifiSsid) && ok;
+    ok = putStringChecked("wifiPass", runtimeConfig.wifiPassword) && ok;
+    ok = putStringChecked("mqttHost", runtimeConfig.mqttHost) && ok;
+    ok = prefs.putUShort("mqttPort", runtimeConfig.mqttPort) == sizeof(uint16_t) && ok;
+    ok = putStringChecked("mqttUser", runtimeConfig.mqttUser) && ok;
+    ok = putStringChecked("mqttPass", runtimeConfig.mqttPass) && ok;
+    ok = putStringChecked("topicRoot", runtimeConfig.topicRoot) && ok;
+    ok = prefs.putFloat("loraFreq", runtimeConfig.loraFreqMHz) == sizeof(float) && ok;
+    ok = prefs.putFloat("loraBw", runtimeConfig.loraBwKHz) == sizeof(float) && ok;
+    ok = prefs.putUChar("loraSf", runtimeConfig.loraSf) == sizeof(uint8_t) && ok;
+    ok = prefs.putUChar("loraCr", runtimeConfig.loraCr) == sizeof(uint8_t) && ok;
+    ok = prefs.putUChar("loraSync", runtimeConfig.loraSyncWord) == sizeof(uint8_t) && ok;
+    ok = prefs.putShort("loraPwr", runtimeConfig.loraTxPowerDbm) == sizeof(int16_t) && ok;
+    ok = prefs.putUShort("loraPre", runtimeConfig.loraPreamble) == sizeof(uint16_t) && ok;
+    ok = prefs.putFloat("loraTcxo", runtimeConfig.loraTcxoVoltage) == sizeof(float) && ok;
+    ok = prefs.putFloat("loraXtal", runtimeConfig.loraXtalVoltage) == sizeof(float) && ok;
     if (runtimeConfig.aesKeyPresent && runtimeConfig.aesKeyId != 0) {
-        prefs.putBool("aesKeySet", true);
-        prefs.putUChar("aesKeyId", runtimeConfig.aesKeyId);
-        prefs.putBytes("aesKey", runtimeConfig.aesKey, sizeof(runtimeConfig.aesKey));
+        ok = prefs.putBool("aesKeySet", true) == sizeof(uint8_t) && ok;
+        ok = prefs.putUChar("aesKeyId", runtimeConfig.aesKeyId) == sizeof(uint8_t) && ok;
+        ok = prefs.putBytes("aesKey", runtimeConfig.aesKey, sizeof(runtimeConfig.aesKey)) ==
+                 sizeof(runtimeConfig.aesKey) && ok;
     } else {
-        prefs.putBool("aesKeySet", false);
-        prefs.remove("aesKeyId");
-        prefs.remove("aesKey");
+        ok = prefs.putBool("aesKeySet", false) == sizeof(uint8_t) && ok;
+        ok = removeIfPresent("aesKeyId") && ok;
+        ok = removeIfPresent("aesKey") && ok;
     }
-    prefs.putUShort("lastCmdId", runtimeConfig.lastDownlinkCommandId);
+    ok = prefs.putUShort("lastCmdId", runtimeConfig.lastDownlinkCommandId) == sizeof(uint16_t) && ok;
+    if (ok) {
+        ok = prefs.putUChar("ctrlword", GLD_CTRL_WORD_VALUE) == sizeof(uint8_t);
+    }
     prefs.end();
-    return true;
+    runtimeConfig.ctrlword = ok ? GLD_CTRL_WORD_VALUE : 0;
+    return ok;
 }
 
 bool saveDownlinkReplayState() {
     Preferences prefs;
     if (!prefs.begin("gld_app", false)) return false;
-    prefs.putUShort("lastCmdId", runtimeConfig.lastDownlinkCommandId);
+    const bool stored = prefs.putUShort("lastCmdId", runtimeConfig.lastDownlinkCommandId) ==
+                        sizeof(uint16_t);
     prefs.end();
-    return true;
+    return stored;
 }
 
 bool validDeviceId(const char* deviceId) {
@@ -1107,7 +1234,10 @@ void emitInfoJson() {
     appConfig["topicRoot"] = runtimeConfig.topicRoot;
     appConfig["configValid"] = runtimeConfigValid();
     JsonObject security = doc.createNestedObject("security");
-    security["aesKeyProvisioned"] = runtimeConfig.aesKeyPresent;
+    security["aesKeyProvisioned"] =
+        runtimeAesKeySource == RuntimeAesKeySource::Nvs;
+    security["aesKeyPresent"] = runtimeConfig.aesKeyPresent;
+    security["aesKeySource"] = runtimeAesKeySourceName();
     security["keyId"] = runtimeConfig.aesKeyId;
     security["selfTestFallbackAllowed"] = GLD_ALLOW_SELFTEST_AES_FALLBACK ? true : false;
     security["lastDownlinkCommandId"] = runtimeConfig.lastDownlinkCommandId;
@@ -1134,11 +1264,14 @@ void emitStatusJson() {
     powerObj["externalPower"] = power.externalPower;
     powerObj["batteryMv"] = power.batteryMv;
     powerObj["batteryValid"] = power.batteryValid;
+    powerObj["batteryDetected"] = power.batteryDetected;
+    powerObj["batterySenseStatus"] = pgl::gld::gldBatterySenseStatusName(power.batterySenseStatus);
     powerObj["batteryLow"] = power.batteryLow;
     powerObj["batteryCritical"] = power.batteryCritical;
+    powerObj["sourceAmbiguous"] = power.powerSourceAmbiguous;
     powerObj["serviceHoldActive"] = serviceHoldActive;
     powerObj["serviceHoldEffective"] = batteryPowerMode &&
-        (serviceHoldActive ||
+        (serviceHoldActive || batteryPersistenceFaultHold ||
          digitalRead(pgl::gld::board::PIN_USER_BUTTON) == LOW ||
          !cfgButtonRawHigh || cfgButtonPressArmed);
 
@@ -1152,6 +1285,8 @@ void emitStatusJson() {
     batterySession["alarmTxAttemptLimit"] = BATTERY_ALARM_TX_ATTEMPTS;
     batterySession["alarmAckReceived"] = batteryAlarmAckReceived;
     batterySession["pendingAlarm"] = batteryPendingAlarm.active;
+    batterySession["pendingSaveRequired"] = batteryPendingSaveRequired;
+    batterySession["persistenceFaultHold"] = batteryPersistenceFaultHold;
     batterySession["completionReason"] = batteryCompletionReason;
 
     JsonObject boot = doc.createNestedObject("bootHealth");
@@ -1187,6 +1322,18 @@ void emitStatusJson() {
     boot["dacReady"] = dacReady;
     boot["radioReady"] = radioReady;
     boot["mlReady"] = mlReady;
+    boot["nullingProfileApplied"] = nullingProfileApplied;
+    boot["modelProfileReady"] = modelProfileReady;
+
+    JsonObject modelStatus = doc.createNestedObject("model");
+    modelStatus["profileId"] = pgl::gld::model::PROFILE_ID;
+    modelStatus["scalerProfileId"] = pgl::gld::model::SCALER_PROFILE_ID;
+    modelStatus["productionApproved"] = pgl::gld::model::PRODUCTION_APPROVED;
+    modelStatus["boundNullingProfileId"] = pgl::gld::model::BOUND_NULLING_PROFILE_ID;
+    modelStatus["activeNullingProfileId"] = nullingProfileId;
+    modelStatus["profileReady"] = modelProfileReady;
+    modelStatus["inferenceValid"] = lastInferenceValid;
+    modelStatus["sensorFault"] = sensorFaultActive;
 
     JsonObject lora = doc.createNestedObject("lora");
     lora["beginState"] = lastLoraBeginState;
@@ -1194,7 +1341,10 @@ void emitStatusJson() {
     lora["lastTxOk"] = lastLoraTxOk;
     lora["txSeq"] = txSeq;
     lora["txCounter"] = txCounter;
-    lora["aesKeyProvisioned"] = runtimeConfig.aesKeyPresent;
+    lora["aesKeyProvisioned"] =
+        runtimeAesKeySource == RuntimeAesKeySource::Nvs;
+    lora["aesKeyPresent"] = runtimeConfig.aesKeyPresent;
+    lora["aesKeySource"] = runtimeAesKeySourceName();
     lora["keyId"] = runtimeConfig.aesKeyId;
     lora["lastDownlinkCommandId"] = runtimeConfig.lastDownlinkCommandId;
     lora["freqMHz"] = runtimeConfig.loraFreqMHz;
@@ -1226,6 +1376,14 @@ void emitStatusJson() {
     dataset["publishFailCount"] = datasetPublishFailCount;
     dataset["retryCount"] = datasetQueueRetryCount;
     dataset["retryFailCount"] = datasetQueueRetryFailCount;
+    dataset["rejectedSamples"] = datasetRejectedSamples;
+    dataset["lastRejectReason"] =
+        pgl::gld::gldDatasetRejectReasonName(lastDatasetRejectReason);
+    dataset["lastRejectChannel"] = static_cast<int>(lastDatasetRejectChannel);
+    dataset["lastRejectOkFiniteCount"] = lastDatasetRejectOkFiniteCount;
+    dataset["lastRejectStatus"] = lastDatasetRejectStatus;
+    dataset["lastRejectGain"] = lastDatasetRejectGain;
+    dataset["lastRejectSaturated"] = lastDatasetRejectSaturated;
 
     JsonObject recovery = doc.createNestedObject("recovery");
     recovery["wifiReconnectCount"] = wifiReconnectCount;
@@ -1270,11 +1428,18 @@ bool serviceHoldBlocksClr();
 void setServiceHoldActive(bool active, const char* source);
 
 void onModeCmd(pgl::gld::GldMode newMode) {
+    if (!pgl::gld::writeGldMode(newMode)) {
+        emitCommandAck("SET_MODE", "error", "mode persistence failed; restart cancelled", false);
+        logPrintf("GLD_MODE_SWITCH current=%s new=%s persisted=0 restart=0\n",
+                  pgl::gld::gldModeName(currentMode),
+                  pgl::gld::gldModeName(newMode));
+        return;
+    }
     emitCommandAck("SET_MODE", "ok", "mode switch accepted", true);
     logPrintf("GLD_MODE_SWITCH current=%s new=%s\n",
               pgl::gld::gldModeName(currentMode),
               pgl::gld::gldModeName(newMode));
-    pgl::gld::switchGldMode(newMode);
+    ESP.restart();
 }
 
 void onDebugCmd(bool enabled) {
@@ -1515,6 +1680,7 @@ void onSetAppConfigJson(const char* payload) {
         runtimeConfig.aesKeyId = requestedKeyId;
         memcpy(runtimeConfig.aesKey, parsedAesKey, sizeof(runtimeConfig.aesKey));
         runtimeConfig.aesKeyPresent = true;
+        runtimeAesKeySource = RuntimeAesKeySource::Nvs;
         runtimeConfig.lastDownlinkCommandId = 0;
     }
     buildRuntimeTopics();
@@ -1788,30 +1954,51 @@ void onRunNullingSingleJson(const char* payload) {
     const pgl::gld::GldNullingSingleResult result = pgl::gld::runNullingServiceSingleChannel(
         ads, dac, static_cast<uint8_t>(channel), nullingLogLine, firmwareServiceTick, nullingConfig);
 
-    // Merge into the persisted profile so this channel's result survives
-    // reboots without touching the other 7 channels' saved state - unlike a
-    // full nulling run, a single-channel run does not require every channel
-    // to succeed before it can be saved.
+    // A single-channel service may update only an already-complete production
+    // profile. Never promote a partial/failing result into a valid profile.
     pgl::gld::GldNullingProfile existing{};
     const bool hadExisting = pgl::gld::loadNullingProfile(existing);
-    pgl::gld::GldNullingProfile toSave = hadExisting ? existing : pgl::gld::GldNullingProfile{};
-    toSave.validMagic = pgl::gld::NULLING_PROFILE_VALID_MAGIC;
-    toSave.profileId = static_cast<uint8_t>(hadExisting ? toSave.profileId + 1u : 1u);
+    if (!hadExisting) {
+        emitCommandAck("RUN_NULLING_SINGLE", "rejected",
+                       "complete nulling profile required before single-channel update", false);
+        return;
+    }
+    if (!result.success) {
+        emitCommandAck("RUN_NULLING_SINGLE", "failed",
+                       "channel nulling failed; active profile unchanged", false);
+        return;
+    }
+    if (existing.profileId == UINT8_MAX) {
+        emitCommandAck("RUN_NULLING_SINGLE", "rejected",
+                       "nulling profile id exhausted; maintenance reset required", false);
+        return;
+    }
+
+    pgl::gld::GldNullingProfile toSave = existing;
+    toSave.profileId = static_cast<uint8_t>(existing.profileId + 1u);
     toSave.dacCode[channel]   = result.dacCode;
     toSave.baselineV[channel] = result.baselineV;
     toSave.afterV[channel]    = result.afterV;
-    toSave.channelOk[channel] = result.success ? 1u : 0u;
+    toSave.channelOk[channel] = 1u;
 
+    if (!pgl::gld::isNullingProfileValid(toSave)) {
+        emitCommandAck("RUN_NULLING_SINGLE", "error", "updated profile validation failed", false);
+        return;
+    }
+    if (!dac.writeDac(static_cast<uint8_t>(channel), result.dacCode)) {
+        emitCommandAck("RUN_NULLING_SINGLE", "error", "DAC apply failed; active profile unchanged", false);
+        return;
+    }
     if (!pgl::gld::saveNullingProfile(toSave)) {
+        (void)dac.writeDac(static_cast<uint8_t>(channel), existing.dacCode[channel]);
         emitCommandAck("RUN_NULLING_SINGLE", "error", "nulling result computed but failed to save profile", false);
         return;
     }
     nullingProfileId = toSave.profileId;
-    if (result.success) dac.writeDac(static_cast<uint8_t>(channel), result.dacCode);
+    nullingProfileApplied = true;
     logPrintf("GLD_NULLING_SINGLE_SAVE=OK channel=%d success=%u profileId=%u\n",
-              channel, result.success ? 1u : 0u, toSave.profileId);
-    emitCommandAck("RUN_NULLING_SINGLE", result.success ? "ok" : "failed",
-                    result.success ? "channel nulled" : "channel nulling failed - see NULLING_ log for detail", false);
+              channel, 1u, toSave.profileId);
+    emitCommandAck("RUN_NULLING_SINGLE", "ok", "channel nulled", false);
 }
 
 // Diagnostic voltage-vs-DAC-code sweep for one channel, used by the QC tab's
@@ -1850,7 +2037,18 @@ void onRunFullScaleSweepJson(const char* payload) {
     // board hard-resets mid-sweep.
     const pgl::gld::GldFullScaleSweepResult result = pgl::gld::runFullScaleSweep(
         ads, dac, static_cast<uint8_t>(channel), restoreCode, 1, nullingLogLine, firmwareServiceTick);
-    (void)result;
+    if (!result.success) {
+        dacReady = false;
+        nullingProfileApplied = false;
+        nullingProfileId = 0;
+        logPrintf("GLD_FULLSCALE_SWEEP_RESULT=FAIL channel=%d status=%s restoreCode=%u runtimeInvalidated=1\n",
+                  channel,
+                  pgl::gld::gldNullingStatusName(result.status),
+                  result.restoredCode);
+    } else {
+        logPrintf("GLD_FULLSCALE_SWEEP_RESULT=PASS channel=%d restoreCode=%u\n",
+                  channel, result.restoredCode);
+    }
 }
 
 void handleSerialCommand(const pgl::gld::GldSerialCommand& command) {
@@ -1991,9 +2189,10 @@ void checkSerial() {
 
 void pulseWdtKeepaliveNow() {
     const bool serviceHoldRequested = serviceHoldActive ||
+        batteryPersistenceFaultHold ||
         digitalRead(pgl::gld::board::PIN_USER_BUTTON) == LOW ||
         !cfgButtonRawHigh || cfgButtonPressArmed;
-    if (batteryPowerMode && !serviceHoldRequested) {
+    if (batteryPowerMode && !TFBG_CONTINUOUS_BATTERY && !serviceHoldRequested) {
         lastWdtKeepaliveMs = millis();
         return;
     }
@@ -2003,9 +2202,10 @@ void pulseWdtKeepaliveNow() {
 
 void maintainWdtKeepalive() {
     const bool serviceHoldRequested = serviceHoldActive ||
+        batteryPersistenceFaultHold ||
         digitalRead(pgl::gld::board::PIN_USER_BUTTON) == LOW ||
         !cfgButtonRawHigh || cfgButtonPressArmed;
-    if (batteryPowerMode && !serviceHoldRequested) return;
+    if (batteryPowerMode && !TFBG_CONTINUOUS_BATTERY && !serviceHoldRequested) return;
     const uint32_t now = millis();
     if (now - lastWdtKeepaliveMs >= pgl::gld::GLD_WDT_KEEPALIVE_INTERVAL_MS) {
         pulseWdtKeepaliveNow();
@@ -2018,7 +2218,8 @@ bool serviceHoldBlocksClr() {
     // operator is still holding CFG and waiting to release it.
     const bool cfgLowNow = digitalRead(pgl::gld::board::PIN_USER_BUTTON) == LOW;
     return batteryPowerMode &&
-           (serviceHoldActive || cfgLowNow || !cfgButtonRawHigh || cfgButtonPressArmed);
+           (serviceHoldActive || batteryPersistenceFaultHold ||
+            cfgLowNow || !cfgButtonRawHigh || cfgButtonPressArmed);
 }
 
 void blinkServiceHoldEnabled() {
@@ -2044,10 +2245,11 @@ void setServiceHoldActive(bool active, const char* source) {
     }
 
     serviceHoldActive = active;
-    pgl::gld::writeGldServiceHold(active);
-    logPrintf("GLD_SERVICE_HOLD state=%s source=%s persisted=1 batteryMode=%u session=%s\n",
+    const bool persisted = pgl::gld::writeGldServiceHold(active);
+    logPrintf("GLD_SERVICE_HOLD state=%s source=%s persisted=%u batteryMode=%u session=%s\n",
               active ? "ON" : "OFF",
               source != nullptr ? source : "unknown",
+              persisted ? 1u : 0u,
               batteryPowerMode ? 1 : 0,
               batterySessionStateName(batterySessionState));
 
@@ -2106,7 +2308,7 @@ void maintainServiceHoldButton() {
 }
 
 bool batteryRuntimeReady() {
-    return adsReady && radioReady && mlReady;
+    return adsReady && radioReady && mlReady && nullingProfileApplied && modelProfileReady;
 }
 
 void startBatteryInferenceSession() {
@@ -2115,6 +2317,7 @@ void startBatteryInferenceSession() {
     batterySessionStartedMs = now;
     batteryStateStartedMs = now;
     batteryLastSampleAttemptMs = now;
+    batteryLastWarmupPrimeMs = 0;
     batteryNextTxAttemptMs = 0;
     batteryValidSampleBatches = 0;
     batteryAlarmTxAttempts = 0;
@@ -2136,6 +2339,8 @@ const char* batteryRuntimeBlockReason() {
     if (!adsReady) return "ads_not_ready";
     if (!radioReady) return "radio_not_ready";
     if (!mlReady) return "ml_not_ready";
+    if (!nullingProfileApplied) return "nulling_profile_not_applied";
+    if (!modelProfileReady) return "model_profile_unapproved_or_mismatch";
     return "none";
 }
 
@@ -2149,6 +2354,19 @@ void armBatteryFaultPowerOff(const char* reason) {
               adsReady ? 1 : 0,
               radioReady ? 1 : 0,
               mlReady ? 1 : 0);
+}
+
+void enterBatteryPersistenceFaultHold(const char* reason) {
+    batteryPersistenceFaultHold = true;
+    batteryPersistenceRetryDueMs = millis() + BATTERY_ALARM_RETRY_DELAY_MS;
+    batterySessionState = BatterySessionState::CompleteHeld;
+    batteryStateStartedMs = millis();
+    snprintf(batteryCompletionReason, sizeof(batteryCompletionReason), "%s",
+             reason != nullptr ? reason : "persistence_fault");
+    logPrintf("GLD_BATTERY_PERSISTENCE_HOLD reason=%s retryMs=%lu clrBlocked=1\n",
+              batteryCompletionReason,
+              static_cast<unsigned long>(BATTERY_ALARM_RETRY_DELAY_MS));
+    pulseWdtKeepaliveNow();
 }
 
 void completeBatterySessionAndPowerOff(const char* reason) {
@@ -2190,6 +2408,77 @@ void completeBatterySessionAndPowerOff(const char* reason) {
     batterySessionState = BatterySessionState::PowerOffIssued;
     batteryStateStartedMs = millis();
     pgl::gld::pulseGldTpl5010DoneThenPowerLatchClear();
+}
+
+void applyRuntimePowerReading(const pgl::gld::GldPowerReading& power,
+                              const char* source,
+                              bool immediate = false) {
+    const bool requestedBatteryMode = TFBG_CONTINUOUS_BATTERY || !power.externalPower;
+    if (requestedBatteryMode == batteryPowerMode) {
+        powerModeCandidateCount = 0;
+        powerModeCandidateBattery = requestedBatteryMode;
+        return;
+    }
+
+    if (!immediate) {
+        if (powerModeCandidateCount == 0 ||
+            powerModeCandidateBattery != requestedBatteryMode) {
+            powerModeCandidateBattery = requestedBatteryMode;
+            powerModeCandidateCount = 1;
+            return;
+        }
+        if (powerModeCandidateCount < POWER_RECONCILE_STABLE_SAMPLES) {
+            ++powerModeCandidateCount;
+        }
+        if (powerModeCandidateCount < POWER_RECONCILE_STABLE_SAMPLES) {
+            return;
+        }
+    }
+
+    const bool previousBatteryMode = batteryPowerMode;
+    batteryPowerMode = requestedBatteryMode;
+    powerModeCandidateCount = 0;
+    logPrintf("GLD_POWER_TRANSITION source=%s fromBattery=%u toBattery=%u mode=%s batterySense=%s ambiguous=%u batteryMv=%u\n",
+              source != nullptr ? source : "runtime",
+              previousBatteryMode ? 1u : 0u,
+              batteryPowerMode ? 1u : 0u,
+              pgl::gld::gldPowerModeName(power.mode),
+              pgl::gld::gldBatterySenseStatusName(power.batterySenseStatus),
+              power.powerSourceAmbiguous ? 1u : 0u,
+              power.batteryMv);
+
+    if (batteryPowerMode) {
+        if (currentMode != pgl::gld::GldMode::INFERENCE) {
+            const bool persisted = pgl::gld::writeGldMode(pgl::gld::GldMode::INFERENCE);
+            powerTransitionShutdownPending = true;
+            logPrintf("MODE_POWER_TRANSITION_BLOCK mode=%s nextMode=inference persisted=%u action=power_off\n",
+                      pgl::gld::gldModeName(currentMode), persisted ? 1u : 0u);
+            completeBatterySessionAndPowerOff("unsupported_mode_power_transition");
+            return;
+        }
+        if (!TFBG_CONTINUOUS_BATTERY) {
+            startBatteryInferenceSession();
+        }
+        return;
+    }
+
+    // External power returned before CLR: cancel the one-shot state so an
+    // in-flight battery session cannot cut a newly restored external rail.
+    powerTransitionShutdownPending = false;
+    batteryPersistenceFaultHold = false;
+    batterySessionState = BatterySessionState::Inactive;
+    batteryFaultPowerOffArmed = false;
+    batteryCyclePoweredOff = false;
+    logPrintln("GLD_BATTERY_SESSION_CANCEL reason=external_power_restored clrInhibited=1");
+}
+
+void reconcileRuntimePowerMode() {
+    const uint32_t now = millis();
+    if (now - lastPowerReconcileMs < POWER_RECONCILE_INTERVAL_MS) {
+        return;
+    }
+    lastPowerReconcileMs = now;
+    applyRuntimePowerReading(pgl::gld::readGldPower(), "periodic", false);
 }
 
 void firmwareServiceTick() {
@@ -2827,7 +3116,7 @@ void publishCmdAck(const char* cmd, const char* result) {
 }
 
 void publishDatasetStatus(const char* state, const char* detail) {
-    StaticJsonDocument<256> doc;
+    StaticJsonDocument<384> doc;
     doc["device_id"] = runtimeConfig.deviceId;
     doc["stage"] = "DATASET";
     doc["state"] = state;
@@ -2835,13 +3124,52 @@ void publishDatasetStatus(const char* state, const char* detail) {
     doc["queue_pending"] = datasetQueueCount;
     doc["queue_dropped"] = datasetQueueDropped;
     doc["publish_fail_count"] = datasetPublishFailCount;
-    char buf[256];
+    doc["rejected_samples"] = datasetRejectedSamples;
+    doc["last_reject_reason"] =
+        pgl::gld::gldDatasetRejectReasonName(lastDatasetRejectReason);
+    doc["last_reject_channel"] = static_cast<int>(lastDatasetRejectChannel);
+    doc["last_reject_ok_finite_count"] = lastDatasetRejectOkFiniteCount;
+    doc["last_reject_status"] = lastDatasetRejectStatus;
+    doc["last_reject_gain"] = lastDatasetRejectGain;
+    doc["last_reject_saturated"] = lastDatasetRejectSaturated;
+    char buf[384];
+    serializeJson(doc, buf, sizeof(buf));
+    mqtt.publish(topicStatus, buf, false);
+}
+
+void publishDatasetRejectedStatus(
+    const pgl::gld::GldDatasetValidationResult& validation,
+    const pgl::gld::GldDatasetChannelSample* samples,
+    size_t count) {
+    StaticJsonDocument<512> doc;
+    doc["device_id"] = runtimeConfig.deviceId;
+    doc["stage"] = "DATASET";
+    doc["state"] = "sample_rejected";
+    doc["detail"] = pgl::gld::gldDatasetRejectReasonName(validation.reason);
+    doc["attempted_seq"] = datasetSeq;
+    doc["rejected_samples"] = datasetRejectedSamples;
+    doc["expected_channel_count"] = pgl::gld::GLD_DATASET_FEATURE_COUNT;
+    doc["actual_channel_count"] = count;
+    doc["ok_finite_count"] = validation.okFiniteCount;
+    doc["channel"] = static_cast<int>(validation.channel);
+    if (validation.channel >= 0 &&
+        static_cast<size_t>(validation.channel) < count && samples != nullptr) {
+        const size_t channel = static_cast<size_t>(validation.channel);
+        const pgl::gld::GldDatasetChannelSample& sample = samples[channel];
+        doc["expected_feature"] = pgl::gld::GLD_DATASET_CANONICAL_FEATURE_ORDER[channel];
+        doc["actual_feature"] = sample.feature != nullptr ? sample.feature : "null";
+        doc["sensor_status"] = sample.status;
+        doc["gain"] = sample.gain;
+        doc["saturated"] = sample.saturated;
+        doc["finite"] = std::isfinite(sample.voltage);
+    }
+    char buf[512];
     serializeJson(doc, buf, sizeof(buf));
     mqtt.publish(topicStatus, buf, false);
 }
 
 void publishDatasetSummary() {
-    StaticJsonDocument<256> doc;
+    StaticJsonDocument<384> doc;
     doc["device_id"] = runtimeConfig.deviceId;
     doc["stage"] = "DATASET";
     doc["label"] = currentLabel;
@@ -2851,7 +3179,11 @@ void publishDatasetSummary() {
     doc["queue_pending"] = datasetQueueCount;
     doc["queue_dropped"] = datasetQueueDropped;
     doc["publish_fail_count"] = datasetPublishFailCount;
-    char buf[256];
+    doc["rejected_samples"] = datasetRejectedSamples;
+    doc["last_reject_reason"] =
+        pgl::gld::gldDatasetRejectReasonName(lastDatasetRejectReason);
+    doc["last_reject_channel"] = static_cast<int>(lastDatasetRejectChannel);
+    char buf[384];
     serializeJson(doc, buf, sizeof(buf));
     mqtt.publish(topicSummary, buf, false);
 }
@@ -2885,7 +3217,7 @@ void handleDatasetTopic(const char* payload, unsigned int length) {
         return;
     }
     if (strcmp(cmd, "START_DATASET") == 0) {
-        if (nullingProfileId == 0) {
+        if (nullingProfileId == 0 || !nullingProfileApplied) {
             publishCmdAck("START_DATASET", "reject_no_profile");
             return;
         }
@@ -2903,6 +3235,13 @@ void handleDatasetTopic(const char* payload, unsigned int length) {
         fanOnMs          = doc["fan_on_ms"]          | 1000u;
         postFanSettleMs  = doc["post_fan_settle_ms"] | 0u;
         datasetSeq     = 0;
+        datasetRejectedSamples = 0;
+        lastDatasetRejectReason = pgl::gld::GldDatasetRejectReason::None;
+        lastDatasetRejectChannel = -1;
+        lastDatasetRejectOkFiniteCount = 0;
+        lastDatasetRejectStatus = 0xFF;
+        lastDatasetRejectGain = 0;
+        lastDatasetRejectSaturated = false;
         sessionStartMs = millis();
         lastScanMs     = sessionStartMs;
         sampleStep     = SampleStep::None;
@@ -2942,12 +3281,22 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 // ---------------------------------------------------------------------------
 
 bool initNulling(bool runIfMissing) {
+    nullingProfileApplied = false;
     pgl::gld::GldNullingProfile profile{};
     if (pgl::gld::loadNullingProfile(profile)) {
         logPrintf("NULLING_NVS_LOAD=found profileId=%u\n", profile.profileId);
+        bool allApplied = true;
+        for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
+            allApplied = dac.writeDac(ch, profile.dacCode[ch]) && allApplied;
+        }
+        if (!allApplied) {
+            nullingProfileId = 0;
+            (void)dac.writeAll(0);
+            logPrintln("NULLING_NVS_APPLY=FAIL safeReset=1");
+            return false;
+        }
         nullingProfileId = profile.profileId;
-        for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch)
-            dac.writeDac(ch, profile.dacCode[ch]);
+        nullingProfileApplied = true;
         return true;
     }
     if (!runIfMissing) {
@@ -2960,14 +3309,30 @@ bool initNulling(bool runIfMissing) {
         pgl::gld::runNullingService(ads, dac, nullingLogLine, firmwareServiceTick, nullingConfig);
     logPrintf("NULLING_RUN status=%s successCount=%u\n",
               pgl::gld::gldNullingStatusName(result.status), result.successCount);
-    if (result.status != pgl::gld::GldNullingStatus::Ok) return false;
+    if (result.status != pgl::gld::GldNullingStatus::Ok ||
+        result.successCount != pgl::gld::board::SENSOR_COUNT) {
+        return false;
+    }
     pgl::gld::GldNullingProfile toSave = result.profile;
     toSave.validMagic = pgl::gld::NULLING_PROFILE_VALID_MAGIC;
     toSave.profileId  = 1;
-    pgl::gld::saveNullingProfile(toSave);
-    nullingProfileId = 1;
-    for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch)
-        dac.writeDac(ch, toSave.dacCode[ch]);
+    if (!pgl::gld::isNullingProfileValid(toSave)) {
+        return false;
+    }
+    if (!pgl::gld::saveNullingProfile(toSave)) {
+        return false;
+    }
+    bool allApplied = true;
+    for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
+        allApplied = dac.writeDac(ch, toSave.dacCode[ch]) && allApplied;
+    }
+    if (!allApplied) {
+        nullingProfileId = 0;
+        (void)dac.writeAll(0);
+        return false;
+    }
+    nullingProfileId = toSave.profileId;
+    nullingProfileApplied = true;
     return true;
 }
 
@@ -3016,11 +3381,19 @@ bool saveCompleteNullingProfile(const pgl::gld::GldNullingServiceResult& result,
 
     pgl::gld::GldNullingProfile existing{};
     pgl::gld::loadNullingProfile(existing);
+    if (pgl::gld::isNullingProfileValid(existing) && existing.profileId == UINT8_MAX) {
+        logPrintln("NULLING_NVS_SAVE=FAIL reason=profile_id_exhausted");
+        return false;
+    }
     toSave = result.profile;
     toSave.validMagic = pgl::gld::NULLING_PROFILE_VALID_MAGIC;
     toSave.profileId  = static_cast<uint8_t>(
         pgl::gld::isNullingProfileValid(existing)
             ? static_cast<uint8_t>(existing.profileId + 1u) : 1u);
+    if (!pgl::gld::isNullingProfileValid(toSave)) {
+        logPrintln("NULLING_NVS_SAVE=FAIL reason=profile_validation");
+        return false;
+    }
     const bool saved = pgl::gld::saveNullingProfile(toSave);
     logPrintf("NULLING_NVS_SAVE=%s profileId=%u\n",
               saved ? "OK" : "FAIL", toSave.profileId);
@@ -3034,7 +3407,11 @@ void returnToRunningAfterNulling(const pgl::gld::GldNullingProfile& profile) {
     logPrintf("NULLING_AUTO_MODE_SWITCH target=running mode=inference profileId=%u delayMs=%lu\n",
               profile.profileId,
               static_cast<unsigned long>(NULLING_AUTO_RESTART_DELAY_MS));
-    pgl::gld::writeGldMode(pgl::gld::GldMode::INFERENCE);
+    if (!pgl::gld::writeGldMode(pgl::gld::GldMode::INFERENCE)) {
+        logPrintln("NULLING_AUTO_MODE_SWITCH=FAIL reason=nvs_write");
+        armNullingRetry("mode_persist_failed");
+        return;
+    }
     serviceDelay(NULLING_AUTO_RESTART_DELAY_MS);
     Serial.flush();
 #if defined(ARDUINO_ARCH_ESP32)
@@ -3057,7 +3434,7 @@ void runNullingRetryAttempt() {
     }
 
     const pgl::gld::GldNullingServiceResult result =
-        pgl::gld::runNullingService(ads, dac, nullingLogLine, checkSerial, nullingConfig);
+        pgl::gld::runNullingService(ads, dac, nullingLogLine, firmwareServiceTick, nullingConfig);
     logPrintf("NULLING_RETRY_DONE status=%s successCount=%u\n",
               pgl::gld::gldNullingStatusName(result.status), result.successCount);
 
@@ -3078,6 +3455,8 @@ void runNullingRetryAttempt() {
 }
 
 bool applySavedNullingProfileOnly() {
+    nullingProfileApplied = false;
+    nullingProfileId = 0;
     pgl::gld::GldNullingProfile profile{};
     if (!pgl::gld::loadNullingProfile(profile)) {
         if (dacReady) {
@@ -3108,6 +3487,10 @@ bool applySavedNullingProfileOnly() {
     serviceDelay(BOOT_DAC_SETTLE_MS);
     if (allApplied) {
         nullingProfileId = profile.profileId;
+        nullingProfileApplied = true;
+    } else {
+        const bool resetOk = dac.writeAll(0);
+        logPrintf("BOOT_NULLING_PROFILE_SAFE_RESET=%s\n", resetOk ? "OK" : "FAIL");
     }
     logPrintf("BOOT_NULLING_PROFILE_APPLY=%s profileId=%u\n",
               allApplied ? "OK" : "FAIL",
@@ -3146,13 +3529,15 @@ void printBootSensorSnapshotRow(uint8_t rowNumber) {
 }
 
 void runExternalPowerBootSensorSamples(const pgl::gld::GldPowerReading& power) {
+    // The DAC loses its volatile register state whenever the main rail is cut.
+    // Apply and verify the complete profile on every boot, including a TPL5010
+    // battery wake, before any inference path can become ready.
+    (void)applySavedNullingProfileOnly();
     if (!power.externalPower) {
         return;
     }
 
     logPrintln("[BOOT_SENSOR_SAMPLES]");
-    applySavedNullingProfileOnly();
-
     if (!adsReady) {
         logPrintln("BOOT_SENSOR_SAMPLE_BLOCKED reason=ads_not_ready");
         return;
@@ -3168,7 +3553,7 @@ void runBootCheckFromSerialCommand() {
     emitCommandAck("RUN_BOOT_CHECK", "ok", "running boot diagnostics", false);
 
     const pgl::gld::GldPowerReading power = pgl::gld::readGldPower();
-    batteryPowerMode = !power.externalPower;
+    applyRuntimePowerReading(power, "run_boot_check", true);
     logPrintf("RUN_BOOT_CHECK_START mode=%s power=%s externalPower=%u\n",
               pgl::gld::gldModeName(currentMode),
               pgl::gld::gldPowerModeName(power.mode),
@@ -3198,7 +3583,7 @@ void runBootCheckFromSerialCommand() {
                  passFail(radioReady),
                  passFail(mlReady));
     } else if (currentMode == pgl::gld::GldMode::DATASET) {
-        modeReady = adsReady && dacReady && nullingProfileId > 0;
+        modeReady = adsReady && dacReady && nullingProfileApplied && nullingProfileId > 0;
         snprintf(modeDetail, sizeof(modeDetail), "ads=%s mcp=%u/%u dac=%s nullingProfileId=%u rerun=1",
                  passFail(adsReady),
                  bootDiagnostics.i2c.mcpOkCount,
@@ -3422,36 +3807,78 @@ bool nonceProvider(uint8_t nonce[pgl::protocol::GLD_AES_GCM_NONCE_SIZE], void* c
     return true;
 }
 
-void updateAlarmOutputs(bool alarm) {
-    if (alarm == lastAlarm) return;
-    lastAlarm = alarm;
-    pgl::gld::writeGldAlarmLatched(alarm);
+void driveAlarmOutputs(bool alarm) {
+    if (FIELDTEST_MODEL_UNVERIFIED) {
+        alarm = false;
+    }
     optionalDigitalWrite(pgl::gld::board::PIN_ALARM_LAMP, alarm ? ACTIVE_LOW_OUTPUT_ON : ACTIVE_LOW_OUTPUT_OFF);
     optionalDigitalWrite(pgl::gld::board::PIN_BUZZER,     alarm ? ACTIVE_LOW_OUTPUT_ON : ACTIVE_LOW_OUTPUT_OFF);
     optionalDigitalWrite(pgl::gld::board::PIN_STATUS_LED, alarm ? ACTIVE_LOW_OUTPUT_ON : ACTIVE_LOW_OUTPUT_OFF);
+}
+
+bool updateAlarmOutputs(bool alarm) {
+    if (FIELDTEST_MODEL_UNVERIFIED) {
+        driveAlarmOutputs(false);
+        logPrintf("GLD_MODEL_BENCH_ALARM_SUPPRESSED requested=%u\n", alarm ? 1 : 0);
+        return true;
+    }
+    if (alarm == lastAlarm) {
+        driveAlarmOutputs(alarm);
+        return true;
+    }
+
+    const bool persisted = pgl::gld::writeGldAlarmLatched(alarm);
+    if (!persisted && !alarm) {
+        // Clearing must survive the imminent TPL5010 power cut. If NVS cannot
+        // commit the clear state, keep the physical alarm fail-safe and retry
+        // on a later valid scan instead of reviving a stale latch next boot.
+        logPrintln("GLD_ALARM_PERSIST=FAIL requested=clear failSafe=latched");
+        driveAlarmOutputs(true);
+        return false;
+    }
+
+    lastAlarm = alarm;
+    driveAlarmOutputs(alarm);
+    if (!persisted) {
+        logPrintln("GLD_ALARM_PERSIST=FAIL requested=set physicalAlarm=on");
+    }
     logPrintf("GLD_ALARM_OUTPUT alarm=%u\n", alarm ? 1 : 0);
+    return persisted;
 }
 
 uint8_t modelClassToGasClass(int predicted) {
-    switch (predicted) {
-        case 0: return pgl::protocol::GLD_GAS_CLEAR;
-        case 1: return pgl::protocol::GLD_GAS_LPG;
-        case 2: return pgl::protocol::GLD_GAS_METHANE;
-        case 3: return pgl::protocol::GLD_GAS_PROPANE;
-        case 4: return pgl::protocol::GLD_GAS_BUTANE;
-        default: return pgl::protocol::GLD_GAS_ANOMALY;
+    if (predicted < 0 || predicted >= pgl::gld::model::EXPECTED_OUTPUT_ELEMENTS) {
+        return pgl::protocol::GLD_GAS_ANOMALY;
     }
+    const uint8_t gasClass = pgl::gld::model::CLASS_MAP[predicted];
+    return pgl::protocol::isValidGasClass(gasClass)
+        ? gasClass
+        : pgl::protocol::GLD_GAS_ANOMALY;
 }
 
-void runInference(const float mavVoltage[8]) {
+bool modelProfileMatchesActiveNulling() {
+    if (!mlReady || !nullingProfileApplied || nullingProfileId == 0) {
+        return false;
+    }
+    if (FIELDTEST_MODEL_UNVERIFIED) {
+        return true;
+    }
+    if (TFBG_CONTINUOUS_BATTERY) {
+        // tfbg is an explicitly non-production field exercise environment.
+        return true;
+    }
+    return pgl::gld::model::PRODUCTION_APPROVED &&
+           pgl::gld::model::BOUND_NULLING_PROFILE_ID != 0 &&
+           pgl::gld::model::BOUND_NULLING_PROFILE_ID == nullingProfileId;
+}
+
+bool runInference(const float mavVoltage[8]) {
     if (!mlReady || !network->isInitialized()) {
-        lastResult = {pgl::protocol::GLD_GAS_ANOMALY, 0};
-        return;
+        return false;
     }
     float* modelInput = network->getInputBuffer();
     if (!modelInput) {
-        lastResult = {pgl::protocol::GLD_GAS_ANOMALY, 0};
-        return;
+        return false;
     }
     // Channel n is fed directly as feature n (no remap - hardware channel order
     // matches model feature order). feature_means/feature_stds in
@@ -3461,10 +3888,10 @@ void runInference(const float mavVoltage[8]) {
     }
     float confidenceFloat = 0.0f;
     const int predicted = network->predict(confidenceFloat);
-    if (predicted < 0) {
+    if (predicted < 0 || !std::isfinite(confidenceFloat) ||
+        confidenceFloat < 0.0f || confidenceFloat > 1.0f) {
         logPrintln("GLD_ML_PREDICT_ERROR");
-        lastResult = {pgl::protocol::GLD_GAS_ANOMALY, 0};
-        return;
+        return false;
     }
     lastResult = {modelClassToGasClass(predicted),
                   static_cast<uint8_t>(confidenceFloat * 100.0f)};
@@ -3472,9 +3899,11 @@ void runInference(const float mavVoltage[8]) {
               predicted, lastResult.gasClass,
               pgl::gld::gldGasClassName(lastResult.gasClass),
               lastResult.confidence);
+    return true;
 }
 
 bool runScan(bool requireCompleteBatch = false) {
+    (void)requireCompleteBatch;
     pgl::gld::GldAds1256Reading readings[pgl::gld::board::SENSOR_COUNT]{};
     float mavVoltage[8] = {};
     uint8_t okChannels = 0;
@@ -3483,7 +3912,7 @@ bool runScan(bool requireCompleteBatch = false) {
         readings[ch] = r;
         latestSensorGain[ch] = r.gain;
         latestSensorStatus[ch] = static_cast<uint8_t>(r.status);
-        if (r.status == pgl::gld::GldAds1256Status::Ok) ++okChannels;
+        if (r.status == pgl::gld::GldAds1256Status::Ok && !r.saturated) ++okChannels;
     }
     noteAdsReadHealth(okChannels, "runScan");
     const bool allValid = okChannels == pgl::gld::board::SENSOR_COUNT;
@@ -3491,8 +3920,9 @@ bool runScan(bool requireCompleteBatch = false) {
 
     uint8_t primedChannels = 0;
     for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
-        const bool mayCommit = readings[ch].status == pgl::gld::GldAds1256Status::Ok &&
-                               (!requireCompleteBatch || allValid);
+        const bool mayCommit = allValid &&
+                               readings[ch].status == pgl::gld::GldAds1256Status::Ok &&
+                               !readings[ch].saturated;
         mavVoltage[ch] = mayCommit ? movingAvg.add(ch, readings[ch].voltage)
                                    : movingAvg.value(ch);
         latestSensorVoltage[ch] = mavVoltage[ch];
@@ -3500,23 +3930,33 @@ bool runScan(bool requireCompleteBatch = false) {
     }
 
     const bool primed = primedChannels >= pgl::gld::board::SENSOR_COUNT;
-    if (allValid && primed && mlReady) {
-        runInference(mavVoltage);
-    } else {
-        // No classification available this scan (sensors not primed yet, or
-        // ML stack failed init). Report the anomaly/unknown sentinel instead
-        // of silently re-sending the last (or default) result, so a dead
-        // classifier never looks like a genuine "clear air" reading.
-        lastResult = {pgl::protocol::GLD_GAS_ANOMALY, 0};
+    modelProfileReady = modelProfileMatchesActiveNulling();
+    lastInferenceValid = allValid && primed && mlReady && nullingProfileApplied &&
+                         modelProfileReady &&
+                         runInference(mavVoltage);
+    sensorFaultActive = !lastInferenceValid;
+    // The model output is classification confidence, not a calibrated %LEL
+    // value. A valid non-clear classification therefore uses a conservative
+    // fail-safe alarm policy instead of comparing softmax confidence to 30%.
+    const bool classifierAlarm = lastInferenceValid &&
+                                 lastResult.gasClass != pgl::protocol::GLD_GAS_CLEAR;
+    const bool alarm = FIELDTEST_MODEL_UNVERIFIED ? false : classifierAlarm;
+    if (FIELDTEST_MODEL_UNVERIFIED && classifierAlarm) {
+        logPrintf("GLD_FIELDTEST_CLASS_UNVERIFIED gasClass=%u confidence=%u alarmSuppressed=1\n",
+                  lastResult.gasClass, lastResult.confidence);
     }
-    const bool alarm = lastResult.gasClass != pgl::protocol::GLD_GAS_CLEAR &&
-                       lastResult.confidence >= ML_CONFIDENCE_THRESHOLD;
-    logPrintf("GLD_SENSOR_SCAN seq=%lu allValid=%u primed=%u gasClass=%u(%s) confidence=%u alarm=%u\n",
+    logPrintf("GLD_SENSOR_SCAN seq=%lu allValid=%u primed=%u inferenceValid=%u sensorFault=%u gasClass=%u(%s) confidence=%u alarm=%u\n",
               static_cast<unsigned long>(txCounter),
               allValid ? 1 : 0, primed ? 1 : 0,
+              lastInferenceValid ? 1 : 0, sensorFaultActive ? 1 : 0,
               lastResult.gasClass, pgl::gld::gldGasClassName(lastResult.gasClass),
               lastResult.confidence, alarm ? 1 : 0);
-    updateAlarmOutputs(alarm);
+    if (lastInferenceValid) {
+        (void)updateAlarmOutputs(alarm);
+    } else {
+        logPrintf("GLD_ALARM_OUTPUT held=%u reason=sensor_or_inference_fault\n",
+                  lastAlarm ? 1 : 0);
+    }
     return allValid;
 }
 
@@ -3536,7 +3976,7 @@ bool openLoRaRxWindow(bool expectAlarmAck, uint8_t expectedSeq) {
         const int16_t rxState = loraRadio->readData(rxBuf, sizeof(rxBuf));
         logPrintf("GLD_LORA_DOWNLINK_RX state=%d len=%u\n", rxState, static_cast<unsigned>(rxLen));
         if (rxState == RADIOLIB_ERR_NONE) {
-            if (expectAlarmAck &&
+            if (expectAlarmAck && ALLOW_UNAUTHENTICATED_ALARM_ACK &&
                 pgl::gld::parseCompactAlarmAck(rxBuf, rxLen,
                                                runtimeConfig.chId,
                                                runtimeConfig.nodeId,
@@ -3545,16 +3985,26 @@ bool openLoRaRxWindow(bool expectAlarmAck, uint8_t expectedSeq) {
                 logPrintf("GLD_LORA_ALARM_ACK matched=1 chId=0x%04X nodeId=0x%04X seq=%u\n",
                           runtimeConfig.chId, runtimeConfig.nodeId, expectedSeq);
             } else {
+                if (expectAlarmAck && !ALLOW_UNAUTHENTICATED_ALARM_ACK) {
+                    logPrintln("GLD_LORA_ALARM_ACK rejected=1 reason=unauthenticated_ack_disabled");
+                }
                 pgl::gld::GldMode newMode;
+                const uint16_t previousCommandId = runtimeConfig.lastDownlinkCommandId;
                 if (pgl::gld::parseLoRaDownlinkCmd(rxBuf, rxLen,
                                                    runtimeConfig.nodeId,
                                                    runtimeConfig.aesKey,
                                                    runtimeConfig.aesKeyPresent,
                                                    runtimeConfig.lastDownlinkCommandId,
                                                    newMode)) {
-                    logPrintf("GLD_LORA_DOWNLINK_CMD mode=%s\n", pgl::gld::gldModeName(newMode));
-                    saveDownlinkReplayState();
-                    onModeCmd(newMode);
+                    if (!saveDownlinkReplayState()) {
+                        runtimeConfig.lastDownlinkCommandId = previousCommandId;
+                        logPrintln("GLD_LORA_DOWNLINK_CMD rejected=1 reason=replay_state_persist_failed");
+                    } else {
+                        logPrintf("GLD_LORA_DOWNLINK_CMD mode=%s commandId=%u persisted=1\n",
+                                  pgl::gld::gldModeName(newMode),
+                                  runtimeConfig.lastDownlinkCommandId);
+                        onModeCmd(newMode);
+                    }
                 }
             }
         }
@@ -3567,7 +4017,9 @@ bool openLoRaRxWindow(bool expectAlarmAck, uint8_t expectedSeq) {
     return alarmAckMatched;
 }
 
-bool transmitOnce(bool expectAlarmAck = false) {
+bool buildTxSnapshot(const pgl::gld::GldClassifyResult& result,
+                     GldTxSnapshot& snapshot) {
+    snapshot = {};
     if (!runtimeConfig.aesKeyPresent || runtimeConfig.aesKeyId == 0) {
         lastLoraTxState = -32767;
         lastLoraTxOk = false;
@@ -3576,16 +4028,26 @@ bool transmitOnce(bool expectAlarmAck = false) {
         return false;
     }
 
+    uint8_t sequence = 0;
+    if (!pgl::gld::reserveGldTxSequence(sequence)) {
+        lastLoraTxState = -32766;
+        lastLoraTxOk = false;
+        logPrintln("GLD_TX_SEQUENCE_RESERVE=FAIL txBlocked=1");
+        return false;
+    }
+    txSeq = sequence;
+
     const pgl::gld::GldPowerReading power = pgl::gld::readGldPower();
     const uint16_t batteryMv = power.batteryValid ? power.batteryMv
                                                    : pgl::protocol::GLD_BATTERY_MV_INVALID;
     pgl::gld::GldFrameBuilderConfig config{
         runtimeConfig.nodeId, runtimeConfig.chId,
         runtimeConfig.aesKeyId, runtimeConfig.aesKey,
-        power.externalPower, pgl::protocol::GLD_LEL_THRESHOLD_PERCENT,
+        TFBG_CONTINUOUS_BATTERY ? false : power.externalPower,
+        1,
     };
     pgl::gld::GldFrameBuildInput input{
-        lastResult.gasClass, lastResult.confidence, batteryMv, txSeq,
+        result.gasClass, result.confidence, batteryMv, sequence,
     };
     NonceCtx nonceCtx{txCounter};
     pgl::gld::GldBuiltFrame frame{};
@@ -3594,10 +4056,10 @@ bool transmitOnce(bool expectAlarmAck = false) {
     txCounter = nonceCtx.counter;
 
     logPrintf("GLD_TX_HEADER status=%s seq=%u typeFlags=0x%02X alarm=%u gasClass=%u(%s) confidence=%u frameSize=%u\n",
-              pgl::gld::gldFrameStatusName(buildStatus), txSeq, frame.typeFlags,
-              frame.alarm ? 1 : 0, lastResult.gasClass,
-              pgl::gld::gldGasClassName(lastResult.gasClass),
-              lastResult.confidence, static_cast<unsigned>(frame.size));
+              pgl::gld::gldFrameStatusName(buildStatus), sequence, frame.typeFlags,
+              frame.alarm ? 1 : 0, result.gasClass,
+              pgl::gld::gldGasClassName(result.gasClass),
+              result.confidence, static_cast<unsigned>(frame.size));
 
     if (buildStatus != pgl::gld::GldFrameStatus::Ok) {
         lastLoraTxState = -32768;
@@ -3606,19 +4068,141 @@ bool transmitOnce(bool expectAlarmAck = false) {
         return false;
     }
 
+    if (frame.size > sizeof(snapshot.frame)) {
+        lastLoraTxState = -32765;
+        lastLoraTxOk = false;
+        logPrintln("GLD_TX_SNAPSHOT=FAIL reason=frame_too_large");
+        return false;
+    }
+    snapshot.valid = true;
+    snapshot.alarm = frame.alarm;
+    snapshot.sequence = sequence;
+    snapshot.frameLen = static_cast<uint8_t>(frame.size);
+    memcpy(snapshot.frame, frame.bytes, frame.size);
+    return true;
+}
+
+bool loadFrozenPendingSnapshot(const pgl::gld::GldPendingAlarm& pending,
+                               GldTxSnapshot& snapshot) {
+    snapshot = {};
+    if (!pgl::gld::gldPendingAlarmHasFrozenFrame(pending)) {
+        return false;
+    }
+    snapshot.valid = true;
+    snapshot.alarm = true;
+    snapshot.sequence = pending.sequence;
+    snapshot.frameLen = pending.frameLen;
+    memcpy(snapshot.frame, pending.frame, pending.frameLen);
+    txSeq = pending.sequence;
+    return true;
+}
+
+bool persistAlarmSnapshot(const pgl::gld::GldClassifyResult& result,
+                          const GldTxSnapshot& snapshot) {
+    if (!snapshot.valid || !snapshot.alarm || snapshot.frameLen == 0) {
+        return false;
+    }
+    pgl::gld::GldPendingAlarm pending{};
+    pending.active = true;
+    pending.gasClass = result.gasClass;
+    pending.confidence = result.confidence;
+    pending.sequence = snapshot.sequence;
+    pending.frameLen = snapshot.frameLen;
+    memcpy(pending.frame, snapshot.frame, snapshot.frameLen);
+    batteryPendingAlarm = pending;
+    if (!pgl::gld::writeGldPendingAlarm(pending)) {
+        batteryPendingSaveRequired = true;
+        logPrintf("GLD_BATTERY_ALARM_PENDING_SAVE=FAIL seq=%u txBlocked=1\n",
+                  snapshot.sequence);
+        return false;
+    }
+    batteryPendingSaveRequired = false;
+    logPrintf("GLD_BATTERY_ALARM_PENDING_SAVE=OK seq=%u frameLen=%u frozen=1\n",
+              pending.sequence, pending.frameLen);
+    return true;
+}
+
+bool transmitSnapshot(const GldTxSnapshot& snapshot,
+                      bool expectAlarmAck = false) {
+    if (FIELDTEST_MODEL_UNVERIFIED && (snapshot.alarm || expectAlarmAck)) {
+        lastLoraTxState = -32763;
+        lastLoraTxOk = false;
+        logPrintf("GLD_FIELDTEST_ALARM_TX_SUPPRESSED frameLen=%u alarm=%u alarmAck=%u\n",
+                  static_cast<unsigned>(snapshot.frameLen), snapshot.alarm ? 1 : 0,
+                  expectAlarmAck ? 1 : 0);
+        return false;
+    }
+    if (FIELDTEST_MODEL_UNVERIFIED) {
+        logPrintf("GLD_FIELDTEST_TELEMETRY_TX frameLen=%u\n",
+                  static_cast<unsigned>(snapshot.frameLen));
+    }
+    if (!snapshot.valid || snapshot.frameLen == 0 || !radioReady || loraRadio == nullptr) {
+        lastLoraTxState = -32764;
+        lastLoraTxOk = false;
+        logPrintln("GLD_LORA_TX_RESULT=FAIL reason=invalid_snapshot_or_radio");
+        return false;
+    }
+
     digitalWrite(pgl::gld::board::PIN_ADS1256_CS, HIGH);
-    const uint8_t transmittedSeq = txSeq;
-    const int16_t txState = loraRadio->transmit(frame.bytes, frame.size);
+    const int16_t txState = loraRadio->transmit(snapshot.frame, snapshot.frameLen);
     lastLoraTxState = txState;
     lastLoraTxOk = txState == RADIOLIB_ERR_NONE;
     digitalWrite(pgl::gld::board::PIN_LORA_RXEN, LOW);
     digitalWrite(pgl::gld::board::PIN_LORA_TXEN, LOW);
-    logPrintf("GLD_STAR_TX_STATE=%d seq=%u\n", txState, txSeq);
+    logPrintf("GLD_STAR_TX_STATE=%d seq=%u frameLen=%u frozen=%u\n",
+              txState, snapshot.sequence, snapshot.frameLen,
+              snapshot.alarm ? 1u : 0u);
     logPrintln(txState == RADIOLIB_ERR_NONE ? "GLD_LORA_TX_RESULT=PASS" : "GLD_LORA_TX_RESULT=FAIL");
-    ++txSeq;
 
     // Class A RX window for downlink commands
-    return openLoRaRxWindow(expectAlarmAck, transmittedSeq);
+    return openLoRaRxWindow(expectAlarmAck, snapshot.sequence);
+}
+
+bool transmitOnce(bool expectAlarmAck = false) {
+    if (!lastInferenceValid) {
+        lastLoraTxOk = false;
+        logPrintln("GLD_LORA_TX_RESULT=BLOCKED reason=inference_invalid");
+        return false;
+    }
+    GldTxSnapshot snapshot{};
+    if (!buildTxSnapshot(lastResult, snapshot)) {
+        return false;
+    }
+    return transmitSnapshot(snapshot, expectAlarmAck);
+}
+
+bool prepareAndPersistAlarmDelivery(const pgl::gld::GldClassifyResult& result) {
+    GldTxSnapshot snapshot{};
+    if (!buildTxSnapshot(result, snapshot) || !snapshot.alarm) {
+        logPrintln("GLD_BATTERY_ALARM_PREPARE=FAIL reason=frame_build");
+        return false;
+    }
+    batteryTxSnapshot = snapshot;
+    batterySendingPersistedAlarm = true;
+    if (!persistAlarmSnapshot(result, snapshot)) {
+        return false;
+    }
+    return true;
+}
+
+bool activateQueuedFreshAlarm(const char* reason) {
+    if (!batteryFreshAlarmQueued || !batteryFreshInferenceValid || !batteryFreshAlarm) {
+        return false;
+    }
+    if (!prepareAndPersistAlarmDelivery(batteryFreshResult)) {
+        return false;
+    }
+    batteryFreshAlarmQueued = false;
+    batteryAlarmTxAttempts = 0;
+    batteryAlarmAckReceived = false;
+    batteryNextTxAttemptMs = millis();
+    (void)updateAlarmOutputs(true);
+    logPrintf("GLD_BATTERY_FRESH_ALARM_ACTIVATED reason=%s gasClass=%u confidence=%u seq=%u\n",
+              reason != nullptr ? reason : "queued",
+              batteryFreshResult.gasClass,
+              batteryFreshResult.confidence,
+              batteryTxSnapshot.sequence);
+    return true;
 }
 
 void runBatteryInferenceSession() {
@@ -3630,6 +4214,16 @@ void runBatteryInferenceSession() {
     }
 
     if (batterySessionState == BatterySessionState::CompleteHeld) {
+        if (batteryPersistenceFaultHold) {
+            if (static_cast<int32_t>(now - batteryPersistenceRetryDueMs) >= 0) {
+                batteryPersistenceFaultHold = false;
+                batterySessionState = BatterySessionState::Transmit;
+                batteryStateStartedMs = now;
+                batteryNextTxAttemptMs = now;
+                logPrintln("GLD_BATTERY_PERSISTENCE_HOLD retry=1 state=transmit clrBlocked=0");
+            }
+            return;
+        }
         if (!serviceHoldBlocksClr()) {
             logPrintln("GLD_BATTERY_SESSION_RELEASED serviceHold=0 action=power_off");
             completeBatterySessionAndPowerOff(batteryCompletionReason);
@@ -3649,6 +4243,21 @@ void runBatteryInferenceSession() {
 
     switch (batterySessionState) {
         case BatterySessionState::Warmup:
+            if (batteryLastWarmupPrimeMs == 0 ||
+                now - batteryLastWarmupPrimeMs >= SCAN_INTERVAL_MS) {
+                batteryLastWarmupPrimeMs = now;
+                uint8_t stableChannels = 0;
+                for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
+                    const pgl::gld::GldAds1256Reading reading = ads.readChannel(ch);
+                    if (reading.status == pgl::gld::GldAds1256Status::Ok &&
+                        !reading.saturated) {
+                        ++stableChannels;
+                    }
+                }
+                logPrintf("GLD_BATTERY_WARMUP_AGC stableChannels=%u/%u\n",
+                          static_cast<unsigned>(stableChannels),
+                          static_cast<unsigned>(pgl::gld::board::SENSOR_COUNT));
+            }
             if (now - batteryStateStartedMs < BATTERY_SENSOR_WARMUP_MS) return;
             movingAvg.reset();
             batteryValidSampleBatches = 0;
@@ -3681,31 +4290,115 @@ void runBatteryInferenceSession() {
                       static_cast<unsigned>(BATTERY_VALID_SAMPLE_BATCHES));
             if (batteryValidSampleBatches < BATTERY_VALID_SAMPLE_BATCHES) return;
 
+            batteryFreshInferenceValid = lastInferenceValid;
+            batteryFreshResult = lastResult;
+            batteryFreshAlarm = lastInferenceValid &&
+                                lastResult.gasClass != pgl::protocol::GLD_GAS_CLEAR;
+            batteryFreshAlarmQueued = false;
+            batterySendingPersistedAlarm = false;
+            batteryTxSnapshot = {};
+
+            if (!batteryFreshInferenceValid && !batteryPendingAlarm.active) {
+                armBatteryFaultPowerOff("inference_invalid");
+                if (static_cast<int32_t>(now - batteryFaultPowerOffDueMs) >= 0) {
+                    completeBatterySessionAndPowerOff("inference_invalid");
+                }
+                return;
+            }
+
             if (batteryPendingAlarm.active) {
-                logPrintf("GLD_BATTERY_PENDING_ALARM_LOAD gasClass=%u confidence=%u currentGasClass=%u currentConfidence=%u\n",
+                logPrintf("GLD_BATTERY_PENDING_ALARM_LOAD gasClass=%u confidence=%u freshValid=%u freshGasClass=%u freshConfidence=%u frozen=%u\n",
                           batteryPendingAlarm.gasClass,
                           batteryPendingAlarm.confidence,
-                          lastResult.gasClass,
-                          lastResult.confidence);
-                lastResult = {batteryPendingAlarm.gasClass, batteryPendingAlarm.confidence};
-                updateAlarmOutputs(true);
+                          batteryFreshInferenceValid ? 1u : 0u,
+                          batteryFreshResult.gasClass,
+                          batteryFreshResult.confidence,
+                          pgl::gld::gldPendingAlarmHasFrozenFrame(batteryPendingAlarm) ? 1u : 0u);
+                if (!loadFrozenPendingSnapshot(batteryPendingAlarm, batteryTxSnapshot)) {
+                    const pgl::gld::GldClassifyResult legacyResult{
+                        batteryPendingAlarm.gasClass,
+                        batteryPendingAlarm.confidence,
+                    };
+                    if (!prepareAndPersistAlarmDelivery(legacyResult)) {
+                        enterBatteryPersistenceFaultHold("pending_alarm_persist_failed");
+                        return;
+                    }
+                } else {
+                    batterySendingPersistedAlarm = true;
+                }
+                batteryFreshAlarmQueued = batteryFreshAlarm &&
+                    (batteryFreshResult.gasClass != batteryPendingAlarm.gasClass ||
+                     batteryFreshResult.confidence != batteryPendingAlarm.confidence);
+                (void)updateAlarmOutputs(true);
+            } else if (batteryFreshAlarm) {
+                if (!prepareAndPersistAlarmDelivery(batteryFreshResult)) {
+                    enterBatteryPersistenceFaultHold("alarm_persist_failed");
+                    return;
+                }
+                (void)updateAlarmOutputs(true);
+            } else if (!buildTxSnapshot(batteryFreshResult, batteryTxSnapshot)) {
+                completeBatterySessionAndPowerOff("normal_frame_build_failed");
+                return;
             }
             batteryAlarmTxAttempts = 0;
             batteryAlarmAckReceived = false;
             batteryNextTxAttemptMs = now;
             batterySessionState = BatterySessionState::Transmit;
             batteryStateStartedMs = now;
-            logPrintf("GLD_BATTERY_INFERENCE_READY alarm=%u gasClass=%u confidence=%u\n",
-                      lastAlarm ? 1 : 0, lastResult.gasClass, lastResult.confidence);
+            logPrintf("GLD_BATTERY_INFERENCE_READY alarm=%u freshValid=%u freshQueued=%u gasClass=%u confidence=%u seq=%u frozen=%u\n",
+                      batteryTxSnapshot.alarm ? 1u : 0u,
+                      batteryFreshInferenceValid ? 1u : 0u,
+                      batteryFreshAlarmQueued ? 1u : 0u,
+                      batteryFreshResult.gasClass,
+                      batteryFreshResult.confidence,
+                      batteryTxSnapshot.sequence,
+                      batterySendingPersistedAlarm ? 1u : 0u);
             return;
         }
 
         case BatterySessionState::Transmit: {
             if (static_cast<int32_t>(now - batteryNextTxAttemptMs) < 0) return;
 
-            const bool alarm = lastAlarm;
-            const bool alarmAck = transmitOnce(alarm);
-            ++batteryAlarmTxAttempts;
+            if (batteryPendingSaveRequired) {
+                if (!pgl::gld::writeGldPendingAlarm(batteryPendingAlarm)) {
+                    enterBatteryPersistenceFaultHold("pending_alarm_persist_retry_failed");
+                    return;
+                }
+                batteryPendingSaveRequired = false;
+                logPrintf("GLD_BATTERY_ALARM_PENDING_SAVE=OK seq=%u retry=1\n",
+                          batteryPendingAlarm.sequence);
+            }
+
+            if (batteryAlarmAckReceived) {
+                const pgl::gld::GldPendingAlarm cleared{};
+                if (!pgl::gld::writeGldPendingAlarm(cleared)) {
+                    batteryNextTxAttemptMs = millis() + BATTERY_ALARM_RETRY_DELAY_MS;
+                    logPrintln("GLD_BATTERY_ALARM_PENDING_CLEAR=FAIL powerOffBlocked=1");
+                    enterBatteryPersistenceFaultHold("pending_alarm_clear_failed");
+                    return;
+                }
+                batteryPendingAlarm = {};
+                batteryAlarmAckReceived = false;
+                if (activateQueuedFreshAlarm("prior_alarm_acknowledged")) {
+                    return;
+                }
+                if (batteryFreshInferenceValid && !batteryFreshAlarm &&
+                    !updateAlarmOutputs(false)) {
+                    batteryAlarmAckReceived = true;
+                    batteryNextTxAttemptMs = millis() + BATTERY_ALARM_RETRY_DELAY_MS;
+                    logPrintln("GLD_BATTERY_ALARM_LATCH_CLEAR=FAIL powerOffBlocked=1");
+                    enterBatteryPersistenceFaultHold("alarm_latch_clear_failed");
+                    return;
+                }
+                completeBatterySessionAndPowerOff("alarm_ack_received");
+                return;
+            }
+
+            const bool alarm = batteryTxSnapshot.alarm;
+            const bool alarmAck = transmitSnapshot(batteryTxSnapshot, alarm);
+            if (alarm) {
+                ++batteryAlarmTxAttempts;
+            }
             if (!alarm) {
                 completeBatterySessionAndPowerOff(lastLoraTxOk
                     ? "normal_tx_rx_done"
@@ -3715,11 +4408,9 @@ void runBatteryInferenceSession() {
 
             if (alarmAck) {
                 batteryAlarmAckReceived = true;
-                batteryPendingAlarm = {};
-                pgl::gld::writeGldPendingAlarm(batteryPendingAlarm);
                 logPrintf("GLD_BATTERY_ALARM_ACK_SUCCESS attempts=%u\n",
                           static_cast<unsigned>(batteryAlarmTxAttempts));
-                completeBatterySessionAndPowerOff("alarm_ack_received");
+                batteryNextTxAttemptMs = millis();
                 return;
             }
 
@@ -3734,14 +4425,20 @@ void runBatteryInferenceSession() {
                 return;
             }
 
-            batteryPendingAlarm.active = true;
-            batteryPendingAlarm.gasClass = lastResult.gasClass;
-            batteryPendingAlarm.confidence = lastResult.confidence;
-            pgl::gld::writeGldPendingAlarm(batteryPendingAlarm);
-            logPrintf("GLD_BATTERY_ALARM_PENDING_SAVE attempts=%u gasClass=%u confidence=%u sleepNext=1\n",
+            if (batteryFreshAlarmQueued) {
+                if (activateQueuedFreshAlarm("prior_alarm_retry_exhausted")) {
+                    return;
+                }
+                batteryNextTxAttemptMs = millis() + BATTERY_ALARM_RETRY_DELAY_MS;
+                logPrintln("GLD_BATTERY_FRESH_ALARM_ACTIVATE=FAIL powerOffBlocked=1");
+                enterBatteryPersistenceFaultHold("fresh_alarm_persist_failed");
+                return;
+            }
+            logPrintf("GLD_BATTERY_ALARM_PENDING_RETAIN attempts=%u gasClass=%u confidence=%u seq=%u sleepNext=1\n",
                       static_cast<unsigned>(batteryAlarmTxAttempts),
                       batteryPendingAlarm.gasClass,
-                      batteryPendingAlarm.confidence);
+                      batteryPendingAlarm.confidence,
+                      batteryPendingAlarm.sequence);
             completeBatterySessionAndPowerOff("alarm_ack_timeout_pending");
             return;
         }
@@ -3757,7 +4454,78 @@ void runBatteryInferenceSession() {
 // Dataset sample publish
 // ---------------------------------------------------------------------------
 
-void publishDataRecord() {
+void rejectDatasetRecord(
+    const pgl::gld::GldDatasetValidationResult& validation,
+    const pgl::gld::GldDatasetChannelSample* samples,
+    size_t count) {
+    ++datasetRejectedSamples;
+    lastDatasetRejectReason = validation.reason;
+    lastDatasetRejectChannel = validation.channel;
+    lastDatasetRejectOkFiniteCount = validation.okFiniteCount;
+    lastDatasetRejectStatus = 0xFF;
+    lastDatasetRejectGain = 0;
+    lastDatasetRejectSaturated = false;
+
+    if (validation.channel >= 0 &&
+        static_cast<size_t>(validation.channel) < count && samples != nullptr) {
+        const pgl::gld::GldDatasetChannelSample& sample =
+            samples[static_cast<size_t>(validation.channel)];
+        lastDatasetRejectStatus = sample.status;
+        lastDatasetRejectGain = sample.gain;
+        lastDatasetRejectSaturated = sample.saturated;
+    }
+
+    logPrintf(
+        "DATASET_RECORD_REJECT attemptedSeq=%lu reason=%s channel=%d "
+        "okFiniteCount=%u status=%u gain=%u saturated=%u rejectedTotal=%lu\n",
+        static_cast<unsigned long>(datasetSeq),
+        pgl::gld::gldDatasetRejectReasonName(validation.reason),
+        static_cast<int>(validation.channel),
+        static_cast<unsigned>(validation.okFiniteCount),
+        static_cast<unsigned>(lastDatasetRejectStatus),
+        static_cast<unsigned>(lastDatasetRejectGain),
+        lastDatasetRejectSaturated ? 1u : 0u,
+        static_cast<unsigned long>(datasetRejectedSamples));
+    publishDatasetRejectedStatus(validation, samples, count);
+}
+
+bool publishDataRecord() {
+    pgl::gld::GldAds1256Reading readings[pgl::gld::GLD_DATASET_FEATURE_COUNT]{};
+    pgl::gld::GldDatasetChannelSample samples[pgl::gld::GLD_DATASET_FEATURE_COUNT]{};
+    uint8_t statusOkChannels = 0;
+
+    static_assert(pgl::gld::board::SENSOR_COUNT == pgl::gld::GLD_DATASET_FEATURE_COUNT,
+                  "Dataset contract requires exactly eight board channels");
+    for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
+        readings[ch] = ads.readChannel(ch);
+        const pgl::gld::GldAds1256Reading& reading = readings[ch];
+        latestSensorVoltage[ch] = reading.voltage;
+        latestSensorGain[ch] = reading.gain;
+        latestSensorStatus[ch] = static_cast<uint8_t>(reading.status);
+        if (reading.status == pgl::gld::GldAds1256Status::Ok) ++statusOkChannels;
+        samples[ch] = pgl::gld::GldDatasetChannelSample{
+            pgl::gld::board::SENSOR_NAMES[ch],
+            static_cast<uint8_t>(reading.status),
+            reading.voltage,
+            reading.gain,
+            reading.saturated,
+        };
+    }
+    noteAdsReadHealth(statusOkChannels, "dataset");
+
+    pgl::gld::GldDatasetValidationResult validation =
+        pgl::gld::validateGldDatasetSample(
+            samples,
+            pgl::gld::board::SENSOR_COUNT,
+            nullingProfileApplied,
+            nullingProfileId);
+    latestTelemetryValid = validation.accepted;
+    if (!validation.accepted) {
+        rejectDatasetRecord(validation, samples, pgl::gld::board::SENSOR_COUNT);
+        return false;
+    }
+
+    // Build the wire record only after all eight readings satisfy the schema.
     StaticJsonDocument<1024> doc;
     doc["device_id"]          = runtimeConfig.deviceId;
     doc["node_id"]            = runtimeConfig.nodeId;
@@ -3766,38 +4534,47 @@ void publishDataRecord() {
     doc["timestamp_ms"]       = static_cast<uint32_t>(millis());
     doc["label"]              = currentLabel;
     doc["nulling_profile_id"] = nullingProfileId;
-    JsonArray svArr  = doc.createNestedArray("sensor_voltage");
+    JsonArray svArr = doc.createNestedArray("sensor_voltage");
     JsonArray gainArr = doc.createNestedArray("sensor_gain");
     JsonArray statusArr = doc.createNestedArray("sensor_status");
-    JsonArray foArr  = doc.createNestedArray("feature_order");
-    uint8_t okChannels = 0;
-    for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
-        const pgl::gld::GldAds1256Reading r = ads.readChannel(ch);
-        latestSensorVoltage[ch] = r.voltage;
-        latestSensorGain[ch] = r.gain;
-        latestSensorStatus[ch] = static_cast<uint8_t>(r.status);
-        if (r.status == pgl::gld::GldAds1256Status::Ok) ++okChannels;
-        svArr.add(r.voltage);
-        gainArr.add(r.gain);
-        statusArr.add(static_cast<uint8_t>(r.status));
-        foArr.add(pgl::gld::board::SENSOR_NAMES[ch]);
+    JsonArray foArr = doc.createNestedArray("feature_order");
+    for (size_t ch = 0; ch < pgl::gld::GLD_DATASET_FEATURE_COUNT; ++ch) {
+        svArr.add(readings[ch].voltage);
+        gainArr.add(readings[ch].gain);
+        statusArr.add(static_cast<uint8_t>(readings[ch].status));
+        foArr.add(pgl::gld::GLD_DATASET_CANONICAL_FEATURE_ORDER[ch]);
     }
-    noteAdsReadHealth(okChannels, "dataset");
-    latestTelemetryValid = okChannels == pgl::gld::board::SENSOR_COUNT;
+
     char payload[DATASET_PAYLOAD_BYTES];
+    const size_t requiredLen = measureJson(doc);
+    if (doc.overflowed() || requiredLen == 0 || requiredLen >= sizeof(payload)) {
+        validation.accepted = false;
+        validation.reason = pgl::gld::GldDatasetRejectReason::PayloadEncoding;
+        validation.channel = -1;
+        rejectDatasetRecord(validation, samples, pgl::gld::board::SENSOR_COUNT);
+        return false;
+    }
     const size_t len = serializeJson(doc, payload, sizeof(payload));
-    const size_t termIndex = len < (sizeof(payload) - 1U) ? len : (sizeof(payload) - 1U);
-    payload[termIndex] = '\0';
-    const bool ok = publishDatasetPayload(payload, datasetSeq, false);
-    if (!ok) {
+    if (len != requiredLen) {
+        validation.accepted = false;
+        validation.reason = pgl::gld::GldDatasetRejectReason::PayloadEncoding;
+        validation.channel = -1;
+        rejectDatasetRecord(validation, samples, pgl::gld::board::SENSOR_COUNT);
+        return false;
+    }
+    payload[len] = '\0';
+
+    const bool published = publishDatasetPayload(payload, datasetSeq, false);
+    if (!published) {
         enqueueDatasetPayload(payload, len, datasetSeq);
     }
     logPrintf("DATASET_RECORD seq=%lu ok=%u queued=%u pending=%u len=%u\n",
-              static_cast<unsigned long>(datasetSeq), ok ? 1 : 0,
-              ok ? 0 : 1,
+              static_cast<unsigned long>(datasetSeq), published ? 1 : 0,
+              published ? 0 : 1,
               static_cast<unsigned>(datasetQueueCount),
               static_cast<unsigned>(len));
     ++datasetSeq;
+    return true;
 }
 
 bool shouldAutoStop() {
@@ -3877,6 +4654,10 @@ void setup() {
     serviceHoldActive = pgl::gld::readGldServiceHold();
     batteryPendingAlarm = pgl::gld::readGldPendingAlarm();
     setupPins();
+    const bool persistedAlarmLatched = pgl::gld::readGldAlarmLatched();
+    if (persistedAlarmLatched || batteryPendingAlarm.active) {
+        (void)updateAlarmOutputs(true);
+    }
     beginServiceHoldButton();
     movingAvg.reset();
 
@@ -3896,10 +4677,23 @@ void setup() {
               BOARD_PROFILE);
 
     const pgl::gld::GldPowerReading power = pgl::gld::readGldPower();
-    logPrintf("GLD_POWER mode=%s externalPower=%u batteryMv=%u\n",
+    logPrintf("GLD_POWER mode=%s externalPower=%u batteryMv=%u batterySense=%s ambiguous=%u\n",
               pgl::gld::gldPowerModeName(power.mode),
-              power.externalPower ? 1 : 0, power.batteryMv);
-    batteryPowerMode = !power.externalPower;
+              power.externalPower ? 1 : 0, power.batteryMv,
+              pgl::gld::gldBatterySenseStatusName(power.batterySenseStatus),
+              power.powerSourceAmbiguous ? 1u : 0u);
+    batteryPowerMode = TFBG_CONTINUOUS_BATTERY || !power.externalPower;
+    powerModeCandidateBattery = batteryPowerMode;
+    powerModeCandidateCount = 0;
+    lastPowerReconcileMs = millis();
+    if (batteryPowerMode && !TFBG_CONTINUOUS_BATTERY &&
+        currentMode != pgl::gld::GldMode::INFERENCE) {
+        const pgl::gld::GldMode rejectedMode = currentMode;
+        currentMode = pgl::gld::GldMode::INFERENCE;
+        const bool persisted = pgl::gld::writeGldMode(currentMode);
+        logPrintf("MODE_BATTERY_REJECTED requested=%s fallback=inference persisted=%u\n",
+                  pgl::gld::gldModeName(rejectedMode), persisted ? 1u : 0u);
+    }
     if (batteryPowerMode && serviceHoldActive) {
         logPrintln("GLD_SERVICE_HOLD state=ON source=nvs persisted=1");
         blinkServiceHoldEnabled();
@@ -3918,33 +4712,48 @@ void setup() {
         disableNetworkForOfflineMode("inference_mode");
         network = new NeuralNetwork();
         mlReady = network->isInitialized();
+        const int mlInputSize = mlReady ? network->getInputSize() : -1;
         const int mlOutputSize = mlReady ? network->getOutputSize() : -1;
-        logPrintf("GLD_ML_INIT initialized=%u outputSize=%d\n",
-                  mlReady ? 1 : 0, mlOutputSize);
+        logPrintf("GLD_ML_INIT initialized=%u inputSize=%d outputSize=%d\n",
+                  mlReady ? 1 : 0, mlInputSize, mlOutputSize);
 
         radioReady = beginLoraRadio();
-        logPrintf("GLD_INFERENCE_READY adsReady=%u radioReady=%u mlReady=%u\n",
-                  adsReady ? 1 : 0, radioReady ? 1 : 0, mlReady ? 1 : 0);
-        char modeDetail[96];
-        snprintf(modeDetail, sizeof(modeDetail), "ads=%s mcp=%u/%u lora=%s ml=%s",
+        runExternalPowerBootSensorSamples(power);
+        modelProfileReady = modelProfileMatchesActiveNulling();
+        logPrintf("GLD_MODEL_PROFILE id=%s scaler=%s approved=%u boundNullingProfileId=%u activeNullingProfileId=%u tfbgOverride=%u ready=%u\n",
+                  pgl::gld::model::PROFILE_ID,
+                  pgl::gld::model::SCALER_PROFILE_ID,
+                  pgl::gld::model::PRODUCTION_APPROVED ? 1u : 0u,
+                  pgl::gld::model::BOUND_NULLING_PROFILE_ID,
+                  nullingProfileId,
+                  TFBG_CONTINUOUS_BATTERY ? 1u : 0u,
+                  modelProfileReady ? 1u : 0u);
+        logPrintf("GLD_INFERENCE_READY adsReady=%u radioReady=%u mlReady=%u nullingApplied=%u modelProfileReady=%u profileId=%u\n",
+                  adsReady ? 1 : 0, radioReady ? 1 : 0, mlReady ? 1 : 0,
+                  nullingProfileApplied ? 1 : 0, modelProfileReady ? 1 : 0,
+                  nullingProfileId);
+        char modeDetail[128];
+        snprintf(modeDetail, sizeof(modeDetail), "ads=%s mcp=%u/%u lora=%s ml=%s nulling=%s modelProfile=%s profileId=%u",
                  passFail(adsReady),
                  bootI2c.mcpOkCount,
                  pgl::gld::board::SENSOR_COUNT,
                  passFail(radioReady),
-                 passFail(mlReady));
+                 passFail(mlReady),
+                 passFail(nullingProfileApplied),
+                 passFail(modelProfileReady),
+                 nullingProfileId);
         printBootIcReport(power, bootAds, bootI2c, bootMcpControl,
                           true, radioReady,
                           true, mlReady, mlOutputSize,
-                          adsReady && radioReady && mlReady,
+                          adsReady && radioReady && mlReady && nullingProfileApplied && modelProfileReady,
                           modeDetail);
-        runExternalPowerBootSensorSamples(power);
         armBootReportRecoveryIfNeeded(bootAds, bootI2c, bootMcpControl,
                                       true, radioReady,
                                       true, mlReady);
 
         lastScanMs = millis();
         lastTxMs   = millis();
-        if (batteryPowerMode) {
+        if (batteryPowerMode && !TFBG_CONTINUOUS_BATTERY) {
             startBatteryInferenceSession();
         }
 
@@ -3989,7 +4798,7 @@ void setup() {
             printBootIcReport(power, bootAds, bootI2c, bootMcpControl,
                               false, false,
                               false, false, -1,
-                              adsReady && dacReady && nullingProfileId > 0,
+                              adsReady && dacReady && nullingProfileApplied && nullingProfileId > 0,
                               modeDetail);
             runExternalPowerBootSensorSamples(power);
             armBootReportRecoveryIfNeeded(bootAds, bootI2c, bootMcpControl,
@@ -4087,13 +4896,18 @@ void setup() {
 
 void loop() {
     firmwareServiceTick();
+    reconcileRuntimePowerMode();
+    if (powerTransitionShutdownPending) {
+        completeBatterySessionAndPowerOff("unsupported_mode_power_transition");
+        return;
+    }
     maintainBootReportRecovery();
 
     if (currentMode == pgl::gld::GldMode::INFERENCE) {
         const uint32_t now = millis();
         maintainAdsRecovery("inference_ads_not_ready");
 
-        if (batteryPowerMode) {
+        if (batteryPowerMode && !TFBG_CONTINUOUS_BATTERY) {
             // One-shot wake cycle: warm-up, 10 complete valid sample batches,
             // inference, bounded LoRa TX/RX, then final DONE followed by CLR.
             // While service hold is active, CLR is inhibited and DONE becomes

@@ -84,19 +84,18 @@ placeholders, matching the dataset-side convention. The two broker IPs were
 left as-is, matching how the dataset broker host was already treated in this
 repo (a private-LAN address, not an auth secret) — revisit if that
 distinction isn't acceptable for this deployment.
-**Not done by this fix, and still required:** rotate the exposed Wi-Fi
-(`Fshares`/`kayabiasa`) and MQTT (`deviot`/`deviot`) credentials on the actual
-network/broker, since they remain in git history regardless of this commit.
+**Not done by this fix, and still required:** rotate the previously exposed
+Wi-Fi and MQTT credentials on the actual network/broker. The literal values are
+redacted from the current tree but remain in Git history until an explicitly
+approved history-rewrite and coordinated credential rotation are completed.
 
 **Severity:** Medium — secret leakage via version control.
 
 ### What breaks
 
-`firmware/config/ServerConfig.h` commits live-looking credentials:
-
-- `PGL_SERVER_SITE_WIFI_SSID "Fshares"` / `..._WIFI_PASSWORD "kayabiasa"` (`:35`, `:39`)
-- `PGL_SERVER_SITE_MQTT_USER "deviot"` / `..._MQTT_PASS "deviot"` (`:49`, `:52`)
-- Two hard-coded broker IPs (`10.217.88.180`, `10.158.198.180`) (`:19`, `:43`)
+Earlier revisions of `firmware/config/ServerConfig.h` committed live-looking
+Wi-Fi, MQTT, and broker endpoint values. Their literals are intentionally
+redacted here; repository history must still be treated as exposed.
 
 The file's own comments say "Jangan commit credential produksi permanen" / "For
 produksi, pindahkan ke provisioning/NVS", so the intent is understood but not

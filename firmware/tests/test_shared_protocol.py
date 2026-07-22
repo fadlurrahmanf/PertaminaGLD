@@ -1,4 +1,5 @@
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+import copy
 import json
 import pathlib
 import re
@@ -12,8 +13,16 @@ MESH_MAX_PAYLOAD = 80
 MSG_SENSOR_DATA = 0x10
 MSG_SERVER_PULL_REQUEST = 0x30
 MSG_CLUSTER_DATA_RESPONSE = 0x31
+MSG_CH_HELLO = 0x33
+MSG_CH_CONFIG_RESPONSE = 0x35
+MSG_CH_HELLO_ACK = 0x36
 FLAG_ALARM_ACK = 0x40
 FLAG_GLD_EXT_POWER = 0x80
+
+CH_CONFIG_FLAG_ROUTE_TO_ROOT = 0x01
+CH_CONFIG_CAP_HELLO_ACK_V1 = 0x02
+CH_CONFIG_CAP_ALARM_ACK_NODE_ID_V1 = 0x04
+CH_HELLO_FLAG_ACK_REQUEST_V1 = 0x01
 
 TYPE_GLD_NORMAL_BATTERY = 0x10
 TYPE_GLD_NORMAL_EXTERNAL = 0x90
@@ -221,8 +230,11 @@ def parse_ch_gld_uplink(frame: bytes):
     }
 
 
-def build_compact_alarm_ack(ch_id: int, node_id: int, seq: int) -> bytes:
-    return encode_app_frame(TYPE_GLD_ALARM_BATTERY, ch_id, node_id, seq, b"")
+def build_compact_alarm_ack(
+    ch_id: int, node_id: int, seq: int, acknowledged_node_id: int | None = None
+) -> bytes:
+    payload = b"" if acknowledged_node_id is None else acknowledged_node_id.to_bytes(2, "big")
+    return encode_app_frame(TYPE_GLD_ALARM_BATTERY, ch_id, node_id, seq, payload)
 
 
 def encode_gld_record(node_id: int, seq: int, flags: int, payload: bytes) -> bytes:
@@ -357,6 +369,8 @@ def build_single_record_push_frame(ch_id: int, dst_id: int, mesh_seq: int, entry
 
 def process_gld_frame(entries, alarm_queue, tx_queue, frame: bytes, now_ms: int, mesh_seq: int):
     uplink = parse_ch_gld_uplink(frame)
+    cache_snapshot = copy.deepcopy(entries)
+    alarm_snapshot = copy.deepcopy(alarm_queue.items)
     status, index, should_ack, recovery = update_cache(entries, uplink, now_ms)
     if status not in {"Inserted", "Updated", "Duplicate"}:
         return {"status": status, "ack": None, "queued": False}
@@ -367,12 +381,18 @@ def process_gld_frame(entries, alarm_queue, tx_queue, frame: bytes, now_ms: int,
     if uplink["alarm"] and should_ack:
         alarm_status = alarm_queue.enqueue_if_absent(entry)
         if alarm_status == "Full":
+            entries[:] = cache_snapshot
+            alarm_queue.items = alarm_snapshot
             return {"status": "AlarmQueueFull", "ack": None, "queued": False}
         if alarm_status == "Conflict":
+            entries[:] = cache_snapshot
+            alarm_queue.items = alarm_snapshot
             return {"status": "AlarmQueueConflict", "ack": None, "queued": False}
         if alarm_status == "Queued":
             push = build_single_record_push_frame(0x0001, 0x0064, mesh_seq, entry)
             if tx_queue.enqueue("AlarmPush", push, entry.node_id, entry.current_seq) != "Ok":
+                entries[:] = cache_snapshot
+                alarm_queue.items = alarm_snapshot
                 return {"status": "TxQueueFull", "ack": None, "queued": False}
             queued = True
         ack = build_compact_alarm_ack(0x0001, entry.node_id, entry.current_seq)
@@ -380,6 +400,8 @@ def process_gld_frame(entries, alarm_queue, tx_queue, frame: bytes, now_ms: int,
     if recovery:
         push = build_single_record_push_frame(0x0001, 0x0064, mesh_seq, entry)
         if tx_queue.enqueue("RecoveryClear", push, entry.node_id, entry.current_seq) != "Ok":
+            entries[:] = cache_snapshot
+            alarm_queue.items = alarm_snapshot
             return {"status": "TxQueueFull", "ack": ack, "queued": queued}
         queued = True
 
@@ -667,6 +689,19 @@ def test_ch_runtime_alarm_queue_ack_and_tx_success_semantics():
     assert alarm_queue.items == []
 
 
+def test_ch_identity_is_runtime_persisted_and_app_provisioned():
+    runtime_src = pathlib.Path("firmware/ch/src/ChStarMeshRuntimeMain.cpp").read_text(encoding="utf-8")
+    operator_src = pathlib.Path("apps/ch-operator/js/ch-main.js").read_text(encoding="utf-8")
+
+    assert "static uint16_t CH_ID" in runtime_src
+    assert 'getUShort("chId", CH_ID)' in runtime_src
+    assert 'putUShort("chId", newId)' in runtime_src
+    assert 'prefs.remove("parentId")' in runtime_src
+    assert 'prefs.remove("parentAlt")' in runtime_src
+    assert "loadChIdentity();" in runtime_src
+    assert 'SET_CH_ADDRESS_JSON {"chId":"${check.id}","reboot":true}' in operator_src
+
+
 def test_ch_runtime_alarm_queue_full_blocks_ack():
     entries = [CacheEntry() for _ in range(2)]
     alarm_queue = AlarmQueue(capacity=1)
@@ -906,9 +941,9 @@ def test_gld_unified_runtime_scaffolds_present():
     assert "gld_inference_esp32s3" not in platformio
     assert "gld_dataset_esp32s3" not in platformio
     assert "gld_nulling_runtime_esp32s3" not in platformio
-    assert "[env:ch1]" in platformio
-    assert "[env:ch2]" in platformio
-    assert "[env:ch3]" in platformio
+    assert "[env:ch]" in platformio
+    assert "[env:chFieldtest]" in platformio
+    assert "[env:ch1]" not in platformio
     assert "[env:gw]" in platformio
     assert "ch_star_mesh_runtime_esp32s3" not in platformio
     assert "ch_layer1_1_esp32s3" not in platformio
@@ -1176,7 +1211,7 @@ def test_gld_unified_runtime_scaffolds_present():
     assert "MSG_NODE_DOWNLINK" in command_src
     assert "GLD_SECURITY_NOT_PROVISIONED" in unified_src
     assert "aesKeyHex" in unified_src
-    assert "GLD_ALLOW_SELFTEST_AES_FALLBACK 0" in pathlib.Path("firmware/config/GldConfig.h").read_text(encoding="utf-8")
+    assert "GLD_ALLOW_SELFTEST_AES_FALLBACK 1" in pathlib.Path("firmware/config/GldConfig.h").read_text(encoding="utf-8")
     assert "CMD_SET_MODE_AUTHENTICATED = 0x81" in command_src
     crypto_header = pathlib.Path("firmware/shared/include/GldCrypto.h").read_text(encoding="utf-8")
     crypto_src = pathlib.Path("firmware/shared/src/GldCrypto.cpp").read_text(encoding="utf-8")
@@ -1282,9 +1317,8 @@ def test_current_design_docs_mirror_live_source_contracts():
     assert "`gld`" in gld_doc
     assert "`gldw`" not in gld_doc
     assert "GLDW / ESP32-S3-WROOM-1U-N16R8" in gld_doc
-    assert "`ch1`" in ch_doc
-    assert "`ch2`" in ch_doc
-    assert "`ch3`" in ch_doc
+    assert "`ch`" in ch_doc
+    assert "`chFieldtest`" in ch_doc
     assert "`gw`" in gw_doc
     old_env_names = (
         "gld_unified_esp32s3",
@@ -1404,9 +1438,9 @@ def test_version_constants_format():
         assert re.fullmatch(r"\d+\.\d+\.\d+", version), version
 
     assert 'GLD_FIRMWARE_VERSION = "0.8.14"' in header
-    assert 'CH_FIRMWARE_VERSION = "0.7.1"' in header
-    assert 'GATEWAY_FIRMWARE_VERSION = "0.1.3"' in header
-    assert 'PROTOCOL_VERSION = "0.1.0"' in header
+    assert 'CH_FIRMWARE_VERSION = "0.7.2"' in header
+    assert 'GATEWAY_FIRMWARE_VERSION = "0.1.4"' in header
+    assert 'PROTOCOL_VERSION = "0.2.0"' in header
     assert 'CONFIG_SCHEMA_VERSION = "0.1.0"' in header
 
 
@@ -1615,7 +1649,8 @@ def test_lora_link_selftest_scaffold_present():
     assert "setPacketReceivedAction(onMeshPacketReceived)" in ch_runtime
     assert "startStarReceive(\"boot\")" in ch_runtime
     assert "startMeshReceive(\"boot\")" in ch_runtime
-    assert "CH_EXTERNAL_WDT_KEEPALIVE_INTERVAL_MS = 10000" in ch_runtime
+    assert "#define PGL_CH_EXTERNAL_WDT_KEEPALIVE_INTERVAL_MS 10000" in ch_runtime
+    assert "CH_EXTERNAL_WDT_KEEPALIVE_INTERVAL_MS = PGL_CH_EXTERNAL_WDT_KEEPALIVE_INTERVAL_MS" in ch_runtime
     assert "setupExternalWdtKeepalivePin()" in ch_runtime
     assert "pulseExternalWdtKeepaliveNow()" in ch_runtime
     assert "maintainExternalWdtKeepalive()" in ch_runtime
@@ -1704,13 +1739,17 @@ def test_ch_mesh_relay_sends_hop_by_hop_alarm_ack_to_child():
 
     is_alarm_sensor_data = decoded["type_flags"] & 0x3F == MSG_SENSOR_DATA and decoded["type_flags"] & FLAG_ALARM_ACK
     assert is_alarm_sensor_data
-    child_ack = build_compact_alarm_ack(parent_ch_id, decoded["src_id"], decoded["seq"])
+    acknowledged_node_id = int.from_bytes(decoded["payload"][0:2], "big")
+    child_ack = build_compact_alarm_ack(
+        parent_ch_id, decoded["src_id"], decoded["seq"], acknowledged_node_id
+    )
 
     decoded_ack = decode_app_frame(child_ack)
     assert decoded_ack["src_id"] == parent_ch_id
     assert decoded_ack["dst_id"] == child_ch_id
     assert decoded_ack["seq"] == child_mesh_seq
-    assert decoded_ack["payload_len"] == 0
+    assert decoded_ack["payload_len"] == 2
+    assert int.from_bytes(decoded_ack["payload"], "big") == acknowledged_node_id
     assert decoded_ack["type_flags"] == TYPE_GLD_ALARM_BATTERY
 
     # CH-B's own ACK-acceptance check (handleMeshPacketReceived): the ACK
@@ -1743,3 +1782,288 @@ def test_ch_mesh_relay_does_not_ack_non_alarm_uplink():
 
     would_ack = decoded["type_flags"] & 0x3F == MSG_SENSOR_DATA and decoded["type_flags"] & FLAG_ALARM_ACK
     assert not would_ack
+
+
+def test_ch_parent_health_timing_invariants():
+    config = pathlib.Path("firmware/config/ChConfig.h").read_text(encoding="utf-8")
+    runtime = pathlib.Path("firmware/ch/src/ChStarMeshRuntimeMain.cpp").read_text(encoding="utf-8")
+
+    def macro(name):
+        match = re.search(rf"#define\s+{name}\s+(\d+)", config)
+        assert match, name
+        return int(match.group(1))
+
+    def constant(name):
+        match = re.search(rf"constexpr uint32_t\s+{name}\s*=\s*(\d+)", config)
+        assert match, name
+        return int(match.group(1))
+
+    health = macro("PGL_CH_PARENT_HEALTH_TIMEOUT_MS")
+    hello = macro("PGL_CH_FIELD_HELLO_INTERVAL_MS")
+    jitter = macro("PGL_CH_FIELD_HELLO_JITTER_MS")
+    ack_timeout = macro("PGL_CH_HELLO_ACK_TMO_MS")
+    retries = macro("PGL_CH_HELLO_RETRY_MAX")
+    assert health > hello + jitter + (retries + 1) * ack_timeout
+    assert health > (
+        constant("ROUTE_VERIFY_INTERVAL_MS")
+        + constant("ROUTE_VERIFY_JITTER_MS")
+        + constant("ROUTE_VERIFY_WINDOW_MS")
+    )
+    joined = runtime[runtime.index("void handleJoined()") : runtime.index("void handleParentFailover()")]
+    assert joined.index("nextHelloDueMs") < joined.index("CH_PARENT_HEALTH_FAIL")
+    assert "meshAck.kind != MeshAckKind::Hello" in joined
+
+
+def test_ch_hello_ack_rolling_upgrade_matrix_and_direct_origin_rule():
+    def child_waits_for_ack(child_is_new, parent_route_flags):
+        return child_is_new and bool(parent_route_flags & CH_CONFIG_CAP_HELLO_ACK_V1)
+
+    def parent_sends_ack(parent_is_new, src_id, receiver_id, payload):
+        return (
+            parent_is_new
+            and len(payload) >= 12
+            and int.from_bytes(payload[0:2], "big") == src_id
+            and int.from_bytes(payload[2:4], "big") == receiver_id
+            and bool(payload[11] & CH_HELLO_FLAG_ACK_REQUEST_V1)
+        )
+
+    legacy_flags = CH_CONFIG_FLAG_ROUTE_TO_ROOT
+    new_flags = legacy_flags | CH_CONFIG_CAP_HELLO_ACK_V1
+    matrix = [
+        (False, False, legacy_flags, False, False),
+        (False, True, new_flags, False, False),
+        (True, False, legacy_flags, False, False),
+        (True, True, new_flags, True, True),
+    ]
+    for child_new, parent_new, flags, waits, sends in matrix:
+        payload = bytearray(12 if child_new and flags & CH_CONFIG_CAP_HELLO_ACK_V1 else 11)
+        payload[0:2] = (0x0064).to_bytes(2, "big")
+        payload[2:4] = (0x006F).to_bytes(2, "big")
+        if len(payload) == 12:
+            payload[11] = CH_HELLO_FLAG_ACK_REQUEST_V1
+        assert child_waits_for_ack(child_new, flags) is waits
+        assert parent_sends_ack(parent_new, 0x0064, 0x006F, payload) is sends
+
+    direct = bytearray(12)
+    direct[0:2] = (0x0064).to_bytes(2, "big")
+    direct[2:4] = (0x006F).to_bytes(2, "big")
+    direct[11] = CH_HELLO_FLAG_ACK_REQUEST_V1
+    assert parent_sends_ack(True, 0x0064, 0x006F, direct)
+    assert not parent_sends_ack(True, 0x0065, 0x006F, direct)  # relayed src rewrite
+    assert not parent_sends_ack(True, 0x0064, 0x0065, direct)  # wrong intended parent
+    assert not parent_sends_ack(True, 0x0064, 0x006F, direct[:11])
+
+    ch_runtime = pathlib.Path("firmware/ch/src/ChStarMeshRuntimeMain.cpp").read_text(encoding="utf-8")
+    gw_runtime = pathlib.Path("firmware/gateway/src/GatewayMqttMeshMain.cpp").read_text(encoding="utf-8")
+    assert "readU16Be(&decoded.payload[0]) == decoded.srcId" in ch_runtime
+    assert "readU16Be(&decoded.payload[0]) != decoded.srcId" in gw_runtime
+    for source in (ch_runtime, gw_runtime):
+        assert "CH_HELLO_FLAG_ACK_REQUEST_V1" in source
+        assert "CH_HELLO_ACK_V1_PAYLOAD_SIZE" in source
+
+
+def test_ch_mesh_ack_transaction_is_single_and_alarm_preempts_hello():
+    runtime = pathlib.Path("firmware/ch/src/ChStarMeshRuntimeMain.cpp").read_text(encoding="utf-8")
+    assert "struct MeshAckPending" in runtime
+    assert "MeshAckKind::LocalAlarm" in runtime
+    assert "MeshAckKind::RelayAlarm" in runtime
+    assert "MeshAckKind::Hello" in runtime
+    assert "struct AlarmAckPending" not in runtime
+    assert "struct HelloAckPending" not in runtime
+    assert "if (meshAckBusy()) return;" in runtime
+    assert "alarm-preempts-hello" in runtime
+
+
+def test_ch_alarm_ack_requires_exact_pending_correlation():
+    pending = {
+        "parent": 0x006F,
+        "dst": 0x0064,
+        "frame_seq": 0x21,
+        "node": 0xF001,
+        "flags": CH_CONFIG_CAP_ALARM_ACK_NODE_ID_V1,
+    }
+
+    def valid_ack(type_flags, src, dst, seq, payload):
+        tuple_ok = (
+            type_flags == TYPE_GLD_ALARM_BATTERY
+            and src == pending["parent"]
+            and dst == pending["dst"]
+            and seq == pending["frame_seq"]
+        )
+        if pending["flags"] & CH_CONFIG_CAP_ALARM_ACK_NODE_ID_V1:
+            return tuple_ok and payload == pending["node"].to_bytes(2, "big")
+        return tuple_ok and payload == b""
+
+    valid_payload = pending["node"].to_bytes(2, "big")
+    assert valid_ack(TYPE_GLD_ALARM_BATTERY, 0x006F, 0x0064, 0x21, valid_payload)
+    assert not valid_ack(TYPE_GLD_ALARM_EXTERNAL, 0x006F, 0x0064, 0x21, valid_payload)
+    assert not valid_ack(TYPE_GLD_ALARM_BATTERY, 0x006E, 0x0064, 0x21, valid_payload)
+    assert not valid_ack(TYPE_GLD_ALARM_BATTERY, 0x006F, 0x0065, 0x21, valid_payload)
+    assert not valid_ack(TYPE_GLD_ALARM_BATTERY, 0x006F, 0x0064, 0x22, valid_payload)
+    assert not valid_ack(TYPE_GLD_ALARM_BATTERY, 0x006F, 0x0064, 0x21, b"")
+    assert not valid_ack(TYPE_GLD_ALARM_BATTERY, 0x006F, 0x0064, 0x21, b"\xF0\x02")
+
+    pending["flags"] = CH_CONFIG_FLAG_ROUTE_TO_ROOT
+    assert valid_ack(TYPE_GLD_ALARM_BATTERY, 0x006F, 0x0064, 0x21, b"")
+    assert not valid_ack(TYPE_GLD_ALARM_BATTERY, 0x006F, 0x0064, 0x21, valid_payload)
+
+    runtime = pathlib.Path("firmware/ch/src/ChStarMeshRuntimeMain.cpp").read_text(encoding="utf-8")
+    handler = runtime[runtime.index("bool onAlarmAckFromParent") : runtime.index("void checkFailover")]
+    assert "decoded.typeFlags == pgl::protocol::TYPE_ALARM_ACK_COMPACT" in handler
+    assert "decoded.seq == meshAck.frameSeq" in handler
+    assert "decoded.payloadLen == pgl::protocol::MESH_ALARM_ACK_V1_PAYLOAD_SIZE" in handler
+    assert "markAlarmAcked(completedNodeId, completedGldSeq" in handler
+
+
+def test_ch_alarm_timeout_and_parent_change_retain_unacked_alarm():
+    runtime = pathlib.Path("firmware/ch/src/ChStarMeshRuntimeMain.cpp").read_text(encoding="utf-8")
+    timeout = runtime[runtime.index("void checkAlarmAckTimeout()") : runtime.index("void drainTxQueue()")]
+    parent_change = runtime[
+        runtime.index("void handleMeshAckParentChange") : runtime.index("void startMeshAckTransaction")
+    ]
+    assert "markAlarmAcked" not in timeout
+    assert "retained=1" in timeout
+    assert "meshAck.retryCount = 0" in timeout
+    assert "noAckBurst >= NO_ACK_RECOVERY_TH && !retainedAlarm" in runtime
+    assert "parentFailCnt = 0;" in runtime[runtime.index("void updateRuntimeParent") : runtime.index("void clearParentCandidates")]
+    assert "retargetPendingAlarm(newParent)" in parent_change
+    assert "clearMeshAckTransaction(\"parent-changed\")" in parent_change
+    assert "meshAck.kind == MeshAckKind::Hello" in parent_change
+
+
+def test_ch_radio_retry_reuses_allocations_and_rf_switch_writes_are_gated():
+    runtime = pathlib.Path("firmware/ch/src/ChStarMeshRuntimeMain.cpp").read_text(encoding="utf-8")
+    begin = runtime[runtime.index("bool beginRadio") : runtime.index("void onStarPacketReceived")]
+    transmit = runtime[runtime.index("bool transmitRadio") : runtime.index("bool enqueueRelayFrame")]
+    assert re.search(r"if \(module == nullptr\).*?new Module", begin, re.S)
+    assert re.search(r"if \(radio == nullptr\).*?new SX1262", begin, re.S)
+    assert begin.count("new Module") == 1
+    assert begin.count("new SX1262") == 1
+    assert re.search(
+        r"if \(USE_RF_SWITCH\)\s*\{\s*digitalWrite\(pins\.rxen, LOW\);\s*"
+        r"digitalWrite\(pins\.txen, LOW\);",
+        transmit,
+        re.S,
+    )
+
+
+def test_ch_gateway_ack_guards_prevent_ack_ping_pong_and_hello_republish():
+    gateway = pathlib.Path("firmware/gateway/src/GatewayMqttMeshMain.cpp").read_text(encoding="utf-8")
+    alarm_ack = gateway[
+        gateway.index("void sendGatewayAckIfNeeded") : gateway.index("bool suppressDuplicateHello")
+    ]
+    assert "decoded.payloadLen < pgl::protocol::GLD_RECORD_HEADER_SIZE" in alarm_ack
+    assert "MESH_ALARM_ACK_V1_PAYLOAD_SIZE" in alarm_ack
+    assert "ackPayload[0] = decoded.payload[0]" in alarm_ack
+    assert "PublishDisposition disposition" in alarm_ack
+    assert "disposition != PublishDisposition::PublishedImmediately" in alarm_ack
+    assert "GW_ALARM_ACK_WITHHELD" in alarm_ack
+    assert "suppressDuplicateHello(frame, packetLen)" in gateway
+    assert "publishSkipped=1" in gateway
+
+
+def test_ch_route_capabilities_follow_selected_parent_and_reset_on_change():
+    runtime = pathlib.Path("firmware/ch/src/ChStarMeshRuntimeMain.cpp").read_text(encoding="utf-8")
+    protocol = pathlib.Path("firmware/shared/include/ProtocolConstants.h").read_text(encoding="utf-8")
+    assert "uint8_t  routeFlags;" in runtime
+    assert "updateRuntimeParent(best->id, best->routeFlags);" in runtime
+    assert "parentRouteFlags = newRouteFlags;" in runtime
+    assert "meshAck.expectedParentFlags = newRouteFlags;" in runtime
+    assert "parent-capability-downgrade" in runtime
+    assert "CH_CONFIG_CAP_HELLO_ACK_V1 = 0x02" in protocol
+    assert "CH_CONFIG_CAP_ALARM_ACK_NODE_ID_V1 = 0x04" in protocol
+
+
+def test_ch_alarm_enqueue_failure_rolls_back_and_exact_retry_requeues():
+    entries = [CacheEntry()]
+    alarms = AlarmQueue(capacity=1)
+    tx_queue = TxQueue(capacity=1)
+    assert tx_queue.enqueue("RelayFrame", b"occupied") == "Ok"
+    alarm, _, frame = build_gld_frame(
+        GLD_GAS_METHANE, 90, 3600, 0x61, external_power=False
+    )
+    assert alarm
+
+    blocked = process_gld_frame(entries, alarms, tx_queue, frame, 1000, 0x10)
+    assert blocked == {"status": "TxQueueFull", "ack": None, "queued": False}
+    assert not entries[0].used
+    assert alarms.items == []
+
+    tx_queue.items.pop(0)
+    retried = process_gld_frame(entries, alarms, tx_queue, frame, 1010, 0x11)
+    assert retried["status"] == "Ok"
+    assert retried["ack"] is not None
+    assert retried["queued"]
+    assert len(alarms.items) == 1
+    assert len(tx_queue.items) == 1
+    assert tx_queue.items[0]["kind"] == "AlarmPush"
+
+    runtime = pathlib.Path("firmware/ch/src/ChRuntime.cpp").read_text(encoding="utf-8")
+    assert "snapshotNodeCacheEntry" in runtime
+    assert "removeAlarmQueueItem" in runtime
+    assert "restoreNodeCacheEntry" in runtime
+
+
+def test_ch_successful_old_alarm_tx_retires_head_without_marking_new_cache_seq_sent():
+    entries = [CacheEntry()]
+    alarms = AlarmQueue(capacity=2)
+    tx_queue = TxQueue(capacity=2)
+    _, _, frame_n = build_gld_frame(GLD_GAS_LPG, 80, 3700, 0x70, external_power=False)
+    _, _, frame_n1 = build_gld_frame(GLD_GAS_LPG, 80, 3700, 0x71, external_power=False)
+    assert process_gld_frame(entries, alarms, tx_queue, frame_n, 2000, 0x20)["queued"]
+    assert process_gld_frame(entries, alarms, tx_queue, frame_n1, 2010, 0x21)["queued"]
+    assert entries[0].current_seq == 0x71
+    assert entries[0].unsent
+
+    retired = tx_queue.pop_success(entries, alarms)
+    assert retired["gld_seq"] == 0x70
+    assert len(tx_queue.items) == 1
+    assert tx_queue.items[0]["gld_seq"] == 0x71
+    assert entries[0].current_seq == 0x71
+    assert entries[0].unsent
+
+    runtime = pathlib.Path("firmware/ch/src/ChRuntime.cpp").read_text(encoding="utf-8")
+    pop_pos = runtime.index("popChTxFrame(txQueue, txQueueCapacity)", runtime.index("markChTxSuccess"))
+    mark_pos = runtime.index("markChTxItemSentInCache", runtime.index("markChTxSuccess"))
+    assert pop_pos < mark_pos
+    assert "cacheStatus == NodeCacheStatus::NotFound" in runtime
+
+
+def test_committed_config_contains_no_default_deployment_mqtt_hosts():
+    server_config = pathlib.Path("firmware/config/ServerConfig.h").read_text(encoding="utf-8")
+    gateway = pathlib.Path("firmware/gateway/src/GatewayMqttMeshMain.cpp").read_text(encoding="utf-8")
+    ipv4_literals = re.findall(r'"(?:\d{1,3}\.){3}\d{1,3}"', server_config)
+    assert ipv4_literals == []
+    assert server_config.count('"CHANGE_ME_MQTT_HOST"') == 2
+    assert "mqttHostConfigured()" in gateway
+    assert "GW_CONFIG_ERROR mqttHost=unconfigured" in gateway
+    assert "inject-PGL_SERVER_SITE_MQTT_HOST" in gateway
+
+
+def test_gateway_alarm_ack_requires_immediate_mqtt_publish_acceptance():
+    def disposition(connected, publish_succeeds, queue_has_space):
+        if connected and publish_succeeds:
+            return "PublishedImmediately"
+        return "QueuedVolatile" if queue_has_space else "Rejected"
+
+    def should_ack_alarm(is_alarm, accepted):
+        return is_alarm and accepted == "PublishedImmediately"
+
+    immediate = disposition(True, True, True)
+    offline_queued = disposition(False, False, True)
+    publish_failed_queued = disposition(True, False, True)
+    queue_full = disposition(False, False, False)
+    assert should_ack_alarm(True, immediate)
+    assert not should_ack_alarm(True, offline_queued)
+    assert not should_ack_alarm(True, publish_failed_queued)
+    assert not should_ack_alarm(True, queue_full)
+    assert not should_ack_alarm(False, immediate)
+    assert offline_queued == "QueuedVolatile"  # non-alarm queue behavior remains available
+
+    gateway = pathlib.Path("firmware/gateway/src/GatewayMqttMeshMain.cpp").read_text(encoding="utf-8")
+    assert "enum class PublishDisposition" in gateway
+    assert "PublishDisposition publishMeshFrame" in gateway
+    assert "PublishDisposition::PublishedImmediately" in gateway
+    receive = gateway[gateway.index("void receiveMeshOnce") : gateway.index("void printBootHeader")]
+    assert "uplinkDisposition = publishMeshFrame" in receive
+    assert "sendGatewayAckIfNeeded(frame, packetLen, uplinkDisposition)" in receive

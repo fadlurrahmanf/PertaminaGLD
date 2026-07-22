@@ -7,32 +7,74 @@ import { bridgeFetch } from "./bridge-client.js";
 import { applyAndAlert, sendCommand } from "./serial-protocol.js";
 import { requireUnlock } from "./security.js";
 
-export async function loadManifestFile(file) {
-  if (!file) return;
-  const text = await file.text();
+export async function loadManifestFile(fileList) {
+  const files = Array.from(fileList || []);
+  if (!files.length) return;
+  const manifestFile = files.find((file) => file.name === "manifest.json");
+  if (!manifestFile) {
+    state.manifest = null;
+    state.manifestPackageFiles = new Map();
+    $("manifestPreview").textContent = "Invalid package: manifest.json is missing.";
+    return;
+  }
+  const text = await manifestFile.text();
   try {
     const manifest = JSON.parse(text);
+    const binaries = new Map();
+    for (const file of files) {
+      if (file === manifestFile || file.name === "manifest.sha256") continue;
+      if (binaries.has(file.name)) throw new Error(`duplicate package filename ${file.name}`);
+      binaries.set(file.name, file);
+    }
     state.manifest = manifest;
+    state.manifestPackageFiles = binaries;
     $("packageDeviceId").value = manifest.deviceId || "";
-    if (manifest.env || manifest.environment) $("firmwareEnv").value = manifest.env || manifest.environment;
+    if (manifest.environment) $("firmwareEnv").value = manifest.environment;
     $("manifestPreview").textContent = JSON.stringify(manifest, null, 2);
   } catch (error) {
     state.manifest = null;
+    state.manifestPackageFiles = new Map();
     $("manifestPreview").textContent = `Invalid manifest: ${error.message}`;
   }
 }
 
 function validateManifestForUpload(manifest, env, targetDeviceId) {
-  if (!manifest) return "";
-  const manifestEnv = manifest.env || manifest.environment;
-  if (manifestEnv && manifestEnv !== env) return `manifest env ${manifestEnv} does not match selected env ${env}`;
+  if (!manifest) return "Select a complete schema-v2 firmware package directory first";
+  if (manifest.schemaVersion !== 2 || manifest.packageType !== "pertamina-gld-prebuilt-firmware") return "firmware package must use the trusted schema-v2 format";
+  const manifestEnv = manifest.environment;
+  if (manifestEnv !== env) return `manifest environment ${manifestEnv} does not match selected env ${env}`;
   const packageDeviceId = String(manifest.deviceId || "").toUpperCase();
-  if (packageDeviceId && packageDeviceId !== "F000" && packageDeviceId !== targetDeviceId) {
+  if (packageDeviceId !== targetDeviceId) {
     return `manifest deviceId ${packageDeviceId} does not match target ID ${targetDeviceId}`;
   }
-  const chip = manifest.chipFamily || manifest.chip;
-  if (chip && !/esp32s3/i.test(String(chip))) return `manifest chip ${chip} is not ESP32-S3`;
+  if (String(manifest.chip || "").toLowerCase() !== "esp32s3") return `manifest chip ${manifest.chip} is not ESP32-S3`;
+  if (!Array.isArray(manifest.flashFiles) || !manifest.flashFiles.length) return "manifest flashFiles is missing";
+  for (const item of manifest.flashFiles) {
+    if (!item || typeof item.path !== "string" || !state.manifestPackageFiles.has(item.path)) {
+      return `package binary ${item?.path || "(unknown)"} is missing`;
+    }
+  }
   return "";
+}
+
+function arrayBufferToBase64(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
+  }
+  return btoa(binary);
+}
+
+async function readPackageFiles(manifest) {
+  const encoded = {};
+  for (const item of manifest.flashFiles) {
+    const file = state.manifestPackageFiles.get(item.path);
+    if (!file) throw new Error(`package binary ${item.path} is missing`);
+    encoded[item.path] = arrayBufferToBase64(await file.arrayBuffer());
+  }
+  return encoded;
 }
 
 export async function checkPortLock() {
@@ -84,9 +126,10 @@ export async function uploadFirmware() {
   }
   if (!(await showConfirm(`Upload PlatformIO env ${env} to ${port}?`, "warn", "Confirm Firmware Upload"))) return;
   try {
+    const packageFiles = await readPackageFiles(state.manifest);
     await bridgeFetch("/api/firmware/upload", {
       method: "POST",
-      body: JSON.stringify({ env, port, targetDeviceId, manifest: state.manifest, slot: state.activeSlot })
+      body: JSON.stringify({ env, port, targetDeviceId, manifest: state.manifest, packageFiles, slot: state.activeSlot })
     });
     switchTab("log");
   } catch (error) {

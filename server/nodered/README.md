@@ -34,8 +34,8 @@ Flow menyediakan:
   - inject/publish `gld/gateway/cmd/pull`
   - high-level GLD command input `gld/server/cmd/node`
   - signed Gateway command output `gld/gateway/cmd/node`
-- Inject test vector:
-  - `GLD AES-GCM test vector`
+- Test vectors run through the checked-in automated harness, not a production
+  flow inject node.
 
 ## Jalur Output MQTT
 
@@ -43,6 +43,10 @@ Flow menyediakan:
 - `gld/gateway/events`
 - `gld/server/decoded`
 - `gld/server/alarm`
+- `gld/server/integrity` untuk record yang gagal autentikasi/validasi
+- `gld/server/replay` untuk duplicate atau sequence di luar replay window
+- `gld/server/test` untuk input HTTP manual/test yang terautentikasi tetapi
+  tidak boleh masuk alarm produksi
 - `gld/gateway/error`
 - command inject:
   - `gld/gateway/cmd/pull`
@@ -56,10 +60,12 @@ Pull command mengikuti kontrak CH `SERVER_PULL_REQUEST`: payload berisi
 {"requestId":1,"hopList":["0x0064"]}
 ```
 
-Command GLD/downlink high-level masuk ke `gld/server/cmd/node` dengan
-`mode`. Flow menandatangani payload memakai `GLD_AES128_KEY_HEX` lalu publish
-hasil `hex` authenticated ke `gld/gateway/cmd/node`; topic Gateway ini tetap
-boleh membawa `node`.
+Command GLD/downlink high-level masuk ke `gld/server/cmd/node` dengan `mode`,
+`cluster`, `node`, `id`, dan `authorization`. Nilai authorization harus sama
+dengan secret `PGL_COMMAND_AUTH_TOKEN` (minimal 32 karakter). Flow menolak ID
+hilang/tidak valid, menghapus token sebelum output, menandatangani payload
+memakai `GLD_AES128_KEY_HEX`, lalu publish hasil authenticated ke
+`gld/gateway/cmd/node`.
 
 ## Dataset Flow Controls
 
@@ -69,6 +75,12 @@ boleh membawa `node`.
 - `STOP_DATASET` publish ke `gas-leak-detector/F001/dataset`.
 
 Flow dataset juga listen ke `gas-leak-detector/+/cmd/ack`, `gas-leak-detector/+/dataset/status`, `gas-leak-detector/+/dataset/summary`, `gas-leak-detector/+/dataset/data`, dan `gas-leak-detector/+/nulling/result`.
+
+Record disimpan hanya bila topic/device cocok, mode `DATASET`, delapan voltage
+finite, gain valid, seluruh `sensor_status` bernilai `0`, dan `feature_order`
+sama dengan urutan model canonical. MySQL menjadi gate idempotensi sebelum CSV,
+sehingga duplicate tidak dihitung atau ditulis dua kali. Saat deploy, script
+membuat header CSV hanya untuk file baru dan menolak schema file lama.
 
 ## Apply Lokal
 
@@ -80,7 +92,8 @@ node .\server\nodered\apply-pertamina-gld-flow.js `
   --gateway-status-url "http://0.0.0.0/disabled-until-gateway-ip-known" `
   --gateway-base-url "http://0.0.0.0" `
   --mqtt-host "127.0.0.1" `
-  --mqtt-port 1884
+  --mqtt-port 1884 `
+  --replay-state-path "C:\ProgramData\PertaminaGLD\replay-state.json"
 ```
 
 Wrapper PowerShell lama tetap bisa dipakai dan meneruskan argumen ke generator JS:
@@ -94,15 +107,23 @@ Wrapper PowerShell lama tetap bisa dipakai dan meneruskan argumen ke generator J
   -MqttPort 1884
 ```
 
-Jika broker MQTT butuh auth, pass username/password saat apply lokal. Jangan simpan password produksi di file repo.
-
-Untuk bench 2026-06-17, flow Pertamina membuat broker Aedes sendiri di port `1884`.
-Port `1883` di laptop ini sedang dipakai service Mosquitto lama, jadi Gateway firmware
-bench `v0.1.2` diarahkan ke `CHANGE_ME_MQTT_HOST:1884`.
+Jika broker MQTT butuh auth, pass username/password saat apply lokal. Untuk host
+non-loopback generator mewajibkan credentials dan TLS (`--mqtt-tls`), kecuali
+operator secara eksplisit memilih `--allow-insecure-mqtt` untuk jaringan bench
+yang benar-benar terisolasi. Flow tidak lagi membuat broker Aedes anonim.
 
 ## Catatan Keamanan
 
-Flow wajib menerima `GLD_AES128_KEY_HEX` dari environment/secret store. Jika key kosong, decrypt GLD dan builder downlink authenticated ditolak eksplisit; tidak ada fallback ke test key produksi.
+Flow wajib menerima `GLD_AES128_KEY_HEX`, `PGL_COMMAND_AUTH_TOKEN`, dan token
+Admin API Node-RED dari environment/secret store. Jika key kosong, decrypt GLD
+dan builder downlink authenticated ditolak eksplisit. Replay state disimpan
+atomik ke `PGL_REPLAY_STATE_PATH` agar restart Node-RED tidak membuka replay
+window kembali. Deploy memakai API v2/revision checking dan tidak menimpa
+credential node lain; credential baru hanya dikirim inline ke node miliknya.
+
+Gunakan `node server/nodered/apply-pertamina-gld-flow.js --check` dan
+`powershell -ExecutionPolicy Bypass -File server/nodered/apply-pertamina-gld-dataset-flow.ps1 -Check`
+untuk mendeteksi drift antara generator dan flow JSON yang disimpan.
 
 ## Compatibility Notes
 

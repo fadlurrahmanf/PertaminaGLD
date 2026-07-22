@@ -12,12 +12,17 @@
 #include "FirmwareVersion.h"
 #include "GldAds1256Reader.h"
 #include "GldDacMux.h"
+#include "GldDatasetValidator.h"
 #include "GldConfig.h"
 #include "GldNullingProfile.h"
 #include "GldNullingService.h"
 #include "GldPower.h"
 
 namespace {
+
+static_assert(static_cast<uint8_t>(pgl::gld::GldAds1256Status::Ok) ==
+                  pgl::gld::GLD_DATASET_STATUS_OK,
+              "Dataset validator status contract must track ADS1256 Ok");
 
 // Standalone dataset runtime kept as a maintenance mirror. The active
 // production GLD env builds GldUnifiedMain.cpp and excludes this file.
@@ -78,6 +83,7 @@ uint32_t     stepStartMs       = 0;
 uint32_t     lastStatusMs      = 0;
 uint32_t     lastMqttAttemptMs = 0;
 uint8_t      nullingProfileId  = 0;
+bool         nullingProfileApplied = false;
 bool         adsReady          = false;
 bool         dacReady          = false;
 
@@ -95,6 +101,11 @@ uint32_t datasetQueueDropped = 0;
 uint32_t datasetPublishFailCount = 0;
 uint32_t datasetQueueRetryCount = 0;
 uint32_t datasetQueueRetryFailCount = 0;
+uint32_t datasetRejectedSamples = 0;
+pgl::gld::GldDatasetRejectReason lastDatasetRejectReason =
+    pgl::gld::GldDatasetRejectReason::None;
+int8_t lastDatasetRejectChannel = -1;
+uint8_t lastDatasetRejectOkFiniteCount = 0;
 uint32_t wifiReconnectCount = 0;
 uint32_t wifiReconnectFailCount = 0;
 uint32_t mqttReconnectCount = 0;
@@ -263,21 +274,28 @@ void setupPins() {
 // Nulling
 // ---------------------------------------------------------------------------
 
-void applyNullingProfile(const pgl::gld::GldNullingProfile& profile) {
-    if (!dacReady || !pgl::gld::isNullingProfileValid(profile)) return;
+bool applyNullingProfile(const pgl::gld::GldNullingProfile& profile) {
+    if (!dacReady || !pgl::gld::isNullingProfileValid(profile)) return false;
     for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
-        dac.writeDac(ch, profile.dacCode[ch]);
+        if (!dac.writeDac(ch, profile.dacCode[ch])) {
+            logPrintf("DAC_APPLY_FAIL profileId=%u channel=%u\n", profile.profileId, ch);
+            return false;
+        }
     }
     logPrintf("DAC_APPLY profileId=%u\n", profile.profileId);
+    return true;
 }
 
 bool initNulling(bool runIfMissing) {
+    nullingProfileApplied = false;
+    nullingProfileId = 0;
     pgl::gld::GldNullingProfile profile{};
     if (pgl::gld::loadNullingProfile(profile)) {
         logPrintf("NULLING_NVS_LOAD=found profileId=%u\n", profile.profileId);
+        if (!applyNullingProfile(profile)) return false;
         nullingProfileId = profile.profileId;
-        applyNullingProfile(profile);
-        return true;
+        nullingProfileApplied = true;
+        return nullingProfileApplied;
     }
     if (!runIfMissing) {
         nullingProfileId = 0;
@@ -290,16 +308,21 @@ bool initNulling(bool runIfMissing) {
     logPrintf("NULLING_RUN status=%s successCount=%u\n",
               pgl::gld::gldNullingStatusName(result.status),
               result.successCount);
-    if (result.status == pgl::gld::GldNullingStatus::AllChannelsFailed) {
+    if (result.status != pgl::gld::GldNullingStatus::Ok ||
+        result.successCount != pgl::gld::board::SENSOR_COUNT) {
         return false;
     }
     pgl::gld::GldNullingProfile toSave = result.profile;
     toSave.validMagic = pgl::gld::NULLING_PROFILE_VALID_MAGIC;
     toSave.profileId  = 1;
-    pgl::gld::saveNullingProfile(toSave);
-    nullingProfileId = 1;
-    applyNullingProfile(toSave);
-    return true;
+    if (!pgl::gld::isNullingProfileValid(toSave) ||
+        !pgl::gld::saveNullingProfile(toSave) ||
+        !applyNullingProfile(toSave)) {
+        return false;
+    }
+    nullingProfileId = toSave.profileId;
+    nullingProfileApplied = true;
+    return nullingProfileApplied;
 }
 
 // ---------------------------------------------------------------------------
@@ -331,7 +354,7 @@ bool connectWifi() {
 // ---------------------------------------------------------------------------
 
 void publishStatus(const char* state, const char* detail) {
-    StaticJsonDocument<384> doc;
+    StaticJsonDocument<512> doc;
     doc["device_id"] = DEVICE_ID_STR;
     doc["stage"]     = "DATASET";
     doc["state"]     = state;
@@ -344,7 +367,43 @@ void publishStatus(const char* state, const char* detail) {
     doc["ads_recovery_count"] = adsRecoveryCount;
     doc["ads_recovery_fail_count"] = adsRecoveryFailCount;
     doc["last_recovery_reason"] = lastRecoveryReason;
-    char buf[384];
+    doc["rejected_samples"] = datasetRejectedSamples;
+    doc["last_reject_reason"] =
+        pgl::gld::gldDatasetRejectReasonName(lastDatasetRejectReason);
+    doc["last_reject_channel"] = static_cast<int>(lastDatasetRejectChannel);
+    doc["last_reject_ok_finite_count"] = lastDatasetRejectOkFiniteCount;
+    char buf[512];
+    serializeJson(doc, buf, sizeof(buf));
+    mqtt.publish(TOPIC_STATUS, buf, false);
+}
+
+void publishRejectedStatus(
+    const pgl::gld::GldDatasetValidationResult& validation,
+    const pgl::gld::GldDatasetChannelSample* samples,
+    size_t count) {
+    StaticJsonDocument<512> doc;
+    doc["device_id"] = DEVICE_ID_STR;
+    doc["stage"] = "DATASET";
+    doc["state"] = "sample_rejected";
+    doc["detail"] = pgl::gld::gldDatasetRejectReasonName(validation.reason);
+    doc["attempted_seq"] = datasetSeq;
+    doc["rejected_samples"] = datasetRejectedSamples;
+    doc["expected_channel_count"] = pgl::gld::GLD_DATASET_FEATURE_COUNT;
+    doc["actual_channel_count"] = count;
+    doc["ok_finite_count"] = validation.okFiniteCount;
+    doc["channel"] = static_cast<int>(validation.channel);
+    if (validation.channel >= 0 &&
+        static_cast<size_t>(validation.channel) < count && samples != nullptr) {
+        const size_t channel = static_cast<size_t>(validation.channel);
+        const pgl::gld::GldDatasetChannelSample& sample = samples[channel];
+        doc["expected_feature"] = pgl::gld::GLD_DATASET_CANONICAL_FEATURE_ORDER[channel];
+        doc["actual_feature"] = sample.feature != nullptr ? sample.feature : "null";
+        doc["sensor_status"] = sample.status;
+        doc["gain"] = sample.gain;
+        doc["saturated"] = sample.saturated;
+        doc["finite"] = std::isfinite(sample.voltage);
+    }
+    char buf[512];
     serializeJson(doc, buf, sizeof(buf));
     mqtt.publish(TOPIC_STATUS, buf, false);
 }
@@ -361,7 +420,7 @@ void publishCmdAck(const char* cmd, const char* result) {
 }
 
 void publishSummary() {
-    StaticJsonDocument<384> doc;
+    StaticJsonDocument<512> doc;
     doc["device_id"]          = DEVICE_ID_STR;
     doc["stage"]              = "DATASET";
     doc["label"]              = currentLabel;
@@ -375,7 +434,11 @@ void publishSummary() {
     doc["retry_fail_count"] = datasetQueueRetryFailCount;
     doc["ads_recovery_count"] = adsRecoveryCount;
     doc["ads_recovery_fail_count"] = adsRecoveryFailCount;
-    char buf[384];
+    doc["rejected_samples"] = datasetRejectedSamples;
+    doc["last_reject_reason"] =
+        pgl::gld::gldDatasetRejectReasonName(lastDatasetRejectReason);
+    doc["last_reject_channel"] = static_cast<int>(lastDatasetRejectChannel);
+    char buf[512];
     serializeJson(doc, buf, sizeof(buf));
     mqtt.publish(TOPIC_SUMMARY, buf, false);
 }
@@ -403,7 +466,7 @@ void handleCmd(const char* payload, unsigned int length) {
             publishCmdAck("START_DATASET", "reject_battery_mode");
             return;
         }
-        if (nullingProfileId == 0) {
+        if (nullingProfileId == 0 || !nullingProfileApplied) {
             logPrintln("DATASET_START_REJECT no_nulling_profile");
             publishCmdAck("START_DATASET", "reject_no_profile");
             return;
@@ -424,6 +487,10 @@ void handleCmd(const char* payload, unsigned int length) {
         postFanSettleMs  = doc["post_fan_settle_ms"] | 0u;
 
         datasetSeq     = 0;
+        datasetRejectedSamples = 0;
+        lastDatasetRejectReason = pgl::gld::GldDatasetRejectReason::None;
+        lastDatasetRejectChannel = -1;
+        lastDatasetRejectOkFiniteCount = 0;
         sessionStartMs = millis();
         lastScanMs     = sessionStartMs;
         sampleStep     = SampleStep::None;
@@ -501,8 +568,72 @@ bool mqttConnect() {
 // Dataset record publish
 // ---------------------------------------------------------------------------
 
-void publishDataRecord() {
-    // JSON pool: root(10 keys) + 3 arrays(8 each) + string pool for label
+void rejectDatasetRecord(
+    const pgl::gld::GldDatasetValidationResult& validation,
+    const pgl::gld::GldDatasetChannelSample* samples,
+    size_t count) {
+    ++datasetRejectedSamples;
+    lastDatasetRejectReason = validation.reason;
+    lastDatasetRejectChannel = validation.channel;
+    lastDatasetRejectOkFiniteCount = validation.okFiniteCount;
+
+    uint8_t status = 0xFF;
+    uint8_t gain = 0;
+    bool saturated = false;
+    if (validation.channel >= 0 &&
+        static_cast<size_t>(validation.channel) < count && samples != nullptr) {
+        const pgl::gld::GldDatasetChannelSample& sample =
+            samples[static_cast<size_t>(validation.channel)];
+        status = sample.status;
+        gain = sample.gain;
+        saturated = sample.saturated;
+    }
+    logPrintf(
+        "DATASET_RECORD_REJECT attemptedSeq=%lu reason=%s channel=%d "
+        "okFiniteCount=%u status=%u gain=%u saturated=%u rejectedTotal=%lu\n",
+        static_cast<unsigned long>(datasetSeq),
+        pgl::gld::gldDatasetRejectReasonName(validation.reason),
+        static_cast<int>(validation.channel),
+        static_cast<unsigned>(validation.okFiniteCount),
+        static_cast<unsigned>(status),
+        static_cast<unsigned>(gain),
+        saturated ? 1u : 0u,
+        static_cast<unsigned long>(datasetRejectedSamples));
+    publishRejectedStatus(validation, samples, count);
+}
+
+bool publishDataRecord() {
+    pgl::gld::GldAds1256Reading readings[pgl::gld::GLD_DATASET_FEATURE_COUNT]{};
+    pgl::gld::GldDatasetChannelSample samples[pgl::gld::GLD_DATASET_FEATURE_COUNT]{};
+    uint8_t statusOkChannels = 0;
+
+    static_assert(pgl::gld::board::SENSOR_COUNT == pgl::gld::GLD_DATASET_FEATURE_COUNT,
+                  "Dataset contract requires exactly eight board channels");
+    for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
+        readings[ch] = ads.readChannel(ch);
+        const pgl::gld::GldAds1256Reading& reading = readings[ch];
+        if (reading.status == pgl::gld::GldAds1256Status::Ok) ++statusOkChannels;
+        samples[ch] = pgl::gld::GldDatasetChannelSample{
+            pgl::gld::board::SENSOR_NAMES[ch],
+            static_cast<uint8_t>(reading.status),
+            reading.voltage,
+            reading.gain,
+            reading.saturated,
+        };
+    }
+    noteAdsReadHealth(statusOkChannels, "dataset");
+
+    pgl::gld::GldDatasetValidationResult validation =
+        pgl::gld::validateGldDatasetSample(
+            samples,
+            pgl::gld::board::SENSOR_COUNT,
+            nullingProfileApplied,
+            nullingProfileId);
+    if (!validation.accepted) {
+        rejectDatasetRecord(validation, samples, pgl::gld::board::SENSOR_COUNT);
+        return false;
+    }
+
     StaticJsonDocument<1024> doc;
     doc["device_id"]          = DEVICE_ID_STR;
     doc["node_id"]            = NODE_ID_INT;
@@ -511,44 +642,47 @@ void publishDataRecord() {
     doc["timestamp_ms"]       = static_cast<uint32_t>(millis());
     doc["label"]              = currentLabel;
     doc["nulling_profile_id"] = nullingProfileId;
-
-    JsonArray svArr   = doc.createNestedArray("sensor_voltage");
+    JsonArray svArr = doc.createNestedArray("sensor_voltage");
     JsonArray gainArr = doc.createNestedArray("sensor_gain");
     JsonArray statusArr = doc.createNestedArray("sensor_status");
-    JsonArray foArr   = doc.createNestedArray("feature_order");
-
-    bool anyFail = false;
-    uint8_t okChannels = 0;
-    for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
-        const pgl::gld::GldAds1256Reading r = ads.readChannel(ch);
-        const bool ok = r.status == pgl::gld::GldAds1256Status::Ok;
-        svArr.add(r.voltage);
-        gainArr.add(r.gain);
-        statusArr.add(static_cast<uint8_t>(r.status));
-        foArr.add(pgl::gld::board::SENSOR_NAMES[ch]);
-        if (ok) ++okChannels;
-        if (!ok) anyFail = true;
+    JsonArray foArr = doc.createNestedArray("feature_order");
+    for (size_t ch = 0; ch < pgl::gld::GLD_DATASET_FEATURE_COUNT; ++ch) {
+        svArr.add(readings[ch].voltage);
+        gainArr.add(readings[ch].gain);
+        statusArr.add(static_cast<uint8_t>(readings[ch].status));
+        foArr.add(pgl::gld::GLD_DATASET_CANONICAL_FEATURE_ORDER[ch]);
     }
-    noteAdsReadHealth(okChannels, "dataset");
 
     char payload[DATASET_PAYLOAD_BYTES];
-    const size_t len = serializeJson(doc, payload, sizeof(payload));
-    const size_t termIndex = len < (sizeof(payload) - 1U) ? len : (sizeof(payload) - 1U);
-    payload[termIndex] = '\0';
-
-    const bool pubOk = publishDatasetPayload(payload, datasetSeq, false);
-    if (!pubOk) {
-        enqueueDatasetPayload(payload, len, datasetSeq);
+    const size_t requiredLen = measureJson(doc);
+    if (doc.overflowed() || requiredLen == 0 || requiredLen >= sizeof(payload)) {
+        validation.accepted = false;
+        validation.reason = pgl::gld::GldDatasetRejectReason::PayloadEncoding;
+        validation.channel = -1;
+        rejectDatasetRecord(validation, samples, pgl::gld::board::SENSOR_COUNT);
+        return false;
     }
-    logPrintf("DATASET_RECORD seq=%lu label=%s ok=%u queued=%u pending=%u anyFail=%u len=%u\n",
+    const size_t len = serializeJson(doc, payload, sizeof(payload));
+    if (len != requiredLen) {
+        validation.accepted = false;
+        validation.reason = pgl::gld::GldDatasetRejectReason::PayloadEncoding;
+        validation.channel = -1;
+        rejectDatasetRecord(validation, samples, pgl::gld::board::SENSOR_COUNT);
+        return false;
+    }
+    payload[len] = '\0';
+
+    const bool published = publishDatasetPayload(payload, datasetSeq, false);
+    if (!published) enqueueDatasetPayload(payload, len, datasetSeq);
+    logPrintf("DATASET_RECORD seq=%lu label=%s ok=%u queued=%u pending=%u len=%u\n",
               static_cast<unsigned long>(datasetSeq),
               currentLabel,
-              pubOk ? 1 : 0,
-              pubOk ? 0 : 1,
+              published ? 1 : 0,
+              published ? 0 : 1,
               static_cast<unsigned>(datasetQueueCount),
-              anyFail ? 1 : 0,
               static_cast<unsigned>(len));
     ++datasetSeq;
+    return true;
 }
 
 // ---------------------------------------------------------------------------

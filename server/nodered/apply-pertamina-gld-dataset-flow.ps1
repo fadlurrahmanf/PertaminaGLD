@@ -11,7 +11,9 @@ param(
     [string]$MySqlPassword = "",
     [string]$CsvPath       = "C:\Users\asus\gld-dataset.csv",
     [string]$DeviceId      = "F001",
-    [switch]$GenerateOnly
+    [string]$NodeRedToken  = $env:NODE_RED_ADMIN_TOKEN,
+    [switch]$GenerateOnly,
+    [switch]$Check
 )
 
 $ErrorActionPreference = "Stop"
@@ -26,9 +28,9 @@ $commandTopic = "gas-leak-detector/$DeviceId/dataset"
 $ackTopic = "gas-leak-detector/+/cmd/ack"
 
 # JS function bodies stay single-line for PowerShell 5.1 ConvertTo-Json stability.
-$parseFn = "var p=(typeof msg.payload==='string')?JSON.parse(msg.payload):msg.payload; if(!p||p.seq===undefined||!p.sensor_voltage||p.sensor_voltage.length!==8){node.warn('invalid record');return null;} var sv=p.sensor_voltage,gain=p.sensor_gain||[0,0,0,0,0,0,0,0]; msg.topic='INSERT INTO gld_dataset (device_id,node_id,mode,seq,timestamp_ms,label,nulling_profile_id,sv0,sv1,sv2,sv3,sv4,sv5,sv6,sv7,gain0,gain1,gain2,gain3,gain4,gain5,gain6,gain7) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'; msg.payload=[p.device_id||'',p.node_id||0,p.mode||'DATASET',p.seq,p.timestamp_ms||0,p.label||'',p.nulling_profile_id||0,sv[0],sv[1],sv[2],sv[3],sv[4],sv[5],sv[6],sv[7],gain[0],gain[1],gain[2],gain[3],gain[4],gain[5],gain[6],gain[7]]; return msg;"
-$csvRowFn = "var p=(typeof msg.payload==='string')?JSON.parse(msg.payload):msg.payload; if(!p||!p.sensor_voltage)return null; var sv=p.sensor_voltage,gain=p.sensor_gain||[0,0,0,0,0,0,0,0]; msg.payload=[p.device_id||'',p.node_id||0,p.mode||'DATASET',p.seq,p.timestamp_ms||0,p.label||'',p.nulling_profile_id||0].concat(sv).concat(gain).join(',')+String.fromCharCode(10); msg.filename=global.get('gld_csv_path')||'$CsvPath'; return msg;"
-$csvHeaderFn = "msg.payload='device_id,node_id,mode,seq,timestamp_ms,label,nulling_profile_id,sv0,sv1,sv2,sv3,sv4,sv5,sv6,sv7,gain0,gain1,gain2,gain3,gain4,gain5,gain6,gain7'+String.fromCharCode(10); msg.filename=global.get('gld_csv_path')||'$CsvPath'; return msg;"
+$csvHeader = "device_id,node_id,mode,seq,timestamp_ms,label,nulling_profile_id,sv_MQ8,sv_MQ135,sv_MQ3,sv_MQ5,sv_MQ4,sv_MQ7,sv_MQ6,sv_MQ2,gain_MQ8,gain_MQ135,gain_MQ3,gain_MQ5,gain_MQ4,gain_MQ7,gain_MQ6,gain_MQ2,status_MQ8,status_MQ135,status_MQ3,status_MQ5,status_MQ4,status_MQ7,status_MQ6,status_MQ2,feature_1,feature_2,feature_3,feature_4,feature_5,feature_6,feature_7,feature_8"
+$parseFn = "function reject(reason){node.warn('dataset record rejected: '+reason);return null;} function finite8(v){return Array.isArray(v)&&v.length===8&&v.every(function(x){return typeof x==='number'&&Number.isFinite(x);});} function csv(v){var s=String(v===undefined?'':v);return /[\x22,\r\n]/.test(s)?String.fromCharCode(34)+s.replace(/\x22/g,String.fromCharCode(34)+String.fromCharCode(34))+String.fromCharCode(34):s;} var p;try{p=(typeof msg.payload==='string')?JSON.parse(msg.payload):msg.payload;}catch(e){return reject('invalid JSON');} var expected=['MQ8','MQ135','MQ3','MQ5','MQ4','MQ7','MQ6','MQ2']; var gains=[1,2,4,8,16,32,64]; if(!p||typeof p!=='object'||Array.isArray(p))return reject('object required'); var device=String(p.device_id||'').toUpperCase(); if(!/^[0-9A-F]{4}`$/.test(device))return reject('invalid device_id'); var topic=String(msg.topic||'').split('/'); if(topic.length!==4||topic[0]!=='gas-leak-detector'||String(topic[1]).toUpperCase()!==device||topic[2]!=='dataset'||topic[3]!=='data')return reject('topic/device mismatch'); if(!Number.isInteger(p.node_id)||p.node_id!==parseInt(device,16))return reject('node_id mismatch'); if(String(p.mode||'').toUpperCase()!=='DATASET')return reject('mode'); if(!Number.isInteger(p.seq)||p.seq<0||p.seq>4294967295)return reject('seq'); if(!Number.isInteger(p.timestamp_ms)||p.timestamp_ms<0||p.timestamp_ms>4294967295)return reject('timestamp_ms'); if(!Number.isInteger(p.nulling_profile_id)||p.nulling_profile_id<1||p.nulling_profile_id>255)return reject('nulling profile'); var label=String(p.label||''); if(!label||label.length>31||/[\x00-\x1F]/.test(label)||/^[=+\-@]/.test(label))return reject('unsafe label'); if(!finite8(p.sensor_voltage))return reject('sensor_voltage'); if(!Array.isArray(p.sensor_gain)||p.sensor_gain.length!==8||!p.sensor_gain.every(function(x){return Number.isInteger(x)&&gains.includes(x);}))return reject('sensor_gain'); if(!Array.isArray(p.sensor_status)||p.sensor_status.length!==8||!p.sensor_status.every(function(x){return x===0;}))return reject('sensor_status'); if(!Array.isArray(p.feature_order)||p.feature_order.length!==8||!p.feature_order.every(function(x,i){return x===expected[i];}))return reject('feature_order'); var row=[device,p.node_id,'DATASET',p.seq,p.timestamp_ms,label,p.nulling_profile_id].concat(p.sensor_voltage,p.sensor_gain); msg.csvLine=row.concat(p.sensor_status,p.feature_order).map(csv).join(',')+String.fromCharCode(10); msg.filename=global.get('gld_csv_path')||'$CsvPath'; msg.topic='INSERT INTO gld_dataset (device_id,node_id,mode,seq,timestamp_ms,label,nulling_profile_id,sv0,sv1,sv2,sv3,sv4,sv5,sv6,sv7,gain0,gain1,gain2,gain3,gain4,gain5,gain6,gain7) SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,? FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM gld_dataset WHERE device_id=? AND seq=? AND timestamp_ms=? AND label=? LIMIT 1)'; msg.payload=row.concat([device,p.seq,p.timestamp_ms,label]); return msg;"
+$persistGateFn = "var result=msg.payload||{}; if(Number(result.affectedRows)!==1){node.status({fill:'yellow',shape:'ring',text:'duplicate/rejected'});return null;} var count=Number(flow.get('gld_dataset_persisted_count')||0)+1; flow.set('gld_dataset_persisted_count',count); msg.payload=msg.csvLine; delete msg.csvLine; node.status({fill:'green',shape:'dot',text:count+' rows persisted'}); return msg;"
 $initFn = "global.set('gld_csv_path','$CsvPath'); return msg;"
 $createTableFn = "msg.topic='CREATE TABLE IF NOT EXISTS gld_dataset (id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,device_id VARCHAR(16),node_id INT UNSIGNED,mode VARCHAR(16) DEFAULT \'DATASET\',seq INT UNSIGNED,timestamp_ms BIGINT UNSIGNED,label VARCHAR(32),nulling_profile_id TINYINT UNSIGNED DEFAULT 0,sv0 FLOAT,sv1 FLOAT,sv2 FLOAT,sv3 FLOAT,sv4 FLOAT,sv5 FLOAT,sv6 FLOAT,sv7 FLOAT,gain0 TINYINT,gain1 TINYINT,gain2 TINYINT,gain3 TINYINT,gain4 TINYINT,gain5 TINYINT,gain6 TINYINT,gain7 TINYINT)'; msg.payload=[]; return msg;"
 
@@ -49,7 +51,6 @@ $mysqlConfig = @{
     db = $MySqlDatabase
     tz = "Asia/Jakarta"
     charset = "UTF8"
-    credentials = @{ user = $MySqlUser; password = $MySqlPassword }
 }
 
 $tabNodes = @(
@@ -60,7 +61,7 @@ $tabNodes = @(
 
     @{ id = New-Id "init_fn"; type = "function"; z = $tab; name = "set csv path"
        func = $initFn; outputs = 1; timeout = 0; noerr = 0; initialize = ""; finalize = ""; libs = @()
-       x = 380; y = 80; wires = @(, @((New-Id "create_table_fn"), (New-Id "csv_header_fn"))) },
+       x = 380; y = 80; wires = @(, @((New-Id "create_table_fn"))) },
 
     @{ id = New-Id "create_table_fn"; type = "function"; z = $tab; name = "CREATE TABLE SQL"
        func = $createTableFn; outputs = 1; timeout = 0; noerr = 0; initialize = ""; finalize = ""; libs = @()
@@ -68,14 +69,6 @@ $tabNodes = @(
 
     @{ id = New-Id "mysql_init"; type = "mysql"; z = $tab; name = "CREATE TABLE"; mydb = $mysqlCfg
        x = 880; y = 60; wires = @(, @()) },
-
-    @{ id = New-Id "csv_header_fn"; type = "function"; z = $tab; name = "CSV header"
-       func = $csvHeaderFn; outputs = 1; timeout = 0; noerr = 0; initialize = ""; finalize = ""; libs = @()
-       x = 640; y = 120; wires = @(, @((New-Id "csv_header_file"))) },
-
-    @{ id = New-Id "csv_header_file"; type = "file"; z = $tab; name = "write CSV header"
-       filename = "filename"; filenameType = "msg"; appendNewline = $false; createDir = $true; overwriteFile = "true"
-       x = 880; y = 120; wires = @(, @()) },
 
     @{ id = New-Id "start_dataset_inject"; type = "inject"; z = $tab; name = "START_DATASET clear_air_test"
        props = @(@{ p = "payload" })
@@ -97,18 +90,18 @@ $tabNodes = @(
     @{ id = New-Id "mqtt_data_in"; type = "mqtt in"; z = $tab; name = "dataset/data"
        topic = "gas-leak-detector/+/dataset/data"; qos = "0"; datatype = "auto"; broker = $broker
        nl = $false; rap = $false; rh = 0; inputs = 0
-       x = 160; y = 260; wires = @(, @((New-Id "parse_record_fn"), (New-Id "csv_row_fn"), (New-Id "debug_record"))) },
+       x = 160; y = 260; wires = @(, @((New-Id "parse_record_fn"), (New-Id "debug_record"))) },
 
     @{ id = New-Id "parse_record_fn"; type = "function"; z = $tab; name = "parse record"
        func = $parseFn; outputs = 1; timeout = 0; noerr = 0; initialize = ""; finalize = ""; libs = @()
        x = 400; y = 260; wires = @(, @((New-Id "mysql_insert"))) },
 
     @{ id = New-Id "mysql_insert"; type = "mysql"; z = $tab; name = "INSERT record"; mydb = $mysqlCfg
-       x = 660; y = 220; wires = @(, @()) },
+       x = 660; y = 220; wires = @(, @((New-Id "persist_gate_fn"))) },
 
-    @{ id = New-Id "csv_row_fn"; type = "function"; z = $tab; name = "format CSV row"
-       func = $csvRowFn; outputs = 1; timeout = 0; noerr = 0; initialize = ""; finalize = ""; libs = @()
-       x = 660; y = 280; wires = @(, @((New-Id "csv_append_file"))) },
+    @{ id = New-Id "persist_gate_fn"; type = "function"; z = $tab; name = "persist only inserted row"
+       func = $persistGateFn; outputs = 1; timeout = 0; noerr = 0; initialize = ""; finalize = ""; libs = @()
+       x = 690; y = 280; wires = @(, @((New-Id "csv_append_file"))) },
 
     @{ id = New-Id "csv_append_file"; type = "file"; z = $tab; name = "append CSV"
        filename = "filename"; filenameType = "msg"; appendNewline = $false; createDir = $true; overwriteFile = "false"
@@ -162,7 +155,21 @@ $tabNodes = @(
 
 $generatedPath = Join-Path $scriptDir "pertamina-gld-dataset.flow.json"
 $exportNodes = @($tabNode, $mysqlConfig) + $tabNodes
-$exportNodes | ConvertTo-Json -Depth 30 | Set-Content -Path $generatedPath -Encoding UTF8
+$generatedJson = $exportNodes | ConvertTo-Json -Depth 30
+$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+if ($Check) {
+    if (-not (Test-Path -LiteralPath $generatedPath)) {
+        throw "Generated dataset flow is missing: $generatedPath"
+    }
+    $existingJson = [IO.File]::ReadAllText($generatedPath)
+    if ($existingJson -ne $generatedJson) {
+        throw "Generated dataset flow drift detected; run with -GenerateOnly and review the result"
+    }
+    [pscustomobject]@{ Generated = $false; Drift = $false; FlowFile = $generatedPath; Nodes = $exportNodes.Count } |
+        ConvertTo-Json -Compress
+    exit 0
+}
+[IO.File]::WriteAllText($generatedPath, $generatedJson, $utf8NoBom)
 
 if ($GenerateOnly) {
     [pscustomobject]@{ Generated = $true; FlowFile = $generatedPath; Nodes = $exportNodes.Count } |
@@ -176,6 +183,10 @@ $deployHeaders = @{
     "Node-RED-API-Version" = "v2"
     "Node-RED-Deployment-Type" = "full"
 }
+if ($NodeRedToken) {
+    $apiHeaders["Authorization"] = "Bearer $NodeRedToken"
+    $deployHeaders["Authorization"] = "Bearer $NodeRedToken"
+}
 
 $current = Invoke-RestMethod -Uri $flowsEndpoint -Method Get -Headers $apiHeaders -TimeoutSec 30
 if (-not $current.flows -or -not $current.rev) {
@@ -185,15 +196,13 @@ if (-not $current.flows -or -not $current.rev) {
 $currentFlows = @($current.flows)
 
 $deployNodes = @()
-$credentials = @{}
 foreach ($node in $exportNodes) {
     $copy = @{}
     foreach ($key in $node.Keys) {
         $copy[$key] = $node[$key]
     }
-    if ($copy.ContainsKey("credentials")) {
-        $credentials[[string]$copy["id"]] = $copy["credentials"]
-        [void]$copy.Remove("credentials")
+    if ([string]$copy["id"] -eq $mysqlCfg) {
+        $copy["credentials"] = @{ user = $MySqlUser; password = $MySqlPassword }
     }
     $deployNodes += $copy
 }
@@ -216,11 +225,22 @@ $merged = @($kept + $deployNodes)
 $deployBody = @{
     rev = $current.rev
     flows = $merged
-    credentials = $credentials
 }
 $jsonBody = $deployBody | ConvertTo-Json -Depth 60 -Compress
-$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 $bodyBytes = $utf8NoBom.GetBytes($jsonBody)
+
+$csvParent = Split-Path -Parent $CsvPath
+if ($csvParent -and -not (Test-Path -LiteralPath $csvParent)) {
+    [IO.Directory]::CreateDirectory($csvParent) | Out-Null
+}
+if (-not (Test-Path -LiteralPath $CsvPath) -or (Get-Item -LiteralPath $CsvPath).Length -eq 0) {
+    [IO.File]::WriteAllText($CsvPath, $csvHeader + [Environment]::NewLine, $utf8NoBom)
+} else {
+    $existingHeader = [IO.File]::ReadLines($CsvPath) | Select-Object -First 1
+    if ($existingHeader -ne $csvHeader) {
+        throw "Existing CSV schema does not match the validated dataset schema; choose a new -CsvPath"
+    }
+}
 $response = Invoke-RestMethod -Uri $flowsEndpoint -Method Post `
     -Headers $deployHeaders `
     -ContentType "application/json; charset=utf-8" `
@@ -235,7 +255,7 @@ $response = Invoke-RestMethod -Uri $flowsEndpoint -Method Post `
     RemovedDatasetNodes = $removedDatasetNodes.Count
     TotalNodes = $merged.Count
     ApiUsesEnvelope = $true
-    CredentialsApplied = $credentials.Count
+    CredentialsApplied = 1
     BrokerConfig = $broker
     CommandTopic = $commandTopic
     AckTopic = $ackTopic

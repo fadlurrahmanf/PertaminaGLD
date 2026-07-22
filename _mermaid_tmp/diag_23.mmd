@@ -2,7 +2,7 @@ flowchart TD
     subgraph PRE["Persiapan"]
         P1["✅ Cek COM port: pio device list"]
         P2["✅ Pastikan env sesuai hardware:\ngld/gldw untuk GLD\nch1/ch2/ch3 untuk CH\ngw untuk Gateway"]
-        P3["✅ Cek credential ServerConfig.h\n(site: Fshares/10.158.198.180\ndataset: CHANGE_ME harus diisi)"]
+        P3["✅ Cek credential ServerConfig.h\n(site dan dataset harus diprovision\ndari local secret store)"]
     end
 
     subgraph BUILD["Build & Upload"]

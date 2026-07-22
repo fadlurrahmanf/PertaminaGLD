@@ -32,6 +32,38 @@ namespace pgl::config::ch {
 #define PGL_CH_BATT_CRITICAL_MV 3100
 #endif
 
+#ifndef PGL_CH_FIELD_HELLO_INTERVAL_MS
+#define PGL_CH_FIELD_HELLO_INTERVAL_MS 300000
+#endif
+
+#ifndef PGL_CH_FIELD_HELLO_JITTER_MS
+#define PGL_CH_FIELD_HELLO_JITTER_MS 0
+#endif
+
+#ifndef PGL_CH_HELLO_ACK_TMO_MS
+#define PGL_CH_HELLO_ACK_TMO_MS 1500
+#endif
+
+#ifndef PGL_CH_HELLO_RETRY_MAX
+#define PGL_CH_HELLO_RETRY_MAX 3
+#endif
+
+#ifndef PGL_CH_HELLO_FAILURE_THRESHOLD
+#define PGL_CH_HELLO_FAILURE_THRESHOLD 3
+#endif
+
+#ifndef PGL_CH_HELLO_REPROBE_MS
+#define PGL_CH_HELLO_REPROBE_MS 30000
+#endif
+
+#ifndef PGL_CH_PARENT_HEALTH_TIMEOUT_MS
+#define PGL_CH_PARENT_HEALTH_TIMEOUT_MS 960000
+#endif
+
+#ifndef PGL_CH_VBAT_READ_ONLY
+#define PGL_CH_VBAT_READ_ONLY 0
+#endif
+
 // ID Cluster Head lokal. Harus cocok dengan GLD_CH_ID pada GLD yang terhubung
 // dan dengan hopList/cluster yang dikirim Gateway untuk CH ini.
 constexpr uint16_t CH_ID = PGL_CH_ID;
@@ -82,8 +114,15 @@ constexpr uint8_t NO_ACK_RECOVERY_TH = 5;
 // Cooldown minimum antar failover (ms) — cegah flip-flop.
 constexpr uint32_t FAILOVER_CDN_MS = 60000;
 
-// Interval CH_HELLO ke parent (ms).
-constexpr uint32_t HELLO_INTERVAL_MS = 300000;
+// Interval CH_HELLO ke parent (ms). Satu sumber nilai ini dipakai untuk
+// scheduling normal, join, failover, dan compile-time health checks.
+constexpr uint32_t HELLO_INTERVAL_MS = PGL_CH_FIELD_HELLO_INTERVAL_MS;
+constexpr uint32_t HELLO_JITTER_MS = PGL_CH_FIELD_HELLO_JITTER_MS;
+constexpr uint32_t HELLO_ACK_TMO_MS = PGL_CH_HELLO_ACK_TMO_MS;
+constexpr uint8_t HELLO_RETRY_MAX = PGL_CH_HELLO_RETRY_MAX;
+constexpr uint8_t HELLO_FAILURE_THRESHOLD = PGL_CH_HELLO_FAILURE_THRESHOLD;
+constexpr uint32_t HELLO_REPROBE_MS = PGL_CH_HELLO_REPROBE_MS;
+constexpr bool VBAT_READ_ONLY = PGL_CH_VBAT_READ_ONLY != 0;
 
 // Timeout tunggu CH_CONFIG_RESPONSE saat JOINING (ms).
 constexpr uint32_t JOINING_TMO_MS = 15000;
@@ -116,7 +155,17 @@ constexpr uint32_t ROUTE_VERIFY_WINDOW_MS = 10000;
 
 // Parent dianggap silent jika tidak terlihat dalam response verifikasi selama
 // durasi ini.
-constexpr uint32_t PARENT_HEALTH_TIMEOUT_MS = 180000;
+constexpr uint32_t PARENT_HEALTH_TIMEOUT_MS = PGL_CH_PARENT_HEALTH_TIMEOUT_MS;
+
+static_assert(
+    static_cast<uint64_t>(PARENT_HEALTH_TIMEOUT_MS) >
+        static_cast<uint64_t>(HELLO_INTERVAL_MS) + HELLO_JITTER_MS +
+            (static_cast<uint64_t>(HELLO_RETRY_MAX) + 1ULL) * HELLO_ACK_TMO_MS,
+    "CH parent health timeout must exceed one complete HELLO/ACK window");
+static_assert(
+    static_cast<uint64_t>(PARENT_HEALTH_TIMEOUT_MS) >
+        static_cast<uint64_t>(ROUTE_VERIFY_INTERVAL_MS) + ROUTE_VERIFY_JITTER_MS + ROUTE_VERIFY_WINDOW_MS,
+    "CH parent health timeout must exceed the worst-case legacy route verification window");
 
 // Waktu minimum parent aktif dipertahankan sebelum boleh diganti oleh kandidat
 // baru pada background verification. Failover tetap boleh pindah cepat jika

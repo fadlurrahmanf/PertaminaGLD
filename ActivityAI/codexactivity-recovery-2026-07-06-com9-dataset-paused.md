@@ -9,13 +9,13 @@ Important note: `ActivityAI/codexactivity.md` appeared corrupted with NUL bytes 
 What was verified:
 
 - Old mock GLD process and old bridge instances were stopped before the real-device attempt.
-- Local MQTT broker on `10.217.88.180:1884` was listening.
+- Local MQTT broker on the deployment-provisioned host and port `1884` was listening.
 - GLD real device on COM9 initially responded over serial:
   - `deviceId=F001`
   - firmware `PertaminaGLD-GLD` version `0.8.12`
   - mode `inference`
-  - WiFi SSID `Fshares`
-  - MQTT host `10.217.88.180`
+  - WiFi SSID provisioned from the local secret configuration
+  - MQTT host provisioned from the local deployment configuration
   - MQTT port `1884`
   - topic root `gas-leak-detector`
   - `configValid=true`
@@ -91,7 +91,7 @@ SET_MODE dataset
 
 Expected after upload: reboot into `mode=dataset` with `MODE_BATTERY_ALLOWED_TEMP mode=dataset`, not fallback to `inference`.
 
-6. Start clear dataset from the website, no mock, with MQTT host `10.217.88.180`, port `1884`, topic root `gas-leak-detector`, device `F001`.
+6. Start clear dataset from the website, no mock, with the provisioned MQTT host, port `1884`, topic root `gas-leak-detector`, device `F001`.
 
 7. Completion requires real GLD evidence:
 

@@ -13,11 +13,17 @@ struct BatteryAdcReading {
     uint16_t adcMv;
     uint16_t batteryMv;
     bool valid;
+    GldBatterySenseStatus status;
 };
 
 // EMA-filtered battery voltage, persisted across calls (alpha = GLD_BATTERY_FILTER_ALPHA).
 float g_filteredBatteryVoltage = 0.0f;
 bool g_filterPrimed = false;
+
+void resetBatteryFilter() {
+    g_filteredBatteryVoltage = 0.0f;
+    g_filterPrimed = false;
+}
 
 BatteryAdcReading readBatteryAdc() {
     uint32_t total = 0;
@@ -32,8 +38,25 @@ BatteryAdcReading readBatteryAdc() {
     const uint16_t rawAdc = static_cast<uint16_t>(avg + 0.5f);
     const uint16_t adcMv = static_cast<uint16_t>((adcVoltage * 1000.0f) + 0.5f);
 
-    if (rawBatteryVoltage <= 0.05f || rawBatteryVoltage > 20.0f) {
-        return {rawAdc, adcMv, pgl::protocol::GLD_BATTERY_MV_INVALID, false};
+    if (rawBatteryVoltage <= GLD_BATTERY_DETECT_FLOOR_VOLTAGE) {
+        resetBatteryFilter();
+        return {
+            rawAdc,
+            adcMv,
+            pgl::protocol::GLD_BATTERY_MV_INVALID,
+            false,
+            GldBatterySenseStatus::NotDetected,
+        };
+    }
+    if (rawBatteryVoltage > GLD_BATTERY_MAX_VALID_VOLTAGE) {
+        resetBatteryFilter();
+        return {
+            rawAdc,
+            adcMv,
+            pgl::protocol::GLD_BATTERY_MV_INVALID,
+            false,
+            GldBatterySenseStatus::Invalid,
+        };
     }
 
     // Smooth the reading with an EMA filter before applying the validity threshold,
@@ -46,14 +69,16 @@ BatteryAdcReading readBatteryAdc() {
                                    ((1.0f - GLD_BATTERY_FILTER_ALPHA) * g_filteredBatteryVoltage);
     }
 
-    if (g_filteredBatteryVoltage < GLD_BATTERY_MIN_VALID_VOLTAGE) {
-        return {rawAdc, adcMv, pgl::protocol::GLD_BATTERY_MV_INVALID, false};
-    }
+    const uint16_t filteredBatteryMv =
+        static_cast<uint16_t>((g_filteredBatteryVoltage * 1000.0f) + 0.5f);
+    const bool valid = g_filteredBatteryVoltage >= GLD_BATTERY_MIN_VALID_VOLTAGE;
     return {
         rawAdc,
         adcMv,
-        static_cast<uint16_t>((g_filteredBatteryVoltage * 1000.0f) + 0.5f),
-        true,
+        filteredBatteryMv,
+        valid,
+        valid ? GldBatterySenseStatus::Valid
+              : GldBatterySenseStatus::DetectedBelowValidRange,
     };
 }
 
@@ -113,12 +138,28 @@ bool readGldExternalPower() {
 GldPowerReading readGldPower() {
     const BatteryAdcReading battery = readBatteryAdc();
     const bool external24V = readGldExternalPower();
-    const GldPowerMode mode = external24V ? GldPowerMode::External24V
-                              : battery.valid ? GldPowerMode::Battery
-                                              : GldPowerMode::External5V;
+    const bool batteryDetected =
+        battery.status == GldBatterySenseStatus::DetectedBelowValidRange ||
+        battery.status == GldBatterySenseStatus::Valid;
+
+    // Power-source priority is intentionally deterministic:
+    // 1. Any detected battery voltage selects battery mode, even when PG24 is HIGH.
+    // 2. Without a detected battery, PG24 HIGH selects the 24 V supply.
+    // 3. Otherwise this is the available 5 V-powered case.
+    // The board has no dedicated USB/5 V presence signal. Keep an invalid battery
+    // ADC reading out of the 5 V classification and expose a battery/PG24 conflict
+    // through powerSourceAmbiguous for diagnostics.
+    const GldPowerMode mode = batteryDetected ? GldPowerMode::Battery
+                              : external24V ? GldPowerMode::External24V
+                              : battery.status == GldBatterySenseStatus::Invalid
+                                  ? GldPowerMode::Ambiguous
+                                  : GldPowerMode::External5V;
+    const bool powerSourceAmbiguous =
+        (batteryDetected && external24V) ||
+        battery.status == GldBatterySenseStatus::Invalid;
     const float batteryVolts = static_cast<float>(battery.batteryMv) / 1000.0f;
-    const bool low = battery.valid && batteryVolts <= GLD_BATTERY_LOW_VOLTAGE;
-    const bool critical = battery.valid && batteryVolts <= GLD_BATTERY_CRITICAL_VOLTAGE;
+    const bool low = batteryDetected && batteryVolts <= GLD_BATTERY_LOW_VOLTAGE;
+    const bool critical = batteryDetected && batteryVolts <= GLD_BATTERY_CRITICAL_VOLTAGE;
     return {
         battery.batteryMv,
         battery.adcMv,
@@ -127,8 +168,11 @@ GldPowerReading readGldPower() {
         low,
         critical,
         external24V,
-        mode != GldPowerMode::Battery,
+        mode != GldPowerMode::Battery && mode != GldPowerMode::Ambiguous,
         mode,
+        batteryDetected,
+        powerSourceAmbiguous,
+        battery.status,
     };
 }
 
@@ -140,6 +184,22 @@ const char* gldPowerModeName(GldPowerMode mode) {
             return "5v";
         case GldPowerMode::External24V:
             return "24v";
+        case GldPowerMode::Ambiguous:
+            return "ambiguous";
+    }
+    return "unknown";
+}
+
+const char* gldBatterySenseStatusName(GldBatterySenseStatus status) {
+    switch (status) {
+        case GldBatterySenseStatus::NotDetected:
+            return "not_detected";
+        case GldBatterySenseStatus::DetectedBelowValidRange:
+            return "below_valid_range";
+        case GldBatterySenseStatus::Valid:
+            return "valid";
+        case GldBatterySenseStatus::Invalid:
+            return "invalid";
     }
     return "unknown";
 }

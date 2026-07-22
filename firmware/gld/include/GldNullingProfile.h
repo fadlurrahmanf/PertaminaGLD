@@ -5,6 +5,7 @@
 namespace pgl::gld {
 
 constexpr uint8_t NULLING_PROFILE_VALID_MAGIC = 0xA5;
+constexpr uint16_t NULLING_PROFILE_MAX_DAC_CODE = 4095;
 
 struct GldNullingProfile {
     uint8_t  validMagic;    // NULLING_PROFILE_VALID_MAGIC when valid
@@ -16,7 +17,16 @@ struct GldNullingProfile {
 };
 
 inline bool isNullingProfileValid(const GldNullingProfile& p) {
-    return p.validMagic == NULLING_PROFILE_VALID_MAGIC;
+    if (p.validMagic != NULLING_PROFILE_VALID_MAGIC || p.profileId == 0) {
+        return false;
+    }
+    for (uint8_t channel = 0; channel < 8; ++channel) {
+        if (p.channelOk[channel] != 1 ||
+            p.dacCode[channel] > NULLING_PROFILE_MAX_DAC_CODE) {
+            return false;
+        }
+    }
+    return true;
 }
 
 constexpr uint8_t NULLING_CONFIG_VALID_MAGIC = 0x5A;

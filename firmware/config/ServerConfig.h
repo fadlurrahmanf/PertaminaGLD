@@ -16,7 +16,9 @@
 
 // Host/IP broker MQTT Server Dataset. Dipakai GLD direct MQTT untuk dataset,
 // status, summary, command ack, dan hasil nulling.
-#define PGL_SERVER_DATASET_MQTT_HOST       "10.217.88.180"
+#ifndef PGL_SERVER_DATASET_MQTT_HOST
+#define PGL_SERVER_DATASET_MQTT_HOST       "CHANGE_ME_MQTT_HOST"
+#endif
 
 // Port broker MQTT Server Dataset. Bench saat ini memakai 1884.
 #define PGL_SERVER_DATASET_MQTT_PORT       1884
@@ -42,7 +44,9 @@
 
 // Host/IP broker MQTT Server Site. Dipakai Gateway untuk publish frame MESH dan
 // menerima command dari server/site.
-#define PGL_SERVER_SITE_MQTT_HOST          "10.158.198.180"
+#ifndef PGL_SERVER_SITE_MQTT_HOST
+#define PGL_SERVER_SITE_MQTT_HOST          "CHANGE_ME_MQTT_HOST"
+#endif
 
 // Port broker MQTT Server Site. Bench saat ini memakai 1884.
 #define PGL_SERVER_SITE_MQTT_PORT          1884

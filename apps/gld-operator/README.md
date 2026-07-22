@@ -51,9 +51,11 @@ Bridge features:
 - Windows WiFi SSID/password and local IPv4 lookup for `Use this PC`.
 - Visual alarm badge plus local sound/mute. Mute is local only and does not send
   an alarm clear command to GLD.
-- Local bench MQTT broker on port `1884` from `run-gld-operator.bat`, so
-  dataset START/STOP does not require Node-RED. Bind address is `0.0.0.0` so a
-  GLD on the same WiFi can connect to this PC's IPv4 address.
+- Local bench MQTT broker on port `1884` from `run-gld-operator.bat`. The safe
+  default binds only to `127.0.0.1`. To accept a physical GLD over WiFi,
+  explicitly bind a LAN address and set `GLD_BENCH_MQTT_USER` plus a random
+  `GLD_BENCH_MQTT_PASSWORD` of at least 16 characters; the bridge refuses an
+  unauthenticated non-loopback broker.
 - Dataset MQTT command publish when `paho-mqtt` is installed and the local
   broker is reachable.
 - Dataset session monitor subscribes to MQTT `cmd/ack`, `dataset/status`,
@@ -73,15 +75,18 @@ D:\PertaminaGLD\apps\gld-operator\output\datasets
   Use the Dataset tab `Save CSV`, `Download CSV`, and `Open Folder` controls.
 - For GLD app config, set `mqttHost` to the WiFi IPv4 shown by `Use this PC`
   and keep `mqttPort` as `1884`.
-- Firmware upload orchestration through installed PlatformIO:
+- Firmware packaging and upload use an immutable prebuilt package. From a clean
+  checkout, create a schema-v2 package with the repository packager, then select
+  the whole generated package directory in the Firmware tab:
 
 ```powershell
-pio run -e gld -t upload --upload-port COM10
+python firmware/tools/package_firmware_release.py --env gld --device-id F011 --board-profile GLD
 ```
 
-The UI can start that upload from the Firmware tab via the bridge. If a
-manifest is loaded, the UI and bridge validate the selected env, target ID, chip
-family, and `flashFiles` shape before starting the upload.
+The bridge verifies schema, source identity, every binary size/hash, flash-set
+hash and offset, then invokes packaged esptool against those exact bytes. It
+never rebuilds or uploads the current working tree. Privileged bridge requests
+also require the same-origin per-run token returned by `/api/health`.
 
 ## Fallback HTML-Only Run
 

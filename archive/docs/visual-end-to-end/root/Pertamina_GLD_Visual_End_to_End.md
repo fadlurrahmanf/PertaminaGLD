@@ -48,7 +48,7 @@ flowchart LR
     end
 
     subgraph SERVER["Server Site"]
-        MQTT["MQTT Broker\n10.158.198.180:1884"]
+        MQTT["MQTT Broker\nCHANGE_ME_MQTT_HOST:1884"]
         NR["Node-RED\nDecode + Routing\nTopology + Dashboard"]
     end
 
@@ -135,7 +135,7 @@ graph TB
     end
 
     subgraph SERVER_BOX["Server (PC/Cloud)"]
-        BROKER["MQTT Broker\n10.158.198.180:1884"]
+        BROKER["MQTT Broker\nCHANGE_ME_MQTT_HOST:1884"]
         NODERED["Node-RED\nFlow: Pertamina GLD Server"]
         DECODE["pertamina-gld-decode.js\nAES-GCM decrypt + parse"]
         TOPO["Topology State\npglTopology"]
@@ -178,7 +178,7 @@ graph TB
 ```mermaid
 flowchart LR
     subgraph MQTT_DOMAIN["Domain MQTT - WiFi TCP"]
-        GWR2["Gateway\nMQTT Client"] -->|"gld/gateway/uplink\ngld/gateway/topology\ngld/gateway/status"| BRK["MQTT Broker\n10.158.198.180:1884"]
+        GWR2["Gateway\nMQTT Client"] -->|"gld/gateway/uplink\ngld/gateway/topology\ngld/gateway/status"| BRK["MQTT Broker\nCHANGE_ME_MQTT_HOST:1884"]
         BRK -->|"gld/gateway/cmd/pull\ngld/gateway/cmd/node"| GWR2
         BRK -->|"subscribe"| NRD["Node-RED"]
         NRD -->|"publish cmd"| BRK
@@ -1012,8 +1012,8 @@ flowchart TD
     end
 
     subgraph WIFI_MQTT_BLOCK["WiFi + MQTT"]
-        WIFI_GW["WiFi STA\nSSID: Fshares"]
-        MQTTC_GW["PubSubClient\n10.158.198.180:1884"]
+        WIFI_GW["WiFi STA\nSSID: deployment-provisioned"]
+        MQTTC_GW["PubSubClient\nCHANGE_ME_MQTT_HOST:1884"]
     end
 
     subgraph LOGIC["Gateway Logic"]
@@ -1066,12 +1066,12 @@ flowchart TD
 
 | Parameter | Nilai |
 |---|---|
-| WiFi SSID | `Fshares` |
-| WiFi Password | `kayabiasa` |
-| MQTT Host | `10.158.198.180` |
+| WiFi SSID | `CHANGE_ME_WIFI_SSID` |
+| WiFi Password | `CHANGE_ME_WIFI_PASSWORD` |
+| MQTT Host | `CHANGE_ME_MQTT_HOST` |
 | MQTT Port | `1884` |
-| MQTT User | `deviot` |
-| MQTT Pass | `deviot` |
+| MQTT User | `CHANGE_ME_MQTT_USER` |
+| MQTT Pass | `CHANGE_ME_MQTT_PASSWORD` |
 | Gateway ID | `0x006F` |
 | Topic Root | `gld/gateway` |
 | MQTT Client ID | `pgl-gateway-006F-<MAC>` |
@@ -1502,10 +1502,10 @@ graph TB
     subgraph SHARED_CONFIG["firmware/config/"]
         GLD_CFG["GldConfig.h\nGLD_NODE_HEX=F001\nGLD_CH_ID=0x0064\nScan: 1000ms\nTX: 10000ms\nRX window: 2000ms"]
         CH_CFG["ChConfig.h\nCH_ID=0x0064 (default)\nROOT_GW=0x006F\nCache: 32\nAlarm Q: 8\nTX Q: 8\nDownlink: 16"]
-        GW_CFG["GwConfig.h\nGATEWAY_ID=0x006F\nWiFi: Fshares\nMQTT: 10.158.198.180:1884"]
+        GW_CFG["GwConfig.h\nGATEWAY_ID=0x006F\nWiFi: deployment-provisioned\nMQTT: CHANGE_ME_MQTT_HOST:1884"]
         STAR_CFG["LoraStarConfig.h\n920.0 MHz, 125 kHz\nSF7, CR4/5\nSync 0x12, 17dBm"]
         MESH_CFG["LoraMeshConfig.h\n921.0 MHz, 125 kHz\nSF9, CR4/5\nSync 0x34, 17dBm"]
-        SRV_CFG["ServerConfig.h\nDataset: CHANGE_ME\nSite: Fshares / 10.158.198.180:1884\ndeviot/deviot"]
+        SRV_CFG["ServerConfig.h\nDataset: deployment-provisioned\nSite: deployment-provisioned\ncredentials from local secret store"]
     end
 
     GLD_CFG --> GLD_NODE["GLD Firmware"]
@@ -1596,7 +1596,7 @@ flowchart TD
     subgraph PRE["Persiapan"]
         P1["✅ Cek COM port: pio device list"]
         P2["✅ Pastikan env sesuai hardware:\ngld/gldw untuk GLD\nch1/ch2/ch3 untuk CH\ngw untuk Gateway"]
-        P3["✅ Cek credential ServerConfig.h\n(site: Fshares/10.158.198.180\ndataset: CHANGE_ME harus diisi)"]
+        P3["✅ Cek credential ServerConfig.h\n(site dan dataset harus diprovision\ndari local secret store)"]
     end
 
     subgraph BUILD["Build & Upload"]

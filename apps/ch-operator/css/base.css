@@ -1,0 +1,112 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  color: var(--text);
+  background: var(--ink);
+  font-family: var(--font-body);
+  transition: background 160ms ease, color 160ms ease;
+}
+
+h1, h2, h3, p, dl, dd {
+  margin: 0;
+}
+
+h1 {
+  font-family: var(--font-body);
+  font-size: clamp(18px, 2vw, 22px);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+h2 {
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+h3 {
+  font-family: var(--font-eyebrow);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+button, input, select {
+  font: inherit;
+  color: inherit;
+}
+
+button, select, input {
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius);
+  color: var(--text);
+  background: var(--surface);
+}
+
+button {
+  min-height: 36px;
+  padding: 0 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 14px;
+  transition: border-color 120ms ease, background 120ms ease, color 120ms ease;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+button:disabled, input:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+button.primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff8f0;
+}
+
+button.primary:hover:not(:disabled) {
+  background: var(--accent);
+  color: #fff8f0;
+  filter: brightness(1.08);
+}
+
+input, select {
+  width: 100%;
+  min-height: 36px;
+  padding: 0 10px;
+  outline: none;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  background: var(--surface-2);
+}
+
+input:focus-visible, select:focus-visible, button:focus-visible {
+  outline: 2px solid var(--accent-2);
+  outline-offset: 1px;
+}
+
+::selection {
+  background: var(--selection-ring);
+  color: var(--text);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}

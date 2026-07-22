@@ -22,6 +22,9 @@ const NC_FLAG_EXT_POWER = 0x10;
 const GLD_ENCRYPTED_LEN = 29;
 const GLD_RECORD_LEN = 34;
 const DEFAULT_GATEWAY_ID = 0x006F;
+const REPLAY_WINDOW_BITS = 32;
+const REPLAY_STATE_TTL_MS = 24 * 60 * 60 * 1000;
+const REPLAY_STATE_MAX_DEVICES = 2048;
 
 function fail(reason, detail) {
     return {
@@ -338,7 +341,7 @@ function parseGldRecord(buf) {
 
 function recordToEvent(record, outer, source) {
     const event = {
-        ok: true,
+        ok: false,
         kind: "gld-event",
         source,
         receivedAt: new Date().toISOString(),
@@ -350,7 +353,7 @@ function recordToEvent(record, outer, source) {
         flags: record.flags,
         alarm: (record.flags & NC_FLAG_ALARM) !== 0,
         externalPower: (record.flags & NC_FLAG_EXT_POWER) !== 0,
-        testDevice: record.nodeId >= 0xF000 && record.nodeId <= 0xFEFF,
+        ingressClass: msg.topic === "gld/test/vector" ? "test" : (msg.req || msg.res ? "manual" : "production"),
         payloadLen: record.payloadLen,
         payloadHex: record.payload.toString("hex").toUpperCase(),
         dedupKey: `${outer && outer.srcIdHex ? outer.srcIdHex : "no-cluster"}:${record.nodeId}:${record.seq}:${(record.flags & NC_FLAG_ALARM) ? "alarm" : "normal"}`
@@ -358,12 +361,181 @@ function recordToEvent(record, outer, source) {
 
     try {
         Object.assign(event, decryptGldPayload(record));
+        if (event.decryptOk === true && event.gasClassValid && event.confidenceValid) {
+            event.ok = true;
+        } else if (event.decryptOk === true) {
+            event.decryptOk = false;
+            event.decryptError = "decrypted payload failed semantic validation";
+        }
     } catch (err) {
         event.decryptOk = false;
         event.decryptError = err.message;
     }
 
     return event;
+}
+
+function replayPersistence() {
+    const filePath = String(env.get("PGL_REPLAY_STATE_PATH") || "").trim();
+    if (!filePath) return null;
+    const fsModule = global.get("fs") || (typeof fs !== "undefined" ? fs : null);
+    const pathModule = global.get("path") || (typeof path !== "undefined" ? path : null);
+    if (!fsModule || !pathModule) {
+        throw new Error("durable replay state requires fs and path modules");
+    }
+    return { filePath, fsModule, pathModule };
+}
+
+function loadReplayState() {
+    const cached = flow.get("pglReplayState");
+    if (cached && typeof cached === "object" && !Array.isArray(cached)) return cached;
+    const persistence = replayPersistence();
+    if (!persistence || !persistence.fsModule.existsSync(persistence.filePath)) return {};
+    const parsed = JSON.parse(persistence.fsModule.readFileSync(persistence.filePath, "utf8"));
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        throw new Error("durable replay state is not a JSON object");
+    }
+    flow.set("pglReplayState", parsed);
+    return parsed;
+}
+
+function saveReplayState(all) {
+    const persistence = replayPersistence();
+    if (persistence) {
+        const dir = persistence.pathModule.dirname(persistence.filePath);
+        persistence.fsModule.mkdirSync(dir, { recursive: true });
+        const temporary = `${persistence.filePath}.${Date.now()}.${Math.random().toString(16).slice(2)}.tmp`;
+        persistence.fsModule.writeFileSync(temporary, JSON.stringify(all), { encoding: "utf8", mode: 0o600 });
+        persistence.fsModule.renameSync(temporary, persistence.filePath);
+    }
+    flow.set("pglReplayState", all);
+}
+
+function replayDecision(event) {
+    const now = Date.now();
+    const all = loadReplayState();
+    for (const [key, value] of Object.entries(all)) {
+        if (!value || now - Number(value.updatedAt || 0) > REPLAY_STATE_TTL_MS) {
+            delete all[key];
+        }
+    }
+
+    const key = `${event.ingressClass}:${event.nodeId}`;
+    const seq = Number(event.seq) & 0xFF;
+    const current = all[key];
+    if (!current) {
+        all[key] = { lastSeq: seq, bitmap: 1, updatedAt: now };
+        const keys = Object.keys(all);
+        if (keys.length > REPLAY_STATE_MAX_DEVICES) {
+            keys.sort((a, b) => Number(all[a].updatedAt || 0) - Number(all[b].updatedAt || 0));
+            for (let i = 0; i < keys.length - REPLAY_STATE_MAX_DEVICES; i++) delete all[keys[i]];
+        }
+        saveReplayState(all);
+        return { accepted: true, reason: "first" };
+    }
+
+    const lastSeq = Number(current.lastSeq) & 0xFF;
+    const forward = (seq - lastSeq + 256) & 0xFF;
+    let bitmap = Number(current.bitmap) >>> 0;
+    if (forward === 0) {
+        return { accepted: false, reason: "duplicate-sequence" };
+    }
+    if (forward < 128) {
+        bitmap = forward >= REPLAY_WINDOW_BITS ? 1 : (((bitmap << forward) | 1) >>> 0);
+        all[key] = { lastSeq: seq, bitmap, updatedAt: now };
+        saveReplayState(all);
+        return { accepted: true, reason: forward < REPLAY_WINDOW_BITS ? "forward" : "forward-reset-window" };
+    }
+
+    const behind = 256 - forward;
+    if (behind >= REPLAY_WINDOW_BITS) {
+        return { accepted: false, reason: "stale-sequence" };
+    }
+    const mask = (1 << behind) >>> 0;
+    if ((bitmap & mask) !== 0) {
+        return { accepted: false, reason: "duplicate-out-of-order-sequence" };
+    }
+    current.bitmap = (bitmap | mask) >>> 0;
+    current.updatedAt = now;
+    all[key] = current;
+    saveReplayState(all);
+    return { accepted: true, reason: "out-of-order" };
+}
+
+function quarantineEvent(event, reason, topic) {
+    return {
+        req: msg.req,
+        res: msg.res,
+        topic,
+        payload: {
+            ok: false,
+            kind: topic === "gld/server/replay" ? "gld-replay-rejected" : "gld-integrity-failure",
+            reason,
+            receivedAt: event.receivedAt,
+            sourceTopic: event.sourceTopic,
+            source: event.source,
+            ingressClass: event.ingressClass,
+            nodeId: event.nodeId,
+            nodeIdHex: event.nodeIdHex,
+            seq: event.seq,
+            alarmClaimed: event.alarm,
+            decryptError: event.decryptError,
+            dedupKey: event.dedupKey
+        }
+    };
+}
+
+function routeRecords(records, outer, source) {
+    const eventMsgs = [];
+    const decodedMsgs = [];
+    const quarantineMsgs = [];
+    for (const record of records) {
+        const event = recordToEvent(record, outer, source);
+        if (event.decryptOk !== true || event.ok !== true) {
+            quarantineMsgs.push(quarantineEvent(
+                event,
+                event.decryptError || event.skipReason || "record authentication failed",
+                "gld/server/integrity"
+            ));
+            continue;
+        }
+        let replay;
+        try {
+            replay = replayDecision(event);
+        } catch (err) {
+            quarantineMsgs.push(quarantineEvent(event, `replay state unavailable: ${err.message}`, "gld/server/integrity"));
+            continue;
+        }
+        if (!replay.accepted) {
+            quarantineMsgs.push(quarantineEvent(event, replay.reason, "gld/server/replay"));
+            continue;
+        }
+        event.replayStatus = replay.reason;
+        const nonProduction = event.ingressClass !== "production";
+        decodedMsgs.push({
+            req: msg.req,
+            res: msg.res,
+            payload: event,
+            topic: nonProduction ? "gld/server/test" : (event.alarm ? "gld/server/alarm" : "gld/server/decoded")
+        });
+        eventMsgs.push({
+            req: msg.req,
+            res: msg.res,
+            payload: {
+                ok: true,
+                kind: "gld-event-envelope",
+                outer,
+                nodeId: event.nodeId,
+                seq: event.seq,
+                flags: event.flags,
+                alarm: event.alarm,
+                decryptOk: true,
+                ingressClass: event.ingressClass
+            },
+            topic: nonProduction ? "gld/gateway/test-events" : "gld/gateway/events"
+        });
+    }
+    return { eventMsgs, decodedMsgs, quarantineMsgs };
 }
 
 function parseAppFrame(buf) {
@@ -518,6 +690,7 @@ function emitGatewayStatus(status) {
 
     const eventMsgs = [];
     const decodedMsgs = [];
+    const quarantineMsgs = [];
     for (const e of status.events || []) {
         const base = {
             ok: true,
@@ -533,8 +706,6 @@ function emitGatewayStatus(status) {
             legacy: true,
             raw: e
         };
-        eventMsgs.push({ req: msg.req, res: msg.res, payload: base, topic: "gld/gateway/events" });
-
         if (e.payload_hex) {
             try {
                 const payload = hexToBuffer(e.payload_hex);
@@ -551,22 +722,27 @@ function emitGatewayStatus(status) {
                     };
                 }
                 if (record) {
-                    const decoded = recordToEvent(record, { srcId: e.cluster_id, srcIdHex: `0x${Number(e.cluster_id).toString(16).toUpperCase().padStart(4, "0")}` }, "gateway-status");
-                    decoded.rawGatewayEvent = e;
-                    decodedMsgs.push({
-                        req: msg.req,
-                        res: msg.res,
-                        payload: decoded,
-                        topic: decoded.alarm ? "gld/server/alarm" : "gld/server/decoded"
-                    });
+                    const routed = routeRecords(
+                        [record],
+                        { srcId: e.cluster_id, srcIdHex: `0x${Number(e.cluster_id).toString(16).toUpperCase().padStart(4, "0")}` },
+                        "gateway-status"
+                    );
+                    eventMsgs.push(...routed.eventMsgs);
+                    decodedMsgs.push(...routed.decodedMsgs);
+                    quarantineMsgs.push(...routed.quarantineMsgs);
                 }
             } catch (err) {
-                eventMsgs.push(fail("gateway event decode failed", { error: err.message, event: e }));
+                quarantineMsgs.push(fail("gateway event decode failed", { error: err.message, event: e }));
             }
+        } else {
+            base.unverified = true;
+            base.alarmClaimed = base.alarm;
+            delete base.alarm;
+            eventMsgs.push({ req: msg.req, res: msg.res, payload: base, topic: "gld/gateway/unverified-events" });
         }
     }
 
-    return [statusMsg, eventMsgs, decodedMsgs, null];
+    return [statusMsg, eventMsgs, decodedMsgs, quarantineMsgs];
 }
 
 try {
@@ -696,28 +872,8 @@ try {
         return [null, null, null, null];
     }
 
-    const decodedMsgs = parsed.records.map((record) => ({
-        req: msg.req,
-        res: msg.res,
-        payload: recordToEvent(record, parsed.outer, "contract"),
-        topic: (record.flags & NC_FLAG_ALARM) ? "gld/server/alarm" : "gld/server/decoded"
-    }));
-    const eventMsgs = decodedMsgs.map((m) => ({
-        req: msg.req,
-        res: msg.res,
-        payload: {
-            ok: true,
-            kind: "gld-event-envelope",
-            outer: parsed.outer,
-            nodeId: m.payload.nodeId,
-            seq: m.payload.seq,
-            flags: m.payload.flags,
-            alarm: m.payload.alarm,
-            decryptOk: m.payload.decryptOk
-        },
-        topic: "gld/gateway/events"
-    }));
-    return [null, eventMsgs, decodedMsgs, null];
+    const routed = routeRecords(parsed.records, parsed.outer, "contract");
+    return [null, routed.eventMsgs, routed.decodedMsgs, routed.quarantineMsgs];
 } catch (err) {
     return [null, null, null, fail("decode failed", err.message)];
 }

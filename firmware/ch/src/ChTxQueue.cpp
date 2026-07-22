@@ -1,7 +1,5 @@
 #include "ChTxQueue.h"
 
-#include "ClusterResponse.h"
-
 namespace pgl::ch {
 
 namespace {
@@ -118,13 +116,24 @@ NodeCacheStatus markChTxItemSentInCache(NodeCacheEntry* entries, size_t capacity
 
     if (item.kind == ChTxKind::ClusterDataResponse) {
         for (size_t i = 0; i < item.selectedCount; ++i) {
-            if (item.selectedIndexes[i] >= capacity ||
-                !entries[item.selectedIndexes[i]].used ||
-                entries[item.selectedIndexes[i]].currentSeq != item.selectedSeqs[i]) {
+            if (item.selectedIndexes[i] >= capacity) {
                 return NodeCacheStatus::InvalidInput;
             }
+
+            NodeCacheEntry& entry = entries[item.selectedIndexes[i]];
+            if (!entry.used || entry.currentSeq != item.selectedSeqs[i]) {
+                // The response carried an older immutable snapshot. Do not
+                // mark the newer cache value sent, but do not fail retirement
+                // of the response that was successfully transmitted either.
+                continue;
+            }
+
+            const NodeCacheStatus status = markNodeCacheEntrySent(entry, nowMs);
+            if (status != NodeCacheStatus::Ok) {
+                return status;
+            }
         }
-        return markSelectedNodeCacheEntriesSent(entries, capacity, item.selectedIndexes, item.selectedCount, nowMs);
+        return NodeCacheStatus::Ok;
     }
 
     if (item.kind == ChTxKind::RelayFrame) {

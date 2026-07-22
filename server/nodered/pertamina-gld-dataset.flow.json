@@ -1,4 +1,4 @@
-﻿[
+[
     {
         "label":  "GLD Dataset Server",
         "info":  "Dataset recording: current GLD unified JSON records via MQTT to MySQL + CSV.",
@@ -7,18 +7,14 @@
         "disabled":  false
     },
     {
-        "tz":  "Asia/Jakarta",
-        "id":  "pgld_ds_mysql_cfg",
-        "type":  "MySQLdatabase",
         "db":  "pertamina_gld",
+        "id":  "pgld_ds_mysql_cfg",
+        "tz":  "Asia/Jakarta",
         "charset":  "UTF8",
         "name":  "GLD Dataset DB",
+        "type":  "MySQLdatabase",
         "host":  "localhost",
-        "port":  "3306",
-        "credentials":  {
-                            "user":  "root",
-                            "password":  ""
-                        }
+        "port":  "3306"
     },
     {
         "id":  "pgld_ds_init_inject",
@@ -55,8 +51,7 @@
         "finalize":  "",
         "wires":  [
                       [
-                          "pgld_ds_create_table_fn",
-                          "pgld_ds_csv_header_fn"
+                          "pgld_ds_create_table_fn"
                       ]
                   ],
         "timeout":  0,
@@ -101,46 +96,6 @@
 
                       ]
                   ]
-    },
-    {
-        "id":  "pgld_ds_csv_header_fn",
-        "y":  120,
-        "initialize":  "",
-        "name":  "CSV header",
-        "type":  "function",
-        "z":  "pgld_ds_tab",
-        "noerr":  0,
-        "x":  640,
-        "finalize":  "",
-        "wires":  [
-                      [
-                          "pgld_ds_csv_header_file"
-                      ]
-                  ],
-        "timeout":  0,
-        "outputs":  1,
-        "func":  "msg.payload=\u0027device_id,node_id,mode,seq,timestamp_ms,label,nulling_profile_id,sv0,sv1,sv2,sv3,sv4,sv5,sv6,sv7,gain0,gain1,gain2,gain3,gain4,gain5,gain6,gain7\u0027+String.fromCharCode(10); msg.filename=global.get(\u0027gld_csv_path\u0027)||\u0027C:\\Users\\asus\\gld-dataset.csv\u0027; return msg;",
-        "libs":  [
-
-                 ]
-    },
-    {
-        "appendNewline":  false,
-        "filename":  "filename",
-        "id":  "pgld_ds_csv_header_file",
-        "type":  "file",
-        "wires":  [
-                      [
-
-                      ]
-                  ],
-        "y":  120,
-        "createDir":  true,
-        "name":  "write CSV header",
-        "filenameType":  "msg",
-        "x":  880,
-        "overwriteFile":  "true",
-        "z":  "pgld_ds_tab"
     },
     {
         "id":  "pgld_ds_start_dataset_inject",
@@ -223,7 +178,6 @@
         "wires":  [
                       [
                           "pgld_ds_parse_record_fn",
-                          "pgld_ds_csv_row_fn",
                           "pgld_ds_debug_record"
                       ]
                   ],
@@ -248,7 +202,7 @@
                   ],
         "timeout":  0,
         "outputs":  1,
-        "func":  "var p=(typeof msg.payload===\u0027string\u0027)?JSON.parse(msg.payload):msg.payload; if(!p||p.seq===undefined||!p.sensor_voltage||p.sensor_voltage.length!==8){node.warn(\u0027invalid record\u0027);return null;} var sv=p.sensor_voltage,gain=p.sensor_gain||[0,0,0,0,0,0,0,0]; msg.topic=\u0027INSERT INTO gld_dataset (device_id,node_id,mode,seq,timestamp_ms,label,nulling_profile_id,sv0,sv1,sv2,sv3,sv4,sv5,sv6,sv7,gain0,gain1,gain2,gain3,gain4,gain5,gain6,gain7) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)\u0027; msg.payload=[p.device_id||\u0027\u0027,p.node_id||0,p.mode||\u0027DATASET\u0027,p.seq,p.timestamp_ms||0,p.label||\u0027\u0027,p.nulling_profile_id||0,sv[0],sv[1],sv[2],sv[3],sv[4],sv[5],sv[6],sv[7],gain[0],gain[1],gain[2],gain[3],gain[4],gain[5],gain[6],gain[7]]; return msg;",
+        "func":  "function reject(reason){node.warn(\u0027dataset record rejected: \u0027+reason);return null;} function finite8(v){return Array.isArray(v)\u0026\u0026v.length===8\u0026\u0026v.every(function(x){return typeof x===\u0027number\u0027\u0026\u0026Number.isFinite(x);});} function csv(v){var s=String(v===undefined?\u0027\u0027:v);return /[\\x22,\\r\\n]/.test(s)?String.fromCharCode(34)+s.replace(/\\x22/g,String.fromCharCode(34)+String.fromCharCode(34))+String.fromCharCode(34):s;} var p;try{p=(typeof msg.payload===\u0027string\u0027)?JSON.parse(msg.payload):msg.payload;}catch(e){return reject(\u0027invalid JSON\u0027);} var expected=[\u0027MQ8\u0027,\u0027MQ135\u0027,\u0027MQ3\u0027,\u0027MQ5\u0027,\u0027MQ4\u0027,\u0027MQ7\u0027,\u0027MQ6\u0027,\u0027MQ2\u0027]; var gains=[1,2,4,8,16,32,64]; if(!p||typeof p!==\u0027object\u0027||Array.isArray(p))return reject(\u0027object required\u0027); var device=String(p.device_id||\u0027\u0027).toUpperCase(); if(!/^[0-9A-F]{4}$/.test(device))return reject(\u0027invalid device_id\u0027); var topic=String(msg.topic||\u0027\u0027).split(\u0027/\u0027); if(topic.length!==4||topic[0]!==\u0027gas-leak-detector\u0027||String(topic[1]).toUpperCase()!==device||topic[2]!==\u0027dataset\u0027||topic[3]!==\u0027data\u0027)return reject(\u0027topic/device mismatch\u0027); if(!Number.isInteger(p.node_id)||p.node_id!==parseInt(device,16))return reject(\u0027node_id mismatch\u0027); if(String(p.mode||\u0027\u0027).toUpperCase()!==\u0027DATASET\u0027)return reject(\u0027mode\u0027); if(!Number.isInteger(p.seq)||p.seq\u003c0||p.seq\u003e4294967295)return reject(\u0027seq\u0027); if(!Number.isInteger(p.timestamp_ms)||p.timestamp_ms\u003c0||p.timestamp_ms\u003e4294967295)return reject(\u0027timestamp_ms\u0027); if(!Number.isInteger(p.nulling_profile_id)||p.nulling_profile_id\u003c1||p.nulling_profile_id\u003e255)return reject(\u0027nulling profile\u0027); var label=String(p.label||\u0027\u0027); if(!label||label.length\u003e31||/[\\x00-\\x1F]/.test(label)||/^[=+\\-@]/.test(label))return reject(\u0027unsafe label\u0027); if(!finite8(p.sensor_voltage))return reject(\u0027sensor_voltage\u0027); if(!Array.isArray(p.sensor_gain)||p.sensor_gain.length!==8||!p.sensor_gain.every(function(x){return Number.isInteger(x)\u0026\u0026gains.includes(x);}))return reject(\u0027sensor_gain\u0027); if(!Array.isArray(p.sensor_status)||p.sensor_status.length!==8||!p.sensor_status.every(function(x){return x===0;}))return reject(\u0027sensor_status\u0027); if(!Array.isArray(p.feature_order)||p.feature_order.length!==8||!p.feature_order.every(function(x,i){return x===expected[i];}))return reject(\u0027feature_order\u0027); var row=[device,p.node_id,\u0027DATASET\u0027,p.seq,p.timestamp_ms,label,p.nulling_profile_id].concat(p.sensor_voltage,p.sensor_gain); msg.csvLine=row.concat(p.sensor_status,p.feature_order).map(csv).join(\u0027,\u0027)+String.fromCharCode(10); msg.filename=global.get(\u0027gld_csv_path\u0027)||\u0027C:\\Users\\asus\\gld-dataset.csv\u0027; msg.topic=\u0027INSERT INTO gld_dataset (device_id,node_id,mode,seq,timestamp_ms,label,nulling_profile_id,sv0,sv1,sv2,sv3,sv4,sv5,sv6,sv7,gain0,gain1,gain2,gain3,gain4,gain5,gain6,gain7) SELECT ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,? FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM gld_dataset WHERE device_id=? AND seq=? AND timestamp_ms=? AND label=? LIMIT 1)\u0027; msg.payload=row.concat([device,p.seq,p.timestamp_ms,label]); return msg;",
         "libs":  [
 
                  ]
@@ -263,19 +217,19 @@
         "mydb":  "pgld_ds_mysql_cfg",
         "wires":  [
                       [
-
+                          "pgld_ds_persist_gate_fn"
                       ]
                   ]
     },
     {
-        "id":  "pgld_ds_csv_row_fn",
+        "id":  "pgld_ds_persist_gate_fn",
         "y":  280,
         "initialize":  "",
-        "name":  "format CSV row",
+        "name":  "persist only inserted row",
         "type":  "function",
         "z":  "pgld_ds_tab",
         "noerr":  0,
-        "x":  660,
+        "x":  690,
         "finalize":  "",
         "wires":  [
                       [
@@ -284,7 +238,7 @@
                   ],
         "timeout":  0,
         "outputs":  1,
-        "func":  "var p=(typeof msg.payload===\u0027string\u0027)?JSON.parse(msg.payload):msg.payload; if(!p||!p.sensor_voltage)return null; var sv=p.sensor_voltage,gain=p.sensor_gain||[0,0,0,0,0,0,0,0]; msg.payload=[p.device_id||\u0027\u0027,p.node_id||0,p.mode||\u0027DATASET\u0027,p.seq,p.timestamp_ms||0,p.label||\u0027\u0027,p.nulling_profile_id||0].concat(sv).concat(gain).join(\u0027,\u0027)+String.fromCharCode(10); msg.filename=global.get(\u0027gld_csv_path\u0027)||\u0027C:\\Users\\asus\\gld-dataset.csv\u0027; return msg;",
+        "func":  "var result=msg.payload||{}; if(Number(result.affectedRows)!==1){node.status({fill:\u0027yellow\u0027,shape:\u0027ring\u0027,text:\u0027duplicate/rejected\u0027});return null;} var count=Number(flow.get(\u0027gld_dataset_persisted_count\u0027)||0)+1; flow.set(\u0027gld_dataset_persisted_count\u0027,count); msg.payload=msg.csvLine; delete msg.csvLine; node.status({fill:\u0027green\u0027,shape:\u0027dot\u0027,text:count+\u0027 rows persisted\u0027}); return msg;",
         "libs":  [
 
                  ]

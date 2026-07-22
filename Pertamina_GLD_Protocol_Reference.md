@@ -394,11 +394,11 @@ Gateway adalah jembatan antara jaringan **LoRa MESH** dan jaringan **WiFi/MQTT**
 
 | Parameter | Nilai |
 |---|---|
-| WiFi SSID | `Fshares` |
-| WiFi Password | `kayabiasa` |
-| MQTT Broker | `10.158.198.180:1884` |
-| MQTT Username | `deviot` |
-| MQTT Password | `deviot` |
+| WiFi SSID | provision at deployment (`CHANGE_ME_WIFI_SSID`) |
+| WiFi Password | provision from a local secret store (`CHANGE_ME_WIFI_PASSWORD`) |
+| MQTT Broker | provision at deployment (`CHANGE_ME_MQTT_HOST:1884`) |
+| MQTT Username | provision from a local secret store (`CHANGE_ME_MQTT_USER`) |
+| MQTT Password | provision from a local secret store (`CHANGE_ME_MQTT_PASSWORD`) |
 | Gateway ID | `0x006F` |
 | MQTT Client ID | `pgl-gateway-006F-<MAC>` |
 | Status interval | 10.000 ms |

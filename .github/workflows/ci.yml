@@ -1,0 +1,92 @@
+name: Repository CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  host-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install host simulation dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes g++ libmbedtls-dev
+          python -m pip install --disable-pip-version-check \
+            platformio==6.1.19 \
+            pyserial==3.5 \
+            paho-mqtt==2.1.0
+
+      - name: Run protocol and source-contract tests
+        run: python firmware/tests/run_tests.py
+
+      - name: Run Python unit suites
+        shell: bash
+        run: |
+          python -m unittest discover -s firmware/tools/tests -p 'test_*.py' -v
+          python -m unittest discover -s tools/tests -p 'test_*.py' -v
+          for suite in server/nodered/tests apps/gld-operator/tests; do
+            if [[ -d "$suite" ]]; then
+              python -m unittest discover -s "$suite" -p 'test_*.py' -v
+            fi
+          done
+
+      - name: Run JavaScript syntax and test suites
+        shell: bash
+        run: |
+          node --check server/nodered/apply-pertamina-gld-flow.js
+          find server/nodered apps/gld-operator \
+            -path '*/node_modules' -prune -o \
+            -name '*.test.js' -print0 | xargs -0 --no-run-if-empty node --test
+
+      - name: Run real-code host simulation
+        run: python firmware/tests/simulation/run_full_system_simulation.py
+
+      - name: Enforce repository secret policy
+        run: python tools/check_repository_secrets.py
+
+      - name: Verify generated files and patch hygiene
+        run: git diff --check
+
+  platformio-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        environment:
+          - gld
+          - tfbg
+          - gld_tpl5010_powercycle_test
+          - ch
+          - chFieldtest
+          - gw_hello_ack_fieldtest
+          - gw
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pinned PlatformIO Core
+        run: python -m pip install --disable-pip-version-check platformio==6.1.19
+
+      - name: Build ${{ matrix.environment }}
+        working-directory: firmware
+        run: pio run -e "${{ matrix.environment }}"

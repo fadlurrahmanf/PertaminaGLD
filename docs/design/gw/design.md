@@ -47,11 +47,11 @@ Firmware identifiers:
 | Config | Value |
 |---|---|
 | Gateway ID | `0x006F` |
-| WiFi SSID | `Fshares` |
-| WiFi password | `kayabiasa` |
-| MQTT host | `10.158.198.180` |
+| WiFi SSID | deployment-provisioned (`CHANGE_ME_WIFI_SSID`) |
+| WiFi password | deployment secret (`CHANGE_ME_WIFI_PASSWORD`) |
+| MQTT host | deployment-provisioned (`CHANGE_ME_MQTT_HOST`) |
 | MQTT port | `1884` |
-| MQTT user/pass | `deviot` / `deviot` |
+| MQTT user/pass | deployment secrets (`CHANGE_ME_MQTT_USER` / `CHANGE_ME_MQTT_PASSWORD`) |
 | topic root | `gld/gateway` |
 | WiFi retry | `5000 ms` |
 | MQTT retry | `3000 ms` |

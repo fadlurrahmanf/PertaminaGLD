@@ -9,6 +9,7 @@ import { handleLine, clearSerialResponseWatch, sendCommand, resetDeviceSnapshot,
 import { setDatasetState, handleDatasetMqttEvent, renderDatasetSession } from "./dataset.js";
 
 const DEFAULT_BRIDGE_ORIGIN = "http://127.0.0.1:5173";
+let bridgeToken = "";
 
 export function bridgeUrl(path) {
   const onBridgeOrigin = location.protocol.startsWith("http")
@@ -22,6 +23,7 @@ export async function bridgeFetch(path, options = {}) {
     ...options,
     headers: {
       "Content-Type": "application/json",
+      ...(bridgeToken ? { "X-GLD-Bridge-Token": bridgeToken } : {}),
       ...(options.headers || {})
     }
   });
@@ -33,6 +35,8 @@ export async function bridgeFetch(path, options = {}) {
 export async function initBridge() {
   try {
     const health = await bridgeFetch("/api/health");
+    if (!health.csrfToken) throw new Error("bridge did not provide a request token");
+    bridgeToken = health.csrfToken;
     const wasAvailable = state.bridgeAvailable;
     state.bridgeAvailable = Boolean(health.ok);
     state.bridgeFeatures = health.features || {};
@@ -111,7 +115,7 @@ async function initDatasetOutputDir() {
 
 function startBridgeEvents() {
   if (state.eventSource) state.eventSource.close();
-  const source = new EventSource(bridgeUrl("/api/events"));
+  const source = new EventSource(bridgeUrl(`/api/events?token=${encodeURIComponent(bridgeToken)}`));
   source.onerror = () => {
     if (!state.bridgeAvailable) return;
     setBadge(elements.connectionBadge, "bridge event lost", "warn");

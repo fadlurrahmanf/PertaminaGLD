@@ -25,6 +25,7 @@ private:
     TfLiteTensor *output;
     uint8_t *tensor_arena;
 
+    int inputSize;
     int outputSize;
     bool initialized;
 
@@ -34,6 +35,7 @@ public:
     float *getInputBuffer();
     // Modified: predict now takes a float reference to return the confidence score
     int predict(float &confidence_score); // <--- MODIFIED LINE
+    int getInputSize();
     int getOutputSize();
     bool isInitialized();
     float *getOutputBuffer(); // Still useful if you want all scores later

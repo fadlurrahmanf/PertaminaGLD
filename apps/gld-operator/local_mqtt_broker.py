@@ -8,6 +8,8 @@ so the GLD dataset path can run without Node-RED/Aedes.
 
 from __future__ import annotations
 
+import hmac
+import ipaddress
 import socket
 import struct
 import threading
@@ -85,6 +87,7 @@ class _Client:
     addr: tuple[str, int]
     broker: "LocalMqttBroker"
     client_id: str = ""
+    authenticated: bool = False
     subscriptions: set[str] = field(default_factory=set)
     lock: threading.Lock = field(default_factory=threading.Lock)
 
@@ -105,7 +108,11 @@ class _Client:
                 packet_type = header & 0xF0
                 qos = (header >> 1) & 0x03
                 if packet_type == 0x10:
+                    if self.authenticated:
+                        raise ValueError("second CONNECT is not allowed")
                     self._handle_connect(data)
+                elif not self.authenticated:
+                    raise ValueError("MQTT packet received before authenticated CONNECT")
                 elif packet_type == 0x30:
                     self._handle_publish(data, qos)
                 elif packet_type == 0x80:
@@ -135,17 +142,30 @@ class _Client:
         level = data[offset]
         flags = data[offset + 1]
         offset += 4
+        if level != 4:
+            raise ValueError("only MQTT 3.1.1 is supported by the bench broker")
         self.client_id, offset = _read_utf(data, offset)
+        if flags & 0x04:
+            _, offset = _read_utf(data, offset)
+            _, offset = _read_utf(data, offset)
+        username = ""
+        password = ""
         if flags & 0x80:
-            _, offset = _read_utf(data, offset)
+            username, offset = _read_utf(data, offset)
         if flags & 0x40:
-            _, offset = _read_utf(data, offset)
-        if proto not in {"MQTT", "MQIsdp"}:
+            password, offset = _read_utf(data, offset)
+        if offset != len(data):
+            raise ValueError("unexpected trailing bytes in CONNECT")
+        if proto != "MQTT":
             raise ValueError(f"unsupported protocol {proto}")
-        if level == 5:
-            self.send_packet(0x20, b"\x00\x00\x00")
-        else:
-            self.send_packet(0x20, b"\x00\x00")
+        if self.broker.username is not None and (
+            not hmac.compare_digest(username, self.broker.username)
+            or not hmac.compare_digest(password, self.broker.password or "")
+        ):
+            self.send_packet(0x20, b"\x00\x04")
+            raise PermissionError("invalid MQTT username or password")
+        self.authenticated = True
+        self.send_packet(0x20, b"\x00\x00")
         self.broker.log(f"MQTT_BROKER_CONNECT client={self.client_id or '-'} addr={self.addr[0]}:{self.addr[1]}")
 
     def _handle_subscribe(self, data: bytes) -> None:
@@ -189,10 +209,19 @@ class _Client:
 
 
 class LocalMqttBroker:
-    def __init__(self, host: str, port: int, log: LogFn | None = None) -> None:
+    def __init__(
+        self,
+        host: str,
+        port: int,
+        log: LogFn | None = None,
+        username: str | None = None,
+        password: str | None = None,
+    ) -> None:
         self.host = host
         self.port = port
         self.log = log or print
+        self.username = username or None
+        self.password = password if self.username is not None else None
         self.stopping = threading.Event()
         self.lock = threading.Lock()
         self.clients: set[_Client] = set()
@@ -206,6 +235,12 @@ class LocalMqttBroker:
     def start(self) -> None:
         if self.running:
             return
+        try:
+            loopback = self.host.lower() == "localhost" or ipaddress.ip_address(self.host).is_loopback
+        except ValueError:
+            loopback = False
+        if not loopback and (not self.username or not self.password or len(self.password) < 16):
+            raise ValueError("non-loopback bench MQTT requires a username and password of at least 16 characters")
         self.stopping.clear()
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)

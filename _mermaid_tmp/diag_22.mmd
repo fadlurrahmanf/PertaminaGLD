@@ -2,10 +2,10 @@ graph TB
     subgraph SHARED_CONFIG["firmware/config/"]
         GLD_CFG["GldConfig.h\nGLD_NODE_HEX=F001\nGLD_CH_ID=0x0064\nScan: 1000ms\nTX: 10000ms\nRX window: 2000ms"]
         CH_CFG["ChConfig.h\nCH_ID=0x0064 (default)\nROOT_GW=0x006F\nCache: 32\nAlarm Q: 8\nTX Q: 8\nDownlink: 16"]
-        GW_CFG["GwConfig.h\nGATEWAY_ID=0x006F\nWiFi: Fshares\nMQTT: 10.158.198.180:1884"]
+        GW_CFG["GwConfig.h\nGATEWAY_ID=0x006F\nWiFi: deployment-provisioned\nMQTT: CHANGE_ME_MQTT_HOST:1884"]
         STAR_CFG["LoraStarConfig.h\n920.0 MHz, 125 kHz\nSF7, CR4/5\nSync 0x12, 17dBm"]
         MESH_CFG["LoraMeshConfig.h\n921.0 MHz, 125 kHz\nSF9, CR4/5\nSync 0x34, 17dBm"]
-        SRV_CFG["ServerConfig.h\nDataset: CHANGE_ME\nSite: Fshares / 10.158.198.180:1884\ndeviot/deviot"]
+        SRV_CFG["ServerConfig.h\nDataset: deployment-provisioned\nSite: deployment-provisioned\ncredentials from local secret store"]
     end
 
     GLD_CFG --> GLD_NODE["GLD Firmware"]

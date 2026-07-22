@@ -5,8 +5,8 @@ flowchart TD
     end
 
     subgraph WIFI_MQTT_BLOCK["WiFi + MQTT"]
-        WIFI_GW["WiFi STA\nSSID: Fshares"]
-        MQTTC_GW["PubSubClient\n10.158.198.180:1884"]
+        WIFI_GW["WiFi STA\nSSID: deployment-provisioned"]
+        MQTTC_GW["PubSubClient\nCHANGE_ME_MQTT_HOST:1884"]
     end
 
     subgraph LOGIC["Gateway Logic"]

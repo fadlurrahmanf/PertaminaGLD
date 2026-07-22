@@ -8,6 +8,41 @@ bool isAckableAlarmQueueStatus(AlarmQueueStatus status) {
     return status == AlarmQueueStatus::Queued || status == AlarmQueueStatus::AlreadyQueued;
 }
 
+struct NodeCacheSnapshot {
+    bool existed;
+    NodeCacheEntry entry;
+};
+
+NodeCacheSnapshot snapshotNodeCacheEntry(
+    const NodeCacheEntry* entries,
+    size_t capacity,
+    uint16_t nodeId) {
+    NodeCacheSnapshot snapshot{};
+    if (entries == nullptr) {
+        return snapshot;
+    }
+
+    for (size_t i = 0; i < capacity; ++i) {
+        if (entries[i].used && entries[i].nodeId == nodeId) {
+            snapshot.existed = true;
+            snapshot.entry = entries[i];
+            break;
+        }
+    }
+    return snapshot;
+}
+
+void restoreNodeCacheEntry(
+    NodeCacheEntry* entries,
+    size_t capacity,
+    size_t updatedIndex,
+    const NodeCacheSnapshot& snapshot) {
+    if (entries == nullptr || updatedIndex >= capacity) {
+        return;
+    }
+    entries[updatedIndex] = snapshot.existed ? snapshot.entry : NodeCacheEntry{};
+}
+
 ChTxQueueStatus enqueueSingleRecordTx(
     const pgl::config::ChRuntimeConfig& config,
     ChTxItem* txQueue,
@@ -60,10 +95,17 @@ ChRuntimeStatus processGldStarFrame(
     size_t ackCapacity,
     ChRuntimeProcessResult& out) {
     out = {};
-    if (!pgl::config::isValidChRuntimeConfig(config)) {
+    // Caching a GLD's STAR uplink only needs this CH's own id to be valid -
+    // it never touches meshDstId. Whether the CH has joined a MESH parent
+    // yet (meshDstId) is a separate, later concern: it only matters for the
+    // onward relay checked by canRelayToMesh below, so a CH sitting alone on
+    // a bench with no parent still ingests and caches every GLD it hears.
+    if (!pgl::config::isValidNodeId(config.chId)) {
         out.status = ChRuntimeStatus::InvalidConfig;
         return out.status;
     }
+    const bool canRelayToMesh =
+        pgl::config::isValidNodeId(config.meshDstId) && config.chId != config.meshDstId;
 
     ChGldUplinkView uplink{};
     out.uplinkStatus = parseGldUplinkFrame(frame, frameLen, uplink);
@@ -72,6 +114,8 @@ ChRuntimeStatus processGldStarFrame(
         return out.status;
     }
 
+    const NodeCacheSnapshot cacheSnapshot =
+        snapshotNodeCacheEntry(cacheEntries, cacheCapacity, uplink.nodeId);
     NodeCacheUpdateResult cacheResult{};
     out.cacheStatus = updateNodeCacheFromUplink(cacheEntries, cacheCapacity, uplink, nowMs, cacheResult);
     if (out.cacheStatus != NodeCacheStatus::Inserted &&
@@ -86,22 +130,32 @@ ChRuntimeStatus processGldStarFrame(
     if (uplink.alarm && cacheResult.shouldAckAlarm) {
         out.alarmQueueStatus = enqueueAlarmIfAbsent(alarmQueue, alarmQueueCapacity, entry);
         if (out.alarmQueueStatus == AlarmQueueStatus::Full) {
+            restoreNodeCacheEntry(cacheEntries, cacheCapacity, cacheResult.index, cacheSnapshot);
             out.status = ChRuntimeStatus::AlarmQueueFull;
             return out.status;
         }
         if (out.alarmQueueStatus == AlarmQueueStatus::Conflict) {
+            restoreNodeCacheEntry(cacheEntries, cacheCapacity, cacheResult.index, cacheSnapshot);
             out.status = ChRuntimeStatus::AlarmQueueConflict;
             return out.status;
         }
         if (!isAckableAlarmQueueStatus(out.alarmQueueStatus)) {
+            restoreNodeCacheEntry(cacheEntries, cacheCapacity, cacheResult.index, cacheSnapshot);
             out.status = ChRuntimeStatus::CacheFailed;
             return out.status;
         }
 
-        if (out.alarmQueueStatus == AlarmQueueStatus::Queued) {
+        // Only attempt the onward MESH push if this CH has actually joined a
+        // parent. Without one there is nowhere to relay to yet, but the STAR
+        // ack below still goes out and the alarm stays queued locally so it
+        // relays as soon as a parent is found.
+        if (out.alarmQueueStatus == AlarmQueueStatus::Queued && canRelayToMesh) {
             out.txQueueStatus = enqueueSingleRecordTx(
                 config, txQueue, txQueueCapacity, meshSeq, entry, ChTxKind::AlarmPush);
             if (out.txQueueStatus != ChTxQueueStatus::Ok) {
+                removeAlarmQueueItem(
+                    alarmQueue, alarmQueueCapacity, entry.nodeId, entry.currentSeq);
+                restoreNodeCacheEntry(cacheEntries, cacheCapacity, cacheResult.index, cacheSnapshot);
                 out.status = out.txQueueStatus == ChTxQueueStatus::Full
                                  ? ChRuntimeStatus::TxQueueFull
                                  : ChRuntimeStatus::TxBuildFailed;
@@ -124,10 +178,11 @@ ChRuntimeStatus processGldStarFrame(
         out.ackBuilt = true;
     }
 
-    if (cacheResult.isRecoveryClear) {
+    if (cacheResult.isRecoveryClear && canRelayToMesh) {
         out.txQueueStatus = enqueueSingleRecordTx(
             config, txQueue, txQueueCapacity, meshSeq, entry, ChTxKind::RecoveryClear);
         if (out.txQueueStatus != ChTxQueueStatus::Ok) {
+            restoreNodeCacheEntry(cacheEntries, cacheCapacity, cacheResult.index, cacheSnapshot);
             out.status = out.txQueueStatus == ChTxQueueStatus::Full
                              ? ChRuntimeStatus::TxQueueFull
                              : ChRuntimeStatus::TxBuildFailed;
@@ -263,17 +318,21 @@ ChRuntimeStatus markChTxSuccess(
     }
 
     const ChTxItem snapshot = *item;
-    const NodeCacheStatus cacheStatus = markChTxItemSentInCache(cacheEntries, cacheCapacity, snapshot, nowMs);
-    if (cacheStatus != NodeCacheStatus::Ok) {
-        return ChRuntimeStatus::CacheFailed;
+    // Physical TX has already succeeded, so retire the immutable queue item
+    // first. Cache bookkeeping is conditional: a newer GLD sequence may have
+    // replaced the snapshot while this item was waiting in the queue.
+    if (popChTxFrame(txQueue, txQueueCapacity) != ChTxQueueStatus::Ok) {
+        return ChRuntimeStatus::TxBuildFailed;
     }
+
+    const NodeCacheStatus cacheStatus =
+        markChTxItemSentInCache(cacheEntries, cacheCapacity, snapshot, nowMs);
 
     // AlarmPush: TIDAK hapus dari alarmQueue di sini.
     // alarmQueue entry tetap sampai markAlarmAcked() dipanggil saat ACK diterima dari parent.
-
-    return popChTxFrame(txQueue, txQueueCapacity) == ChTxQueueStatus::Ok
+    return cacheStatus == NodeCacheStatus::Ok || cacheStatus == NodeCacheStatus::NotFound
                ? ChRuntimeStatus::Ok
-               : ChRuntimeStatus::TxBuildFailed;
+               : ChRuntimeStatus::CacheFailed;
 }
 
 ChRuntimeStatus markAlarmAcked(

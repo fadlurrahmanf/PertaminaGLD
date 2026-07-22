@@ -47,11 +47,11 @@ Firmware identifiers:
 | Config | Value |
 |---|---|
 | Gateway ID | `0x006F` |
-| WiFi SSID | `Fshares` |
-| WiFi password | `kayabiasa` |
-| MQTT host | `10.158.198.180` |
+| WiFi SSID | deployment-provisioned (`CHANGE_ME_WIFI_SSID`) |
+| WiFi password | deployment secret (`CHANGE_ME_WIFI_PASSWORD`) |
+| MQTT host | deployment-provisioned (`CHANGE_ME_MQTT_HOST`) |
 | MQTT port | `1884` |
-| MQTT user/pass | `deviot` / `deviot` |
+| MQTT user/pass | deployment secrets (`CHANGE_ME_MQTT_USER` / `CHANGE_ME_MQTT_PASSWORD`) |
 | topic root | `gld/gateway` |
 | WiFi retry | `5000 ms` |
 | MQTT retry | `3000 ms` |
@@ -138,23 +138,42 @@ Accepted node command JSON:
 
 | Field | Behavior |
 |---|---|
-| `cluster` | required target CH |
+| `cluster` | direct legacy target CH; with a route it must equal the final hop if supplied |
+| `hopList`, `hop_list`, or `hops` | optional explicit Gateway-to-target-CH route; selects routed v1 |
 | `node` | required target GLD |
 | `id` | command ID, default 1 |
 | `ttl` | TTL seconds, default 600 |
 | `hex` | command bytes; non-hex chars ignored by parser |
 
-Command bytes buffer capacity is 32. Current code checks `if (commandLen > 32)` after parsing into a 32-byte buffer, so effective max is 32.
+Command length is limited to 8 bytes, matching the CH pending-downlink store
+and the authenticated GLD mode command. Gateway rejects longer input; it does
+not silently truncate it.
 
-Wire payload:
+Without an explicit hop list, the backward-compatible direct wire payload is:
 
 ```text
 nodeId:uint16BE + commandId:uint16BE + ttlSec:uint16BE + commandLen:uint8 + commandBytes
 ```
 
-Frame type is `MSG_SERVER_NODE_COMMAND`, source Gateway, destination `cluster`, seq `meshSeq++`.
+With an explicit hop list, Gateway prepends routed v1 metadata and the complete
+legacy body:
+
+```text
+magic(0xC1) + version(1) + hopCount + reserved(3) + legacyGuard(0xFF)
++ hopList:uint16BE[]
++ nodeId + commandId + ttlSec + commandLen + commandBytes
+```
+
+Frame type is `MSG_SERVER_NODE_COMMAND`, source Gateway, destination
+`hopList[0]` for routed v1 or `cluster` for direct legacy, and seq is
+`meshSeq++`. The final hop is the target CH; if `cluster` is also supplied it
+must match that final hop. Hop IDs must be unique, non-zero, and non-broadcast.
+At the maximum 8-byte command length, the 80-byte MESH payload permits 29 hops.
 
 CH parses the same payload shape and stores `ttlSec` as the pending downlink expiry. A `ttlSec` of `0` uses the CH default pending TTL.
+Direct legacy delivery works with old and new CH firmware. Routed v1 must be
+used only when every listed CH advertises capability flag `0x08`; an old CH
+rejects the guard as an invalid legacy command length.
 
 ## MESH Receive
 
@@ -206,7 +225,7 @@ Report-specific fields:
 | Report | Fields |
 |---|---|
 | `ch-hello` | `chId`, `parentId`, `parentAltId`, `edgeFrom`, `edgeTo`, `batteryMv`, `uptimeSec16`, `parentIsRoot` |
-| `ch-config-response` | `chId`, `requesterId`, `parentId`, `edgeFrom`, `edgeTo`, `depth`, `batteryMv`, `routeFlags`, `routeToRoot`, `parentIsRoot` |
+| `ch-config-response` | `chId`, `requesterId`, `parentId`, `edgeFrom`, `edgeTo`, `depth`, `batteryMv`, `routeFlags`, `routeToRoot`, `helloAckV1`, `alarmAckNodeIdV1`, `nodeCommandRouteV1`, `parentIsRoot` |
 | `ch-config-request` | `chId`, `requesterId` |
 
 ## Gateway Responses
@@ -219,7 +238,7 @@ Gateway CH_CONFIG_RESPONSE payload:
 | 2..3 | parent `0x0000` |
 | 4 | depth 0 |
 | 5..6 | battery `0xFFFF` |
-| 7 | route-to-root flag `0x01` |
+| 7 | capability bitfield `0x0F`: route-to-root `0x01`, HELLO ACK v1 `0x02`, alarm ACK node ID v1 `0x04`, node-command route v1 `0x08` |
 | 8 | Gateway RX RSSI as int8 |
 | 9 | Gateway RX SNR as int8 |
 

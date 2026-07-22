@@ -1,6 +1,8 @@
 {
   "schemaVersion": 1,
   "packageType": "pertamina-gld-prebuilt-firmware",
+  "deprecated": true,
+  "deprecationReason": "Legacy schema without source/build attestation; do not upload",
   "deviceId": "F000",
   "boardProfile": "4D-ESP32S3",
   "environment": "gld",
@@ -9,7 +11,6 @@
   "chip": "esp32s3",
   "baud": 460800,
   "createdAtUtc": "20260630T062122Z",
-  "sourceBuildDir": "D:\\PertaminaGLD\\firmware\\.pio\\build\\gld",
   "flashFiles": [
     {
       "path": "bootloader.bin",

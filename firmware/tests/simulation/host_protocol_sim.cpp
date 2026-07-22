@@ -106,6 +106,30 @@ bool verifyModeCommandCmacHostMirror(const protocol::FrameView& decoded, const u
     return std::memcmp(cmac, &decoded.payload[4], 4) == 0;
 }
 
+size_t buildSyntheticAlarmFrame(
+    uint16_t nodeId,
+    uint16_t chId,
+    uint8_t seq,
+    uint8_t* out,
+    size_t outCapacity) {
+    uint8_t encryptedPayload[protocol::GLD_ENCRYPTED_PAYLOAD_SIZE]{};
+    for (size_t i = 0; i < sizeof(encryptedPayload); ++i) {
+        encryptedPayload[i] = static_cast<uint8_t>(seq + i);
+    }
+
+    const auto encoded = protocol::encodeAppFrame(
+        protocol::TYPE_GLD_ALARM_BATTERY,
+        nodeId,
+        chId,
+        seq,
+        encryptedPayload,
+        sizeof(encryptedPayload),
+        out,
+        outCapacity,
+        protocol::STAR_MAX_PAYLOAD);
+    return encoded.status == protocol::FrameStatus::Ok ? encoded.size : 0;
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -352,6 +376,179 @@ int main(int argc, char** argv) {
     check(tamperedFrameStatus == protocol::FrameStatus::Ok, "Tampered frame still decodes structurally (CRC fixed up)");
     bool tamperedCmacValid = verifyModeCommandCmacHostMirror(decodedTampered, AES_KEY);
     check(!tamperedCmacValid, "GLD1's REAL AES-CMAC verification REJECTS a tampered command (forgery protection holds)");
+
+    std::printf("\n=== SCENARIO 4: alarm ingest rolls back when onward TX queue is full ===\n");
+
+    constexpr uint16_t TX_FULL_GLD_ID = 0xF101;
+    constexpr uint8_t TX_FULL_GLD_SEQ = 0x41;
+    uint8_t txFullAlarmFrame[protocol::APPFRAME_OVERHEAD + protocol::STAR_MAX_PAYLOAD]{};
+    const size_t txFullAlarmFrameSize = buildSyntheticAlarmFrame(
+        TX_FULL_GLD_ID,
+        CH_B_ID,
+        TX_FULL_GLD_SEQ,
+        txFullAlarmFrame,
+        sizeof(txFullAlarmFrame));
+    check(txFullAlarmFrameSize > 0, "Synthetic alarm frame for TX-full rollback encodes Ok");
+
+    ch::NodeCacheEntry rollbackCache[1]{};
+    ch::AlarmQueueItem rollbackAlarmQueue[1]{};
+    ch::ChTxItem rollbackTxQueue[1]{};
+    const uint8_t occupiedFrame[] = {0xA5};
+    const auto occupyStatus = ch::enqueueChTxFrame(
+        rollbackTxQueue,
+        1,
+        ch::ChTxKind::RelayFrame,
+        0,
+        0,
+        nullptr,
+        nullptr,
+        0,
+        occupiedFrame,
+        sizeof(occupiedFrame));
+    check(occupyStatus == ch::ChTxQueueStatus::Ok, "Rollback test starts with a full onward TX queue");
+
+    uint8_t rollbackAck[protocol::APPFRAME_OVERHEAD]{};
+    ch::ChRuntimeProcessResult rollbackResult{};
+    const auto firstAlarmStatus = ch::processGldStarFrame(
+        chBConfig,
+        txFullAlarmFrame,
+        txFullAlarmFrameSize,
+        3000,
+        0x31,
+        rollbackCache,
+        1,
+        rollbackAlarmQueue,
+        1,
+        rollbackTxQueue,
+        1,
+        rollbackAck,
+        sizeof(rollbackAck),
+        rollbackResult);
+    check(firstAlarmStatus == ch::ChRuntimeStatus::TxQueueFull,
+          "First alarm reports TxQueueFull instead of acknowledging without an onward TX");
+    check(!rollbackResult.ackBuilt, "First alarm does not build a GLD ACK when onward enqueue fails");
+    check(!rollbackCache[0].used, "Failed first alarm restores the pre-ingest node cache state");
+    check(!ch::containsAlarmQueueItem(rollbackAlarmQueue, 1, TX_FULL_GLD_ID, TX_FULL_GLD_SEQ),
+          "Failed first alarm removes its uncommitted alarm-queue entry");
+
+    check(ch::popChTxFrame(rollbackTxQueue, 1) == ch::ChTxQueueStatus::Ok,
+          "Rollback test frees the occupied onward TX slot");
+    ch::ChRuntimeProcessResult retryAlarmResult{};
+    const auto retryAlarmStatus = ch::processGldStarFrame(
+        chBConfig,
+        txFullAlarmFrame,
+        txFullAlarmFrameSize,
+        3100,
+        0x32,
+        rollbackCache,
+        1,
+        rollbackAlarmQueue,
+        1,
+        rollbackTxQueue,
+        1,
+        rollbackAck,
+        sizeof(rollbackAck),
+        retryAlarmResult);
+    check(retryAlarmStatus == ch::ChRuntimeStatus::Ok,
+          "Exact GLD retry is accepted after the onward TX slot becomes available");
+    check(retryAlarmResult.onwardQueued && retryAlarmResult.ackBuilt,
+          "Exact GLD retry is ACKed only after its alarm push is committed upstream");
+    const ch::ChTxItem* retriedAlarmItem = nullptr;
+    check(ch::peekChTxFrame(rollbackTxQueue, 1, retriedAlarmItem) == ch::ChTxQueueStatus::Ok &&
+              retriedAlarmItem != nullptr && retriedAlarmItem->kind == ch::ChTxKind::AlarmPush &&
+              retriedAlarmItem->nodeId == TX_FULL_GLD_ID && retriedAlarmItem->gldSeq == TX_FULL_GLD_SEQ,
+          "Exact GLD retry creates the missing immutable alarm TX item");
+
+    std::printf("\n=== SCENARIO 5: successful TX retires an older sequence without marking newer cache data sent ===\n");
+
+    constexpr uint16_t ADVANCE_GLD_ID = 0xF102;
+    constexpr uint8_t ADVANCE_SEQ_N = 0x51;
+    constexpr uint8_t ADVANCE_SEQ_N_PLUS_1 = 0x52;
+    uint8_t advanceFrameN[protocol::APPFRAME_OVERHEAD + protocol::STAR_MAX_PAYLOAD]{};
+    uint8_t advanceFrameNPlus1[protocol::APPFRAME_OVERHEAD + protocol::STAR_MAX_PAYLOAD]{};
+    const size_t advanceFrameNSize = buildSyntheticAlarmFrame(
+        ADVANCE_GLD_ID, CH_B_ID, ADVANCE_SEQ_N, advanceFrameN, sizeof(advanceFrameN));
+    const size_t advanceFrameNPlus1Size = buildSyntheticAlarmFrame(
+        ADVANCE_GLD_ID,
+        CH_B_ID,
+        ADVANCE_SEQ_N_PLUS_1,
+        advanceFrameNPlus1,
+        sizeof(advanceFrameNPlus1));
+    check(advanceFrameNSize > 0 && advanceFrameNPlus1Size > 0,
+          "Synthetic consecutive alarm frames encode Ok");
+
+    ch::NodeCacheEntry advanceCache[1]{};
+    ch::AlarmQueueItem advanceAlarmQueue[2]{};
+    ch::ChTxItem advanceTxQueue[2]{};
+    uint8_t advanceAck[protocol::APPFRAME_OVERHEAD]{};
+    ch::ChRuntimeProcessResult advanceResultN{};
+    ch::ChRuntimeProcessResult advanceResultNPlus1{};
+    check(ch::processGldStarFrame(
+              chBConfig,
+              advanceFrameN,
+              advanceFrameNSize,
+              4000,
+              0x41,
+              advanceCache,
+              1,
+              advanceAlarmQueue,
+              2,
+              advanceTxQueue,
+              2,
+              advanceAck,
+              sizeof(advanceAck),
+              advanceResultN) == ch::ChRuntimeStatus::Ok,
+          "Alarm sequence N is queued");
+    check(ch::processGldStarFrame(
+              chBConfig,
+              advanceFrameNPlus1,
+              advanceFrameNPlus1Size,
+              4100,
+              0x42,
+              advanceCache,
+              1,
+              advanceAlarmQueue,
+              2,
+              advanceTxQueue,
+              2,
+              advanceAck,
+              sizeof(advanceAck),
+              advanceResultNPlus1) == ch::ChRuntimeStatus::Ok,
+          "Alarm sequence N+1 advances the cache while N remains queued");
+    check(advanceCache[0].currentSeq == ADVANCE_SEQ_N_PLUS_1 &&
+              advanceCache[0].sentSeq != ADVANCE_SEQ_N_PLUS_1,
+          "Cache holds unsent sequence N+1 before the older TX completes");
+
+    const auto retireNStatus = ch::markChTxSuccess(
+        advanceTxQueue,
+        2,
+        advanceCache,
+        1,
+        advanceAlarmQueue,
+        2,
+        4200);
+    check(retireNStatus == ch::ChRuntimeStatus::Ok,
+          "Successful sequence-N TX is retired even though the cache has advanced to N+1");
+    const ch::ChTxItem* nextAdvanceItem = nullptr;
+    check(ch::peekChTxFrame(advanceTxQueue, 2, nextAdvanceItem) == ch::ChTxQueueStatus::Ok &&
+              nextAdvanceItem != nullptr && nextAdvanceItem->gldSeq == ADVANCE_SEQ_N_PLUS_1,
+          "Retiring sequence N exposes sequence N+1 as the next immutable TX head");
+    check(advanceCache[0].currentSeq == ADVANCE_SEQ_N_PLUS_1 &&
+              advanceCache[0].sentSeq != ADVANCE_SEQ_N_PLUS_1,
+          "Retiring sequence N does not falsely mark sequence N+1 sent");
+
+    const auto retireNPlus1Status = ch::markChTxSuccess(
+        advanceTxQueue,
+        2,
+        advanceCache,
+        1,
+        advanceAlarmQueue,
+        2,
+        4300);
+    check(retireNPlus1Status == ch::ChRuntimeStatus::Ok && ch::isChTxQueueEmpty(advanceTxQueue, 2),
+          "Successful sequence-N+1 TX retires the remaining queue head");
+    check(advanceCache[0].sentSeq == ADVANCE_SEQ_N_PLUS_1,
+          "Only the matching sequence N+1 TX marks the latest cache record sent");
 
     std::printf("\n=== SUMMARY: %d passed, %d failed ===\n", g_pass, g_fail);
     return g_fail == 0 ? 0 : 1;

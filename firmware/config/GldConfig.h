@@ -17,13 +17,13 @@
 // Node ID GLD dalam format hex tanpa prefix 0x. Nilai ini menjadi sumber tunggal
 // untuk GLD_NODE_ID numerik, device ID string, MQTT client ID, dan topic per GLD.
 #ifndef GLD_NODE_HEX
-#define GLD_NODE_HEX        F010
+#define GLD_NODE_HEX        F011
 #endif
 
 // Cluster Head target untuk uplink LoRa STAR dari GLD ini. Harus sama dengan
 // CH_ID pada ChConfig.h untuk CH yang menjadi pasangan GLD.
 #ifndef GLD_CH_ID
-#define GLD_CH_ID           0x006B
+#define GLD_CH_ID           0x0066
 #endif
 
 // Interval scan sensor/inference dalam ms. Angka 500 ms adalah titik aman dari
@@ -75,11 +75,15 @@
 // dataset/nulling dan payload JSON yang dipublish.
 #define GLD_MQTT_BUFFER_SIZE     1024
 
-// Default produksi: GLD tidak boleh memakai AES self-test key secara diam-diam.
-// Untuk bench/selftest runtime sementara, build eksplisit dengan
-// -DGLD_ALLOW_SELFTEST_AES_FALLBACK=1.
+// Production and field-test runtimes fail closed until a per-device key has
+// been provisioned in NVS. The public vector key is bench/self-test material,
+// never a deployment fallback.
 #ifndef GLD_ALLOW_SELFTEST_AES_FALLBACK
 #define GLD_ALLOW_SELFTEST_AES_FALLBACK 0
+#endif
+
+#if GLD_ALLOW_SELFTEST_AES_FALLBACK && !defined(PGL_GLD_FIELDTEST_SELFTEST_BUILD)
+#error "GLD public-vector AES fallback requires an explicit nonproduction field-test build"
 #endif
 
 // -----------------------------------------------------------------------------

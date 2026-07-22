@@ -14,6 +14,7 @@
 #include "GwConfig.h"
 #include "GatewayBoardPins.h"
 #include "ProtocolConstants.h"
+#include "ServerNodeCommandRoute.h"
 
 namespace {
 
@@ -75,6 +76,18 @@ struct PendingMqttPublish {
 PendingMqttPublish mqttQueue[MQTT_UPLINK_QUEUE_CAPACITY]{};
 uint32_t mqttQueuePublished = 0;
 uint32_t mqttQueueDropped = 0;
+
+struct RecentHello {
+    bool active;
+    uint16_t origin;
+    uint16_t token;
+    uint8_t seq;
+    uint32_t seenAtMs;
+};
+
+constexpr size_t RECENT_HELLO_CAPACITY = 16;
+constexpr uint32_t RECENT_HELLO_TTL_MS = 60000;
+RecentHello recentHellos[RECENT_HELLO_CAPACITY]{};
 
 void logPrint(const char* text) {
     Serial.print(text);
@@ -175,11 +188,34 @@ bool enqueueMqttPublish(const char* topic, const char* payload, size_t len, cons
     return true;
 }
 
-bool publishOrQueueMqtt(const char* topic, const char* payload, size_t len, const char* reason) {
-    if (publishMqttNow(topic, payload, len, reason)) {
-        return true;
+enum class PublishDisposition : uint8_t {
+    Rejected,
+    PublishedImmediately,
+    QueuedVolatile,
+};
+
+const char* publishDispositionName(PublishDisposition disposition) {
+    switch (disposition) {
+        case PublishDisposition::Rejected:             return "rejected";
+        case PublishDisposition::PublishedImmediately: return "published-immediately";
+        case PublishDisposition::QueuedVolatile:       return "queued-volatile";
     }
-    return enqueueMqttPublish(topic, payload, len, reason);
+    return "unknown";
+}
+
+PublishDisposition publishOrQueueMqttDisposition(
+    const char* topic, const char* payload, size_t len, const char* reason) {
+    if (publishMqttNow(topic, payload, len, reason)) {
+        return PublishDisposition::PublishedImmediately;
+    }
+    return enqueueMqttPublish(topic, payload, len, reason)
+        ? PublishDisposition::QueuedVolatile
+        : PublishDisposition::Rejected;
+}
+
+bool publishOrQueueMqtt(const char* topic, const char* payload, size_t len, const char* reason) {
+    return publishOrQueueMqttDisposition(topic, payload, len, reason) !=
+           PublishDisposition::Rejected;
 }
 
 void drainMqttQueue() {
@@ -259,11 +295,7 @@ bool parseRequiredU16(JsonVariantConst value, uint16_t& out) {
     return true;
 }
 
-size_t parseHopList(const JsonDocument& doc, uint16_t* out, size_t outCapacity) {
-    if (out == nullptr || outCapacity == 0) {
-        return 0;
-    }
-
+JsonVariantConst explicitHopListValue(const JsonDocument& doc) {
     JsonVariantConst hopListValue = doc["hopList"];
     if (hopListValue.isNull()) {
         hopListValue = doc["hop_list"];
@@ -271,6 +303,15 @@ size_t parseHopList(const JsonDocument& doc, uint16_t* out, size_t outCapacity) 
     if (hopListValue.isNull()) {
         hopListValue = doc["hops"];
     }
+    return hopListValue;
+}
+
+size_t parseHopList(const JsonDocument& doc, uint16_t* out, size_t outCapacity) {
+    if (out == nullptr || outCapacity == 0) {
+        return 0;
+    }
+
+    const JsonVariantConst hopListValue = explicitHopListValue(doc);
 
     if (hopListValue.is<JsonArrayConst>()) {
         size_t count = 0;
@@ -416,14 +457,23 @@ void ensureWifi() {
 
 void mqttCallback(char* topic, uint8_t* payload, unsigned int length);
 
+bool mqttHostConfigured() {
+    return MQTT_HOST != nullptr && MQTT_HOST[0] != '\0' &&
+           strcmp(MQTT_HOST, "CHANGE_ME_MQTT_HOST") != 0;
+}
+
 void beginMqtt() {
+    if (!mqttHostConfigured()) {
+        logPrintln("GW_CONFIG_ERROR mqttHost=unconfigured action=inject-PGL_SERVER_SITE_MQTT_HOST");
+        return;
+    }
     mqtt.setServer(MQTT_HOST, MQTT_PORT);
     mqtt.setCallback(mqttCallback);
     mqtt.setBufferSize(1024);
 }
 
 void ensureMqtt() {
-    if (WiFi.status() != WL_CONNECTED || mqtt.connected()) {
+    if (!mqttHostConfigured() || WiFi.status() != WL_CONNECTED || mqtt.connected()) {
         return;
     }
     const uint32_t now = millis();
@@ -571,9 +621,40 @@ void hexToBytes(const char* hex, uint8_t* out, size_t outCapacity, size_t& outLe
 }
 
 void handleNodeCommand(const JsonDocument& doc) {
+    constexpr size_t MAX_NODE_COMMAND_HOPS =
+        (pgl::protocol::MESH_MAX_PAYLOAD -
+         pgl::protocol::SERVER_NODE_COMMAND_ROUTE_V1_HEADER_SIZE -
+         pgl::protocol::SERVER_NODE_COMMAND_LEGACY_HEADER_SIZE -
+         pgl::protocol::NODE_DOWNLINK_COMMAND_MAX_SIZE) / 2;
+    uint16_t hopList[MAX_NODE_COMMAND_HOPS]{};
+    const JsonVariantConst hopListValue = explicitHopListValue(doc);
+    const bool routed = !hopListValue.isNull();
+    size_t hopCount = 0;
     uint16_t chId = 0;
     uint16_t nodeId = 0;
-    if (!parseRequiredU16(doc["cluster"], chId)) {
+    if (routed) {
+        if (!hopListValue.is<JsonArrayConst>() ||
+            hopListValue.as<JsonArrayConst>().size() == 0 ||
+            hopListValue.as<JsonArrayConst>().size() > MAX_NODE_COMMAND_HOPS) {
+            logPrintf("GW_NODE_COMMAND_BUILD_FAIL invalidHopList=1 maxHops=%u\n",
+                      static_cast<unsigned>(MAX_NODE_COMMAND_HOPS));
+            return;
+        }
+        hopCount = parseHopList(doc, hopList, MAX_NODE_COMMAND_HOPS);
+        if (!pgl::protocol::serverNodeCommandRouteIsValid(hopList, hopCount)) {
+            logPrintln("GW_NODE_COMMAND_BUILD_FAIL invalidHopList=1");
+            return;
+        }
+        chId = hopList[hopCount - 1];
+        if (!doc["cluster"].isNull()) {
+            uint16_t requestedChId = 0;
+            if (!parseRequiredU16(doc["cluster"], requestedChId) || requestedChId != chId) {
+                logPrintf("GW_NODE_COMMAND_BUILD_FAIL clusterRouteMismatch=1 routeTarget=0x%04X\n",
+                          chId);
+                return;
+            }
+        }
+    } else if (!parseRequiredU16(doc["cluster"], chId)) {
         logPrintln("GW_NODE_COMMAND_BUILD_FAIL missingCluster=1");
         return;
     }
@@ -583,28 +664,40 @@ void handleNodeCommand(const JsonDocument& doc) {
     }
     const uint16_t commandId = parseU16Value(doc["id"], 1);
     const uint16_t ttlSec = parseU16Value(doc["ttl"], 600);
-    uint8_t commandBytes[32]{};
+    uint8_t commandBytes[pgl::protocol::NODE_DOWNLINK_COMMAND_MAX_SIZE + 1]{};
     size_t commandLen = 0;
     hexToBytes(doc["hex"] | "", commandBytes, sizeof(commandBytes), commandLen);
-    if (commandLen > 32) {
-        commandLen = 32;
+    if (commandLen > pgl::protocol::NODE_DOWNLINK_COMMAND_MAX_SIZE) {
+        logPrintf("GW_NODE_COMMAND_BUILD_FAIL commandTooLong=%u max=%u\n",
+                  static_cast<unsigned>(commandLen),
+                  static_cast<unsigned>(pgl::protocol::NODE_DOWNLINK_COMMAND_MAX_SIZE));
+        return;
     }
 
-    uint8_t payload[2 + 2 + 2 + 1 + 32]{};
-    writeU16Be(&payload[0], nodeId);
-    writeU16Be(&payload[2], commandId);
-    writeU16Be(&payload[4], ttlSec);
-    payload[6] = static_cast<uint8_t>(commandLen);
-    memcpy(&payload[7], commandBytes, commandLen);
+    uint8_t payload[pgl::protocol::MESH_MAX_PAYLOAD]{};
+    size_t payloadLen = 0;
+    const pgl::protocol::ServerNodeCommandStatus payloadStatus = routed
+        ? pgl::protocol::encodeRoutedServerNodeCommandPayloadV1(
+              hopList, hopCount, nodeId, commandId, ttlSec,
+              commandBytes, commandLen, payload, sizeof(payload), payloadLen)
+        : pgl::protocol::encodeLegacyServerNodeCommandPayload(
+              nodeId, commandId, ttlSec, commandBytes, commandLen,
+              payload, sizeof(payload), payloadLen);
+    if (payloadStatus != pgl::protocol::ServerNodeCommandStatus::Ok) {
+        logPrintf("GW_NODE_COMMAND_BUILD_FAIL payloadStatus=%s routed=%u hopCount=%u\n",
+                  pgl::protocol::serverNodeCommandStatusName(payloadStatus),
+                  routed ? 1 : 0, static_cast<unsigned>(hopCount));
+        return;
+    }
 
     uint8_t frame[pgl::protocol::APPFRAME_OVERHEAD + pgl::protocol::MESH_MAX_PAYLOAD]{};
     const pgl::protocol::FrameEncodeResult encoded = pgl::protocol::encodeAppFrame(
         pgl::protocol::MSG_SERVER_NODE_COMMAND,
         GATEWAY_ID,
-        chId,
+        routed ? hopList[0] : chId,
         meshSeq++,
         payload,
-        static_cast<uint8_t>(7 + commandLen),
+        static_cast<uint8_t>(payloadLen),
         frame,
         sizeof(frame),
         pgl::protocol::MESH_MAX_PAYLOAD);
@@ -612,6 +705,11 @@ void handleNodeCommand(const JsonDocument& doc) {
         logPrintf("GW_NODE_COMMAND_BUILD_FAIL status=%u\n", static_cast<unsigned>(encoded.status));
         return;
     }
+    logPrintf("GW_NODE_COMMAND_BUILD routeVersion=%u hopCount=%u nextHop=0x%04X targetCh=0x%04X node=0x%04X commandId=%u commandLen=%u payloadLen=%u\n",
+              routed ? pgl::protocol::SERVER_NODE_COMMAND_ROUTE_VERSION_V1 : 0,
+              static_cast<unsigned>(hopCount), routed ? hopList[0] : chId,
+              chId, nodeId, commandId, static_cast<unsigned>(commandLen),
+              static_cast<unsigned>(payloadLen));
     transmitMeshFrame(frame, encoded.size, "node-command");
 }
 
@@ -711,7 +809,12 @@ bool publishTopologyReport(const pgl::protocol::FrameView& decoded, float rssi, 
         doc["depth"] = decoded.payload[4];
         doc["batteryMv"] = readU16Be(&decoded.payload[5]);
         doc["routeFlags"] = routeFlags;
-        doc["routeToRoot"] = (routeFlags & 0x01) != 0;
+        doc["routeToRoot"] = (routeFlags & pgl::protocol::CH_CONFIG_FLAG_ROUTE_TO_ROOT) != 0;
+        doc["helloAckV1"] = (routeFlags & pgl::protocol::CH_CONFIG_CAP_HELLO_ACK_V1) != 0;
+        doc["alarmAckNodeIdV1"] =
+            (routeFlags & pgl::protocol::CH_CONFIG_CAP_ALARM_ACK_NODE_ID_V1) != 0;
+        doc["nodeCommandRouteV1"] =
+            (routeFlags & pgl::protocol::CH_CONFIG_CAP_NODE_COMMAND_ROUTE_V1) != 0;
         doc["parentIsRoot"] = parentId == GATEWAY_ID;
         writeHexId(doc, "chIdHex", chId);
         writeHexId(doc, "requesterIdHex", requesterId);
@@ -746,7 +849,7 @@ bool publishTopologyReport(const pgl::protocol::FrameView& decoded, float rssi, 
     return ok;
 }
 
-void publishMeshFrame(const uint8_t* frame, size_t frameLen, float rssi, float snr) {
+PublishDisposition publishMeshFrame(const uint8_t* frame, size_t frameLen, float rssi, float snr) {
     char frameHex[2 * (pgl::protocol::APPFRAME_OVERHEAD + pgl::protocol::MESH_MAX_PAYLOAD) + 1]{};
     bytesToHex(frame, frameLen, frameHex, sizeof(frameHex));
 
@@ -792,38 +895,127 @@ void publishMeshFrame(const uint8_t* frame, size_t frameLen, float rssi, float s
 
     char json[1024];
     const size_t len = serializeJson(doc, json, sizeof(json));
-    const bool ok = publishOrQueueMqtt(TOPIC_UPLINK, json, len, "uplink");
-    logPrintf("GW_MQTT_PUBLISH topic=%s ok=%u frameLen=%u parseStatus=%u\n",
+    const PublishDisposition disposition =
+        publishOrQueueMqttDisposition(TOPIC_UPLINK, json, len, "uplink");
+    logPrintf("GW_MQTT_PUBLISH topic=%s disposition=%s frameLen=%u parseStatus=%u\n",
               TOPIC_UPLINK,
-              ok ? 1 : 0,
+              publishDispositionName(disposition),
               static_cast<unsigned>(frameLen),
               static_cast<unsigned>(parseStatus));
+    return disposition;
 }
 
-void sendGatewayAckIfNeeded(const uint8_t* frame, size_t frameLen) {
+void sendGatewayAckIfNeeded(const uint8_t* frame, size_t frameLen,
+                            PublishDisposition disposition) {
     pgl::protocol::FrameView decoded{};
     const pgl::protocol::FrameStatus parseStatus =
         pgl::protocol::decodeAppFrame(frame, frameLen, decoded, pgl::protocol::MESH_MAX_PAYLOAD);
     if (parseStatus != pgl::protocol::FrameStatus::Ok ||
         pgl::protocol::messageType(decoded.typeFlags) != pgl::protocol::MSG_SENSOR_DATA ||
-        !pgl::protocol::hasAlarmAckFlag(decoded.typeFlags)) {
+        !pgl::protocol::hasAlarmAckFlag(decoded.typeFlags) ||
+        decoded.payload == nullptr ||
+        decoded.payloadLen < pgl::protocol::GLD_RECORD_HEADER_SIZE) {
+        return;
+    }
+    if (disposition != PublishDisposition::PublishedImmediately) {
+        logPrintf("GW_ALARM_ACK_WITHHELD src=0x%04X seq=%u disposition=%s reason=no-immediate-mqtt-accept\n",
+                  decoded.srcId, decoded.seq, publishDispositionName(disposition));
         return;
     }
 
-    uint8_t ack[pgl::protocol::APPFRAME_OVERHEAD]{};
+    uint8_t ackPayload[pgl::protocol::MESH_ALARM_ACK_V1_PAYLOAD_SIZE]{};
+    ackPayload[0] = decoded.payload[0];
+    ackPayload[1] = decoded.payload[1];
+    uint8_t ack[pgl::protocol::APPFRAME_OVERHEAD +
+                pgl::protocol::MESH_ALARM_ACK_V1_PAYLOAD_SIZE]{};
     const pgl::protocol::FrameEncodeResult encoded = pgl::protocol::encodeAppFrame(
         pgl::protocol::TYPE_ALARM_ACK_COMPACT,
         GATEWAY_ID,
         decoded.srcId,
         decoded.seq,
-        nullptr,
-        0,
+        ackPayload,
+        sizeof(ackPayload),
         ack,
         sizeof(ack),
         pgl::protocol::MESH_MAX_PAYLOAD);
     if (encoded.status == pgl::protocol::FrameStatus::Ok) {
         transmitMeshFrame(ack, encoded.size, "gateway-ack");
     }
+}
+
+bool suppressDuplicateHello(const uint8_t* frame, size_t frameLen) {
+    pgl::protocol::FrameView decoded{};
+    if (pgl::protocol::decodeAppFrame(frame, frameLen, decoded,
+                                      pgl::protocol::MESH_MAX_PAYLOAD) != pgl::protocol::FrameStatus::Ok ||
+        pgl::protocol::messageType(decoded.typeFlags) != pgl::protocol::MSG_CH_HELLO ||
+        decoded.payload == nullptr || decoded.payloadLen < 8) {
+        return false;
+    }
+
+    const uint16_t origin = readU16Be(&decoded.payload[0]);
+    const uint16_t token = readU16Be(&decoded.payload[6]);
+    const uint32_t now = millis();
+    RecentHello* replacement = nullptr;
+    for (auto& item : recentHellos) {
+        if (item.active && now - item.seenAtMs > RECENT_HELLO_TTL_MS) item.active = false;
+        if (item.active && item.origin == origin && item.seq == decoded.seq && item.token == token) {
+            item.seenAtMs = now;
+            return true;
+        }
+        if (!item.active || replacement == nullptr || item.seenAtMs < replacement->seenAtMs) {
+            replacement = &item;
+        }
+    }
+    if (replacement != nullptr) {
+        replacement->active = true;
+        replacement->origin = origin;
+        replacement->token = token;
+        replacement->seq = decoded.seq;
+        replacement->seenAtMs = now;
+    }
+    return false;
+}
+
+void sendHelloAckIfNeeded(const uint8_t* frame, size_t frameLen) {
+    pgl::protocol::FrameView decoded{};
+    const auto parseStatus = pgl::protocol::decodeAppFrame(
+        frame, frameLen, decoded, pgl::protocol::MESH_MAX_PAYLOAD);
+    if (parseStatus != pgl::protocol::FrameStatus::Ok ||
+        pgl::protocol::messageType(decoded.typeFlags) != pgl::protocol::MSG_CH_HELLO ||
+        decoded.dstId != GATEWAY_ID || decoded.srcId == GATEWAY_ID ||
+        decoded.payload == nullptr ||
+        decoded.payloadLen < pgl::protocol::CH_HELLO_V1_PAYLOAD_SIZE ||
+        readU16Be(&decoded.payload[0]) != decoded.srcId ||
+        readU16Be(&decoded.payload[2]) != GATEWAY_ID ||
+        (decoded.payload[11] & pgl::protocol::CH_HELLO_FLAG_ACK_REQUEST_V1) == 0) {
+        return;
+    }
+
+    uint8_t ackPayload[pgl::protocol::CH_HELLO_ACK_V1_PAYLOAD_SIZE]{};
+    ackPayload[0] = decoded.payload[0];
+    ackPayload[1] = decoded.payload[1];
+    ackPayload[2] = decoded.payload[6];
+    ackPayload[3] = decoded.payload[7];
+    uint8_t ack[pgl::protocol::APPFRAME_OVERHEAD +
+                pgl::protocol::CH_HELLO_ACK_V1_PAYLOAD_SIZE]{};
+    const auto encoded = pgl::protocol::encodeAppFrame(
+        pgl::protocol::MSG_CH_HELLO_ACK,
+        GATEWAY_ID,
+        decoded.srcId,
+        decoded.seq,
+        ackPayload,
+        sizeof(ackPayload),
+        ack,
+        sizeof(ack),
+        pgl::protocol::MESH_MAX_PAYLOAD);
+    if (encoded.status != pgl::protocol::FrameStatus::Ok) {
+        logPrintf("GW_HELLO_ACK_BUILD_FAIL ch=0x%04X seq=%u status=%u\n",
+                  decoded.srcId, decoded.seq, static_cast<unsigned>(encoded.status));
+        return;
+    }
+    const bool txOk = transmitMeshFrame(ack, encoded.size, "hello-ack");
+    logPrintf("GW_HELLO_ACK_TX ch=0x%04X seq=%u txOk=%u\n",
+              decoded.srcId, decoded.seq, txOk ? 1 : 0);
 }
 
 void sendGatewayConfigResponseIfNeeded(const uint8_t* frame, size_t frameLen,
@@ -854,7 +1046,10 @@ void sendGatewayConfigResponseIfNeeded(const uint8_t* frame, size_t frameLen,
     payload[4] = 0;       // Gateway depth to root.
     payload[5] = 0xFF;    // Battery unknown/not applicable.
     payload[6] = 0xFF;
-    payload[7] = 0x01;    // route-to-root capable
+    payload[7] = pgl::protocol::CH_CONFIG_FLAG_ROUTE_TO_ROOT |
+                 pgl::protocol::CH_CONFIG_CAP_HELLO_ACK_V1 |
+                 pgl::protocol::CH_CONFIG_CAP_ALARM_ACK_NODE_ID_V1 |
+                 pgl::protocol::CH_CONFIG_CAP_NODE_COMMAND_ROUTE_V1;
     payload[8] = static_cast<uint8_t>(clampToI8(requestRssiDbm));  // GW hears CH RSSI.
     payload[9] = static_cast<uint8_t>(clampToI8(requestSnrDb));    // GW hears CH SNR.
 
@@ -908,9 +1103,17 @@ void receiveMeshOnce() {
     if (state != RADIOLIB_ERR_NONE) {
         return;
     }
-    publishMeshFrame(frame, packetLen, rxRssiDbm, rxSnrDb);
+    sendHelloAckIfNeeded(frame, packetLen);
+    const bool duplicateHello = suppressDuplicateHello(frame, packetLen);
+    PublishDisposition uplinkDisposition = PublishDisposition::Rejected;
+    if (duplicateHello) {
+        logPrintf("GW_HELLO_DUPLICATE len=%u publishSkipped=1\n",
+                  static_cast<unsigned>(packetLen));
+    } else {
+        uplinkDisposition = publishMeshFrame(frame, packetLen, rxRssiDbm, rxSnrDb);
+    }
     sendGatewayConfigResponseIfNeeded(frame, packetLen, rxRssiDbm, rxSnrDb);
-    sendGatewayAckIfNeeded(frame, packetLen);
+    sendGatewayAckIfNeeded(frame, packetLen, uplinkDisposition);
 }
 
 void printBootHeader() {

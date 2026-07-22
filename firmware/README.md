@@ -32,9 +32,8 @@ Active envs in `firmware/platformio.ini`:
 | Env | Role |
 |---|---|
 | `gld` | GLD unified runtime for the GLDW / ESP32-S3-WROOM-1U-N16R8 board profile |
-| `ch1` | CH runtime default, `PGL_CH_ID=0x0064` |
-| `ch2` | CH runtime, `PGL_CH_ID=0x0065`, battery thresholds disabled for bench |
-| `ch3` | CH runtime, `PGL_CH_ID=0x0066` |
+| `ch` | Universal CH runtime using the latest CH3/CH5 board profile; CH ID is provisioned by the operator app and stored in NVS |
+| `chFieldtest` | CH field-test runtime with faster HELLO and read-only battery gating |
 | `gw` | Gateway MESH radio + WiFi/MQTT bridge |
 
 Main GLD upload example:
@@ -46,7 +45,7 @@ pio run -d firmware -e gld -t upload --upload-port COM10
 Main CH upload example:
 
 ```powershell
-pio run -d firmware -e ch1 -t upload --upload-port COM3
+pio run -d firmware -e ch -t upload --upload-port COM3
 ```
 
 Gateway upload example:
@@ -103,10 +102,10 @@ guards, Node-RED pull hopList contract, and selected source guardrails.
 
 ## GLD Security Provisioning
 
-The production `gld` runtime blocks LoRa uplink until `SET_APP_CONFIG_JSON`
-provisions `keyId` plus `aesKeyHex` into NVS. `GLD_ALLOW_SELFTEST_AES_FALLBACK`
-defaults to `0`; use `-DGLD_ALLOW_SELFTEST_AES_FALLBACK=1` only for explicit
-bench/self-test builds.
+The `gld` runtime uses the Node-RED-compatible self-test AES key by default so
+the firmware can transmit without a prior provisioning command. For production
+deployment, replace that shared default with per-device provisioning through
+`SET_APP_CONFIG_JSON`, which stores `keyId` plus `aesKeyHex` in NVS.
 
 ## Current Design Mirrors
 

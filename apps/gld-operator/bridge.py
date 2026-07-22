@@ -9,13 +9,20 @@ MQTT publish for dataset commands, and PlatformIO firmware upload orchestration.
 from __future__ import annotations
 
 import argparse
+import base64
+import binascii
+import hashlib
+import hmac
 import json
 import os
 import queue
 import re
+import secrets
+import shutil
 import socket
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 from http import HTTPStatus
@@ -73,6 +80,12 @@ SESSION_LOG_DIR = APP_DIR / "output" / "logs"
 # a WiFi-password lookup, and a wildcard lets any page open in the operator's
 # browser call all of that cross-origin.
 BRIDGE_ALLOWED_ORIGINS: set[str] = set()
+BRIDGE_CSRF_TOKEN = secrets.token_urlsafe(32)
+DEFAULT_JSON_BODY_LIMIT = 2 * 1024 * 1024
+FIRMWARE_JSON_BODY_LIMIT = 16 * 1024 * 1024
+SAFE_PACKAGE_FILE_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$")
+SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$")
 
 
 def _register_allowed_origins(host: str, port: int) -> None:
@@ -86,6 +99,12 @@ def _register_allowed_origins(host: str, port: int) -> None:
 
 
 VERSION = "0.4.0-lite-bridge"
+
+
+class RequestError(RuntimeError):
+    def __init__(self, message: str, status: HTTPStatus) -> None:
+        super().__init__(message)
+        self.status = status
 
 
 class EventHub:
@@ -375,12 +394,26 @@ def json_response(handler: SimpleHTTPRequestHandler, payload: Any, status: HTTPS
     handler.wfile.write(body)
 
 
-def read_json(handler: SimpleHTTPRequestHandler) -> dict[str, Any]:
-    length = int(handler.headers.get("Content-Length", "0") or "0")
+def read_json(handler: SimpleHTTPRequestHandler, limit: int = DEFAULT_JSON_BODY_LIMIT) -> dict[str, Any]:
+    content_type = handler.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
+    if content_type != "application/json":
+        raise RequestError("Content-Type must be application/json", HTTPStatus.UNSUPPORTED_MEDIA_TYPE)
+    try:
+        length = int(handler.headers.get("Content-Length", "0") or "0")
+    except ValueError as exc:
+        raise RequestError("invalid Content-Length", HTTPStatus.BAD_REQUEST) from exc
     if length <= 0:
-        return {}
+        raise RequestError("JSON request body is required", HTTPStatus.BAD_REQUEST)
+    if length > limit:
+        raise RequestError(f"request body exceeds {limit} bytes", HTTPStatus.REQUEST_ENTITY_TOO_LARGE)
     raw = handler.rfile.read(length)
-    return json.loads(raw.decode("utf-8"))
+    try:
+        parsed = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise RequestError("invalid JSON request body", HTTPStatus.BAD_REQUEST) from exc
+    if not isinstance(parsed, dict):
+        raise RequestError("JSON request body must be an object", HTTPStatus.BAD_REQUEST)
+    return parsed
 
 
 def run_text_command(args: list[str], timeout: int = 10) -> str:
@@ -664,34 +697,167 @@ def mqtt_reachability(payload: dict[str, Any]) -> dict[str, Any]:
         return {"ok": False, "host": host, "port": port, "message": str(exc)}
 
 
-def validate_firmware_manifest(manifest: Any, env: str, target_id: str) -> None:
-    if manifest in (None, ""):
-        return
+def _manifest_flash_set_sha256(flash_files: list[dict[str, Any]]) -> str:
+    digest = hashlib.sha256()
+    for item in flash_files:
+        digest.update(
+            f"{item['path']}\0{item['offset']}\0{item['size']}\0{item['sha256']}\n".encode("ascii")
+        )
+    return digest.hexdigest()
+
+
+def validate_firmware_package(
+    manifest: Any,
+    package_files: Any,
+    env: str,
+    target_id: str,
+) -> tuple[dict[str, Any], list[tuple[dict[str, Any], bytes]]]:
     if not isinstance(manifest, dict):
-        raise RuntimeError("manifest must be a JSON object")
-    manifest_env = str(manifest.get("env") or manifest.get("environment") or "").strip()
-    if manifest_env and manifest_env != env:
-        raise RuntimeError(f"manifest env {manifest_env} does not match selected env {env}")
-    package_device_id = str(manifest.get("deviceId") or "").strip().upper()
-    if package_device_id and package_device_id != "F000" and package_device_id != target_id:
-        raise RuntimeError(f"manifest deviceId {package_device_id} does not match target ID {target_id}")
-    chip = str(manifest.get("chipFamily") or manifest.get("chip") or "").strip()
-    if chip and not re.search(r"esp32s3", chip, re.IGNORECASE):
-        raise RuntimeError(f"manifest chip {chip} is not ESP32-S3")
-    flash_files = manifest.get("flashFiles")
-    if flash_files is not None and not isinstance(flash_files, list):
-        raise RuntimeError("manifest flashFiles must be a list")
+        raise RuntimeError("a schema-v2 manifest JSON object is required")
+    required_top = {
+        "schemaVersion", "packageType", "deviceId", "boardProfile", "environment",
+        "firmwareVersion", "protocolVersion", "configSchemaVersion", "chip", "baud",
+        "createdAtUtc", "source", "flashSetSha256", "flashFiles",
+    }
+    allowed_top = required_top
+    missing = sorted(required_top - set(manifest))
+    unknown = sorted(set(manifest) - allowed_top)
+    if missing:
+        raise RuntimeError(f"manifest missing required fields: {', '.join(missing)}")
+    if unknown:
+        raise RuntimeError(f"manifest has unsupported schema-v2 fields: {', '.join(unknown)}")
+    if manifest.get("schemaVersion") != 2:
+        raise RuntimeError("manifest schemaVersion must be 2")
+    if manifest.get("packageType") != "pertamina-gld-prebuilt-firmware":
+        raise RuntimeError("manifest packageType is invalid")
+
+    manifest_env = str(manifest["environment"]).strip()
+    if not SAFE_PACKAGE_FILE_RE.fullmatch(manifest_env) or manifest_env != env:
+        raise RuntimeError(f"manifest environment {manifest_env!r} does not match selected env {env!r}")
+    package_device_id = str(manifest["deviceId"]).strip().upper()
+    if not re.fullmatch(r"[0-9A-F]{4}", package_device_id) or package_device_id != target_id:
+        raise RuntimeError(f"manifest deviceId {package_device_id!r} does not match target ID {target_id!r}")
+    board_profile = str(manifest["boardProfile"]).strip()
+    if not board_profile or len(board_profile) > 128 or any(ord(char) < 32 for char in board_profile):
+        raise RuntimeError("manifest boardProfile is invalid")
+    chip = str(manifest["chip"]).strip().lower()
+    if chip != "esp32s3":
+        raise RuntimeError(f"manifest chip {chip!r} is not esp32s3")
+    for field in ("firmwareVersion", "protocolVersion", "configSchemaVersion"):
+        if not SEMVER_RE.fullmatch(str(manifest[field])):
+            raise RuntimeError(f"manifest {field} is not a semantic version")
+    try:
+        baud = int(manifest["baud"])
+    except (TypeError, ValueError) as exc:
+        raise RuntimeError("manifest baud must be an integer") from exc
+    if baud < 9600 or baud > 2_000_000:
+        raise RuntimeError("manifest baud is outside 9600..2000000")
+    if not re.fullmatch(r"\d{8}T\d{6}Z", str(manifest["createdAtUtc"])):
+        raise RuntimeError("manifest createdAtUtc must use YYYYMMDDTHHMMSSZ")
+
+    source = manifest["source"]
+    required_source = {
+        "gitCommit", "gitTreeState", "platformioCoreVersion", "platformioIniSha256",
+        "buildCommand", "buildStartedAtUtc", "buildCompletedAtUtc",
+    }
+    if not isinstance(source, dict) or set(source) != required_source:
+        raise RuntimeError("manifest source identity is incomplete or has unsupported fields")
+    if not re.fullmatch(r"[0-9a-f]{40}", str(source["gitCommit"])):
+        raise RuntimeError("manifest source.gitCommit must be a full lowercase Git SHA")
+    if source["gitTreeState"] != "clean":
+        raise RuntimeError("manifest source tree must be clean")
+    if not SEMVER_RE.fullmatch(str(source["platformioCoreVersion"])):
+        raise RuntimeError("manifest PlatformIO Core version is invalid")
+    if not SHA256_RE.fullmatch(str(source["platformioIniSha256"])):
+        raise RuntimeError("manifest platformio.ini SHA-256 is invalid")
+    expected_build = f"pio run -e {manifest_env} -t clean && pio run -e {manifest_env}"
+    if source["buildCommand"] != expected_build:
+        raise RuntimeError("manifest buildCommand does not describe the required clean build")
+    for field in ("buildStartedAtUtc", "buildCompletedAtUtc"):
+        if not re.fullmatch(r"\d{8}T\d{6}Z", str(source[field])):
+            raise RuntimeError(f"manifest source.{field} is invalid")
+    if str(source["buildCompletedAtUtc"]) < str(source["buildStartedAtUtc"]):
+        raise RuntimeError("manifest build completion precedes build start")
+
+    flash_files = manifest["flashFiles"]
+    if not isinstance(flash_files, list) or not 1 <= len(flash_files) <= 16:
+        raise RuntimeError("manifest flashFiles must contain 1..16 entries")
+    if not isinstance(package_files, dict):
+        raise RuntimeError("packageFiles must be an object containing the declared binaries")
+    declared_names: set[str] = set()
+    offsets: set[int] = set()
+    verified: list[tuple[dict[str, Any], bytes]] = []
+    total_size = 0
+    for raw_item in flash_files:
+        if not isinstance(raw_item, dict) or set(raw_item) != {"path", "offset", "size", "sha256"}:
+            raise RuntimeError("every flashFiles entry must contain only path, offset, size, and sha256")
+        name = str(raw_item["path"])
+        if not SAFE_PACKAGE_FILE_RE.fullmatch(name) or Path(name).name != name or name in {".", ".."}:
+            raise RuntimeError(f"unsafe firmware package path {name!r}")
+        if name in declared_names:
+            raise RuntimeError(f"duplicate firmware package path {name!r}")
+        declared_names.add(name)
+        offset_text = str(raw_item["offset"])
+        if not re.fullmatch(r"0x[0-9A-F]{8}", offset_text):
+            raise RuntimeError(f"flash offset {offset_text!r} must use canonical 0x00000000 form")
+        offset = int(offset_text, 16)
+        if offset in offsets or offset % 0x1000 != 0:
+            raise RuntimeError(f"flash offset {offset_text} is duplicate or not 4 KiB aligned")
+        offsets.add(offset)
+        size = raw_item["size"]
+        if not isinstance(size, int) or isinstance(size, bool) or size <= 0 or size > 8 * 1024 * 1024:
+            raise RuntimeError(f"invalid declared size for {name!r}")
+        expected_hash = str(raw_item["sha256"])
+        if not SHA256_RE.fullmatch(expected_hash):
+            raise RuntimeError(f"invalid SHA-256 for {name!r}")
+        encoded = package_files.get(name)
+        if not isinstance(encoded, str):
+            raise RuntimeError(f"package binary {name!r} is missing")
+        try:
+            content = base64.b64decode(encoded, validate=True)
+        except (binascii.Error, ValueError) as exc:
+            raise RuntimeError(f"package binary {name!r} is not valid base64") from exc
+        if len(content) != size:
+            raise RuntimeError(f"package binary {name!r} size does not match manifest")
+        if not hmac.compare_digest(hashlib.sha256(content).hexdigest(), expected_hash):
+            raise RuntimeError(f"package binary {name!r} SHA-256 does not match manifest")
+        total_size += size
+        verified.append((dict(raw_item), content))
+    if set(package_files) != declared_names:
+        extra = sorted(set(package_files) - declared_names)
+        missing_files = sorted(declared_names - set(package_files))
+        raise RuntimeError(f"packageFiles mismatch; missing={missing_files}, extra={extra}")
+    if total_size > 12 * 1024 * 1024:
+        raise RuntimeError("firmware package exceeds the 12 MiB decoded limit")
+    expected_set_hash = _manifest_flash_set_sha256(flash_files)
+    if not hmac.compare_digest(str(manifest["flashSetSha256"]), expected_set_hash):
+        raise RuntimeError("manifest flashSetSha256 is invalid")
+    return manifest, verified
+
+
+def find_platformio_executable() -> str:
+    discovered = shutil.which("pio") or shutil.which("pio.exe")
+    if discovered:
+        return discovered
+    candidate = Path.home() / ".platformio" / "penv" / "Scripts" / "pio.exe"
+    if candidate.is_file():
+        return str(candidate)
+    raise RuntimeError("PlatformIO executable is required to run the packaged esptool")
 
 
 def firmware_upload(payload: dict[str, Any], slot: int = 1) -> dict[str, Any]:
-    env = str(payload.get("env") or "gld").strip()
+    env = str(payload.get("env") or "").strip()
     port = str(payload.get("port") or "").strip()
     target_id = str(payload.get("targetDeviceId") or "").strip().upper()
     if not re.match(r"^[A-Za-z0-9_\\-]+$", env):
         raise RuntimeError("invalid PlatformIO env")
-    if not port:
-        raise RuntimeError("port is required")
-    validate_firmware_manifest(payload.get("manifest"), env, target_id)
+    if not re.fullmatch(r"COM\d+", port, re.IGNORECASE):
+        raise RuntimeError("port must be a Windows COM port such as COM10")
+    if not re.fullmatch(r"[0-9A-F]{4}", target_id) or target_id == "0000":
+        raise RuntimeError("targetDeviceId must be four non-zero hexadecimal digits")
+    manifest, verified_files = validate_firmware_package(
+        payload.get("manifest"), payload.get("packageFiles"), env, target_id
+    )
     holder = slot_holding_port(port)
     upload_bridge = get_serial_bridge(holder if holder is not None else slot)
     upload_bridge.disconnect()
@@ -705,24 +871,39 @@ def firmware_upload(payload: dict[str, Any], slot: int = 1) -> dict[str, Any]:
             )
 
     def worker() -> None:
-        cmd = ["pio", "run", "-e", env, "-t", "upload", "--upload-port", port]
-        events.emit("upload_start", {"cmd": " ".join(cmd), "cwd": str(FIRMWARE_DIR)})
         try:
-            proc = subprocess.Popen(
-                cmd,
-                cwd=str(FIRMWARE_DIR),
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                encoding="utf-8",
-                errors="replace",
-            )
-            assert proc.stdout is not None
-            for line in proc.stdout:
-                events.emit("upload_line", {"line": line.rstrip("\r\n")})
-            code = proc.wait()
+            with tempfile.TemporaryDirectory(prefix="gld-verified-flash-") as temp_name:
+                temp_dir = Path(temp_name)
+                esptool_args = [
+                    "esptool.py", "--chip", str(manifest["chip"]), "--port", port,
+                    "--baud", str(manifest["baud"]), "write_flash",
+                ]
+                for item, content in verified_files:
+                    target = temp_dir / item["path"]
+                    target.write_bytes(content)
+                    esptool_args.extend([item["offset"], str(target)])
+                esptool_command = subprocess.list2cmdline(esptool_args)
+                cmd = [find_platformio_executable(), "pkg", "exec", "-p", "tool-esptoolpy", "-c", esptool_command]
+                events.emit("upload_start", {
+                    "cmd": f"verified esptool package flash ({len(verified_files)} files)",
+                    "firmwareVersion": manifest["firmwareVersion"],
+                    "gitCommit": manifest["source"]["gitCommit"],
+                })
+                proc = subprocess.Popen(
+                    cmd,
+                    cwd=str(FIRMWARE_DIR),
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                )
+                assert proc.stdout is not None
+                for line in proc.stdout:
+                    events.emit("upload_line", {"line": line.rstrip("\r\n")})
+                code = proc.wait()
             events.emit("upload_done", {"code": code})
-            if code == 0 and re.match(r"^[0-9A-F]{4}$", target_id) and target_id != "0000":
+            if code == 0:
                 time.sleep(2.5)
                 upload_bridge.connect(port, 115200)
                 time.sleep(1.0)
@@ -731,7 +912,15 @@ def firmware_upload(payload: dict[str, Any], slot: int = 1) -> dict[str, Any]:
             events.emit("upload_error", {"message": str(exc)})
 
     threading.Thread(target=worker, name="gld-firmware-upload", daemon=True).start()
-    return {"started": True, "env": env, "port": port}
+    return {
+        "started": True,
+        "env": env,
+        "port": port,
+        "firmwareVersion": manifest["firmwareVersion"],
+        "protocolVersion": manifest["protocolVersion"],
+        "gitCommit": manifest["source"]["gitCommit"],
+        "verifiedFiles": len(verified_files),
+    }
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -753,24 +942,60 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_header("Vary", "Origin")
         if not urlparse(self.path).path.startswith("/api/"):
             self.send_header("Cache-Control", "no-store")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        if origin and origin in BRIDGE_ALLOWED_ORIGINS:
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type, X-GLD-Bridge-Token")
         self.send_header("Cross-Origin-Opener-Policy", "same-origin")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Referrer-Policy", "no-referrer")
         super().end_headers()
 
+    def _origin_allowed(self) -> bool:
+        origin = self.headers.get("Origin", "")
+        return not origin or origin in BRIDGE_ALLOWED_ORIGINS
+
+    def _token_allowed(self, path: str) -> bool:
+        supplied = self.headers.get("X-GLD-Bridge-Token", "")
+        if path == "/api/events" and not supplied:
+            supplied = (parse_qs(urlparse(self.path).query).get("token") or [""])[0]
+        return bool(supplied) and hmac.compare_digest(supplied, BRIDGE_CSRF_TOKEN)
+
+    def _require_api_access(self, path: str, allow_public_health: bool = False) -> None:
+        if not self._origin_allowed():
+            raise RequestError("request origin is not allowed", HTTPStatus.FORBIDDEN)
+        if not (allow_public_health and path == "/api/health") and not self._token_allowed(path):
+            raise RequestError("bridge token is missing or invalid", HTTPStatus.FORBIDDEN)
+
+    def _request_error(self, exc: Exception) -> None:
+        status = exc.status if isinstance(exc, RequestError) else HTTPStatus.INTERNAL_SERVER_ERROR
+        json_response(self, {"error": str(exc)}, status)
+
     def do_OPTIONS(self) -> None:  # noqa: N802
+        if not self._origin_allowed():
+            return json_response(self, {"error": "request origin is not allowed"}, HTTPStatus.FORBIDDEN)
+        requested_headers = {
+            item.strip().lower()
+            for item in self.headers.get("Access-Control-Request-Headers", "").split(",")
+            if item.strip()
+        }
+        if not requested_headers.issubset({"content-type", "x-gld-bridge-token"}):
+            return json_response(self, {"error": "requested CORS headers are not allowed"}, HTTPStatus.FORBIDDEN)
         self.send_response(HTTPStatus.NO_CONTENT)
         self.end_headers()
 
     def do_GET(self) -> None:  # noqa: N802
         path = urlparse(self.path).path
-        if path == "/api/health":
-            broker_running = bool(local_mqtt_broker and local_mqtt_broker.running)
-            return json_response(
-                self,
-                {
+        try:
+            if path.startswith("/api/"):
+                self._require_api_access(path, allow_public_health=True)
+            if path == "/api/health":
+                broker_running = bool(local_mqtt_broker and local_mqtt_broker.running)
+                return json_response(
+                    self,
+                    {
                     "ok": True,
                     "version": VERSION,
+                    "csrfToken": BRIDGE_CSRF_TOKEN,
                     "features": {
                         "serial": serial is not None,
                         "mqtt": mqtt is not None,
@@ -784,6 +1009,7 @@ class Handler(SimpleHTTPRequestHandler):
                         "running": broker_running,
                         "host": getattr(local_mqtt_broker, "host", ""),
                         "port": getattr(local_mqtt_broker, "port", 0),
+                        "authRequired": bool(getattr(local_mqtt_broker, "username", None)),
                     },
                     "errors": {
                         "serial": SERIAL_IMPORT_ERROR,
@@ -792,38 +1018,32 @@ class Handler(SimpleHTTPRequestHandler):
                     },
                     "maxSlots": MAX_SLOTS,
                     "slots": connected_slots_summary(),
-                },
-            )
-        if path == "/api/ports":
-            try:
+                    },
+                )
+            if path == "/api/ports":
                 return json_response(self, {"ports": get_serial_bridge(1).list_ports()})
-            except Exception as exc:
-                return json_response(self, {"error": str(exc)}, HTTPStatus.INTERNAL_SERVER_ERROR)
-        if path == "/api/network":
-            try:
+            if path == "/api/network":
                 return json_response(self, network_info())
-            except Exception as exc:
-                return json_response(self, {"error": str(exc)}, HTTPStatus.INTERNAL_SERVER_ERROR)
-        if path == "/api/dataset/output-dir":
-            try:
+            if path == "/api/dataset/output-dir":
                 return json_response(self, dataset_output_info())
-            except Exception as exc:
-                return json_response(self, {"error": str(exc)}, HTTPStatus.INTERNAL_SERVER_ERROR)
-        if path == "/api/serial/port-status":
-            query = parse_qs(urlparse(self.path).query)
-            port = (query.get("port") or [""])[0]
-            try:
+            if path == "/api/serial/port-status":
+                query = parse_qs(urlparse(self.path).query)
+                port = (query.get("port") or [""])[0]
                 return json_response(self, probe_port(port))
-            except Exception as exc:
-                return json_response(self, {"error": str(exc)}, HTTPStatus.INTERNAL_SERVER_ERROR)
-        if path == "/api/events":
-            return self._serve_events()
-        return super().do_GET()
+            if path == "/api/events":
+                return self._serve_events()
+            return super().do_GET()
+        except Exception as exc:
+            return self._request_error(exc)
 
     def do_POST(self) -> None:  # noqa: N802
         try:
             path = urlparse(self.path).path
-            payload = read_json(self)
+            if not path.startswith("/api/"):
+                raise RequestError("not found", HTTPStatus.NOT_FOUND)
+            self._require_api_access(path)
+            limit = FIRMWARE_JSON_BODY_LIMIT if path == "/api/firmware/upload" else DEFAULT_JSON_BODY_LIMIT
+            payload = read_json(self, limit)
             slot = parse_slot(payload.get("slot"))
             if path == "/api/serial/connect":
                 port = str(payload.get("port") or "")
@@ -857,7 +1077,7 @@ class Handler(SimpleHTTPRequestHandler):
                 return json_response(self, {"error": "not found"}, HTTPStatus.NOT_FOUND)
             return json_response(self, result)
         except Exception as exc:
-            return json_response(self, {"error": str(exc)}, HTTPStatus.INTERNAL_SERVER_ERROR)
+            return self._request_error(exc)
 
     def _serve_events(self) -> None:
         client = events.add()
@@ -891,8 +1111,10 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", default=5173, type=int)
-    parser.add_argument("--mqtt-broker-host", default="0.0.0.0")
+    parser.add_argument("--mqtt-broker-host", default="127.0.0.1")
     parser.add_argument("--mqtt-broker-port", default=0, type=int)
+    parser.add_argument("--mqtt-broker-user", default=os.environ.get("GLD_BENCH_MQTT_USER", ""))
+    parser.add_argument("--mqtt-broker-password", default=os.environ.get("GLD_BENCH_MQTT_PASSWORD", ""))
     parser.add_argument("--no-open", action="store_true")
     args = parser.parse_args()
 
@@ -903,7 +1125,12 @@ def main() -> int:
             print(local_mqtt_broker_error)
         else:
             try:
-                local_mqtt_broker = LocalMqttBroker(args.mqtt_broker_host, args.mqtt_broker_port)
+                local_mqtt_broker = LocalMqttBroker(
+                    args.mqtt_broker_host,
+                    args.mqtt_broker_port,
+                    username=args.mqtt_broker_user or None,
+                    password=args.mqtt_broker_password or None,
+                )
                 local_mqtt_broker.start()
             except Exception as exc:
                 local_mqtt_broker = None

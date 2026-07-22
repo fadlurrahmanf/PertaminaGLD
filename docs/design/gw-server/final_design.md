@@ -18,9 +18,9 @@ Firmware Gateway site config:
 
 | Field | Value |
 |---|---|
-| MQTT host | `10.158.198.180` |
+| MQTT host | deployment-provisioned (`CHANGE_ME_MQTT_HOST`) |
 | MQTT port | `1884` |
-| MQTT user/pass | `deviot` / `deviot` |
+| MQTT user/pass | deployment secrets (`CHANGE_ME_MQTT_USER` / `CHANGE_ME_MQTT_PASSWORD`) |
 | topic root | `gld/gateway` |
 
 Node-RED generator defaults:
@@ -121,18 +121,37 @@ Node-RED/Gateway command topic accepts:
 {"cluster":"0x0064","node":"0xF001","id":1,"ttl":600,"mode":"dataset"}
 ```
 
-Gateway encodes and CH parses the same wire payload:
+For a descendant CH, the signed command published to
+`gld/gateway/cmd/node` also carries the installed route, for example:
+
+```json
+{"cluster":"0x0065","hopList":["0x0064","0x0065"],"node":"0xF001","id":1,"ttl":600,"hex":"81010001AABBCCDD"}
+```
+
+Without `hopList`, Gateway encodes the backward-compatible direct payload:
 
 ```text
 nodeId:uint16BE + commandId:uint16BE + ttlSec:uint16BE + commandLen:uint8 + commandBytes
 ```
 
+With `hopList` (aliases `hop_list` and `hops`), Gateway uses routed node
+command v1: `C1 + version 01 + hopCount + reserved + FF guard + hopList[] +`
+the complete legacy command body. AppFrame destination is the first hop and
+the last hop must equal `cluster`. Each listed CH must advertise capability
+flag `0x08`. Direct commands remain usable during a rolling upgrade; routed
+commands must wait until every hop is upgraded.
+
 `ttlSec` controls the CH pending-downlink expiry; `0` falls back to the CH default pending TTL.
+Command bytes are limited to the shared maximum of 8 bytes; current
+authenticated GLD mode commands; Gateway rejects larger input.
 The Node-RED `build authenticated node command` function subscribes to
 `gld/server/cmd/node`, converts `mode` into
 `commandBytes = 0x81 + mode + commandId + cmacTag4` using
 `GLD_AES128_KEY_HEX`, then publishes the signed command to
-`gld/gateway/cmd/node`.
+`gld/gateway/cmd/node`. When a source command includes `hopList`, the signer
+must preserve that array and require its final hop to equal `cluster`; the
+CMAC still uses the final `cluster` because that CH becomes the STAR
+`MSG_NODE_DOWNLINK` source.
 
 ## Topology Boundary
 

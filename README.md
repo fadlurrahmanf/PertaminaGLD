@@ -43,16 +43,26 @@ Config aktif/terkait ada di:
 
 ## Build Final
 
-Main firmware env final:
+Production/runtime firmware environments:
 
 ```text
 gld
-gldw
-ch1
-ch2
-ch3
+ch
 gw
 ```
+
+Field and power-cycle environments are intentionally separate from production:
+
+```text
+tfbg
+gld_tpl5010_powercycle_test
+chFieldtest
+gw_hello_ack_fieldtest
+```
+
+The `*_fieldtest` and power-cycle images are non-production builds. They may
+change timing or bypass battery shutdown behavior for controlled bench work and
+must not be deployed as normal site firmware.
 
 Build contoh:
 

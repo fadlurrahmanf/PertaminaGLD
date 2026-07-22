@@ -46,7 +46,7 @@ Constants:
 | `0x10` | `MSG_SENSOR_DATA` | GLD record push, alarm push, recovery clear, compact ACK reuse |
 | `0x30` | `MSG_SERVER_PULL_REQUEST` | Gateway/server pull request toward CH path |
 | `0x31` | `MSG_CLUSTER_DATA_RESPONSE` | CH pull response toward Gateway |
-| `0x32` | `MSG_SERVER_NODE_COMMAND` | Gateway command to CH pending downlink store |
+| `0x32` | `MSG_SERVER_NODE_COMMAND` | Gateway command; direct legacy delivery or routed v1 relay to the final CH pending-downlink store |
 | `0x33` | `MSG_CH_HELLO` | CH topology/liveness |
 | `0x34` | `MSG_CH_CONFIG_REQUEST` | CH parent discovery broadcast |
 | `0x35` | `MSG_CH_CONFIG_RESPONSE` | Gateway/CH parent candidate response |
@@ -97,7 +97,7 @@ When Gateway receives a valid broadcast `MSG_CH_CONFIG_REQUEST` not from itself:
 | payload 2..3 | parent `0x0000` |
 | payload 4 | depth `0` |
 | payload 5..6 | battery `0xFFFF` |
-| payload 7 | route-to-root flag `0x01` |
+| payload 7 | capability bitfield `0x0F`: route-to-root `0x01`, HELLO ACK v1 `0x02`, alarm ACK node ID v1 `0x04`, node-command route v1 `0x08` |
 | payload 8 | Gateway RX RSSI clamped to int8 |
 | payload 9 | Gateway RX SNR clamped to int8 |
 
@@ -141,16 +141,38 @@ Gateway accepts JSON fields:
 
 | JSON field | Meaning |
 |---|---|
-| `cluster` | target CH |
+| `cluster` | direct target CH; if a route is present, optional final-hop cross-check |
+| `hopList`, `hop_list`, or `hops` | optional ordered CH path from Gateway neighbor to target CH |
 | `node` | target GLD |
 | `id` | command ID, default 1 |
 | `ttl` | TTL seconds, default 600 |
 | `hex` | command bytes as hex |
 
-Current Gateway wire payload is:
+The direct legacy wire payload remains:
 
 ```text
 nodeId(2) + commandId(2) + ttlSec(2) + commandLen(1) + commandBytes
 ```
 
-Current CH parser expects the same payload shape. `ttlSec` becomes the pending downlink expiry; `0` falls back to the CH default pending TTL.
+An explicit hop list selects routed v1:
+
+```text
+magic=C1 + version=01 + hopCount + reserved(3) + legacyGuard=FF
++ hopList(2 bytes per CH)
++ complete legacy command body
+```
+
+Gateway sends to the first hop. Each CH verifies the previous-hop `srcId`,
+relays the unchanged payload and seq to the next hop, and only the last hop
+stores the command. Route entries must be unique, non-zero, and non-broadcast.
+The final hop must match `cluster` when both are supplied.
+
+Both sides enforce `commandLen <= 8`, matching the only currently authenticated
+GLD command. `ttlSec` becomes the pending downlink expiry; `0` falls back to
+the CH default pending TTL. With an 8-byte command the MESH payload fits up to
+29 CH hops.
+
+Direct legacy commands remain compatible with old CH firmware. Routed v1
+requires all hops to advertise `CH_CONFIG_CAP_NODE_COMMAND_ROUTE_V1 (0x08)`.
+The byte-6 `0xFF` guard makes an old CH reject routed v1 safely. This protocol
+does not add per-hop or end-to-end command ACKs.

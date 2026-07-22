@@ -18,9 +18,9 @@ Firmware Gateway site config:
 
 | Field | Value |
 |---|---|
-| MQTT host | `10.158.198.180` |
+| MQTT host | deployment-provisioned (`CHANGE_ME_MQTT_HOST`) |
 | MQTT port | `1884` |
-| MQTT user/pass | `deviot` / `deviot` |
+| MQTT user/pass | deployment secrets (`CHANGE_ME_MQTT_USER` / `CHANGE_ME_MQTT_PASSWORD`) |
 | topic root | `gld/gateway` |
 
 Node-RED generator defaults:

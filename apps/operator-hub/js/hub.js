@@ -10,12 +10,36 @@ const APPS = {
   gw: { label: "Gateway", port: 5373 }
 };
 
-const STORAGE_KEY = "operator-hub.activeApp";
 const frame = document.getElementById("appFrame");
 const banner = document.getElementById("stageBanner");
+const readiness = document.getElementById("readiness");
+const landing = document.getElementById("landing");
+const homeButton = document.getElementById("homeBtn");
 const tabButtons = Array.from(document.querySelectorAll(".tab"));
+const launchButtons = Array.from(document.querySelectorAll("[data-launch-app]"));
 let activeApp = null;
 let lastStatus = {};
+
+function updateReadiness(report) {
+  if (!readiness) return;
+  const checks = Array.isArray(report.checks) ? report.checks : [];
+  const problems = checks.filter((check) => check.state !== "ok");
+  readiness.classList.toggle("ready", report.readyForFlash === true);
+  readiness.classList.toggle("attention", report.readyForFlash !== true);
+  readiness.textContent = report.readyForFlash === true
+    ? "Upload setup: ready"
+    : `Upload setup: ${problems.length} warning${problems.length === 1 ? "" : "s"}`;
+  readiness.title = checks.map((check) => `[${check.state.toUpperCase()}] ${check.label}: ${check.detail}`).join("\n");
+}
+
+async function loadPreflight() {
+  try {
+    const res = await fetch("/api/preflight", { cache: "no-store" });
+    updateReadiness(await res.json());
+  } catch {
+    if (readiness) readiness.textContent = "Upload setup: unavailable";
+  }
+}
 
 function urlFor(app) {
   return `${location.protocol}//${location.hostname}:${APPS[app].port}/`;
@@ -25,7 +49,8 @@ function selectTab(app, { force = false } = {}) {
   if (!APPS[app]) return;
   if (activeApp === app && !force) return;
   activeApp = app;
-  localStorage.setItem(STORAGE_KEY, app);
+  landing.hidden = true;
+  frame.hidden = false;
   for (const btn of tabButtons) {
     btn.classList.toggle("active", btn.dataset.app === app);
   }
@@ -37,7 +62,21 @@ function selectTab(app, { force = false } = {}) {
   updateBanner();
 }
 
+function showHome() {
+  activeApp = null;
+  landing.hidden = false;
+  frame.hidden = true;
+  frame.removeAttribute("src");
+  delete frame.dataset.loadedUrl;
+  banner.hidden = true;
+  for (const btn of tabButtons) btn.classList.remove("active");
+}
+
 function updateBanner() {
+  if (!activeApp) {
+    banner.hidden = true;
+    return;
+  }
   const status = lastStatus[activeApp];
   if (status === false) {
     banner.hidden = false;
@@ -69,9 +108,13 @@ function init() {
   for (const btn of tabButtons) {
     btn.addEventListener("click", () => selectTab(btn.dataset.app));
   }
-  const remembered = localStorage.getItem(STORAGE_KEY);
-  selectTab(remembered && APPS[remembered] ? remembered : "gld", { force: true });
+  for (const btn of launchButtons) {
+    btn.addEventListener("click", () => selectTab(btn.dataset.launchApp));
+  }
+  homeButton.addEventListener("click", showHome);
+  showHome();
   pollStatus();
+  loadPreflight();
   setInterval(pollStatus, 4000);
 }
 

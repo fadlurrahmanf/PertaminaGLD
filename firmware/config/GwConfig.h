@@ -14,7 +14,7 @@ namespace pgl::config::gw {
 
 // ID Gateway lokal sebagai root MESH dan identity saat publish MQTT.
 // Harus cocok dengan ROOT_GATEWAY_ID pada CH yang menuju Gateway ini.
-constexpr uint16_t GATEWAY_ID = 0x006F;
+constexpr uint16_t GATEWAY_ID = 0x0001;
 
 // Jeda retry koneksi WiFi Gateway dalam ms. Dipakai saat koneksi site putus agar
 // firmware tidak reconnect terlalu agresif.

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Gateway Operator — Pertamina GLD</title>
-  <link rel="stylesheet" href="./style.css?v=2" />
+  <link rel="stylesheet" href="./style.css?v=20260723-upload-progress-1" />
 </head>
 <body>
   <div class="shell">
@@ -24,6 +24,7 @@
       </div>
       <div class="strip-actions">
         <button id="brokerSetupBtn">Gateway Setup</button>
+        <button id="firmwareUploadBtn">Firmware Upload</button>
         <button id="themeToggleBtn">Dark Mode</button>
       </div>
     </header>
@@ -31,6 +32,24 @@
     <div class="banner" id="banner">
       <span id="bannerText"></span>
       <button id="bannerDismiss">Dismiss</button>
+    </div>
+
+    <div id="firmwareUploadDialog" class="upload-dialog" aria-hidden="true">
+      <div class="upload-dialog-backdrop" data-upload-dialog-close></div>
+      <section class="upload-dialog-box" role="dialog" aria-modal="true" aria-labelledby="firmwareUploadDialogTitle">
+        <h2 id="firmwareUploadDialogTitle">Upload Firmware</h2>
+        <p id="firmwareUploadPackage" class="hint">No firmware package loaded.</p>
+        <label class="upload-dialog-field">Target COM
+          <select id="firmwareUploadPort" aria-label="Target COM for firmware upload"></select>
+        </label>
+        <label class="upload-dialog-field"><input id="firmwareResetNvs" type="checkbox"> Reset NVS?</label>
+        <p class="hint">Unchecked: retain Wi-Fi, MQTT, mesh, and other NVS parameters. Checked: erase NVS, then boot with all defaults embedded in this firmware.</p>
+        <p id="firmwareUploadStatus" class="hint" aria-live="polite">Choose the COM port to flash.</p>
+        <div class="btn-row">
+          <button id="firmwareUploadCancelBtn" type="button">Cancel</button>
+          <button id="firmwareUploadConfirmBtn" type="button" class="primary">Upload</button>
+        </div>
+      </section>
     </div>
 
     <nav class="tabs" id="tabs">
@@ -211,12 +230,12 @@
             <h3>Pull request</h3>
             <p class="hint">Publishes to {topicRoot}/cmd/pull. Builds MSG_SERVER_PULL_REQUEST and sends it to hopList[0], or routes by cluster.</p>
             <div class="field">
-              <label for="pullHopList">Hop list (space/comma-separated hex, e.g. 0064 0032)</label>
-              <input id="pullHopList" type="text" placeholder="0064" />
+              <label for="pullHopList">Hop list (space/comma-separated CH IDs, e.g. 0010 0011)</label>
+              <input id="pullHopList" type="text" placeholder="0010" />
             </div>
             <div class="field">
               <label for="pullCluster">or Cluster (4 hex)</label>
-              <input id="pullCluster" type="text" maxlength="4" placeholder="0064" />
+              <input id="pullCluster" type="text" maxlength="4" placeholder="0010" />
             </div>
             <div class="field">
               <label for="pullRequestId">Request ID (optional)</label>
@@ -229,7 +248,7 @@
             <p class="hint">Publishes to {topicRoot}/cmd/node. Builds MSG_SERVER_NODE_COMMAND (routed if capability allows) targeting a GLD node behind a CH.</p>
             <div class="field">
               <label for="nodeCluster">Cluster (CH ID, 4 hex)</label>
-              <input id="nodeCluster" type="text" maxlength="4" placeholder="0064" />
+              <input id="nodeCluster" type="text" maxlength="4" placeholder="0010" />
             </div>
             <div class="field">
               <label for="nodeId">Node ID (4 hex)</label>
@@ -241,7 +260,7 @@
             </div>
             <div class="field">
               <label for="nodeHopList">Hop list override (optional)</label>
-              <input id="nodeHopList" type="text" placeholder="0064" />
+              <input id="nodeHopList" type="text" placeholder="0010" />
             </div>
             <div class="btn-row"><button id="sendNodeBtn" class="primary">Send node command</button></div>
           </div>
@@ -288,17 +307,17 @@
           </div>
         </div>
         <div class="card">
-          <p class="hint" id="expertLockNote">Flash a prebuilt Gateway package (PlatformIO env <code>gw</code>, chip esp32s3) over this COM port. Locked until you enter the PIN. There is no post-flash provisioning step — GATEWAY_ID is compile-time.</p>
+          <p class="hint" id="expertLockNote">Flash a verified prebuilt Gateway package (profile <code>gw</code>, chip esp32s3) over this COM port. Locked until you enter the PIN. There is no post-flash provisioning step — GATEWAY_ID is compile-time.</p>
           <div class="field">
-            <label for="fwEnvSelect">PlatformIO environment</label>
+            <label for="fwEnvSelect">Firmware profile</label>
             <select id="fwEnvSelect" disabled>
               <option value="gw">gw</option>
               <option value="gw_hello_ack_fieldtest">gw_hello_ack_fieldtest</option>
             </select>
           </div>
           <div class="field">
-            <label for="fwTargetId">Target gateway ID (4 hex, informational)</label>
-            <input id="fwTargetId" type="text" maxlength="4" placeholder="006F" disabled />
+            <label for="fwTargetId">Target gateway ID (0001-000F, informational)</label>
+            <input id="fwTargetId" type="text" maxlength="4" placeholder="0001" disabled />
           </div>
           <div class="btn-row">
             <button id="fwPickBtn" disabled>Choose package folder…</button>
@@ -419,6 +438,6 @@
     </div>
   </aside>
 
-  <script type="module" src="./js/gw-main.js?v=6"></script>
+  <script type="module" src="./js/gw-main.js?v=20260723-gateway-package-1"></script>
 </body>
 </html>

@@ -30,6 +30,7 @@
 #include "GldPower.h"
 #include "GldThresholdClassifier.h"
 #include "GldConfig.h"
+#include "FirmwareConfig.h"
 #if GLD_ALLOW_SELFTEST_AES_FALLBACK
 #if !defined(PGL_GLD_FIELDTEST_SELFTEST_BUILD)
 #error "Public AES self-test fallback is allowed only in an explicit nonproduction field-test build"
@@ -133,9 +134,10 @@ constexpr bool TFBG_CONTINUOUS_BATTERY = false;
 #endif
 
 #if defined(PGL_GLD_FIELDTEST_4CLASS)
-// This field test exists only to exercise the legacy 4-class model pipeline. It
-// must not alter alarm persistence or drive alarm outputs.  Authenticated
-// non-alarm telemetry is permitted; alarm radio frames remain blocked.
+// This is a non-production transport/coverage test.  It deliberately bypasses
+// the ML model and emits a fixed safe telemetry result, while still requiring
+// healthy ADS and LoRa hardware.  Alarm persistence, outputs, and alarm radio
+// frames stay disabled.
 constexpr bool FIELDTEST_MODEL_UNVERIFIED = true;
 #else
 constexpr bool FIELDTEST_MODEL_UNVERIFIED = false;
@@ -820,19 +822,14 @@ bool validDeviceId(const char* deviceId) {
         const bool ok = (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F') || (c >= 'a' && c <= 'f');
         if (!ok) return false;
     }
-    return nodeIdFromDeviceId(deviceId, 0) != 0;
+    return pgl::config::isProvisionableGldId(nodeIdFromDeviceId(deviceId, 0));
 }
 
-// Root Gateway node ID. Must match PGL_CH_ROOT_GATEWAY_ID in firmware/config/ChConfig.h.
-// A GLD may never target the Gateway directly as its Cluster Head.
-constexpr uint16_t GLD_RESERVED_GATEWAY_ID = 0x006F;
-
-// Rejects CH addresses that cannot possibly be a valid Cluster Head: the
-// broadcast/unset values 0x0000 and 0xFFFF, the reserved Gateway ID, and the
-// GLD's own node ID (a GLD cannot be its own Cluster Head).
+// New CH provisioning uses the dedicated 0010-0FFF range.  Existing NVS
+// values are deliberately not rewritten on boot; this guard applies only to
+// an explicit SET_CH_ADDRESS_JSON command.
 bool validChId(uint16_t chId) {
-    if (chId == 0x0000 || chId == 0xFFFF) return false;
-    if (chId == GLD_RESERVED_GATEWAY_ID) return false;
+    if (!pgl::config::isProvisionableChId(chId)) return false;
     if (chId == runtimeConfig.nodeId) return false;
     return true;
 }
@@ -1726,7 +1723,7 @@ void onSetDeviceIdJson(const char* payload) {
     if (deviceId == nullptr) deviceId = "";
     const bool reboot = doc["reboot"] | true;
     if (!validDeviceId(deviceId)) {
-        emitCommandAck("SET_DEVICE_ID", "rejected", "deviceId must be 4 hex chars, for example F001", false);
+        emitCommandAck("SET_DEVICE_ID", "rejected", "deviceId must be a GLD ID in 1001-FEFF", false);
         return;
     }
     const uint16_t derivedNodeId = nodeIdFromDeviceId(deviceId, DEFAULT_NODE_ID);
@@ -1772,7 +1769,7 @@ void onSetChAddressJson(const char* payload) {
     const uint16_t parsedChId = nodeIdFromDeviceId(chIdStr, 0);
     if (parsedChId == 0 || !validChId(parsedChId)) {
         emitCommandAck("SET_CH_ADDRESS", "rejected",
-            "chId must be 4 hex chars, not 0000/FFFF, and not the Gateway or GLD's own ID", false);
+            "chId must be a CH ID in 0010-0FFF and not the GLD's own ID", false);
         return;
     }
     runtimeConfig.chId = parsedChId;
@@ -2308,6 +2305,9 @@ void maintainServiceHoldButton() {
 }
 
 bool batteryRuntimeReady() {
+    if (FIELDTEST_MODEL_UNVERIFIED) {
+        return adsReady && radioReady;
+    }
     return adsReady && radioReady && mlReady && nullingProfileApplied && modelProfileReady;
 }
 
@@ -2338,6 +2338,7 @@ void startBatteryInferenceSession() {
 const char* batteryRuntimeBlockReason() {
     if (!adsReady) return "ads_not_ready";
     if (!radioReady) return "radio_not_ready";
+    if (FIELDTEST_MODEL_UNVERIFIED) return "none";
     if (!mlReady) return "ml_not_ready";
     if (!nullingProfileApplied) return "nulling_profile_not_applied";
     if (!modelProfileReady) return "model_profile_unapproved_or_mismatch";
@@ -2371,6 +2372,13 @@ void enterBatteryPersistenceFaultHold(const char* reason) {
 
 void completeBatterySessionAndPowerOff(const char* reason) {
     if (batteryCyclePoweredOff || batterySessionState == BatterySessionState::PowerOffIssued) return;
+
+    if (FIELDTEST_MODEL_UNVERIFIED) {
+        logPrintf("GLD_FIELDTEST_POWER_OFF_SUPPRESSED reason=%s action=continuous_keepalive\n",
+                  reason != nullptr ? reason : "session_done");
+        pulseWdtKeepaliveNow();
+        return;
+    }
 
     snprintf(batteryCompletionReason, sizeof(batteryCompletionReason), "%s",
              reason != nullptr ? reason : "session_done");
@@ -3857,11 +3865,11 @@ uint8_t modelClassToGasClass(int predicted) {
 }
 
 bool modelProfileMatchesActiveNulling() {
-    if (!mlReady || !nullingProfileApplied || nullingProfileId == 0) {
-        return false;
-    }
     if (FIELDTEST_MODEL_UNVERIFIED) {
         return true;
+    }
+    if (!mlReady || !nullingProfileApplied || nullingProfileId == 0) {
+        return false;
     }
     if (TFBG_CONTINUOUS_BATTERY) {
         // tfbg is an explicitly non-production field exercise environment.
@@ -3931,20 +3939,29 @@ bool runScan(bool requireCompleteBatch = false) {
 
     const bool primed = primedChannels >= pgl::gld::board::SENSOR_COUNT;
     modelProfileReady = modelProfileMatchesActiveNulling();
-    lastInferenceValid = allValid && primed && mlReady && nullingProfileApplied &&
-                         modelProfileReady &&
-                         runInference(mavVoltage);
-    sensorFaultActive = !lastInferenceValid;
+    if (FIELDTEST_MODEL_UNVERIFIED) {
+        // Payload is intentionally dummy/safe: it proves the authenticated
+        // GLD -> CH telemetry path, not gas classification correctness. LoRa
+        // cadence is the primary field-test objective, so ADS warm-up/read
+        // failures remain visible in diagnostics but never block dummy TX.
+        lastResult = {pgl::protocol::GLD_GAS_CLEAR, 0};
+        lastInferenceValid = true;
+        logPrintf("GLD_FIELDTEST_DUMMY_RESULT allValid=%u primed=%u gasClass=%u confidence=%u\n",
+                  allValid ? 1u : 0u, primed ? 1u : 0u,
+                  lastResult.gasClass, lastResult.confidence);
+    } else {
+        lastInferenceValid = allValid && primed && mlReady && nullingProfileApplied &&
+                             modelProfileReady &&
+                             runInference(mavVoltage);
+    }
+    sensorFaultActive = FIELDTEST_MODEL_UNVERIFIED ? !(allValid && primed)
+                                                   : !lastInferenceValid;
     // The model output is classification confidence, not a calibrated %LEL
     // value. A valid non-clear classification therefore uses a conservative
     // fail-safe alarm policy instead of comparing softmax confidence to 30%.
     const bool classifierAlarm = lastInferenceValid &&
                                  lastResult.gasClass != pgl::protocol::GLD_GAS_CLEAR;
     const bool alarm = FIELDTEST_MODEL_UNVERIFIED ? false : classifierAlarm;
-    if (FIELDTEST_MODEL_UNVERIFIED && classifierAlarm) {
-        logPrintf("GLD_FIELDTEST_CLASS_UNVERIFIED gasClass=%u confidence=%u alarmSuppressed=1\n",
-                  lastResult.gasClass, lastResult.confidence);
-    }
     logPrintf("GLD_SENSOR_SCAN seq=%lu allValid=%u primed=%u inferenceValid=%u sensorFault=%u gasClass=%u(%s) confidence=%u alarm=%u\n",
               static_cast<unsigned long>(txCounter),
               allValid ? 1 : 0, primed ? 1 : 0,
@@ -4738,18 +4755,20 @@ void setup() {
                  bootI2c.mcpOkCount,
                  pgl::gld::board::SENSOR_COUNT,
                  passFail(radioReady),
-                 passFail(mlReady),
-                 passFail(nullingProfileApplied),
+                 FIELDTEST_MODEL_UNVERIFIED ? "IGNORED" : passFail(mlReady),
+                 FIELDTEST_MODEL_UNVERIFIED ? "IGNORED" : passFail(nullingProfileApplied),
                  passFail(modelProfileReady),
                  nullingProfileId);
         printBootIcReport(power, bootAds, bootI2c, bootMcpControl,
                           true, radioReady,
-                          true, mlReady, mlOutputSize,
-                          adsReady && radioReady && mlReady && nullingProfileApplied && modelProfileReady,
+                          !FIELDTEST_MODEL_UNVERIFIED, FIELDTEST_MODEL_UNVERIFIED || mlReady, mlOutputSize,
+                          FIELDTEST_MODEL_UNVERIFIED ? (adsReady && radioReady)
+                                                   : (adsReady && radioReady && mlReady && nullingProfileApplied && modelProfileReady),
                           modeDetail);
         armBootReportRecoveryIfNeeded(bootAds, bootI2c, bootMcpControl,
                                       true, radioReady,
-                                      true, mlReady);
+                                      !FIELDTEST_MODEL_UNVERIFIED,
+                                      FIELDTEST_MODEL_UNVERIFIED || mlReady);
 
         lastScanMs = millis();
         lastTxMs   = millis();

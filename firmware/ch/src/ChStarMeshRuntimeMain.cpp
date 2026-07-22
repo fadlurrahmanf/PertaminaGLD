@@ -410,8 +410,12 @@ void setState(ChState newState, const char* reason) {
 
 // ─── NVS (parent persistence) ───────────────────────────────────────────────
 
-bool isValidChIdentity(uint16_t id) {
+bool isAcceptedStoredChIdentity(uint16_t id) {
     return pgl::config::isValidNodeId(id) && id != ROOT_GATEWAY_ID;
+}
+
+bool isProvisionableChIdentity(uint16_t id) {
+    return pgl::config::isProvisionableChId(id);
 }
 
 void loadChIdentity() {
@@ -420,7 +424,7 @@ void loadChIdentity() {
     const uint16_t storedId = prefs.getUShort("chId", CH_ID);
     prefs.end();
 
-    if (isValidChIdentity(storedId)) {
+    if (isAcceptedStoredChIdentity(storedId)) {
         CH_ID = storedId;
         logPrintf("CH_NVS_ID_LOAD chId=0x%04X\n", CH_ID);
     } else {
@@ -431,7 +435,7 @@ void loadChIdentity() {
 }
 
 bool saveChIdentity(uint16_t newId) {
-    if (!isValidChIdentity(newId)) return false;
+    if (!isProvisionableChIdentity(newId)) return false;
 
     Preferences prefs;
     if (!prefs.begin("ch-cfg", false)) return false;
@@ -452,8 +456,12 @@ bool saveChIdentity(uint16_t newId) {
     return true;
 }
 
-bool isValidGatewayId(uint16_t id) {
+bool isAcceptedStoredGatewayId(uint16_t id) {
     return pgl::config::isValidNodeId(id) && id != CH_ID;
+}
+
+bool isProvisionableGatewayId(uint16_t id) {
+    return pgl::config::isProvisionableGatewayId(id);
 }
 
 void loadRootGateway() {
@@ -462,7 +470,7 @@ void loadRootGateway() {
     const uint16_t stored = prefs.getUShort("rootGw", ROOT_GATEWAY_ID);
     prefs.end();
 
-    if (isValidGatewayId(stored)) {
+    if (isAcceptedStoredGatewayId(stored)) {
         ROOT_GATEWAY_ID = stored;
         logPrintf("CH_NVS_ROOTGW_LOAD rootGw=0x%04X\n", ROOT_GATEWAY_ID);
     } else {
@@ -472,7 +480,7 @@ void loadRootGateway() {
 }
 
 bool saveRootGateway(uint16_t newId) {
-    if (!isValidGatewayId(newId)) return false;
+    if (!isProvisionableGatewayId(newId)) return false;
 
     Preferences prefs;
     if (!prefs.begin("ch-cfg", false)) return false;
@@ -2425,7 +2433,7 @@ bool parseChIdentityJson(const char* json, uint16_t& outId) {
         if (nibble < 0) return false;
         parsed = static_cast<uint16_t>((parsed << 4) | static_cast<uint8_t>(nibble));
     }
-    if (value[4] != '"' || !isValidChIdentity(parsed)) return false;
+    if (value[4] != '"' || !isProvisionableChIdentity(parsed)) return false;
     outId = parsed;
     return true;
 }
@@ -2446,7 +2454,7 @@ bool parseGatewayIdJson(const char* json, uint16_t& outId) {
         if (nibble < 0) return false;
         parsed = static_cast<uint16_t>((parsed << 4) | static_cast<uint8_t>(nibble));
     }
-    if (value[4] != '"' || !isValidGatewayId(parsed)) return false;
+    if (value[4] != '"' || !isProvisionableGatewayId(parsed)) return false;
     outId = parsed;
     return true;
 }

@@ -4,10 +4,8 @@
 
 export const $ = (id) => document.getElementById(id);
 
-// The GLD operator app enforces this: a CH address must never collide with
-// the reserved root gateway id. Keep in sync with
-// firmware/config/ChConfig.h (PGL_CH_ROOT_GATEWAY_ID).
-export const RESERVED_GATEWAY_ID = "006F";
+export const DEFAULT_CH_ID = "0010";
+export const DEFAULT_GATEWAY_ID = "0001";
 
 // Poll cadence for GET_STATUS / GET_NODES when polling is on. The CH cache
 // report interval is 10 s, so there is no value polling much faster.
@@ -124,7 +122,13 @@ export function normalizeHexId(value) {
 export function validateChAddress(value) {
   const id = normalizeHexId(value);
   if (!/^[0-9A-F]{4}$/.test(id)) return { ok: false, message: "must be exactly 4 hex digits" };
-  if (id === "0000" || id === "FFFF") return { ok: false, message: "0000 and FFFF are reserved" };
-  if (id === RESERVED_GATEWAY_ID) return { ok: false, message: `${RESERVED_GATEWAY_ID} is the reserved root gateway id` };
+  if (Number.parseInt(id, 16) < 0x0010 || Number.parseInt(id, 16) > 0x0FFF) return { ok: false, message: "must be in the CH range 0010-0FFF" };
+  return { ok: true, id };
+}
+
+export function validateGatewayAddress(value) {
+  const id = normalizeHexId(value);
+  if (!/^[0-9A-F]{4}$/.test(id)) return { ok: false, message: "must be exactly 4 hex digits" };
+  if (Number.parseInt(id, 16) < 0x0001 || Number.parseInt(id, 16) > 0x000F) return { ok: false, message: "must be in the Gateway range 0001-000F" };
   return { ok: true, id };
 }

@@ -54,7 +54,7 @@ struct GldSerialCommand {
 // - SERVICE_HOLD_OFF
 // - SET_APP_CONFIG_JSON {...}
 // - SET_DEVICE_ID_JSON {...}
-// - SET_CH_ADDRESS_JSON {"chId":"0064","reboot":true}
+// - SET_CH_ADDRESS_JSON {"chId":"0010","reboot":true}
 // - SET_LORA_CONFIG_JSON {"freqMHz":920.0,"bwKHz":125,"sf":7,"cr":5,"syncWord":18}
 // - SET_NULLING_CONFIG_JSON {"thresholdV":0.00001,"minFinalV":0.0}
 // - SET_QC_RESULT_JSON {"channel":0,"pass":true,"timestamp":"2026-07-16T09:30:00"}

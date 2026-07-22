@@ -23,11 +23,19 @@ import sys
 import threading
 import time
 import urllib.request
+import webbrowser
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 HUB_DIR = Path(__file__).resolve().parent
+if str(HUB_DIR) not in sys.path:
+    # Embedded Python commonly runs in isolated mode and omits the script
+    # directory from sys.path, so add this local module directory explicitly.
+    sys.path.insert(0, str(HUB_DIR))
+
+from preflight import print_report, run_preflight
+
 APPS_DIR = HUB_DIR.parent
 BROKER_CREDENTIALS_PATH = HUB_DIR / "credentials.local.json"
 
@@ -54,6 +62,7 @@ CHILD_APPS = {
 
 CREATE_NEW_PROCESS_GROUP = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
 child_processes: dict[str, subprocess.Popen] = {}
+startup_preflight: dict[str, object] = {}
 
 
 def _python_for(app_dir: Path) -> str:
@@ -183,7 +192,19 @@ class Handler(SimpleHTTPRequestHandler):
         if self.path.split("?", 1)[0] == "/api/status":
             self._handle_status()
             return
+        if self.path.split("?", 1)[0] == "/api/preflight":
+            self._handle_preflight()
+            return
         super().do_GET()
+
+    def _handle_preflight(self) -> None:
+        body = json.dumps(startup_preflight).encode("utf-8")
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(body)
 
     def _handle_status(self) -> None:
         host = self.server.server_address[0] or "127.0.0.1"
@@ -214,11 +235,18 @@ class Handler(SimpleHTTPRequestHandler):
 
 
 def main() -> int:
+    global startup_preflight
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", default=5173, type=int)
     parser.add_argument("--no-children", action="store_true", help="don't spawn gld/ch/gw bridges (assume already running)")
+    parser.add_argument("--open-browser", action="store_true", help="open the Operator Hub in the default browser after binding the server socket")
     args = parser.parse_args()
+
+    startup_preflight = run_preflight(args.host, args.port)
+    print_report(startup_preflight)
+    if any(check["id"] == "hub-port" and check["state"] == "error" for check in startup_preflight["checks"]):
+        return 2
 
     if not args.no_children:
         broker = load_or_create_broker_config()
@@ -229,6 +257,8 @@ def main() -> int:
     httpd = ThreadingHTTPServer((args.host, args.port), Handler)
     url = f"http://{args.host}:{args.port}/"
     print(f"Operator Hub: {url}")
+    if args.open_browser and not webbrowser.open(url):
+        print(f"HUB_BROWSER_OPEN_FAILED Open this URL manually: {url}")
     print("Press Ctrl+C to stop (this also stops the GLD/CH/Gateway bridges it launched).")
     try:
         httpd.serve_forever()

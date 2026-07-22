@@ -1,7 +1,7 @@
 // CH (ClusterHead) Operator entry point: wires the DOM to the bridge and the
 // serial protocol, then bootstraps. Serial-only over USB — no MQTT, no WiFi.
 
-import { elements, state, validateChAddress, normalizeHexId } from "./ch-state.js";
+import { $, elements, state, validateChAddress, validateGatewayAddress, normalizeHexId, DEFAULT_CH_ID } from "./ch-state.js";
 import { initTheme, toggleTheme } from "./theme.js";
 import {
   appendLog, showBanner, hideBanner, switchTab, setDrawer, rerenderLog,
@@ -41,9 +41,9 @@ function applyChId() {
 }
 
 function applyRootGw() {
-  const id = normalizeHexId(elements.setRootGw.value);
-  if (!/^[0-9A-F]{4}$/.test(id)) return showBanner("Gateway ID must be 4 hex digits.", "error");
-  applyAndAlert(`SET_ROOT_GATEWAY_JSON {"gatewayId":"${id}","reboot":true}`, "SET_ROOT_GATEWAY_JSON", "Root gateway");
+  const check = validateGatewayAddress(elements.setRootGw.value);
+  if (!check.ok) return showBanner(`Gateway ID ${check.message}.`, "error");
+  applyAndAlert(`SET_ROOT_GATEWAY_JSON {"gatewayId":"${check.id}","reboot":true}`, "SET_ROOT_GATEWAY_JSON", "Root gateway");
 }
 
 function loraPayload(prefix) {
@@ -138,7 +138,7 @@ function pickFirmwareFolder() {
         if (!bin) throw new Error(`binary ${item.path} missing from folder`);
         state.manifestFiles.set(item.path, await readFileBase64(bin));
       }
-      elements.fwTargetId.value = manifest.deviceId || "";
+      elements.fwTargetId.value = manifest.deviceId === "ANY" ? DEFAULT_CH_ID : (manifest.deviceId || DEFAULT_CH_ID);
       elements.fwStatus.textContent = `Loaded ${manifest.environment} v${manifest.firmwareVersion} (${manifest.flashFiles.length} files, chip ${manifest.chip}).`;
       applyExpertLockUi();
     } catch (error) {
@@ -150,26 +150,91 @@ function pickFirmwareFolder() {
   input.click();
 }
 
-async function uploadFirmware() {
-  if (!state.manifest) return showBanner("Load a firmware package folder first.", "error");
-  const targetId = normalizeHexId(elements.fwTargetId.value);
-  const port = elements.portSelect.value;
-  if (!/^COM\d+$/i.test(port)) return showBanner("Select a COM port in Port Setup first.", "error");
+function setFirmwareUploadDialog(open) {
+  const dialog = $("firmwareUploadDialog");
+  dialog?.classList.toggle("open", open);
+  dialog?.setAttribute("aria-hidden", String(!open));
+}
+
+function setFirmwareUploadStatus(message, state = "") {
+  const status = $("firmwareUploadStatus");
+  const resolvedState = state || (message.startsWith("Disconnecting") ? "loading" : message.startsWith("Upload berhasil") ? "success" : message.startsWith("Upload gagal") ? "error" : "");
+  status.textContent = message;
+  status.dataset.state = resolvedState;
+  status.setAttribute("aria-busy", String(resolvedState === "loading"));
+}
+
+async function openFirmwareUploadDialog() {
+  switchTab("expert");
+  if (state.bridgeAvailable) await refreshPorts(true);
+  elements.fwTargetId.value = DEFAULT_CH_ID;
   try {
+    const builtin = await bridgeFetch(`/api/firmware/package?env=${encodeURIComponent($("firmwareUploadEnv").value)}`);
+    state.manifest = builtin.manifest;
+    state.manifestFiles = new Map(Object.entries(builtin.packageFiles || {}));
+  } catch (error) {
+    state.manifest = null;
+    state.manifestFiles = new Map();
+    showBanner(`Package belum tersedia: ${error.message}`, "error");
+  }
+  const dialogPort = $("firmwareUploadPort");
+  const selectedPort = elements.portSelect.value;
+  dialogPort.replaceChildren(...Array.from(elements.portSelect.options).map((option) => new Option(option.text, option.value, false, option.value === selectedPort)));
+  $("firmwareUploadPackage").textContent = state.manifest
+    ? `Package: ${state.manifest.environment || "unknown"} v${state.manifest.firmwareVersion || "unknown"}`
+    : "No firmware package loaded. Choose a verified package in Expert first.";
+  const ready = Boolean(state.manifest && /^COM\d+$/i.test(dialogPort.value));
+  $("firmwareUploadConfirmBtn").disabled = !ready;
+  setFirmwareUploadStatus(ready ? "Ready to upload." : "Choose a valid package and COM port first.");
+  setFirmwareUploadDialog(true);
+}
+
+async function uploadFirmware() {
+  if (!state.manifest) return;
+  const targetId = normalizeHexId(elements.fwTargetId.value);
+  const port = $("firmwareUploadPort").value;
+  if (!/^COM\d+$/i.test(port)) return setFirmwareUploadStatus("Choose a valid COM port first.");
+  const targetCheck = validateChAddress(targetId);
+  if (!targetCheck.ok) return setFirmwareUploadStatus(`Target CH ID ${targetCheck.message}.`);
+  elements.portSelect.value = port;
+  $("firmwareUploadConfirmBtn").disabled = true;
+  $("firmwareUploadCancelBtn").disabled = true;
+  $("firmwareResetNvs").disabled = true;
+  appendLog(`UPLOAD_START requested port=${port} env=${state.manifest.environment || "ch"}`, "in");
+  switchTab("log");
+  setFirmwareUploadStatus(`Disconnecting serial, then uploading to ${port}…`);
+  $("firmwareUploadStatus").dataset.state = "loading";
+  $("firmwareUploadStatus").setAttribute("aria-busy", "true");
+  try {
+    await disconnectSerial();
     const result = await bridgeFetch("/api/firmware/upload", {
       method: "POST",
       body: JSON.stringify({
         env: state.manifest.environment || "ch",
         port,
         targetDeviceId: targetId,
+        resetNvs: $("firmwareResetNvs").checked,
         slot: state.activeSlot,
         manifest: state.manifest,
         packageFiles: Object.fromEntries(state.manifestFiles)
       })
     });
-    showBanner(`Flashing v${result.firmwareVersion} to ${port}…`, "ok");
+    setFirmwareUploadStatus(result.nvsReset
+      ? `NVS direset. Connecting to ${port} dengan default firmware…`
+      : `Upload berhasil. Parameter NVS dipertahankan. Connecting to ${port}…`);
+    await connectSerial();
+    setFirmwareUploadStatus(state.connected
+      ? `Upload berhasil. Connected to ${port}.`
+      : `Upload berhasil, tetapi reconnect ke ${port} gagal. Periksa Port Setup.`);
+    showBanner(`Firmware v${result.firmwareVersion} berhasil di-upload ke ${port}.`, "ok");
+    if (state.connected) setFirmwareUploadDialog(false);
   } catch (error) {
     showBanner(`Upload failed: ${error.message}`, "error");
+    setFirmwareUploadStatus(`Upload gagal: ${error.message}`);
+  } finally {
+    $("firmwareUploadCancelBtn").disabled = false;
+    $("firmwareResetNvs").disabled = false;
+    $("firmwareUploadCancelBtn").textContent = "Close";
   }
 }
 
@@ -185,6 +250,11 @@ function setupEvents() {
 
   // Drawers
   elements.portSetupBtn.addEventListener("click", () => setDrawer("setup", true));
+  $("firmwareUploadBtn")?.addEventListener("click", openFirmwareUploadDialog);
+  $("firmwareUploadCancelBtn")?.addEventListener("click", () => setFirmwareUploadDialog(false));
+  document.querySelectorAll("[data-upload-dialog-close]").forEach((node) => node.addEventListener("click", () => setFirmwareUploadDialog(false)));
+  $("firmwareUploadConfirmBtn")?.addEventListener("click", uploadFirmware);
+  $("firmwareUploadEnv")?.addEventListener("change", openFirmwareUploadDialog);
   elements.closeSetupBtn.addEventListener("click", () => setDrawer("setup", false));
   elements.setupBackdrop.addEventListener("click", () => setDrawer("setup", false));
   elements.settingsBtn.addEventListener("click", () => setDrawer("settings", true));
@@ -240,7 +310,7 @@ function setupEvents() {
     btn.addEventListener("click", () => sendCommand(btn.dataset.cmd));
   });
   elements.fwPickBtn.addEventListener("click", pickFirmwareFolder);
-  elements.fwUploadBtn.addEventListener("click", uploadFirmware);
+  elements.fwUploadBtn.addEventListener("click", openFirmwareUploadDialog);
 
   // Settings
   elements.applyChIdBtn.addEventListener("click", applyChId);

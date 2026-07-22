@@ -13,11 +13,11 @@ namespace pgl::config::ch {
 // -----------------------------------------------------------------------------
 
 #ifndef PGL_CH_ID
-#define PGL_CH_ID 0x0064
+#define PGL_CH_ID 0x0010
 #endif
 
 #ifndef PGL_CH_ROOT_GATEWAY_ID
-#define PGL_CH_ROOT_GATEWAY_ID 0x006F
+#define PGL_CH_ROOT_GATEWAY_ID 0x0001
 #endif
 
 #ifndef PGL_CH_BATT_START_MV

@@ -59,9 +59,9 @@ export function onUnlocked() {
   $("sendRawBtn").disabled = false;
   $("unlockExpertBtn").disabled = true;
   $("unlockExpertBtn").textContent = "Unlocked";
-  $("uploadFirmwareBtn").disabled = false;
+  $("uploadFirmwareBtn")?.removeAttribute("disabled");
   $("injectIdBtn").disabled = false;
   $("injectChBtn").disabled = false;
-  elements.firmwareLockStatus.textContent = "Firmware actions unlocked for this session.";
+  if (elements.firmwareLockStatus) elements.firmwareLockStatus.textContent = "Firmware actions unlocked for this session.";
   hideBanner();
 }

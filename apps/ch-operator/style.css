@@ -2,3 +2,17 @@
 @import "./css/tokens.css";
 @import "./css/base.css";
 @import "./css/ch.css";
+/* Explicit flash confirmation with an independently selected target COM. */
+.upload-dialog { position: fixed; inset: 0; z-index: 80; display: none; place-items: center; padding: 20px; }
+.upload-dialog.open { display: grid; }
+.upload-dialog-backdrop { position: absolute; inset: 0; background: rgb(0 0 0 / 68%); }
+.upload-dialog-box { position: relative; width: min(460px, 100%); padding: 22px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); box-shadow: 0 24px 64px rgb(0 0 0 / 45%); }
+.upload-dialog-box h2 { margin-top: 0; }
+.upload-dialog-field { display: grid; gap: 7px; margin: 18px 0; font-weight: 700; }
+.upload-dialog-field select { width: 100%; }
+#firmwareUploadStatus[data-state="loading"] { display: flex; align-items: center; gap: 8px; color: var(--accent); font-weight: 700; }
+#firmwareUploadStatus[data-state="loading"]::before { content: ""; width: 13px; height: 13px; border: 2px solid color-mix(in srgb, var(--accent) 28%, transparent); border-top-color: var(--accent); border-radius: 50%; animation: firmware-upload-spin .75s linear infinite; }
+#firmwareUploadStatus[data-state="success"] { color: var(--ok); }
+#firmwareUploadStatus[data-state="warn"] { color: var(--warn); }
+#firmwareUploadStatus[data-state="error"] { color: var(--danger, #d94b4b); }
+@keyframes firmware-upload-spin { to { transform: rotate(360deg); } }

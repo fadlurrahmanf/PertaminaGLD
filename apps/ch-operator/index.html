@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CH Operator — Pertamina GLD ClusterHead</title>
-  <link rel="stylesheet" href="./style.css?v=1" />
+  <link rel="stylesheet" href="./style.css?v=20260723-upload-progress-1" />
 </head>
 <body>
   <div class="shell">
@@ -24,6 +24,7 @@
       </div>
       <div class="strip-actions">
         <button id="settingsBtn">CH Settings</button>
+        <button id="firmwareUploadBtn">Firmware Upload</button>
         <button id="portSetupBtn">Port Setup</button>
         <button id="themeToggleBtn">Dark Mode</button>
       </div>
@@ -32,6 +33,27 @@
     <div class="banner" id="banner">
       <span id="bannerText"></span>
       <button id="bannerDismiss">Dismiss</button>
+    </div>
+
+    <div id="firmwareUploadDialog" class="upload-dialog" aria-hidden="true">
+      <div class="upload-dialog-backdrop" data-upload-dialog-close></div>
+      <section class="upload-dialog-box" role="dialog" aria-modal="true" aria-labelledby="firmwareUploadDialogTitle">
+        <h2 id="firmwareUploadDialogTitle">Upload Firmware</h2>
+        <p id="firmwareUploadPackage" class="hint">No firmware package loaded.</p>
+        <label class="upload-dialog-field">Firmware environment
+          <select id="firmwareUploadEnv" aria-label="Firmware environment"><option value="ch">CH</option><option value="chFieldtest">CH Fieldtest</option></select>
+        </label>
+        <label class="upload-dialog-field">Target COM
+          <select id="firmwareUploadPort" aria-label="Target COM for firmware upload"></select>
+        </label>
+        <label class="upload-dialog-field"><input id="firmwareResetNvs" type="checkbox"> Reset NVS?</label>
+        <p class="hint">Unchecked: retain all NVS parameters. Checked: erase NVS, then boot with all defaults embedded in this firmware, including CH ID <code>0010</code> and Gateway <code>0001</code>.</p>
+        <p id="firmwareUploadStatus" class="hint" aria-live="polite">Choose the COM port to flash.</p>
+        <div class="btn-row">
+          <button id="firmwareUploadCancelBtn" type="button">Cancel</button>
+          <button id="firmwareUploadConfirmBtn" type="button" class="primary">Upload</button>
+        </div>
+      </section>
     </div>
 
     <nav class="tabs" id="tabs">
@@ -272,10 +294,10 @@
         </div>
         <div class="card" style="margin-top:16px">
           <h3>Firmware upload</h3>
-          <p class="hint">Flash a prebuilt CH package (PlatformIO env <code>ch</code>, chip esp32s3) over this COM port. The target CH ID is provisioned through the app after flashing.</p>
+          <p class="hint">Flash a verified prebuilt CH package (profile <code>ch</code>, chip esp32s3) over this COM port. The target CH ID is provisioned through the app after flashing.</p>
           <div class="field">
-            <label for="fwTargetId">Target CH ID (4 hex)</label>
-            <input id="fwTargetId" type="text" maxlength="4" placeholder="0064" disabled />
+            <label for="fwTargetId">Target CH ID (0010-0FFF)</label>
+            <input id="fwTargetId" type="text" maxlength="4" value="0010" disabled />
           </div>
           <div class="btn-row">
             <button id="fwPickBtn" disabled>Choose package folder…</button>
@@ -330,12 +352,12 @@
       <fieldset class="group">
         <legend>Identity</legend>
         <div class="field">
-          <label for="setChId">CH ID (4 hex, not 0000/FFFF/006F)</label>
-          <input id="setChId" type="text" maxlength="4" placeholder="0064" />
+          <label for="setChId">CH ID (0010-0FFF)</label>
+          <input id="setChId" type="text" maxlength="4" placeholder="0010" />
         </div>
         <div class="field">
-          <label for="setRootGw">Root gateway ID (4 hex)</label>
-          <input id="setRootGw" type="text" maxlength="4" placeholder="006F" />
+          <label for="setRootGw">Root gateway ID (0001-000F)</label>
+          <input id="setRootGw" type="text" maxlength="4" placeholder="0001" />
         </div>
         <div class="btn-row">
           <button id="applyChIdBtn">Apply CH ID (reboot)</button>
@@ -388,6 +410,6 @@
     </div>
   </aside>
 
-  <script type="module" src="./js/ch-main.js?v=1"></script>
+  <script type="module" src="./js/ch-main.js?v=20260723-upload-lock-1"></script>
 </body>
 </html>

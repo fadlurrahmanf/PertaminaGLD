@@ -10,10 +10,10 @@
 <body>
   <div class="shell">
     <header class="strip">
-      <div class="brand">
+      <button class="brand brand-button" id="homeBtn" type="button" title="Back to operator selection">
         <span class="eyebrow">Pertamina GLD</span>
         <h1>Operator Hub</h1>
-      </div>
+      </button>
       <nav class="tabs" id="tabs">
         <button class="tab" data-app="gld" type="button">
           <span class="dot" data-dot="gld"></span> GLD
@@ -25,10 +25,41 @@
           <span class="dot" data-dot="gw"></span> Gateway
         </button>
       </nav>
+      <div class="readiness" id="readiness" title="Checking startup requirements">Setup: checking</div>
     </header>
     <main class="stage">
       <div class="stage-banner" id="stageBanner" hidden></div>
-      <iframe id="appFrame" class="app-frame" title="Operator app"></iframe>
+      <section class="landing" id="landing" aria-labelledby="landingTitle">
+        <div class="landing-copy">
+          <span class="eyebrow">Select workspace</span>
+          <h2 id="landingTitle">Choose an operator console</h2>
+          <p>Choose the device group you want to operate. You can return here anytime by clicking Operator Hub.</p>
+        </div>
+        <div class="operator-grid">
+          <button class="operator-card" data-launch-app="gld" type="button">
+            <span class="operator-mark">GLD</span>
+            <span class="operator-card-copy">
+              <strong>Gas Leak Detector</strong>
+              <small>Sensor, data, calibration, and GLD operations</small>
+            </span>
+          </button>
+          <button class="operator-card" data-launch-app="ch" type="button">
+            <span class="operator-mark">CH</span>
+            <span class="operator-card-copy">
+              <strong>Cluster Head</strong>
+              <small>LoRa node, serial, routing, and firmware operations</small>
+            </span>
+          </button>
+          <button class="operator-card" data-launch-app="gw" type="button">
+            <span class="operator-mark">GW</span>
+            <span class="operator-card-copy">
+              <strong>Gateway</strong>
+              <small>Wi-Fi, MQTT, topology, and gateway operations</small>
+            </span>
+          </button>
+        </div>
+      </section>
+      <iframe id="appFrame" class="app-frame" title="Operator app" hidden></iframe>
     </main>
   </div>
   <script type="module" src="./js/hub.js"></script>

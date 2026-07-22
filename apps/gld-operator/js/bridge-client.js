@@ -232,9 +232,10 @@ export async function refreshPorts(bridgeAlreadyChecked = false) {
     const activeSlotPort = state.bridgeSlots?.[String(state.activeSlot)]?.port;
     const preferred = ports.find((port) => port.path === activeSlotPort)
       || ports.find((port) => port.path === previousPort)
-      || ports.find((port) => port.path === "COM10")
-      || (manual ? { path: manual } : null)
-      || ports[0];
+      // A manually entered port is retained only as an option; it must not
+      // silently override a port the bridge actually detected.
+      || ports[0]
+      || (manual ? { path: manual } : null);
     elements.portSelect.value = preferred.path;
     elements.portLabel.textContent = preferred.path;
     updateSelectedPortDetail();

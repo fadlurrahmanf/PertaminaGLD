@@ -7,7 +7,7 @@ export const $ = (id) => document.getElementById(id);
 
 // firmware/config/GwConfig.h GATEWAY_ID default. Display-only: the gateway
 // does not accept a runtime rename, unlike CH/GLD device IDs.
-export const DEFAULT_GATEWAY_ID = "006F";
+export const DEFAULT_GATEWAY_ID = "0001";
 
 export const UPLINK_HISTORY_MAX = 300;
 export const TOPOLOGY_HISTORY_MAX = 300;

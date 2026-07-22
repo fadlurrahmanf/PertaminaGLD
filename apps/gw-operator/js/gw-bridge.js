@@ -204,7 +204,7 @@ function startBridgeEvents() {
   });
   source.addEventListener("upload_start", (event) => {
     appendLog(`UPLOAD_START ${JSON.parse(event.data).cmd}`, "in");
-    switchTab("firmware");
+    switchTab("log");
   });
   source.addEventListener("upload_line", (event) => appendLog(JSON.parse(event.data).line, "in"));
   source.addEventListener("upload_done", (event) => appendLog(`UPLOAD_DONE code=${JSON.parse(event.data).code}`, "in"));

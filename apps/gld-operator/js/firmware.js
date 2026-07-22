@@ -3,7 +3,7 @@
 
 import { $, elements, state } from "./state.js";
 import { appendLog, getField, switchTab, showBanner, showConfirm } from "./ui.js";
-import { bridgeFetch } from "./bridge-client.js";
+import { bridgeFetch, refreshPorts, updateSelectedPortDetail, connectSerial, disconnectSerial } from "./bridge-client.js";
 import { applyAndAlert, sendCommand } from "./serial-protocol.js";
 import { requireUnlock } from "./security.js";
 
@@ -40,11 +40,12 @@ export async function loadManifestFile(fileList) {
 
 function validateManifestForUpload(manifest, env, targetDeviceId) {
   if (!manifest) return "Select a complete schema-v2 firmware package directory first";
+  if (!isGldId(targetDeviceId)) return "target GLD ID must be in 1001-FEFF";
   if (manifest.schemaVersion !== 2 || manifest.packageType !== "pertamina-gld-prebuilt-firmware") return "firmware package must use the trusted schema-v2 format";
   const manifestEnv = manifest.environment;
   if (manifestEnv !== env) return `manifest environment ${manifestEnv} does not match selected env ${env}`;
   const packageDeviceId = String(manifest.deviceId || "").toUpperCase();
-  if (packageDeviceId !== targetDeviceId) {
+  if (packageDeviceId !== "ANY" && packageDeviceId !== targetDeviceId) {
     return `manifest deviceId ${packageDeviceId} does not match target ID ${targetDeviceId}`;
   }
   if (String(manifest.chip || "").toLowerCase() !== "esp32s3") return `manifest chip ${manifest.chip} is not ESP32-S3`;
@@ -72,7 +73,7 @@ async function readPackageFiles(manifest) {
   for (const item of manifest.flashFiles) {
     const file = state.manifestPackageFiles.get(item.path);
     if (!file) throw new Error(`package binary ${item.path} is missing`);
-    encoded[item.path] = arrayBufferToBase64(await file.arrayBuffer());
+    encoded[item.path] = typeof file === "string" ? file : arrayBufferToBase64(await file.arrayBuffer());
   }
   return encoded;
 }
@@ -95,17 +96,57 @@ export async function checkPortLock() {
   }
 }
 
+function setUploadDialog(open) {
+  const dialog = $("firmwareUploadDialog");
+  dialog?.classList.toggle("open", open);
+  dialog?.setAttribute("aria-hidden", String(!open));
+}
+
+function setUploadDialogStatus(message, state = "") {
+  const status = $("firmwareUploadStatus");
+  if (!status) return;
+  status.textContent = message;
+  status.dataset.state = state;
+  status.setAttribute("aria-busy", String(state === "loading"));
+}
+
 export async function uploadFirmware() {
+  switchTab("expert");
+  if (state.bridgeAvailable) await refreshPorts(true);
+  const portSelect = $("firmwareUploadPort");
+  const selectedPort = elements.portSelect.value;
+  portSelect.replaceChildren(...Array.from(elements.portSelect.options).map((option) => new Option(option.text, option.value, false, option.value === selectedPort)));
+  await loadBuiltinPackage($("firmwareUploadEnv").value);
+  const ready = Boolean(state.manifest && /^COM\d+$/i.test(portSelect.value));
+  $("firmwareUploadConfirmBtn").disabled = !ready;
+  setUploadDialogStatus(ready ? "Ready to upload." : "Choose a valid package and COM port first.");
+  setUploadDialog(true);
+}
+
+async function loadBuiltinPackage(environment) {
+  try {
+    const result = await bridgeFetch(`/api/firmware/package?env=${encodeURIComponent(environment)}`);
+    state.manifest = result.manifest;
+    state.manifestPackageFiles = new Map(Object.entries(result.packageFiles || {}));
+    $("firmwareUploadPackage").textContent = `Package: ${state.manifest.environment} v${state.manifest.firmwareVersion}`;
+  } catch (error) {
+    state.manifest = null;
+    state.manifestPackageFiles = new Map();
+    $("firmwareUploadPackage").textContent = `Package belum tersedia: ${error.message}`;
+  }
+}
+
+async function performFirmwareUpload() {
   if (!(await requireUnlock())) return;
   if (!state.bridgeAvailable) {
     appendLog("UPLOAD_SKIPPED local bridge is required for firmware upload", "in");
     showBanner("Firmware upload requires the local bridge to be running.", "warn");
     return;
   }
-  const port = elements.portSelect.value;
-  const env = getField("firmwareEnv") || "gld";
+  const port = $("firmwareUploadPort").value;
+  const env = state.manifest?.environment || "gld";
   const targetDeviceId = getField("targetDeviceId").toUpperCase();
-  if (!port) {
+  if (!/^COM\d+$/i.test(port)) {
     appendLog("UPLOAD_SKIPPED select a COM port first", "in");
     return;
   }
@@ -115,49 +156,65 @@ export async function uploadFirmware() {
     switchTab("expert");
     return;
   }
-  const lock = await checkPortLock();
-  if (lock && !lock.free) {
-    const proceed = await showConfirm(
-      `${port} looks busy (${lock.message}). Upload will disconnect this app's serial session and retry once, `
-      + "but if PlatformIO still reports the chip not responding, close other serial monitors and replug the GLD USB. Continue anyway?",
-      "warn", "COM Port Busy"
-    );
-    if (!proceed) return;
-  }
-  if (!(await showConfirm(`Upload PlatformIO env ${env} to ${port}?`, "warn", "Confirm Firmware Upload"))) return;
+  elements.portSelect.value = port;
+  updateSelectedPortDetail();
+  $("firmwareUploadConfirmBtn").disabled = true;
+  $("firmwareUploadCancelBtn").disabled = true;
+  $("firmwareResetNvs").disabled = true;
+  setUploadDialogStatus(`Disconnecting serial, then uploading to ${port}…`, "loading");
   try {
+    await disconnectSerial();
     const packageFiles = await readPackageFiles(state.manifest);
-    await bridgeFetch("/api/firmware/upload", {
+    const result = await bridgeFetch("/api/firmware/upload", {
       method: "POST",
-      body: JSON.stringify({ env, port, targetDeviceId, manifest: state.manifest, packageFiles, slot: state.activeSlot })
+      body: JSON.stringify({ env, port, targetDeviceId, resetNvs: $("firmwareResetNvs").checked, manifest: state.manifest, packageFiles, slot: state.activeSlot })
     });
-    switchTab("log");
+    setUploadDialogStatus(result.nvsReset
+      ? `NVS direset. Connecting to ${port} dengan default firmware…`
+      : `Upload berhasil. Parameter NVS dipertahankan. Connecting to ${port}…`, "success");
+    await connectSerial();
+    setUploadDialogStatus(state.connected
+      ? `Upload berhasil. Connected to ${port}.`
+      : `Upload berhasil, tetapi reconnect ke ${port} gagal. Periksa Port Setup.`, state.connected ? "success" : "warn");
+    if (state.connected) setUploadDialog(false);
   } catch (error) {
     appendLog(`UPLOAD_ERROR ${error.message}`, "in");
     showBanner(`Firmware upload failed: ${error.message}`, "error");
+    setUploadDialogStatus(`Upload gagal: ${error.message}`, "error");
+  } finally {
+    $("firmwareUploadCancelBtn").disabled = false;
+    $("firmwareResetNvs").disabled = false;
+    $("firmwareUploadCancelBtn").textContent = "Close";
   }
+}
+
+export function initFirmwareUploadDialog() {
+  $("firmwareUploadCancelBtn")?.addEventListener("click", () => setUploadDialog(false));
+  document.querySelectorAll("[data-upload-dialog-close]").forEach((node) => node.addEventListener("click", () => setUploadDialog(false)));
+  $("firmwareUploadConfirmBtn")?.addEventListener("click", performFirmwareUpload);
+  $("firmwareUploadEnv")?.addEventListener("change", async (event) => {
+    await loadBuiltinPackage(event.target.value);
+    $("firmwareUploadConfirmBtn").disabled = !state.manifest || !/^COM\d+$/i.test($("firmwareUploadPort").value);
+  });
 }
 
 export async function injectDeviceId() {
   if (!(await requireUnlock())) return;
   const deviceId = getField("targetDeviceId").toUpperCase();
-  if (!/^[0-9A-F]{4}$/.test(deviceId) || deviceId === "0000") {
-    appendLog("ID_REJECTED target ID must be 4 non-zero hex chars, for example F001", "in");
+  if (!isGldId(deviceId)) {
+    appendLog("ID_REJECTED target GLD ID must be in 1001-FEFF", "in");
     return;
   }
   if (!(await showConfirm(`Inject GLD ID ${deviceId} and reboot?`, "warn", "Inject GLD ID"))) return;
   await applyAndAlert(`SET_DEVICE_ID_JSON ${JSON.stringify({ deviceId, reboot: true })}`, "SET_DEVICE_ID", "Inject GLD ID");
 }
 
-// Node addresses reserved outside the GLD ID space; must stay in sync with
-// firmware/config/ChConfig.h (PGL_CH_ROOT_GATEWAY_ID) and GldUnifiedMain.cpp
-// (GLD_RESERVED_GATEWAY_ID).
-const RESERVED_GATEWAY_ID = "006F";
+function isGldId(value) {
+  return /^[0-9A-F]{4}$/.test(value) && Number.parseInt(value, 16) >= 0x1001 && Number.parseInt(value, 16) <= 0xFEFF;
+}
 
 export function validateChAddress(chId, targetDeviceId) {
-  if (!/^[0-9A-F]{4}$/.test(chId)) return "CH address must be 4 hex chars, for example 0064";
-  if (chId === "0000" || chId === "FFFF") return "CH address cannot be 0000 or FFFF";
-  if (chId === RESERVED_GATEWAY_ID) return `CH address cannot be the Gateway ID (${RESERVED_GATEWAY_ID})`;
+  if (!/^[0-9A-F]{4}$/.test(chId) || Number.parseInt(chId, 16) < 0x0010 || Number.parseInt(chId, 16) > 0x0FFF) return "CH address must be in 0010-0FFF";
   if (targetDeviceId && chId === targetDeviceId) return "CH address cannot equal the GLD's own ID";
   return "";
 }

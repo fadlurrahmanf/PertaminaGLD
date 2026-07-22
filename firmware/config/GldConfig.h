@@ -17,13 +17,13 @@
 // Node ID GLD dalam format hex tanpa prefix 0x. Nilai ini menjadi sumber tunggal
 // untuk GLD_NODE_ID numerik, device ID string, MQTT client ID, dan topic per GLD.
 #ifndef GLD_NODE_HEX
-#define GLD_NODE_HEX        F011
+#define GLD_NODE_HEX        1001
 #endif
 
 // Cluster Head target untuk uplink LoRa STAR dari GLD ini. Harus sama dengan
 // CH_ID pada ChConfig.h untuk CH yang menjadi pasangan GLD.
 #ifndef GLD_CH_ID
-#define GLD_CH_ID           0x0066
+#define GLD_CH_ID           0x0010
 #endif
 
 // Interval scan sensor/inference dalam ms. Angka 500 ms adalah titik aman dari

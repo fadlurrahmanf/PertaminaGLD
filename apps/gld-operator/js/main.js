@@ -22,7 +22,7 @@ import {
   testMqttBroker, saveSessionLog, refreshDatasetWaitingState,
   beginDatasetSwitch, markDatasetWizardStarted, initDatasetWizard
 } from "./dataset.js";
-import { loadManifestFile, uploadFirmware, injectDeviceId, injectChAddress, applyLoraConfig, checkPortLock } from "./firmware.js";
+import { loadManifestFile, uploadFirmware, initFirmwareUploadDialog, injectDeviceId, injectChAddress, applyLoraConfig, checkPortLock } from "./firmware.js";
 import { syncDeviceSummary, renderFleetPanel, addFleetSlot } from "./fleet.js";
 import { toggleMock } from "./mock.js";
 import { initQcTab, switchQcTab, switchQcGroup, restoreQcLatch } from "./qc.js";
@@ -31,6 +31,10 @@ function setupEvents() {
   elements.portSetupBtn.addEventListener("click", () => {
     setPanelOpen(elements.setupPanel, true);
     if (state.bridgeAvailable) refreshPorts(true);
+  });
+  $("firmwareUploadBtn")?.addEventListener("click", async () => {
+    if (!state.bridgeAvailable) await initBridge();
+    await uploadFirmware();
   });
   document.querySelectorAll("[data-close-dialog]").forEach((node) => {
     node.addEventListener("click", () => setPanelOpen($(node.dataset.closeDialog), false));
@@ -119,14 +123,12 @@ function setupEvents() {
   $("rawCommand").addEventListener("keydown", (event) => {
     if (event.key === "Enter" && !$("sendRawBtn").disabled) $("sendRawBtn").click();
   });
-  $("loadManifestBtn").addEventListener("click", () => $("manifestFile").click());
-  $("manifestFile").addEventListener("change", (event) => loadManifestFile(event.target.files));
-  $("uploadFirmwareBtn").addEventListener("click", () => withBusy($("uploadFirmwareBtn"), "Uploading...", uploadFirmware));
-  $("injectIdBtn").addEventListener("click", () => withBusy($("injectIdBtn"), "Injecting...", injectDeviceId));
-  $("injectChBtn").addEventListener("click", () => withBusy($("injectChBtn"), "Applying...", injectChAddress));
-  $("applyLoraConfigBtn").addEventListener("click", () => withBusy($("applyLoraConfigBtn"), "Applying...", applyLoraConfig));
-  $("checkPortLockBtn").addEventListener("click", () => withBusy(elements.checkPortLockBtn, "Checking...", checkPortLock));
-  $("testMqttBtn").addEventListener("click", () => withBusy(elements.testMqttBtn, "Testing...", testMqttBroker));
+  initFirmwareUploadDialog();
+  $("injectIdBtn")?.addEventListener("click", () => withBusy($("injectIdBtn"), "Injecting...", injectDeviceId));
+  $("injectChBtn")?.addEventListener("click", () => withBusy($("injectChBtn"), "Applying...", injectChAddress));
+  $("applyLoraConfigBtn")?.addEventListener("click", () => withBusy($("applyLoraConfigBtn"), "Applying...", applyLoraConfig));
+  $("checkPortLockBtn")?.addEventListener("click", () => withBusy(elements.checkPortLockBtn, "Checking...", checkPortLock));
+  $("testMqttBtn")?.addEventListener("click", () => withBusy(elements.testMqttBtn, "Testing...", testMqttBroker));
   elements.globalBannerDismiss.addEventListener("click", hideBanner);
   $("applyTimeoutsBtn")?.addEventListener("click", () => {
     applyTimeoutOverrides(numberField("timeoutSerialResponseMs"), numberField("timeoutDatasetReadyMs"), numberField("timeoutDatasetStuckMs"));

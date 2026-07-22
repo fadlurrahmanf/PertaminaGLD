@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>GLD Operator</title>
-    <link rel="stylesheet" href="./style.css?v=20260716-mq-qc-analysis-1">
+    <link rel="stylesheet" href="./style.css?v=20260723-upload-progress-1">
   </head>
   <body>
     <div class="shell">
@@ -24,6 +24,7 @@
 
         <div class="strip-actions">
           <button id="opsPanelBtn" type="button">Ops Panel</button>
+          <button id="firmwareUploadBtn" type="button">Firmware Upload</button>
           <button id="themeToggleBtn" type="button">Dark Mode</button>
           <button id="portSetupBtn" type="button">Port Setup</button>
         </div>
@@ -308,25 +309,6 @@
               <label>Dataset Stuck Threshold Ms<input id="timeoutDatasetStuckMs" type="number" min="1000" step="500" value="7000"></label>
             </div>
           </div>
-          <div class="module">
-            <div class="module-head module-head--wrap">
-              <h2>Firmware Upload</h2>
-              <div class="toolbar">
-                <button id="loadManifestBtn" type="button">Load Manifest</button>
-                <button id="checkPortLockBtn" type="button">Check COM Lock</button>
-                <button id="uploadFirmwareBtn" type="button" disabled title="Unlock Expert Terminal first">Upload Firmware</button>
-              </div>
-            </div>
-            <div id="firmwareLockStatus" class="status-line">Firmware actions are locked. Unlock above first.</div>
-            <div id="firmwarePortStatus" class="status-line">COM lock status unknown. Click "Check COM Lock".</div>
-            <div class="form-grid">
-              <label>PlatformIO Env<input id="firmwareEnv" value="gld"></label>
-              <label>Package Device ID<input id="packageDeviceId" value="F000" maxlength="16" readonly></label>
-              <label>Verified Firmware Package<input id="manifestFile" type="file" webkitdirectory multiple></label>
-            </div>
-            <p class="status-line">Target GLD ID and CH address are set from the Running tab settings (gear icon).</p>
-            <pre id="manifestPreview" class="terminal"></pre>
-          </div>
         </section>
       </main>
 
@@ -443,7 +425,7 @@
             </div>
           </div>
           <div class="form-grid">
-            <label>Target GLD ID<input id="targetDeviceId" value="F001" maxlength="4"></label>
+            <label>Target GLD ID (1001-FEFF)<input id="targetDeviceId" value="1001" maxlength="4"></label>
           </div>
 
           <div class="module-head module-head--inner">
@@ -453,10 +435,10 @@
             </div>
           </div>
           <div class="form-grid">
-            <label>Target CH Address (hex)<input id="targetChAddress" value="0064" maxlength="4"></label>
+            <label>Target CH Address (0010-0FFF)<input id="targetChAddress" value="0010" maxlength="4"></label>
             <label>Current CH Address<input id="currentChAddress" value="" maxlength="4" readonly></label>
           </div>
-          <div id="chAddressStatus" class="status-line">CH address must be 4 hex chars, not 0000/FFFF, and not the Gateway ID (006F) or the GLD's own ID.</div>
+          <div id="chAddressStatus" class="status-line">CH address must be in the dedicated range 0010-0FFF and cannot equal the GLD's own ID.</div>
 
           <div class="module-head module-head--inner">
             <h3>LoRa STAR</h3>
@@ -628,6 +610,27 @@
         </div>
       </div>
 
+      <div id="firmwareUploadDialog" class="upload-dialog" aria-hidden="true">
+        <div class="upload-dialog-backdrop" data-upload-dialog-close></div>
+        <section class="upload-dialog-box" role="dialog" aria-modal="true" aria-labelledby="firmwareUploadDialogTitle">
+          <h2 id="firmwareUploadDialogTitle">Upload Firmware</h2>
+          <p id="firmwareUploadPackage" class="status-line">No firmware package loaded.</p>
+          <label class="upload-dialog-field">Firmware environment
+            <select id="firmwareUploadEnv" aria-label="Firmware environment"><option value="gld">GLD</option><option value="gldFieldtest">GLD Fieldtest</option></select>
+          </label>
+          <label class="upload-dialog-field">Target COM
+            <select id="firmwareUploadPort" aria-label="Target COM for firmware upload"></select>
+          </label>
+          <label class="upload-dialog-field"><input id="firmwareResetNvs" type="checkbox"> Reset NVS?</label>
+          <p class="status-line">Unchecked: retain all NVS parameters. Checked: erase NVS, then boot with all defaults embedded in this firmware, including GLD ID <code>1001</code>.</p>
+          <p id="firmwareUploadStatus" class="status-line" aria-live="polite">Choose the COM port to flash.</p>
+          <div class="modal-actions">
+            <button id="firmwareUploadCancelBtn" type="button">Cancel</button>
+            <button id="firmwareUploadConfirmBtn" type="button" class="primary">Upload</button>
+          </div>
+        </section>
+      </div>
+
       <div id="fullScaleSweepModal" class="modal" aria-hidden="true">
         <div class="modal-backdrop" data-close-dialog="fullScaleSweepModal"></div>
         <div class="modal-box modal-box--wide" role="dialog" aria-modal="true" aria-labelledby="fullScaleSweepTitle">
@@ -653,6 +656,6 @@
       </div>
     </div>
 
-    <script type="module" src="./js/main.js?v=20260716-fullscale-sweep-1"></script>
+    <script type="module" src="./js/main.js?v=20260723-reset-nvs-1"></script>
   </body>
 </html>

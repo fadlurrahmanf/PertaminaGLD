@@ -3,7 +3,7 @@
 
 Serves the static UI and exposes the native features plain browser JavaScript
 cannot access: COM port listing, serial read/write over USB, session-log save,
-and PlatformIO firmware upload orchestration.
+and direct verified firmware upload.
 
 Unlike the GLD operator bridge, the CH operator is *serial-only*: there is no
 MQTT broker, no MQTT publish path, and no WiFi lookup. The ClusterHead firmware
@@ -64,6 +64,9 @@ FIRMWARE_JSON_BODY_LIMIT = 16 * 1024 * 1024
 SAFE_PACKAGE_FILE_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$")
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$")
+CH_ID_MIN = 0x0010
+CH_ID_MAX = 0x0FFF
+DEFAULT_CH_ID = "0010"
 # CH runs on a plain ESP32 (GLD runs on ESP32-S3). Accept either so the same
 # firmware-upload path serves both boards; the manifest pins the exact chip.
 ALLOWED_CHIPS = {"esp32", "esp32s3"}
@@ -153,6 +156,8 @@ class SerialBridge:
     def connect(self, port: str, baud: int = 115200) -> dict[str, Any]:
         if serial is None:
             raise RuntimeError(f"pyserial unavailable: {SERIAL_IMPORT_ERROR}")
+        if is_flash_port_reserved(port):
+            raise RuntimeError(f"{port} is reserved for firmware upload; wait until the upload finishes")
         self.disconnect()
         ser = serial.Serial()
         ser.port = port
@@ -236,6 +241,31 @@ MAX_SLOTS = 8
 
 events = EventHub()
 serial_bridges: dict[int, "SerialBridge"] = {}
+flash_port_lock = threading.Lock()
+flash_ports: set[str] = set()
+
+
+def _flash_port_key(port: str) -> str:
+    return str(port).strip().upper()
+
+
+def is_flash_port_reserved(port: str) -> bool:
+    with flash_port_lock:
+        return _flash_port_key(port) in flash_ports
+
+
+def reserve_flash_port(port: str) -> bool:
+    with flash_port_lock:
+        key = _flash_port_key(port)
+        if key in flash_ports:
+            return False
+        flash_ports.add(key)
+        return True
+
+
+def release_flash_port(port: str) -> None:
+    with flash_port_lock:
+        flash_ports.discard(_flash_port_key(port))
 
 
 def parse_slot(value: Any) -> int:
@@ -357,6 +387,25 @@ def probe_port(port: str) -> dict[str, Any]:
         return {"port": port, "free": False, "lockedByApp": False, "message": str(exc)}
 
 
+def wait_for_reenumerated_port(port: str, timeout_seconds: float = 6.0) -> None:
+    """Wait until a USB serial device has stayed enumerated after DTR reset."""
+    if list_ports is None:
+        raise RuntimeError(f"pyserial unavailable: {SERIAL_IMPORT_ERROR}")
+    deadline = time.monotonic() + timeout_seconds
+    stable_since: float | None = None
+    target = port.upper()
+    while time.monotonic() < deadline:
+        present = any(str(item.device).upper() == target for item in list_ports.comports())
+        if present:
+            stable_since = stable_since or time.monotonic()
+            if time.monotonic() - stable_since >= 0.8:
+                return
+        else:
+            stable_since = None
+        time.sleep(0.15)
+    raise RuntimeError(f"COM port {port} did not re-enumerate after serial disconnect; unplug/replug the CH USB, then retry")
+
+
 def _manifest_flash_set_sha256(flash_files: list[dict[str, Any]]) -> str:
     digest = hashlib.sha256()
     for item in flash_files:
@@ -395,7 +444,7 @@ def validate_firmware_package(
     if not SAFE_PACKAGE_FILE_RE.fullmatch(manifest_env) or manifest_env != env:
         raise RuntimeError(f"manifest environment {manifest_env!r} does not match selected env {env!r}")
     package_device_id = str(manifest["deviceId"]).strip().upper()
-    if not re.fullmatch(r"[0-9A-F]{4}", package_device_id) or package_device_id != target_id:
+    if package_device_id != "ANY" and (not re.fullmatch(r"[0-9A-F]{4}", package_device_id) or package_device_id != target_id):
         raise RuntimeError(f"manifest deviceId {package_device_id!r} does not match target ID {target_id!r}")
     board_profile = str(manifest["boardProfile"]).strip()
     if not board_profile or len(board_profile) > 128 or any(ord(char) < 32 for char in board_profile):
@@ -424,13 +473,14 @@ def validate_firmware_package(
         raise RuntimeError("manifest source identity is incomplete or has unsupported fields")
     if not re.fullmatch(r"[0-9a-f]{40}", str(source["gitCommit"])):
         raise RuntimeError("manifest source.gitCommit must be a full lowercase Git SHA")
-    if source["gitTreeState"] != "clean":
-        raise RuntimeError("manifest source tree must be clean")
-    if not SEMVER_RE.fullmatch(str(source["platformioCoreVersion"])):
+    automated_package = source["gitTreeState"] in {"build-output", "operator-hub-auto"}
+    if source["gitTreeState"] != "clean" and not automated_package:
+        raise RuntimeError("manifest source tree must be clean or an Operator Hub auto-package")
+    if not automated_package and not SEMVER_RE.fullmatch(str(source["platformioCoreVersion"])):
         raise RuntimeError("manifest PlatformIO Core version is invalid")
     if not SHA256_RE.fullmatch(str(source["platformioIniSha256"])):
         raise RuntimeError("manifest platformio.ini SHA-256 is invalid")
-    expected_build = f"pio run -e {manifest_env} -t clean && pio run -e {manifest_env}"
+    expected_build = f"pio run -e {manifest_env}" if automated_package else f"pio run -e {manifest_env} -t clean && pio run -e {manifest_env}"
     if source["buildCommand"] != expected_build:
         raise RuntimeError("manifest buildCommand does not describe the required clean build")
     for field in ("buildStartedAtUtc", "buildCompletedAtUtc"):
@@ -495,26 +545,56 @@ def validate_firmware_package(
     return manifest, verified
 
 
-def find_platformio_executable() -> str:
-    discovered = shutil.which("pio") or shutil.which("pio.exe")
-    if discovered:
-        return discovered
-    candidate = Path.home() / ".platformio" / "penv" / "Scripts" / "pio.exe"
-    if candidate.is_file():
-        return str(candidate)
-    raise RuntimeError("PlatformIO executable is required to run the packaged esptool")
+def shared_esptool_command(args: list[str]) -> list[str]:
+    runner = REPO_ROOT / "apps" / "lib" / "run_esptool.py"
+    if not runner.is_file():
+        raise RuntimeError("shared apps/lib esptool runtime is missing")
+    return [sys.executable, str(runner), *args]
 
 
-def firmware_upload(payload: dict[str, Any], slot: int = 1) -> dict[str, Any]:
+def erase_verified_nvs(manifest: dict[str, Any], verified_files: list[tuple[dict[str, Any], bytes]], port: str) -> None:
+    """Erase only the NVS partition proved by the selected firmware package."""
+    for item, content in verified_files:
+        if item.get("path") != "partitions.bin":
+            continue
+        for index in range(0, len(content) - 31, 32):
+            magic = int.from_bytes(content[index:index + 2], "little")
+            if magic == 0xFFFF:
+                break
+            if magic != 0x50AA or content[index + 2] != 0x01 or content[index + 3] != 0x02:
+                continue
+            offset = int.from_bytes(content[index + 4:index + 8], "little")
+            size = int.from_bytes(content[index + 8:index + 12], "little")
+            if offset % 0x1000 or size == 0 or size % 0x1000:
+                raise RuntimeError("verified NVS partition has an unsafe alignment")
+            cmd = shared_esptool_command([
+                "--chip", str(manifest["chip"]), "--port", port, "--baud", str(manifest["baud"]),
+                "erase_region", f"0x{offset:X}", f"0x{size:X}",
+            ])
+            events.emit("upload_line", {"line": f"Resetting verified NVS region 0x{offset:X} (+0x{size:X})"})
+            proc = subprocess.Popen(cmd, cwd=str(FIRMWARE_DIR), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                    text=True, encoding="utf-8", errors="replace")
+            assert proc.stdout is not None
+            for line in proc.stdout:
+                events.emit("upload_line", {"line": line.rstrip("\r\n")})
+            code = proc.wait()
+            if code != 0:
+                raise RuntimeError(f"esptool NVS reset failed with exit code {code}")
+            return
+    raise RuntimeError("verified package does not declare an NVS partition")
+
+
+def _firmware_upload_reserved(payload: dict[str, Any], slot: int = 1) -> dict[str, Any]:
     env = str(payload.get("env") or "").strip()
     port = str(payload.get("port") or "").strip()
     target_id = str(payload.get("targetDeviceId") or "").strip().upper()
+    reset_nvs = bool(payload.get("resetNvs"))
     if not re.match(r"^[A-Za-z0-9_\\-]+$", env):
-        raise RuntimeError("invalid PlatformIO env")
+        raise RuntimeError("invalid firmware environment")
     if not re.fullmatch(r"COM\d+", port, re.IGNORECASE):
         raise RuntimeError("port must be a Windows COM port such as COM3")
-    if not re.fullmatch(r"[0-9A-F]{4}", target_id) or target_id == "0000":
-        raise RuntimeError("targetDeviceId must be four non-zero hexadecimal digits")
+    if not re.fullmatch(r"[0-9A-F]{4}", target_id) or not (CH_ID_MIN <= int(target_id, 16) <= CH_ID_MAX):
+        raise RuntimeError("targetDeviceId must be a CH ID in 0010-0FFF")
     manifest, verified_files = validate_firmware_package(
         payload.get("manifest"), payload.get("packageFiles"), env, target_id
     )
@@ -529,58 +609,65 @@ def firmware_upload(payload: dict[str, Any], slot: int = 1) -> dict[str, Any]:
                 f"COM port {port} is still busy after disconnect ({preflight['message']}). "
                 "Close other serial monitors, unplug/replug the CH USB, then retry."
             )
+        events.emit("upload_line", {"line": f"Waiting for {port} to stabilize after serial disconnect..."})
+        wait_for_reenumerated_port(port)
 
-    def worker() -> None:
-        try:
-            with tempfile.TemporaryDirectory(prefix="ch-verified-flash-") as temp_name:
-                temp_dir = Path(temp_name)
-                esptool_args = [
-                    "esptool.py", "--chip", str(manifest["chip"]), "--port", port,
-                    "--baud", str(manifest["baud"]), "write_flash",
-                ]
-                for item, content in verified_files:
-                    target = temp_dir / item["path"]
-                    target.write_bytes(content)
-                    esptool_args.extend([item["offset"], str(target)])
-                esptool_command = subprocess.list2cmdline(esptool_args)
-                cmd = [find_platformio_executable(), "pkg", "exec", "-p", "tool-esptoolpy", "-c", esptool_command]
-                events.emit("upload_start", {
-                    "cmd": f"verified esptool package flash ({len(verified_files)} files)",
-                    "firmwareVersion": manifest["firmwareVersion"],
-                    "gitCommit": manifest["source"]["gitCommit"],
-                })
-                proc = subprocess.Popen(
-                    cmd,
-                    cwd=str(FIRMWARE_DIR),
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                    text=True,
-                    encoding="utf-8",
-                    errors="replace",
-                )
-                assert proc.stdout is not None
-                for line in proc.stdout:
-                    events.emit("upload_line", {"line": line.rstrip("\r\n")})
-                code = proc.wait()
-            events.emit("upload_done", {"code": code})
-            if code == 0:
-                time.sleep(2.5)
-                upload_bridge.connect(port, 115200)
-                time.sleep(1.0)
-                upload_bridge.write_line(f'SET_CH_ADDRESS_JSON {{"chId":"{target_id}","reboot":true}}')
-        except Exception as exc:
-            events.emit("upload_error", {"message": str(exc)})
-
-    threading.Thread(target=worker, name="ch-firmware-upload", daemon=True).start()
+    with tempfile.TemporaryDirectory(prefix="ch-verified-flash-") as temp_name:
+        temp_dir = Path(temp_name)
+        esptool_args = [
+            "--chip", str(manifest["chip"]), "--port", port,
+            "--baud", str(manifest["baud"]), "write_flash",
+        ]
+        for item, content in verified_files:
+            target = temp_dir / item["path"]
+            target.write_bytes(content)
+            esptool_args.extend([item["offset"], str(target)])
+        cmd = shared_esptool_command(esptool_args)
+        events.emit("upload_start", {
+            "cmd": f"verified shared esptool flash ({len(verified_files)} files)",
+            "firmwareVersion": manifest["firmwareVersion"],
+            "gitCommit": manifest["source"]["gitCommit"],
+        })
+        proc = subprocess.Popen(
+            cmd,
+            cwd=str(FIRMWARE_DIR),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+        assert proc.stdout is not None
+        for line in proc.stdout:
+            events.emit("upload_line", {"line": line.rstrip("\r\n")})
+        code = proc.wait()
+    if code != 0:
+        message = f"esptool flash failed with exit code {code}"
+        events.emit("upload_error", {"message": message})
+        raise RuntimeError(message)
+    events.emit("upload_done", {"code": code})
+    if reset_nvs:
+        erase_verified_nvs(manifest, verified_files, port)
     return {
-        "started": True,
+        "ok": True,
         "env": env,
         "port": port,
         "firmwareVersion": manifest["firmwareVersion"],
         "protocolVersion": manifest["protocolVersion"],
         "gitCommit": manifest["source"]["gitCommit"],
         "verifiedFiles": len(verified_files),
+        "nvsReset": reset_nvs,
     }
+
+
+def firmware_upload(payload: dict[str, Any], slot: int = 1) -> dict[str, Any]:
+    port = str(payload.get("port") or "").strip()
+    if not reserve_flash_port(port):
+        raise RuntimeError(f"COM port {port} already has an active firmware upload")
+    try:
+        return _firmware_upload_reserved(payload, slot)
+    finally:
+        release_flash_port(port)
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -668,6 +755,14 @@ class Handler(SimpleHTTPRequestHandler):
                 )
             if path == "/api/ports":
                 return json_response(self, {"ports": get_serial_bridge(1).list_ports()})
+            if path == "/api/firmware/package":
+                package_env = (parse_qs(urlparse(self.path).query).get("env") or [""])[0]
+                if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", package_env):
+                    raise RuntimeError("invalid firmware environment")
+                package_dir = REPO_ROOT / "apps" / "operator-hub" / "firmware-packages" / package_env / "latest"
+                manifest = json.loads((package_dir / "manifest.json").read_text(encoding="utf-8"))
+                package_files = {str(item["path"]): base64.b64encode((package_dir / str(item["path"])).read_bytes()).decode("ascii") for item in manifest["flashFiles"]}
+                return json_response(self, {"manifest": manifest, "packageFiles": package_files})
             if path == "/api/serial/port-status":
                 query = parse_qs(urlparse(self.path).query)
                 port = (query.get("port") or [""])[0]

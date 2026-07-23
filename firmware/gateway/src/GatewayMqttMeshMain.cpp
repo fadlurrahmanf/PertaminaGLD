@@ -11,6 +11,7 @@
 #include <cstring>
 
 #include "AppFrame.h"
+#include "FirmwareConfig.h"
 #include "FirmwareVersion.h"
 #include "GwConfig.h"
 #include "GatewayBoardPins.h"
@@ -130,7 +131,11 @@ bool isValidMeshConfig(const RuntimeMeshConfig& cfg) {
            cfg.txPowerDbm >= -9 && cfg.txPowerDbm <= 22;
 }
 
-constexpr uint16_t GATEWAY_ID = pgl::config::gw::GATEWAY_ID;
+constexpr uint16_t DEFAULT_GATEWAY_ID = pgl::config::gw::GATEWAY_ID;
+constexpr uint32_t GATEWAY_ID_CONFIG_MAGIC = 0x47574931; // "GWI1"
+constexpr const char* GATEWAY_ID_CONFIG_NAMESPACE = "gw-cfg";
+uint16_t gatewayId = DEFAULT_GATEWAY_ID;
+bool gatewayIdentityLoadedFromNvs = false;
 
 constexpr const char* TOPIC_UPLINK = pgl::config::gw::TOPIC_UPLINK;
 constexpr const char* TOPIC_STATUS = pgl::config::gw::TOPIC_STATUS;
@@ -636,6 +641,127 @@ bool mqttHostConfigured() {
            strcmp(netConfig.mqttHost, "CHANGE_ME_MQTT_HOST") != 0;
 }
 
+bool parseGatewayCommandTarget(JsonVariantConst value, uint16_t& out) {
+    if (value.isNull() || value.is<bool>()) {
+        return false;
+    }
+
+    unsigned long parsed = 0;
+    if (value.is<unsigned int>() || value.is<int>()) {
+        const long numeric = value.as<long>();
+        if (numeric < 0) {
+            return false;
+        }
+        parsed = static_cast<unsigned long>(numeric);
+    } else {
+        const char* text = value.as<const char*>();
+        if (text == nullptr || text[0] == '\0') {
+            return false;
+        }
+        char* end = nullptr;
+        const int base = (strlen(text) > 2 && text[0] == '0' &&
+                          (text[1] == 'x' || text[1] == 'X'))
+                             ? 16
+                             : 10;
+        parsed = strtoul(text, &end, base);
+        if (end == text || *end != '\0') {
+            return false;
+        }
+    }
+
+    if (parsed > 0xFFFFUL ||
+        !pgl::config::isProvisionableGatewayId(static_cast<uint16_t>(parsed))) {
+        return false;
+    }
+    out = static_cast<uint16_t>(parsed);
+    return true;
+}
+
+bool commandTargetsThisGateway(const JsonDocument& doc, const char* topic) {
+    const JsonVariantConst targetValue = doc["targetGatewayId"];
+    const JsonVariantConst gatewayValue = doc["gatewayId"];
+    const bool hasTarget = !targetValue.isNull();
+    const bool hasGateway = !gatewayValue.isNull();
+    if (!hasTarget && !hasGateway) {
+        logPrintf("GW_MQTT_CMD_IGNORE topic=%s reason=missing-gateway-target local=0x%04X\n",
+                  topic, gatewayId);
+        return false;
+    }
+
+    uint16_t targetGatewayId = 0;
+    uint16_t envelopeGatewayId = 0;
+    if (hasTarget && !parseGatewayCommandTarget(targetValue, targetGatewayId)) {
+        logPrintf("GW_MQTT_CMD_IGNORE topic=%s reason=invalid-targetGatewayId local=0x%04X\n",
+                  topic, gatewayId);
+        return false;
+    }
+    if (hasGateway && !parseGatewayCommandTarget(gatewayValue, envelopeGatewayId)) {
+        logPrintf("GW_MQTT_CMD_IGNORE topic=%s reason=invalid-gatewayId local=0x%04X\n",
+                  topic, gatewayId);
+        return false;
+    }
+    if (hasTarget && hasGateway && targetGatewayId != envelopeGatewayId) {
+        logPrintf("GW_MQTT_CMD_IGNORE topic=%s reason=conflicting-gateway-targets target=0x%04X gateway=0x%04X local=0x%04X\n",
+                  topic, targetGatewayId, envelopeGatewayId, gatewayId);
+        return false;
+    }
+
+    const uint16_t requestedGatewayId = hasTarget ? targetGatewayId : envelopeGatewayId;
+    if (requestedGatewayId != gatewayId) {
+        logPrintf("GW_MQTT_CMD_IGNORE topic=%s reason=gateway-target-mismatch target=0x%04X local=0x%04X\n",
+                  topic, requestedGatewayId, gatewayId);
+        return false;
+    }
+    return true;
+}
+
+void loadGatewayIdentity() {
+    gatewayId = DEFAULT_GATEWAY_ID;
+    gatewayIdentityLoadedFromNvs = false;
+    Preferences prefs;
+    if (!prefs.begin(GATEWAY_ID_CONFIG_NAMESPACE, true)) {
+        return;
+    }
+    const uint32_t magic = prefs.getUInt("magic", 0);
+    const uint16_t storedGatewayId = prefs.getUShort("gatewayId", DEFAULT_GATEWAY_ID);
+    prefs.end();
+    if (magic != GATEWAY_ID_CONFIG_MAGIC) {
+        return;
+    }
+    if (!pgl::config::isProvisionableGatewayId(storedGatewayId)) {
+        logPrintf("GW_NVS_ID_INVALID stored=0x%04X fallback=0x%04X\n",
+                  storedGatewayId, DEFAULT_GATEWAY_ID);
+        return;
+    }
+    gatewayId = storedGatewayId;
+    gatewayIdentityLoadedFromNvs = true;
+}
+
+bool saveGatewayIdentity(uint16_t requestedGatewayId) {
+    if (!pgl::config::isProvisionableGatewayId(requestedGatewayId)) {
+        return false;
+    }
+    Preferences prefs;
+    if (!prefs.begin(GATEWAY_ID_CONFIG_NAMESPACE, false)) {
+        return false;
+    }
+    const bool idSaved = prefs.putUShort("gatewayId", requestedGatewayId) == sizeof(uint16_t);
+    const bool magicSaved = prefs.putUInt("magic", GATEWAY_ID_CONFIG_MAGIC) == sizeof(uint32_t);
+    prefs.end();
+    if (!idSaved || !magicSaved) {
+        return false;
+    }
+
+    if (!prefs.begin(GATEWAY_ID_CONFIG_NAMESPACE, true)) {
+        return false;
+    }
+    const uint32_t readbackMagic = prefs.getUInt("magic", 0);
+    const uint16_t readbackGatewayId = prefs.getUShort("gatewayId", 0);
+    prefs.end();
+    return readbackMagic == GATEWAY_ID_CONFIG_MAGIC &&
+           readbackGatewayId == requestedGatewayId;
+}
+
 void beginMqtt() {
     if (!netConfig.mqttEnabled) {
         logPrintln("GW_MQTT_DISABLED waiting=SET_MQTT_CONFIG_JSON");
@@ -660,7 +786,7 @@ void ensureMqtt() {
     }
     lastMqttAttemptMs = now;
 
-    snprintf(mqttClientId, sizeof(mqttClientId), "pgl-gateway-%04X-%08lX", GATEWAY_ID, static_cast<unsigned long>(ESP.getEfuseMac()));
+    snprintf(mqttClientId, sizeof(mqttClientId), "pgl-gateway-%04X-%08lX", gatewayId, static_cast<unsigned long>(ESP.getEfuseMac()));
     const bool ok = mqtt.connect(mqttClientId, netConfig.mqttUser, netConfig.mqttPassword);
     logPrintf("GW_MQTT_CONNECT host=%s port=%u ok=%u\n", netConfig.mqttHost, netConfig.mqttPort, ok ? 1 : 0);
     if (!ok) {
@@ -684,7 +810,7 @@ bool publishStatus(const char* state) {
     const bool wifiConnected = WiFi.status() == WL_CONNECTED;
     const bool mqttConnected = mqtt.connected();
     doc["kind"] = "gateway-status";
-    doc["gatewayId"] = GATEWAY_ID;
+    doc["gatewayId"] = gatewayId;
     doc["state"] = state;
     doc["firmwareVersion"] = pgl::firmware::GATEWAY_FIRMWARE_VERSION;
     doc["protocolVersion"] = pgl::firmware::PROTOCOL_VERSION;
@@ -776,7 +902,7 @@ void handlePullCommand(const JsonDocument& doc) {
     uint8_t frame[pgl::protocol::APPFRAME_OVERHEAD + pgl::protocol::MESH_MAX_PAYLOAD]{};
     const pgl::protocol::FrameEncodeResult encoded = pgl::protocol::encodeAppFrame(
         pgl::protocol::MSG_SERVER_PULL_REQUEST,
-        GATEWAY_ID,
+        gatewayId,
         nextHop,
         meshSeq++,
         payload,
@@ -895,7 +1021,7 @@ void handleNodeCommand(const JsonDocument& doc) {
     uint8_t frame[pgl::protocol::APPFRAME_OVERHEAD + pgl::protocol::MESH_MAX_PAYLOAD]{};
     const pgl::protocol::FrameEncodeResult encoded = pgl::protocol::encodeAppFrame(
         pgl::protocol::MSG_SERVER_NODE_COMMAND,
-        GATEWAY_ID,
+        gatewayId,
         routed ? hopList[0] : chId,
         meshSeq++,
         payload,
@@ -930,15 +1056,21 @@ void mqttCallback(char* topic, uint8_t* payload, unsigned int length) {
 
     logPrintf("GW_MQTT_CMD topic=%s len=%u\n", topic, length);
     if (strcmp(topic, TOPIC_PULL) == 0 || strstr(topic, "/pull") != nullptr) {
+        if (!commandTargetsThisGateway(doc, topic)) {
+            return;
+        }
         handlePullCommand(doc);
     } else if (strcmp(topic, TOPIC_NODE_COMMAND) == 0 || strstr(topic, "/node") != nullptr) {
+        if (!commandTargetsThisGateway(doc, topic)) {
+            return;
+        }
         handleNodeCommand(doc);
     }
 }
 
 bool publishTopologyReport(const pgl::protocol::FrameView& decoded, float rssi, float snr) {
     const uint8_t msgType = pgl::protocol::messageType(decoded.typeFlags);
-    if (decoded.srcId == GATEWAY_ID) {
+    if (decoded.srcId == gatewayId) {
         return false;
     }
     if (msgType != pgl::protocol::MSG_CH_HELLO &&
@@ -950,8 +1082,8 @@ bool publishTopologyReport(const pgl::protocol::FrameView& decoded, float rssi, 
     StaticJsonDocument<1024> doc;
     doc["kind"] = "gateway-topology";
     doc["source"] = "gateway";
-    doc["gatewayId"] = GATEWAY_ID;
-    doc["rootId"] = GATEWAY_ID;
+    doc["gatewayId"] = gatewayId;
+    doc["rootId"] = gatewayId;
     doc["msgType"] = msgType;
     doc["typeFlags"] = decoded.typeFlags;
     doc["srcId"] = decoded.srcId;
@@ -960,8 +1092,8 @@ bool publishTopologyReport(const pgl::protocol::FrameView& decoded, float rssi, 
     doc["payloadLen"] = decoded.payloadLen;
     doc["rssi"] = rssi;
     doc["snr"] = snr;
-    writeHexId(doc, "gatewayIdHex", GATEWAY_ID);
-    writeHexId(doc, "rootIdHex", GATEWAY_ID);
+    writeHexId(doc, "gatewayIdHex", gatewayId);
+    writeHexId(doc, "rootIdHex", gatewayId);
     writeHexId(doc, "srcIdHex", decoded.srcId);
     writeHexId(doc, "dstIdHex", decoded.dstId);
 
@@ -986,7 +1118,7 @@ bool publishTopologyReport(const pgl::protocol::FrameView& decoded, float rssi, 
         doc["edgeTo"] = parentId;
         doc["batteryMv"] = readU16Be(&decoded.payload[4]);
         doc["uptimeSec16"] = readU16Be(&decoded.payload[6]);
-        doc["parentIsRoot"] = parentId == GATEWAY_ID;
+        doc["parentIsRoot"] = parentId == gatewayId;
         writeHexId(doc, "chIdHex", chId);
         writeHexId(doc, "parentIdHex", parentId);
         writeHexId(doc, "parentAltIdHex", parentAltId);
@@ -1017,7 +1149,7 @@ bool publishTopologyReport(const pgl::protocol::FrameView& decoded, float rssi, 
             (routeFlags & pgl::protocol::CH_CONFIG_CAP_ALARM_ACK_NODE_ID_V1) != 0;
         doc["nodeCommandRouteV1"] =
             (routeFlags & pgl::protocol::CH_CONFIG_CAP_NODE_COMMAND_ROUTE_V1) != 0;
-        doc["parentIsRoot"] = parentId == GATEWAY_ID;
+        doc["parentIsRoot"] = parentId == gatewayId;
         writeHexId(doc, "chIdHex", chId);
         writeHexId(doc, "requesterIdHex", requesterId);
         writeHexId(doc, "parentIdHex", parentId);
@@ -1061,7 +1193,7 @@ PublishDisposition publishMeshFrame(const uint8_t* frame, size_t frameLen, float
 
     StaticJsonDocument<1024> doc;
     doc["source"] = "gateway";
-    doc["gatewayId"] = GATEWAY_ID;
+    doc["gatewayId"] = gatewayId;
     doc["frameHex"] = frameHex;
     doc["frameLen"] = frameLen;
     doc["rssi"] = rssi;
@@ -1086,9 +1218,9 @@ PublishDisposition publishMeshFrame(const uint8_t* frame, size_t frameLen, float
             topology["batteryMv"] = readU16Be(&decoded.payload[4]);
             topology["uptimeSec16"] = readU16Be(&decoded.payload[6]);
             topology["meshDepth"] = decoded.payloadLen >= 9 ? decoded.payload[8] : 0xFF;
-            topology["parentIsRoot"] = readU16Be(&decoded.payload[2]) == GATEWAY_ID;
+            topology["parentIsRoot"] = readU16Be(&decoded.payload[2]) == gatewayId;
             topology["viaHop"] = decoded.srcId;
-            topology["gatewayId"] = GATEWAY_ID;
+            topology["gatewayId"] = gatewayId;
             topology["rssi"] = rssi;
             topology["snr"] = snr;
         }
@@ -1132,7 +1264,7 @@ void sendGatewayAckIfNeeded(const uint8_t* frame, size_t frameLen,
                 pgl::protocol::MESH_ALARM_ACK_V1_PAYLOAD_SIZE]{};
     const pgl::protocol::FrameEncodeResult encoded = pgl::protocol::encodeAppFrame(
         pgl::protocol::TYPE_ALARM_ACK_COMPACT,
-        GATEWAY_ID,
+        gatewayId,
         decoded.srcId,
         decoded.seq,
         ackPayload,
@@ -1184,11 +1316,11 @@ void sendHelloAckIfNeeded(const uint8_t* frame, size_t frameLen) {
         frame, frameLen, decoded, pgl::protocol::MESH_MAX_PAYLOAD);
     if (parseStatus != pgl::protocol::FrameStatus::Ok ||
         pgl::protocol::messageType(decoded.typeFlags) != pgl::protocol::MSG_CH_HELLO ||
-        decoded.dstId != GATEWAY_ID || decoded.srcId == GATEWAY_ID ||
+        decoded.dstId != gatewayId || decoded.srcId == gatewayId ||
         decoded.payload == nullptr ||
         decoded.payloadLen < pgl::protocol::CH_HELLO_V1_PAYLOAD_SIZE ||
         readU16Be(&decoded.payload[0]) != decoded.srcId ||
-        readU16Be(&decoded.payload[2]) != GATEWAY_ID ||
+        readU16Be(&decoded.payload[2]) != gatewayId ||
         (decoded.payload[11] & pgl::protocol::CH_HELLO_FLAG_ACK_REQUEST_V1) == 0) {
         return;
     }
@@ -1202,7 +1334,7 @@ void sendHelloAckIfNeeded(const uint8_t* frame, size_t frameLen) {
                 pgl::protocol::CH_HELLO_ACK_V1_PAYLOAD_SIZE]{};
     const auto encoded = pgl::protocol::encodeAppFrame(
         pgl::protocol::MSG_CH_HELLO_ACK,
-        GATEWAY_ID,
+        gatewayId,
         decoded.srcId,
         decoded.seq,
         ackPayload,
@@ -1228,7 +1360,7 @@ void sendGatewayConfigResponseIfNeeded(const uint8_t* frame, size_t frameLen,
     if (parseStatus != pgl::protocol::FrameStatus::Ok ||
         pgl::protocol::messageType(decoded.typeFlags) != pgl::protocol::MSG_CH_CONFIG_REQUEST ||
         decoded.dstId != 0xFFFF ||
-        decoded.srcId == GATEWAY_ID) {
+        decoded.srcId == gatewayId) {
         return;
     }
 
@@ -1258,7 +1390,7 @@ void sendGatewayConfigResponseIfNeeded(const uint8_t* frame, size_t frameLen,
     uint8_t response[pgl::protocol::APPFRAME_OVERHEAD + pgl::protocol::MESH_MAX_PAYLOAD]{};
     const pgl::protocol::FrameEncodeResult encoded = pgl::protocol::encodeAppFrame(
         pgl::protocol::MSG_CH_CONFIG_RESPONSE,
-        GATEWAY_ID,
+        gatewayId,
         requesterId,
         decoded.seq,
         payload,
@@ -1305,6 +1437,18 @@ void receiveMeshOnce() {
     if (state != RADIOLIB_ERR_NONE) {
         return;
     }
+    pgl::protocol::FrameView addressedFrame{};
+    const pgl::protocol::FrameStatus addressedStatus =
+        pgl::protocol::decodeAppFrame(frame, packetLen, addressedFrame,
+                                      pgl::protocol::MESH_MAX_PAYLOAD);
+    if (addressedStatus == pgl::protocol::FrameStatus::Ok &&
+        pgl::config::isProvisionableGatewayId(addressedFrame.dstId) &&
+        addressedFrame.dstId != gatewayId) {
+        logPrintf("GW_MESH_RX_DROP reason=gateway-destination-mismatch src=0x%04X dst=0x%04X local=0x%04X msgType=0x%02X\n",
+                  addressedFrame.srcId, addressedFrame.dstId, gatewayId,
+                  pgl::protocol::messageType(addressedFrame.typeFlags));
+        return;
+    }
     sendHelloAckIfNeeded(frame, packetLen);
     const bool duplicateHello = suppressDuplicateHello(frame, packetLen);
     PublishDisposition uplinkDisposition = PublishDisposition::Rejected;
@@ -1325,7 +1469,8 @@ void printBootHeader() {
     logPrintf("Firmware version: %s\n", pgl::firmware::GATEWAY_FIRMWARE_VERSION);
     logPrintf("Protocol version: %s\n", pgl::firmware::PROTOCOL_VERSION);
     logPrintf("Build date/time: %s %s Asia/Jakarta\n", __DATE__, __TIME__);
-    logPrintf("GW_IDS gateway=0x%04X\n", GATEWAY_ID);
+    logPrintf("GW_IDS gateway=0x%04X source=%s\n", gatewayId,
+              gatewayIdentityLoadedFromNvs ? "nvs" : "build-default");
     logPrintf("GW_MESH_CONFIG freq=%.1f bw=%.1f sf=%u cr=%u sync=0x%02X\n",
               MESH_FREQ_MHZ,
               MESH_BW_KHZ,
@@ -1499,10 +1644,52 @@ void emitMeshLoraJson() {
               MESH_SYNC_WORD, MESH_TX_POWER_DBM);
 }
 
+void emitGatewayAddressJson() {
+    logPrintf("GW_GATEWAY_ADDRESS_JSON {\"gatewayId\":\"0x%04X\",\"min\":\"0x%04X\",\"max\":\"0x%04X\"}\n",
+              gatewayId, pgl::config::GATEWAY_ID_MIN, pgl::config::GATEWAY_ID_MAX);
+}
+
+void handleSetGatewayAddressJson(const char* payload) {
+    StaticJsonDocument<192> doc;
+    if (deserializeJson(doc, payload)) {
+        logPrintln("GW_CMD_ACK cmd=SET_GATEWAY_ADDRESS_JSON status=error message=invalid_json reboot=0");
+        return;
+    }
+
+    JsonVariantConst requestedValue = doc["gatewayId"];
+    if (requestedValue.isNull()) requestedValue = doc["address"];
+    if (requestedValue.isNull()) requestedValue = doc["id"];
+    uint16_t requestedGatewayId = 0;
+    if (!parseGatewayCommandTarget(requestedValue, requestedGatewayId)) {
+        logPrintf("GW_CMD_ACK cmd=SET_GATEWAY_ADDRESS_JSON status=rejected message=gatewayId-range-0x%04X-0x%04X reboot=0\n",
+                  pgl::config::GATEWAY_ID_MIN, pgl::config::GATEWAY_ID_MAX);
+        return;
+    }
+    if (requestedGatewayId == gatewayId) {
+        logPrintf("GW_CMD_ACK cmd=SET_GATEWAY_ADDRESS_JSON status=ok message=unchanged gatewayId=0x%04X reboot=0\n",
+                  gatewayId);
+        return;
+    }
+    if (!saveGatewayIdentity(requestedGatewayId)) {
+        logPrintln("GW_CMD_ACK cmd=SET_GATEWAY_ADDRESS_JSON status=error message=nvs-write-or-readback-failed reboot=0");
+        return;
+    }
+
+    logPrintf("GW_CMD_ACK cmd=SET_GATEWAY_ADDRESS_JSON status=ok message=saved-verified-restarting gatewayId=0x%04X reboot=1\n",
+              requestedGatewayId);
+    Serial.flush();
+#if defined(ARDUINO_ARCH_ESP32)
+    Serial0.flush();
+#endif
+    delay(250);
+    ESP.restart();
+}
+
 void handleSerialLine(const char* line) {
     constexpr size_t kWifiPrefixLen = sizeof("SET_WIFI_CONFIG_JSON ") - 1;
     constexpr size_t kMqttPrefixLen = sizeof("SET_MQTT_CONFIG_JSON ") - 1;
     constexpr size_t kMeshLoraPrefixLen = sizeof("SET_MESH_LORA_JSON ") - 1;
+    constexpr size_t kGatewayAddressPrefixLen = sizeof("SET_GATEWAY_ADDRESS_JSON ") - 1;
     if (strncmp(line, "SET_WIFI_CONFIG_JSON ", kWifiPrefixLen) == 0) {
         handleSetWifiConfigJson(line + kWifiPrefixLen);
     } else if (strcmp(line, "TEST_WIFI") == 0) {
@@ -1515,6 +1702,10 @@ void handleSerialLine(const char* line) {
         handleSetMeshLoraJson(line + kMeshLoraPrefixLen);
     } else if (strcmp(line, "GET_MESH_LORA") == 0) {
         emitMeshLoraJson();
+    } else if (strncmp(line, "SET_GATEWAY_ADDRESS_JSON ", kGatewayAddressPrefixLen) == 0) {
+        handleSetGatewayAddressJson(line + kGatewayAddressPrefixLen);
+    } else if (strcmp(line, "GET_GATEWAY_ADDRESS") == 0) {
+        emitGatewayAddressJson();
     }
 }
 
@@ -1563,6 +1754,7 @@ void setup() {
 #endif
     delay(1000);
     setupPinsSafe();
+    loadGatewayIdentity();
     loadNetConfig();
     loadMeshConfig();
     printBootHeader();

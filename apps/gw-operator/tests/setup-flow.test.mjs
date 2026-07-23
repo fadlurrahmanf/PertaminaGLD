@@ -18,9 +18,14 @@ assert.equal(setupAccess({ serialConnected: false, wifiVerified: false, mqttConn
 const here = dirname(fileURLToPath(import.meta.url));
 const html = readFileSync(resolve(here, "../index.html"), "utf8");
 const serialAt = html.indexOf('id="serialSetupStep"');
+const identityAt = html.indexOf('id="gatewayIdentitySetupStep"');
 const wifiAt = html.indexOf('id="wifiSetupStep"');
 const mqttAt = html.indexOf('id="mqttSetupStep"');
-assert.ok(serialAt >= 0 && serialAt < wifiAt && wifiAt < mqttAt, "setup panels must be ordered COM -> Wi-Fi -> MQTT");
+assert.ok(
+  serialAt >= 0 && serialAt < identityAt && identityAt < wifiAt && wifiAt < mqttAt,
+  "setup panels must be ordered COM -> Gateway identity -> Wi-Fi -> MQTT"
+);
+assert.match(html, /id="gatewayIdentitySetupStep" disabled/);
 assert.match(html, /id="wifiSetupStep" disabled/);
 assert.match(html, /id="mqttSetupStep" disabled/);
 

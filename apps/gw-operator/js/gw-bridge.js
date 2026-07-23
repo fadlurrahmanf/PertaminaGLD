@@ -4,6 +4,7 @@
 // Talks to bridge.py on 127.0.0.1:5373.
 
 import { elements, state } from "./gw-state.js";
+import { gatewayIdFromRuntime } from "./gw-gateway-id.mjs";
 import { setupAccess } from "./gw-setup-flow.mjs";
 import { setBadge, appendLog, showBanner, switchTab } from "./gw-ui.js";
 import { handleStatus, handleUplink, handleTopologyEvent, logCommand } from "./gw-protocol.js";
@@ -49,7 +50,10 @@ export async function initBridge() {
     if (activeSlot?.port) elements.portSelect.value = activeSlot.port;
     updateSerialUi();
     if (state.serialConnected) {
-      setTimeout(() => requestMeshLoraConfig().catch(() => {}), 300);
+      setTimeout(() => {
+        requestGatewayAddress().catch(() => {});
+        requestMeshLoraConfig().catch(() => {});
+      }, 300);
     }
     if (health.mqtt?.connected) {
       state.mqttConnected = true;
@@ -108,6 +112,10 @@ export function updateSetupFlowUi() {
     elements.wifiSetupStep.disabled = !wifiUnlocked;
     elements.wifiSetupStep.setAttribute("aria-disabled", String(!wifiUnlocked));
   }
+  if (elements.gatewayIdentitySetupStep) {
+    elements.gatewayIdentitySetupStep.disabled = !wifiUnlocked;
+    elements.gatewayIdentitySetupStep.setAttribute("aria-disabled", String(!wifiUnlocked));
+  }
   if (elements.mqttSetupStep) {
     elements.mqttSetupStep.disabled = !mqttPanelEnabled;
     elements.mqttSetupStep.setAttribute("aria-disabled", String(!mqttPanelEnabled));
@@ -118,6 +126,9 @@ export function updateSetupFlowUi() {
   }
   if (elements.meshApplyStatus && !wifiUnlocked) {
     elements.meshApplyStatus.textContent = "Locked until COM is connected.";
+  }
+  if (elements.gatewayIdStatus && !wifiUnlocked) {
+    elements.gatewayIdStatus.textContent = "Locked until COM is connected.";
   }
   if (elements.mqttLockNote) {
     elements.mqttLockNote.textContent = mqttUnlocked
@@ -152,6 +163,11 @@ function startBridgeEvents() {
     const payload = JSON.parse(event.data);
     if (payload.kind === "status") {
       handleStatus(payload.json);
+      try {
+        state.gatewayId = gatewayIdFromRuntime(payload.json?.gatewayId);
+      } catch {
+        // A malformed MQTT status must not replace the last serial-verified ID.
+      }
       if (state.serialConnected && payload.json?.wifi) {
         state.wifiVerified = true;
         state.wifiIp = payload.json.ip || "";
@@ -180,6 +196,17 @@ function startBridgeEvents() {
         window.dispatchEvent(new CustomEvent("gw-mesh-lora-config", { detail: config }));
       } catch {
         appendLog("GW_MESH_LORA_JSON_PARSE_ERROR", "err");
+      }
+    }
+    const gatewayAddressPrefix = "GW_GATEWAY_ADDRESS_JSON ";
+    if (payload.line.startsWith(gatewayAddressPrefix)) {
+      try {
+        const config = JSON.parse(payload.line.slice(gatewayAddressPrefix.length));
+        config.gatewayId = gatewayIdFromRuntime(config.gatewayId);
+        state.gatewayId = config.gatewayId;
+        window.dispatchEvent(new CustomEvent("gw-gateway-address", { detail: config }));
+      } catch {
+        appendLog("GW_GATEWAY_ADDRESS_JSON_PARSE_ERROR", "err");
       }
     }
   });
@@ -309,7 +336,10 @@ export async function connectSerial() {
     });
     state.serialConnected = true;
     updateSerialUi();
-    await requestMeshLoraConfig().catch((error) => appendLog(`GET_MESH_LORA_ERROR ${error.message}`, "err"));
+    await Promise.allSettled([
+      requestGatewayAddress().catch((error) => appendLog(`GET_GATEWAY_ADDRESS_ERROR ${error.message}`, "err")),
+      requestMeshLoraConfig().catch((error) => appendLog(`GET_MESH_LORA_ERROR ${error.message}`, "err"))
+    ]);
   } catch (error) {
     appendLog(`CONNECT_ERROR ${error.message}`, "err");
   }
@@ -355,8 +385,6 @@ export async function testMqtt(config) {
   return bridgeFetch("/api/mqtt/test", { method: "POST", body: JSON.stringify(config) });
 }
 
-// Gateway has no serial command console in the UI - this is the one command
-// it understands (SET_WIFI_CONFIG_JSON, mirrors GLD's SET_APP_CONFIG_JSON).
 // Waits for the device's GW_CMD_ACK line over the existing serial_line SSE
 // stream rather than polling, since the ack can arrive well before the HTTP
 // POST that queued the write even resolves.
@@ -458,6 +486,65 @@ export async function applyMeshLoraConfig(config) {
     body: JSON.stringify({ line: `SET_MESH_LORA_JSON ${JSON.stringify(config)}`, slot: state.activeSlot })
   });
   return ackPromise;
+}
+
+function waitForGatewayAddress(timeoutMs = 5000) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      window.removeEventListener("gw-gateway-address", onAddress);
+      reject(new Error("timeout waiting for Gateway ID readback"));
+    }, timeoutMs);
+    function onAddress(event) {
+      clearTimeout(timer);
+      window.removeEventListener("gw-gateway-address", onAddress);
+      resolve(event.detail);
+    }
+    window.addEventListener("gw-gateway-address", onAddress);
+  });
+}
+
+export async function requestGatewayAddress() {
+  if (!state.serialConnected) throw new Error("Connect the Gateway COM port first.");
+  const response = waitForGatewayAddress();
+  await bridgeFetch("/api/serial/write", {
+    method: "POST",
+    body: JSON.stringify({ line: "GET_GATEWAY_ADDRESS", slot: state.activeSlot })
+  });
+  return response;
+}
+
+export async function applyGatewayAddress(gatewayId) {
+  if (!state.serialConnected) throw new Error("Connect the Gateway COM port first.");
+  const ackPromise = waitForAck("SET_GATEWAY_ADDRESS_JSON", 8000);
+  await bridgeFetch("/api/serial/write", {
+    method: "POST",
+    body: JSON.stringify({
+      line: `SET_GATEWAY_ADDRESS_JSON ${JSON.stringify({ gatewayId: `0x${gatewayId}` })}`,
+      slot: state.activeSlot
+    })
+  });
+  return ackPromise;
+}
+
+export async function reconnectSerialAfterGatewayReboot(attempts = 12, delayMs = 1500) {
+  const port = elements.portSelect.value;
+  if (!port) throw new Error("No Gateway COM port is selected for reconnect.");
+  await disconnectSerial();
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+    try {
+      await bridgeFetch("/api/serial/connect", {
+        method: "POST",
+        body: JSON.stringify({ port, baud: 115200, slot: state.activeSlot })
+      });
+      state.serialConnected = true;
+      updateSerialUi();
+      return { port, attempt };
+    } catch {
+      // USB serial may still be rebooting/re-enumerating.
+    }
+  }
+  throw new Error(`Gateway did not reconnect on ${port}. Reconnect it manually.`);
 }
 
 export async function useLocalPc() {

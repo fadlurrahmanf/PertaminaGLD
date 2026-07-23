@@ -21,7 +21,7 @@ const repoDir = path.resolve(__dirname, "..", "..");
 const scriptDir = __dirname;
 const decodeFunction = fs.readFileSync(path.join(scriptDir, "functions", "pertamina-gld-decode.js"), "utf8");
 const commandFunction = fs.readFileSync(path.join(scriptDir, "functions", "pertamina-gld-build-command.js"), "utf8");
-const generatorVersion = "2.0.0";
+const generatorVersion = "2.1.0";
 
 const nodeRedUrl = args.get("node-red-url") || "http://127.0.0.1:1880";
 const nodeRedUserDir = args.get("node-red-user-dir") || "C:\\Users\\asus\\.node-red";
@@ -70,17 +70,36 @@ const topologyJsonFunction = `function idHex(value) {
   return "0x" + n.toString(16).toUpperCase().padStart(4, "0");
 }
 
-const gatewayIdHex = idHex(Number(env.get("PGL_GATEWAY_ID") || "0x006F"));
+function idValue(value) {
+  const raw = String(value || "").trim();
+  const parsed = Number(raw);
+  return Number.isInteger(parsed) && parsed >= 0 && parsed <= 0xFFFF ? parsed : Number.NaN;
+}
+
+function isGatewayId(value) {
+  const id = idValue(value);
+  return id >= 0x0001 && id <= 0x000F;
+}
+
 const topology = flow.get("pglTopology") || {
-  gatewayIdHex,
+  gateways: {},
   parents: {},
   discovery: {},
   gatewayLinks: {},
   hellos: {},
   routes: {},
+  routeGateways: {},
   updatedAt: null
 };
-topology.gatewayIdHex = topology.gatewayIdHex || gatewayIdHex;
+topology.gateways = topology.gateways || {};
+if (isGatewayId(topology.gatewayIdHex)) {
+  const legacyGatewayIdHex = idHex(idValue(topology.gatewayIdHex));
+  topology.gateways[legacyGatewayIdHex] = topology.gateways[legacyGatewayIdHex] || {
+    gatewayId: idValue(legacyGatewayIdHex), gatewayIdHex: legacyGatewayIdHex,
+    receivedAt: topology.updatedAt || new Date().toISOString(), source: "legacy-single-gateway-state"
+  };
+}
+delete topology.gatewayIdHex;
 const directGatewayMinRssiDbm = Number(env.get("PGL_GATEWAY_DIRECT_PARENT_MIN_RSSI_DBM") || "-95");
 const directGatewayMinSnrDb = Number(env.get("PGL_GATEWAY_DIRECT_PARENT_MIN_SNR_DB") || "5");
 const topologyParentTtlMs = Number(env.get("PGL_TOPOLOGY_PARENT_TTL_MS") || "900000");
@@ -118,20 +137,27 @@ topology.discovery = topology.discovery || {};
 topology.gatewayLinks = topology.gatewayLinks || {};
 topology.hellos = topology.hellos || {};
 topology.routes = topology.routes || {};
+topology.routeGateways = topology.routeGateways || {};
+pruneMapByTtl(topology.gateways, topologyParentTtlMs);
 pruneMapByTtl(topology.parents, topologyParentTtlMs);
 pruneMapByTtl(topology.discovery, topologyDiscoveryTtlMs);
-pruneMapByTtl(topology.gatewayLinks, topologyGatewayLinkTtlMs);
+for (const [clusterIdHex, links] of Object.entries(topology.gatewayLinks)) {
+  if (links && links.gatewayIdHex) topology.gatewayLinks[clusterIdHex] = { [links.gatewayIdHex]: links };
+  pruneMapByTtl(topology.gatewayLinks[clusterIdHex], topologyGatewayLinkTtlMs);
+  if (Object.keys(topology.gatewayLinks[clusterIdHex] || {}).length === 0) delete topology.gatewayLinks[clusterIdHex];
+}
 pruneMapByTtl(topology.hellos, topologyParentTtlMs);
 for (const clusterIdHex of Object.keys(topology.routes)) {
   if (!topology.parents[clusterIdHex]) {
     delete topology.routes[clusterIdHex];
+    delete topology.routeGateways[clusterIdHex];
   }
 }
 flow.set("pglTopology", topology);
 
-const nodes = [{
-  id: topology.gatewayIdHex,
-  label: "GW",
+const nodes = Object.keys(topology.gateways).filter(isGatewayId).sort().map((gatewayIdHex) => ({
+  id: gatewayIdHex,
+  label: "GW " + gatewayIdHex,
   type: "gateway",
   parent: null,
   depth: 0,
@@ -139,15 +165,16 @@ const nodes = [{
   layerLabel: "Layer 0",
   route: [],
   status: "root"
-}];
+}));
 
 const edges = [];
 const installedIds = new Set(Object.keys(topology.parents || {}));
-const visibleIds = new Set([topology.gatewayIdHex]);
+const visibleIds = new Set(nodes.map((node) => node.id));
 for (const [clusterIdHex, entry] of Object.entries(topology.parents || {})) {
   const route = Array.isArray((topology.routes || {})[clusterIdHex])
     ? topology.routes[clusterIdHex]
     : [];
+  const routeGatewayIdHex = (topology.routeGateways || {})[clusterIdHex];
   const live = (topology.discovery || {})[clusterIdHex] || null;
   const liveIsGatewayRequest = live &&
     live.report === "ch-config-request" &&
@@ -157,7 +184,8 @@ for (const [clusterIdHex, entry] of Object.entries(topology.parents || {})) {
   const liveBattery = live && hasNumber(live.batteryMv) && Number(live.batteryMv) !== 0xFFFF
     ? Number(live.batteryMv)
     : undefined;
-  const gatewayLink = (topology.gatewayLinks || {})[clusterIdHex] || null;
+  const gatewayLinks = (topology.gatewayLinks || {})[clusterIdHex] || {};
+  const gatewayLink = gatewayLinks[routeGatewayIdHex] || Object.values(gatewayLinks)[0] || null;
   const gatewayRssi = gatewayLink && hasNumber(gatewayLink.rssi) ? Number(gatewayLink.rssi) : undefined;
   const gatewaySnr = gatewayLink && hasNumber(gatewayLink.snr) ? Number(gatewayLink.snr) : undefined;
   const hello = (topology.hellos || {})[clusterIdHex] || (entry.report === "ch-hello" ? entry : null);
@@ -167,11 +195,12 @@ for (const [clusterIdHex, entry] of Object.entries(topology.parents || {})) {
   const parentIdHex = entry.parentIdHex || "0x0000";
   const parentAltIdHex = entry.parentAltIdHex || "0x0000";
   const routeIsInstalled = route.length > 0 &&
-    (parentIdHex === topology.gatewayIdHex || parentIdHex === "0x0000" || installedIds.has(parentIdHex));
+    isGatewayId(routeGatewayIdHex) &&
+    (isGatewayId(parentIdHex) || installedIds.has(parentIdHex));
   const depth = routeIsInstalled ? route.length : null;
   const layer = depth;
   const layerLabel = hasNumber(layer) ? "Layer " + layer : "Discovery";
-  const rssiSource = parentIdHex && parentIdHex !== "0x0000" ? parentIdHex : (entry.viaHopHex || topology.gatewayIdHex);
+  const rssiSource = parentIdHex && parentIdHex !== "0x0000" ? parentIdHex : (entry.viaHopHex || routeGatewayIdHex);
   const rssiTarget = clusterIdHex;
   const rssiLink = rssiSource + " -> " + rssiTarget;
   const displayRssi = !liveIsGatewayRequest && liveRssi !== undefined ? liveRssi : entry.rssi;
@@ -199,8 +228,10 @@ for (const [clusterIdHex, entry] of Object.entries(topology.parents || {})) {
     layer,
     layerLabel,
     route: publicRoute,
-    routeText: routeIsInstalled ? topology.gatewayIdHex + " -> " + route.join(" -> ") : "installed route pending",
-    requestPayload: routeIsInstalled ? { requestId: 1, hopList: route } : null,
+    gatewayIdHex: routeIsInstalled ? routeGatewayIdHex : entry.gatewayIdHex,
+    routeGatewayIdHex: routeIsInstalled ? routeGatewayIdHex : null,
+    routeText: routeIsInstalled ? routeGatewayIdHex + " -> " + route.join(" -> ") : "installed route pending",
+    requestPayload: routeIsInstalled ? { gatewayId: routeGatewayIdHex, requestId: 1, hopList: route } : null,
     lastHop: routeIsInstalled ? route[route.length - 1] : clusterIdHex,
     report: entry.report,
     rssi: displayRssi,
@@ -254,7 +285,10 @@ for (const [clusterIdHex, event] of Object.entries(topology.discovery || {})) {
   if (visibleIds.has(clusterIdHex)) {
     continue;
   }
-  const gatewayLink = (topology.gatewayLinks || {})[clusterIdHex] || null;
+  const gatewayLinks = Object.values((topology.gatewayLinks || {})[clusterIdHex] || {});
+  gatewayLinks.sort((a, b) => Number(b.rssi ?? -999) - Number(a.rssi ?? -999));
+  const gatewayLink = gatewayLinks[0] || null;
+  const candidateGatewayIdHex = gatewayLink && gatewayLink.gatewayIdHex;
   const gatewayRssi = gatewayLink && hasNumber(gatewayLink.rssi) ? Number(gatewayLink.rssi) : undefined;
   const gatewaySnr = gatewayLink && hasNumber(gatewayLink.snr) ? Number(gatewayLink.snr) : undefined;
   const hello = (topology.hellos || {})[clusterIdHex] || null;
@@ -280,21 +314,23 @@ for (const [clusterIdHex, event] of Object.entries(topology.discovery || {})) {
     id: clusterIdHex,
     label: "CH " + clusterIdHex,
     type: "ch",
-    parent: directGatewayCandidate ? topology.gatewayIdHex : null,
+    parent: directGatewayCandidate ? candidateGatewayIdHex : null,
     parentAlt: null,
     depth: null,
     layer: null,
     layerLabel: "Discovery",
     route: [],
-    routeText: directGatewayCandidate ? topology.gatewayIdHex + " -> " + clusterIdHex + " (pending)" : "installed route pending",
-    requestPayload: directGatewayCandidate ? { requestId: 1, hopList: [clusterIdHex] } : null,
+    gatewayIdHex: candidateGatewayIdHex || event.gatewayIdHex,
+    routeGatewayIdHex: null,
+    routeText: directGatewayCandidate ? candidateGatewayIdHex + " -> " + clusterIdHex + " (pending)" : "installed route pending",
+    requestPayload: directGatewayCandidate ? { gatewayId: candidateGatewayIdHex, requestId: 1, hopList: [clusterIdHex] } : null,
     lastHop: clusterIdHex,
     report: event.report,
     rssi: directGatewayCandidate ? gatewayRssi : undefined,
     snr: directGatewayCandidate ? gatewaySnr : undefined,
-    rssiSource: directGatewayCandidate ? topology.gatewayIdHex : null,
+    rssiSource: directGatewayCandidate ? candidateGatewayIdHex : null,
     rssiTarget: clusterIdHex,
-    rssiLink: directGatewayCandidate ? topology.gatewayIdHex + " -> " + clusterIdHex : null,
+    rssiLink: directGatewayCandidate ? candidateGatewayIdHex + " -> " + clusterIdHex : null,
     linkQualityLabel: directGatewayCandidate
       ? "RSSI to Parent: " + (gatewayRssi ?? "-") + " dBm, SNR " + (gatewaySnr ?? "-") + " dB"
       : "RSSI to Parent: belum ada",
@@ -410,6 +446,7 @@ for (const [chIdHex, entry] of Object.entries(gldDiscoveryRaw)) {
     ch: chIdHex,
     status: statusDisplay,
     requestId: entry.requestId,
+    gatewayIdHex: entry.gatewayIdHex || (topology.routeGateways || {})[chIdHex],
     hopList: entry.hopList || [],
     requestedAt: entry.requestedAt || null,
     requestedAgeSec,
@@ -481,6 +518,7 @@ nodes.sort((a, b) => {
 });
 
 msg.headers = { "content-type": "application/json; charset=utf-8" };
+const gatewayIds = Object.keys(topology.gateways || {}).filter(isGatewayId).sort();
 msg.payload = {
   ok: true,
   kind: "pgl-topology",
@@ -488,7 +526,9 @@ msg.payload = {
   liveUpdatedAt: newestIso(topology.discoveryUpdatedAt, topology.updatedAt),
   topologyUpdatedAt: topology.updatedAt,
   resetAt: topology.resetAt || null,
-  gatewayIdHex: topology.gatewayIdHex,
+  gatewayIdHex: gatewayIds.length === 1 ? gatewayIds[0] : null,
+  gatewayIds,
+  gateways: topology.gateways || {},
   nodeCount: nodes.length,
   edgeCount: edges.length,
   mainEdgeCount: edges.filter((edge) => edge.role === "main").length,
@@ -499,25 +539,21 @@ msg.payload = {
   nodes,
   edges,
   routes: publicRoutes,
+  routeGateways: topology.routeGateways || {},
   discovery: topology.discovery || {},
   gldDiscovery
 };
 return msg;`;
 
-const topologyResetFunction = `function idHex(value) {
-  const n = Number(value) & 0xFFFF;
-  return "0x" + n.toString(16).toUpperCase().padStart(4, "0");
-}
-
-const gatewayIdHex = idHex(Number(env.get("PGL_GATEWAY_ID") || "0x006F"));
-const resetAt = new Date().toISOString();
+const topologyResetFunction = `const resetAt = new Date().toISOString();
 const topology = {
-  gatewayIdHex,
+  gateways: {},
   parents: {},
   discovery: {},
   gatewayLinks: {},
   hellos: {},
   routes: {},
+  routeGateways: {},
   updatedAt: null,
   discoveryUpdatedAt: null,
   resetAt
@@ -535,26 +571,19 @@ msg.payload = {
   updatedAt: null,
   liveUpdatedAt: null,
   topologyUpdatedAt: null,
-  gatewayIdHex,
-  nodeCount: 1,
+  gatewayIdHex: null,
+  gatewayIds: [],
+  gateways: {},
+  nodeCount: 0,
   edgeCount: 0,
   mainEdgeCount: 0,
   alternateEdgeCount: 0,
   discoveryCount: 0,
   gldNodeCount: 0,
-  nodes: [{
-    id: gatewayIdHex,
-    label: "GW",
-    type: "gateway",
-    parent: null,
-    depth: 0,
-    layer: 0,
-    layerLabel: "Layer 0",
-    route: [],
-    status: "root"
-  }],
+  nodes: [],
   edges: [],
   routes: {},
+  routeGateways: {},
   discovery: {},
   gatewayLinks: {},
   gldDiscovery: {}
@@ -563,9 +592,9 @@ return msg;`;
 
 const topologyDeleteFunction = `function idHexValue(value) {
   const raw = String(value || "").trim();
-  const n = raw.toLowerCase().startsWith("0x") ? parseInt(raw, 16) : Number(raw);
-  if (!Number.isFinite(n)) return null;
-  return "0x" + (n & 0xFFFF).toString(16).toUpperCase().padStart(4, "0");
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 0x0010 || n > 0x0FFF) return null;
+  return "0x" + n.toString(16).toUpperCase().padStart(4, "0");
 }
 
 const clusterIdHex = idHexValue((msg.req && msg.req.query && msg.req.query.ch) || (msg.payload && (msg.payload.ch || msg.payload.clusterId)));
@@ -581,15 +610,18 @@ topology.discovery = topology.discovery || {};
 topology.gatewayLinks = topology.gatewayLinks || {};
 topology.hellos = topology.hellos || {};
 topology.routes = topology.routes || {};
+topology.routeGateways = topology.routeGateways || {};
 
 delete topology.parents[clusterIdHex];
 delete topology.discovery[clusterIdHex];
 delete topology.gatewayLinks[clusterIdHex];
 delete topology.hellos[clusterIdHex];
 delete topology.routes[clusterIdHex];
+delete topology.routeGateways[clusterIdHex];
 for (const [key, route] of Object.entries(topology.routes)) {
   if (Array.isArray(route) && route.includes(clusterIdHex)) {
     delete topology.routes[key];
+    delete topology.routeGateways[key];
   }
 }
 topology.updatedAt = new Date().toISOString();
@@ -602,9 +634,9 @@ return msg;`;
 
 const topologyRequestFunction = `function idHexValue(value) {
   const raw = String(value || "").trim();
-  const n = raw.toLowerCase().startsWith("0x") ? parseInt(raw, 16) : Number(raw);
-  if (!Number.isFinite(n)) return null;
-  return "0x" + (n & 0xFFFF).toString(16).toUpperCase().padStart(4, "0");
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 0x0010 || n > 0x0FFF) return null;
+  return "0x" + n.toString(16).toUpperCase().padStart(4, "0");
 }
 
 const clusterIdHex = idHexValue((msg.req && msg.req.query && msg.req.query.ch) || (msg.payload && (msg.payload.ch || msg.payload.clusterId)));
@@ -616,10 +648,14 @@ if (!clusterIdHex) {
 
 const topology = flow.get("pglTopology") || {};
 let route = topology.routes && Array.isArray(topology.routes[clusterIdHex]) ? topology.routes[clusterIdHex] : [];
+let gatewayIdHex = topology.routeGateways && topology.routeGateways[clusterIdHex];
 if (route.length === 0) {
   const directGatewayMinRssiDbm = Number(env.get("PGL_GATEWAY_DIRECT_PARENT_MIN_RSSI_DBM") || "-95");
   const directGatewayMinSnrDb = Number(env.get("PGL_GATEWAY_DIRECT_PARENT_MIN_SNR_DB") || "5");
-  const gatewayLink = (topology.gatewayLinks || {})[clusterIdHex];
+  const rawGatewayLinks = (topology.gatewayLinks || {})[clusterIdHex] || {};
+  const gatewayLinks = rawGatewayLinks.gatewayIdHex ? [rawGatewayLinks] : Object.values(rawGatewayLinks);
+  gatewayLinks.sort((a, b) => Number(b.rssi ?? -999) - Number(a.rssi ?? -999));
+  const gatewayLink = gatewayLinks[0];
   const isDirectCandidate = gatewayLink &&
     Number.isFinite(Number(gatewayLink.rssi)) &&
     Number.isFinite(Number(gatewayLink.snr)) &&
@@ -627,9 +663,11 @@ if (route.length === 0) {
     Number(gatewayLink.snr) >= directGatewayMinSnrDb;
   if (isDirectCandidate) {
     route = [clusterIdHex];
+    gatewayIdHex = gatewayLink.gatewayIdHex;
   }
 }
-if (route.length === 0) {
+const gatewayId = gatewayIdHex && parseInt(String(gatewayIdHex).replace(/^0x/i, ""), 16);
+if (route.length === 0 || !Number.isInteger(gatewayId) || gatewayId < 0x0001 || gatewayId > 0x000F) {
   msg.statusCode = 409;
   msg.payload = { ok: false, reason: "route-not-installed", ch: clusterIdHex };
   return [null, msg];
@@ -659,12 +697,14 @@ if (!requestIdAvailable) {
 }
 const requestedAt = new Date(requestNowMs).toISOString();
 const command = {
+  gatewayId: gatewayIdHex,
   requestId,
   hopList: route
 };
 requestIndex[String(requestId)] = {
   requestId,
   targetChIdHex: clusterIdHex,
+  gatewayIdHex,
   hopList: route,
   requestedAt
 };
@@ -679,6 +719,7 @@ const existingGldEntry = gldDiscovery[clusterIdHex] || {};
 gldDiscovery[clusterIdHex] = {
   status: "sent",
   requestId,
+  gatewayIdHex,
   hopList: route,
   requestedAt,
   respondedAt: existingGldEntry.respondedAt || null,
@@ -690,7 +731,7 @@ gldDiscovery[clusterIdHex] = {
 flow.set("pglGldDiscovery", gldDiscovery);
 
 msg.headers = { "content-type": "application/json; charset=utf-8" };
-msg.payload = { ok: true, kind: "pgl-topology-request", ch: clusterIdHex, requestId, hopList: route };
+msg.payload = { ok: true, kind: "pgl-topology-request", ch: clusterIdHex, gatewayId: gatewayIdHex, requestId, hopList: route };
 return [mqttMsg, msg];`;
 
 const topologyViewFunction = `msg.headers = { "content-type": "text/html; charset=utf-8" };
@@ -1555,13 +1596,13 @@ msg.payload = \`<!doctype html>
       const manualLayout = loadManualLayout();
       currentEdges = edges;
       currentPositions = {};
-      summaryEl.textContent = data.nodeCount + " node (" + (data.gldNodeCount || 0) + " GLD), " + (data.mainEdgeCount ?? data.edgeCount) + " main link, " + (data.alternateEdgeCount || 0) + " alt link, " + (data.pendingEdgeCount || 0) + " pending link, " + (data.discoveryCount || 0) + " discovery";
+      summaryEl.textContent = (data.gatewayIds || []).length + " GW, " + data.nodeCount + " node (" + (data.gldNodeCount || 0) + " GLD), " + (data.mainEdgeCount ?? data.edgeCount) + " main link, " + (data.alternateEdgeCount || 0) + " alt link, " + (data.pendingEdgeCount || 0) + " pending link, " + (data.discoveryCount || 0) + " discovery";
       statusEl.textContent = "Topology: " + (data.topologyUpdatedAt || data.updatedAt || "belum ada topology event") +
         " | Live: " + (data.liveUpdatedAt || "belum ada live event");
-      if (data.resetAt && nodes.length <= 1) {
+      if (data.resetAt && nodes.every((node) => node.type === "gateway")) {
         statusEl.textContent = "Routing reset: " + data.resetAt + " | Menunggu update routing berikutnya";
       }
-      if (nodes.length <= 1) {
+      if (nodes.every((node) => node.type === "gateway")) {
         nodesEl.innerHTML = '<div class="empty">Belum ada CH route. Tunggu CH_CONFIG/CH_HELLO masuk dari Gateway.</div>';
       }
       renderPendingTable(nodes);
@@ -1751,7 +1792,6 @@ const nodes = [
     env: [
       { name: "GATEWAY_STATUS_URL", value: gatewayStatusUrl, type: "str" },
       { name: "GATEWAY_BASE_URL", value: gatewayBaseUrl, type: "str" },
-      { name: "PGL_GATEWAY_ID", value: "0x006F", type: "str" },
       { name: "PGL_REPLAY_STATE_PATH", value: replayStatePath, type: "str" }
     ]
   },
@@ -2412,9 +2452,14 @@ return msg;`,
     name: "normalize pull hopList",
     func: `function idHex(value) {
   const raw = String(value || '').trim();
-  const n = raw.toLowerCase().startsWith('0x') ? parseInt(raw, 16) : Number(raw);
-  if (!Number.isFinite(n)) return null;
-  return '0x' + (n & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 0 || n > 0xFFFF) return null;
+  return '0x' + n.toString(16).toUpperCase().padStart(4, '0');
+}
+
+function isChId(value) {
+  const n = value && parseInt(value.slice(2), 16);
+  return Number.isInteger(n) && n >= 0x0010 && n <= 0x0FFF;
 }
 
 const p = msg.payload || {};
@@ -2425,8 +2470,17 @@ if (!rawHopList || rawHopList.length === 0) {
 }
 
 const hopList = rawHopList.map(idHex);
-if (hopList.some((hop) => hop === null)) {
-  node.warn('pull command has invalid hopList entry');
+if (hopList.some((hop) => !isChId(hop))) {
+  node.warn('pull command hopList entries must be CH IDs in 0x0010..0x0FFF');
+  return null;
+}
+
+const targetChIdHex = hopList[hopList.length - 1];
+const topology = flow.get('pglTopology') || {};
+const gatewayIdHex = idHex(p.gatewayId || p.gateway_id || ((topology.routeGateways || {})[targetChIdHex]));
+const gatewayId = gatewayIdHex && parseInt(gatewayIdHex.slice(2), 16);
+if (!Number.isInteger(gatewayId) || gatewayId < 0x0001 || gatewayId > 0x000F) {
+  node.warn('pull command requires a Gateway ID in 0x0001..0x000F or an installed route owner');
   return null;
 }
 
@@ -2435,13 +2489,15 @@ const requestedAt = new Date().toISOString();
 const requestIndex = flow.get('pglGldRequestIndex') || {};
 requestIndex[String(requestId)] = {
   requestId,
-  targetChIdHex: hopList[hopList.length - 1],
+  targetChIdHex,
+  gatewayIdHex,
   hopList,
   requestedAt
 };
 flow.set('pglGldRequestIndex', requestIndex);
 
 msg.payload = {
+  gatewayId: gatewayIdHex,
   requestId,
   hopList
 };

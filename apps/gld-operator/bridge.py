@@ -231,7 +231,13 @@ class SerialBridge:
             raise RuntimeError("serial port is not connected")
         ser.write(line.encode("utf-8", errors="replace"))
         ser.flush()
-        self._emit("serial_tx", {"line": line.rstrip("\r\n")})
+        event_line = re.sub(
+            r'("(?:aesKeyHex|gldAes128KeyHex|GLD_AES128_KEY_HEX)"\s*:\s*")[^"]*(")',
+            r"\1<redacted>\2",
+            line.rstrip("\r\n"),
+            flags=re.IGNORECASE,
+        )
+        self._emit("serial_tx", {"line": event_line})
         return {"ok": True}
 
     def _read_loop(self) -> None:

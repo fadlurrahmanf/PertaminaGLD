@@ -6,9 +6,8 @@ JavaScript cannot access: COM port listing + Gateway provisioning/boot-log seria
 monitor, MQTT connect/subscribe/publish against the site broker, and direct
 verified firmware upload.
 
-The Gateway firmware exposes only staged network provisioning commands over
-serial; it has no general console or runtime device-id provisioning command,
-because GATEWAY_ID is a compile-time constant (firmware/config/GwConfig.h).
+The Gateway firmware exposes staged network, radio, and NVS-backed runtime
+Gateway identity provisioning commands over serial; it has no general console.
 The gateway bridges LoRa MESH
 frames to MQTT on its own; this app is an MQTT dashboard + command composer
 for the {topicRoot}/uplink, /status, /topology, /cmd/pull, /cmd/node topics

@@ -17,6 +17,7 @@
 #include "ChBoardPins.h"
 #endif
 #include "ChCommandParser.h"
+#include "ChParentPolicy.h"
 #include "ChRuntime.h"
 #include "ChTxQueue.h"
 #include "ChConfig.h"
@@ -411,7 +412,7 @@ void setState(ChState newState, const char* reason) {
 // ─── NVS (parent persistence) ───────────────────────────────────────────────
 
 bool isAcceptedStoredChIdentity(uint16_t id) {
-    return pgl::config::isValidNodeId(id) && id != ROOT_GATEWAY_ID;
+    return pgl::ch::parent_policy::isStoredChIdentityAllowed(id);
 }
 
 bool isProvisionableChIdentity(uint16_t id) {
@@ -457,7 +458,7 @@ bool saveChIdentity(uint16_t newId) {
 }
 
 bool isAcceptedStoredGatewayId(uint16_t id) {
-    return pgl::config::isValidNodeId(id) && id != CH_ID;
+    return pgl::ch::parent_policy::isRootGatewayIdentityAllowed(id);
 }
 
 bool isProvisionableGatewayId(uint16_t id) {
@@ -485,6 +486,10 @@ bool saveRootGateway(uint16_t newId) {
     Preferences prefs;
     if (!prefs.begin("ch-cfg", false)) return false;
     const size_t written = prefs.putUShort("rootGw", newId);
+    // A cached parent/alternate belongs to the previous root tree. Never carry
+    // that lineage across a root-Gateway change.
+    prefs.remove("parentId");
+    prefs.remove("parentAlt");
     prefs.end();
     if (written != sizeof(uint16_t)) return false;
 
@@ -650,6 +655,39 @@ ParentCandidate* findParentCandidate(uint16_t id) {
     return nullptr;
 }
 
+bool candidateLineageReachesConfiguredRoot(const ParentCandidate& candidate) {
+    const ParentCandidate* current = &candidate;
+    uint16_t visited[PARENT_CANDIDATE_CAPACITY]{};
+    size_t visitedCount = 0;
+
+    while (current != nullptr && visitedCount < PARENT_CANDIDATE_CAPACITY) {
+        for (size_t i = 0; i < visitedCount; ++i) {
+            if (visited[i] == current->id) return false;
+        }
+        visited[visitedCount++] = current->id;
+
+        if (current->id == ROOT_GATEWAY_ID) {
+            return current->depth == 0 && current->advertisedParent == 0;
+        }
+        if (!pgl::config::isProvisionableChId(current->id) ||
+            !pgl::ch::parent_policy::isChParentReferenceAllowed(
+                current->advertisedParent, ROOT_GATEWAY_ID)) {
+            return false;
+        }
+        if (current->advertisedParent == ROOT_GATEWAY_ID) {
+            return current->depth == 1;
+        }
+
+        const ParentCandidate* upstream = findParentCandidate(current->advertisedParent);
+        if (upstream == nullptr || upstream->depth == 0xFF ||
+            current->depth == 0 || upstream->depth + 1 != current->depth) {
+            return false;
+        }
+        current = upstream;
+    }
+    return false;
+}
+
 uint8_t advertisedMeshDepth() {
     if (CH_ID == ROOT_GATEWAY_ID) return 0;
     if (parentId == ROOT_GATEWAY_ID) return 1;
@@ -694,7 +732,9 @@ bool allowedAsRuntimeParent(const ParentCandidate& c) {
                                  (c.rssiDbm >= GATEWAY_PARENT_MIN_RSSI_DBM &&
                                   c.hasReverseLink &&
                                   c.reverseRssiDbm >= GATEWAY_PARENT_MIN_RSSI_DBM);
-    return gatewayParentOk && candidateIsUpstreamForDepth(c, meshDepth);
+    return gatewayParentOk &&
+           candidateLineageReachesConfiguredRoot(c) &&
+           candidateIsUpstreamForDepth(c, meshDepth);
 }
 
 bool allowedAsAlternateForNodeDepth(const ParentCandidate& c, uint8_t nodeDepth) {
@@ -702,7 +742,9 @@ bool allowedAsAlternateForNodeDepth(const ParentCandidate& c, uint8_t nodeDepth)
                               (c.rssiDbm >= GATEWAY_ALT_PARENT_MIN_RSSI_DBM &&
                                c.hasReverseLink &&
                                c.reverseRssiDbm >= GATEWAY_ALT_PARENT_MIN_RSSI_DBM);
-    return gatewayAltOk && candidateIsUpstreamForDepth(c, nodeDepth);
+    return gatewayAltOk &&
+           candidateLineageReachesConfiguredRoot(c) &&
+           candidateIsUpstreamForDepth(c, nodeDepth);
 }
 
 bool allowedAsAlternateParent(const ParentCandidate& c, const ParentCandidate& selectedParent) {
@@ -729,6 +771,23 @@ void upsertParentCandidate(uint16_t id, uint16_t advertisedParent, uint8_t depth
                            uint8_t routeFlags, bool hasReverseLink = false,
                            int16_t reverseRssiDbm = 0, int8_t reverseSnrDb = 0) {
     if (id == 0 || id == CH_ID || id == BROADCAST_ID) return;
+    if (!pgl::ch::parent_policy::isCandidateRoleAllowed(id, ROOT_GATEWAY_ID)) {
+        logPrintf("CH_PARENT_CANDIDATE_REJECT id=0x%04X reason=foreign-gateway-or-role root=0x%04X\n",
+                  id, ROOT_GATEWAY_ID);
+        return;
+    }
+    if (id == ROOT_GATEWAY_ID) {
+        if (advertisedParent != 0 || depth != 0) {
+            logPrintf("CH_PARENT_CANDIDATE_REJECT id=0x%04X reason=root-lineage parent=0x%04X depth=%u\n",
+                      id, advertisedParent, depth);
+            return;
+        }
+    } else if (!pgl::ch::parent_policy::isChParentReferenceAllowed(
+                   advertisedParent, ROOT_GATEWAY_ID)) {
+        logPrintf("CH_PARENT_CANDIDATE_REJECT id=0x%04X reason=parent-role parent=0x%04X root=0x%04X\n",
+                  id, advertisedParent, ROOT_GATEWAY_ID);
+        return;
+    }
     if (advertisedParent == CH_ID) return;
     if (depth == 0xFF) return;
 

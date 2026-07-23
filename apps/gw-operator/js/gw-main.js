@@ -11,9 +11,11 @@ import {
   initBridge, startBridgeHealthPoll, refreshPorts, connectSerial, disconnectSerial,
   ensureManualPortOption, bridgeFetch, connectMqtt, disconnectMqtt, testMqtt,
   publishPull, publishNode, useLocalPc, applyWifiConfig, testGatewayWifi,
-  applyMqttConfig, requestMeshLoraConfig, applyMeshLoraConfig, updateSetupFlowUi
+  applyMqttConfig, requestMeshLoraConfig, applyMeshLoraConfig, updateSetupFlowUi,
+  requestGatewayAddress, applyGatewayAddress, reconnectSerialAfterGatewayReboot
 } from "./gw-bridge.js";
 import { validateMeshLoraConfig } from "./gw-lora-config.mjs";
+import { validateGatewayId } from "./gw-gateway-id.mjs";
 import {
   renderOverview, renderUplinks, clearUplinks, renderTopology, clearTopology,
   renderCommandLog, clearCommandLog, tickStatusAge
@@ -166,6 +168,67 @@ function populateMeshLoraForm(config) {
   elements.meshApplyStatus.textContent = "Current MESH LoRa settings loaded from Gateway.";
 }
 
+function populateGatewayIdentity(config) {
+  const gatewayId = validateGatewayId(config?.gatewayId ?? state.gatewayId);
+  state.gatewayId = gatewayId;
+  elements.gatewayCurrentId.textContent = `0x${gatewayId}`;
+  elements.gatewayIdInput.value = gatewayId;
+  elements.gatewayIdStatus.textContent = "Current Gateway ID loaded from device NVS/runtime.";
+}
+
+async function handleLoadGatewayIdentity() {
+  elements.gatewayIdStatus.textContent = "Reading current Gateway ID from device…";
+  try {
+    populateGatewayIdentity(await requestGatewayAddress());
+  } catch (error) {
+    elements.gatewayIdStatus.textContent = `Read failed: ${error.message}`;
+  }
+}
+
+async function handleApplyGatewayIdentity() {
+  let requestedGatewayId;
+  try {
+    requestedGatewayId = validateGatewayId(elements.gatewayIdInput.value);
+  } catch (error) {
+    elements.gatewayIdStatus.textContent = error.message;
+    return;
+  }
+
+  elements.gatewayIdApplyBtn.disabled = true;
+  elements.gatewayIdLoadBtn.disabled = true;
+  elements.gatewayIdStatus.textContent = `Saving Gateway ID 0x${requestedGatewayId}…`;
+  try {
+    const ack = await applyGatewayAddress(requestedGatewayId);
+    if (String(ack.status).toLowerCase() !== "ok") {
+      throw new Error(ack.message || ack.status || "device rejected Gateway ID");
+    }
+    if (ack.reboot !== "1") {
+      state.gatewayId = requestedGatewayId;
+      populateGatewayIdentity({ gatewayId: requestedGatewayId });
+      elements.gatewayIdStatus.textContent = `Gateway ID remains 0x${requestedGatewayId}; reboot not required.`;
+      return;
+    }
+
+    elements.gatewayIdStatus.textContent = `Saved as 0x${requestedGatewayId}. Gateway is rebooting; waiting for COM reconnect…`;
+    const reconnect = await reconnectSerialAfterGatewayReboot();
+    elements.gatewayIdStatus.textContent = `Reconnected to ${reconnect.port}; verifying Gateway ID…`;
+    const readback = await requestGatewayAddress();
+    const verifiedGatewayId = validateGatewayId(readback.gatewayId);
+    if (verifiedGatewayId !== requestedGatewayId) {
+      throw new Error(`readback mismatch: expected ${requestedGatewayId}, received ${verifiedGatewayId}`);
+    }
+    populateGatewayIdentity({ gatewayId: verifiedGatewayId });
+    elements.gatewayIdStatus.textContent = `Gateway ID 0x${verifiedGatewayId} saved, rebooted, reconnected, and verified.`;
+    showBanner(`Gateway identity is now 0x${verifiedGatewayId}.`, "ok");
+  } catch (error) {
+    elements.gatewayIdStatus.textContent = `Gateway ID update failed: ${error.message}`;
+    showBanner(`Gateway ID update failed: ${error.message}`, "error");
+  } finally {
+    elements.gatewayIdLoadBtn.disabled = !state.serialConnected;
+    elements.gatewayIdApplyBtn.disabled = !state.serialConnected;
+  }
+}
+
 async function handleLoadMeshLora() {
   elements.meshApplyStatus.textContent = "Reading MESH LoRa settings from Gateway…";
   try {
@@ -232,7 +295,7 @@ async function sendPull() {
   const requestId = Number(elements.pullRequestId.value) || undefined;
   if (!hopList.length && !cluster) return showBanner("Provide a hop list or a cluster ID.", "error");
   try {
-    await publishPull({ hopList: hopList.length ? hopList : undefined, cluster: hopList.length ? undefined : cluster, requestId });
+    await publishPull({ gatewayId: `0x${state.gatewayId}`, hopList: hopList.length ? hopList : undefined, cluster: hopList.length ? undefined : cluster, requestId });
     showBanner("Pull request published.", "ok");
   } catch (error) {
     showBanner(`Pull publish failed: ${error.message}`, "error");
@@ -247,7 +310,7 @@ async function sendNode() {
   const hopList = parseHopList(elements.nodeHopList.value);
   if (!cluster) return showBanner("Cluster ID is required.", "error");
   try {
-    await publishNode({ cluster, node, id: node, ttl, hex, hopList: hopList.length ? hopList : undefined });
+    await publishNode({ gatewayId: `0x${state.gatewayId}`, cluster, node, id: node, ttl, hex, hopList: hopList.length ? hopList : undefined });
     showBanner("Node command published.", "ok");
   } catch (error) {
     showBanner(`Node publish failed: ${error.message}`, "error");
@@ -452,6 +515,9 @@ function setupEvents() {
   elements.gwApplyMqttBtn.addEventListener("click", handleApplyMqttConfig);
   elements.meshLoadBtn.addEventListener("click", handleLoadMeshLora);
   elements.meshApplyBtn.addEventListener("click", handleApplyMeshLora);
+  elements.gatewayIdLoadBtn.addEventListener("click", handleLoadGatewayIdentity);
+  elements.gatewayIdApplyBtn.addEventListener("click", handleApplyGatewayIdentity);
+  window.addEventListener("gw-gateway-address", (event) => populateGatewayIdentity(event.detail));
   for (const input of [elements.meshSetFreq, elements.meshSetBw, elements.meshSetSf,
     elements.meshSetCr, elements.meshSetSync, elements.meshSetTx]) {
     input.addEventListener("input", () => { state.meshLoraDirty = true; });
@@ -504,11 +570,12 @@ async function bootstrap() {
   renderTopology();
   renderCommandLog();
   elements.fwTargetId.value = DEFAULT_GATEWAY_ID;
+  elements.gatewayIdInput.value = DEFAULT_GATEWAY_ID;
   await initBridge();
   updateSetupFlowUi();
   startBridgeHealthPoll();
   setInterval(tickStatusAge, 1000);
-  appendLog("Gateway Operator ready. Setup order: connect COM, save and verify Wi-Fi, then configure MQTT.", "in");
+  appendLog("Gateway Operator ready. Setup order: connect COM, verify Gateway identity, save and verify Wi-Fi, then configure MQTT.", "in");
 }
 
 bootstrap();

@@ -1,6 +1,6 @@
-// Decodes and renders the gateway's MQTT payloads. There is no serial
-// command/ack protocol to parse here (see gw-state.js header) — everything
-// below is driven by the JSON the gateway firmware publishes itself:
+// Decodes and renders the gateway's MQTT payloads. Serial provisioning and
+// command/ack parsing live in gw-bridge.js; everything below is driven by the
+// JSON the gateway firmware publishes itself:
 //   {root}/status   -> publishStatus()          (GatewayMqttMeshMain.cpp)
 //   {root}/uplink    -> publishMeshFrame()
 //   {root}/topology  -> publishTopologyReport()

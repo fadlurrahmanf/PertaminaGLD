@@ -62,7 +62,7 @@ function buildResponseFrame({ requestId, transportSrc, gatewayId, record }) {
   return Buffer.concat([body, Buffer.from([(crc >> 8) & 0xFF, crc & 0xFF])]).toString("hex").toUpperCase();
 }
 
-function runDecoder(recordHex, flowStore, replayStatePath) {
+function runDecoder(recordHex, flowStore, replayStatePath, wrapperGatewayId) {
   const flow = {
     get: (name) => flowStore[name],
     set: (name, value) => { flowStore[name] = value; }
@@ -71,7 +71,6 @@ function runDecoder(recordHex, flowStore, replayStatePath) {
   const envValues = {
     GLD_KEY_ID: "1",
     GLD_AES128_KEY_HEX: key.toString("hex"),
-    PGL_GATEWAY_ID: "0x006F",
     PGL_REPLAY_STATE_PATH: replayStatePath,
     PGL_GLD_REQUEST_CORRELATION_TTL_MS: "120000"
   };
@@ -81,7 +80,7 @@ function runDecoder(recordHex, flowStore, replayStatePath) {
     Error, RegExp, parseInt, parseFloat
   }, { filename: decoderPath });
   return fn(
-    { payload: { recordHex }, topic: "gld/gateway/uplink" },
+    { payload: { recordHex, gatewayId: wrapperGatewayId }, topic: "gld/gateway/uplink" },
     flow,
     globalContext,
     { get: (name) => envValues[name] },
@@ -96,12 +95,13 @@ const flowStore = {
     [requestId]: {
       requestId,
       targetChIdHex: "0x0068",
+      gatewayIdHex: "0x0001",
       hopList: ["0x0069", "0x0068"],
       requestedAt
     }
   },
   pglGldDiscovery: {
-    "0x0068": { status: "sent", requestId, hopList: ["0x0069", "0x0068"], requestedAt, devices: {} },
+    "0x0068": { status: "sent", requestId, gatewayIdHex: "0x0001", hopList: ["0x0069", "0x0068"], requestedAt, devices: {} },
     "0x0069": { status: "idle", devices: {} }
   }
 };
@@ -111,7 +111,7 @@ try {
   const frame = buildResponseFrame({
     requestId,
     transportSrc: 0x0069,
-    gatewayId: 0x006F,
+    gatewayId: 0x0001,
     record: buildRecord(0xF020, 72, 1)
   });
   const result = runDecoder(frame, flowStore, path.join(tempDir, "replay.json"));
@@ -126,16 +126,16 @@ try {
 
   const directStore = {
     pglGldRequestIndex: {
-      12816: { requestId: 12816, targetChIdHex: "0x0068", hopList: ["0x0068"], requestedAt }
+      12816: { requestId: 12816, targetChIdHex: "0x0068", gatewayIdHex: "0x0001", hopList: ["0x0068"], requestedAt }
     },
     pglGldDiscovery: {
-      "0x0068": { status: "sent", requestId: 12816, hopList: ["0x0068"], requestedAt, devices: {} }
+      "0x0068": { status: "sent", requestId: 12816, gatewayIdHex: "0x0001", hopList: ["0x0068"], requestedAt, devices: {} }
     }
   };
   const direct = runDecoder(buildResponseFrame({
     requestId: 12816,
     transportSrc: 0x0068,
-    gatewayId: 0x006F,
+    gatewayId: 0x0001,
     record: buildRecord(0xF020, 73, 2)
   }), directStore, path.join(tempDir, "direct-replay.json"));
   assert.equal(direct[2][0].payload.outer.responseTargetChIdHex, "0x0068");
@@ -144,7 +144,7 @@ try {
   const unknown = runDecoder(buildResponseFrame({
     requestId: 32000,
     transportSrc: 0x0069,
-    gatewayId: 0x006F,
+    gatewayId: 0x0001,
     record: buildRecord(0xF020, 74, 3)
   }), unknownStore, path.join(tempDir, "unknown-replay.json"));
   assert.equal(unknown[2][0].payload.outer.responseTargetChIdHex, undefined);
@@ -154,16 +154,16 @@ try {
   const lateAt = new Date(Date.now() - 30000).toISOString();
   const lateStore = {
     pglGldRequestIndex: {
-      12817: { requestId: 12817, targetChIdHex: "0x0068", hopList: ["0x0069", "0x0068"], requestedAt: lateAt }
+      12817: { requestId: 12817, targetChIdHex: "0x0068", gatewayIdHex: "0x0001", hopList: ["0x0069", "0x0068"], requestedAt: lateAt }
     },
     pglGldDiscovery: {
-      "0x0068": { status: "sent", requestId: 12817, hopList: ["0x0069", "0x0068"], requestedAt: lateAt, devices: {} }
+      "0x0068": { status: "sent", requestId: 12817, gatewayIdHex: "0x0001", hopList: ["0x0069", "0x0068"], requestedAt: lateAt, devices: {} }
     }
   };
   const late = runDecoder(buildResponseFrame({
     requestId: 12817,
     transportSrc: 0x0069,
-    gatewayId: 0x006F,
+    gatewayId: 0x0001,
     record: buildRecord(0xF020, 75, 4)
   }), lateStore, path.join(tempDir, "late-replay.json"));
   assert.equal(late[2][0].payload.outer.responseTargetChIdHex, undefined);
@@ -172,21 +172,71 @@ try {
 
   const mismatchStore = {
     pglGldRequestIndex: {
-      12818: { requestId: 12818, targetChIdHex: "0x0068", hopList: ["0x0067", "0x0068"], requestedAt }
+      12818: { requestId: 12818, targetChIdHex: "0x0068", gatewayIdHex: "0x0001", hopList: ["0x0067", "0x0068"], requestedAt }
     },
     pglGldDiscovery: {
-      "0x0068": { status: "sent", requestId: 12818, hopList: ["0x0067", "0x0068"], requestedAt, devices: {} }
+      "0x0068": { status: "sent", requestId: 12818, gatewayIdHex: "0x0001", hopList: ["0x0067", "0x0068"], requestedAt, devices: {} }
     }
   };
   const mismatch = runDecoder(buildResponseFrame({
     requestId: 12818,
     transportSrc: 0x0069,
-    gatewayId: 0x006F,
+    gatewayId: 0x0001,
     record: buildRecord(0xF020, 76, 5)
   }), mismatchStore, path.join(tempDir, "mismatch-replay.json"));
   assert.equal(mismatch[2][0].payload.outer.responseTargetChIdHex, undefined);
   assert.equal(mismatch[2][0].payload.outer.responseCorrelation, "ingress-route-mismatch");
   assert.equal(mismatchStore.pglGldDiscovery["0x0068"].devices["0xF020"], undefined);
+
+  for (const gatewayId of [0x0002, 0x000F]) {
+    const boundaryRequestId = 13000 + gatewayId;
+    const gatewayIdHex = `0x${gatewayId.toString(16).toUpperCase().padStart(4, "0")}`;
+    const store = {
+      pglGldRequestIndex: {
+        [boundaryRequestId]: { requestId: boundaryRequestId, targetChIdHex: "0x0068", gatewayIdHex, hopList: ["0x0068"], requestedAt }
+      },
+      pglGldDiscovery: {
+        "0x0068": { status: "sent", requestId: boundaryRequestId, gatewayIdHex, hopList: ["0x0068"], requestedAt, devices: {} }
+      }
+    };
+    const accepted = runDecoder(buildResponseFrame({
+      requestId: boundaryRequestId,
+      transportSrc: 0x0068,
+      gatewayId,
+      record: buildRecord(0x1001, gatewayId, 100 + gatewayId)
+    }), store, path.join(tempDir, `gateway-${gatewayId}.json`), gatewayId);
+    assert.equal(accepted[2][0].payload.outer.gatewayIdHex, gatewayIdHex);
+    assert(store.pglGldDiscovery["0x0068"].devices["0x1001"]);
+  }
+
+  for (const invalidDestination of [0x0000, 0x0010, 0x1001, 0xFEFF, 0xFF00, 0xFFFF]) {
+    const rejected = runDecoder(buildResponseFrame({
+      requestId: 14000,
+      transportSrc: 0x0068,
+      gatewayId: invalidDestination,
+      record: buildRecord(0x1001, 90, 200 + invalidDestination)
+    }), { pglGldRequestIndex: {}, pglGldDiscovery: {} }, path.join(tempDir, `invalid-${invalidDestination}.json`));
+    assert.match(rejected[3].payload.detail, /is not a Gateway ID/);
+  }
+
+  const wrapperMismatch = runDecoder(buildResponseFrame({
+    requestId: 15000,
+    transportSrc: 0x0068,
+    gatewayId: 0x0002,
+    record: buildRecord(0x1001, 91, 300)
+  }), { pglGldRequestIndex: {}, pglGldDiscovery: {} }, path.join(tempDir, "wrapper-mismatch.json"), 0x0003);
+  assert.match(wrapperMismatch[3].payload.detail, /wrapper\/frame gateway mismatch/);
+
+  const invalidGld = runDecoder(buildResponseFrame({
+    requestId: 15001,
+    transportSrc: 0x0068,
+    gatewayId: 0x0002,
+    record: buildRecord(0x1000, 92, 301)
+  }), {
+    pglGldRequestIndex: { 15001: { requestId: 15001, targetChIdHex: "0x0068", gatewayIdHex: "0x0002", hopList: ["0x0068"], requestedAt } },
+    pglGldDiscovery: { "0x0068": { requestId: 15001, gatewayIdHex: "0x0002", hopList: ["0x0068"], requestedAt, devices: {} } }
+  }, path.join(tempDir, "invalid-gld.json"), 0x0002);
+  assert.match(invalidGld[3][0].payload.reason, /expected GLD/);
 
   console.log("PASS routed GLD response request correlation");
 } finally {

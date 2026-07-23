@@ -5,8 +5,8 @@
 
 export const $ = (id) => document.getElementById(id);
 
-// firmware/config/GwConfig.h GATEWAY_ID default. Display-only: the gateway
-// does not accept a runtime rename, unlike CH/GLD device IDs.
+// Build default. Current firmware can persist a different 0001-000F identity
+// in NVS through SET_GATEWAY_ADDRESS_JSON.
 export const DEFAULT_GATEWAY_ID = "0001";
 
 export const UPLINK_HISTORY_MAX = 300;
@@ -33,6 +33,7 @@ export const state = {
   wifiVerified: false,
   wifiIp: "",
   meshLoraDirty: false,
+  gatewayId: DEFAULT_GATEWAY_ID,
 
   mqttConnected: false,
   mqttConfig: { host: "", port: 1884, username: "", password: "", topicRoot: "gld/gateway" },
@@ -92,7 +93,8 @@ const ELEMENT_IDS = [
 
   // Broker Setup drawer
   "setupBackdrop", "setupPanel", "closeSetupBtn",
-  "serialSetupStep", "wifiSetupStep", "mqttSetupStep", "mqttLockNote", "meshLoraSetupStep",
+  "serialSetupStep", "gatewayIdentitySetupStep", "wifiSetupStep", "mqttSetupStep", "mqttLockNote", "meshLoraSetupStep",
+  "gatewayCurrentId", "gatewayIdInput", "gatewayIdLoadBtn", "gatewayIdApplyBtn", "gatewayIdStatus",
   "mqttHost", "mqttPort", "mqttUsername", "mqttPassword", "mqttTopicRoot",
   "mqttConnectBtn", "mqttDisconnectBtn", "mqttTestBtn", "mqttSetupDetail", "useThisPcBtn",
   "gwWifiSsid", "gwWifiPassword", "gwUseThisWifiBtn",

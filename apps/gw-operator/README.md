@@ -14,8 +14,9 @@ browser JavaScript cannot reach (COM ports, MQTT, PlatformIO/esptool).
 The Gateway Setup drawer enforces COM connection, Gateway-side Wi-Fi save and
 verification, then MQTT configuration. A save ACK is not treated as proof
 that Wi-Fi connected. The serial provisioning surface is intentionally
-limited to network provisioning plus `GET_MESH_LORA` and
-`SET_MESH_LORA_JSON`; operational traffic still uses MQTT. The gateway
+limited to network provisioning, runtime Gateway identity
+(`GET_GATEWAY_ADDRESS` / `SET_GATEWAY_ADDRESS_JSON`), plus `GET_MESH_LORA`
+and `SET_MESH_LORA_JSON`; operational traffic still uses MQTT. The gateway
 bridges LoRa MESH frames to MQTT entirely on its own:
 
 Step 2 can read the active Windows Wi-Fi profile with **Use this PC Wi-Fi**.
@@ -38,9 +39,9 @@ See `firmware/config/GwConfig.h` for the topic constants and
 **MQTT dashboard + downlink command composer**, plus staged network
 provisioning, a boot-log tail, and a verified firmware flasher.
 
-`GATEWAY_ID` is also a compile-time constant (`GwConfig.h`), unlike the
-CH/GLD device ID, which is provisioned at runtime over serial after
-flashing. There is no equivalent "set gateway ID" command in this app.
+Gateway ID defaults to `0001` and is persisted in NVS at runtime. Gateway
+Setup validates the role range `0001` through `000F`, then reboots,
+reconnects, and verifies device readback after a change.
 
 ## Run it
 

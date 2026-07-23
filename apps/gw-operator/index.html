@@ -107,7 +107,7 @@
               <dt>Uptime</dt><dd id="ovUptime">—</dd>
               <dt>IP</dt><dd id="ovIp">—</dd>
             </dl>
-            <p class="hint">GATEWAY_ID is a compile-time constant (firmware/config/GwConfig.h) — there is no runtime rename command, unlike CH/GLD device IDs.</p>
+            <p class="hint">Gateway ID is stored in device NVS. Use Gateway Setup to assign a unique ID from 0x0001 through 0x000F.</p>
           </div>
           <div class="card">
             <h3>Gateway Wi-Fi</h3>
@@ -307,7 +307,7 @@
           </div>
         </div>
         <div class="card">
-          <p class="hint" id="expertLockNote">Flash a verified prebuilt Gateway package (profile <code>gw</code>, chip esp32s3) over this COM port. Locked until you enter the PIN. There is no post-flash provisioning step — GATEWAY_ID is compile-time.</p>
+          <p class="hint" id="expertLockNote">Flash a verified prebuilt Gateway package (profile <code>gw</code>, chip esp32s3) over this COM port. Locked until you enter the PIN. Resetting NVS restores Gateway ID 0001; assign a unique runtime ID again in Gateway Setup afterward.</p>
           <div class="field">
             <label for="fwEnvSelect">Firmware profile</label>
             <select id="fwEnvSelect" disabled>
@@ -361,6 +361,21 @@
           <button id="connectSerialBtn" class="primary">Connect</button>
           <button id="disconnectSerialBtn" disabled>Disconnect</button>
         </div>
+      </fieldset>
+
+      <fieldset class="group setup-step" id="gatewayIdentitySetupStep" disabled aria-disabled="true">
+        <legend>Gateway identity</legend>
+        <p class="hint">Each Gateway on the shared MQTT/MESH network must have a unique ID from 0001 through 000F. Saving writes NVS, reboots the Gateway, reconnects COM, and verifies readback.</p>
+        <dl class="kv"><dt>Current ID</dt><dd id="gatewayCurrentId">not read yet</dd></dl>
+        <div class="field">
+          <label for="gatewayIdInput">New Gateway ID</label>
+          <input id="gatewayIdInput" type="text" value="0001" maxlength="4" pattern="[0-9A-Fa-f]{4}" placeholder="0002" autocomplete="off" />
+        </div>
+        <div class="btn-row">
+          <button id="gatewayIdLoadBtn">Load current ID</button>
+          <button id="gatewayIdApplyBtn" class="primary">Save ID &amp; reboot</button>
+        </div>
+        <p class="hint" id="gatewayIdStatus">Locked until COM is connected.</p>
       </fieldset>
 
       <fieldset class="group setup-step" id="wifiSetupStep" disabled aria-disabled="true">
@@ -438,6 +453,6 @@
     </div>
   </aside>
 
-  <script type="module" src="./js/gw-main.js?v=20260723-gateway-package-1"></script>
+  <script type="module" src="./js/gw-main.js?v=20260723-gateway-runtime-id-1"></script>
 </body>
 </html>

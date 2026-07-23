@@ -42,7 +42,6 @@ function createRunner(replayStatePath, initialFlowStore = {}) {
   const envValues = {
     GLD_KEY_ID: "1",
     GLD_AES128_KEY_HEX: key.toString("hex"),
-    PGL_GATEWAY_ID: "0x006F",
     PGL_REPLAY_STATE_PATH: replayStatePath
   };
   const env = { get: (name) => envValues[name] };

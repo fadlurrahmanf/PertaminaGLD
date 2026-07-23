@@ -21,7 +21,13 @@ const NC_FLAG_ALARM = 0x01;
 const NC_FLAG_EXT_POWER = 0x10;
 const GLD_ENCRYPTED_LEN = 29;
 const GLD_RECORD_LEN = 34;
-const DEFAULT_GATEWAY_ID = 0x006F;
+const GATEWAY_ID_MIN = 0x0001;
+const GATEWAY_ID_MAX = 0x000F;
+const CH_ID_MIN = 0x0010;
+const CH_ID_MAX = 0x0FFF;
+const GLD_ID_MIN = 0x1001;
+const GLD_ID_MAX = 0xFEFF;
+const SYSTEM_ID_MIN = 0xFF00;
 const REPLAY_STATE_TTL_MS = 24 * 60 * 60 * 1000;
 const REPLAY_STATE_VERSION = 2;
 const REPLAY_STATE_MAX_RECORDS = 8192;
@@ -91,12 +97,6 @@ function getAesKey(keyId) {
     };
 }
 
-function getGatewayId() {
-    const raw = String(env.get("PGL_GATEWAY_ID") || env.get("GATEWAY_ID") || "0x006F").trim();
-    const value = raw.toLowerCase().startsWith("0x") ? parseInt(raw, 16) : Number(raw);
-    return Number.isFinite(value) ? value : DEFAULT_GATEWAY_ID;
-}
-
 function idHex(value) {
     const n = Number(value) & 0xFFFF;
     return `0x${n.toString(16).toUpperCase().padStart(4, "0")}`;
@@ -108,7 +108,7 @@ function parseIdValue(value, fallback = 0) {
     }
     if (typeof value === "string") {
         const trimmed = value.trim();
-        const parsed = trimmed.toLowerCase().startsWith("0x") ? parseInt(trimmed, 16) : Number(trimmed);
+        const parsed = Number(trimmed);
         return Number.isFinite(parsed) ? parsed : fallback;
     }
     const parsed = Number(value);
@@ -130,16 +130,25 @@ function ageMsOf(entry, nowMs = Date.now()) {
 }
 
 function pruneTopology(topology, nowMs = Date.now()) {
+    topology.gateways = topology.gateways || {};
     topology.parents = topology.parents || {};
     topology.discovery = topology.discovery || {};
     topology.gatewayLinks = topology.gatewayLinks || {};
     topology.hellos = topology.hellos || {};
     topology.routes = topology.routes || {};
+    topology.routeGateways = topology.routeGateways || {};
+
+    for (const [gatewayIdHex, entry] of Object.entries(topology.gateways)) {
+        if (!isGatewayId(parseIdValue(gatewayIdHex)) || ageMsOf(entry, nowMs) > TOPOLOGY_PARENT_TTL_MS) {
+            delete topology.gateways[gatewayIdHex];
+        }
+    }
 
     for (const [clusterIdHex, entry] of Object.entries(topology.parents)) {
         if (ageMsOf(entry, nowMs) > TOPOLOGY_PARENT_TTL_MS) {
             delete topology.parents[clusterIdHex];
             delete topology.routes[clusterIdHex];
+            delete topology.routeGateways[clusterIdHex];
         }
     }
     for (const [clusterIdHex, entry] of Object.entries(topology.hellos)) {
@@ -152,55 +161,134 @@ function pruneTopology(topology, nowMs = Date.now()) {
             delete topology.discovery[clusterIdHex];
         }
     }
-    for (const [clusterIdHex, entry] of Object.entries(topology.gatewayLinks)) {
-        if (ageMsOf(entry, nowMs) > TOPOLOGY_GATEWAY_LINK_TTL_MS) {
+    for (const [clusterIdHex, links] of Object.entries(topology.gatewayLinks)) {
+        if (links && links.gatewayIdHex) {
+            topology.gatewayLinks[clusterIdHex] = { [links.gatewayIdHex]: links };
+        }
+        for (const [gatewayIdHex, entry] of Object.entries(topology.gatewayLinks[clusterIdHex] || {})) {
+            if (!isGatewayId(parseIdValue(gatewayIdHex)) || ageMsOf(entry, nowMs) > TOPOLOGY_GATEWAY_LINK_TTL_MS) {
+                delete topology.gatewayLinks[clusterIdHex][gatewayIdHex];
+            }
+        }
+        if (Object.keys(topology.gatewayLinks[clusterIdHex] || {}).length === 0) {
             delete topology.gatewayLinks[clusterIdHex];
         }
     }
     for (const clusterIdHex of Object.keys(topology.routes)) {
         if (!topology.parents[clusterIdHex]) {
             delete topology.routes[clusterIdHex];
+            delete topology.routeGateways[clusterIdHex];
         }
     }
     return topology;
 }
 
 function getTopologyState() {
-    return pruneTopology(flow.get("pglTopology") || {
-        gatewayIdHex: idHex(getGatewayId()),
+    const topology = flow.get("pglTopology") || {
+        gateways: {},
         parents: {},
         discovery: {},
         gatewayLinks: {},
         hellos: {},
         routes: {},
+        routeGateways: {},
         updatedAt: null
-    });
+    };
+    topology.gateways = topology.gateways || {};
+    if (isGatewayId(parseIdValue(topology.gatewayIdHex))) {
+        const legacyGatewayIdHex = idHex(parseIdValue(topology.gatewayIdHex));
+        topology.gateways[legacyGatewayIdHex] = topology.gateways[legacyGatewayIdHex] || {
+            gatewayId: parseIdValue(legacyGatewayIdHex),
+            gatewayIdHex: legacyGatewayIdHex,
+            receivedAt: topology.updatedAt || new Date().toISOString(),
+            source: "legacy-single-gateway-state"
+        };
+    }
+    delete topology.gatewayIdHex;
+    return pruneTopology(topology);
 }
 
 function buildRouteTo(clusterIdHex, topology) {
-    const gatewayIdHex = topology.gatewayIdHex || idHex(getGatewayId());
     const route = [];
     const seen = {};
     let current = clusterIdHex;
+    const origin = topology.parents && topology.parents[clusterIdHex];
+    const expectedGatewayId = parseIdValue(origin && (origin.gatewayId ?? origin.gatewayIdHex), 0);
+    if (!isGatewayId(expectedGatewayId)) return null;
+    const expectedGatewayIdHex = idHex(expectedGatewayId);
 
     for (let guard = 0; guard < 16; guard++) {
-        if (!current || current === gatewayIdHex || current === "0x0000" || seen[current]) {
-            break;
-        }
+        if (!current || current === "0x0000" || seen[current] || !isChId(parseIdValue(current))) return null;
         seen[current] = true;
         const entry = topology.parents[current];
-        if (!entry) {
-            return [];
-        }
+        if (!entry) return null;
+        const entryGatewayId = parseIdValue(entry.gatewayId ?? entry.gatewayIdHex, 0);
+        if (!isGatewayId(entryGatewayId) || idHex(entryGatewayId) !== expectedGatewayIdHex) return null;
         route.unshift(current);
-        current = entry.parentIdHex;
+        const parentIdHex = entry.parentIdHex;
+        const parentId = parseIdValue(parentIdHex);
+        if (isGatewayId(parentId)) {
+            return parentId === expectedGatewayId
+                ? { hopList: route, gatewayIdHex: expectedGatewayIdHex }
+                : null;
+        }
+        current = parentIdHex;
     }
-    return route;
+    return null;
+}
+
+function registerGateway(topology, gatewayId, receivedAt, source) {
+    if (!isGatewayId(gatewayId)) throw new Error(`gateway ID ${idHex(gatewayId)} is outside 0x0001..0x000F`);
+    const gatewayIdHex = idHex(gatewayId);
+    topology.gateways = topology.gateways || {};
+    topology.gateways[gatewayIdHex] = {
+        gatewayId,
+        gatewayIdHex,
+        receivedAt: receivedAt || new Date().toISOString(),
+        source: source || "gateway-ingress"
+    };
+    return gatewayIdHex;
+}
+
+function rebuildRoutes(topology) {
+    topology.routes = topology.routes || {};
+    topology.routeGateways = topology.routeGateways || {};
+    for (const clusterIdHex of Object.keys(topology.parents || {})) {
+        const resolved = buildRouteTo(clusterIdHex, topology);
+        if (resolved) {
+            topology.routes[clusterIdHex] = resolved.hopList;
+            topology.routeGateways[clusterIdHex] = resolved.gatewayIdHex;
+        } else {
+            delete topology.routes[clusterIdHex];
+            delete topology.routeGateways[clusterIdHex];
+        }
+    }
 }
 
 function updateTopology(topologyEvent) {
     const topology = getTopologyState();
-    topology.gatewayIdHex = idHex(topologyEvent.gatewayId || getGatewayId());
+    const ingressGatewayIdHex = idHex(topologyEvent.gatewayId);
+    for (const candidate of [
+        { role: "parent", id: topologyEvent.parentId, idHex: topologyEvent.parentIdHex },
+        { role: "alternate parent", id: topologyEvent.parentAltId, idHex: topologyEvent.parentAltIdHex }
+    ]) {
+        if (!candidate.id) continue;
+        if (!isGatewayId(candidate.id) && !isChId(candidate.id)) {
+            throw new Error(`${candidate.role} ${candidate.idHex} has invalid role ${nodeRole(candidate.id)}`);
+        }
+        if (isGatewayId(candidate.id) && candidate.id !== topologyEvent.gatewayId) {
+            throw new Error(`${candidate.role} Gateway ${candidate.idHex} does not match ingress ${ingressGatewayIdHex}`);
+        }
+        if (isChId(candidate.id)) {
+            const knownParent = topology.parents && topology.parents[candidate.idHex];
+            const knownOwner = (topology.routeGateways && topology.routeGateways[candidate.idHex]) ||
+                (knownParent && knownParent.gatewayIdHex);
+            if (knownOwner && knownOwner !== ingressGatewayIdHex) {
+                throw new Error(`${candidate.role} ${candidate.idHex} belongs to ${knownOwner}, not ingress ${ingressGatewayIdHex}`);
+            }
+        }
+    }
+    registerGateway(topology, topologyEvent.gatewayId, topologyEvent.receivedAt, topologyEvent.source);
     topology.discovery = topology.discovery || {};
     topology.gatewayLinks = topology.gatewayLinks || {};
     topology.hellos = topology.hellos || {};
@@ -212,9 +300,7 @@ function updateTopology(topologyEvent) {
     }
     delete topology.discovery[topologyEvent.clusterIdHex];
 
-    for (const clusterIdHex of Object.keys(topology.parents)) {
-        topology.routes[clusterIdHex] = buildRouteTo(clusterIdHex, topology);
-    }
+    rebuildRoutes(topology);
     const route = topology.routes[topologyEvent.clusterIdHex] || [];
     flow.set("pglTopology", topology);
     return { topology, route };
@@ -222,7 +308,7 @@ function updateTopology(topologyEvent) {
 
 function rememberDiscovery(topologyEvent) {
     const topology = getTopologyState();
-    topology.gatewayIdHex = idHex(topologyEvent.gatewayId || getGatewayId());
+    const gatewayIdHex = registerGateway(topology, topologyEvent.gatewayId, topologyEvent.receivedAt, topologyEvent.source);
     topology.discovery = topology.discovery || {};
     topology.gatewayLinks = topology.gatewayLinks || {};
     const hasFreshInstalledRoute = Boolean(topology.parents[topologyEvent.clusterIdHex]);
@@ -234,9 +320,10 @@ function rememberDiscovery(topologyEvent) {
     if (topologyEvent.report === "ch-config-request" &&
         topologyEvent.parentIdHex === "0x0000" &&
         topologyEvent.rssi !== undefined) {
-        topology.gatewayLinks[topologyEvent.clusterIdHex] = {
+        topology.gatewayLinks[topologyEvent.clusterIdHex] = topology.gatewayLinks[topologyEvent.clusterIdHex] || {};
+        topology.gatewayLinks[topologyEvent.clusterIdHex][gatewayIdHex] = {
             clusterIdHex: topologyEvent.clusterIdHex,
-            gatewayIdHex: topology.gatewayIdHex,
+            gatewayIdHex,
             rssi: topologyEvent.rssi,
             snr: topologyEvent.snr,
             receivedAt: topologyEvent.receivedAt,
@@ -264,6 +351,34 @@ function getGldDiscoveryState() {
     return flow.get("pglGldDiscovery") || {};
 }
 
+function isGatewayId(value) {
+    const id = Number(value);
+    return Number.isInteger(id) && id >= GATEWAY_ID_MIN && id <= GATEWAY_ID_MAX;
+}
+
+function isChId(value) {
+    const id = Number(value);
+    return Number.isInteger(id) && id >= CH_ID_MIN && id <= CH_ID_MAX;
+}
+
+function isGldId(value) {
+    const id = Number(value);
+    return Number.isInteger(id) && id >= GLD_ID_MIN && id <= GLD_ID_MAX;
+}
+
+function isSystemId(value) {
+    const id = Number(value);
+    return Number.isInteger(id) && id >= SYSTEM_ID_MIN && id <= 0xFFFF;
+}
+
+function nodeRole(value) {
+    if (isGatewayId(value)) return "gateway";
+    if (isChId(value)) return "ch";
+    if (isGldId(value)) return "gld";
+    if (isSystemId(value)) return "system";
+    return "invalid";
+}
+
 function resolveGldResponseOwner(outer) {
     const transportSrcIdHex = outer && outer.srcIdHex;
     const response = outer && outer.response;
@@ -278,7 +393,7 @@ function resolveGldResponseOwner(outer) {
     let ownerChIdHex;
     let correlation = "unknown-request-id";
 
-    function validateCandidate(targetChIdHex, hopList, requestedAt) {
+    function validateCandidate(targetChIdHex, gatewayIdHex, hopList, requestedAt) {
         const requestedAtMs = Date.parse(requestedAt || "");
         if (!Number.isFinite(requestedAtMs)) return "invalid-request-time";
         const ageMs = nowMs - requestedAtMs;
@@ -287,11 +402,13 @@ function resolveGldResponseOwner(outer) {
         if (!Array.isArray(hopList) || hopList.length === 0) return "invalid-request-route";
         if (hopList[hopList.length - 1] !== targetChIdHex) return "target-route-mismatch";
         if (hopList[0] !== transportSrcIdHex) return "ingress-route-mismatch";
+        if (!isGatewayId(parseIdValue(gatewayIdHex))) return "invalid-request-gateway";
+        if (gatewayIdHex !== outer.gatewayIdHex || gatewayIdHex !== outer.dstIdHex) return "response-gateway-mismatch";
         return "valid";
     }
 
     if (indexed && indexed.targetChIdHex) {
-        correlation = validateCandidate(indexed.targetChIdHex, indexed.hopList, indexed.requestedAt);
+        correlation = validateCandidate(indexed.targetChIdHex, indexed.gatewayIdHex, indexed.hopList, indexed.requestedAt);
         if (correlation === "valid") {
             ownerChIdHex = indexed.targetChIdHex;
             correlation = "request-index";
@@ -303,6 +420,7 @@ function resolveGldResponseOwner(outer) {
             .filter(([, entry]) => Number(entry && entry.requestId) === requestId)
             .map(([chIdHex, entry]) => ({
                 chIdHex,
+                gatewayIdHex: entry.gatewayIdHex,
                 hopList: entry.hopList,
                 requestedAt: entry.requestedAt,
                 requestedAtMs: Date.parse(entry.requestedAt || "")
@@ -312,7 +430,7 @@ function resolveGldResponseOwner(outer) {
         if (candidates.length > 0 &&
             (candidates.length === 1 || candidates[0].requestedAtMs > candidates[1].requestedAtMs)) {
             const candidate = candidates[0];
-            correlation = validateCandidate(candidate.chIdHex, candidate.hopList, candidate.requestedAt);
+            correlation = validateCandidate(candidate.chIdHex, candidate.gatewayIdHex, candidate.hopList, candidate.requestedAt);
             if (correlation === "valid") {
                 ownerChIdHex = candidate.chIdHex;
                 correlation = "discovery-request-id";
@@ -340,6 +458,7 @@ function rememberGldResponse(outer) {
         entry.responseStatus = response.status;
         entry.recordCount = response.recordCount;
         entry.chBatteryMv = response.chBatteryMv;
+        entry.gatewayIdHex = outer.gatewayIdHex;
         entry.respondedAt = new Date().toISOString();
     }
     entry.devices = entry.devices || {};
@@ -366,6 +485,7 @@ function rememberGldDevice(outer, event) {
         plaintextHex: event.plaintextHex,
         decryptOk: event.decryptOk,
         requestId: outer && outer.response ? outer.response.requestId : undefined,
+        gatewayIdHex: outer && outer.gatewayIdHex,
         lastSeenAt: event.receivedAt
     };
     discovery[chIdHex] = entry;
@@ -471,6 +591,12 @@ function recordToEvent(record, outer, source) {
         payloadHex: record.payload.toString("hex").toUpperCase(),
         dedupKey: `${outer && outer.srcIdHex ? outer.srcIdHex : "no-cluster"}:${record.nodeId}:${record.seq}:${(record.flags & NC_FLAG_ALARM) ? "alarm" : "normal"}`
     };
+
+    if (!isGldId(record.nodeId)) {
+        event.decryptOk = false;
+        event.decryptError = `node ID ${event.nodeIdHex} has role ${nodeRole(record.nodeId)}, expected GLD 0x1001..0xFEFF`;
+        return event;
+    }
 
     try {
         Object.assign(event, decryptGldPayload(record));
@@ -702,7 +828,7 @@ function routeRecords(records, outer, source) {
     return { eventMsgs, decodedMsgs, quarantineMsgs };
 }
 
-function parseAppFrame(buf) {
+function parseAppFrame(buf, meta = {}) {
     if (buf.length < 10 || buf[0] !== 0xAA) {
         throw new Error("AppFrame magic/length invalid");
     }
@@ -729,6 +855,17 @@ function parseAppFrame(buf) {
         seq: buf[6],
         payloadLen
     };
+    const wrapperGatewayId = parseIdValue(meta.gatewayId ?? meta.gateway_id ?? meta.rootId ?? meta.root_id, 0);
+    if (wrapperGatewayId !== 0 && !isGatewayId(wrapperGatewayId)) {
+        throw new Error(`uplink wrapper gateway ID ${idHex(wrapperGatewayId)} is outside 0x0001..0x000F`);
+    }
+    if (wrapperGatewayId !== 0) {
+        outer.gatewayId = wrapperGatewayId;
+        outer.gatewayIdHex = idHex(wrapperGatewayId);
+        if (isGatewayId(outer.dstId) && outer.dstId !== wrapperGatewayId) {
+            throw new Error(`uplink wrapper/frame gateway mismatch wrapper=${outer.gatewayIdHex} dst=${outer.dstIdHex}`);
+        }
+    }
     const payload = buf.subarray(8, 8 + payloadLen);
     outer.payloadHex = payload.toString("hex").toUpperCase();
     const records = [];
@@ -787,8 +924,8 @@ function parseAppFrame(buf) {
             meshDepth: payload.length >= 9 ? payload[8] : null,
             viaHop: outer.srcId,
             viaHopHex: outer.srcIdHex,
-            gatewayId: getGatewayId(),
-            gatewayIdHex: idHex(getGatewayId()),
+            gatewayId: wrapperGatewayId || (isGatewayId(outer.dstId) ? outer.dstId : 0),
+            gatewayIdHex: idHex(wrapperGatewayId || (isGatewayId(outer.dstId) ? outer.dstId : 0)),
             rssi: msg.payload && typeof msg.payload === "object" ? msg.payload.rssi : undefined,
             snr: msg.payload && typeof msg.payload === "object" ? msg.payload.snr : undefined
         };
@@ -837,6 +974,13 @@ function normalizeInput(input) {
 }
 
 function emitGatewayStatus(status) {
+    const gatewayId = parseIdValue(status.gateway_id ?? status.gatewayId, 0);
+    if (!isGatewayId(gatewayId)) {
+        throw new Error(`gateway status ID ${idHex(gatewayId)} is outside 0x0001..0x000F`);
+    }
+    const topology = getTopologyState();
+    registerGateway(topology, gatewayId, new Date().toISOString(), "gateway-status");
+    flow.set("pglTopology", topology);
     const statusMsg = {
         req: msg.req,
         res: msg.res,
@@ -844,7 +988,8 @@ function emitGatewayStatus(status) {
             ok: true,
             kind: "gateway-status",
             receivedAt: new Date().toISOString(),
-            gatewayId: status.gateway_id,
+            gatewayId,
+            gatewayIdHex: idHex(gatewayId),
             clusterCount: Array.isArray(status.clusters) ? status.clusters.length : 0,
             eventCount: Array.isArray(status.events) ? status.events.length : 0,
             clusters: status.clusters || []
@@ -860,7 +1005,8 @@ function emitGatewayStatus(status) {
             ok: true,
             kind: "gateway-event",
             receivedAt: new Date().toISOString(),
-            gatewayId: status.gateway_id,
+            gatewayId,
+            gatewayIdHex: idHex(gatewayId),
             clusterId: e.cluster_id,
             nodeId: e.node_id,
             seq: e.seq,
@@ -888,7 +1034,7 @@ function emitGatewayStatus(status) {
                 if (record) {
                     const routed = routeRecords(
                         [record],
-                        { srcId: e.cluster_id, srcIdHex: `0x${Number(e.cluster_id).toString(16).toUpperCase().padStart(4, "0")}` },
+                        { srcId: e.cluster_id, srcIdHex: idHex(e.cluster_id), gatewayId, gatewayIdHex: idHex(gatewayId) },
                         "gateway-status"
                     );
                     eventMsgs.push(...routed.eventMsgs);
@@ -916,8 +1062,22 @@ try {
     }
     if (input.kind === "topologyObject") {
         const t = input.topology || {};
+        const gatewayId = parseIdValue(t.gatewayId ?? t.gateway_id ?? t.rootId ?? t.root_id, 0);
         const clusterId = Number(t.clusterId || t.cluster_id || t.chId || t.ch_id || t.edgeFrom || t.edge_from);
         const parentId = Number(t.parentId || t.parent_id || t.edgeTo || t.edge_to || 0);
+        const parentAltId = parseIdValue(t.parentAltId || t.parentAltIdHex || t.parent_alt_id || t.altParentId || t.alt_parent_id || 0);
+        if (!isGatewayId(gatewayId)) {
+            throw new Error(`topology gateway ID ${idHex(gatewayId)} is outside 0x0001..0x000F`);
+        }
+        if (!isChId(clusterId)) {
+            throw new Error(`topology cluster ID ${idHex(clusterId)} is outside 0x0010..0x0FFF`);
+        }
+        if (parentId !== 0 && !isGatewayId(parentId) && !isChId(parentId)) {
+            throw new Error(`topology parent ID ${idHex(parentId)} has invalid role ${nodeRole(parentId)}`);
+        }
+        if (parentAltId !== 0 && !isGatewayId(parentAltId) && !isChId(parentAltId)) {
+            throw new Error(`topology alternate parent ID ${idHex(parentAltId)} has invalid role ${nodeRole(parentAltId)}`);
+        }
         const event = {
             ok: true,
             kind: "ch-topology",
@@ -925,15 +1085,15 @@ try {
             receivedAt: new Date().toISOString(),
             sourceTopic: msg.topic,
             report: t.reportType || t.report || t.kind,
-            gatewayId: Number(t.gatewayId || t.gateway_id || getGatewayId()),
-            gatewayIdHex: idHex(t.gatewayId || t.gateway_id || getGatewayId()),
+            gatewayId,
+            gatewayIdHex: idHex(gatewayId),
             clusterId,
             clusterIdHex: idHex(clusterId),
             parentId,
             parentIdHex: idHex(parentId),
-            parentAltId: parseIdValue(t.parentAltId || t.parentAltIdHex || t.parent_alt_id || t.altParentId || t.alt_parent_id || 0),
-            parentAltIdHex: idHex(parseIdValue(t.parentAltId || t.parentAltIdHex || t.parent_alt_id || t.altParentId || t.alt_parent_id || 0)),
-            parentIsRoot: parentId === Number(t.gatewayId || t.gateway_id || getGatewayId()),
+            parentAltId,
+            parentAltIdHex: idHex(parentAltId),
+            parentIsRoot: parentId === gatewayId,
             requesterId: t.requesterId !== undefined ? Number(t.requesterId) : undefined,
             requesterIdHex: t.requesterId !== undefined ? idHex(t.requesterId) : undefined,
             batteryMv: Number(t.batteryMv || t.battery_mv || 0xFFFF),
@@ -956,7 +1116,7 @@ try {
             event.routeText = route.length > 0
                 ? `${event.gatewayIdHex} -> ${route.join(" -> ")}`
                 : `${event.gatewayIdHex} heard CH_CONFIG_REQUEST from ${event.clusterIdHex}; installed route pending`;
-            event.requestPayload = route.length > 0 ? { requestId: 1, hopList: route } : undefined;
+            event.requestPayload = route.length > 0 ? { gatewayId: event.gatewayIdHex, requestId: 1, hopList: route } : undefined;
             event.routeStatus = route.length > 0 ? "CH_CONFIG request seen; retained fresh installed route" : "CH_CONFIG request seen; installed route pending";
             return [null, [{ req: msg.req, res: msg.res, payload: event, topic: "gld/server/topology" }], null, null];
         }
@@ -970,7 +1130,7 @@ try {
             event.routeText = route.length > 0
                 ? `${event.gatewayIdHex} -> ${route.join(" -> ")}`
                 : `${event.gatewayIdHex} heard ${event.report || "discovery"} from ${event.clusterIdHex}; installed route pending`;
-            event.requestPayload = route.length > 0 ? { requestId: 1, hopList: route } : undefined;
+            event.requestPayload = route.length > 0 ? { gatewayId: event.gatewayIdHex, requestId: 1, hopList: route } : undefined;
             event.routeStatus = route.length > 0 ? "CH_CONFIG candidate seen; retained fresh installed route" : "CH_CONFIG candidate seen; installed route pending";
             event.discoveryOnly = true;
             return [null, [{ req: msg.req, res: msg.res, payload: event, topic: "gld/server/topology" }], null, null];
@@ -982,14 +1142,14 @@ try {
         event.nextHopHex = event.nextHop;
         event.lastHop = route.length > 0 ? route[route.length - 1] : event.clusterIdHex;
         event.routeText = route.length > 0 ? `${event.gatewayIdHex} -> ${route.join(" -> ")}` : `${event.gatewayIdHex} -> ${event.clusterIdHex} (pending)`;
-        event.requestPayload = route.length > 0 ? { requestId: 1, hopList: route } : undefined;
+        event.requestPayload = route.length > 0 ? { gatewayId: event.gatewayIdHex, requestId: 1, hopList: route } : undefined;
         event.routeStatus = route.length > 0 ? "CH route updated" : "CH route pending";
         return [null, [{ req: msg.req, res: msg.res, payload: event, topic: "gld/server/topology" }], null, null];
     }
 
     let parsed;
     if (input.buffer[0] === 0xAA) {
-        parsed = parseAppFrame(input.buffer);
+        parsed = parseAppFrame(input.buffer, input.meta || {});
     } else if (input.buffer.length === GLD_RECORD_LEN) {
         parsed = { outer: { srcIdHex: "direct-record" }, records: [parseGldRecord(input.buffer)] };
     } else if (input.buffer.length === GLD_ENCRYPTED_LEN && input.meta) {
@@ -1021,21 +1181,33 @@ try {
             report: "ch-hello",
             outer: parsed.outer
         }, parsed.outer.topology);
+        if (!isGatewayId(event.gatewayId) || !isChId(event.clusterId) ||
+            (!isGatewayId(event.parentId) && !isChId(event.parentId))) {
+            throw new Error(`CH_HELLO role validation failed gateway=${event.gatewayIdHex} cluster=${event.clusterIdHex} parent=${event.parentIdHex}`);
+        }
         const { route } = updateTopology(event);
         event.hopList = route;
         event.nextHop = route.length > 0 ? route[0] : undefined;
         event.nextHopHex = event.nextHop;
         event.lastHop = route.length > 0 ? route[route.length - 1] : event.clusterIdHex;
         event.routeText = route.length > 0 ? `${event.gatewayIdHex} -> ${route.join(" -> ")}` : `${event.gatewayIdHex} -> ${event.clusterIdHex} (pending)`;
-        event.requestPayload = route.length > 0 ? { requestId: 1, hopList: route } : undefined;
+        event.requestPayload = route.length > 0 ? { gatewayId: event.gatewayIdHex, requestId: 1, hopList: route } : undefined;
         event.routeStatus = route.length > 0 ? "CH route updated" : "CH route pending";
         return [null, [{ req: msg.req, res: msg.res, payload: event, topic: "gld/server/topology" }], null, null];
     }
 
     if (parsed.outer && parsed.outer.msgType === MSG_CLUSTER_DATA_RESPONSE) {
-        if (parsed.outer.dstId !== getGatewayId()) {
-            return [null, null, null, null];
+        if (!isGatewayId(parsed.outer.dstId)) {
+            throw new Error(`CLUSTER_DATA_RESPONSE destination ${parsed.outer.dstIdHex} is not a Gateway ID`);
         }
+        if (parsed.outer.gatewayId !== undefined && parsed.outer.gatewayId !== parsed.outer.dstId) {
+            throw new Error(`CLUSTER_DATA_RESPONSE wrapper/frame gateway mismatch wrapper=${parsed.outer.gatewayIdHex} dst=${parsed.outer.dstIdHex}`);
+        }
+        parsed.outer.gatewayId = parsed.outer.dstId;
+        parsed.outer.gatewayIdHex = parsed.outer.dstIdHex;
+        const topology = getTopologyState();
+        registerGateway(topology, parsed.outer.gatewayId, new Date().toISOString(), "cluster-data-response");
+        flow.set("pglTopology", topology);
         rememberGldResponse(parsed.outer);
     }
 

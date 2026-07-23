@@ -17,11 +17,10 @@
 #include "GldThresholdClassifier.h"
 #include "ProtocolConstants.h"
 
-// Machine learning model — placeholder from ApplyGasleak project.
-// Replace model_data.cpp + scaler_params.cpp when a Pertamina-trained model is ready.
-// IMPORTANT: channel remapping in runInference() must match training feature order.
+// CNN dual-branch + datasheet-evidence gas classification model (INT8).
+// See ModelMetadata.h for the fail-closed production-approval contract.
+#include "../model/ModelMetadata.h"
 #include "../model/NeuralNetwork.h"
-#include "../model/scaler_params.h"
 
 namespace {
 
@@ -90,19 +89,14 @@ void logPrintln(const char* text) {
 }
 
 // ---------------------------------------------------------------------------
-// Map model class index → GLD gas class constant
-// Placeholder mapping — update when real labeled model is trained.
+// Map model class index → GLD gas class constant (ModelMetadata::CLASS_MAP)
 // ---------------------------------------------------------------------------
 
 uint8_t modelClassToGasClass(int predicted) {
-    switch (predicted) {
-        case 0:  return pgl::protocol::GLD_GAS_CLEAR;
-        case 1:  return pgl::protocol::GLD_GAS_LPG;
-        case 2:  return pgl::protocol::GLD_GAS_METHANE;
-        case 3:  return pgl::protocol::GLD_GAS_PROPANE;
-        case 4:  return pgl::protocol::GLD_GAS_BUTANE;
-        default: return pgl::protocol::GLD_GAS_ANOMALY;
+    if (predicted < 0 || predicted >= pgl::gld::model::EXPECTED_OUTPUT_ELEMENTS) {
+        return pgl::protocol::GLD_GAS_ANOMALY;
     }
+    return pgl::gld::model::CLASS_MAP[predicted];
 }
 
 // ---------------------------------------------------------------------------
@@ -198,17 +192,12 @@ bool nonceProvider(uint8_t nonce[pgl::protocol::GLD_AES_GCM_NONCE_SIZE], void* c
 void runInference(const float mavVoltage[8]) {
     if (!mlReady || !network->isInitialized()) return;
 
-    float* modelInput = network->getInputBuffer();
-    if (!modelInput) return;
-
-    // Apply StandardScaler normalization; channel n is fed directly as feature n
-    // (no remap - hardware channel order matches model feature order).
-    for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
-        modelInput[ch] = (mavVoltage[ch] - feature_means[ch]) / feature_stds[ch];
-    }
-
+    // Channel n is fed directly as feature n (no remap - hardware channel order
+    // already matches CNN_GAS_ADC_NAMES order: MQ8, MQ135, MQ3, MQ5, MQ4, MQ7,
+    // MQ6, MQ2). Normalization, evidence-feature computation, and INT8
+    // quantization happen inside NeuralNetwork::predict().
     float confidenceFloat = 0.0f;
-    const int predictedClass = network->predict(confidenceFloat);
+    const int predictedClass = network->predict(mavVoltage, confidenceFloat);
 
     if (predictedClass < 0) {
         logPrintln("GLD_ML_PREDICT_ERROR");

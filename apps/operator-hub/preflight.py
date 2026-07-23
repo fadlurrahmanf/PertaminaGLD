@@ -22,6 +22,7 @@ HUB_DIR = Path(__file__).resolve().parent
 APPS_DIR = HUB_DIR.parent
 LIB_DIR = APPS_DIR / "lib"
 FIRMWARE_PACKAGES_DIR = HUB_DIR / "firmware-packages"
+REQUIRED_ENVIRONMENTS = ("gld", "gldFieldtest", "ch", "chFieldtest", "gw")
 
 
 def find_esptool_entry() -> Path | None:
@@ -84,39 +85,53 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _verify_manifest(manifest_path: Path) -> None:
+    """Raise ValueError/OSError/... if this package's manifest or files don't check out."""
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    flash_files = manifest.get("flashFiles")
+    if not isinstance(flash_files, list) or not flash_files:
+        raise ValueError("manifest has no flashFiles entries")
+    for item in flash_files:
+        path = manifest_path.parent / str(item["path"])
+        if not path.is_file() or path.stat().st_size != int(item["size"]):
+            raise ValueError(f"{item['path']} is missing or the wrong size")
+        if _sha256(path) != str(item["sha256"]).lower():
+            raise ValueError(f"{item['path']} hash mismatch")
+
+
 def _firmware_packages_check() -> dict[str, str]:
     if not FIRMWARE_PACKAGES_DIR.is_dir():
         return _check(
             "firmware-packages",
             "Firmware packages",
-            "warn",
-            "No offline release package directory yet; firmware upload is disabled.",
+            "error",
+            "No offline release package directory; firmware upload is disabled for all environments.",
         )
 
-    manifests = sorted(FIRMWARE_PACKAGES_DIR.rglob("manifest.json"))
-    if not manifests:
-        return _check("firmware-packages", "Firmware packages", "warn", "No manifest.json found; firmware upload is disabled.")
-
-    valid_packages = 0
-    for manifest_path in manifests:
-        try:
-            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-            flash_files = manifest.get("flashFiles")
-            if not isinstance(flash_files, list) or not flash_files:
-                continue
-            for item in flash_files:
-                path = manifest_path.parent / str(item["path"])
-                if not path.is_file() or path.stat().st_size != int(item["size"]):
-                    raise ValueError("missing or incorrectly sized firmware file")
-                if _sha256(path) != str(item["sha256"]).lower():
-                    raise ValueError("firmware hash mismatch")
-            valid_packages += 1
-        except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError):
+    broken: dict[str, str] = {}
+    for env in REQUIRED_ENVIRONMENTS:
+        env_dir = FIRMWARE_PACKAGES_DIR / env
+        manifests = sorted(env_dir.rglob("manifest.json")) if env_dir.is_dir() else []
+        if not manifests:
+            broken[env] = "no package found"
             continue
+        last_error = "unknown error"
+        for manifest_path in manifests:
+            try:
+                _verify_manifest(manifest_path)
+                break
+            except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:
+                last_error = str(exc) or type(exc).__name__
+        else:
+            broken[env] = last_error
 
-    if valid_packages:
-        return _check("firmware-packages", "Firmware packages", "ok", f"{valid_packages} verified offline package(s) available.")
-    return _check("firmware-packages", "Firmware packages", "error", "Manifest or firmware hash validation failed; do not flash.")
+    if not broken:
+        return _check(
+            "firmware-packages", "Firmware packages", "ok",
+            f"All {len(REQUIRED_ENVIRONMENTS)} environments have a verified offline package.",
+        )
+    detail = "; ".join(f"{env}: {reason}" for env, reason in sorted(broken.items()))
+    return _check("firmware-packages", "Firmware packages", "error", f"Do not flash - {detail}.")
 
 
 def _ch340_driver_check() -> dict[str, str]:

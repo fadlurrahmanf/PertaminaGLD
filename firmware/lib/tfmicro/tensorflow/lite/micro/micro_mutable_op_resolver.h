@@ -176,6 +176,12 @@ class MicroMutableOpResolver : public MicroOpResolver {
                       tflite::ops::micro::Register_EQUAL(), ParseEqual);
   }
 
+  TfLiteStatus AddExpandDims() {
+    return AddBuiltin(BuiltinOperator_EXPAND_DIMS,
+                      tflite::ops::micro::Register_EXPAND_DIMS(),
+                      ParseExpandDims);
+  }
+
   TfLiteStatus AddFloor() {
     return AddBuiltin(BuiltinOperator_FLOOR,
                       tflite::ops::micro::Register_FLOOR(), ParseFloor);
@@ -327,6 +333,11 @@ class MicroMutableOpResolver : public MicroOpResolver {
   TfLiteStatus AddReshape() {
     return AddBuiltin(BuiltinOperator_RESHAPE,
                       tflite::ops::micro::Register_RESHAPE(), ParseReshape);
+  }
+
+  TfLiteStatus AddShape() {
+    return AddBuiltin(BuiltinOperator_SHAPE,
+                      tflite::ops::micro::Register_SHAPE(), ParseShape);
   }
 
   TfLiteStatus AddResizeNearestNeighbor() {

@@ -1079,6 +1079,15 @@ TfLiteStatus ParseEqual(const Operator*, ErrorReporter*, BuiltinDataAllocator*,
   return kTfLiteOk;
 }
 
+// EXPAND_DIMS has no builtin options in the schema (the axis is an input
+// tensor, not a parameter), so there is nothing to parse. Added locally
+// because this vendored snapshot's selective-registration resolver requires
+// every AddXxx() to have a dedicated Parse* function.
+TfLiteStatus ParseExpandDims(const Operator*, ErrorReporter*,
+                             BuiltinDataAllocator*, void**) {
+  return kTfLiteOk;
+}
+
 // We have this parse function instead of directly returning kTfLiteOk from the
 // switch-case in ParseOpData because this function is used as part of the
 // selective registration for the OpResolver implementation in micro.

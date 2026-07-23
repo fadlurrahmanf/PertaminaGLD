@@ -13,12 +13,14 @@ const APPS = {
 const frame = document.getElementById("appFrame");
 const banner = document.getElementById("stageBanner");
 const readiness = document.getElementById("readiness");
+const refreshButton = document.getElementById("refreshReadinessBtn");
 const landing = document.getElementById("landing");
 const homeButton = document.getElementById("homeBtn");
 const tabButtons = Array.from(document.querySelectorAll(".tab"));
 const launchButtons = Array.from(document.querySelectorAll("[data-launch-app]"));
 let activeApp = null;
 let lastStatus = {};
+let mqttDegraded = false;
 
 function updateReadiness(report) {
   if (!readiness) return;
@@ -78,12 +80,22 @@ function updateBanner() {
     return;
   }
   const status = lastStatus[activeApp];
-  if (status === false) {
+  if (!status || status.up !== true) {
     banner.hidden = false;
     banner.textContent = `${APPS[activeApp].label} bridge not reachable on port ${APPS[activeApp].port}. Start it (its run-*.bat) and reload this tab.`;
+  } else if (status.identityOk === false) {
+    banner.hidden = false;
+    banner.textContent = `Something other than the ${APPS[activeApp].label} bridge is answering on port ${APPS[activeApp].port}. Close that process and reload this tab.`;
+  } else if (activeApp === "gw" && mqttDegraded) {
+    banner.hidden = false;
+    banner.textContent = "MQTT unavailable: no LAN connection was detected at startup. Gateway topology/MQTT features are degraded; reconnect to a LAN and restart the Hub.";
   } else {
     banner.hidden = true;
   }
+}
+
+function isAppReady(status) {
+  return !!status && status.up === true && status.identityOk !== false;
 }
 
 async function pollStatus() {
@@ -91,11 +103,13 @@ async function pollStatus() {
     const res = await fetch("/api/status", { cache: "no-store" });
     const payload = await res.json();
     lastStatus = payload.apps || {};
-    for (const [app, up] of Object.entries(lastStatus)) {
+    mqttDegraded = payload.mqttDegraded === true;
+    for (const [app, status] of Object.entries(lastStatus)) {
       const dot = document.querySelector(`[data-dot="${app}"]`);
       if (dot) {
-        dot.classList.toggle("up", up === true);
-        dot.classList.toggle("down", up === false);
+        const ready = isAppReady(status);
+        dot.classList.toggle("up", ready);
+        dot.classList.toggle("down", !ready);
       }
     }
     updateBanner();
@@ -112,10 +126,16 @@ function init() {
     btn.addEventListener("click", () => selectTab(btn.dataset.launchApp));
   }
   homeButton.addEventListener("click", showHome);
+  if (refreshButton) {
+    refreshButton.addEventListener("click", loadPreflight);
+  }
   showHome();
   pollStatus();
   loadPreflight();
   setInterval(pollStatus, 4000);
+  // /api/preflight recomputes on every request (packages can go bad or get
+  // fixed after startup), so poll it too, not just once at load.
+  setInterval(loadPreflight, 20000);
 }
 
 init();

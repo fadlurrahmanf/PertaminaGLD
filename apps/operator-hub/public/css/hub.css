@@ -83,6 +83,22 @@ body {
   border-color: var(--warn);
 }
 
+.refresh-btn {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 12px;
+  font-family: var(--font-body);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.refresh-btn:hover {
+  border-color: var(--hairline-strong);
+}
+
 .tab {
   display: inline-flex;
   align-items: center;
@@ -219,7 +235,7 @@ body {
 
 @media (max-width: 760px) {
   .strip { gap: var(--space-3); padding: 0 var(--space-3); }
-  .readiness { display: none; }
+  .readiness, .refresh-btn { display: none; }
   .operator-grid { grid-template-columns: 1fr; }
   .operator-card { min-height: 180px; }
 }

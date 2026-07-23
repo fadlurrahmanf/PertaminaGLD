@@ -20,7 +20,7 @@ import {
   renderDatasetSession, applyGldSettings, publishDatasetCommand, confirmDatasetConfig,
   downloadDatasetCsv, openDatasetFolder, clearDatasetSession, useLocalhost,
   testMqttBroker, saveSessionLog, refreshDatasetWaitingState,
-  beginDatasetSwitch, markDatasetWizardStarted, initDatasetWizard
+  beginDatasetSwitch, markDatasetWizardStarted, initDatasetWizard, refreshGldAesKeyStatus
 } from "./dataset.js";
 import { loadManifestFile, uploadFirmware, initFirmwareUploadDialog, injectDeviceId, injectChAddress, applyLoraConfig, checkPortLock } from "./firmware.js";
 import { syncDeviceSummary, renderFleetPanel, addFleetSlot } from "./fleet.js";
@@ -51,7 +51,10 @@ function setupEvents() {
     await withBusy(button, "Restarting...", () => applyAndAlert("RESTART", "RESTART", "Restart GLD"));
   });
   $("runningSettingsBtn")?.addEventListener("click", () => setPanelOpen($("runningSettingsPanel"), true));
-  $("datasetSettingsBtn")?.addEventListener("click", () => setPanelOpen($("datasetSettingsPanel"), true));
+  $("datasetSettingsBtn")?.addEventListener("click", () => {
+    setPanelOpen($("datasetSettingsPanel"), true);
+    refreshGldAesKeyStatus();
+  });
   $("nullingSettingsBtn")?.addEventListener("click", () => setPanelOpen($("nullingSettingsPanel"), true));
   $("themeToggleBtn")?.addEventListener("click", toggleTheme);
   elements.connectBtn.addEventListener("click", () => withBusy(elements.connectBtn, "Connecting...", connectSerial));

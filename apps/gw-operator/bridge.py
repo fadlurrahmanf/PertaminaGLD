@@ -98,6 +98,7 @@ def _register_allowed_origins(host: str, port: int) -> None:
 
 
 VERSION = "0.1.0-gw-lite-bridge"
+APP_ID = "gw-operator"
 
 
 class RequestError(RuntimeError):
@@ -639,38 +640,66 @@ def mqtt_reachability(payload: dict[str, Any]) -> dict[str, Any]:
         return {"ok": False, "host": host, "port": port, "message": str(exc)}
 
 
+def _as_hex_id(value: Any) -> str:
+    """Format a CH/gateway/node ID as an explicit 0x-prefixed hex string.
+
+    The firmware's parseU16Value() (GatewayMqttMeshMain.cpp) only parses a
+    JSON string as hex when it starts with 0x/0X - anything else parses as
+    base-10, so an unprefixed "0010" silently becomes decimal 10 (0x000A)
+    instead of CH 0x0010, and the frame gets addressed to the wrong node with
+    no error (CH_MESH_IGNORE reason=not-local on a real CH). Every ID field
+    published to MQTT must go through this, not just str(...).upper().
+    """
+    text = str(value).strip()
+    if text.lower().startswith("0x"):
+        text = text[2:]
+    return f"0x{text.upper()}"
+
+
 def mqtt_publish_pull(payload: dict[str, Any]) -> dict[str, Any]:
     hop_list = payload.get("hopList")
     cluster = payload.get("cluster")
     message: dict[str, Any] = {"requestId": int(payload.get("requestId") or int(time.time()) % 100000)}
+    # The firmware's commandTargetsThisGateway() rejects any cmd/pull or
+    # cmd/node message that doesn't carry gatewayId/targetGatewayId matching
+    # this gateway's own ID (GW_MQTT_CMD_IGNORE reason=missing-gateway-target)
+    # - a safety check so one gateway doesn't act on a command meant for
+    # another gateway sharing the same broker/topicRoot. The frontend already
+    # sends it; it must be forwarded, not silently dropped.
+    gateway_id = str(payload.get("gatewayId") or "").strip()
+    if gateway_id:
+        message["gatewayId"] = gateway_id
     if isinstance(hop_list, list) and hop_list:
-        message["hopList"] = [str(h).strip().upper() for h in hop_list if str(h).strip()]
+        message["hopList"] = [_as_hex_id(h) for h in hop_list if str(h).strip()]
     elif cluster:
-        message["cluster"] = str(cluster).strip().upper()
+        message["cluster"] = _as_hex_id(cluster)
     else:
         raise RuntimeError("hopList or cluster is required")
     return mqtt_monitor.publish("pull", message)
 
 
 def mqtt_publish_node(payload: dict[str, Any]) -> dict[str, Any]:
-    cluster = str(payload.get("cluster") or "").strip().upper()
-    node = str(payload.get("node") or "").strip().upper()
+    cluster_raw = str(payload.get("cluster") or "").strip()
+    node_raw = str(payload.get("node") or "").strip()
     hex_payload = str(payload.get("hex") or "").strip()
-    if not cluster:
+    if not cluster_raw:
         raise RuntimeError("cluster is required")
     if not re.fullmatch(r"[0-9A-Fa-f]*", hex_payload):
         raise RuntimeError("hex must contain only hexadecimal characters")
-    message: dict[str, Any] = {"cluster": cluster, "hex": hex_payload}
+    message: dict[str, Any] = {"cluster": _as_hex_id(cluster_raw), "hex": hex_payload}
+    gateway_id = str(payload.get("gatewayId") or "").strip()
+    if gateway_id:
+        message["gatewayId"] = gateway_id
     node_id = payload.get("id")
-    if node:
-        message["node"] = node
+    if node_raw:
+        message["node"] = _as_hex_id(node_raw)
     if node_id not in (None, ""):
-        message["id"] = str(node_id).strip().upper()
+        message["id"] = _as_hex_id(node_id)
     if payload.get("ttl") not in (None, ""):
         message["ttl"] = int(payload["ttl"])
     hop_list = payload.get("hopList")
     if isinstance(hop_list, list) and hop_list:
-        message["hopList"] = [str(h).strip().upper() for h in hop_list if str(h).strip()]
+        message["hopList"] = [_as_hex_id(h) for h in hop_list if str(h).strip()]
     return mqtt_monitor.publish("node", message)
 
 
@@ -1052,6 +1081,7 @@ class Handler(SimpleHTTPRequestHandler):
                     self,
                     {
                         "ok": True,
+                        "appId": APP_ID,
                         "version": VERSION,
                         "csrfToken": BRIDGE_CSRF_TOKEN,
                         "features": {

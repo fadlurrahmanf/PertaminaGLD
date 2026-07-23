@@ -6,6 +6,7 @@ import { appendLog, getField, switchTab, showBanner, showConfirm } from "./ui.js
 import { bridgeFetch, refreshPorts, updateSelectedPortDetail, connectSerial, disconnectSerial } from "./bridge-client.js";
 import { applyAndAlert, sendCommand } from "./serial-protocol.js";
 import { requireUnlock } from "./security.js";
+import { restoreGldConfigAfterReset } from "./dataset.js";
 
 export async function loadManifestFile(fileList) {
   const files = Array.from(fileList || []);
@@ -176,6 +177,14 @@ async function performFirmwareUpload() {
     setUploadDialogStatus(state.connected
       ? `Upload berhasil. Connected to ${port}.`
       : `Upload berhasil, tetapi reconnect ke ${port} gagal. Periksa Port Setup.`, state.connected ? "success" : "warn");
+    if (state.connected && result.nvsReset) {
+      setUploadDialogStatus(`Upload berhasil. NVS direset - reapplying saved WiFi/MQTT settings and AES key…`, "loading");
+      const restoreAck = await restoreGldConfigAfterReset();
+      setUploadDialogStatus(restoreAck?.status === "ok"
+        ? `Upload berhasil. Connected to ${port}, config + AES key restored - SERVER_PULL should work again.`
+        : `Upload berhasil dan connected to ${port}, tapi config belum di-restore otomatis - buka Dataset Settings dan Apply GLD Settings manual.`,
+        restoreAck?.status === "ok" ? "success" : "warn");
+    }
     if (state.connected) setUploadDialog(false);
   } catch (error) {
     appendLog(`UPLOAD_ERROR ${error.message}`, "in");

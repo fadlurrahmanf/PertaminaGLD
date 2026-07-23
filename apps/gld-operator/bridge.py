@@ -70,6 +70,12 @@ REPO_ROOT = APP_DIR.parents[1]
 FIRMWARE_DIR = REPO_ROOT / "firmware"
 DATASET_OUTPUT_DIR = APP_DIR / "output" / "datasets"
 SESSION_LOG_DIR = APP_DIR / "output" / "logs"
+# Node-RED's decoder is the source of truth for which AES key/keyId GLD
+# uplinks must be encrypted with (see server/nodered/.env.example). Reading
+# it here lets every SET_APP_CONFIG_JSON push provision a device with the
+# same key automatically, instead of relying on someone re-typing it and the
+# two sides silently drifting apart.
+NODERED_ENV_PATH = REPO_ROOT / "server" / "nodered" / ".env"
 
 # Populated at startup from the actual --host/--port the bridge binds to.
 # The documented launch path (run-gld-operator.bat) serves the static UI and
@@ -90,6 +96,59 @@ SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$")
 GLD_ID_MIN = 0x1001
 GLD_ID_MAX = 0xFEFF
 DEFAULT_GLD_ID = "1001"
+AES_KEY_HEX_RE = re.compile(r"^[0-9A-Fa-f]{32}$")
+
+
+def load_canonical_gld_aes_key() -> dict[str, Any] | None:
+    """Read the AES key/keyId from server/nodered/.env, or None if it isn't
+    configured there yet. This intentionally never falls back to the public
+    self-test vector - an unconfigured Node-RED side means nothing gets
+    auto-provisioned, rather than silently provisioning a known-public key."""
+    if not NODERED_ENV_PATH.is_file():
+        return None
+    values: dict[str, str] = {}
+    try:
+        for raw_line in NODERED_ENV_PATH.read_text(encoding="utf-8").splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            values[key.strip()] = value.strip()
+    except OSError:
+        return None
+    key_hex = values.get("GLD_AES128_KEY_HEX", "")
+    key_id_raw = values.get("GLD_KEY_ID", "")
+    if not AES_KEY_HEX_RE.match(key_hex) or not key_id_raw.isdigit():
+        return None
+    key_id = int(key_id_raw)
+    if not (1 <= key_id <= 255):
+        return None
+    return {"aesKeyHex": key_hex.upper(), "keyId": key_id}
+
+
+def inject_canonical_aes_key(line: str) -> tuple[str, bool]:
+    """Auto-fill aesKeyHex/keyId on an outgoing SET_APP_CONFIG_JSON command
+    from server/nodered/.env, so every config push provisions the device with
+    the same key Node-RED's decoder expects - the operator never has to type
+    or paste it, and the two sides can't silently drift apart. A caller that
+    already set a key explicitly is left untouched."""
+    prefix = "SET_APP_CONFIG_JSON "
+    if not line.startswith(prefix):
+        return line, False
+    canonical = load_canonical_gld_aes_key()
+    if canonical is None:
+        return line, False
+    try:
+        body = json.loads(line[len(prefix):])
+    except (ValueError, TypeError):
+        return line, False
+    if not isinstance(body, dict):
+        return line, False
+    if any(body.get(k) for k in ("aesKeyHex", "gldAes128KeyHex", "GLD_AES128_KEY_HEX")):
+        return line, False
+    body["aesKeyHex"] = canonical["aesKeyHex"]
+    body.setdefault("keyId", canonical["keyId"])
+    return prefix + json.dumps(body), True
 
 
 def _register_allowed_origins(host: str, port: int) -> None:
@@ -103,6 +162,7 @@ def _register_allowed_origins(host: str, port: int) -> None:
 
 
 VERSION = "0.4.0-lite-bridge"
+APP_ID = "gld-operator"
 
 
 class RequestError(RuntimeError):
@@ -1092,6 +1152,7 @@ class Handler(SimpleHTTPRequestHandler):
                     self,
                     {
                     "ok": True,
+                    "appId": APP_ID,
                     "version": VERSION,
                     "csrfToken": BRIDGE_CSRF_TOKEN,
                     "features": {
@@ -1130,6 +1191,12 @@ class Handler(SimpleHTTPRequestHandler):
                 return json_response(self, {"manifest": manifest, "packageFiles": package_files})
             if path == "/api/network":
                 return json_response(self, network_info())
+            if path == "/api/gld-key-status":
+                canonical = load_canonical_gld_aes_key()
+                return json_response(
+                    self,
+                    {"configured": canonical is not None, "keyId": canonical["keyId"] if canonical else None},
+                )
             if path == "/api/dataset/output-dir":
                 return json_response(self, dataset_output_info())
             if path == "/api/serial/port-status":
@@ -1160,7 +1227,10 @@ class Handler(SimpleHTTPRequestHandler):
             elif path == "/api/serial/disconnect":
                 result = get_serial_bridge(slot).disconnect()
             elif path == "/api/serial/write":
-                result = get_serial_bridge(slot).write_line(str(payload.get("line") or ""), require_connected=False)
+                line, aes_key_synced = inject_canonical_aes_key(str(payload.get("line") or ""))
+                result = get_serial_bridge(slot).write_line(line, require_connected=False)
+                if aes_key_synced and isinstance(result, dict):
+                    result["aesKeySynced"] = True
             elif path == "/api/mqtt/dataset":
                 result = mqtt_publish_dataset(payload, slot)
             elif path == "/api/mqtt/dataset-monitor/stop":

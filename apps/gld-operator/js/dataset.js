@@ -769,8 +769,24 @@ function renderDatasetRows() {
 
 // ---- config + commands ----
 
-export async function applyGldSettings() {
-  const payload = {
+// Reflects server/nodered/.env, which SET_APP_CONFIG_JSON auto-provisions
+// from on every Apply GLD Settings (see inject_canonical_aes_key in
+// apps/gld-operator/bridge.py) - this is read-only status, not a form field.
+export async function refreshGldAesKeyStatus() {
+  const el = $("gldAesKeyStatus");
+  if (!el) return;
+  try {
+    const status = await bridgeFetch("/api/gld-key-status");
+    el.textContent = status?.configured
+      ? `AES key sync: on - Apply GLD Settings will provision this device with Node-RED's key (keyId ${status.keyId}).`
+      : "AES key sync: off - server/nodered/.env has no GLD_AES128_KEY_HEX yet, so Apply GLD Settings will not touch the device's key.";
+  } catch {
+    el.textContent = "AES key sync: unavailable (could not reach the bridge).";
+  }
+}
+
+function buildGldConfigPayload() {
+  return {
     ssid: getField("wifiSsid"),
     password: $("wifiPassword").value,
     mqttHost: getField("mqttHost"),
@@ -780,6 +796,37 @@ export async function applyGldSettings() {
     topicRoot: getField("topicRoot"),
     reboot: true
   };
+}
+
+// Runs the same SET_APP_CONFIG_JSON push as "Apply GLD Settings", but without
+// the confirm dialog or a second banner - for the case where the operator
+// already explicitly confirmed a reset-NVS firmware upload, which just wiped
+// WiFi/MQTT/AES key. Uses whatever was last saved to the settings form, so it
+// only fires if there's something sane to restore. The bridge still injects
+// the AES key from server/nodered/.env the same way it does for a manual
+// apply (see inject_canonical_aes_key in apps/gld-operator/bridge.py) - this
+// is what makes SERVER_PULL work again right after a reset-NVS flash instead
+// of needing a separate manual step.
+export async function restoreGldConfigAfterReset() {
+  const payload = buildGldConfigPayload();
+  if (!payload.ssid || !payload.mqttHost || !payload.topicRoot || !payload.mqttPort) {
+    appendLog("CONFIG_RESTORE_SKIPPED NVS was reset but no saved WiFi/MQTT settings are on hand - open Dataset Settings and Apply GLD Settings manually.", "in");
+    return null;
+  }
+  appendLog("CONFIG_RESTORE_AUTO reapplying saved WiFi/MQTT settings + AES key after NVS reset", "out");
+  const ack = await applyAndAlert(`SET_APP_CONFIG_JSON ${JSON.stringify(payload)}`, "SET_APP_CONFIG", "Restore GLD Config");
+  if (ack?.status === "ok") {
+    state.datasetGldConfigApplied = true;
+    const status = $("datasetGldConfigStatus");
+    if (status) status.textContent = "Restored automatically after NVS reset - GLD is rebooting with these WiFi/MQTT settings (and synced AES key). Confirm Config is now unlocked.";
+    updateConfirmDatasetConfigAvailability();
+    refreshGldAesKeyStatus();
+  }
+  return ack;
+}
+
+export async function applyGldSettings() {
+  const payload = buildGldConfigPayload();
   if (!payload.ssid || !payload.mqttHost || !payload.topicRoot || !payload.mqttPort) {
     appendLog("CONFIG_REJECTED ssid, mqttHost, mqttPort, and topicRoot are required", "in");
     return;
@@ -792,6 +839,7 @@ export async function applyGldSettings() {
     const status = $("datasetGldConfigStatus");
     if (status) status.textContent = "Applied - GLD is rebooting with these WiFi/MQTT settings. Confirm Config is now unlocked.";
     updateConfirmDatasetConfigAvailability();
+    refreshGldAesKeyStatus();
   }
 }
 

@@ -40,7 +40,6 @@
 #include "ProtocolConstants.h"
 #include "../model/ModelMetadata.h"
 #include "../model/NeuralNetwork.h"
-#include "../model/scaler_params.h"
 
 namespace {
 
@@ -3884,18 +3883,12 @@ bool runInference(const float mavVoltage[8]) {
     if (!mlReady || !network->isInitialized()) {
         return false;
     }
-    float* modelInput = network->getInputBuffer();
-    if (!modelInput) {
-        return false;
-    }
     // Channel n is fed directly as feature n (no remap - hardware channel order
-    // matches model feature order). feature_means/feature_stds in
-    // scaler_params.cpp must be stored in this same physical channel order.
-    for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
-        modelInput[ch] = (mavVoltage[ch] - feature_means[ch]) / feature_stds[ch];
-    }
+    // already matches CNN_GAS_ADC_NAMES order: MQ8, MQ135, MQ3, MQ5, MQ4, MQ7,
+    // MQ6, MQ2). Normalization, evidence-feature computation, and INT8
+    // quantization happen inside NeuralNetwork::predict().
     float confidenceFloat = 0.0f;
-    const int predicted = network->predict(confidenceFloat);
+    const int predicted = network->predict(mavVoltage, confidenceFloat);
     if (predicted < 0 || !std::isfinite(confidenceFloat) ||
         confidenceFloat < 0.0f || confidenceFloat > 1.0f) {
         logPrintln("GLD_ML_PREDICT_ERROR");

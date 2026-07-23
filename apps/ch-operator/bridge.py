@@ -83,6 +83,7 @@ def _register_allowed_origins(host: str, port: int) -> None:
 
 
 VERSION = "0.1.0-ch-lite-bridge"
+APP_ID = "ch-operator"
 
 
 class RequestError(RuntimeError):
@@ -740,6 +741,7 @@ class Handler(SimpleHTTPRequestHandler):
                     self,
                     {
                         "ok": True,
+                        "appId": APP_ID,
                         "version": VERSION,
                         "csrfToken": BRIDGE_CSRF_TOKEN,
                         "features": {

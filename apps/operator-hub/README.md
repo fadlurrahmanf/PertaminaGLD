@@ -5,6 +5,17 @@ reimplement any of them - it launches each one's existing `bridge.py` as a
 child process on its own port and serves a tab switcher that iframes whichever
 one you pick.
 
+Only `apps/operator-hub/public/` is served over HTTP. `bridge.py`,
+`preflight.py`, `firmware-packages/`, and this README are not web-accessible.
+Local MQTT broker credentials live outside `apps/operator-hub` entirely, in
+`apps/runtime/operator-hub/credentials.local.json`.
+
+The Hub only binds to loopback (`127.0.0.1`, `localhost`, or `::1`) and refuses
+any other `--host` value. The GLD/CH/Gateway bridges it launches accept
+unauthenticated serial, MQTT, and firmware-flash requests same-origin, so
+binding any of this to a LAN address would expose that to the network. LAN
+access would need its own authenticated, HTTPS mode - it does not exist today.
+
 | App | Port | Folder |
 |---|---|---|
 | GLD | 5174 | `apps/gld-operator` |
@@ -33,14 +44,23 @@ preflight never downloads software, installs drivers, opens a COM port, or
 writes firmware; it only reports what is missing.
 
 Pick GLD / CH / Gateway from the top tab bar. Each tab's dot turns green once
-its bridge answers `/api/health`; the hub polls this for you since the browser
-can't check cross-origin (each bridge's CORS allowlist is same-origin only).
-The Hub starts on an operator-selection page; the three cards are buttons that
-open the corresponding console. Running `apps/ch-operator/run-ch-operator.bat`
-also opens this Hub entry page instead of entering the CH console directly.
+its bridge answers `/api/health` **and** confirms its identity (`appId`); a
+different service answering on the same port is treated as down, not ready.
+The hub polls this for you since the browser can't check cross-origin (each
+bridge's CORS allowlist is same-origin only). Use "Refresh readiness" in the
+header to recheck firmware packages, runtimes, and ports on demand - it's not
+just a snapshot from when the Hub started. The Hub starts on an
+operator-selection page; the three cards are buttons that open the
+corresponding console. Running `apps/ch-operator/run-ch-operator.bat` also
+opens this Hub entry page instead of entering the CH console directly.
 
-Closing the hub window (or Ctrl+C in its console) also stops the three child
-bridges it launched.
+If no LAN connection is available at startup, the Hub still opens and the
+GLD/CH serial consoles still work; only Gateway/MQTT features are marked
+degraded.
+
+**Closing the browser tab does not stop the Hub or its child bridges.** Only
+Ctrl+C (or otherwise terminating) the Hub's own console/process stops it and
+the GLD/CH/Gateway bridges it launched.
 
 For child apps without their own `python-embed` folder, the hub reuses the
 bundled interpreter from GLD Operator (then CH Operator) before falling back

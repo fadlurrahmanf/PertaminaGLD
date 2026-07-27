@@ -301,11 +301,26 @@
   margin-bottom: var(--space-3);
 }
 
+/* Fixed 4-column grid (not auto-fit) so the 8 sensor channels always form
+   two full, evenly aligned rows instead of a ragged last row at in-between
+   widths. */
 .channel-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: var(--space-3);
   margin-top: var(--space-3);
+}
+
+@media (max-width: 900px) {
+  .channel-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .channel-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ---- Disclosure ---- */

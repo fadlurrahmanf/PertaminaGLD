@@ -10,7 +10,13 @@ constexpr float GLD_BATTERY_ADC_MAX_VOLTAGE = 3.3f;
 constexpr float GLD_BATTERY_ADC_MAX_COUNT = 4095.0f;
 constexpr float GLD_BATTERY_DIVIDER_RATIO = 3.0f;
 constexpr uint8_t GLD_BATTERY_SAMPLE_COUNT = 16;
-constexpr float GLD_BATTERY_DETECT_FLOOR_VOLTAGE = 0.05f;
+// Below this, treat the battery-sense ADC as "no battery" rather than a real
+// reading. With no cell attached the pin floats and noise alone can drift a
+// few tens of mV above 0, which used to register as a (fake) detected
+// battery and override a genuine 24V/5V external-power reading - 2.0V is
+// comfortably below any real cell chemistry's discharge floor, so it can't
+// be mistaken for one.
+constexpr float GLD_BATTERY_DETECT_FLOOR_VOLTAGE = 2.00f;
 constexpr float GLD_BATTERY_MIN_VALID_VOLTAGE = 3.00f;
 constexpr float GLD_BATTERY_MAX_VALID_VOLTAGE = 20.0f;
 constexpr float GLD_BATTERY_LOW_VOLTAGE = 3.50f;

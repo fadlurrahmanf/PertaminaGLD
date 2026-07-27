@@ -85,6 +85,7 @@ function setupEvents() {
   ["chartYAxisFixed", "chartYAxisMin", "chartYAxisMax"].forEach((id) => {
     $(id)?.addEventListener("change", drawChart);
   });
+  $("pauseLogBtn")?.addEventListener("click", togglePauseLog);
   $("downloadLogBtn").addEventListener("click", exportLog);
   $("clearLogBtn").addEventListener("click", () => {
     state.logs = [];

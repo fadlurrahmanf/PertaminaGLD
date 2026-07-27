@@ -178,11 +178,11 @@ async function performFirmwareUpload() {
       ? `Upload berhasil. Connected to ${port}.`
       : `Upload berhasil, tetapi reconnect ke ${port} gagal. Periksa Port Setup.`, state.connected ? "success" : "warn");
     if (state.connected && result.nvsReset) {
-      setUploadDialogStatus(`Upload berhasil. NVS direset - reapplying saved WiFi/MQTT settings and AES key…`, "loading");
+      setUploadDialogStatus(`Upload berhasil. NVS direset - reapplying AES key…`, "loading");
       const restoreAck = await restoreGldConfigAfterReset();
       setUploadDialogStatus(restoreAck?.status === "ok"
-        ? `Upload berhasil. Connected to ${port}, config + AES key restored - SERVER_PULL should work again.`
-        : `Upload berhasil dan connected to ${port}, tapi config belum di-restore otomatis - buka Dataset Settings dan Apply GLD Settings manual.`,
+        ? `Upload berhasil. Connected to ${port}, AES key restored - SERVER_PULL should work again. WiFi/MQTT is at firmware defaults; use Dataset Settings > Apply GLD Settings if you need dataset capture.`
+        : `Upload berhasil dan connected to ${port}, tapi AES key belum ter-restore otomatis - buka Dataset Settings dan Apply GLD Settings manual.`,
         restoreAck?.status === "ok" ? "success" : "warn");
     }
     if (state.connected) setUploadDialog(false);

@@ -4,7 +4,7 @@
 import { $, elements, state, SENSOR_NAMES, DATASET_RUNTIME_READY_TIMEOUT_MS, DATASET_WAITING_STUCK_MS, DATASET_WIZARD_LABELS, initialDatasetSession } from "./state.js";
 import { appendLog, getField, numberField, saveForm, downloadText, csvCell, stamp, nowText, switchTab, showConfirm, showBanner, wait, setPanelOpen } from "./ui.js";
 import { bridgeFetch } from "./bridge-client.js";
-import { tokenValue, handleLine, sendCommand, applyAndAlert } from "./serial-protocol.js";
+import { tokenValue, handleLine, sendCommand, applyAndAlert, sendCommandAndWaitAck } from "./serial-protocol.js";
 import { emitMockInfo, emitMockStatus } from "./mock.js";
 import { drawChart } from "./chart.js";
 
@@ -798,31 +798,35 @@ function buildGldConfigPayload() {
   };
 }
 
-// Runs the same SET_APP_CONFIG_JSON push as "Apply GLD Settings", but without
-// the confirm dialog or a second banner - for the case where the operator
-// already explicitly confirmed a reset-NVS firmware upload, which just wiped
-// WiFi/MQTT/AES key. Uses whatever was last saved to the settings form, so it
-// only fires if there's something sane to restore. The bridge still injects
-// the AES key from server/nodered/.env the same way it does for a manual
-// apply (see inject_canonical_aes_key in apps/gld-operator/bridge.py) - this
-// is what makes SERVER_PULL work again right after a reset-NVS flash instead
-// of needing a separate manual step.
+// Fires after a reset-NVS firmware upload, which wipes WiFi/MQTT/AES key
+// together (NVS is all-or-nothing - the firmware can't erase just one field).
+// This only restores the AES key, not WiFi/MQTT: GLD's WiFi/MQTT is only used
+// for the optional Dataset-capture feature, not core sensor/inference
+// operation, and the firmware falls back to its own compiled placeholder
+// ("CHANGE_ME") for any WiFi/MQTT field left out of SET_APP_CONFIG_JSON - so
+// omitting them here still satisfies the firmware's non-empty-field check.
+// If the operator needs Dataset capture, they apply real WiFi/MQTT separately
+// via Dataset Settings > Apply GLD Settings, independent of this step.
+//
+// Uses sendCommandAndWaitAck() directly (not applyAndAlert()) because this
+// runs automatically inside the firmware-upload flow, which already shows
+// its own status inside the Upload Firmware dialog (see firmware.js) -
+// applyAndAlert()'s blocking "OK" popup would stack on top of that dialog
+// and look like the upload was stuck.
 export async function restoreGldConfigAfterReset() {
-  const payload = buildGldConfigPayload();
-  if (!payload.ssid || !payload.mqttHost || !payload.topicRoot || !payload.mqttPort) {
-    appendLog("CONFIG_RESTORE_SKIPPED NVS was reset but no saved WiFi/MQTT settings are on hand - open Dataset Settings and Apply GLD Settings manually.", "in");
+  appendLog("CONFIG_RESTORE_AUTO reapplying AES key after NVS reset (WiFi/MQTT left at firmware defaults - use Dataset Settings > Apply GLD Settings if you need dataset capture)", "out");
+  try {
+    const ack = await sendCommandAndWaitAck(`SET_APP_CONFIG_JSON ${JSON.stringify({ reboot: true })}`, "SET_APP_CONFIG");
+    if (ack?.status === "ok") {
+      refreshGldAesKeyStatus();
+    } else {
+      appendLog(`CONFIG_RESTORE_AUTO_REJECTED ${ack?.message || ack?.status}`, "in");
+    }
+    return ack;
+  } catch (error) {
+    appendLog(`CONFIG_RESTORE_AUTO_ERROR ${error.message}`, "in");
     return null;
   }
-  appendLog("CONFIG_RESTORE_AUTO reapplying saved WiFi/MQTT settings + AES key after NVS reset", "out");
-  const ack = await applyAndAlert(`SET_APP_CONFIG_JSON ${JSON.stringify(payload)}`, "SET_APP_CONFIG", "Restore GLD Config");
-  if (ack?.status === "ok") {
-    state.datasetGldConfigApplied = true;
-    const status = $("datasetGldConfigStatus");
-    if (status) status.textContent = "Restored automatically after NVS reset - GLD is rebooting with these WiFi/MQTT settings (and synced AES key). Confirm Config is now unlocked.";
-    updateConfirmDatasetConfigAvailability();
-    refreshGldAesKeyStatus();
-  }
-  return ack;
 }
 
 export async function applyGldSettings() {

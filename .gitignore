@@ -48,6 +48,8 @@ firmware/**/.cache/
 *.elf
 *.bin
 *.hex
+# Operator Hub distributes these verified firmware images for offline flashing.
+!apps/operator-hub/firmware-packages/**/*.bin
 
 # Generated manuals may contain site-specific command examples.
 docs/manual/*.pdf

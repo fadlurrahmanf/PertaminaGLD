@@ -160,7 +160,17 @@ constexpr uint32_t STATUS_INTERVAL_MS = pgl::config::gw::STATUS_INTERVAL_MS;
 constexpr uint8_t MQTT_UPLINK_QUEUE_CAPACITY = pgl::config::gw::MQTT_UPLINK_QUEUE_CAPACITY;
 constexpr size_t MQTT_UPLINK_QUEUE_ITEM_BYTES = pgl::config::gw::MQTT_UPLINK_QUEUE_ITEM_BYTES;
 constexpr uint8_t CONFIG_RESPONSE_REPEAT_COUNT = pgl::config::gw::CONFIG_RESPONSE_REPEAT_COUNT;
+constexpr uint16_t CONFIG_RESPONSE_INITIAL_DELAY_MS =
+    pgl::config::gw::CONFIG_RESPONSE_INITIAL_DELAY_MS;
 constexpr uint16_t CONFIG_RESPONSE_REPEAT_GAP_MS = pgl::config::gw::CONFIG_RESPONSE_REPEAT_GAP_MS;
+constexpr int8_t CONFIG_RESPONSE_REVERSE_RSSI_FLOOR_DBM =
+    pgl::config::gw::CONFIG_RESPONSE_REVERSE_RSSI_FLOOR_DBM;
+constexpr int16_t CONFIG_RESPONSE_MIN_REPLY_RSSI_DBM =
+    pgl::config::gw::CONFIG_RESPONSE_MIN_REPLY_RSSI_DBM;
+constexpr int8_t CONFIG_RESPONSE_MIN_REPLY_SNR_DB =
+    pgl::config::gw::CONFIG_RESPONSE_MIN_REPLY_SNR_DB;
+constexpr uint8_t PULL_REQUEST_REPEAT_COUNT = pgl::config::gw::PULL_REQUEST_REPEAT_COUNT;
+constexpr uint16_t PULL_REQUEST_REPEAT_GAP_MS = pgl::config::gw::PULL_REQUEST_REPEAT_GAP_MS;
 
 void logPrintln(const char* text);
 void logPrintf(const char* fmt, ...);
@@ -253,6 +263,19 @@ struct PendingMqttPublish {
 PendingMqttPublish mqttQueue[MQTT_UPLINK_QUEUE_CAPACITY]{};
 uint32_t mqttQueuePublished = 0;
 uint32_t mqttQueueDropped = 0;
+
+struct PendingPullRetry {
+    bool active;
+    uint16_t requestId;
+    uint16_t nextHop;
+    uint8_t frame[pgl::protocol::APPFRAME_OVERHEAD + pgl::protocol::MESH_MAX_PAYLOAD];
+    size_t frameSize;
+    uint8_t attemptsSent;
+    uint8_t repeatCount;
+    uint32_t nextDueMs;
+};
+
+PendingPullRetry pendingPullRetry{};
 
 struct RecentHello {
     bool active;
@@ -870,6 +893,69 @@ bool transmitMeshFrame(const uint8_t* frame, size_t frameSize, const char* reaso
     return txState == RADIOLIB_ERR_NONE;
 }
 
+void cancelPendingPullRetry(const char* reason) {
+    if (!pendingPullRetry.active) return;
+    logPrintf("GW_PULL_RETRY_CANCEL requestId=%u nextHop=0x%04X attempts=%u reason=%s\n",
+              static_cast<unsigned>(pendingPullRetry.requestId),
+              pendingPullRetry.nextHop,
+              static_cast<unsigned>(pendingPullRetry.attemptsSent),
+              reason);
+    pendingPullRetry.active = false;
+}
+
+void schedulePullRetry(uint16_t requestId, uint16_t nextHop, const uint8_t* frame,
+                       size_t frameSize) {
+    const uint8_t repeatCount = PULL_REQUEST_REPEAT_COUNT == 0 ? 1 : PULL_REQUEST_REPEAT_COUNT;
+    if (repeatCount <= 1 || frameSize > sizeof(pendingPullRetry.frame)) return;
+    pendingPullRetry.active = true;
+    pendingPullRetry.requestId = requestId;
+    pendingPullRetry.nextHop = nextHop;
+    memcpy(pendingPullRetry.frame, frame, frameSize);
+    pendingPullRetry.frameSize = frameSize;
+    pendingPullRetry.attemptsSent = 1;
+    pendingPullRetry.repeatCount = repeatCount;
+    pendingPullRetry.nextDueMs = millis() + PULL_REQUEST_REPEAT_GAP_MS;
+    logPrintf("GW_PULL_RETRY_SCHEDULE requestId=%u nextHop=0x%04X attempts=1/%u gapMs=%u\n",
+              static_cast<unsigned>(requestId),
+              nextHop,
+              static_cast<unsigned>(repeatCount),
+              static_cast<unsigned>(PULL_REQUEST_REPEAT_GAP_MS));
+}
+
+void processPendingPullRetry() {
+    if (!pendingPullRetry.active) return;
+    if (static_cast<int32_t>(millis() - pendingPullRetry.nextDueMs) < 0) return;
+    if (pendingPullRetry.attemptsSent >= pendingPullRetry.repeatCount) {
+        cancelPendingPullRetry("complete");
+        return;
+    }
+    pendingPullRetry.attemptsSent++;
+    transmitMeshFrame(pendingPullRetry.frame, pendingPullRetry.frameSize, "server-pull-retry");
+    logPrintf("GW_PULL_RETRY_TX requestId=%u nextHop=0x%04X attempt=%u/%u\n",
+              static_cast<unsigned>(pendingPullRetry.requestId),
+              pendingPullRetry.nextHop,
+              static_cast<unsigned>(pendingPullRetry.attemptsSent),
+              static_cast<unsigned>(pendingPullRetry.repeatCount));
+    if (pendingPullRetry.attemptsSent >= pendingPullRetry.repeatCount) {
+        cancelPendingPullRetry("sent-all");
+    } else {
+        pendingPullRetry.nextDueMs = millis() + PULL_REQUEST_REPEAT_GAP_MS;
+    }
+}
+
+void cancelPullRetryOnResponseIfNeeded(const pgl::protocol::FrameView& decoded) {
+    if (!pendingPullRetry.active ||
+        pgl::protocol::messageType(decoded.typeFlags) != pgl::protocol::MSG_CLUSTER_DATA_RESPONSE ||
+        decoded.payload == nullptr ||
+        decoded.payloadLen < 2) {
+        return;
+    }
+    const uint16_t responseRequestId = readU16Be(&decoded.payload[0]);
+    if (responseRequestId == pendingPullRetry.requestId) {
+        cancelPendingPullRetry("response-received");
+    }
+}
+
 void handlePullCommand(const JsonDocument& doc) {
     constexpr size_t MAX_PULL_HOPS = (pgl::protocol::MESH_MAX_PAYLOAD - 2) / 2;
     uint16_t hopList[MAX_PULL_HOPS]{};
@@ -920,6 +1006,7 @@ void handlePullCommand(const JsonDocument& doc) {
               nextHop,
               static_cast<unsigned>(payloadLen));
     transmitMeshFrame(frame, encoded.size, "server-pull");
+    schedulePullRetry(pullRequestId, nextHop, frame, encoded.size);
 }
 
 void hexToBytes(const char* hex, uint8_t* out, size_t outCapacity, size_t& outLen) {
@@ -1374,6 +1461,17 @@ void sendGatewayConfigResponseIfNeeded(const uint8_t* frame, size_t frameLen,
         requesterId = decoded.srcId;
     }
 
+    if (requestRssiDbm < CONFIG_RESPONSE_MIN_REPLY_RSSI_DBM ||
+        requestSnrDb < CONFIG_RESPONSE_MIN_REPLY_SNR_DB) {
+        logPrintf("GW_CONFIG_RESPONSE_SKIP requester=0x%04X reason=weak-link gwRxRssi=%d gwRxSnr=%d minRssi=%d minSnr=%d\n",
+                  requesterId,
+                  static_cast<int>(clampToI8(requestRssiDbm)),
+                  static_cast<int>(clampToI8(requestSnrDb)),
+                  CONFIG_RESPONSE_MIN_REPLY_RSSI_DBM,
+                  static_cast<int>(CONFIG_RESPONSE_MIN_REPLY_SNR_DB));
+        return;
+    }
+
     uint8_t payload[10]{};
     writeU16Be(&payload[0], requesterId);
     writeU16Be(&payload[2], 0);
@@ -1384,8 +1482,13 @@ void sendGatewayConfigResponseIfNeeded(const uint8_t* frame, size_t frameLen,
                  pgl::protocol::CH_CONFIG_CAP_HELLO_ACK_V1 |
                  pgl::protocol::CH_CONFIG_CAP_ALARM_ACK_NODE_ID_V1 |
                  pgl::protocol::CH_CONFIG_CAP_NODE_COMMAND_ROUTE_V1;
-    payload[8] = static_cast<uint8_t>(clampToI8(requestRssiDbm));  // GW hears CH RSSI.
-    payload[9] = static_cast<uint8_t>(clampToI8(requestSnrDb));    // GW hears CH SNR.
+    const int8_t measuredReverseRssi = clampToI8(requestRssiDbm);
+    const int8_t advertisedReverseRssi =
+        measuredReverseRssi < CONFIG_RESPONSE_REVERSE_RSSI_FLOOR_DBM
+            ? CONFIG_RESPONSE_REVERSE_RSSI_FLOOR_DBM
+            : measuredReverseRssi;
+    payload[8] = static_cast<uint8_t>(advertisedReverseRssi);  // GW hears CH RSSI, field-range clamped.
+    payload[9] = static_cast<uint8_t>(clampToI8(requestSnrDb)); // GW hears CH SNR.
 
     uint8_t response[pgl::protocol::APPFRAME_OVERHEAD + pgl::protocol::MESH_MAX_PAYLOAD]{};
     const pgl::protocol::FrameEncodeResult encoded = pgl::protocol::encodeAppFrame(
@@ -1399,19 +1502,20 @@ void sendGatewayConfigResponseIfNeeded(const uint8_t* frame, size_t frameLen,
         sizeof(response),
         pgl::protocol::MESH_MAX_PAYLOAD);
     if (encoded.status == pgl::protocol::FrameStatus::Ok) {
-        delay(20);
+        delay(CONFIG_RESPONSE_INITIAL_DELAY_MS);
         const uint8_t repeatCount = CONFIG_RESPONSE_REPEAT_COUNT == 0 ? 1 : CONFIG_RESPONSE_REPEAT_COUNT;
         for (uint8_t attempt = 0; attempt < repeatCount; ++attempt) {
             if (attempt > 0) {
                 delay(CONFIG_RESPONSE_REPEAT_GAP_MS);
             }
             transmitMeshFrame(response, encoded.size, "gateway-config-response");
-            logPrintf("GW_CONFIG_RESPONSE_TX requester=0x%04X parent=0x0000 depth=0 battMv=65535 routeToRoot=1 seq=%u attempt=%u/%u gwRxRssi=%d gwRxSnr=%d\n",
+            logPrintf("GW_CONFIG_RESPONSE_TX requester=0x%04X parent=0x0000 depth=0 battMv=65535 routeToRoot=1 seq=%u attempt=%u/%u gwRxRssi=%d advertisedReverseRssi=%d gwRxSnr=%d\n",
                       requesterId,
                       decoded.seq,
                       static_cast<unsigned>(attempt + 1),
                       static_cast<unsigned>(repeatCount),
-                      static_cast<int>(static_cast<int8_t>(payload[8])),
+                      static_cast<int>(measuredReverseRssi),
+                      static_cast<int>(advertisedReverseRssi),
                       static_cast<int>(static_cast<int8_t>(payload[9])));
         }
     } else {
@@ -1448,6 +1552,9 @@ void receiveMeshOnce() {
                   addressedFrame.srcId, addressedFrame.dstId, gatewayId,
                   pgl::protocol::messageType(addressedFrame.typeFlags));
         return;
+    }
+    if (addressedStatus == pgl::protocol::FrameStatus::Ok) {
+        cancelPullRetryOnResponseIfNeeded(addressedFrame);
     }
     sendHelloAckIfNeeded(frame, packetLen);
     const bool duplicateHello = suppressDuplicateHello(frame, packetLen);
@@ -1773,6 +1880,7 @@ void loop() {
 
     if (meshReady && meshRadio != nullptr) {
         receiveMeshOnce();
+        processPendingPullRetry();
     } else {
         delay(250);
     }

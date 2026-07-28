@@ -34,13 +34,53 @@ constexpr uint32_t STATUS_INTERVAL_MS = 10000;
 constexpr uint8_t MQTT_UPLINK_QUEUE_CAPACITY = 8;
 constexpr size_t MQTT_UPLINK_QUEUE_ITEM_BYTES = 1024;
 
-// Jumlah pengiriman CH_CONFIG_RESPONSE untuk satu CH_CONFIG_REQUEST. Dua kali
-// dipakai agar CH lebih besar peluangnya menerima balasan Gateway saat beberapa
-// CH lain ikut merespons discovery pada window yang sama.
-constexpr uint8_t CONFIG_RESPONSE_REPEAT_COUNT = 2;
+// CH_CONFIG_RESPONSE reliability. Default values preserve the normal Gateway
+// behavior; field-test environments override these macros for range testing.
+#ifndef PGL_GW_CONFIG_RESPONSE_REPEAT_COUNT
+#define PGL_GW_CONFIG_RESPONSE_REPEAT_COUNT 2
+#endif
+#ifndef PGL_GW_CONFIG_RESPONSE_INITIAL_DELAY_MS
+#define PGL_GW_CONFIG_RESPONSE_INITIAL_DELAY_MS 20
+#endif
+#ifndef PGL_GW_CONFIG_RESPONSE_REPEAT_GAP_MS
+#define PGL_GW_CONFIG_RESPONSE_REPEAT_GAP_MS 70
+#endif
+#ifndef PGL_GW_CONFIG_RESPONSE_REVERSE_RSSI_FLOOR_DBM
+#define PGL_GW_CONFIG_RESPONSE_REVERSE_RSSI_FLOOR_DBM -128
+#endif
+#ifndef PGL_GW_CONFIG_RESPONSE_MIN_REPLY_RSSI_DBM
+#define PGL_GW_CONFIG_RESPONSE_MIN_REPLY_RSSI_DBM -128
+#endif
+#ifndef PGL_GW_CONFIG_RESPONSE_MIN_REPLY_SNR_DB
+#define PGL_GW_CONFIG_RESPONSE_MIN_REPLY_SNR_DB -128
+#endif
 
-// Jeda antar pengiriman ulang CH_CONFIG_RESPONSE Gateway dalam ms.
-constexpr uint16_t CONFIG_RESPONSE_REPEAT_GAP_MS = 70;
+constexpr uint8_t CONFIG_RESPONSE_REPEAT_COUNT =
+    PGL_GW_CONFIG_RESPONSE_REPEAT_COUNT;
+constexpr uint16_t CONFIG_RESPONSE_INITIAL_DELAY_MS =
+    PGL_GW_CONFIG_RESPONSE_INITIAL_DELAY_MS;
+constexpr uint16_t CONFIG_RESPONSE_REPEAT_GAP_MS =
+    PGL_GW_CONFIG_RESPONSE_REPEAT_GAP_MS;
+constexpr int8_t CONFIG_RESPONSE_REVERSE_RSSI_FLOOR_DBM =
+    PGL_GW_CONFIG_RESPONSE_REVERSE_RSSI_FLOOR_DBM;
+constexpr int16_t CONFIG_RESPONSE_MIN_REPLY_RSSI_DBM =
+    PGL_GW_CONFIG_RESPONSE_MIN_REPLY_RSSI_DBM;
+constexpr int8_t CONFIG_RESPONSE_MIN_REPLY_SNR_DB =
+    PGL_GW_CONFIG_RESPONSE_MIN_REPLY_SNR_DB;
+
+// Pull retry. Normal firmware sends one pull request; field-test builds can
+// retry carefully spaced requests without blocking the Gateway RX loop.
+#ifndef PGL_GW_PULL_REQUEST_REPEAT_COUNT
+#define PGL_GW_PULL_REQUEST_REPEAT_COUNT 1
+#endif
+#ifndef PGL_GW_PULL_REQUEST_REPEAT_GAP_MS
+#define PGL_GW_PULL_REQUEST_REPEAT_GAP_MS 1800
+#endif
+
+constexpr uint8_t PULL_REQUEST_REPEAT_COUNT =
+    PGL_GW_PULL_REQUEST_REPEAT_COUNT;
+constexpr uint16_t PULL_REQUEST_REPEAT_GAP_MS =
+    PGL_GW_PULL_REQUEST_REPEAT_GAP_MS;
 
 // -----------------------------------------------------------------------------
 // Derived / aliases

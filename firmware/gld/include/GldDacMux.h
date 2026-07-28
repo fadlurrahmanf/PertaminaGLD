@@ -20,6 +20,7 @@ public:
     bool writeDac(uint8_t sensorChannel, uint16_t value);
     bool writeAll(uint16_t value);
     bool ready() const { return initialized_; }
+    uint16_t lastValue(uint8_t sensorChannel) const;
 
 private:
     TwoWire* i2c_ = nullptr;

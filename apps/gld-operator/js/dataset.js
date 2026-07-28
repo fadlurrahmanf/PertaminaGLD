@@ -2,6 +2,7 @@
 // MQTT START_DATASET/STOP_DATASET -> row capture -> CSV + session log.
 
 import { $, elements, state, SENSOR_NAMES, DATASET_RUNTIME_READY_TIMEOUT_MS, DATASET_WAITING_STUCK_MS, DATASET_WIZARD_LABELS, initialDatasetSession } from "./state.js";
+import { requestFullNulling } from "./nulling.js";
 import { appendLog, getField, numberField, saveForm, downloadText, csvCell, stamp, nowText, switchTab, showConfirm, showBanner, wait, setPanelOpen } from "./ui.js";
 import { bridgeFetch } from "./bridge-client.js";
 import { tokenValue, handleLine, sendCommand, applyAndAlert, sendCommandAndWaitAck } from "./serial-protocol.js";
@@ -219,6 +220,7 @@ function queueTextFromSerial(line) {
   const pending = tokenValue(line, "pending");
   const seq = tokenValue(line, "seq");
   if (line.startsWith("DATASET_QUEUE_DROP")) return seq ? `Queue full, dropped seq ${seq}` : "Queue full, dropped oldest sample";
+  if (line.startsWith("DATASET_QUEUE_FULL")) return "Queue full - dataset stopped before dropping a record";
   if (line.startsWith("DATASET_QUEUE_ENQUEUE")) return `Queue ${pending ? `pending ${pending}` : "sample buffered"}`;
   if (line.startsWith("DATASET_QUEUE_RETRY")) return `Queue retry ${line.includes("ok=1") ? "sent" : "waiting"}${pending ? `, pending ${pending}` : ""}`;
   return "Dataset queue event";
@@ -275,7 +277,18 @@ export async function confirmDatasetConfig() {
 
 function updateStartDatasetAvailability() {
   const button = $("startDatasetBtn");
-  if (button) button.disabled = !state.dataset.configConfirmed;
+  if (button) button.disabled = !state.dataset.configConfirmed || state.dataset.commandAccepted;
+}
+
+function maybeActivateDatasetSession() {
+  if (!state.dataset.commandAccepted || !state.dataset.firmwareRunning || state.dataset.active) return;
+  state.dataset.active = true;
+  state.dataset.state = "Capturing";
+  state.dataset.phase = "GLD acknowledged START_DATASET and reports running";
+  state.dataset.startedAt = Date.now();
+  state.dataset.lastEvent = `${nowText()} Dataset capture confirmed by GLD`;
+  renderDatasetSession();
+  updateStartDatasetAvailability();
 }
 
 function startDatasetSession(dataset, deviceId) {
@@ -288,7 +301,9 @@ function startDatasetSession(dataset, deviceId) {
   };
   const session = initialDatasetSession();
   Object.assign(session, confirmedFile);
-  session.active = true;
+  // Do not treat a click as an active capture. The session becomes active only
+  // after the GLD ACKs START_DATASET and reports its dataset state as running.
+  session.active = false;
   session.state = "Starting";
   session.phase = "Publishing START_DATASET";
   session.sessionId = dataset.session_id || crypto.randomUUID();
@@ -410,13 +425,10 @@ export function handleDatasetSerialLine(line) {
   if (line.startsWith("DATASET_START")) {
     const target = Number.parseInt(tokenValue(line, "target") || "", 10);
     if (Number.isFinite(target) && target > 0) state.dataset.target = target;
-    state.dataset.active = true;
-    if (!state.dataset.startedAt) state.dataset.startedAt = Date.now();
-    setDatasetState("Capturing", "GLD accepted START_DATASET", line);
+    setDatasetState(state.dataset.state, "Serial START observed; awaiting MQTT ACK and running status", line);
     return;
   }
   if (line.startsWith("DATASET_RECORD")) {
-    state.dataset.active = true;
     const seq = Number.parseInt(tokenValue(line, "seq") || "", 10);
     const queueText = datasetQueueText({
       pending: tokenValue(line, "pending"),
@@ -455,6 +467,10 @@ export function handleDatasetMqttEvent(payload) {
   const text = payload.payload || "";
 
   if (kind === "data" && data.sensor_voltage) {
+    if (!state.dataset.active || !state.dataset.commandAccepted || !state.dataset.firmwareRunning) {
+      appendLog("DATASET_DATA_IGNORED awaiting_start_confirmation", "in");
+      return;
+    }
     if (addDatasetRecord(data, "mqtt")) {
       setDatasetState("Capturing", "MQTT dataset/data received", `MQTT data seq=${data.seq ?? state.dataset.rows.length}`);
     } else {
@@ -475,6 +491,10 @@ export function handleDatasetMqttEvent(payload) {
       } else {
         state.dataset.state = remoteState;
       }
+      if (/^running$/i.test(remoteState)) {
+        state.dataset.firmwareRunning = true;
+        maybeActivateDatasetSession();
+      }
     }
     if (queueText && !remoteIdleWhileWaiting) state.dataset.phase = queueText;
     state.dataset.lastEvent = `${nowText()} MQTT status ${text}`;
@@ -494,9 +514,17 @@ export function handleDatasetMqttEvent(payload) {
     const rejected = /reject|error|fail/i.test(String(result));
     if (ok && String(cmd).toUpperCase() === "SET_MODE" && state.pendingMqttMode) {
       state.mode = state.pendingMqttMode;
-      $("modeValue").textContent = state.pendingMqttMode;
       elements.topModeStatus.textContent = state.pendingMqttMode;
       state.pendingMqttMode = "";
+    }
+    if (String(cmd).toUpperCase() === "START_DATASET") {
+      state.dataset.commandAccepted = ok;
+      if (!ok) {
+        state.dataset.active = false;
+        updateStartDatasetAvailability();
+      } else {
+        maybeActivateDatasetSession();
+      }
     }
     const phase = noProfile
       ? "No nulling profile in GLD. Run nulling once, then start dataset again."
@@ -549,15 +577,32 @@ function normalizeDatasetRecord(raw, source) {
 // that point safely on disk, not just whatever made it into memory.
 async function appendDatasetRowToFile(record) {
   if (!state.bridgeAvailable || !state.dataset.fileName) return;
+  const sessionId = state.dataset.sessionId;
+  const filename = state.dataset.fileName;
   const line = datasetRowCsvLine(record, state.dataset.sessionId);
-  try {
-    await bridgeFetch("/api/dataset/append", {
+  state.dataset.appendPending += 1;
+  state.dataset.appendChain = state.dataset.appendChain
+    .then(() => bridgeFetch("/api/dataset/append", {
       method: "POST",
-      body: JSON.stringify({ filename: state.dataset.fileName, lines: [line] })
+      body: JSON.stringify({ filename, lines: [line] })
+    }))
+    .then(() => {
+      if (state.dataset.sessionId === sessionId) state.dataset.appendWritten += 1;
+    })
+    .catch((error) => {
+      if (state.dataset.sessionId === sessionId) {
+        state.dataset.appendFailed += 1;
+        state.dataset.error = `CSV append failed: ${error.message}`;
+        state.dataset.phase = "CSV write failed - capture is not complete";
+      }
+      appendLog(`DATASET_APPEND_ERROR ${error.message}`, "in");
+    })
+    .finally(() => {
+      if (state.dataset.sessionId === sessionId) {
+        state.dataset.appendPending = Math.max(0, state.dataset.appendPending - 1);
+        renderDatasetSession();
+      }
     });
-  } catch (error) {
-    appendLog(`DATASET_APPEND_ERROR ${error.message}`, "in");
-  }
 }
 
 function addDatasetRecord(raw, source) {
@@ -586,7 +631,8 @@ function addDatasetRecord(raw, source) {
 export function maybeCaptureDatasetTelemetry(status) {
   const mode = String(status.mode || state.mode || "").toLowerCase();
   if (state.datasetRuntime.mqtt) return;
-  if (!state.dataset.active || mode !== "dataset") return;
+  if (!state.dataset.active || !state.dataset.commandAccepted || !state.dataset.firmwareRunning || mode !== "dataset") return;
+  if (String(status.dataset?.state || "").toLowerCase() !== "running") return;
   const telemetry = status.telemetry;
   if (!telemetry?.valid || !Array.isArray(telemetry.sensorVoltage)) return;
   addDatasetRecord(
@@ -611,9 +657,13 @@ export function updateDatasetFromStatus(status) {
   }
   const dataset = status.dataset || status.datasetState;
   if (dataset && typeof dataset === "object") {
-    if (dataset.running === true) state.dataset.active = true;
-    if (dataset.done === true) state.dataset.active = false;
     const remoteState = String(dataset.state || dataset.status || "").trim();
+    const running = dataset.running === true || /^running$/i.test(remoteState);
+    if (running && state.dataset.commandAccepted) {
+      state.dataset.firmwareRunning = true;
+      maybeActivateDatasetSession();
+    }
+    if (dataset.done === true) state.dataset.active = false;
     const remoteIdleWhileWaiting = state.dataset.active && state.dataset.rows.length === 0 && /^idle$/i.test(remoteState);
     if (remoteState) {
       if (remoteIdleWhileWaiting) {
@@ -888,7 +938,7 @@ export async function publishDatasetCommand(command) {
     if (dataset.run_nulling_first) {
       setDatasetState("Nulling First", "Switching GLD to nulling. START_DATASET not published yet.", "DATASET_WAIT_NULLING_FIRST selected");
       switchTab("nulling");
-      await sendCommand("SET_MODE nulling");
+      await requestFullNulling();
       return;
     }
     const mode = String(state.status?.mode || state.info?.mode || state.mode || "").toLowerCase();
@@ -898,7 +948,10 @@ export async function publishDatasetCommand(command) {
       await sendCommand("SET_MODE dataset");
       const ready = await waitForDatasetRuntimeReady();
       if (!ready) {
+        state.dataset.commandAccepted = false;
+        state.dataset.active = false;
         setDatasetState("Error", "Timed out waiting for DATASET_READY and MQTT_CONNECT_RESULT=OK", "DATASET_RUNTIME_READY_TIMEOUT", true);
+        updateStartDatasetAvailability();
         return;
       }
       setDatasetState("Runtime Ready", "GLD dataset MQTT is ready; publishing START_DATASET", "DATASET_RUNTIME_READY");
@@ -941,6 +994,11 @@ export async function publishDatasetCommand(command) {
     });
     setDatasetState(command === "START_DATASET" ? "Command Sent" : "Stop Sent", "Waiting for GLD MQTT response", `${command} published to MQTT`);
   } catch (error) {
+    if (command === "START_DATASET") {
+      state.dataset.commandAccepted = false;
+      state.dataset.active = false;
+      updateStartDatasetAvailability();
+    }
     setDatasetState("Error", "MQTT publish failed", `DATASET_MQTT_ERROR ${error.message}`, true);
     appendLog(`DATASET_MQTT_ERROR ${error.message}`, "in");
   }

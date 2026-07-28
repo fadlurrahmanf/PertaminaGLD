@@ -421,13 +421,30 @@ class DatasetMqttMonitor:
         if username or password:
             client.username_pw_set(username, password)
 
+        subscribed = threading.Event()
+        subscribe_error: dict[str, str] = {}
+        pending_subscriptions = {"count": len(topics)}
+
         def on_connect(client_obj: Any, _userdata: Any, _flags: Any, reason_code: Any, _properties: Any) -> None:
+            if not (str(reason_code).lower() == "success" or reason_code == 0):
+                subscribe_error["message"] = f"connect failed: {reason_code}"
+                subscribed.set()
+                return
             for topic in topics:
                 client_obj.subscribe(topic, qos=0)
             self._emit(
                 "dataset_monitor",
                 {"status": "subscribed", "host": host, "port": port, "deviceId": device_id, "topics": topics, "reason": str(reason_code)},
             )
+
+        def on_subscribe(_client_obj: Any, _userdata: Any, _mid: int, reason_codes: Any, _properties: Any) -> None:
+            if any(getattr(code, "value", code) == 0x80 for code in reason_codes):
+                subscribe_error["message"] = "broker rejected dataset topic subscription"
+                subscribed.set()
+                return
+            pending_subscriptions["count"] -= 1
+            if pending_subscriptions["count"] <= 0:
+                subscribed.set()
 
         def on_message(_client_obj: Any, _userdata: Any, msg: Any) -> None:
             text = msg.payload.decode("utf-8", errors="replace")
@@ -441,9 +458,19 @@ class DatasetMqttMonitor:
             )
 
         client.on_connect = on_connect
+        client.on_subscribe = on_subscribe
         client.on_message = on_message
         client.connect(host, port, keepalive=20)
         client.loop_start()
+
+        if not subscribed.wait(timeout=5):
+            client.loop_stop()
+            client.disconnect()
+            raise RuntimeError(f"MQTT dataset monitor subscription timeout to {host}:{port}")
+        if subscribe_error:
+            client.loop_stop()
+            client.disconnect()
+            raise RuntimeError(subscribe_error["message"])
 
         with self._lock:
             self._client = client

@@ -5,7 +5,7 @@
 
 import { elements, state, MAX_FLEET_SLOTS, ensureFleetSlot } from "./state.js";
 import { setSetupOpen, showBanner } from "./ui.js";
-import { parseJsonAfter, formatGas, resetDeviceSnapshot, sendCommand } from "./serial-protocol.js";
+import { parseJsonAfter, formatGas, resetDeviceSnapshot, sendCommand, updateTelemetryCollectionProgress } from "./serial-protocol.js";
 import { updateConnectionUi, bridgeFetch } from "./bridge-client.js";
 import { drawChart } from "./chart.js";
 
@@ -106,6 +106,7 @@ export async function setActiveSlot(slot) {
   ensureFleetSlot(slot);
   resetDeviceSnapshot();
   state.history = [];
+  updateTelemetryCollectionProgress();
   drawChart();
   const entry = state.fleet[slot];
   updateConnectionUi(entry.connected ? "connected" : "bridge ready", "ok");

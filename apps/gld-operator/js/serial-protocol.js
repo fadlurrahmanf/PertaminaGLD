@@ -178,6 +178,16 @@ function updateStatus(status) {
   setText("dacHealth", boot.dacReady === true ? "Ready" : "Not ready");
   setText("mlHealth", boot.mlReady === true ? "Ready" : "Not ready");
 
+  const model = status.model || {};
+  const bindingStatus = $("modelNullingBindingStatus");
+  if (bindingStatus) {
+    const bound = Number(model.boundNullingProfileId);
+    const active = Number(model.activeNullingProfileId);
+    bindingStatus.textContent = model.bindingValid && model.bindingModelMatches
+      ? `Model bound to Nulling profile #${bound}; active profile #${active}.`
+      : `Model binding is not approved for active Nulling profile #${Number.isFinite(active) ? active : "?"}; inference remains fail-closed.`;
+  }
+
   const lora = status.lora || {};
   const loraOk = lora.lastTxOk === true || lora.beginState === 0;
   setText("loraValue", loraOk ? "OK" : Number.isFinite(lora.beginState) ? `state ${lora.beginState}` : "Unknown");
@@ -208,6 +218,7 @@ function maybeAppendTelemetry(status) {
     featureOrder: Array.isArray(telemetry.featureOrder) ? telemetry.featureOrder.slice(0, 8) : []
   });
   pruneHistory();
+  updateTelemetryCollectionProgress();
   drawChart();
   drawQcCharts();
   maybeCaptureDatasetTelemetry(status);
@@ -725,13 +736,215 @@ export function renderSensorCheck() {
 // PGA_VALUE_TABLE in firmware/gld/src/GldAds1256Reader.cpp) - the value the
 // GLD reports in telemetry.sensorGain is already one of these, not an index.
 const GAIN_STEPS = [1, 2, 4, 8, 16, 32, 64];
+const SENSOR_TREND_WINDOW_MS = 60 * 1000;
+const SENSOR_TREND_MIN_SPAN_MS = 5 * 1000;
+const SENSOR_STABILITY_BASELINE_WINDOW_MS = 10 * 60 * 1000;
+const SENSOR_STABILITY_MIN_WINDOWS = 5;
+const SENSOR_STABILITY_MIN_DRIFT_MV_PER_MIN = 0.5;
+const SENSOR_STABILITY_MIN_RANGE_MV = 0.5;
+const SENSOR_STABILITY_BASELINE_MULTIPLIER = 2;
+const SESSION_MCP_CODE_MIN = 0;
+const SESSION_MCP_CODE_MAX = 4095;
+const sessionMcpExpanded = new Set();
+const sessionMcpOverrides = new Map();
+const sessionMcpApplying = new Set();
+
+export function updateTelemetryCollectionProgress() {
+  if (!elements.telemetryMinuteProgress || !elements.telemetryBaselineProgress) return;
+  const completeSamples = state.history.filter((sample) => (
+    Array.isArray(sample.sensorVoltage)
+    && sample.sensorVoltage.length >= 8
+    && sample.sensorVoltage.every((value) => Number.isFinite(Number(value)))
+  ));
+  const elapsedMs = completeSamples.length > 1
+    ? completeSamples[completeSamples.length - 1].ts - completeSamples[0].ts
+    : 0;
+  const minutePercent = Math.min(100, Math.floor((elapsedMs / SENSOR_TREND_WINDOW_MS) * 100));
+  const baselineDurationMs = SENSOR_TREND_WINDOW_MS * (SENSOR_STABILITY_MIN_WINDOWS + 1);
+  const baselinePercent = Math.min(100, Math.floor((elapsedMs / baselineDurationMs) * 100));
+
+  elements.telemetryMinuteProgress.value = minutePercent;
+  elements.telemetryMinuteProgressValue.textContent = `${minutePercent}%`;
+  elements.telemetryBaselineProgress.value = baselinePercent;
+  elements.telemetryBaselineProgressValue.textContent = `${baselinePercent}%`;
+}
+
+function sensorWindowSamples(index) {
+  const cutoff = Date.now() - SENSOR_TREND_WINDOW_MS;
+  return state.history.filter((sample) => sample.ts >= cutoff && Number.isFinite(Number(sample.sensorVoltage?.[index])));
+}
+
+function sensorWindowMetrics(samples, index) {
+  if (samples.length < 2) return null;
+
+  const first = samples[0];
+  const last = samples[samples.length - 1];
+  const elapsedMs = last.ts - first.ts;
+  if (elapsedMs < SENSOR_TREND_MIN_SPAN_MS) return null;
+
+  const millivoltsPerMinute = ((Number(last.sensorVoltage[index]) - Number(first.sensorVoltage[index])) / elapsedMs) * 60 * 1000 * 1000;
+  const valuesMv = samples.map((sample) => Number(sample.sensorVoltage[index]) * 1000);
+  const lowMv = Math.min(...valuesMv);
+  const highMv = Math.max(...valuesMv);
+  if (!Number.isFinite(millivoltsPerMinute) || !Number.isFinite(lowMv) || !Number.isFinite(highMv)) return null;
+  return { millivoltsPerMinute, lowMv, highMv, rangeMv: highMv - lowMv };
+}
+
+function lowerQuartile(values) {
+  const sorted = values.filter(Number.isFinite).sort((a, b) => a - b);
+  if (!sorted.length) return null;
+  return sorted[Math.floor((sorted.length - 1) * 0.25)];
+}
+
+function sensorStability(index, currentMetrics) {
+  if (!currentMetrics) return { stable: false, learning: true, title: "Mengumpulkan data tren satu menit" };
+
+  const now = Date.now();
+  const baselineEnd = now - SENSOR_TREND_WINDOW_MS;
+  const baselineStart = baselineEnd - SENSOR_STABILITY_BASELINE_WINDOW_MS;
+  const completedWindows = [];
+  for (let start = baselineStart; start + SENSOR_TREND_WINDOW_MS <= baselineEnd; start += SENSOR_TREND_WINDOW_MS) {
+    const samples = state.history.filter((sample) => (
+      sample.ts >= start && sample.ts < start + SENSOR_TREND_WINDOW_MS && Number.isFinite(Number(sample.sensorVoltage?.[index]))
+    ));
+    const metrics = sensorWindowMetrics(samples, index);
+    if (metrics) completedWindows.push(metrics);
+  }
+  if (completedWindows.length < SENSOR_STABILITY_MIN_WINDOWS) {
+    return { stable: false, learning: true, title: `Mempelajari baseline ${completedWindows.length}/${SENSOR_STABILITY_MIN_WINDOWS} menit` };
+  }
+
+  const driftLimit = Math.max(
+    SENSOR_STABILITY_MIN_DRIFT_MV_PER_MIN,
+    lowerQuartile(completedWindows.map((metrics) => Math.abs(metrics.millivoltsPerMinute))) * SENSOR_STABILITY_BASELINE_MULTIPLIER,
+  );
+  const rangeLimit = Math.max(
+    SENSOR_STABILITY_MIN_RANGE_MV,
+    lowerQuartile(completedWindows.map((metrics) => metrics.rangeMv)) * SENSOR_STABILITY_BASELINE_MULTIPLIER,
+  );
+  const stable = Math.abs(currentMetrics.millivoltsPerMinute) <= driftLimit && currentMetrics.rangeMv <= rangeLimit;
+  const format = new Intl.NumberFormat("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return {
+    stable,
+    learning: false,
+    title: `Stabil jika |drift| ≤ ${format.format(driftLimit)} mV/menit dan Δ 1m ≤ ${format.format(rangeLimit)} mV`,
+  };
+}
+
+function sensorTrendPerMinute(metrics) {
+  if (!metrics) return { tone: "collecting", text: "collecting trend" };
+  const { millivoltsPerMinute } = metrics;
+  const magnitude = new Intl.NumberFormat("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    .format(Math.abs(millivoltsPerMinute));
+  if (Math.abs(millivoltsPerMinute) < 0.01) {
+    return { tone: "flat", text: `→ ${magnitude} mV/menit` };
+  }
+  return millivoltsPerMinute > 0
+    ? { tone: "up", text: `↑ +${magnitude} mV/menit` }
+    : { tone: "down", text: `↓ −${magnitude} mV/menit` };
+}
+
+function sensorRangeOneMinute(index) {
+  const samples = sensorWindowSamples(index);
+  const metrics = sensorWindowMetrics(samples, index);
+  if (!metrics) {
+    return { text: "Δ 1m: menunggu data", title: "Rentang low sampai high pada data satu menit terakhir" };
+  }
+
+  const format = new Intl.NumberFormat("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return {
+    text: `Δ 1m: ${format.format(metrics.rangeMv)} mV`,
+    title: `Rentang 1 menit: ${format.format(metrics.lowMv)} sampai ${format.format(metrics.highMv)} mV`,
+  };
+}
+
+function activeSessionMcpCode(index) {
+  const override = Number(sessionMcpOverrides.get(index));
+  if (Number.isInteger(override)) return override;
+  const runtime = Number(state.status?.runtimeMcpCode?.[index]);
+  if (Number.isInteger(runtime)) return runtime;
+  const saved = Number(state.qc?.nullingProfile?.dacCode?.[index]);
+  return Number.isInteger(saved) ? saved : null;
+}
+
+async function applySessionMcpCode(index, code) {
+  if (sessionMcpApplying.has(index)) return;
+  const bounded = Math.min(SESSION_MCP_CODE_MAX, Math.max(SESSION_MCP_CODE_MIN, code));
+  sessionMcpApplying.add(index);
+  renderSensorChannels(sensorPresenceFromStatus());
+  try {
+    const ack = await sendCommandAndWaitAck(
+      `SET_SESSION_MCP_JSON ${JSON.stringify({ channel: index, code: bounded })}`,
+      "SET_SESSION_MCP",
+    );
+    if (ack.status !== "ok") throw new Error(ack.message || ack.status || "device rejected MCP change");
+    sessionMcpOverrides.set(index, Number.isInteger(Number(ack.code)) ? Number(ack.code) : bounded);
+    await sendCommand("GET_STATUS");
+  } catch (error) {
+    appendLog(`SESSION_MCP_APPLY_ERROR ch=${index} code=${bounded} reason=${error.message}`, "in");
+  } finally {
+    sessionMcpApplying.delete(index);
+    renderSensorChannels(sensorPresenceFromStatus());
+  }
+}
+
+function buildSessionMcpControl(channel) {
+  const code = activeSessionMcpCode(channel.index);
+  const expanded = sessionMcpExpanded.has(channel.index);
+  const applying = sessionMcpApplying.has(channel.index);
+  const wrap = document.createElement("div");
+  wrap.className = "sensor-range-row";
+
+  const rangeEl = document.createElement("span");
+  rangeEl.className = "sensor-range";
+  const range = sensorRangeOneMinute(channel.index);
+  rangeEl.textContent = range.text;
+  rangeEl.title = range.title;
+
+  const toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "mcp-adjust-toggle";
+  toggle.textContent = expanded ? "⌃" : "⌄";
+  toggle.title = "Tampilkan kontrol MCP sesi";
+  toggle.setAttribute("aria-expanded", String(expanded));
+  toggle.addEventListener("click", () => {
+    if (expanded) sessionMcpExpanded.delete(channel.index);
+    else sessionMcpExpanded.add(channel.index);
+    renderSensorChannels(sensorPresenceFromStatus());
+  });
+  wrap.append(rangeEl, toggle);
+
+  if (!expanded) return [wrap];
+
+  const adjuster = document.createElement("div");
+  adjuster.className = "mcp-session-adjuster";
+  adjuster.title = "Perubahan MCP ini langsung diterapkan ke DAC untuk sesi berjalan dan tidak disimpan ke profil Nulling atau NVS.";
+  const decrement = document.createElement("button");
+  decrement.type = "button";
+  decrement.textContent = "−";
+  decrement.disabled = applying || !Number.isInteger(code) || code <= SESSION_MCP_CODE_MIN || state.mode !== "inference";
+  decrement.addEventListener("click", () => applySessionMcpCode(channel.index, code - 1));
+  const value = document.createElement("output");
+  value.textContent = Number.isInteger(code) ? String(code) : "?";
+  const increment = document.createElement("button");
+  increment.type = "button";
+  increment.textContent = "+";
+  increment.disabled = applying || !Number.isInteger(code) || code >= SESSION_MCP_CODE_MAX || state.mode !== "inference";
+  increment.addEventListener("click", () => applySessionMcpCode(channel.index, code + 1));
+  adjuster.append(decrement, value, increment);
+  return [wrap, adjuster];
+}
 
 // Live per-channel voltage + gain readout for the Running tab: one card per
 // sensor with its current voltage and a 7-step gain ladder highlighting the
 // PGA gain currently in effect for that channel.
 function buildSensorChannelCard(channel) {
+  const metrics = sensorWindowMetrics(sensorWindowSamples(channel.index), channel.index);
+  const stability = sensorStability(channel.index, metrics);
+  const trend = sensorTrendPerMinute(metrics);
   const card = document.createElement("article");
-  card.className = "channel-card";
+  card.className = `channel-card${stability.stable ? " stable" : ""}`;
+  card.title = stability.title;
 
   const head = document.createElement("div");
   head.className = "channel-card-head";
@@ -742,7 +955,11 @@ function buildSensorChannelCard(channel) {
   swatch.style.background = CHART_COLORS[channel.index];
   const title = document.createElement("strong");
   title.textContent = channel.sensor;
-  titleWrap.append(swatch, title);
+  const trendEl = document.createElement("span");
+  trendEl.className = `sensor-trend ${trend.tone}`;
+  trendEl.textContent = trend.text;
+  trendEl.title = "Perubahan tegangan dari data satu menit terakhir, dinormalisasi per menit";
+  titleWrap.append(swatch, title, trendEl);
   const key = document.createElement("span");
   key.textContent = `CH${channel.index + 1}`;
   head.append(titleWrap, key);
@@ -755,6 +972,8 @@ function buildSensorChannelCard(channel) {
   const voltageNumber = Number(rawVoltage);
   voltageEl.textContent = Number.isFinite(voltageNumber) ? `${voltageNumber} V` : "- V";
 
+  const sessionMcpControl = buildSessionMcpControl(channel);
+
   const gainValue = channel.gain !== "" ? Number(channel.gain) : null;
   const ladder = document.createElement("div");
   ladder.className = "gain-ladder";
@@ -765,7 +984,7 @@ function buildSensorChannelCard(channel) {
     ladder.append(block);
   }
 
-  card.append(head, voltageEl, ladder);
+  card.append(head, voltageEl, ...sessionMcpControl, ladder);
   return card;
 }
 
@@ -856,6 +1075,10 @@ export function handleLine(rawLine) {
     handleDatasetSerialLine(line);
   } else if (line.startsWith("NULLING_")) {
     appendNulling(line);
+    // NULLING_RUNTIME_RESULT is emitted after the service has either saved a
+    // complete profile or deliberately retained the prior one. Refresh the
+    // NVS snapshot so cards never treat a transient candidate as saved.
+    if (line.startsWith("NULLING_RUNTIME_RESULT")) sendCommand("GET_QC_STATUS");
   } else if (line.startsWith("FULLSCALE_")) {
     appendFullScaleSweep(line);
   } else {

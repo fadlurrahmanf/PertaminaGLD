@@ -20,6 +20,9 @@
           <span class="strip-gauge"><span>Port</span><strong id="portLabel">browser selected</strong></span>
           <span class="strip-gauge"><span>ID</span><strong id="topDeviceStatus">Unknown</strong></span>
           <span class="strip-gauge"><span>Mode</span><strong id="topModeStatus">Unknown</strong></span>
+          <span class="strip-gauge"><span>Power</span><strong id="powerMode">Unknown</strong></span>
+          <span class="strip-gauge"><span>LoRa</span><strong id="loraValue">Unknown</strong></span>
+          <span class="strip-gauge"><span>Battery</span><strong id="batteryValue">Unknown</strong></span>
         </div>
 
         <div class="strip-actions">
@@ -48,43 +51,26 @@
 
       <main class="workspace">
         <section id="running" class="view active">
-          <div class="gauge-row">
-            <article class="gauge-card">
-              <span>Device</span>
-              <strong id="deviceId">Unknown</strong>
-              <small id="firmwareValue">Unknown</small>
-            </article>
-            <article class="gauge-card">
-              <span>Mode</span>
-              <strong id="modeValue">Unknown</strong>
-              <small id="powerMode">Unknown</small>
-            </article>
-            <article class="gauge-card">
-              <span>Gas</span>
-              <strong id="gasValue">n/a</strong>
-              <small id="confidenceValue">-%</small>
-            </article>
-            <article class="gauge-card">
-              <span>LoRa</span>
-              <strong id="loraValue">Unknown</strong>
-              <small id="batteryValue">Unknown</small>
-            </article>
-          </div>
-
           <div class="module module--full-bleed">
             <div class="module-head module-head--wrap">
-              <h2>Sensor Telemetry</h2>
+              <div class="sensor-telemetry-heading">
+                <h2>Sensor Telemetry</h2>
+                <div class="telemetry-collection-progress" aria-label="Sensor telemetry collection progress">
+                  <label>1m <progress id="telemetryMinuteProgress" max="100" value="0"></progress><output id="telemetryMinuteProgressValue">0%</output></label>
+                  <label>6m <progress id="telemetryBaselineProgress" max="100" value="0"></progress><output id="telemetryBaselineProgressValue">0%</output></label>
+                </div>
+                <div class="telemetry-result" aria-live="polite">
+                  <span>Gas</span>
+                  <strong id="gasValue">n/a</strong>
+                  <small>Confidence <output id="confidenceValue">-%</output></small>
+                </div>
+              </div>
               <div class="toolbar">
                 <button data-mode="inference" type="button">Switch to Running</button>
-                <select id="rangeSelect" aria-label="Chart range">
-                  <option value="10">10 sec</option>
-                  <option value="30">30 sec</option>
-                  <option value="60" selected>1 min</option>
-                  <option value="300">5 min</option>
-                  <option value="600">10 min</option>
-                  <option value="1800">30 min</option>
-                  <option value="3600">1 hour</option>
-                </select>
+                <label class="chart-range-control" for="rangeSelect">
+                  <span>Range <output id="rangeValue">1 min</output></span>
+                  <input id="rangeSelect" type="range" min="60" max="3600" step="60" value="60" aria-label="Chart range">
+                </label>
                 <button id="refreshLoopBtn" class="poll-btn" type="button">Poll 500ms</button>
                 <button id="clearChartBtn" type="button">Clear</button>
                 <button id="exportCsvBtn" type="button">Export CSV</button>
@@ -170,15 +156,10 @@
             <div class="module-head module-head--wrap">
               <h2>Dataset Telemetry</h2>
               <div class="toolbar">
-                <select id="datasetRangeSelect" aria-label="Chart range">
-                  <option value="10">10 sec</option>
-                  <option value="30">30 sec</option>
-                  <option value="60" selected>1 min</option>
-                  <option value="300">5 min</option>
-                  <option value="600">10 min</option>
-                  <option value="1800">30 min</option>
-                  <option value="3600">1 hour</option>
-                </select>
+                <label class="chart-range-control" for="datasetRangeSelect">
+                  <span>Range <output id="datasetRangeValue">1 min</output></span>
+                  <input id="datasetRangeSelect" type="range" min="60" max="3600" step="60" value="60" aria-label="Dataset chart range">
+                </label>
                 <button id="datasetPollBtn" class="poll-btn" type="button">Poll 500ms</button>
                 <button id="datasetClearChartBtn" type="button">Clear</button>
                 <button id="datasetExportCsvBtn" type="button">Export CSV</button>
@@ -419,6 +400,16 @@
           </div>
 
           <div class="module-head module-head--inner">
+            <h3>Model &amp; Nulling Profile</h3>
+            <div class="toolbar">
+              <button id="bindModelToNullingProfileBtn" type="button">Use Latest Nulling Profile</button>
+              <button data-command="GET_STATUS" type="button">Refresh Status</button>
+            </div>
+          </div>
+          <p id="modelNullingBindingStatus" class="status-line">The model remains fail-closed until the operator explicitly binds a complete saved Nulling profile.</p>
+          <p class="status-line">This records the latest complete Nulling profile for the currently installed model and scaler. A newer Nulling profile requires a new explicit bind.</p>
+
+          <div class="module-head module-head--inner">
             <h3>Device Identity</h3>
             <div class="toolbar">
               <button id="injectIdBtn" type="button" disabled title="Unlock Expert Terminal first">Inject ID</button>
@@ -588,8 +579,8 @@
             <label>Minimum Delta Threshold (V)
               <input id="nullingThresholdV" type="number" step="0.00001" min="0.00001" max="2.497" value="0.00001">
             </label>
-            <label>Minimum Final Voltage (Legacy)
-              <input id="nullingMinFinalV" type="number" step="0.001" min="-2.497" max="2.497" value="0">
+            <label>Minimum Final Voltage (must be non-negative)
+              <input id="nullingMinFinalV" type="number" step="0.001" min="0" max="2.497" value="0">
             </label>
           </div>
           <div class="toolbar">
@@ -651,6 +642,7 @@
           <div class="modal-actions">
             <button id="fullScaleSweepExportBtn" type="button" disabled>Export CSV</button>
             <button id="fullScaleSweepStartBtn" type="button" class="primary">Start</button>
+            <button id="fullScaleSweepStopBtn" type="button" disabled>Stop</button>
             <button type="button" data-close-dialog="fullScaleSweepModal">Close</button>
           </div>
         </div>

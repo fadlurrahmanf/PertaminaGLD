@@ -23,6 +23,7 @@
 #include "GldFrameBuilder.h"
 #include "GldModeManager.h"
 #include "GldMovingAverage.h"
+#include "GldModelBinding.h"
 #include "GldNullingProfile.h"
 #include "GldNullingService.h"
 #include "GldQcProfile.h"
@@ -194,6 +195,10 @@ bool nullingProfileApplied = false;
 bool lastInferenceValid = false;
 bool sensorFaultActive = false;
 bool modelProfileReady = false;
+bool fullScaleSweepActive = false;
+bool fullScaleSweepCancelRequested = false;
+pgl::gld::GldModelBinding modelBinding{};
+bool modelBindingLoaded = false;
 uint8_t  txSeq           = 0;
 uint32_t txCounter       = 0;
 uint32_t lastScanMs      = 0;
@@ -205,6 +210,8 @@ bool     lastAlarm       = false;
 uint8_t  nullingProfileId = 0;
 uint8_t  nullingAttemptCount = 0;
 pgl::gld::GldNullingConfig nullingConfig{};
+
+bool modelProfileMatchesActiveNulling();
 
 struct DatasetQueuedPayload {
     char payload[DATASET_PAYLOAD_BYTES]{};
@@ -1032,14 +1039,14 @@ uint8_t datasetQueueTail() {
     return static_cast<uint8_t>((datasetQueueHead + datasetQueueCount) % DATASET_QUEUE_CAPACITY);
 }
 
-void enqueueDatasetPayload(const char* payload, size_t len, uint32_t seq) {
-    if (payload == nullptr || len == 0) return;
+bool enqueueDatasetPayload(const char* payload, size_t len, uint32_t seq) {
+    if (payload == nullptr || len == 0) return false;
     if (datasetQueueCount >= DATASET_QUEUE_CAPACITY) {
-        logPrintf("DATASET_QUEUE_DROP seq=%lu reason=full\n",
-                  static_cast<unsigned long>(datasetQueue[datasetQueueHead].seq));
-        datasetQueueHead = static_cast<uint8_t>((datasetQueueHead + 1U) % DATASET_QUEUE_CAPACITY);
-        --datasetQueueCount;
-        ++datasetQueueDropped;
+        logPrintf("DATASET_QUEUE_FULL seq=%lu pending=%u capacity=%u action=stop_dataset\n",
+                  static_cast<unsigned long>(seq),
+                  static_cast<unsigned>(datasetQueueCount),
+                  static_cast<unsigned>(DATASET_QUEUE_CAPACITY));
+        return false;
     }
 
     DatasetQueuedPayload& slot = datasetQueue[datasetQueueTail()];
@@ -1055,6 +1062,7 @@ void enqueueDatasetPayload(const char* payload, size_t len, uint32_t seq) {
               static_cast<unsigned long>(seq),
               static_cast<unsigned>(datasetQueueCount),
               static_cast<unsigned>(copyLen));
+    return true;
 }
 
 bool publishDatasetPayload(const char* payload, uint32_t seq, bool retry) {
@@ -1157,6 +1165,8 @@ void addCapabilities(JsonObject caps) {
     caps["modeSwitchReboots"] = true;
     caps["datasetControlPath"] = "mqtt";
     caps["nullingConfig"] = "SET_NULLING_CONFIG_JSON thresholdV,minFinalV";
+    caps["sessionMcp"] = "SET_SESSION_MCP_JSON channel,code (volatile inference-only)";
+    caps["modelNullingBinding"] = "BIND_MODEL_TO_ACTIVE_NULLING_PROFILE";
     caps["qcTracking"] = "SET_QC_RESULT_JSON channel,pass,timestamp / GET_QC_STATUS";
     caps["nullingSingleChannel"] = "RUN_NULLING_SINGLE_JSON channel";
     caps["fullScaleSweep"] = "RUN_FULLSCALE_SWEEP_JSON channel";
@@ -1321,12 +1331,21 @@ void emitStatusJson() {
     boot["nullingProfileApplied"] = nullingProfileApplied;
     boot["modelProfileReady"] = modelProfileReady;
 
+    JsonArray runtimeMcpCode = doc.createNestedArray("runtimeMcpCode");
+    for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
+        runtimeMcpCode.add(dac.lastValue(ch));
+    }
+
     JsonObject modelStatus = doc.createNestedObject("model");
     modelStatus["profileId"] = pgl::gld::model::PROFILE_ID;
     modelStatus["scalerProfileId"] = pgl::gld::model::SCALER_PROFILE_ID;
     modelStatus["productionApproved"] = pgl::gld::model::PRODUCTION_APPROVED;
-    modelStatus["boundNullingProfileId"] = pgl::gld::model::BOUND_NULLING_PROFILE_ID;
+    modelStatus["boundNullingProfileId"] = modelBindingLoaded ? modelBinding.nullingProfileId : 0;
     modelStatus["activeNullingProfileId"] = nullingProfileId;
+    modelStatus["bindingValid"] = modelBindingLoaded;
+    modelStatus["bindingModelMatches"] = modelBindingLoaded &&
+        modelBinding.modelFingerprint == pgl::gld::modelBindingFingerprint(
+            pgl::gld::model::PROFILE_ID, pgl::gld::model::SCALER_PROFILE_ID);
     modelStatus["profileReady"] = modelProfileReady;
     modelStatus["inferenceValid"] = lastInferenceValid;
     modelStatus["sensorFault"] = sensorFaultActive;
@@ -1408,6 +1427,7 @@ void emitStatusJson() {
 
     JsonObject telemetry = doc.createNestedObject("telemetry");
     addTelemetry(telemetry);
+    doc["alarmLatched"] = pgl::gld::readGldAlarmLatched();
 
     rawJsonLine("GLD_STATUS_JSON", doc);
 }
@@ -1794,8 +1814,8 @@ void onSetNullingConfigJson(const char* payload) {
         emitCommandAck("SET_NULLING_CONFIG", "rejected", "thresholdV must be > 0 and <= VREF", false);
         return;
     }
-    if (minFinalV < -pgl::gld::GLD_ADS1256_VREF_VOLTS || minFinalV > pgl::gld::GLD_ADS1256_VREF_VOLTS) {
-        emitCommandAck("SET_NULLING_CONFIG", "rejected", "minFinalV out of ADS1256 VREF range", false);
+    if (minFinalV < 0.0f || minFinalV > pgl::gld::GLD_ADS1256_VREF_VOLTS) {
+        emitCommandAck("SET_NULLING_CONFIG", "rejected", "minFinalV must be >= 0 and <= VREF", false);
         return;
     }
 
@@ -1810,6 +1830,124 @@ void onSetNullingConfigJson(const char* payload) {
     logPrintf("GLD_NULLING_CONFIG_SAVE=OK thresholdV=%.6f minFinalV=%.6f\n",
               nullingConfig.thresholdV, nullingConfig.minFinalV);
     emitCommandAck("SET_NULLING_CONFIG", "ok", "nulling config saved; applies on next nulling run", false);
+}
+
+// Running-card MCP trim is deliberately volatile. It writes only the MCP4725
+// register, never the saved Nulling profile or model binding; boot/restart
+// reapplies the saved profile and therefore clears this session adjustment.
+void onSetSessionMcpJson(const char* payload) {
+    StaticJsonDocument<96> doc;
+    if (deserializeJson(doc, payload)) {
+        emitCommandAck("SET_SESSION_MCP", "error", "invalid json", false);
+        return;
+    }
+    if (!doc.containsKey("channel") || !doc.containsKey("code") ||
+        !doc["channel"].is<long>() || !doc["code"].is<long>()) {
+        emitCommandAck("SET_SESSION_MCP", "rejected", "channel and code integers are required", false);
+        return;
+    }
+
+    const long channel = doc["channel"].as<long>();
+    const long code = doc["code"].as<long>();
+    if (channel < 0 || channel >= pgl::gld::board::SENSOR_COUNT) {
+        emitCommandAck("SET_SESSION_MCP", "rejected", "channel must be 0..7", false);
+        return;
+    }
+    if (code < pgl::gld::board::GLD_DAC_CODE_MIN ||
+        code > pgl::gld::board::GLD_DAC_CODE_MAX) {
+        emitCommandAck("SET_SESSION_MCP", "rejected", "code must be 0..4095", false);
+        return;
+    }
+    if (currentMode != pgl::gld::GldMode::INFERENCE) {
+        emitCommandAck("SET_SESSION_MCP", "rejected", "session MCP adjustment is allowed only in inference mode", false);
+        return;
+    }
+    if (!dacReady || !dac.ready()) {
+        emitCommandAck("SET_SESSION_MCP", "error", "DAC not ready", false);
+        return;
+    }
+    if (!dac.writeDac(static_cast<uint8_t>(channel), static_cast<uint16_t>(code))) {
+        dacReady = false;
+        emitCommandAck("SET_SESSION_MCP", "error", "DAC apply failed", false);
+        return;
+    }
+
+    logPrintf("GLD_SESSION_MCP_APPLY=OK channel=%ld code=%ld persisted=0\n", channel, code);
+    emitCommandAck("SET_SESSION_MCP", "ok", "session MCP applied; not saved", false);
+    emitStatusJson();
+}
+
+// This command is deliberately separate from SET_MODE. It records an
+// operator's explicit clean-air acknowledgement and clears only the persisted
+// alarm latch. It never silences physical alarm outputs; the following mode
+// reboot owns those outputs. A later valid alarm still latches normally.
+void onVerifyCleanAirForNulling() {
+    if (currentMode != pgl::gld::GldMode::INFERENCE) {
+        emitCommandAck("VERIFY_CLEAN_AIR_FOR_NULLING", "rejected", "clean-air verification is allowed only in inference mode", false);
+        return;
+    }
+    if (batteryPowerMode || batteryPendingAlarm.active) {
+        emitCommandAck("VERIFY_CLEAN_AIR_FOR_NULLING", "rejected", "battery alarm state cannot be cleared for nulling", false);
+        return;
+    }
+    const bool wasLatched = pgl::gld::readGldAlarmLatched();
+    if (wasLatched && !pgl::gld::writeGldAlarmLatched(false)) {
+        emitCommandAck("VERIFY_CLEAN_AIR_FOR_NULLING", "error", "failed to clear persisted alarm latch", false);
+        return;
+    }
+    // Force a later valid alarm scan to persist/re-latch even though this
+    // operator acknowledgement cleared the previous in-memory edge.
+    lastAlarm = false;
+    logPrintf("GLD_ALARM_LATCH_OPERATOR_CLEAR=OK reason=operator_verified_clean_air_for_nulling wasLatched=%u outputHeld=1 relatchArmed=1\n",
+              wasLatched ? 1u : 0u);
+    emitCommandAck("VERIFY_CLEAN_AIR_FOR_NULLING", "ok",
+                   wasLatched ? "alarm latch cleared for confirmed nulling" : "no alarm latch was active; clean-air confirmation recorded", false);
+}
+
+// Explicit local operator action: approve the most recently saved complete
+// Nulling profile for this exact compiled model/scaler pair. New Nulling runs
+// deliberately invalidate readiness until this action is repeated.
+void onBindModelToActiveNullingProfile() {
+    if (FIELDTEST_MODEL_UNVERIFIED || TFBG_CONTINUOUS_BATTERY || !pgl::gld::model::PRODUCTION_APPROVED) {
+        emitCommandAck("BIND_MODEL_TO_ACTIVE_NULLING_PROFILE", "rejected", "binding is unavailable in a non-production build", false);
+        return;
+    }
+    if (currentMode != pgl::gld::GldMode::INFERENCE) {
+        emitCommandAck("BIND_MODEL_TO_ACTIVE_NULLING_PROFILE", "rejected", "binding is allowed only in inference mode", false);
+        return;
+    }
+    if (nullingRetryArmed || !nullingProfileApplied || nullingProfileId == 0) {
+        emitCommandAck("BIND_MODEL_TO_ACTIVE_NULLING_PROFILE", "rejected", "no stable applied nulling profile is available", false);
+        return;
+    }
+    pgl::gld::GldNullingProfile profile{};
+    if (!pgl::gld::loadNullingProfile(profile) || profile.profileId != nullingProfileId) {
+        emitCommandAck("BIND_MODEL_TO_ACTIVE_NULLING_PROFILE", "rejected", "latest complete nulling profile is unavailable or changed", false);
+        return;
+    }
+
+    pgl::gld::GldModelBinding updated{};
+    updated.magic = pgl::gld::MODEL_BINDING_MAGIC;
+    updated.schemaVersion = pgl::gld::MODEL_BINDING_SCHEMA_VERSION;
+    updated.nullingProfileId = profile.profileId;
+    updated.modelFingerprint = pgl::gld::modelBindingFingerprint(
+        pgl::gld::model::PROFILE_ID, pgl::gld::model::SCALER_PROFILE_ID);
+    updated.checksum = updated.magic ^ (static_cast<uint32_t>(updated.schemaVersion) << 16) ^
+                       updated.nullingProfileId ^ updated.modelFingerprint ^ 0xC35A91E7u;
+    if (!pgl::gld::saveModelBinding(updated)) {
+        modelBinding = pgl::gld::GldModelBinding{};
+        modelBindingLoaded = false;
+        modelProfileReady = false;
+        emitCommandAck("BIND_MODEL_TO_ACTIVE_NULLING_PROFILE", "error", "failed to persist model binding", false);
+        return;
+    }
+    modelBinding = updated;
+    modelBindingLoaded = true;
+    modelProfileReady = modelProfileMatchesActiveNulling();
+    logPrintf("MODEL_NULLING_BIND=OK profileId=%u fingerprint=%08lX ready=%u\n",
+              updated.nullingProfileId, static_cast<unsigned long>(updated.modelFingerprint),
+              modelProfileReady ? 1u : 0u);
+    emitCommandAck("BIND_MODEL_TO_ACTIVE_NULLING_PROFILE", "ok", "latest nulling profile bound to model", false);
 }
 
 void onSetQcResultJson(const char* payload) {
@@ -1901,7 +2039,10 @@ void emitQcStatusJson() {
     pgl::gld::GldNullingProfile nullingProfile{};
     const bool nullingValid = pgl::gld::loadNullingProfile(nullingProfile);
 
-    StaticJsonDocument<1024> doc;
+    // The saved nulling profile is operator metadata requested explicitly by
+    // GET_QC_STATUS, not live telemetry. Keep it with QC so a reconnect can
+    // display the exact NVS snapshot without inferring it from transient logs.
+    StaticJsonDocument<2048> doc;
     char chIdHex[5];
     formatHex4(runtimeConfig.chId, chIdHex, sizeof(chIdHex));
     doc["deviceId"] = runtimeConfig.deviceId;
@@ -1917,6 +2058,22 @@ void emitQcStatusJson() {
         c["tested"] = qcProfile.tested[ch] != 0;
         c["pass"] = qcProfile.passed[ch] != 0;
         c["timestamp"] = qcProfile.timestamp[ch];
+    }
+
+    JsonObject savedProfile = doc.createNestedObject("nullingProfile");
+    savedProfile["valid"] = nullingValid;
+    if (nullingValid) {
+        savedProfile["profileId"] = nullingProfile.profileId;
+        JsonArray dacCode = savedProfile.createNestedArray("dacCode");
+        JsonArray baselineV = savedProfile.createNestedArray("baselineV");
+        JsonArray afterV = savedProfile.createNestedArray("afterV");
+        JsonArray channelOk = savedProfile.createNestedArray("channelOk");
+        for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
+            dacCode.add(nullingProfile.dacCode[ch]);
+            baselineV.add(nullingProfile.baselineV[ch]);
+            afterV.add(nullingProfile.afterV[ch]);
+            channelOk.add(nullingProfile.channelOk[ch] != 0);
+        }
     }
     rawJsonLine("GLD_QC_STATUS_JSON", doc);
 }
@@ -2022,17 +2179,38 @@ void onRunFullScaleSweepJson(const char* payload) {
         return;
     }
 
-    pgl::gld::GldNullingProfile existing{};
-    const bool hadExisting = pgl::gld::loadNullingProfile(existing);
-    const uint16_t restoreCode = (hadExisting && existing.channelOk[channel]) ? existing.dacCode[channel] : 0;
+    // Restore exactly the effective DAC code that was active when the sweep
+    // began. This preserves a session-only Running trim as well as a saved
+    // Nulling profile, without reading or writing NVS.
+    const uint16_t restoreCode = dac.lastValue(static_cast<uint8_t>(channel));
 
     emitCommandAck("RUN_FULLSCALE_SWEEP", "ok", "running full scale sweep", false);
     // firmwareServiceTick (not bare checkSerial) - a full 4096-code sweep runs
     // well past the external TPL5010 watchdog's keepalive window, so the tick
     // function must also pulse the watchdog (see maintainWdtKeepalive) or the
     // board hard-resets mid-sweep.
+    fullScaleSweepCancelRequested = false;
+    fullScaleSweepActive = true;
     const pgl::gld::GldFullScaleSweepResult result = pgl::gld::runFullScaleSweep(
-        ads, dac, static_cast<uint8_t>(channel), restoreCode, 1, nullingLogLine, firmwareServiceTick);
+        ads, dac, static_cast<uint8_t>(channel), restoreCode, 1, nullingLogLine,
+        firmwareServiceTick, []() { return fullScaleSweepCancelRequested; });
+    fullScaleSweepActive = false;
+    fullScaleSweepCancelRequested = false;
+    if (result.cancelled) {
+        if (!result.success) {
+            // Cancelling is safe only if the original DAC output was restored.
+            // Keep the runtime conservative if that final write failed.
+            dacReady = false;
+            nullingProfileApplied = false;
+            nullingProfileId = 0;
+            logPrintf("GLD_FULLSCALE_SWEEP_RESULT=CANCELLED channel=%d restoreCode=%u restoreOk=0 runtimeInvalidated=1\n",
+                      channel, result.restoredCode);
+            return;
+        }
+        logPrintf("GLD_FULLSCALE_SWEEP_RESULT=CANCELLED channel=%d restoreCode=%u restoreOk=1\n",
+                  channel, result.restoredCode);
+        return;
+    }
     if (!result.success) {
         dacReady = false;
         nullingProfileApplied = false;
@@ -2045,6 +2223,19 @@ void onRunFullScaleSweepJson(const char* payload) {
         logPrintf("GLD_FULLSCALE_SWEEP_RESULT=PASS channel=%d restoreCode=%u\n",
                   channel, result.restoredCode);
     }
+}
+
+void onCancelFullScaleSweep() {
+    if (!fullScaleSweepActive) {
+        emitCommandAck("CANCEL_FULLSCALE_SWEEP", "rejected", "no full scale sweep is active", false);
+        return;
+    }
+    if (fullScaleSweepCancelRequested) {
+        emitCommandAck("CANCEL_FULLSCALE_SWEEP", "ok", "full scale sweep cancellation already requested", false);
+        return;
+    }
+    fullScaleSweepCancelRequested = true;
+    emitCommandAck("CANCEL_FULLSCALE_SWEEP", "ok", "full scale sweep cancellation requested", false);
 }
 
 void handleSerialCommand(const pgl::gld::GldSerialCommand& command) {
@@ -2100,6 +2291,15 @@ void handleSerialCommand(const pgl::gld::GldSerialCommand& command) {
         case pgl::gld::GldSerialCommandType::SetNullingConfigJson:
             onSetNullingConfigJson(command.payload);
             break;
+        case pgl::gld::GldSerialCommandType::SetSessionMcpJson:
+            onSetSessionMcpJson(command.payload);
+            break;
+        case pgl::gld::GldSerialCommandType::VerifyCleanAirForNulling:
+            onVerifyCleanAirForNulling();
+            break;
+        case pgl::gld::GldSerialCommandType::BindModelToActiveNullingProfile:
+            onBindModelToActiveNullingProfile();
+            break;
         case pgl::gld::GldSerialCommandType::SetQcResultJson:
             onSetQcResultJson(command.payload);
             break;
@@ -2117,6 +2317,9 @@ void handleSerialCommand(const pgl::gld::GldSerialCommand& command) {
             break;
         case pgl::gld::GldSerialCommandType::RunFullScaleSweepJson:
             onRunFullScaleSweepJson(command.payload);
+            break;
+        case pgl::gld::GldSerialCommandType::CancelFullScaleSweep:
+            onCancelFullScaleSweep();
             break;
         case pgl::gld::GldSerialCommandType::InjectTplDone:
             injectTplDoneFromSerialCommand();
@@ -2143,22 +2346,35 @@ void handleSerialCommand(const pgl::gld::GldSerialCommand& command) {
 // sweep tick loop, so a stuck or very long-running sweep can never leave the
 // board unrecoverable from software until it finishes or is power-cycled -
 // ESP.restart() never returns, so there is no stack to unwind. Any other
-// command parsed while already nested is stashed in a single slot and
-// drained once nesting unwinds, so it is only delayed, never lost.
+// CANCEL_FULLSCALE_SWEEP shares this priority path. Ordinary commands are
+// queued and drained once nesting unwinds, so they cannot block stop/restart.
 void checkSerial() {
     static bool inProgress = false;
-    static pgl::gld::GldSerialCommand pendingCommand{};
-    static bool hasPending = false;
+    constexpr uint8_t PENDING_COMMAND_CAPACITY = 8;
+    static pgl::gld::GldSerialCommand pendingCommands[PENDING_COMMAND_CAPACITY]{};
+    static uint8_t pendingHead = 0;
+    static uint8_t pendingCount = 0;
 
-    if (!hasPending) {
-        pgl::gld::GldSerialCommand parsed{};
-        if (pgl::gld::parseSerialCommand(parsed)) {
-            if (parsed.type == pgl::gld::GldSerialCommandType::Restart) {
-                restartFromSerialCommand();
-                return;  // unreachable in practice - ESP.restart() reboots immediately
-            }
-            pendingCommand = parsed;
-            hasPending = true;
+    pgl::gld::GldSerialCommand parsed{};
+    if (pgl::gld::parseSerialCommand(parsed)) {
+        if (parsed.type == pgl::gld::GldSerialCommandType::Restart) {
+            restartFromSerialCommand();
+            return;  // unreachable in practice - ESP.restart() reboots immediately
+        }
+        if (parsed.type == pgl::gld::GldSerialCommandType::CancelFullScaleSweep) {
+            // This path remains callable from firmwareServiceTick() while the
+            // synchronous sweep handler owns `inProgress` or a normal command
+            // is already queued for later execution.
+            onCancelFullScaleSweep();
+            return;
+        }
+        if (pendingCount < PENDING_COMMAND_CAPACITY) {
+            const uint8_t tail = static_cast<uint8_t>(
+                (pendingHead + pendingCount) % PENDING_COMMAND_CAPACITY);
+            pendingCommands[tail] = parsed;
+            ++pendingCount;
+        } else {
+            emitCommandAck("SERIAL_COMMAND", "busy", "command queue is full", false);
         }
     }
 
@@ -2166,14 +2382,10 @@ void checkSerial() {
         return;
     }
     inProgress = true;
-    for (uint8_t i = 0; i < 8; ++i) {
-        pgl::gld::GldSerialCommand command{};
-        if (hasPending) {
-            command = pendingCommand;
-            hasPending = false;
-        } else if (!pgl::gld::parseSerialCommand(command)) {
-            break;
-        }
+    for (uint8_t i = 0; i < PENDING_COMMAND_CAPACITY && pendingCount > 0; ++i) {
+        const pgl::gld::GldSerialCommand command = pendingCommands[pendingHead];
+        pendingHead = static_cast<uint8_t>((pendingHead + 1U) % PENDING_COMMAND_CAPACITY);
+        --pendingCount;
         if (command.type == pgl::gld::GldSerialCommandType::Restart) {
             restartFromSerialCommand();
             return;
@@ -3367,6 +3579,7 @@ void armNullingRetry(const char* reason) {
               static_cast<unsigned long>(delayMs));
 }
 
+
 bool ensureNullingHardwareReady() {
     if (!adsReady) {
         adsReady = ads.begin(gldSpi);
@@ -3874,9 +4087,13 @@ bool modelProfileMatchesActiveNulling() {
         // tfbg is an explicitly non-production field exercise environment.
         return true;
     }
+    const uint32_t compiledFingerprint = pgl::gld::modelBindingFingerprint(
+        pgl::gld::model::PROFILE_ID, pgl::gld::model::SCALER_PROFILE_ID);
     return pgl::gld::model::PRODUCTION_APPROVED &&
-           pgl::gld::model::BOUND_NULLING_PROFILE_ID != 0 &&
-           pgl::gld::model::BOUND_NULLING_PROFILE_ID == nullingProfileId;
+           modelBindingLoaded &&
+           pgl::gld::isModelBindingValid(modelBinding) &&
+           modelBinding.modelFingerprint == compiledFingerprint &&
+           modelBinding.nullingProfileId == nullingProfileId;
 }
 
 bool runInference(const float mavVoltage[8]) {
@@ -4464,6 +4681,8 @@ void runBatteryInferenceSession() {
 // Dataset sample publish
 // ---------------------------------------------------------------------------
 
+void stopDataset(const char* detail = "completed");
+
 void rejectDatasetRecord(
     const pgl::gld::GldDatasetValidationResult& validation,
     const pgl::gld::GldDatasetChannelSample* samples,
@@ -4576,7 +4795,12 @@ bool publishDataRecord() {
 
     const bool published = publishDatasetPayload(payload, datasetSeq, false);
     if (!published) {
-        enqueueDatasetPayload(payload, len, datasetSeq);
+        if (!enqueueDatasetPayload(payload, len, datasetSeq)) {
+            logPrintf("DATASET_RECORD_ABORT seq=%lu reason=queue_full\n",
+                      static_cast<unsigned long>(datasetSeq));
+            stopDataset("queue_full");
+            return false;
+        }
     }
     logPrintf("DATASET_RECORD seq=%lu ok=%u queued=%u pending=%u len=%u\n",
               static_cast<unsigned long>(datasetSeq), published ? 1 : 0,
@@ -4599,13 +4823,13 @@ bool shouldAutoStop() {
     return false;
 }
 
-void stopDataset() {
+void stopDataset(const char* detail) {
     optionalDigitalWrite(pgl::gld::board::PIN_DC_FAN, LOW);
     datasetState = DatasetState::Idle;
     sampleStep   = SampleStep::None;
     optionalDigitalWrite(pgl::gld::board::PIN_STATUS_LED, ACTIVE_LOW_OUTPUT_OFF);
     publishDatasetSummary();
-    publishDatasetStatus("idle", "completed");
+    publishDatasetStatus("idle", detail != nullptr ? detail : "completed");
 }
 
 void runDatasetStateMachine() {
@@ -4620,7 +4844,7 @@ void runDatasetStateMachine() {
                     sampleStep  = SampleStep::FanOn;
                 } else {
                     publishDataRecord(); lastScanMs = now;
-                    if (shouldAutoStop()) stopDataset();
+                    if (datasetState == DatasetState::Running && shouldAutoStop()) stopDataset();
                 }
             }
             break;
@@ -4636,7 +4860,7 @@ void runDatasetStateMachine() {
             break;
         case SampleStep::Scan:
             publishDataRecord(); lastScanMs = now; sampleStep = SampleStep::None;
-            if (shouldAutoStop()) stopDataset();
+            if (datasetState == DatasetState::Running && shouldAutoStop()) stopDataset();
             break;
     }
 }
@@ -4658,6 +4882,12 @@ void setup() {
     // clear the power latch before the operator can see firmware startup.
     delay(1000);
     loadRuntimeConfig();
+    modelBindingLoaded = pgl::gld::loadModelBinding(modelBinding);
+    if (!modelBindingLoaded) modelBinding = pgl::gld::GldModelBinding{};
+    logPrintf("MODEL_NULLING_BIND_LOAD=%s profileId=%u fingerprint=%08lX\n",
+              modelBindingLoaded ? "OK" : "MISSING_OR_INVALID",
+              modelBinding.nullingProfileId,
+              static_cast<unsigned long>(modelBinding.modelFingerprint));
     if (!pgl::gld::loadNullingConfig(nullingConfig)) {
         nullingConfig = pgl::gld::GldNullingConfig{};
     }
@@ -4730,11 +4960,12 @@ void setup() {
         radioReady = beginLoraRadio();
         runExternalPowerBootSensorSamples(power);
         modelProfileReady = modelProfileMatchesActiveNulling();
-        logPrintf("GLD_MODEL_PROFILE id=%s scaler=%s approved=%u boundNullingProfileId=%u activeNullingProfileId=%u tfbgOverride=%u ready=%u\n",
+        logPrintf("GLD_MODEL_PROFILE id=%s scaler=%s approved=%u boundNullingProfileId=%u bindingValid=%u activeNullingProfileId=%u tfbgOverride=%u ready=%u\n",
                   pgl::gld::model::PROFILE_ID,
                   pgl::gld::model::SCALER_PROFILE_ID,
                   pgl::gld::model::PRODUCTION_APPROVED ? 1u : 0u,
-                  pgl::gld::model::BOUND_NULLING_PROFILE_ID,
+                  modelBindingLoaded ? modelBinding.nullingProfileId : 0u,
+                  modelBindingLoaded ? 1u : 0u,
                   nullingProfileId,
                   TFBG_CONTINUOUS_BATTERY ? 1u : 0u,
                   modelProfileReady ? 1u : 0u);
@@ -4857,49 +5088,49 @@ void setup() {
                 pgl::gld::GldNullingProfile toSave{};
                 const bool saved = saveCompleteNullingProfile(result, toSave);
                 if (saved) {
-                    logPrintln("NULLING_RUNTIME_RESULT=PASS");
-                    nullDone = true;
-                    char modeDetail[96];
-                    snprintf(modeDetail, sizeof(modeDetail), "ads=%s mcp=%u/%u dac=%s nulling=PASS auto=running profileId=%u",
-                             passFail(adsReady),
-                             bootI2c.mcpOkCount,
-                             pgl::gld::board::SENSOR_COUNT,
-                             passFail(dacReady),
-                             toSave.profileId);
-                    printBootIcReport(power, bootAds, bootI2c, bootMcpControl,
-                                      false, false,
-                                      false, false, -1,
-                                      true,
-                                      modeDetail);
-                    runExternalPowerBootSensorSamples(power);
-                    armBootReportRecoveryIfNeeded(bootAds, bootI2c, bootMcpControl,
-                                                  false, false,
-                                                  false, false);
-                    returnToRunningAfterNulling(toSave);
+                        logPrintln("NULLING_RUNTIME_RESULT=PASS");
+                        nullDone = true;
+                        char modeDetail[96];
+                        snprintf(modeDetail, sizeof(modeDetail), "ads=%s mcp=%u/%u dac=%s nulling=PASS auto=running profileId=%u",
+                                 passFail(adsReady),
+                                 bootI2c.mcpOkCount,
+                                 pgl::gld::board::SENSOR_COUNT,
+                                 passFail(dacReady),
+                                 toSave.profileId);
+                        printBootIcReport(power, bootAds, bootI2c, bootMcpControl,
+                                          false, false,
+                                          false, false, -1,
+                                          true,
+                                          modeDetail);
+                        runExternalPowerBootSensorSamples(power);
+                        armBootReportRecoveryIfNeeded(bootAds, bootI2c, bootMcpControl,
+                                                      false, false,
+                                                      false, false);
+                        returnToRunningAfterNulling(toSave);
                 } else {
-                    const bool partial = result.status == pgl::gld::GldNullingStatus::PartialSuccess;
-                    const bool fullOk = result.status == pgl::gld::GldNullingStatus::Ok &&
-                                        result.successCount == pgl::gld::board::SENSOR_COUNT;
-                    logPrintln(partial
-                               ? "NULLING_RUNTIME_RESULT=PARTIAL_RETRY"
-                               : "NULLING_RUNTIME_RESULT=FAIL_RETRY");
-                    char modeDetail[96];
-                    snprintf(modeDetail, sizeof(modeDetail), "ads=%s mcp=%u/%u dac=%s nulling=%s",
-                             passFail(adsReady),
-                             bootI2c.mcpOkCount,
-                             pgl::gld::board::SENSOR_COUNT,
-                             passFail(dacReady),
-                             partial ? "PARTIAL_RETRY" : "FAIL_RETRY");
-                    printBootIcReport(power, bootAds, bootI2c, bootMcpControl,
-                                      false, false,
-                                      false, false, -1,
-                                      false,
-                                      modeDetail);
-                    runExternalPowerBootSensorSamples(power);
-                    armBootReportRecoveryIfNeeded(bootAds, bootI2c, bootMcpControl,
-                                                  false, false,
-                                                  false, false);
-                    armNullingRetry(fullOk ? "nvs_save_failed" : nullingRetryReason(result.status));
+                        const bool partial = result.status == pgl::gld::GldNullingStatus::PartialSuccess;
+                        const bool fullOk = result.status == pgl::gld::GldNullingStatus::Ok &&
+                                            result.successCount == pgl::gld::board::SENSOR_COUNT;
+                        logPrintln(partial
+                                   ? "NULLING_RUNTIME_RESULT=PARTIAL_RETRY"
+                                   : "NULLING_RUNTIME_RESULT=FAIL_RETRY");
+                        char modeDetail[96];
+                        snprintf(modeDetail, sizeof(modeDetail), "ads=%s mcp=%u/%u dac=%s nulling=%s",
+                                 passFail(adsReady),
+                                 bootI2c.mcpOkCount,
+                                 pgl::gld::board::SENSOR_COUNT,
+                                 passFail(dacReady),
+                                 partial ? "PARTIAL_RETRY" : "FAIL_RETRY");
+                        printBootIcReport(power, bootAds, bootI2c, bootMcpControl,
+                                          false, false,
+                                          false, false, -1,
+                                          false,
+                                          modeDetail);
+                        runExternalPowerBootSensorSamples(power);
+                        armBootReportRecoveryIfNeeded(bootAds, bootI2c, bootMcpControl,
+                                                      false, false,
+                                                      false, false);
+                        armNullingRetry(fullOk ? "nvs_save_failed" : nullingRetryReason(result.status));
                 }
             }
         }

@@ -912,6 +912,8 @@ def test_gld_unified_runtime_scaffolds_present():
     mode_header = pathlib.Path("firmware/gld/include/GldModeManager.h").read_text(encoding="utf-8")
     mode_src = pathlib.Path("firmware/gld/src/GldModeManager.cpp").read_text(encoding="utf-8")
     nulling_header = pathlib.Path("firmware/gld/include/GldNullingService.h").read_text(encoding="utf-8")
+    model_binding_header = pathlib.Path("firmware/gld/include/GldModelBinding.h").read_text(encoding="utf-8")
+    model_binding_src = pathlib.Path("firmware/gld/src/GldModelBinding.cpp").read_text(encoding="utf-8")
     power_src = pathlib.Path("firmware/gld/src/GldPower.cpp").read_text(encoding="utf-8")
     unified_src = pathlib.Path("firmware/gld/src/GldUnifiedMain.cpp").read_text(encoding="utf-8")
     dataset_src = pathlib.Path("firmware/gld/src/GldDatasetMain.cpp").read_text(encoding="utf-8")
@@ -961,6 +963,9 @@ def test_gld_unified_runtime_scaffolds_present():
     assert "RUN_ADS_MCP_SWEEP" in command_src
     assert "SLEEP_NOW" in command_src
     assert "SET_CH_ADDRESS_JSON" in command_src
+    assert "SET_SESSION_MCP_JSON" in command_src
+    assert "CANCEL_FULLSCALE_SWEEP" in command_src
+    assert "BIND_MODEL_TO_ACTIVE_NULLING_PROFILE" in command_src
     assert "GldSerialCommandType::Unknown" in command_src
     assert "echoTypedChar" in command_src
     assert "stream.write(static_cast<uint8_t>(c))" in command_src
@@ -975,6 +980,9 @@ def test_gld_unified_runtime_scaffolds_present():
     assert "SleepNow" in command_header
     assert "ServiceHoldOff" in command_header
     assert "SetChAddressJson" in command_header
+    assert "SetSessionMcpJson" in command_header
+    assert "CancelFullScaleSweep" in command_header
+    assert "BindModelToActiveNullingProfile" in command_header
     assert "GldSerialCommandType::Restart" in command_src
     assert "GldSerialCommandType::RunBootCheck" in command_src
     assert "GldSerialCommandType::RunAdsMcpSweep" in command_src
@@ -987,6 +995,13 @@ def test_gld_unified_runtime_scaffolds_present():
     assert "decoded.seq == expectedSeq" in command_src
     assert "GLD_INFO_JSON" in unified_src
     assert "GLD_STATUS_JSON" in unified_src
+    assert "onBindModelToActiveNullingProfile" in unified_src
+    assert "MODEL_NULLING_BIND=OK" in unified_src
+    assert "modelBindingLoaded" in unified_src
+    assert "GldModelBinding" in model_binding_header
+    assert "modelBindingFingerprint" in model_binding_header
+    assert "saveModelBinding" in model_binding_src
+    assert "loadModelBinding" in model_binding_src
     assert "GLD_CMD_ACK_JSON" in unified_src
     assert "restartFromSerialCommand" in unified_src
     assert 'emitCommandAck("RESTART", "ok", "restarting", true)' in unified_src
@@ -1069,6 +1084,16 @@ def test_gld_unified_runtime_scaffolds_present():
     assert 'caps["nullingConfig"] = "SET_NULLING_CONFIG_JSON thresholdV,minFinalV"' in unified_src
     assert "onSetNullingConfigJson" in unified_src
     assert "GldSerialCommandType::SetNullingConfigJson" in unified_src
+    assert "onSetSessionMcpJson" in unified_src
+    assert "GldSerialCommandType::SetSessionMcpJson" in unified_src
+    assert 'caps["sessionMcp"] = "SET_SESSION_MCP_JSON channel,code (volatile inference-only)"' in unified_src
+    assert 'doc.createNestedArray("runtimeMcpCode")' in unified_src
+    assert "GLD_SESSION_MCP_APPLY=OK" in unified_src
+    assert "session MCP applied; not saved" in unified_src
+    assert "onCancelFullScaleSweep" in unified_src
+    assert "fullScaleSweepCancelRequested" in unified_src
+    assert "FULLSCALE_CANCELLED" in nulling_src
+    assert "GldFullScaleSweepCancelFn" in nulling_header
     assert "SET_QC_RESULT_JSON" in command_src
     assert "GET_QC_STATUS" in command_src
     assert "GldSerialCommandType::SetQcResultJson" in command_src
@@ -1309,8 +1334,8 @@ def test_current_design_docs_mirror_live_source_contracts():
     server_doc = pathlib.Path("docs/design/server/design.md").read_text(encoding="utf-8")
     command_header = pathlib.Path("firmware/gld/include/GldCommandParser.h").read_text(encoding="utf-8")
 
-    assert "GLD_FIRMWARE_VERSION = \"0.8.14\"" in pathlib.Path("firmware/shared/include/FirmwareVersion.h").read_text(encoding="utf-8")
-    assert "| firmware version | `0.8.14` |" in gld_doc
+    assert "GLD_FIRMWARE_VERSION = \"0.8.18\"" in pathlib.Path("firmware/shared/include/FirmwareVersion.h").read_text(encoding="utf-8")
+    assert "| firmware version | `0.8.18` |" in gld_doc
     assert "| firmware version | `0.7.1` |" in ch_doc
     assert "| firmware version | `0.1.3` |" in gw_doc
 
@@ -1468,7 +1493,7 @@ def test_version_constants_format():
     for version in versions:
         assert re.fullmatch(r"\d+\.\d+\.\d+", version), version
 
-    assert 'GLD_FIRMWARE_VERSION = "0.8.14"' in header
+    assert 'GLD_FIRMWARE_VERSION = "0.8.18"' in header
     assert 'CH_FIRMWARE_VERSION = "0.7.3"' in header
     assert 'GATEWAY_FIRMWARE_VERSION = "0.1.4"' in header
     assert 'PROTOCOL_VERSION = "0.2.0"' in header

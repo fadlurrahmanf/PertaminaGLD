@@ -7,12 +7,14 @@
 import { $, elements, state, CHART_COLORS, SENSOR_NAMES } from "./state.js";
 import { csvCell, downloadText, stamp } from "./ui.js";
 
+// The range dropdowns are display zoom only. Keep enough browser-side history
+// for the largest offered zoom (one hour) so widening a range never loses
+// samples that were collected while a shorter view was selected.
+const HISTORY_RETENTION_MS = 60 * 60 * 1000;
+const Y_AXIS_TICK_COUNT = 10;
+
 export function pruneHistory() {
-  const rangeMs = Math.max(
-    Number(elements.rangeSelect?.value) || 0,
-    Number(elements.datasetRangeSelect?.value) || 0
-  ) * 1000;
-  const cutoff = Date.now() - rangeMs;
+  const cutoff = Date.now() - HISTORY_RETENTION_MS;
   while (state.history.length && state.history[0].ts < cutoff) state.history.shift();
 }
 
@@ -21,8 +23,8 @@ function drawGrid(ctx, pad, width, height) {
   ctx.lineWidth = 1;
   ctx.strokeRect(pad.left, pad.top, width, height);
   ctx.beginPath();
-  for (let i = 1; i < 4; i += 1) {
-    const y = pad.top + (height / 4) * i;
+  for (let i = 1; i < Y_AXIS_TICK_COUNT - 1; i += 1) {
+    const y = pad.top + (height / (Y_AXIS_TICK_COUNT - 1)) * i;
     ctx.moveTo(pad.left, y);
     ctx.lineTo(pad.left + width, y);
   }
@@ -32,6 +34,38 @@ function drawGrid(ctx, pad, width, height) {
     ctx.lineTo(x, pad.top + height);
   }
   ctx.stroke();
+}
+
+function drawYAxisTicks(ctx, pad, width, height, min, max) {
+  const fraction = 1 / (Y_AXIS_TICK_COUNT - 1);
+  const decimals = Math.abs(max - min) < 0.001 ? 6 : 4;
+  const tickValues = Array.from({ length: Y_AXIS_TICK_COUNT }, (_, tick) => (
+    max - (max - min) * fraction * tick
+  ));
+  const zeroTolerance = Math.abs(max - min) / 100000;
+  if (!tickValues.some((value) => Math.abs(value) <= zeroTolerance)) tickValues.push(0);
+  tickValues.sort((a, b) => b - a);
+
+  const zeroY = pad.top + (1 - (0 - min) / (max - min)) * height;
+  ctx.beginPath();
+  ctx.strokeStyle = "#f3c969";
+  ctx.lineWidth = 1.75;
+  ctx.setLineDash([7, 5]);
+  ctx.moveTo(pad.left, zeroY);
+  ctx.lineTo(pad.left + width, zeroY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle = "#8a8272";
+  ctx.font = "13.5px 'Cascadia Mono', monospace";
+  ctx.textAlign = "right";
+  ctx.textBaseline = "middle";
+  for (const value of tickValues) {
+    const y = pad.top + (1 - (value - min) / (max - min)) * height;
+    ctx.fillText(value.toFixed(decimals), pad.left - 8, y);
+  }
+  ctx.textAlign = "start";
+  ctx.textBaseline = "alphabetic";
 }
 
 function latestFeatureOrder(points) {
@@ -141,10 +175,10 @@ export function drawOneChart(canvas, rangeSelect, legendEl, markers = [], channe
     max += margin;
   }
 
-  ctx.fillStyle = "#8a8272";
-  ctx.font = "13.5px 'Cascadia Mono', monospace";
-  ctx.fillText(max.toFixed(4), 8, pad.top + 6);
-  ctx.fillText(min.toFixed(4), 8, pad.top + height);
+  min = Math.min(min, 0);
+  max = Math.max(max, 0);
+
+  drawYAxisTicks(ctx, pad, width, height, min, max);
 
   // Vertical session markers (dataset START/STOP) drawn under the series
   // lines so the traces stay legible on top of them.
@@ -245,10 +279,12 @@ export function drawFullScaleSweepChart(canvas, points, codeMax, color = "#3ecf8
   min -= margin;
   max += margin;
 
+  min = Math.min(min, 0);
+  max = Math.max(max, 0);
+
+  drawYAxisTicks(ctx, pad, width, height, min, max);
   ctx.fillStyle = "#8a8272";
   ctx.font = "13.5px 'Cascadia Mono', monospace";
-  ctx.fillText(max.toFixed(4), 8, pad.top + 6);
-  ctx.fillText(min.toFixed(4), 8, pad.top + height);
   ctx.fillText("0", pad.left, pad.top + height + 18);
   ctx.fillText(String(codeMax), pad.left + width - 24, pad.top + height + 18);
 

@@ -86,6 +86,32 @@
   min-width: max-content;
 }
 
+.chart-range-control {
+  display: grid;
+  gap: 2px;
+  min-width: 152px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+
+.chart-range-control > span {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.chart-range-control output {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-range-control input[type="range"] {
+  width: 152px;
+  accent-color: var(--accent);
+}
+
 /* ---- Alert bar ---- */
 
 .alert-bar[hidden] {

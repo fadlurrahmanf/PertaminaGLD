@@ -95,6 +95,20 @@ bool decodeLine(const char* line, GldSerialCommand& outCommand) {
         outCommand.payload[sizeof(outCommand.payload) - 1] = '\0';
         return true;
     }
+    if (strncmp(line, "SET_SESSION_MCP_JSON ", 21) == 0) {
+        outCommand.type = GldSerialCommandType::SetSessionMcpJson;
+        strncpy(outCommand.payload, line + 21, sizeof(outCommand.payload) - 1);
+        outCommand.payload[sizeof(outCommand.payload) - 1] = '\0';
+        return true;
+    }
+    if (strcmp(line, "VERIFY_CLEAN_AIR_FOR_NULLING") == 0) {
+        outCommand.type = GldSerialCommandType::VerifyCleanAirForNulling;
+        return true;
+    }
+    if (strcmp(line, "BIND_MODEL_TO_ACTIVE_NULLING_PROFILE") == 0) {
+        outCommand.type = GldSerialCommandType::BindModelToActiveNullingProfile;
+        return true;
+    }
     if (strncmp(line, "SET_QC_RESULT_JSON ", 19) == 0) {
         outCommand.type = GldSerialCommandType::SetQcResultJson;
         strncpy(outCommand.payload, line + 19, sizeof(outCommand.payload) - 1);
@@ -129,6 +143,10 @@ bool decodeLine(const char* line, GldSerialCommand& outCommand) {
             outCommand.payload[sizeof(outCommand.payload) - 1] = '\0';
             return true;
         }
+    }
+    if (strcmp(line, "CANCEL_FULLSCALE_SWEEP") == 0) {
+        outCommand.type = GldSerialCommandType::CancelFullScaleSweep;
+        return true;
     }
     if (strcmp(line, "INJECT_TPL_DONE") == 0) {
         outCommand.type = GldSerialCommandType::InjectTplDone;

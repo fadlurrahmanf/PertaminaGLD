@@ -37,9 +37,9 @@ constexpr float NULLING_CONFIG_DEFAULT_MIN_FINAL_V  = 0.0f;
 // Tunable nulling thresholds. thresholdV is the minimum floor for the dynamic
 // baseline-relative threshold:
 //   dynamicThreshold = max(abs(baselineV) * 0.5, thresholdV)
-// Current unified nulling confirms against baseline + dynamicThreshold.
-// minFinalV is retained in the config/status command for compatibility with
-// older operator panels and historical logs, but no longer gates success.
+// A result must satisfy both the baseline-relative threshold and minFinalV.
+// minFinalV is clamped to 0 V by the service, so a negative final voltage can
+// never become a successful, persisted profile value.
 struct GldNullingConfig {
     uint8_t validMagic = NULLING_CONFIG_VALID_MAGIC;
     float   thresholdV = NULLING_CONFIG_DEFAULT_THRESHOLD_V;

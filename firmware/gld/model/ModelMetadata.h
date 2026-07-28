@@ -18,7 +18,6 @@ namespace pgl::gld::model {
 // GET_STATUS's model.activeNullingProfileId after nulling completes.
 constexpr const char* PROFILE_ID = "cnn-dualbranch-datasheet-v1-unbound";
 constexpr const char* SCALER_PROFILE_ID = "cnn-dualbranch-datasheet-v1-unbound";
-constexpr uint8_t BOUND_NULLING_PROFILE_ID = 1;
 constexpr bool PRODUCTION_APPROVED = true;
 
 // Model is dual-input: Branch A (Conv1D) takes the 8 raw ADC channels,

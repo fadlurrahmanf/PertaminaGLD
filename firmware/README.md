@@ -10,7 +10,7 @@ Older board bring-up notes and upload captures are kept in
 
 | Component | Version |
 |---|---:|
-| GLD | `0.8.14` |
+| GLD | `0.8.18` |
 | CH | `0.7.1` |
 | Gateway | `0.1.3` |
 | Protocol | `0.1.0` |

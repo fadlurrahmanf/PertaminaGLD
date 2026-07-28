@@ -154,6 +154,12 @@ for (const clusterIdHex of Object.keys(topology.routes)) {
   }
 }
 flow.set("pglTopology", topology);
+const gldDiscoveryRaw = flow.get("pglGldDiscovery") || {};
+
+function ageSecFromIso(value, nowMs = Date.now()) {
+  const t = Date.parse(value || "");
+  return Number.isFinite(t) ? Math.max(0, Math.round((nowMs - t) / 1000)) : undefined;
+}
 
 const nodes = Object.keys(topology.gateways).filter(isGatewayId).sort().map((gatewayIdHex) => ({
   id: gatewayIdHex,
@@ -192,6 +198,11 @@ for (const [clusterIdHex, entry] of Object.entries(topology.parents || {})) {
   const lastSeenAgeSec = Math.round(ageMsOf(entry) / 1000);
   const lastHelloAgeSec = hello ? Math.round(ageMsOf(hello) / 1000) : undefined;
   const gatewayLinkAgeSec = gatewayLink ? Math.round(ageMsOf(gatewayLink) / 1000) : undefined;
+  const gldEntry = gldDiscoveryRaw[clusterIdHex] || null;
+  const lastPullRespondedAt = gldEntry && gldEntry.respondedAt ? gldEntry.respondedAt : undefined;
+  const lastPullAgeSec = ageSecFromIso(lastPullRespondedAt);
+  const lastLiveAt = newestIso(entry.receivedAt, live ? live.receivedAt : null, lastPullRespondedAt);
+  const lastLiveAgeSec = ageSecFromIso(lastLiveAt);
   const parentIdHex = entry.parentIdHex || "0x0000";
   const parentAltIdHex = entry.parentAltIdHex || "0x0000";
   const routeIsInstalled = route.length > 0 &&
@@ -248,13 +259,19 @@ for (const [clusterIdHex, entry] of Object.entries(topology.parents || {})) {
     lastHelloAgeSec,
     lastHelloUpdatedAt: hello ? hello.receivedAt : undefined,
     liveUpdatedAt: live ? live.receivedAt : undefined,
-    lastSeenAgeSec,
+    lastSeenAgeSec: lastLiveAgeSec !== undefined ? lastLiveAgeSec : lastSeenAgeSec,
+    lastTopologyAgeSec: lastSeenAgeSec,
+    lastTopologyUpdatedAt: entry.receivedAt || topology.updatedAt,
+    lastPullRespondedAt,
+    lastPullAgeSec,
+    lastPullRecordCount: gldEntry ? gldEntry.recordCount : undefined,
+    lastPullResponseStatus: gldEntry ? gldEntry.responseStatus : undefined,
     batteryMv,
     batteryLabel: batteryMv !== undefined && batteryMv !== null && Number(batteryMv) !== 0xFFFF
       ? "battery: " + batteryMv + " mV"
       : "battery: belum ada",
     pendingReason,
-    updatedAt: entry.receivedAt || topology.updatedAt,
+    updatedAt: lastLiveAt || entry.receivedAt || topology.updatedAt,
     status: routeIsInstalled ? "installed" : "pending"
   });
   visibleIds.add(clusterIdHex);
@@ -425,7 +442,6 @@ for (const node of nodes) {
 }
 
 const gldRequestTimeoutMs = Number(env.get("PGL_GLD_REQUEST_TIMEOUT_MS") || "20000");
-const gldDiscoveryRaw = flow.get("pglGldDiscovery") || {};
 const gldDiscovery = {};
 const nowMsGld = Date.now();
 for (const [chIdHex, entry] of Object.entries(gldDiscoveryRaw)) {
@@ -1292,6 +1308,9 @@ msg.payload = \`<!doctype html>
 
     function expectedNextEvent(node) {
       if (node.status === "installed") {
+        if (node.lastPullAgeSec !== undefined && node.lastPullAgeSec < 60 && node.lastHelloAgeSec !== undefined && node.lastHelloAgeSec > 300) {
+          return "CH baru saja merespons pull; heartbeat/topology belum update.";
+        }
         if (node.lastHelloAgeSec !== undefined) {
           const remaining = Math.max(0, 300 - Math.round(Number(node.lastHelloAgeSec)));
           return remaining > 0
@@ -1320,6 +1339,32 @@ msg.payload = \`<!doctype html>
       return "Menunggu event CH_CONFIG atau CH_HELLO berikutnya.";
     }
 
+    function gldResponseStatusLabel(status) {
+      switch (Number(status)) {
+        case 0: return "DATA_OK";
+        case 1: return "DATA_EMPTY";
+        case 2: return "DATA_NOT_AVAIL";
+        case 3: return "DATA_STALE";
+        case 4: return "DATA_BUSY";
+        case 5: return "DATA_INVALID";
+        default: return status === undefined || status === null ? "-" : String(status);
+      }
+    }
+
+    function gldResponseMeaning(entry) {
+      const status = Number(entry && entry.responseStatus);
+      if (!Number.isFinite(status)) return "";
+      switch (status) {
+        case 0: return "ada data";
+        case 1: return "cache kosong / tidak ada unsent baru";
+        case 2: return "belum ada cache GLD valid";
+        case 3: return "cache GLD stale";
+        case 4: return "CH sedang busy";
+        case 5: return "response invalid";
+        default: return "";
+      }
+    }
+
     function renderPendingTable(nodes) {
       const chNodes = nodes.filter((node) => node.type === "ch");
       const pendingNodes = chNodes.filter((node) => node.status !== "installed" || node.pendingReason);
@@ -1332,7 +1377,7 @@ msg.payload = \`<!doctype html>
         '<div class="pending-table-wrap">' +
         '<table class="pending-table">' +
         '<thead><tr>' +
-        '<th>CH</th><th>Status</th><th>Parent</th><th>Route</th><th>Last CH_HELLO</th><th>Expected Next Event</th><th>Aksi</th><th>Update</th>' +
+        '<th>CH</th><th>Status</th><th>Parent</th><th>Route</th><th>Last CH_HELLO</th><th>Last Pull</th><th>Expected Next Event</th><th>Aksi</th><th>Update</th>' +
         '</tr></thead><tbody>' +
         chNodes.map((node) =>
           '<tr>' +
@@ -1341,6 +1386,7 @@ msg.payload = \`<!doctype html>
           '<td>' + escapeHtml(node.parent || "-") + '</td>' +
           '<td>' + escapeHtml(node.routeText || "-") + '</td>' +
           '<td>' + escapeHtml(ageLabel(node.lastHelloAgeSec)) + '</td>' +
+          '<td>' + escapeHtml(node.lastPullAgeSec !== undefined ? ageLabel(node.lastPullAgeSec) + " / " + gldResponseStatusLabel(node.lastPullResponseStatus) : "-") + '</td>' +
           '<td>' + escapeHtml(expectedNextEvent(node)) + '</td>' +
           '<td><div class="table-actions">' +
           '<button class="table-action" data-action="request" data-node-id="' + escapeHtml(node.id || "") + '"' + (node.requestPayload ? "" : " disabled") + '>Request</button>' +
@@ -1522,6 +1568,13 @@ msg.payload = \`<!doctype html>
       }
     }
 
+    function gldStatusDisplay(entry) {
+      const base = gldStatusLabel(entry.status || "idle");
+      if (entry.status !== "received") return base;
+      const statusLabel = gldResponseStatusLabel(entry.responseStatus);
+      return base + " / " + statusLabel;
+    }
+
     function renderGldRequests(gldDiscovery) {
       const entries = Object.values(gldDiscovery || {}).sort((a, b) => {
         const ta = Date.parse(a.requestedAt || a.respondedAt || 0) || 0;
@@ -1538,10 +1591,11 @@ msg.payload = \`<!doctype html>
         const spinner = status === "sent" ? '<span class="spinner"></span>' : "";
         return '<div class="gld-request-item">' +
           '<div class="row1"><span class="ch-id">' + escapeHtml(entry.ch) + '</span>' +
-          '<span class="status-badge ' + escapeHtml(status) + '">' + spinner + escapeHtml(gldStatusLabel(status)) + '</span></div>' +
+          '<span class="status-badge ' + escapeHtml(status) + '">' + spinner + escapeHtml(gldStatusDisplay(entry)) + '</span></div>' +
           '<div class="meta">Request ID: ' + escapeHtml(entry.requestId ?? "-") + ' | Hop: ' + escapeHtml((entry.hopList || []).join(" -> ") || "-") + '</div>' +
           '<div class="meta">Dikirim: ' + escapeHtml(entry.requestedAt ? ageLabel(entry.requestedAgeSec) : "-") + '</div>' +
-          '<div class="meta">Direspon: ' + escapeHtml(entry.respondedAt || "-") + (entry.recordCount !== undefined ? " | " + entry.recordCount + " record" : "") + '</div>' +
+          '<div class="meta">Direspon: ' + escapeHtml(entry.respondedAt || "-") + (entry.recordCount !== undefined ? " | " + entry.recordCount + " record" : "") + (entry.responseStatus !== undefined ? " | " + escapeHtml(gldResponseStatusLabel(entry.responseStatus)) : "") + '</div>' +
+          (entry.responseStatus !== undefined ? '<div class="meta">Arti: ' + escapeHtml(gldResponseMeaning(entry) || "-") + '</div>' : "") +
           '</div>';
       }).join("");
     }
@@ -1654,7 +1708,9 @@ msg.payload = \`<!doctype html>
             : (node.gatewayQualityLabel || "RSSI to Gateway: belum ada");
           const ageMetric = node.type === "gateway"
             ? ""
-            : ("last update: " + (node.lastSeenAgeSec !== undefined ? node.lastSeenAgeSec + "s ago" : "belum ada"));
+            : ("last activity: " + (node.lastSeenAgeSec !== undefined ? ageLabel(node.lastSeenAgeSec) : "belum ada") +
+              (node.lastTopologyAgeSec !== undefined ? " | topology " + ageLabel(node.lastTopologyAgeSec) : "") +
+              (node.lastPullAgeSec !== undefined ? " | pull " + ageLabel(node.lastPullAgeSec) + " " + gldResponseStatusLabel(node.lastPullResponseStatus) : ""));
           div.innerHTML = node.type === "gld"
             ? '<div class="title">' + escapeHtml(node.label || "-") + '</div>' +
               '<div class="layer">' + escapeHtml(node.layerLabel || "GLD") + '</div>' +

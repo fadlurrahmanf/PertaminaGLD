@@ -180,8 +180,19 @@ constexpr int16_t PARENT_SWITCH_MARGIN_DB = 15;
 // memprioritaskan Gateway sebagai parent utama. RSSI -95 dBm dengan SNR baik
 // masih layak untuk LoRa bench, sedangkan link di bawah ini tetap menunggu
 // parent CH agar route tidak dipaksa lewat direct link yang lemah/noisy.
-constexpr int16_t GATEWAY_DIRECT_PARENT_MIN_RSSI_DBM = -95;
-constexpr int8_t  GATEWAY_DIRECT_PARENT_MIN_SNR_DB = 5;
+#ifndef PGL_CH_GATEWAY_DIRECT_PARENT_MIN_RSSI_DBM
+#define PGL_CH_GATEWAY_DIRECT_PARENT_MIN_RSSI_DBM -95
+#endif
+#ifndef PGL_CH_GATEWAY_DIRECT_PARENT_MIN_SNR_DB
+#define PGL_CH_GATEWAY_DIRECT_PARENT_MIN_SNR_DB 5
+#endif
+constexpr int16_t GATEWAY_DIRECT_PARENT_MIN_RSSI_DBM = PGL_CH_GATEWAY_DIRECT_PARENT_MIN_RSSI_DBM;
+constexpr int8_t  GATEWAY_DIRECT_PARENT_MIN_SNR_DB = PGL_CH_GATEWAY_DIRECT_PARENT_MIN_SNR_DB;
+
+#ifndef PGL_CH_FORCE_BENCH_CHAIN
+#define PGL_CH_FORCE_BENCH_CHAIN 0
+#endif
+constexpr bool FORCE_BENCH_CHAIN = PGL_CH_FORCE_BENCH_CHAIN != 0;
 
 // Gateway/root tidak boleh menjadi parent utama jika RSSI yang diterima CH
 // lebih lemah dari floor ini. Ini berbeda dari direct-priority di atas:

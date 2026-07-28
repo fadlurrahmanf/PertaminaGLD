@@ -142,6 +142,45 @@ constexpr bool FIELDTEST_MODEL_UNVERIFIED = true;
 constexpr bool FIELDTEST_MODEL_UNVERIFIED = false;
 #endif
 
+#if !defined(PGL_GLD_SIMULATED_ALARM_GAS_CLASS)
+#define PGL_GLD_SIMULATED_ALARM_GAS_CLASS 2
+#endif
+
+#if !defined(PGL_GLD_SIMULATED_ALARM_CONFIDENCE)
+#define PGL_GLD_SIMULATED_ALARM_CONFIDENCE 100
+#endif
+
+#if defined(PGL_GLD_SIMULATED_ALARM_MODEL) && defined(PGL_GLD_FIELDTEST_4CLASS)
+#error "PGL_GLD_SIMULATED_ALARM_MODEL must not be combined with fieldtest alarm suppression"
+#endif
+
+#if defined(PGL_GLD_SIMULATED_CLEAR_MODEL) && defined(PGL_GLD_FIELDTEST_4CLASS)
+#error "PGL_GLD_SIMULATED_CLEAR_MODEL must not be combined with fieldtest alarm suppression"
+#endif
+
+#if defined(PGL_GLD_SIMULATED_ALARM_MODEL) || defined(PGL_GLD_SIMULATED_CLEAR_MODEL)
+constexpr bool SIMULATED_MODEL_OUTPUT = true;
+#else
+constexpr bool SIMULATED_MODEL_OUTPUT = false;
+#endif
+
+#if defined(PGL_GLD_SENSORLESS_BENCH)
+constexpr bool SENSORLESS_BENCH = true;
+#else
+constexpr bool SENSORLESS_BENCH = false;
+#endif
+
+#ifndef PGL_GLD_SENSORLESS_REPEAT_INTERVAL_MS
+#define PGL_GLD_SENSORLESS_REPEAT_INTERVAL_MS 0
+#endif
+constexpr uint32_t SENSORLESS_REPEAT_INTERVAL_MS = PGL_GLD_SENSORLESS_REPEAT_INTERVAL_MS;
+constexpr bool SENSORLESS_REPEAT_BENCH =
+    SENSORLESS_BENCH && SIMULATED_MODEL_OUTPUT && SENSORLESS_REPEAT_INTERVAL_MS > 0;
+
+#if defined(PGL_GLD_SENSORLESS_BENCH) && !defined(PGL_GLD_SIMULATED_ALARM_MODEL) && !defined(PGL_GLD_SIMULATED_CLEAR_MODEL)
+#error "PGL_GLD_SENSORLESS_BENCH requires a simulated clear or alarm model output"
+#endif
+
 #if defined(PGL_GLD_ALLOW_UNAUTHENTICATED_ALARM_ACK)
 constexpr bool ALLOW_UNAUTHENTICATED_ALARM_ACK = true;
 #else
@@ -2304,7 +2343,10 @@ void maintainServiceHoldButton() {
 }
 
 bool batteryRuntimeReady() {
-    if (FIELDTEST_MODEL_UNVERIFIED) {
+    if (SENSORLESS_BENCH && SIMULATED_MODEL_OUTPUT) {
+        return radioReady;
+    }
+    if (FIELDTEST_MODEL_UNVERIFIED || SIMULATED_MODEL_OUTPUT) {
         return adsReady && radioReady;
     }
     return adsReady && radioReady && mlReady && nullingProfileApplied && modelProfileReady;
@@ -2335,9 +2377,10 @@ void startBatteryInferenceSession() {
 }
 
 const char* batteryRuntimeBlockReason() {
-    if (!adsReady) return "ads_not_ready";
     if (!radioReady) return "radio_not_ready";
-    if (FIELDTEST_MODEL_UNVERIFIED) return "none";
+    if (SENSORLESS_BENCH && SIMULATED_MODEL_OUTPUT) return "none";
+    if (!adsReady) return "ads_not_ready";
+    if (FIELDTEST_MODEL_UNVERIFIED || SIMULATED_MODEL_OUTPUT) return "none";
     if (!mlReady) return "ml_not_ready";
     if (!nullingProfileApplied) return "nulling_profile_not_applied";
     if (!modelProfileReady) return "model_profile_unapproved_or_mismatch";
@@ -2637,6 +2680,15 @@ void armBootReportRecoveryIfNeeded(const BootAdsReport& adsReport,
                                    bool radioOk,
                                    bool mlChecked,
                                    bool mlOk) {
+    if (SENSORLESS_BENCH && SIMULATED_MODEL_OUTPUT && (!radioChecked || radioOk)) {
+        bootRecoveryArmed = false;
+        bootRecoveryRestartAllowed = false;
+        bootRecoveryNonAdsFailure = false;
+        bootRecoveryRestartCount = 0;
+        copyBounded(bootRecoveryReason, sizeof(bootRecoveryReason), "none");
+        return;
+    }
+
     const char* reason = bootReportFailureReason(adsReport, i2cReport, mcpControl,
                                                  radioChecked, radioOk, mlChecked, mlOk);
     if (reason == nullptr) {
@@ -3864,7 +3916,7 @@ uint8_t modelClassToGasClass(int predicted) {
 }
 
 bool modelProfileMatchesActiveNulling() {
-    if (FIELDTEST_MODEL_UNVERIFIED) {
+    if (FIELDTEST_MODEL_UNVERIFIED || SIMULATED_MODEL_OUTPUT) {
         return true;
     }
     if (!mlReady || !nullingProfileApplied || nullingProfileId == 0) {
@@ -3908,26 +3960,45 @@ bool runScan(bool requireCompleteBatch = false) {
     pgl::gld::GldAds1256Reading readings[pgl::gld::board::SENSOR_COUNT]{};
     float mavVoltage[8] = {};
     uint8_t okChannels = 0;
-    for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
-        const pgl::gld::GldAds1256Reading r = ads.readChannel(ch);
-        readings[ch] = r;
-        latestSensorGain[ch] = r.gain;
-        latestSensorStatus[ch] = static_cast<uint8_t>(r.status);
-        if (r.status == pgl::gld::GldAds1256Status::Ok && !r.saturated) ++okChannels;
+    if (SENSORLESS_BENCH) {
+        okChannels = pgl::gld::board::SENSOR_COUNT;
+        for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
+            latestSensorGain[ch] = 1;
+            latestSensorStatus[ch] = static_cast<uint8_t>(pgl::gld::GldAds1256Status::Ok);
+            latestSensorVoltage[ch] = 0.0f;
+            mavVoltage[ch] = 0.0f;
+        }
+        logPrintf("GLD_SENSORLESS_BENCH_SCAN dummyChannels=%u adsReady=%u mcpOk=%u/%u\n",
+                  static_cast<unsigned>(okChannels),
+                  adsReady ? 1u : 0u,
+                  static_cast<unsigned>(lastBootMcpOkCount),
+                  static_cast<unsigned>(pgl::gld::board::SENSOR_COUNT));
+    } else {
+        for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
+            const pgl::gld::GldAds1256Reading r = ads.readChannel(ch);
+            readings[ch] = r;
+            latestSensorGain[ch] = r.gain;
+            latestSensorStatus[ch] = static_cast<uint8_t>(r.status);
+            if (r.status == pgl::gld::GldAds1256Status::Ok && !r.saturated) ++okChannels;
+        }
     }
     noteAdsReadHealth(okChannels, "runScan");
     const bool allValid = okChannels == pgl::gld::board::SENSOR_COUNT;
     latestTelemetryValid = allValid;
 
     uint8_t primedChannels = 0;
-    for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
-        const bool mayCommit = allValid &&
-                               readings[ch].status == pgl::gld::GldAds1256Status::Ok &&
-                               !readings[ch].saturated;
-        mavVoltage[ch] = mayCommit ? movingAvg.add(ch, readings[ch].voltage)
-                                   : movingAvg.value(ch);
-        latestSensorVoltage[ch] = mavVoltage[ch];
-        if (movingAvg.count(ch) >= MIN_PRIMED_COUNT) ++primedChannels;
+    if (SENSORLESS_BENCH) {
+        primedChannels = pgl::gld::board::SENSOR_COUNT;
+    } else {
+        for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
+            const bool mayCommit = allValid &&
+                                   readings[ch].status == pgl::gld::GldAds1256Status::Ok &&
+                                   !readings[ch].saturated;
+            mavVoltage[ch] = mayCommit ? movingAvg.add(ch, readings[ch].voltage)
+                                       : movingAvg.value(ch);
+            latestSensorVoltage[ch] = mavVoltage[ch];
+            if (movingAvg.count(ch) >= MIN_PRIMED_COUNT) ++primedChannels;
+        }
     }
 
     const bool primed = primedChannels >= pgl::gld::board::SENSOR_COUNT;
@@ -3942,6 +4013,31 @@ bool runScan(bool requireCompleteBatch = false) {
         logPrintf("GLD_FIELDTEST_DUMMY_RESULT allValid=%u primed=%u gasClass=%u confidence=%u\n",
                   allValid ? 1u : 0u, primed ? 1u : 0u,
                   lastResult.gasClass, lastResult.confidence);
+#if defined(PGL_GLD_SIMULATED_ALARM_MODEL)
+    } else if (true) {
+        // Bench-only alarm simulation: keep the production alarm/radio path
+        // active, but replace the ML output with a deterministic non-clear
+        // result so end-to-end alarm routing can be tested without gas.
+        lastResult = {
+            static_cast<uint8_t>(PGL_GLD_SIMULATED_ALARM_GAS_CLASS),
+            static_cast<uint8_t>(PGL_GLD_SIMULATED_ALARM_CONFIDENCE),
+        };
+        lastInferenceValid = true;
+        logPrintf("GLD_SIM_ALARM_MODEL_RESULT allValid=%u primed=%u gasClass=%u(%s) confidence=%u\n",
+                  allValid ? 1u : 0u, primed ? 1u : 0u,
+                  lastResult.gasClass, pgl::gld::gldGasClassName(lastResult.gasClass),
+                  lastResult.confidence);
+#elif defined(PGL_GLD_SIMULATED_CLEAR_MODEL)
+    } else if (true) {
+        // Bench-only clear simulation for route/pull tests while the bundled
+        // model artifact contract is being updated.
+        lastResult = {pgl::protocol::GLD_GAS_CLEAR, 100};
+        lastInferenceValid = true;
+        logPrintf("GLD_SIM_CLEAR_MODEL_RESULT allValid=%u primed=%u gasClass=%u(%s) confidence=%u\n",
+                  allValid ? 1u : 0u, primed ? 1u : 0u,
+                  lastResult.gasClass, pgl::gld::gldGasClassName(lastResult.gasClass),
+                  lastResult.confidence);
+#endif
     } else {
         lastInferenceValid = allValid && primed && mlReady && nullingProfileApplied &&
                              modelProfileReady &&
@@ -4224,6 +4320,15 @@ void runBatteryInferenceSession() {
     }
 
     if (batterySessionState == BatterySessionState::CompleteHeld) {
+        if (SENSORLESS_REPEAT_BENCH &&
+            now - batterySessionStartedMs >= SENSORLESS_REPEAT_INTERVAL_MS) {
+            logPrintf("GLD_SENSORLESS_REPEAT_RESTART intervalMs=%lu elapsedMs=%lu previousReason=%s\n",
+                      static_cast<unsigned long>(SENSORLESS_REPEAT_INTERVAL_MS),
+                      static_cast<unsigned long>(now - batterySessionStartedMs),
+                      batteryCompletionReason);
+            startBatteryInferenceSession();
+            return;
+        }
         if (batteryPersistenceFaultHold) {
             if (static_cast<int32_t>(now - batteryPersistenceRetryDueMs) >= 0) {
                 batteryPersistenceFaultHold = false;
@@ -4257,11 +4362,15 @@ void runBatteryInferenceSession() {
                 now - batteryLastWarmupPrimeMs >= SCAN_INTERVAL_MS) {
                 batteryLastWarmupPrimeMs = now;
                 uint8_t stableChannels = 0;
-                for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
-                    const pgl::gld::GldAds1256Reading reading = ads.readChannel(ch);
-                    if (reading.status == pgl::gld::GldAds1256Status::Ok &&
-                        !reading.saturated) {
-                        ++stableChannels;
+                if (SENSORLESS_BENCH) {
+                    stableChannels = pgl::gld::board::SENSOR_COUNT;
+                } else {
+                    for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
+                        const pgl::gld::GldAds1256Reading reading = ads.readChannel(ch);
+                        if (reading.status == pgl::gld::GldAds1256Status::Ok &&
+                            !reading.saturated) {
+                            ++stableChannels;
+                        }
                     }
                 }
                 logPrintf("GLD_BATTERY_WARMUP_AGC stableChannels=%u/%u\n",
@@ -4287,12 +4396,18 @@ void runBatteryInferenceSession() {
             lastScanMs = now;
             const bool completeValidBatch = runScan(true);
             if (completeValidBatch) {
-                uint8_t primedBatchCount = UINT8_MAX;
-                for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
-                    const uint8_t count = movingAvg.count(ch);
-                    if (count < primedBatchCount) primedBatchCount = count;
+                if (SENSORLESS_BENCH) {
+                    if (batteryValidSampleBatches < BATTERY_VALID_SAMPLE_BATCHES) {
+                        ++batteryValidSampleBatches;
+                    }
+                } else {
+                    uint8_t primedBatchCount = UINT8_MAX;
+                    for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
+                        const uint8_t count = movingAvg.count(ch);
+                        if (count < primedBatchCount) primedBatchCount = count;
+                    }
+                    batteryValidSampleBatches = primedBatchCount;
                 }
-                batteryValidSampleBatches = primedBatchCount;
             }
             logPrintf("GLD_BATTERY_SAMPLE valid=%u count=%u required=%u\n",
                       completeValidBatch ? 1 : 0,
@@ -4748,20 +4863,25 @@ void setup() {
                  bootI2c.mcpOkCount,
                  pgl::gld::board::SENSOR_COUNT,
                  passFail(radioReady),
-                 FIELDTEST_MODEL_UNVERIFIED ? "IGNORED" : passFail(mlReady),
-                 FIELDTEST_MODEL_UNVERIFIED ? "IGNORED" : passFail(nullingProfileApplied),
+                 (FIELDTEST_MODEL_UNVERIFIED || SIMULATED_MODEL_OUTPUT) ? "IGNORED" : passFail(mlReady),
+                 (FIELDTEST_MODEL_UNVERIFIED || SIMULATED_MODEL_OUTPUT) ? "IGNORED" : passFail(nullingProfileApplied),
                  passFail(modelProfileReady),
                  nullingProfileId);
         printBootIcReport(power, bootAds, bootI2c, bootMcpControl,
                           true, radioReady,
-                          !FIELDTEST_MODEL_UNVERIFIED, FIELDTEST_MODEL_UNVERIFIED || mlReady, mlOutputSize,
-                          FIELDTEST_MODEL_UNVERIFIED ? (adsReady && radioReady)
-                                                   : (adsReady && radioReady && mlReady && nullingProfileApplied && modelProfileReady),
+                          !(FIELDTEST_MODEL_UNVERIFIED || SIMULATED_MODEL_OUTPUT),
+                          FIELDTEST_MODEL_UNVERIFIED || SIMULATED_MODEL_OUTPUT || mlReady,
+                          mlOutputSize,
+                          (SENSORLESS_BENCH && SIMULATED_MODEL_OUTPUT)
+                              ? radioReady
+                              : (FIELDTEST_MODEL_UNVERIFIED || SIMULATED_MODEL_OUTPUT)
+                              ? (adsReady && radioReady)
+                              : (adsReady && radioReady && mlReady && nullingProfileApplied && modelProfileReady),
                           modeDetail);
         armBootReportRecoveryIfNeeded(bootAds, bootI2c, bootMcpControl,
-                                      true, radioReady,
-                                      !FIELDTEST_MODEL_UNVERIFIED,
-                                      FIELDTEST_MODEL_UNVERIFIED || mlReady);
+                                      !SENSORLESS_BENCH, radioReady,
+                                      !(FIELDTEST_MODEL_UNVERIFIED || SIMULATED_MODEL_OUTPUT),
+                                      FIELDTEST_MODEL_UNVERIFIED || SIMULATED_MODEL_OUTPUT || mlReady);
 
         lastScanMs = millis();
         lastTxMs   = millis();
@@ -4941,7 +5061,7 @@ void loop() {
             return;
         }
 
-        if (adsReady && now - lastScanMs >= SCAN_INTERVAL_MS) {
+        if ((adsReady || SENSORLESS_BENCH) && now - lastScanMs >= SCAN_INTERVAL_MS) {
             lastScanMs = now;
             runScan();
         }

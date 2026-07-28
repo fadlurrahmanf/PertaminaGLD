@@ -21,6 +21,7 @@
 #include "ChRuntime.h"
 #include "ChTxQueue.h"
 #include "ChConfig.h"
+#include "ClusterResponse.h"
 #include "LoraStarConfig.h"
 #include "LoraMeshConfig.h"
 #include "FirmwareConfig.h"
@@ -91,6 +92,7 @@ constexpr uint32_t PARENT_MIN_DWELL_MS     = pgl::config::ch::PARENT_MIN_DWELL_M
 constexpr int16_t  PARENT_SWITCH_MARGIN_DB = pgl::config::ch::PARENT_SWITCH_MARGIN_DB;
 constexpr int16_t  GATEWAY_DIRECT_PARENT_MIN_RSSI_DBM = pgl::config::ch::GATEWAY_DIRECT_PARENT_MIN_RSSI_DBM;
 constexpr int8_t   GATEWAY_DIRECT_PARENT_MIN_SNR_DB = pgl::config::ch::GATEWAY_DIRECT_PARENT_MIN_SNR_DB;
+constexpr bool     FORCE_BENCH_CHAIN = pgl::config::ch::FORCE_BENCH_CHAIN;
 constexpr int16_t  GATEWAY_PARENT_MIN_RSSI_DBM = pgl::config::ch::GATEWAY_PARENT_MIN_RSSI_DBM;
 constexpr int16_t  GATEWAY_ALT_PARENT_MIN_RSSI_DBM = pgl::config::ch::GATEWAY_ALT_PARENT_MIN_RSSI_DBM;
 constexpr uint8_t  PARENT_NVS_STABLE_SCANS = pgl::config::ch::PARENT_NVS_STABLE_SCANS;
@@ -708,7 +710,17 @@ bool candidateBetter(const ParentCandidate& a, const ParentCandidate& b) {
     return a.id < b.id;
 }
 
+uint16_t forcedBenchParentId() {
+    if (!FORCE_BENCH_CHAIN || ROOT_GATEWAY_ID != 0x0001) return 0;
+    if (CH_ID == 0x0010) return ROOT_GATEWAY_ID;
+    if (CH_ID == 0x0011) return 0x0010;
+    if (CH_ID == 0x0012) return 0x0011;
+    return 0;
+}
+
 bool directGatewayPreferred(const ParentCandidate& c) {
+    const uint16_t forcedParent = forcedBenchParentId();
+    if (forcedParent != 0 && forcedParent != ROOT_GATEWAY_ID) return false;
     return c.id == ROOT_GATEWAY_ID &&
            c.rssiDbm >= GATEWAY_DIRECT_PARENT_MIN_RSSI_DBM &&
            c.hasReverseLink &&
@@ -732,12 +744,19 @@ bool allowedAsRuntimeParent(const ParentCandidate& c) {
                                  (c.rssiDbm >= GATEWAY_PARENT_MIN_RSSI_DBM &&
                                   c.hasReverseLink &&
                                   c.reverseRssiDbm >= GATEWAY_PARENT_MIN_RSSI_DBM);
+    const uint16_t forcedParent = forcedBenchParentId();
+    if (forcedParent != 0) {
+        return c.id == forcedParent &&
+               gatewayParentOk &&
+               candidateLineageReachesConfiguredRoot(c);
+    }
     return gatewayParentOk &&
            candidateLineageReachesConfiguredRoot(c) &&
            candidateIsUpstreamForDepth(c, meshDepth);
 }
 
 bool allowedAsAlternateForNodeDepth(const ParentCandidate& c, uint8_t nodeDepth) {
+    if (forcedBenchParentId() != 0) return false;
     const bool gatewayAltOk = c.id != ROOT_GATEWAY_ID ||
                               (c.rssiDbm >= GATEWAY_ALT_PARENT_MIN_RSSI_DBM &&
                                c.hasReverseLink &&
@@ -1197,6 +1216,65 @@ void reportCachePeriodic() {
 }
 
 // ─── TX helpers ─────────────────────────────────────────────────────────────
+
+bool hasPendingAlarmTx(uint16_t nodeId, uint8_t gldSeq) {
+    for (size_t i = 0; i < TX_QUEUE_CAPACITY; ++i) {
+        const pgl::ch::ChTxItem& item = txQueue[i];
+        if (item.used && item.kind == pgl::ch::ChTxKind::AlarmPush &&
+            item.nodeId == nodeId && item.gldSeq == gldSeq) {
+            return true;
+        }
+    }
+    return false;
+}
+
+uint8_t enqueueRetainedAlarmPushes(const char* reason) {
+    if (!pgl::config::isValidNodeId(runtimeConfig.meshDstId) ||
+        runtimeConfig.meshDstId == runtimeConfig.chId) {
+        return 0;
+    }
+
+    uint8_t queued = 0;
+    for (size_t i = 0; i < NODE_CACHE_CAPACITY; ++i) {
+        const pgl::ch::NodeCacheEntry& entry = nodeCache[i];
+        if (!pgl::ch::isNodeCacheEntryValidPayload(entry) ||
+            !pgl::ch::isNodeCacheEntryUnsent(entry) ||
+            !pgl::ch::isNodeCacheEntryAlarm(entry) ||
+            !pgl::ch::containsAlarmQueueItem(alarmQueue, ALARM_QUEUE_CAPACITY,
+                                             entry.nodeId, entry.currentSeq) ||
+            hasPendingAlarmTx(entry.nodeId, entry.currentSeq)) {
+            continue;
+        }
+
+        uint8_t frame[pgl::ch::CH_TX_FRAME_MAX]{};
+        size_t frameSize = 0;
+        const uint8_t seq = meshSeq;
+        const pgl::ch::ClusterBuildStatus buildStatus =
+            pgl::ch::buildSingleRecordSensorPushFrame(
+                runtimeConfig.chId, runtimeConfig.meshDstId, seq, entry,
+                frame, sizeof(frame), frameSize);
+        if (buildStatus != pgl::ch::ClusterBuildStatus::Ok) {
+            logPrintf("CH_ALARM_RETAINED_BUILD_FAIL reason=%s nodeId=0x%04X gldSeq=%u status=%s\n",
+                      reason, entry.nodeId, entry.currentSeq,
+                      pgl::ch::clusterBuildStatusName(buildStatus));
+            continue;
+        }
+
+        const pgl::ch::ChTxQueueStatus txStatus = pgl::ch::enqueueChTxFrame(
+            txQueue, TX_QUEUE_CAPACITY, pgl::ch::ChTxKind::AlarmPush,
+            entry.nodeId, entry.currentSeq, nullptr, nullptr, 0,
+            frame, frameSize);
+        logPrintf("CH_ALARM_RETAINED_ENQUEUE reason=%s nodeId=0x%04X gldSeq=%u meshDst=0x%04X status=%s frameSize=%u\n",
+                  reason, entry.nodeId, entry.currentSeq, runtimeConfig.meshDstId,
+                  pgl::ch::chTxQueueStatusName(txStatus),
+                  static_cast<unsigned>(frameSize));
+        if (txStatus == pgl::ch::ChTxQueueStatus::Ok) {
+            meshSeq = static_cast<uint8_t>(meshSeq + 1);
+            ++queued;
+        }
+    }
+    return queued;
+}
 
 bool transmitRadio(SX1262* radio, const RadioPins& pins,
                    const uint8_t* frame, size_t frameSize, const char* tag) {
@@ -2219,6 +2297,7 @@ void handleJoined() {
     checkAlarmAckTimeout();
     retryHelloIfNeeded();
     if (chState != ChState::JOINED) return;
+    (void)enqueueRetainedAlarmPushes("joined-loop");
     drainTxQueue();
 
     const uint32_t now = millis();

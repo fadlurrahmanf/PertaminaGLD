@@ -2,24 +2,24 @@
   "schemaVersion": 2,
   "packageType": "pertamina-gld-prebuilt-firmware",
   "deviceId": "ANY",
-  "boardProfile": "CH3 ESP32-S3 R8N16 field-test",
-  "environment": "chFieldtest",
+  "boardProfile": "WROOM-1U-N16R8 sensorless alarm field-test",
+  "environment": "gldFieldtestSensorlessAlarm",
   "firmwareVersion": "0.8.14",
   "protocolVersion": "0.2.0",
   "configSchemaVersion": "0.1.0",
   "chip": "esp32s3",
   "baud": 460800,
-  "createdAtUtc": "20260729T052351Z",
+  "createdAtUtc": "20260729T073247Z",
   "source": {
     "gitCommit": "f34ca7fc8e7423b25ff103425a8428199597c418",
     "gitTreeState": "operator-hub-auto",
     "platformioCoreVersion": "PlatformIO post-build hook",
     "platformioIniSha256": "84334c9764581d13fbaf24b7559cba303b19245960a82ba4bf22b5d6f553e4c5",
-    "buildCommand": "pio run -e chFieldtest",
-    "buildStartedAtUtc": "20260729T052351Z",
-    "buildCompletedAtUtc": "20260729T052351Z"
+    "buildCommand": "pio run -e gldFieldtestSensorlessAlarm",
+    "buildStartedAtUtc": "20260729T073247Z",
+    "buildCompletedAtUtc": "20260729T073247Z"
   },
-  "flashSetSha256": "09633fd59961b68e12e59a01f11e04908262c2b3f6c968fd3665f5494e3a2426",
+  "flashSetSha256": "5dca2812cc8a62b878f0fa522775f67039d8092d364a985b46203e63a0681afb",
   "flashFiles": [
     {
       "path": "bootloader.bin",
@@ -42,8 +42,8 @@
     {
       "path": "firmware.bin",
       "offset": "0x00010000",
-      "size": 408352,
-      "sha256": "a7aef4b8173788a6696dbd9a842ded43319aeb546d5398bcbe34e40728bcb587"
+      "size": 1009152,
+      "sha256": "9043681b226d67a8169036940e9fb40664ea27e86fd44ed67548324f8e906d06"
     }
   ]
 }

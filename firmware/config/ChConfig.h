@@ -142,16 +142,25 @@ constexpr uint8_t CFG_RESPONSE_SLOT_COUNT = 16;
 
 // Interval dasar verifikasi route saat CH sudah JOINED. Dibuat konservatif
 // agar jaringan 10+ CH memprioritaskan data/alarm/pull daripada maintenance.
-constexpr uint32_t ROUTE_VERIFY_INTERVAL_MS = 600000;
+#ifndef PGL_CH_ROUTE_VERIFY_INTERVAL_MS
+#define PGL_CH_ROUTE_VERIFY_INTERVAL_MS 600000
+#endif
+constexpr uint32_t ROUTE_VERIFY_INTERVAL_MS = PGL_CH_ROUTE_VERIFY_INTERVAL_MS;
 
 // Tambahan jitter maksimum untuk verifikasi route (ms). Nilai ini mencegah
 // beberapa CH melakukan scan CH_CONFIG bersamaan sehingga topology tidak
 // berubah karena tabrakan/response window yang terlalu serempak.
-constexpr uint32_t ROUTE_VERIFY_JITTER_MS = 300000;
+#ifndef PGL_CH_ROUTE_VERIFY_JITTER_MS
+#define PGL_CH_ROUTE_VERIFY_JITTER_MS 300000
+#endif
+constexpr uint32_t ROUTE_VERIFY_JITTER_MS = PGL_CH_ROUTE_VERIFY_JITTER_MS;
 
 // Durasi satu window scan CH_CONFIG untuk validasi parent (ms). 10 detik memberi
 // sekitar dua round request/response dengan interval 5 detik.
-constexpr uint32_t ROUTE_VERIFY_WINDOW_MS = 10000;
+#ifndef PGL_CH_ROUTE_VERIFY_WINDOW_MS
+#define PGL_CH_ROUTE_VERIFY_WINDOW_MS 10000
+#endif
+constexpr uint32_t ROUTE_VERIFY_WINDOW_MS = PGL_CH_ROUTE_VERIFY_WINDOW_MS;
 
 // Parent dianggap silent jika tidak terlihat dalam response verifikasi selama
 // durasi ini.
@@ -170,18 +179,51 @@ static_assert(
 // Waktu minimum parent aktif dipertahankan sebelum boleh diganti oleh kandidat
 // baru pada background verification. Failover tetap boleh pindah cepat jika
 // parent benar-benar tidak sehat.
-constexpr uint32_t PARENT_MIN_DWELL_MS = 300000;
+#ifndef PGL_CH_PARENT_MIN_DWELL_MS
+#define PGL_CH_PARENT_MIN_DWELL_MS 300000
+#endif
+constexpr uint32_t PARENT_MIN_DWELL_MS = PGL_CH_PARENT_MIN_DWELL_MS;
 
 // Kandidat baru hanya mengganti parent aktif jika RSSI lebih baik minimal
 // margin ini, supaya route tidak flapping karena noise sesaat.
-constexpr int16_t PARENT_SWITCH_MARGIN_DB = 15;
+#ifndef PGL_CH_PARENT_SWITCH_MARGIN_DB
+#define PGL_CH_PARENT_SWITCH_MARGIN_DB 15
+#endif
+constexpr int16_t PARENT_SWITCH_MARGIN_DB = PGL_CH_PARENT_SWITCH_MARGIN_DB;
+
+// Scoring parent. Default dibuat setara perilaku lama: RSSI saja, tanpa bonus
+// SNR atau penalti depth. chFieldtest dapat mengaktifkan scoring lebih kaya
+// tanpa mengubah env ch normal.
+#ifndef PGL_CH_PARENT_SCORE_RSSI_WEIGHT
+#define PGL_CH_PARENT_SCORE_RSSI_WEIGHT 1
+#endif
+#ifndef PGL_CH_PARENT_SCORE_SNR_WEIGHT
+#define PGL_CH_PARENT_SCORE_SNR_WEIGHT 0
+#endif
+#ifndef PGL_CH_PARENT_SCORE_DEPTH_PENALTY
+#define PGL_CH_PARENT_SCORE_DEPTH_PENALTY 0
+#endif
+constexpr int16_t PARENT_SCORE_RSSI_WEIGHT = PGL_CH_PARENT_SCORE_RSSI_WEIGHT;
+constexpr int16_t PARENT_SCORE_SNR_WEIGHT = PGL_CH_PARENT_SCORE_SNR_WEIGHT;
+constexpr int16_t PARENT_SCORE_DEPTH_PENALTY = PGL_CH_PARENT_SCORE_DEPTH_PENALTY;
 
 // Jika Gateway/root terdengar langsung dengan kualitas minimal ini, CH akan
 // memprioritaskan Gateway sebagai parent utama. RSSI -95 dBm dengan SNR baik
 // masih layak untuk LoRa bench, sedangkan link di bawah ini tetap menunggu
 // parent CH agar route tidak dipaksa lewat direct link yang lemah/noisy.
-constexpr int16_t GATEWAY_DIRECT_PARENT_MIN_RSSI_DBM = -95;
-constexpr int8_t  GATEWAY_DIRECT_PARENT_MIN_SNR_DB = 5;
+#ifndef PGL_CH_GATEWAY_DIRECT_PARENT_MIN_RSSI_DBM
+#define PGL_CH_GATEWAY_DIRECT_PARENT_MIN_RSSI_DBM -95
+#endif
+#ifndef PGL_CH_GATEWAY_DIRECT_PARENT_MIN_SNR_DB
+#define PGL_CH_GATEWAY_DIRECT_PARENT_MIN_SNR_DB 5
+#endif
+constexpr int16_t GATEWAY_DIRECT_PARENT_MIN_RSSI_DBM = PGL_CH_GATEWAY_DIRECT_PARENT_MIN_RSSI_DBM;
+constexpr int8_t  GATEWAY_DIRECT_PARENT_MIN_SNR_DB = PGL_CH_GATEWAY_DIRECT_PARENT_MIN_SNR_DB;
+
+#ifndef PGL_CH_FORCE_BENCH_CHAIN
+#define PGL_CH_FORCE_BENCH_CHAIN 0
+#endif
+constexpr bool FORCE_BENCH_CHAIN = PGL_CH_FORCE_BENCH_CHAIN != 0;
 
 // Gateway/root tidak boleh menjadi parent utama jika RSSI yang diterima CH
 // lebih lemah dari floor ini. Ini berbeda dari direct-priority di atas:

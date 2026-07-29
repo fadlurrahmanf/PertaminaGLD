@@ -120,6 +120,43 @@ function envNumber(name, fallback) {
     return Number.isFinite(value) && value >= 0 ? value : fallback;
 }
 
+function parseGldTargetMap(raw) {
+    const text = String(raw || "").trim();
+    if (!text) return {};
+
+    function normalizeEntries(entries) {
+        const out = {};
+        for (const [nodeId, chId] of entries) {
+            const node = parseIdValue(String(nodeId).trim().replace(/^['"]|['"]$/g, ""), 0);
+            const ch = parseIdValue(String(chId).trim().replace(/^['"]|['"]$/g, ""), 0);
+            if (isGldId(node) && isChId(ch)) {
+                out[idHex(node)] = idHex(ch);
+            }
+        }
+        return out;
+    }
+
+    try {
+        return normalizeEntries(Object.entries(JSON.parse(text) || {}));
+    } catch (err) {
+        const body = text.replace(/^\{|\}$/g, "");
+        const entries = body
+            .split(/[;,]/)
+            .map((part) => part.trim())
+            .filter(Boolean)
+            .map((part) => {
+                const match = part.match(/^([^:=]+)\s*(?::|=)\s*(.+)$/);
+                return match ? [match[1], match[2]] : null;
+            })
+            .filter(Boolean);
+        return normalizeEntries(entries);
+    }
+}
+
+function envGldTargetOverrides() {
+    return parseGldTargetMap(env.get("PGL_GLD_TARGET_CH_MAP_JSON"));
+}
+
 const TOPOLOGY_PARENT_TTL_MS = envNumber("PGL_TOPOLOGY_PARENT_TTL_MS", 900000);
 const TOPOLOGY_DISCOVERY_TTL_MS = envNumber("PGL_TOPOLOGY_DISCOVERY_TTL_MS", 420000);
 const TOPOLOGY_GATEWAY_LINK_TTL_MS = envNumber("PGL_TOPOLOGY_GATEWAY_LINK_TTL_MS", 420000);
@@ -401,9 +438,10 @@ function resolveGldResponseOwner(outer) {
         if (ageMs > responseTimeoutMs) return "late-response";
         if (!Array.isArray(hopList) || hopList.length === 0) return "invalid-request-route";
         if (hopList[hopList.length - 1] !== targetChIdHex) return "target-route-mismatch";
-        if (hopList[0] !== transportSrcIdHex) return "ingress-route-mismatch";
+        if (!hopList.includes(transportSrcIdHex)) return "ingress-route-mismatch";
         if (!isGatewayId(parseIdValue(gatewayIdHex))) return "invalid-request-gateway";
-        if (gatewayIdHex !== outer.gatewayIdHex || gatewayIdHex !== outer.dstIdHex) return "response-gateway-mismatch";
+        if (gatewayIdHex !== outer.gatewayIdHex) return "response-gateway-mismatch";
+        if (isGatewayId(outer.dstId) && gatewayIdHex !== outer.dstIdHex) return "response-gateway-mismatch";
         return "valid";
     }
 
@@ -467,7 +505,11 @@ function rememberGldResponse(outer) {
 }
 
 function rememberGldDevice(outer, event) {
-    const chIdHex = outer && (outer.responseTargetChIdHex || resolveGldResponseOwner(outer));
+    const targetOverrides = envGldTargetOverrides();
+    const configuredTargetChIdHex = event && targetOverrides[event.nodeIdHex];
+    const chIdHex = (outer && outer.responseTargetChIdHex) ||
+        configuredTargetChIdHex ||
+        (outer && resolveGldResponseOwner(outer));
     if (!chIdHex || !event || event.ok !== true) return;
     const discovery = getGldDiscoveryState();
     const entry = discovery[chIdHex] || { status: "unsolicited", hopList: [], devices: {} };
@@ -907,6 +949,9 @@ function parseAppFrame(buf, meta = {}) {
         }
         return { outer, records, control: true, ignoredReason: "server-pull-request" };
     } else if (msgType === MSG_SENSOR_DATA) {
+        if (payload.length < 5) {
+            return { outer, records, control: true, ignoredReason: "short-sensor-control-frame" };
+        }
         records.push(parseGldRecord(payload));
     } else if (msgType === MSG_CH_HELLO) {
         if (payload.length < 8) {
@@ -1197,14 +1242,17 @@ try {
     }
 
     if (parsed.outer && parsed.outer.msgType === MSG_CLUSTER_DATA_RESPONSE) {
-        if (!isGatewayId(parsed.outer.dstId)) {
-            throw new Error(`CLUSTER_DATA_RESPONSE destination ${parsed.outer.dstIdHex} is not a Gateway ID`);
+        const responseGatewayId = isGatewayId(parsed.outer.gatewayId)
+            ? parsed.outer.gatewayId
+            : (isGatewayId(parsed.outer.dstId) ? parsed.outer.dstId : 0);
+        if (!isGatewayId(responseGatewayId)) {
+            throw new Error(`CLUSTER_DATA_RESPONSE does not include a Gateway ID dst=${parsed.outer.dstIdHex}`);
         }
-        if (parsed.outer.gatewayId !== undefined && parsed.outer.gatewayId !== parsed.outer.dstId) {
+        if (isGatewayId(parsed.outer.dstId) && parsed.outer.dstId !== responseGatewayId) {
             throw new Error(`CLUSTER_DATA_RESPONSE wrapper/frame gateway mismatch wrapper=${parsed.outer.gatewayIdHex} dst=${parsed.outer.dstIdHex}`);
         }
-        parsed.outer.gatewayId = parsed.outer.dstId;
-        parsed.outer.gatewayIdHex = parsed.outer.dstIdHex;
+        parsed.outer.gatewayId = responseGatewayId;
+        parsed.outer.gatewayIdHex = idHex(responseGatewayId);
         const topology = getTopologyState();
         registerGateway(topology, parsed.outer.gatewayId, new Date().toISOString(), "cluster-data-response");
         flow.set("pglTopology", topology);

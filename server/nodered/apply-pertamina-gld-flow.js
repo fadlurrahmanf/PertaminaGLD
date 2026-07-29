@@ -39,6 +39,71 @@ const mqttTls = args.has("mqtt-tls");
 const mqttTlsInsecure = args.has("mqtt-tls-insecure");
 const mqttCaPath = String(args.get("mqtt-ca") || "");
 const replayStatePath = String(args.get("replay-state-path") || path.join(nodeRedUserDir, "pertamina-gld-replay-state.json"));
+const fieldTestLogDir = String(args.get("field-test-log-dir") || path.join(scriptDir, "field-test-logs"));
+const fieldTestSnapshotIntervalSec = String(args.get("field-test-snapshot-interval-sec") || "30");
+const gldKeyId = String(args.get("gld-key-id") || process.env.GLD_KEY_ID || "");
+const gldAes128KeyHex = cleanHex(args.get("gld-aes128-key-hex") || process.env.GLD_AES128_KEY_HEX || "").toUpperCase();
+const gldTargetChMapJson = canonicalizeGldTargetChMap(args.get("gld-target-ch-map-json") || process.env.PGL_GLD_TARGET_CH_MAP_JSON || "");
+const commandAuthToken = String(args.get("command-auth-token") || process.env.PGL_COMMAND_AUTH_TOKEN || "");
+
+function cleanHex(input) {
+  return String(input || "").replace(/^0x/i, "").replace(/[^0-9a-fA-F]/g, "");
+}
+
+function idHex(value) {
+  const n = Number(value) & 0xFFFF;
+  return `0x${n.toString(16).toUpperCase().padStart(4, "0")}`;
+}
+
+function parseIdValue(value) {
+  const raw = String(value ?? "").trim().replace(/^['"]|['"]$/g, "");
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function isChId(value) {
+  return Number.isInteger(value) && value >= 0x0010 && value <= 0x0FFF;
+}
+
+function isGldId(value) {
+  return Number.isInteger(value) && value >= 0x1001 && value <= 0xFEFF;
+}
+
+function normalizeGldTargetEntries(entries) {
+  const out = {};
+  for (const [nodeId, chId] of entries) {
+    const node = parseIdValue(nodeId);
+    const ch = parseIdValue(chId);
+    if (isGldId(node) && isChId(ch)) {
+      out[idHex(node)] = idHex(ch);
+    }
+  }
+  return out;
+}
+
+function canonicalizeGldTargetChMap(input) {
+  const text = String(input || "").trim();
+  if (!text) return "";
+  try {
+    return JSON.stringify(normalizeGldTargetEntries(Object.entries(JSON.parse(text) || {})));
+  } catch (_) {
+    const body = text.replace(/^\{|\}$/g, "");
+    const entries = body
+      .split(/[;,]/)
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .map((part) => {
+        const match = part.match(/^([^:=]+)\s*(?::|=)\s*(.+)$/);
+        return match ? [match[1], match[2]] : null;
+      })
+      .filter(Boolean);
+    const normalized = normalizeGldTargetEntries(entries);
+    if (Object.keys(normalized).length === 0) {
+      throw new Error("PGL_GLD_TARGET_CH_MAP_JSON must map GLD IDs to CH IDs, for example {\"0x1002\":\"0x0012\"}");
+    }
+    return JSON.stringify(normalized);
+  }
+}
 
 function isLoopbackHost(host) {
   return ["127.0.0.1", "localhost", "::1"].includes(String(host).trim().toLowerCase());
@@ -53,6 +118,12 @@ if ((mqttUser && !mqttPassword) || (!mqttUser && mqttPassword)) {
 if (!isLoopbackHost(mqttHost) && !mqttUser) {
   throw new Error("Remote MQTT requires explicit credentials");
 }
+if (gldAes128KeyHex && gldAes128KeyHex.length !== 32) {
+  throw new Error("GLD AES-128 key must be exactly 32 hex characters");
+}
+if (gldKeyId && !Number.isFinite(Number(gldKeyId))) {
+  throw new Error("GLD key id must be numeric");
+}
 
 function id(name) {
   return `pgl_${name}`;
@@ -60,6 +131,24 @@ function id(name) {
 
 const tab = id("tab");
 const broker = id("mqtt_broker");
+
+const flowEnv = [
+  { name: "GATEWAY_STATUS_URL", value: gatewayStatusUrl, type: "str" },
+  { name: "GATEWAY_BASE_URL", value: gatewayBaseUrl, type: "str" },
+  { name: "PGL_REPLAY_STATE_PATH", value: replayStatePath, type: "str" },
+  { name: "PGL_FIELD_TEST_LOG_DIR", value: fieldTestLogDir, type: "str" }
+];
+
+function addOptionalFlowEnv(name, value) {
+  if (String(value || "").trim()) {
+    flowEnv.push({ name, value: String(value), type: "str" });
+  }
+}
+
+addOptionalFlowEnv("GLD_KEY_ID", gldKeyId);
+addOptionalFlowEnv("GLD_AES128_KEY_HEX", gldAes128KeyHex);
+addOptionalFlowEnv("PGL_GLD_TARGET_CH_MAP_JSON", gldTargetChMapJson);
+addOptionalFlowEnv("PGL_COMMAND_AUTH_TOKEN", commandAuthToken);
 
 function nodeBase(type, name, extra) {
   return Object.assign({ id: id(name), type, z: tab }, extra);
@@ -154,6 +243,12 @@ for (const clusterIdHex of Object.keys(topology.routes)) {
   }
 }
 flow.set("pglTopology", topology);
+const gldDiscoveryRaw = flow.get("pglGldDiscovery") || {};
+
+function ageSecFromIso(value, nowMs = Date.now()) {
+  const t = Date.parse(value || "");
+  return Number.isFinite(t) ? Math.max(0, Math.round((nowMs - t) / 1000)) : undefined;
+}
 
 const nodes = Object.keys(topology.gateways).filter(isGatewayId).sort().map((gatewayIdHex) => ({
   id: gatewayIdHex,
@@ -192,6 +287,11 @@ for (const [clusterIdHex, entry] of Object.entries(topology.parents || {})) {
   const lastSeenAgeSec = Math.round(ageMsOf(entry) / 1000);
   const lastHelloAgeSec = hello ? Math.round(ageMsOf(hello) / 1000) : undefined;
   const gatewayLinkAgeSec = gatewayLink ? Math.round(ageMsOf(gatewayLink) / 1000) : undefined;
+  const gldEntry = gldDiscoveryRaw[clusterIdHex] || null;
+  const lastPullRespondedAt = gldEntry && gldEntry.respondedAt ? gldEntry.respondedAt : undefined;
+  const lastPullAgeSec = ageSecFromIso(lastPullRespondedAt);
+  const lastLiveAt = newestIso(entry.receivedAt, live ? live.receivedAt : null, lastPullRespondedAt);
+  const lastLiveAgeSec = ageSecFromIso(lastLiveAt);
   const parentIdHex = entry.parentIdHex || "0x0000";
   const parentAltIdHex = entry.parentAltIdHex || "0x0000";
   const routeIsInstalled = route.length > 0 &&
@@ -248,13 +348,19 @@ for (const [clusterIdHex, entry] of Object.entries(topology.parents || {})) {
     lastHelloAgeSec,
     lastHelloUpdatedAt: hello ? hello.receivedAt : undefined,
     liveUpdatedAt: live ? live.receivedAt : undefined,
-    lastSeenAgeSec,
+    lastSeenAgeSec: lastLiveAgeSec !== undefined ? lastLiveAgeSec : lastSeenAgeSec,
+    lastTopologyAgeSec: lastSeenAgeSec,
+    lastTopologyUpdatedAt: entry.receivedAt || topology.updatedAt,
+    lastPullRespondedAt,
+    lastPullAgeSec,
+    lastPullRecordCount: gldEntry ? gldEntry.recordCount : undefined,
+    lastPullResponseStatus: gldEntry ? gldEntry.responseStatus : undefined,
     batteryMv,
     batteryLabel: batteryMv !== undefined && batteryMv !== null && Number(batteryMv) !== 0xFFFF
       ? "battery: " + batteryMv + " mV"
       : "battery: belum ada",
     pendingReason,
-    updatedAt: entry.receivedAt || topology.updatedAt,
+    updatedAt: lastLiveAt || entry.receivedAt || topology.updatedAt,
     status: routeIsInstalled ? "installed" : "pending"
   });
   visibleIds.add(clusterIdHex);
@@ -425,7 +531,6 @@ for (const node of nodes) {
 }
 
 const gldRequestTimeoutMs = Number(env.get("PGL_GLD_REQUEST_TIMEOUT_MS") || "20000");
-const gldDiscoveryRaw = flow.get("pglGldDiscovery") || {};
 const gldDiscovery = {};
 const nowMsGld = Date.now();
 for (const [chIdHex, entry] of Object.entries(gldDiscoveryRaw)) {
@@ -733,6 +838,221 @@ flow.set("pglGldDiscovery", gldDiscovery);
 msg.headers = { "content-type": "application/json; charset=utf-8" };
 msg.payload = { ok: true, kind: "pgl-topology-request", ch: clusterIdHex, gatewayId: gatewayIdHex, requestId, hopList: route };
 return [mqttMsg, msg];`;
+
+const fieldTestSnapshotFunction = `function ageSecOf(entry, nowMs) {
+  const t = Date.parse(entry && entry.receivedAt);
+  return Number.isFinite(t) ? Math.max(0, Math.round((nowMs - t) / 1000)) : undefined;
+}
+
+function newestGatewayLink(links) {
+  let best = null;
+  let bestMs = -1;
+  for (const entry of Object.values(links || {})) {
+    const t = Date.parse(entry && entry.receivedAt);
+    if (Number.isFinite(t) && t > bestMs) {
+      best = entry;
+      bestMs = t;
+    }
+  }
+  return best;
+}
+
+const now = new Date();
+const nowMs = now.getTime();
+const topology = flow.get("pglTopology") || {};
+const gldDiscovery = flow.get("pglGldDiscovery") || {};
+const parents = topology.parents || {};
+const discovery = topology.discovery || {};
+const routes = topology.routes || {};
+const routeGateways = topology.routeGateways || {};
+const hellos = topology.hellos || {};
+const gatewayLinks = topology.gatewayLinks || {};
+const chIds = Array.from(new Set(Object.keys(parents).concat(Object.keys(discovery), Object.keys(gldDiscovery)))).sort();
+
+msg.payload = {
+  kind: "pgl-field-snapshot",
+  receivedAt: now.toISOString(),
+  gatewayIds: Object.keys(topology.gateways || {}).sort(),
+  topologyUpdatedAt: topology.updatedAt || null,
+  chNodes: chIds.map((chIdHex) => {
+    const parent = parents[chIdHex] || discovery[chIdHex] || {};
+    const hello = hellos[chIdHex] || null;
+    const gld = gldDiscovery[chIdHex] || null;
+    const route = Array.isArray(routes[chIdHex]) ? routes[chIdHex] : [];
+    const gatewayLink = newestGatewayLink(gatewayLinks[chIdHex]);
+    const gatewayIdHex = routeGateways[chIdHex] || parent.gatewayIdHex || parent.gatewayId || (gatewayLink && gatewayLink.gatewayIdHex) || null;
+    return {
+      chIdHex,
+      gatewayIdHex,
+      parentIdHex: parent.parentIdHex || parent.parent || null,
+      parentAltIdHex: parent.parentAltIdHex || parent.parentAlt || null,
+      status: parents[chIdHex] ? "installed" : "discovery",
+      report: parent.report || null,
+      route,
+      routeText: route.length > 0 && gatewayIdHex ? gatewayIdHex + " -> " + route.join(" -> ") : null,
+      depth: route.length || parent.depth || null,
+      rssi: parent.rssi,
+      snr: parent.snr,
+      gatewayRssi: gatewayLink && gatewayLink.rssi,
+      gatewaySnr: gatewayLink && gatewayLink.snr,
+      batteryMv: parent.batteryMv,
+      lastSeenAgeSec: ageSecOf(parent, nowMs),
+      lastHelloAgeSec: ageSecOf(hello, nowMs),
+      lastTopologyAgeSec: ageSecOf(parent, nowMs),
+      lastPullStatus: gld && gld.status,
+      lastPullRequestId: gld && gld.requestId,
+      lastPullResponseStatus: gld && gld.responseStatus,
+      lastPullRecordCount: gld && gld.recordCount,
+      lastPullRequestedAt: gld && gld.requestedAt,
+      lastPullRespondedAt: gld && gld.respondedAt
+    };
+  })
+};
+return msg;`;
+
+const fieldTestLogFunction = `const logDir = String(env.get("PGL_FIELD_TEST_LOG_DIR") || "").trim();
+if (!logDir) {
+  return null;
+}
+
+function clean(value) {
+  if (value === undefined || value === null) return "";
+  if (Array.isArray(value)) return value.join(" -> ");
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
+}
+
+function csv(value) {
+  const s = clean(value);
+  return /[",\\r\\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
+function idFromPayload(p) {
+  const outer = p.outer || {};
+  return p.ch || p.chIdHex || p.clusterIdHex || outer.responseTargetChIdHex || outer.srcIdHex || "";
+}
+
+function eventTypeOf(p) {
+  if (p.kind === "gateway-status") return "gateway.status";
+  if (p.kind === "ch-topology") return "topology." + (p.report || "event");
+  if (p.kind === "pgl-topology-request") return "pull.request";
+  if (p.kind === "gld-event") return p.alarm ? "gld.alarm" : "gld.decoded";
+  if (p.kind === "gld-event-envelope") return "gld.envelope";
+  if (p.kind === "pertamina-gld-error") return "error.decode";
+  return p.kind || "unknown";
+}
+
+function rowFromPayload(p, eventTypeOverride) {
+  const outer = p.outer || {};
+  const response = outer.response || {};
+  const hopList = p.hopList || p.route || outer.responseHopList;
+  const requestId = p.requestId ?? response.requestId ?? p.lastPullRequestId;
+  const responseStatus = p.responseStatus ?? response.status ?? p.lastPullResponseStatus;
+  const recordCount = p.recordCount ?? response.recordCount ?? p.lastPullRecordCount;
+  return {
+    loggedAt: new Date().toISOString(),
+    eventType: eventTypeOverride || eventTypeOf(p),
+    gatewayId: p.gatewayIdHex || p.gatewayId || p.routeGatewayIdHex || "",
+    chId: idFromPayload(p),
+    parentId: p.parentIdHex || p.parent || "",
+    parentAltId: p.parentAltIdHex || p.parentAlt || "",
+    routeText: p.routeText || "",
+    hopList,
+    requestId,
+    status: p.status || p.report || "",
+    responseStatus,
+    recordCount,
+    rssi: p.rssi,
+    snr: p.snr,
+    gatewayRssi: p.gatewayRssi,
+    gatewaySnr: p.gatewaySnr,
+    batteryMv: p.batteryMv || p.chBatteryMv,
+    lastSeenAgeSec: p.lastSeenAgeSec,
+    lastHelloAgeSec: p.lastHelloAgeSec,
+    nodeId: p.nodeIdHex || p.nodeId || "",
+    gasName: p.gasName || "",
+    confidence: p.confidence,
+    alarm: p.alarm,
+    topic: msg.topic || p.sourceTopic || "",
+    summary: p.summary || p.routeStatus || p.decryptError || ""
+  };
+}
+
+function rowsFromMessage(p) {
+  if (p && p.kind === "pgl-field-snapshot") {
+    const rows = [];
+    for (const ch of p.chNodes || []) {
+      rows.push(rowFromPayload(Object.assign({}, ch, {
+        gatewayIdHex: ch.gatewayIdHex,
+        chIdHex: ch.chIdHex,
+        status: ch.status,
+        requestId: ch.lastPullRequestId,
+        responseStatus: ch.lastPullResponseStatus,
+        recordCount: ch.lastPullRecordCount
+      }), "snapshot.ch"));
+    }
+    if (rows.length === 0) {
+      rows.push({
+        loggedAt: new Date().toISOString(),
+        eventType: "snapshot.empty",
+        gatewayId: (p.gatewayIds || []).join(" -> "),
+        chId: "",
+        parentId: "",
+        parentAltId: "",
+        routeText: "",
+        hopList: "",
+        requestId: "",
+        status: "",
+        responseStatus: "",
+        recordCount: "",
+        rssi: "",
+        snr: "",
+        gatewayRssi: "",
+        gatewaySnr: "",
+        batteryMv: "",
+        lastSeenAgeSec: "",
+        lastHelloAgeSec: "",
+        nodeId: "",
+        gasName: "",
+        confidence: "",
+        alarm: "",
+        topic: msg.topic || "",
+        summary: "no CH topology yet"
+      });
+    }
+    return rows;
+  }
+  return [rowFromPayload(p || {})];
+}
+
+const payload = msg.payload || {};
+const rows = rowsFromMessage(payload);
+if (rows.length === 0) return null;
+
+fs.mkdirSync(logDir, { recursive: true });
+const day = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+const jsonPath = path.join(logDir, "field-test-" + day + ".jsonl");
+const csvPath = path.join(logDir, "field-test-" + day + ".csv");
+
+const jsonRecords = rows.map((row) => JSON.stringify({
+  row,
+  payload,
+  topic: msg.topic || "",
+  loggedAt: row.loggedAt
+})).join("\\n") + "\\n";
+fs.appendFileSync(jsonPath, jsonRecords, "utf8");
+
+const columns = [
+  "loggedAt", "eventType", "gatewayId", "chId", "parentId", "parentAltId",
+  "routeText", "hopList", "requestId", "status", "responseStatus", "recordCount",
+  "rssi", "snr", "gatewayRssi", "gatewaySnr", "batteryMv", "lastSeenAgeSec",
+  "lastHelloAgeSec", "nodeId", "gasName", "confidence", "alarm", "topic", "summary"
+];
+const needsHeader = !fs.existsSync(csvPath) || fs.statSync(csvPath).size === 0;
+const csvLines = rows.map((row) => columns.map((col) => csv(row[col])).join(",")).join("\\n") + "\\n";
+fs.appendFileSync(csvPath, (needsHeader ? columns.join(",") + "\\n" : "") + csvLines, "utf8");
+node.status({ fill: "green", shape: "dot", text: rows.length + " row -> " + path.basename(csvPath) });
+return null;`;
 
 const topologyViewFunction = `msg.headers = { "content-type": "text/html; charset=utf-8" };
 msg.payload = \`<!doctype html>
@@ -1292,6 +1612,9 @@ msg.payload = \`<!doctype html>
 
     function expectedNextEvent(node) {
       if (node.status === "installed") {
+        if (node.lastPullAgeSec !== undefined && node.lastPullAgeSec < 60 && node.lastHelloAgeSec !== undefined && node.lastHelloAgeSec > 300) {
+          return "CH baru saja merespons pull; heartbeat/topology belum update.";
+        }
         if (node.lastHelloAgeSec !== undefined) {
           const remaining = Math.max(0, 300 - Math.round(Number(node.lastHelloAgeSec)));
           return remaining > 0
@@ -1320,6 +1643,32 @@ msg.payload = \`<!doctype html>
       return "Menunggu event CH_CONFIG atau CH_HELLO berikutnya.";
     }
 
+    function gldResponseStatusLabel(status) {
+      switch (Number(status)) {
+        case 0: return "DATA_OK";
+        case 1: return "DATA_EMPTY";
+        case 2: return "DATA_NOT_AVAIL";
+        case 3: return "DATA_STALE";
+        case 4: return "DATA_BUSY";
+        case 5: return "DATA_INVALID";
+        default: return status === undefined || status === null ? "-" : String(status);
+      }
+    }
+
+    function gldResponseMeaning(entry) {
+      const status = Number(entry && entry.responseStatus);
+      if (!Number.isFinite(status)) return "";
+      switch (status) {
+        case 0: return "ada data";
+        case 1: return "cache kosong / tidak ada unsent baru";
+        case 2: return "belum ada cache GLD valid";
+        case 3: return "cache GLD stale";
+        case 4: return "CH sedang busy";
+        case 5: return "response invalid";
+        default: return "";
+      }
+    }
+
     function renderPendingTable(nodes) {
       const chNodes = nodes.filter((node) => node.type === "ch");
       const pendingNodes = chNodes.filter((node) => node.status !== "installed" || node.pendingReason);
@@ -1332,7 +1681,7 @@ msg.payload = \`<!doctype html>
         '<div class="pending-table-wrap">' +
         '<table class="pending-table">' +
         '<thead><tr>' +
-        '<th>CH</th><th>Status</th><th>Parent</th><th>Route</th><th>Last CH_HELLO</th><th>Expected Next Event</th><th>Aksi</th><th>Update</th>' +
+        '<th>CH</th><th>Status</th><th>Parent</th><th>Route</th><th>Last CH_HELLO</th><th>Last Pull</th><th>Expected Next Event</th><th>Aksi</th><th>Update</th>' +
         '</tr></thead><tbody>' +
         chNodes.map((node) =>
           '<tr>' +
@@ -1341,6 +1690,7 @@ msg.payload = \`<!doctype html>
           '<td>' + escapeHtml(node.parent || "-") + '</td>' +
           '<td>' + escapeHtml(node.routeText || "-") + '</td>' +
           '<td>' + escapeHtml(ageLabel(node.lastHelloAgeSec)) + '</td>' +
+          '<td>' + escapeHtml(node.lastPullAgeSec !== undefined ? ageLabel(node.lastPullAgeSec) + " / " + gldResponseStatusLabel(node.lastPullResponseStatus) : "-") + '</td>' +
           '<td>' + escapeHtml(expectedNextEvent(node)) + '</td>' +
           '<td><div class="table-actions">' +
           '<button class="table-action" data-action="request" data-node-id="' + escapeHtml(node.id || "") + '"' + (node.requestPayload ? "" : " disabled") + '>Request</button>' +
@@ -1522,6 +1872,13 @@ msg.payload = \`<!doctype html>
       }
     }
 
+    function gldStatusDisplay(entry) {
+      const base = gldStatusLabel(entry.status || "idle");
+      if (entry.status !== "received") return base;
+      const statusLabel = gldResponseStatusLabel(entry.responseStatus);
+      return base + " / " + statusLabel;
+    }
+
     function renderGldRequests(gldDiscovery) {
       const entries = Object.values(gldDiscovery || {}).sort((a, b) => {
         const ta = Date.parse(a.requestedAt || a.respondedAt || 0) || 0;
@@ -1538,10 +1895,11 @@ msg.payload = \`<!doctype html>
         const spinner = status === "sent" ? '<span class="spinner"></span>' : "";
         return '<div class="gld-request-item">' +
           '<div class="row1"><span class="ch-id">' + escapeHtml(entry.ch) + '</span>' +
-          '<span class="status-badge ' + escapeHtml(status) + '">' + spinner + escapeHtml(gldStatusLabel(status)) + '</span></div>' +
+          '<span class="status-badge ' + escapeHtml(status) + '">' + spinner + escapeHtml(gldStatusDisplay(entry)) + '</span></div>' +
           '<div class="meta">Request ID: ' + escapeHtml(entry.requestId ?? "-") + ' | Hop: ' + escapeHtml((entry.hopList || []).join(" -> ") || "-") + '</div>' +
           '<div class="meta">Dikirim: ' + escapeHtml(entry.requestedAt ? ageLabel(entry.requestedAgeSec) : "-") + '</div>' +
-          '<div class="meta">Direspon: ' + escapeHtml(entry.respondedAt || "-") + (entry.recordCount !== undefined ? " | " + entry.recordCount + " record" : "") + '</div>' +
+          '<div class="meta">Direspon: ' + escapeHtml(entry.respondedAt || "-") + (entry.recordCount !== undefined ? " | " + entry.recordCount + " record" : "") + (entry.responseStatus !== undefined ? " | " + escapeHtml(gldResponseStatusLabel(entry.responseStatus)) : "") + '</div>' +
+          (entry.responseStatus !== undefined ? '<div class="meta">Arti: ' + escapeHtml(gldResponseMeaning(entry) || "-") + '</div>' : "") +
           '</div>';
       }).join("");
     }
@@ -1654,7 +2012,9 @@ msg.payload = \`<!doctype html>
             : (node.gatewayQualityLabel || "RSSI to Gateway: belum ada");
           const ageMetric = node.type === "gateway"
             ? ""
-            : ("last update: " + (node.lastSeenAgeSec !== undefined ? node.lastSeenAgeSec + "s ago" : "belum ada"));
+            : ("last activity: " + (node.lastSeenAgeSec !== undefined ? ageLabel(node.lastSeenAgeSec) : "belum ada") +
+              (node.lastTopologyAgeSec !== undefined ? " | topology " + ageLabel(node.lastTopologyAgeSec) : "") +
+              (node.lastPullAgeSec !== undefined ? " | pull " + ageLabel(node.lastPullAgeSec) + " " + gldResponseStatusLabel(node.lastPullResponseStatus) : ""));
           div.innerHTML = node.type === "gld"
             ? '<div class="title">' + escapeHtml(node.label || "-") + '</div>' +
               '<div class="layer">' + escapeHtml(node.layerLabel || "GLD") + '</div>' +
@@ -1789,11 +2149,7 @@ const nodes = [
     label: "Pertamina GLD Server",
     disabled: false,
     info: `Generated by apply-pertamina-gld-flow.js v${generatorVersion}`,
-    env: [
-      { name: "GATEWAY_STATUS_URL", value: gatewayStatusUrl, type: "str" },
-      { name: "GATEWAY_BASE_URL", value: gatewayBaseUrl, type: "str" },
-      { name: "PGL_REPLAY_STATE_PATH", value: replayStatePath, type: "str" }
-    ]
+    env: flowEnv
   },
   nodeBase("inject", "poll_gateway", {
     name: "poll Gateway /api/status",
@@ -1902,10 +2258,10 @@ const nodes = [
     x: 700,
     y: 140,
     wires: [
-      [id("mqtt_status"), id("debug_status")],
-      [id("mqtt_events"), id("debug_events"), id("compact_topology_debug")],
-      [id("mqtt_decoded"), id("compact_decoded_debug"), id("http_decode_ok")],
-      [id("mqtt_error"), id("debug_error"), id("http_decode_error")]
+      [id("mqtt_status"), id("debug_status"), id("field_test_log")],
+      [id("mqtt_events"), id("debug_events"), id("compact_topology_debug"), id("field_test_log")],
+      [id("mqtt_decoded"), id("compact_decoded_debug"), id("http_decode_ok"), id("field_test_log")],
+      [id("mqtt_error"), id("debug_error"), id("http_decode_error"), id("field_test_log")]
     ]
   }),
   nodeBase("function", "http_decode_ok", {
@@ -2009,7 +2365,7 @@ const nodes = [
     libs: [],
     x: 500,
     y: 650,
-    wires: [[id("mqtt_out_pull_command"), id("debug_mqtt_command")], [id("http_topology_response")]]
+    wires: [[id("mqtt_out_pull_command"), id("debug_mqtt_command")], [id("field_test_log"), id("http_topology_response")]]
   }),
   nodeBase("http in", "http_topology_delete_in", {
     name: "POST /pertamina-gld/topology/delete",
@@ -2064,6 +2420,46 @@ const nodes = [
     x: 760,
     y: 550,
     wires: []
+  }),
+  nodeBase("inject", "field_test_snapshot_tick", {
+    name: "Field test snapshot",
+    props: [{ p: "payload" }, { p: "topic", vt: "str" }],
+    repeat: fieldTestSnapshotIntervalSec,
+    crontab: "",
+    once: true,
+    onceDelay: "5",
+    topic: "field-test/snapshot",
+    payload: "",
+    payloadType: "date",
+    x: 190,
+    y: 790,
+    wires: [[id("field_test_snapshot")]]
+  }),
+  nodeBase("function", "field_test_snapshot", {
+    name: "build field-test snapshot",
+    func: fieldTestSnapshotFunction,
+    outputs: 1,
+    timeout: 0,
+    noerr: 0,
+    initialize: "",
+    finalize: "",
+    libs: [],
+    x: 460,
+    y: 790,
+    wires: [[id("field_test_log")]]
+  }),
+  nodeBase("function", "field_test_log", {
+    name: "write field-test log",
+    func: fieldTestLogFunction,
+    outputs: 1,
+    timeout: 0,
+    noerr: 0,
+    initialize: "",
+    finalize: "",
+    libs: [{ var: "fs", module: "fs" }, { var: "path", module: "path" }],
+    x: 760,
+    y: 790,
+    wires: [[]]
   }),
   nodeBase("catch", "decode_catch", {
     name: "catch decode errors",

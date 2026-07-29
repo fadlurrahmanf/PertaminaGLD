@@ -29,7 +29,9 @@
 // Interval scan sensor/inference dalam ms. Angka 500 ms adalah titik aman dari
 // hasil bench COM9: cukup di atas sweep ADS 8-sensor ~330 ms, tanpa membebani
 // pipeline seperti interval sub-350 ms.
+#ifndef GLD_SCAN_INTERVAL_MS
 #define GLD_SCAN_INTERVAL_MS      500
+#endif
 
 // Batas bawah interval dataset. Command MQTT yang meminta interval lebih kecil
 // tetap dinaikkan ke nilai ini supaya pembacaan ADS 8-sensor tidak overlap.
@@ -53,19 +55,31 @@
 
 // Lama RX window LoRa GLD dalam ms setelah GLD mengirim SENSOR_DATA.
 // Downlink battery-mode dari CH harus masuk dalam window ini.
+#ifndef GLD_LORA_RX_WINDOW_MS
 #define GLD_LORA_RX_WINDOW_MS    2000
+#endif
 
 // Battery inference wake cycle. Warm-up starts after boot/hardware init. Only
 // complete 8-channel ADS batches count toward the moving-average window.
+#ifndef GLD_BATTERY_SENSOR_WARMUP_MS
 #define GLD_BATTERY_SENSOR_WARMUP_MS       30000
+#endif
+#ifndef GLD_BATTERY_VALID_SAMPLE_BATCHES
 #define GLD_BATTERY_VALID_SAMPLE_BATCHES      10
+#endif
+#ifndef GLD_BATTERY_ALARM_TX_ATTEMPTS
 #define GLD_BATTERY_ALARM_TX_ATTEMPTS          3
+#endif
+#ifndef GLD_BATTERY_ALARM_RETRY_DELAY_MS
 #define GLD_BATTERY_ALARM_RETRY_DELAY_MS     250
+#endif
 
 // Safety deadline, not a fixed ON duration. A successful session powers off
 // immediately after its own procedure finishes; this only bounds fault cases
 // before the approximately 160-second TPL5010 wake interval.
+#ifndef GLD_BATTERY_SESSION_DEADLINE_MS
 #define GLD_BATTERY_SESSION_DEADLINE_MS   120000
+#endif
 
 // CFG/IO16 is active-low (board pull-up, switch to GND). One fully debounced
 // press-release toggles the persistent battery service hold.

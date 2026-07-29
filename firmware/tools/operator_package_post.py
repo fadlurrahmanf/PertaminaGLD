@@ -28,9 +28,12 @@ FLASH_FILES = (
 PROFILE_BY_ENV = {
     "gld": "WROOM-1U-N16R8",
     "gldFieldtest": "WROOM-1U-N16R8 field-test",
+    "gldFieldtestSensorlessAlarm": "WROOM-1U-N16R8 sensorless alarm field-test",
+    "gldFieldtestSensorlessClear": "WROOM-1U-N16R8 sensorless clear field-test",
     "ch": "CH3 ESP32-S3 R8N16",
     "chFieldtest": "CH3 ESP32-S3 R8N16 field-test",
     "gw": "Gateway ESP32-S3 R8N16",
+    "gw_hello_ack_fieldtest": "Gateway ESP32-S3 R8N16 field-test",
 }
 
 

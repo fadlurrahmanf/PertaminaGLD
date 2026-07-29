@@ -33,10 +33,23 @@ export function channelIndexFromLog(line) {
   return Number.isFinite(parsed) && parsed >= 0 && parsed < 8 ? parsed : undefined;
 }
 
+// Fallback names for when telemetry.gasName hasn't arrived yet. Kept in
+// sync with gldGasClassName() in firmware/gld/src/GldThresholdClassifier.cpp.
+// The active CNN model (cnn_gas_datasheet.zip) only ever produces
+// Clean_Air(0)/LPG(1)/CO2(6); the rest are the legacy threshold
+// classifier's classes.
+const GAS_CLASS_NAMES = {
+  0: "Clean_Air",
+  1: "LPG",
+  2: "methane",
+  3: "propane",
+  4: "butane",
+  6: "CO2",
+};
+
 export function formatGas(gasClass) {
-  if (gasClass === 0) return "clearGas";
   if (gasClass == null) return "n/a";
-  return `class ${gasClass}`;
+  return GAS_CLASS_NAMES[gasClass] ?? `class ${gasClass}`;
 }
 
 function textValue(value, fallback = "Unknown") {

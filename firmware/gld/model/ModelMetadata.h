@@ -5,14 +5,21 @@
 namespace pgl::gld::model {
 
 // CNN dual-branch + datasheet-evidence gas model (cnn_gas_datasheet.zip,
-// INT8 TFLite Micro). It has no field validation against the Pertamina GLD
-// taxonomy or nulling-profile binding yet, so production inference must fail
-// closed until this is explicitly approved together with model_data.cpp,
-// cnn_gas_datasheet_normalize_params.h, and cnn_gas_sensitivity_table.h.
+// INT8 TFLite Micro). User explicitly approved production use on 2026-07-24
+// (COM3 board, deviceId 1001) after the fail-closed default (always
+// reporting CO2/ANOMALY, confidence 0) was diagnosed as the intended
+// behavior while this stayed false. BOUND_NULLING_PROFILE_ID=1 matches the
+// profileId the *next* nulling calibration run produces on that board: its
+// NVS was wiped by a Reset-NVS firmware upload earlier in this session, so
+// GldUnifiedMain.cpp's save-profile path (no prior valid profile in NVS)
+// assigns profileId=1. If nulling is instead run on a board whose NVS was
+// never reset (existing profileId > 0), the saved profileId increments from
+// that value instead and this bound ID must be updated to match — check
+// GET_STATUS's model.activeNullingProfileId after nulling completes.
 constexpr const char* PROFILE_ID = "cnn-dualbranch-datasheet-v1-unbound";
 constexpr const char* SCALER_PROFILE_ID = "cnn-dualbranch-datasheet-v1-unbound";
-constexpr uint8_t BOUND_NULLING_PROFILE_ID = 0;
-constexpr bool PRODUCTION_APPROVED = false;
+constexpr uint8_t BOUND_NULLING_PROFILE_ID = 1;
+constexpr bool PRODUCTION_APPROVED = true;
 
 // Model is dual-input: Branch A (Conv1D) takes the 8 raw ADC channels,
 // Branch B (Dense) takes 7 "evidence" features derived from the ADC via

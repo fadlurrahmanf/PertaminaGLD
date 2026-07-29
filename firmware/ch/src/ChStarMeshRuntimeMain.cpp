@@ -90,6 +90,9 @@ constexpr uint32_t ROUTE_VERIFY_WINDOW_MS  = pgl::config::ch::ROUTE_VERIFY_WINDO
 constexpr uint32_t PARENT_HEALTH_TIMEOUT_MS= pgl::config::ch::PARENT_HEALTH_TIMEOUT_MS;
 constexpr uint32_t PARENT_MIN_DWELL_MS     = pgl::config::ch::PARENT_MIN_DWELL_MS;
 constexpr int16_t  PARENT_SWITCH_MARGIN_DB = pgl::config::ch::PARENT_SWITCH_MARGIN_DB;
+constexpr int16_t  PARENT_SCORE_RSSI_WEIGHT = pgl::config::ch::PARENT_SCORE_RSSI_WEIGHT;
+constexpr int16_t  PARENT_SCORE_SNR_WEIGHT = pgl::config::ch::PARENT_SCORE_SNR_WEIGHT;
+constexpr int16_t  PARENT_SCORE_DEPTH_PENALTY = pgl::config::ch::PARENT_SCORE_DEPTH_PENALTY;
 constexpr int16_t  GATEWAY_DIRECT_PARENT_MIN_RSSI_DBM = pgl::config::ch::GATEWAY_DIRECT_PARENT_MIN_RSSI_DBM;
 constexpr int8_t   GATEWAY_DIRECT_PARENT_MIN_SNR_DB = pgl::config::ch::GATEWAY_DIRECT_PARENT_MIN_SNR_DB;
 constexpr bool     FORCE_BENCH_CHAIN = pgl::config::ch::FORCE_BENCH_CHAIN;
@@ -697,8 +700,13 @@ uint8_t advertisedMeshDepth() {
 }
 
 int32_t candidateScore(const ParentCandidate& c) {
-    // Higher is better. Design policy: parent utama dipilih dari RSSI terbaik.
-    return static_cast<int32_t>(c.rssiDbm);
+    // Higher is better. Defaults keep the old RSSI-only behavior; field-test
+    // builds can include SNR and depth to avoid choosing a noisy long route
+    // just because one packet had a slightly stronger RSSI.
+    const uint8_t depth = c.depth == 0xFF ? 8 : c.depth;
+    return static_cast<int32_t>(c.rssiDbm) * PARENT_SCORE_RSSI_WEIGHT +
+           static_cast<int32_t>(c.snrDb) * PARENT_SCORE_SNR_WEIGHT -
+           static_cast<int32_t>(depth) * PARENT_SCORE_DEPTH_PENALTY;
 }
 
 bool candidateBetter(const ParentCandidate& a, const ParentCandidate& b) {
@@ -1030,7 +1038,7 @@ bool selectDiscoveredParents(const char* reason) {
               (alt != nullptr) ? alt->snrDb : 0,
               (alt != nullptr) ? alt->depth : 0,
               static_cast<long>(altScore),
-              gatewayPriority ? "gateway-direct-rssi" : "rssi",
+              gatewayPriority ? "gateway-direct-rssi" : "weighted-score",
               GATEWAY_DIRECT_PARENT_MIN_RSSI_DBM,
               GATEWAY_DIRECT_PARENT_MIN_SNR_DB,
               GATEWAY_ALT_PARENT_MIN_RSSI_DBM,

@@ -167,6 +167,18 @@ TfLiteStatus Eval(TfLiteContext* context, TfLiteNode* node) {
                                   tflite::micro::GetTensorShape(output),
                                   tflite::micro::GetTensorData<int8_t>(output));
       break;
+    case kTfLiteInt32:
+      // Needed for graphs where StridedSlice consumes a SHAPE op's output
+      // (dynamic-batch Flatten lowering: SHAPE -> STRIDED_SLICE -> PACK ->
+      // RESHAPE) - upstream TFLite Micro supports this; this vendored
+      // snapshot's switch was missing it, so it fell through to `default`
+      // and failed Invoke() with kTfLiteError for every such model.
+      reference_ops::StridedSlice(op_params,
+                                  tflite::micro::GetTensorShape(input),
+                                  tflite::micro::GetTensorData<int32_t>(input),
+                                  tflite::micro::GetTensorShape(output),
+                                  tflite::micro::GetTensorData<int32_t>(output));
+      break;
     default:
       TF_LITE_KERNEL_LOG(context, "Type %s (%d) not supported.",
                          TfLiteTypeGetName(input->type), input->type);

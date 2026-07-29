@@ -110,7 +110,7 @@ export function emitMockStatus() {
     telemetry: {
       valid: true,
       gasClass: 0,
-      gasName: alarm ? "methane" : "clearGas",
+      gasName: alarm ? "methane" : "Clean_Air",
       confidence: alarm ? 87 : 99,
       alarm,
       sensorVoltage: voltage,

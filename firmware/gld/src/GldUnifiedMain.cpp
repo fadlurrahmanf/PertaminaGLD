@@ -2424,6 +2424,15 @@ void completeBatterySessionAndPowerOff(const char* reason) {
 
     snprintf(batteryCompletionReason, sizeof(batteryCompletionReason), "%s",
              reason != nullptr ? reason : "session_done");
+    if (SENSORLESS_REPEAT_BENCH) {
+        batterySessionState = BatterySessionState::CompleteHeld;
+        batteryStateStartedMs = millis();
+        logPrintf("GLD_SENSORLESS_REPEAT_HOLD reason=%s intervalMs=%lu action=repeat_without_power_off\n",
+                  batteryCompletionReason,
+                  static_cast<unsigned long>(SENSORLESS_REPEAT_INTERVAL_MS));
+        pulseWdtKeepaliveNow();
+        return;
+    }
     if (serviceHoldBlocksClr()) {
         if (batterySessionState != BatterySessionState::CompleteHeld) {
             batterySessionState = BatterySessionState::CompleteHeld;
@@ -4320,13 +4329,14 @@ void runBatteryInferenceSession() {
     }
 
     if (batterySessionState == BatterySessionState::CompleteHeld) {
-        if (SENSORLESS_REPEAT_BENCH &&
-            now - batterySessionStartedMs >= SENSORLESS_REPEAT_INTERVAL_MS) {
-            logPrintf("GLD_SENSORLESS_REPEAT_RESTART intervalMs=%lu elapsedMs=%lu previousReason=%s\n",
-                      static_cast<unsigned long>(SENSORLESS_REPEAT_INTERVAL_MS),
-                      static_cast<unsigned long>(now - batterySessionStartedMs),
-                      batteryCompletionReason);
-            startBatteryInferenceSession();
+        if (SENSORLESS_REPEAT_BENCH) {
+            if (now - batterySessionStartedMs >= SENSORLESS_REPEAT_INTERVAL_MS) {
+                logPrintf("GLD_SENSORLESS_REPEAT_RESTART intervalMs=%lu elapsedMs=%lu previousReason=%s\n",
+                          static_cast<unsigned long>(SENSORLESS_REPEAT_INTERVAL_MS),
+                          static_cast<unsigned long>(now - batterySessionStartedMs),
+                          batteryCompletionReason);
+                startBatteryInferenceSession();
+            }
             return;
         }
         if (batteryPersistenceFaultHold) {

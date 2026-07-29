@@ -89,12 +89,18 @@ GldClassifyResult classifyByThreshold(const float mavVoltage[8], const GldThresh
 
 const char* gldGasClassName(uint8_t gasClass) {
     switch (gasClass) {
-        case pgl::protocol::GLD_GAS_CLEAR:   return "clearGas";
+        // CLEAR/LPG/ANOMALY are the only classes the active CNN model
+        // (cnn_gas_datasheet.zip, ModelMetadata::CLASS_MAP) can produce:
+        // Clean_Air->CLEAR, LPG->LPG, CO2->ANOMALY (no dedicated GLD
+        // gas-class slot exists for CO2). PROPANE/BUTANE/METHANE below are
+        // never emitted by the CNN path; they remain for
+        // classifyByThreshold()'s legacy threshold classifier.
+        case pgl::protocol::GLD_GAS_CLEAR:   return "Clean_Air";
         case pgl::protocol::GLD_GAS_LPG:     return "LPG";
         case pgl::protocol::GLD_GAS_PROPANE: return "propane";
         case pgl::protocol::GLD_GAS_BUTANE:  return "butane";
         case pgl::protocol::GLD_GAS_METHANE: return "methane";
-        case pgl::protocol::GLD_GAS_ANOMALY: return "anomaly";
+        case pgl::protocol::GLD_GAS_ANOMALY: return "CO2";
         default:                              return "unknown";
     }
 }

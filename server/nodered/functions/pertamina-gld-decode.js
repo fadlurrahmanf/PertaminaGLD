@@ -120,23 +120,41 @@ function envNumber(name, fallback) {
     return Number.isFinite(value) && value >= 0 ? value : fallback;
 }
 
-function envGldTargetOverrides() {
-    const raw = String(env.get("PGL_GLD_TARGET_CH_MAP_JSON") || "").trim();
-    if (!raw) return {};
-    try {
-        const parsed = JSON.parse(raw);
+function parseGldTargetMap(raw) {
+    const text = String(raw || "").trim();
+    if (!text) return {};
+
+    function normalizeEntries(entries) {
         const out = {};
-        for (const [nodeId, chId] of Object.entries(parsed || {})) {
-            const node = parseIdValue(nodeId, 0);
-            const ch = parseIdValue(chId, 0);
+        for (const [nodeId, chId] of entries) {
+            const node = parseIdValue(String(nodeId).trim().replace(/^['"]|['"]$/g, ""), 0);
+            const ch = parseIdValue(String(chId).trim().replace(/^['"]|['"]$/g, ""), 0);
             if (isGldId(node) && isChId(ch)) {
                 out[idHex(node)] = idHex(ch);
             }
         }
         return out;
-    } catch (err) {
-        return {};
     }
+
+    try {
+        return normalizeEntries(Object.entries(JSON.parse(text) || {}));
+    } catch (err) {
+        const body = text.replace(/^\{|\}$/g, "");
+        const entries = body
+            .split(/[;,]/)
+            .map((part) => part.trim())
+            .filter(Boolean)
+            .map((part) => {
+                const match = part.match(/^([^:=]+)\s*(?::|=)\s*(.+)$/);
+                return match ? [match[1], match[2]] : null;
+            })
+            .filter(Boolean);
+        return normalizeEntries(entries);
+    }
+}
+
+function envGldTargetOverrides() {
+    return parseGldTargetMap(env.get("PGL_GLD_TARGET_CH_MAP_JSON"));
 }
 
 const TOPOLOGY_PARENT_TTL_MS = envNumber("PGL_TOPOLOGY_PARENT_TTL_MS", 900000);

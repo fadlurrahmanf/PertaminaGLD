@@ -315,6 +315,20 @@ try {
   assert(alarmTargetStore.pglGldDiscovery["0x0012"].devices["0x1002"]);
   assert.equal(alarmTargetStore.pglGldDiscovery["0x0011"], undefined);
 
+  const unquotedAlarmTargetStore = { pglGldRequestIndex: {}, pglGldDiscovery: {} };
+  const unsolicitedAlarmUnquotedMap = runDecoder(buildAppFrame({
+    typeFlags: 0x50,
+    src: 0x0011,
+    dst: 0x0001,
+    seq: 6,
+    payload: buildRecord(0x1002, 18, 501)
+  }), unquotedAlarmTargetStore, path.join(tempDir, "alarm-target-map-unquoted.json"), 0x0001, {
+    PGL_GLD_TARGET_CH_MAP_JSON: "{0x1001:0x0012,0x1002:0x0012}"
+  });
+  assert.equal(unsolicitedAlarmUnquotedMap[2][0].payload.nodeIdHex, "0x1002");
+  assert(unquotedAlarmTargetStore.pglGldDiscovery["0x0012"].devices["0x1002"]);
+  assert.equal(unquotedAlarmTargetStore.pglGldDiscovery["0x0011"], undefined);
+
   console.log("PASS routed GLD response request correlation");
 } finally {
   fs.rmSync(tempDir, { recursive: true, force: true });

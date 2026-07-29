@@ -501,6 +501,32 @@ button.is-busy::before {
   color: var(--text);
 }
 
+.chart-series-toggle {
+  appearance: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}
+
+.chart-series-toggle:hover,
+.chart-series-toggle:focus-visible {
+  color: var(--accent-2);
+  outline: none;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.chart-series-toggle.is-hidden {
+  color: var(--text-faint);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
 .sensor-range {
   display: block;
   max-width: 100%;

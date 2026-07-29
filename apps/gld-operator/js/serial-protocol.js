@@ -4,7 +4,7 @@
 import { $, elements, state, encoder, SENSOR_NAMES, SENSOR_MUX_CHANNELS, SENSOR_STATUS_NAMES, SERIAL_RESPONSE_TIMEOUT_MS, DEFAULT_POLL_INTERVAL_MS, CHART_COLORS } from "./state.js";
 import { setText, setBadge, appendLog, getField, setField, wait, showAlert, saveUiSession } from "./ui.js";
 import { syncDeviceSummary, renderFleetPanel } from "./fleet.js";
-import { pruneHistory, drawChart } from "./chart.js";
+import { pruneHistory, drawChart, isSensorChartSeriesVisible, toggleSensorChartSeries } from "./chart.js";
 import { renderNullingChannels, latestFeatureOrderForNulling, updateNullingMeta, appendNulling } from "./nulling.js";
 import {
   updateDatasetFromStatus, maybeCaptureDatasetTelemetry, trackDatasetRuntimeLine, handleDatasetSerialLine
@@ -953,8 +953,20 @@ function buildSensorChannelCard(channel) {
   const swatch = document.createElement("i");
   swatch.className = "legend-swatch";
   swatch.style.background = CHART_COLORS[channel.index];
-  const title = document.createElement("strong");
+  const seriesVisible = isSensorChartSeriesVisible(channel.index);
+  const title = document.createElement("button");
+  title.type = "button";
+  title.className = `chart-series-toggle${seriesVisible ? "" : " is-hidden"}`;
   title.textContent = channel.sensor;
+  title.title = seriesVisible
+    ? `Sembunyikan seri ${channel.sensor} dari grafik Running`
+    : `Tampilkan seri ${channel.sensor} pada grafik Running`;
+  title.setAttribute("aria-pressed", String(seriesVisible));
+  title.setAttribute("aria-label", title.title);
+  title.addEventListener("click", () => {
+    toggleSensorChartSeries(channel.index);
+    renderSensorChannels(sensorPresenceFromStatus());
+  });
   const trendEl = document.createElement("span");
   trendEl.className = `sensor-trend ${trend.tone}`;
   trendEl.textContent = trend.text;

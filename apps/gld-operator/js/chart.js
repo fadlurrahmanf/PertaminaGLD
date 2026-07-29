@@ -12,6 +12,21 @@ import { csvCell, downloadText, stamp } from "./ui.js";
 // samples that were collected while a shorter view was selected.
 const HISTORY_RETENTION_MS = 60 * 60 * 1000;
 const Y_AXIS_TICK_COUNT = 10;
+const ALL_SENSOR_CHANNELS = [0, 1, 2, 3, 4, 5, 6, 7];
+
+export function isSensorChartSeriesVisible(channel) {
+  return Number.isInteger(channel) && channel >= 0 && channel < ALL_SENSOR_CHANNELS.length &&
+    !state.hiddenSensorChartChannels.has(channel);
+}
+
+// This affects the Running chart display only; it never removes collected
+// telemetry or changes the Dataset chart, export, model, or firmware values.
+export function toggleSensorChartSeries(channel) {
+  if (!Number.isInteger(channel) || channel < 0 || channel >= ALL_SENSOR_CHANNELS.length) return;
+  if (state.hiddenSensorChartChannels.has(channel)) state.hiddenSensorChartChannels.delete(channel);
+  else state.hiddenSensorChartChannels.add(channel);
+  drawChart();
+}
 
 export function pruneHistory() {
   const cutoff = Date.now() - HISTORY_RETENTION_MS;
@@ -118,7 +133,7 @@ export function drawOneChart(canvas, rangeSelect, legendEl, markers = [], channe
   ctx.fillStyle = "#14110d";
   ctx.fillRect(0, 0, cssWidth, cssHeight);
 
-  const channels = channelIndices || [0, 1, 2, 3, 4, 5, 6, 7];
+  const channels = channelIndices || ALL_SENSOR_CHANNELS;
   const pad = { left: 58, right: 58, top: 18, bottom: 34 };
   const width = cssWidth - pad.left - pad.right;
   const height = cssHeight - pad.top - pad.bottom;
@@ -321,7 +336,8 @@ function datasetSessionMarkers() {
 }
 
 export function drawChart() {
-  drawOneChart(elements.sensorChart, elements.rangeSelect, elements.legend, []);
+  const visibleRunningChannels = ALL_SENSOR_CHANNELS.filter(isSensorChartSeriesVisible);
+  drawOneChart(elements.sensorChart, elements.rangeSelect, elements.legend, [], visibleRunningChannels);
   drawOneChart(elements.datasetChart, elements.datasetRangeSelect, elements.datasetLegend, datasetSessionMarkers());
 }
 

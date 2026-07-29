@@ -33,12 +33,14 @@ struct GldNullingSingleResult {
 
 struct GldFullScaleSweepResult {
     bool             success;
+    bool             cancelled;
     GldNullingStatus status;
     uint16_t         restoredCode;
 };
 
 using GldNullingLogFn = void (*)(const char* line);
 using GldNullingTickFn = void (*)();
+using GldFullScaleSweepCancelFn = bool (*)();
 
 // Run the nulling algorithm on all 8 sensor channels.
 // ads and dac must be initialized (begin() called) before calling.
@@ -70,14 +72,15 @@ GldNullingSingleResult runNullingServiceSingleChannel(GldAds1256Reader& ads,
 // live voltage-vs-DAC-code characterization curve. Purely diagnostic - does
 // not touch the persisted nulling profile. The DAC is restored to
 // restoreCode (normally the channel's currently-nulled code) once the sweep
-// finishes, including on early failure.
+// finishes, including failure or a cancellation checked between sweep points.
 GldFullScaleSweepResult runFullScaleSweep(GldAds1256Reader& ads,
                                           GldDacMux& dac,
                                           uint8_t channel,
                                           uint16_t restoreCode,
                                           uint16_t stepSize = 1,
                                           GldNullingLogFn logFn = nullptr,
-                                          GldNullingTickFn tickFn = nullptr);
+                                          GldNullingTickFn tickFn = nullptr,
+                                          GldFullScaleSweepCancelFn cancelFn = nullptr);
 
 // NVS persistence via ESP32 Preferences.
 bool saveNullingProfile(const GldNullingProfile& profile);

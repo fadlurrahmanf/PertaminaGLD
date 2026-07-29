@@ -28,6 +28,7 @@ function mockAck(cmd, status, rebootExpected) {
     message: "mock",
     rebootExpected,
     mode: state.mode === "unknown" ? "inference" : state.mode,
+    alarmLatched: state.mockAlarmLatched === true,
     uptimeMs: Math.floor(performance.now())
   };
 }
@@ -78,6 +79,7 @@ export function emitMockInfo() {
       serialDeviceId: true,
       serialChAddress: "SET_CH_ADDRESS_JSON chId",
       serialLoraConfig: "SET_LORA_CONFIG_JSON freqMHz,bwKHz,sf,cr,syncWord,txPowerDbm,preamble,tcxoVoltage,xtalVoltage",
+      sessionMcp: "SET_SESSION_MCP_JSON channel,code (volatile inference-only)",
       liveLoraReinit: true
     }
   };
@@ -91,14 +93,17 @@ export function emitMockStatus() {
   });
   const alarm = Math.random() > 0.98;
   const lora = mockLoraConfig();
+  const runtimeMcpCode = state.mockRuntimeMcpCode || Array.from({ length: 8 }, (_, index) => 132 + index * 4);
   const status = {
     deviceId: state.info?.deviceId || "F001",
     nodeId: 0xF001,
     mode: state.mode === "unknown" ? "inference" : state.mode,
+    alarmLatched: state.mockAlarmLatched === true,
     uptimeMs: Math.floor(performance.now()),
     power: { mode: "24v", externalPower: true, batteryMv: 3560, batteryValid: true },
     bootHealth: { adsReady: true, mcpOkCount: 8, dacReady: true, mlReady: true },
     lora: { beginState: 0, lastTxOk: true, ...lora },
+    runtimeMcpCode,
     nulling: {
       running: state.mode === "nulling" && state.mockNullingStep < 48,
       done: state.mockNullingStep >= 48,
@@ -216,6 +221,23 @@ export function handleMockCommand(command) {
       minFinalV: payload?.minFinalV ?? state.mockNullingConfig?.minFinalV ?? 0
     };
     handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("SET_NULLING_CONFIG", "ok", false))}`);
+  }
+  if (command.startsWith("SET_SESSION_MCP_JSON ")) {
+    const payload = safeJson(command.slice("SET_SESSION_MCP_JSON ".length));
+    const channel = Number(payload?.channel);
+    const code = Number(payload?.code);
+    if (state.mode === "inference" && Number.isInteger(channel) && channel >= 0 && channel < 8 && Number.isInteger(code) && code >= 0 && code <= DAC_CODE_MAX) {
+      state.mockRuntimeMcpCode = state.mockRuntimeMcpCode || Array.from({ length: 8 }, (_, index) => 132 + index * 4);
+      state.mockRuntimeMcpCode[channel] = code;
+      handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify({ ...mockAck("SET_SESSION_MCP", "ok", false), code, message: "session MCP applied; not saved" })}`);
+      emitMockStatus();
+    } else {
+      handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("SET_SESSION_MCP", "rejected", false))}`);
+    }
+  }
+  if (command === "VERIFY_CLEAN_AIR_FOR_NULLING") {
+    state.mockAlarmLatched = false;
+    handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("VERIFY_CLEAN_AIR_FOR_NULLING", "ok", false))}`);
   }
   if (command === "GET_QC_STATUS") emitMockQcStatus();
   if (command.startsWith("RUN_NULLING_SINGLE_JSON ")) {

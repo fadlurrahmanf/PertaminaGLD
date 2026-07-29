@@ -478,10 +478,95 @@ button.is-busy::before {
   min-width: 0;
 }
 
+.sensor-trend {
+  display: inline-flex;
+  align-items: center;
+  min-width: max-content;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.sensor-trend.up { color: #2cd797; }
+.sensor-trend.down { color: #66c9ff; }
+.sensor-trend.flat,
+.sensor-trend.collecting { color: var(--text-faint); }
+
 .channel-stage {
   font-family: var(--font-mono);
   font-weight: 600;
   color: var(--text);
+}
+
+.sensor-range {
+  display: block;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.25;
+  white-space: nowrap;
+}
+
+.sensor-range-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.sensor-range-row .sensor-range {
+  flex: 1;
+}
+
+.mcp-adjust-toggle,
+.mcp-session-adjuster button {
+  min-width: 24px;
+  min-height: 22px;
+  padding: 1px 5px;
+  border-color: var(--hairline-strong);
+  color: var(--text);
+  font-family: var(--font-mono);
+  line-height: 1;
+}
+
+.mcp-adjust-toggle {
+  color: var(--accent-2);
+  font-size: 13px;
+}
+
+.mcp-session-adjuster {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) 26px;
+  align-items: center;
+  gap: 5px;
+  padding: 4px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 5px;
+  background: var(--surface);
+}
+
+.mcp-session-adjuster output {
+  overflow: hidden;
+  color: var(--accent-2);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mcp-session-adjuster button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
 }
 
 .channel-card-head span,
@@ -604,6 +689,86 @@ button.is-busy::before {
   grid-template-columns: 1fr;
 }
 
+.sensor-telemetry-heading,
+.telemetry-collection-progress,
+.telemetry-collection-progress label {
+  display: inline-flex;
+  align-items: center;
+}
+
+.sensor-telemetry-heading {
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.telemetry-collection-progress {
+  gap: var(--space-2);
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.telemetry-collection-progress label {
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.telemetry-collection-progress progress {
+  width: 48px;
+  height: 6px;
+  accent-color: var(--accent-2);
+}
+
+.telemetry-collection-progress output {
+  min-width: 26px;
+  color: var(--text-faint);
+  text-align: right;
+}
+
+.telemetry-result {
+  display: grid;
+  grid-template-columns: auto auto;
+  align-items: baseline;
+  column-gap: 6px;
+  min-width: 132px;
+  padding: 5px 9px;
+  border: 1px solid var(--accent-2);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  font-family: var(--font-mono);
+}
+
+.telemetry-result > span {
+  color: var(--text-muted);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.telemetry-result > strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 14px;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.telemetry-result > small {
+  grid-column: 1 / -1;
+  margin-top: 2px;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.telemetry-result output {
+  color: var(--text);
+  font-family: inherit;
+  font-weight: 600;
+}
+
 .chart-wrap {
   position: relative;
   width: 100%;
@@ -628,6 +793,18 @@ button.is-busy::before {
 
 .sensor-channel-list .channel-card {
   min-height: 0;
+}
+
+.sensor-channel-list .channel-card.stable {
+  border-color: #338ec8;
+  background: #122d3d;
+  box-shadow: inset 3px 0 0 #5ab8f0;
+}
+
+/* A full-bleed module uses 100vw; clip the scrollbar-width overshoot so the
+   Running screen never gains a horizontal page scrollbar. */
+.shell {
+  overflow-x: clip;
 }
 
 @media (max-width: 900px) {

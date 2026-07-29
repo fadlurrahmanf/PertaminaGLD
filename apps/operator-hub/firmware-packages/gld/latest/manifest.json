@@ -4,22 +4,22 @@
   "deviceId": "ANY",
   "boardProfile": "WROOM-1U-N16R8",
   "environment": "gld",
-  "firmwareVersion": "0.8.14",
+  "firmwareVersion": "0.8.18",
   "protocolVersion": "0.2.0",
   "configSchemaVersion": "0.1.0",
   "chip": "esp32s3",
   "baud": 460800,
-  "createdAtUtc": "20260728T070050Z",
+  "createdAtUtc": "20260728T152131Z",
   "source": {
-    "gitCommit": "ac18d1f3dd3e65230783fb1b6f3a994b7bd36ea9",
+    "gitCommit": "095756fc6366f349541365be1b9959f2a9178f6d",
     "gitTreeState": "operator-hub-auto",
     "platformioCoreVersion": "PlatformIO post-build hook",
-    "platformioIniSha256": "c4dee057d1994a6ef0f5dda5ee997f0f4d66ac82005cd0ba02835380f117c700",
+    "platformioIniSha256": "7cd4d86c60881e4eabbf28dd26f3352f4ef5f14c4b99127eaa21d7ca59db7671",
     "buildCommand": "pio run -e gld",
-    "buildStartedAtUtc": "20260728T070050Z",
-    "buildCompletedAtUtc": "20260728T070050Z"
+    "buildStartedAtUtc": "20260728T152131Z",
+    "buildCompletedAtUtc": "20260728T152131Z"
   },
-  "flashSetSha256": "6c333e968a01c90f4846db3d15c544178605b8aa3c42f49f16569e18bd406177",
+  "flashSetSha256": "15def9a9fe918836e229f9868886cae2ab2422284f1e258498ec2daaebf1bbbf",
   "flashFiles": [
     {
       "path": "bootloader.bin",
@@ -42,8 +42,8 @@
     {
       "path": "firmware.bin",
       "offset": "0x00010000",
-      "size": 1012272,
-      "sha256": "381641a21939215935d6257c8f9629a347aff62c3bb933c49f4a693098059ec4"
+      "size": 1017296,
+      "sha256": "f6af49e17bd81d5f7b933ee366e883b41b9f9c217af90989fd40eb53c3c54815"
     }
   ]
 }

@@ -71,6 +71,12 @@ export function initialDatasetSession() {
     outputPath: "Waiting for session",
     fileName: "",
     configConfirmed: false,
+    commandAccepted: false,
+    firmwareRunning: false,
+    appendChain: Promise.resolve(),
+    appendPending: 0,
+    appendWritten: 0,
+    appendFailed: 0,
     saved: false,
     nullingFirst: false,
     lastEvent: "No dataset command sent.",
@@ -133,6 +139,9 @@ export const state = {
     channels: Array.from({ length: 8 }, (_, index) => ({
       channel: index, sensor: SENSOR_NAMES[index], nullingOk: false, tested: false, pass: false, timestamp: ""
     })),
+    // Last complete profile read from the GLD's NVS through GET_QC_STATUS.
+    // This intentionally remains separate from live NULLING_* log candidates.
+    nullingProfile: { valid: false, profileId: 0, dacCode: [], baselineV: [], afterV: [], channelOk: [] },
     activeTab: "all",
     activeGroup: "mq",
     latchOn: false,
@@ -176,6 +185,10 @@ export const elements = {
   refreshPortsBtn: $("refreshPortsBtn"),
   refreshLoopBtn: $("refreshLoopBtn"),
   rangeSelect: $("rangeSelect"),
+  telemetryMinuteProgress: $("telemetryMinuteProgress"),
+  telemetryMinuteProgressValue: $("telemetryMinuteProgressValue"),
+  telemetryBaselineProgress: $("telemetryBaselineProgress"),
+  telemetryBaselineProgressValue: $("telemetryBaselineProgressValue"),
   sensorChart: $("sensorChart"),
   legend: $("legend"),
   serialLog: $("serialLog"),

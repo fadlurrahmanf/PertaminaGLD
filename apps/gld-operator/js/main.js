@@ -12,10 +12,10 @@ import {
 } from "./bridge-client.js";
 import { requireUnlock } from "./security.js";
 import {
-  sendCommand, applyAndAlert, togglePolling, stopPolling, renderSensorCheck, toggleAlarmMute, updateAlarmState
+  sendCommand, applyAndAlert, togglePolling, stopPolling, renderSensorCheck, toggleAlarmMute, updateAlarmState, updateTelemetryCollectionProgress
 } from "./serial-protocol.js";
-import { drawChart, renderLegend, pruneHistory, exportCsv } from "./chart.js";
-import { applyNullingConfig, updateNullingMeta, renderNullingChannels } from "./nulling.js";
+import { drawChart, renderLegend, exportCsv } from "./chart.js";
+import { applyNullingConfig, requestFullNulling, updateNullingMeta, renderNullingChannels } from "./nulling.js";
 import {
   renderDatasetSession, applyGldSettings, publishDatasetCommand, confirmDatasetConfig,
   downloadDatasetCsv, openDatasetFolder, clearDatasetSession, useLocalhost,
@@ -51,6 +51,19 @@ function setupEvents() {
     await withBusy(button, "Restarting...", () => applyAndAlert("RESTART", "RESTART", "Restart GLD"));
   });
   $("runningSettingsBtn")?.addEventListener("click", () => setPanelOpen($("runningSettingsPanel"), true));
+  $("bindModelToNullingProfileBtn")?.addEventListener("click", async () => {
+    const profileId = state.status?.model?.activeNullingProfileId;
+    const confirmed = await showConfirm(
+      `Use the latest complete Nulling profile${Number.isFinite(profileId) ? ` #${profileId}` : ""} for the installed model? This saves an explicit NVS binding. A later Nulling run will require this action again.`,
+      "warn",
+      "Bind Model to Nulling Profile"
+    );
+    if (!confirmed) return;
+    await withBusy($("bindModelToNullingProfileBtn"), "Binding...", async () => {
+      await applyAndAlert("BIND_MODEL_TO_ACTIVE_NULLING_PROFILE", "BIND_MODEL_TO_ACTIVE_NULLING_PROFILE", "Bind Model to Nulling Profile");
+      sendCommand("GET_STATUS");
+    });
+  });
   $("datasetSettingsBtn")?.addEventListener("click", () => {
     setPanelOpen($("datasetSettingsPanel"), true);
     refreshGldAesKeyStatus();
@@ -64,20 +77,16 @@ function setupEvents() {
   elements.manualPortInput.addEventListener("change", saveForm);
   elements.portSelect.addEventListener("change", updateSelectedPortDetail);
   document.querySelectorAll(".poll-btn").forEach((button) => button.addEventListener("click", togglePolling));
-  elements.rangeSelect.addEventListener("change", () => {
-    pruneHistory();
-    drawChart();
-  });
-  $("datasetRangeSelect")?.addEventListener("change", () => {
-    pruneHistory();
-    drawChart();
-  });
+  bindChartRangeSlider(elements.rangeSelect, $("rangeValue"));
+  bindChartRangeSlider($("datasetRangeSelect"), $("datasetRangeValue"));
   $("clearChartBtn").addEventListener("click", () => {
     state.history = [];
+    updateTelemetryCollectionProgress();
     drawChart();
   });
   $("datasetClearChartBtn")?.addEventListener("click", () => {
     state.history = [];
+    updateTelemetryCollectionProgress();
     drawChart();
   });
   $("exportCsvBtn").addEventListener("click", exportCsv);
@@ -142,7 +151,7 @@ function setupEvents() {
   elements.addSlotBtn.addEventListener("click", addFleetSlot);
   elements.runNullingNowBtn.addEventListener("click", () => {
     switchTab("nulling");
-    sendCommand("SET_MODE nulling");
+    requestFullNulling();
   });
   $("saveSessionLogBtn")?.addEventListener("click", () => saveSessionLog(state.dataset.sessionId || stamp(), "serial"));
 
@@ -150,7 +159,10 @@ function setupEvents() {
     button.addEventListener("click", () => sendCommand(button.dataset.command));
   });
   document.querySelectorAll("[data-mode]").forEach((button) => {
-    button.addEventListener("click", () => sendCommand(`SET_MODE ${button.dataset.mode}`));
+    button.addEventListener("click", () => {
+      if (button.dataset.mode === "nulling") requestFullNulling();
+      else sendCommand(`SET_MODE ${button.dataset.mode}`);
+    });
   });
   document.querySelectorAll(".tab").forEach((button) => {
     button.addEventListener("click", () => {
@@ -170,6 +182,20 @@ function setupEvents() {
     });
   });
   window.addEventListener("resize", drawChart);
+}
+
+function bindChartRangeSlider(slider, output) {
+  if (!slider || !output) return;
+  const sync = () => {
+    const minutes = Math.max(1, Math.round((Number(slider.value) || 60) / 60));
+    const text = `${minutes} min`;
+    output.value = text;
+    output.textContent = text;
+    slider.setAttribute("aria-valuetext", text);
+    drawChart();
+  };
+  slider.addEventListener("input", sync);
+  sync();
 }
 
 // Restores the operator's last session (active tab, QC sub-tab/latch, and -

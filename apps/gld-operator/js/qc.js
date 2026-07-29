@@ -9,7 +9,7 @@ import { $, elements, state, SENSOR_NAMES, SENSOR_STATUS_NAMES } from "./state.j
 import { sendCommand, sendCommandAndWaitAck, togglePolling, channelIndexFromLog, tokenValue } from "./serial-protocol.js";
 import { showAlert, showConfirm, withBusy, saveUiSession, setPanelOpen, downloadText, csvCell, stamp, onAppendLog } from "./ui.js";
 import { drawOneChart, drawFullScaleSweepChart } from "./chart.js";
-import { renderNullingChannels, DAC_CODE_MAX } from "./nulling.js";
+import { renderNullingChannels, DAC_CODE_MAX, requestFullNulling } from "./nulling.js";
 
 // Single-channel nulling runs the same physical search algorithm as a full
 // 8-channel nulling pass, just for one channel - it can legitimately take
@@ -29,12 +29,41 @@ function emptyQcChannels() {
   }));
 }
 
+function emptyNullingProfile() {
+  return { valid: false, profileId: 0, dacCode: [], baselineV: [], afterV: [], channelOk: [] };
+}
+
+function normalizeNullingProfile(payload) {
+  const profile = payload?.nullingProfile;
+  const arrays = [profile?.dacCode, profile?.baselineV, profile?.afterV, profile?.channelOk];
+  if (profile?.valid !== true || !Number.isInteger(Number(profile.profileId)) || Number(profile.profileId) <= 0 ||
+      arrays.some((values) => !Array.isArray(values) || values.length !== 8)) {
+    return emptyNullingProfile();
+  }
+
+  const dacCode = profile.dacCode.map(Number);
+  const baselineV = profile.baselineV.map(Number);
+  const afterV = profile.afterV.map(Number);
+  if (![...dacCode, ...baselineV, ...afterV].every(Number.isFinite)) return emptyNullingProfile();
+  return {
+    valid: true,
+    profileId: Number(profile.profileId),
+    dacCode,
+    baselineV,
+    afterV,
+    channelOk: profile.channelOk.map(Boolean)
+  };
+}
+
 // Called when the active fleet slot changes (a different GLD's port becomes
 // the one shown in the tabs) so stale QC verdicts from the previous board
 // don't linger on screen until the next GET_QC_STATUS reply arrives.
 export function resetQcStatus() {
   state.qc.channels = emptyQcChannels();
+  state.qc.nullingProfile = emptyNullingProfile();
   renderQc();
+  renderNullingChannels();
+  renderQcNullingViews();
 }
 
 export function updateQcStatus(payload) {
@@ -51,6 +80,7 @@ export function updateQcStatus(payload) {
       timestamp: match.timestamp || ""
     };
   });
+  state.qc.nullingProfile = normalizeNullingProfile(payload);
   renderQc();
   // Freshly-known nullingOk can flip a channel's card from "Waiting" to
   // "Done (saved)" in both the Nulling tab and QC's own grids without
@@ -402,6 +432,7 @@ function buildTplPanel() {
 const fullScaleSweep = {
   channel: null,
   running: false,
+  cancelRequested: false,
   points: [],
   statusText: "Click Start to sweep MCP min to max."
 };
@@ -422,6 +453,7 @@ function fullScaleSweepModalEls() {
     tableBody: $("fullScaleSweepTableBody"),
     tableWrap: $("fullScaleSweepTableBody")?.closest(".fullscale-table-wrap"),
     startBtn: $("fullScaleSweepStartBtn"),
+    stopBtn: $("fullScaleSweepStopBtn"),
     exportBtn: $("fullScaleSweepExportBtn")
   };
 }
@@ -472,12 +504,14 @@ function renderFullScaleSweepView() {
     if (els.tableWrap) els.tableWrap.scrollTop = els.tableWrap.scrollHeight;
   }
   if (els.startBtn) els.startBtn.disabled = fullScaleSweep.running;
+  if (els.stopBtn) els.stopBtn.disabled = !fullScaleSweep.running || fullScaleSweep.cancelRequested;
   if (els.exportBtn) els.exportBtn.disabled = fullScaleSweep.points.length === 0;
 }
 
 function openFullScaleSweepModal(index) {
   fullScaleSweep.channel = index;
   fullScaleSweep.running = false;
+  fullScaleSweep.cancelRequested = false;
   fullScaleSweep.points = [];
   fullScaleSweep.statusText = "Click Start to sweep MCP min to max.";
   const els = fullScaleSweepModalEls();
@@ -490,6 +524,7 @@ async function startFullScaleSweep() {
   const index = fullScaleSweep.channel;
   if (index == null || fullScaleSweep.running) return;
   fullScaleSweep.running = true;
+  fullScaleSweep.cancelRequested = false;
   fullScaleSweep.points = [];
   fullScaleSweep.statusText = `Sweeping ${SENSOR_NAMES[index]} (CH${index + 1})...`;
   renderFullScaleSweepView();
@@ -511,6 +546,24 @@ async function startFullScaleSweep() {
   }
 }
 
+async function stopFullScaleSweep() {
+  if (!fullScaleSweep.running || fullScaleSweep.cancelRequested) return;
+  fullScaleSweep.cancelRequested = true;
+  fullScaleSweep.statusText = "Stopping sweep and restoring the pre-sweep MCP...";
+  renderFullScaleSweepView();
+  try {
+    const ack = await sendCommandAndWaitAck("CANCEL_FULLSCALE_SWEEP", "CANCEL_FULLSCALE_SWEEP", 10000);
+    if (ack.status !== "ok") throw new Error(ack.message || ack.status || "device rejected cancellation");
+    // Keep Start disabled until FULLSCALE_CANCELLED confirms the DAC was restored.
+    fullScaleSweep.statusText = "Stop accepted; waiting for MCP restore...";
+    renderFullScaleSweepView();
+  } catch (error) {
+    fullScaleSweep.cancelRequested = false;
+    fullScaleSweep.statusText = `Stop GAGAL: ${error.message}`;
+    renderFullScaleSweepView();
+  }
+}
+
 function exportFullScaleSweepCsv() {
   if (!fullScaleSweep.points.length) return;
   const sensor = fullScaleSweep.channel != null ? SENSOR_NAMES[fullScaleSweep.channel] : "unknown";
@@ -526,6 +579,7 @@ export function appendFullScaleSweep(line) {
 
   if (line.startsWith("FULLSCALE_START")) {
     fullScaleSweep.running = true;
+    fullScaleSweep.cancelRequested = false;
     fullScaleSweep.points = [];
     fullScaleSweep.statusText = `Sweeping ${SENSOR_NAMES[ch]} (CH${ch + 1})...`;
     renderFullScaleSweepView();
@@ -543,10 +597,20 @@ export function appendFullScaleSweep(line) {
     }
   } else if (line.startsWith("FULLSCALE_BLOCKED")) {
     fullScaleSweep.running = false;
+    fullScaleSweep.cancelRequested = false;
     fullScaleSweep.statusText = `Sweep blocked: ${tokenValue(line, "status") || "hardware not ready"}`;
+    renderFullScaleSweepView();
+  } else if (line.startsWith("FULLSCALE_CANCELLED")) {
+    fullScaleSweep.running = false;
+    fullScaleSweep.cancelRequested = false;
+    const restored = tokenValue(line, "restoreOk") === "1";
+    fullScaleSweep.statusText = restored
+      ? `Sweep stopped - ${fullScaleSweep.points.length} points captured, MCP restored. Ready to start again.`
+      : "Sweep stopped, but MCP restoration FAILED. Reconnect and run Boot Check before starting again.";
     renderFullScaleSweepView();
   } else if (line.startsWith("FULLSCALE_DONE")) {
     fullScaleSweep.running = false;
+    fullScaleSweep.cancelRequested = false;
     const status = tokenValue(line, "status") || "Unknown";
     fullScaleSweep.statusText = status === "Ok"
       ? `Sweep complete - ${fullScaleSweep.points.length} points captured, DAC restored.`
@@ -1017,7 +1081,7 @@ export function initQcTab() {
   for (let index = 0; index < 8; index += 1) panels.append(buildChannelPanel(index));
 
   $("qcRefreshBtn")?.addEventListener("click", () => sendCommand("GET_QC_STATUS"));
-  $("qcRunNullingBtn")?.addEventListener("click", () => sendCommand("SET_MODE nulling"));
+  $("qcRunNullingBtn")?.addEventListener("click", requestFullNulling);
   $("qcResetAllBtn")?.addEventListener("click", () => {
     const button = $("qcResetAllBtn");
     withBusy(button, "Resetting...", resetAllQc);
@@ -1038,6 +1102,7 @@ export function initQcTab() {
   }
 
   $("fullScaleSweepStartBtn")?.addEventListener("click", startFullScaleSweep);
+  $("fullScaleSweepStopBtn")?.addEventListener("click", stopFullScaleSweep);
   $("fullScaleSweepExportBtn")?.addEventListener("click", exportFullScaleSweepCsv);
 
   applyQcLatchVisibility();

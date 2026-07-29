@@ -4,12 +4,34 @@
 // the signature sweep-meter visualizing the binary-search bracket live.
 
 import { $, elements, state, SENSOR_NAMES } from "./state.js";
-import { appendLog, numberField, stamp } from "./ui.js";
-import { tokenValue, channelIndexFromLog, applyAndAlert } from "./serial-protocol.js";
+import { appendLog, numberField, stamp, showAlert, showConfirm } from "./ui.js";
+import { tokenValue, channelIndexFromLog, applyAndAlert, sendCommand, sendCommandAndWaitAck } from "./serial-protocol.js";
 import { saveSessionLog } from "./dataset.js";
 import { renderQcNullingViews } from "./qc.js";
 
 export const DAC_CODE_MAX = 4095;
+
+// Session-only snapshot of the profile that existed immediately before a full
+// Nulling run. This supports an old-to-new MCP comparison without persisting
+// another profile on the GLD.
+let previousNullingProfile = null;
+
+function capturePreviousNullingProfile() {
+  const profile = state.qc?.nullingProfile;
+  if (!profile?.valid || !Array.isArray(profile.dacCode) || profile.dacCode.length !== 8) {
+    previousNullingProfile = null;
+    return;
+  }
+  previousNullingProfile = {
+    profileId: profile.profileId,
+    dacCode: profile.dacCode.map((value) => Number(value))
+  };
+}
+
+function previousMcpForChannel(index) {
+  const value = Number(previousNullingProfile?.dacCode?.[index]);
+  return Number.isFinite(value) ? value : null;
+}
 
 export function latestFeatureOrderForNulling() {
   const statusOrder = state.status?.telemetry?.featureOrder;
@@ -94,6 +116,16 @@ function initNullingStages() {
     },
     failStage: "", failReason: ""
   };
+}
+
+function savedProfileChannel(index) {
+  const profile = state.qc?.nullingProfile;
+  if (!profile?.valid || !profile.channelOk?.[index]) return null;
+  const dac = Number(profile.dacCode?.[index]);
+  const baseline = Number(profile.baselineV?.[index]);
+  const after = Number(profile.afterV?.[index]);
+  if (![dac, baseline, after].every(Number.isFinite)) return null;
+  return { profileId: profile.profileId, dac, baseline, after };
 }
 
 function nullingChannelsFromLogs(logs, featureOrder = SENSOR_NAMES) {
@@ -224,10 +256,17 @@ function nullingChannelsFromLogs(logs, featureOrder = SENSOR_NAMES) {
   // silent for a channel, fall back to it instead of showing a stale
   // "Waiting/No nulling data" for a channel that is actually already OK.
   for (const channel of channels) {
-    if (channel.tone === "idle" && state.qc.channels[channel.index]?.nullingOk) {
+    channel.saved = savedProfileChannel(channel.index);
+    if (channel.tone === "idle" && channel.saved) {
       channel.stage = "Done (saved)";
       channel.tone = "pass";
-      channel.detail = "Nulling OK - saved on the GLD from a previous run";
+      channel.detail = `Saved profile: #${channel.saved.profileId}`;
+    } else if (channel.tone === "idle" && state.qc.channels[channel.index]?.nullingOk) {
+      // Compatibility with an older firmware that reports the boolean QC
+      // status but cannot yet provide its saved numeric profile.
+      channel.stage = "Done (saved)";
+      channel.tone = "pass";
+      channel.detail = "Nulling OK - update firmware to view saved values";
     }
   }
 
@@ -312,6 +351,21 @@ function nullingDacSourceRow(channel) {
   if (channel.stage !== "Done" || !c.done) return null;
   const bumpText = c.bumps > 0 ? ` (+${c.bumps} bump)` : "";
   return { label: "Final DAC", value: `${channel.dac}${bumpText}` };
+}
+
+function nullingMcpRow(channel) {
+  // The service log supplies the final DAC before GET_QC_STATUS returns the
+  // newly saved NVS profile. Prefer it so a completed run never briefly shows
+  // the preceding profile as its own result.
+  const current = Number(channel.tone === "pass" && channel.stage === "Done" ? channel.dac : channel.saved?.dac);
+  if (!Number.isFinite(current)) return null;
+  const previous = previousMcpForChannel(channel.index);
+  if (!Number.isFinite(previous)) return `MCP: ${current}`;
+  const delta = current - previous;
+  const deltaText = delta > 0 ? `+${delta}` : String(delta);
+  const previousProfile = Number(previousNullingProfile?.profileId);
+  const previousLabel = Number.isFinite(previousProfile) ? `previous #${previousProfile}: ${previous}` : `previous ${previous}`;
+  return `MCP: ${current} · ${previousLabel} · Δ ${deltaText}`;
 }
 
 // ---- signature element: sweep meter ----
@@ -419,11 +473,11 @@ export function renderNullingChannels(container = elements.nullingChannels, chan
     if (sweepMeter) card.append(sweepMeter);
     card.append(detail);
 
-    const extra = [channel.dac ? `DAC ${channel.dac}` : "", channel.baseline ? `base ${channel.baseline}` : "", channel.after ? `after ${channel.after}` : ""].filter(Boolean);
-    if (extra.length) {
-      const extraLine = document.createElement("small");
-      extraLine.textContent = extra.join(" - ");
-      card.append(extraLine);
+    const mcpRow = nullingMcpRow(channel);
+    if (mcpRow) {
+      const savedLine = document.createElement("small");
+      savedLine.textContent = mcpRow;
+      card.append(savedLine);
     }
 
     const stageRows = nullingStageDetailRows(channel.stages);
@@ -507,9 +561,32 @@ export async function applyNullingConfig() {
     appendLog("NULLING_CONFIG_REJECTED thresholdV must be > 0", "in");
     return;
   }
-  if (!Number.isFinite(minFinalV)) {
-    appendLog("NULLING_CONFIG_REJECTED minFinalV must be a number", "in");
+  if (!Number.isFinite(minFinalV) || minFinalV < 0) {
+    appendLog("NULLING_CONFIG_REJECTED minFinalV must be >= 0", "in");
     return;
   }
   await applyAndAlert(`SET_NULLING_CONFIG_JSON ${JSON.stringify({ thresholdV, minFinalV })}`, "SET_NULLING_CONFIG", "Apply Thresholds");
+}
+
+export async function requestFullNulling() {
+  const alarmLatched = state.status?.alarmLatched === true;
+  const confirmed = await showConfirm(
+    alarmLatched
+      ? "Alarm latch aktif. Konfirmasi hanya jika Anda sudah memastikan area/sensor clean air secara fisik. Ini dicatat sebagai acknowledgement operator, tidak menguji sensor dan tidak mematikan output alarm saat ini. Lanjutkan Nulling?"
+      : "Pastikan area/sensor clean air secara fisik sebelum melanjutkan. GLD akan restart dan menjalankan nulling pada seluruh 8 channel. Lanjutkan Nulling?",
+    "Confirm Clean Air Before Nulling"
+  );
+  if (!confirmed) return;
+
+  try {
+    capturePreviousNullingProfile();
+    const ack = await sendCommandAndWaitAck("VERIFY_CLEAN_AIR_FOR_NULLING", "VERIFY_CLEAN_AIR_FOR_NULLING");
+    if (ack.status !== "ok") {
+      await showAlert(`Nulling dibatalkan: ${ack.message || ack.status}`, "error", "Alarm Latch");
+      return;
+    }
+    await sendCommand("SET_MODE nulling");
+  } catch (error) {
+    await showAlert(`Nulling dibatalkan: ${error.message}`, "error", "Alarm Latch");
+  }
 }

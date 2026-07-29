@@ -65,6 +65,10 @@ bool GldDacMux::writeAll(uint16_t value) {
     return true;
 }
 
+uint16_t GldDacMux::lastValue(uint8_t sensorChannel) const {
+    return sensorChannel < board::SENSOR_COUNT ? lastValue_[sensorChannel] : 0;
+}
+
 bool GldDacMux::selectMux(uint8_t muxChannel) {
     return mux != nullptr && mux->selectChannel(muxChannel);
 }

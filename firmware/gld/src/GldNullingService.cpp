@@ -104,8 +104,20 @@ float targetForBaseline(float baselineV, float thresholdV) {
     return baselineV + thresholdV;
 }
 
+float requiredFinalVoltage(const GldNullingConfig& config) {
+    // A zero floor makes positivity/non-negativity a hard safety invariant,
+    // including for an old NVS config that may contain a negative minFinalV.
+    return fmaxf(config.minFinalV, 0.0f);
+}
+
 bool crossedBaselineThreshold(float voltage, float baselineV, float thresholdV) {
     return (voltage - baselineV) >= thresholdV;
+}
+
+bool meetsNullingTarget(float voltage, float baselineV, float thresholdV,
+                        const GldNullingConfig& config) {
+    return crossedBaselineThreshold(voltage, baselineV, thresholdV) &&
+           voltage >= requiredFinalVoltage(config);
 }
 
 Snapshot readAverage(GldAds1256Reader& ads, uint8_t ch, uint8_t count,
@@ -135,7 +147,8 @@ bool findRange(GldAds1256Reader& ads, GldDacMux& dac,
     uint16_t previous = 0;
     uint16_t current  = 1;
     const float thresholdV = dynamicThresholdForBaseline(baselineV, config);
-    const float targetV = targetForBaseline(baselineV, thresholdV);
+    const float targetV = fmaxf(targetForBaseline(baselineV, thresholdV),
+                                 requiredFinalVoltage(config));
     emitLog(logFn, "NULLING_EXP_START ch=%u sensor=%s baseline=%.6f threshold=%.6f minThreshold=%.6f ratio=%.6f target=%.6f",
             static_cast<unsigned>(ch), sensorName(ch), baselineV, thresholdV,
             config.thresholdV, BASELINE_THRESHOLD_RATIO, targetV);
@@ -154,7 +167,7 @@ bool findRange(GldAds1256Reader& ads, GldDacMux& dac,
                 static_cast<unsigned>(ch), sensorName(ch),
                 static_cast<unsigned>(current), snap.voltage, delta,
                 snap.valid ? 1u : 0u);
-        if (snap.valid && crossedBaselineThreshold(snap.voltage, baselineV, thresholdV)) {
+        if (snap.valid && meetsNullingTarget(snap.voltage, baselineV, thresholdV, config)) {
             outLow  = previous;
             outHigh = current;
             emitLog(logFn, "NULLING_EXP_RANGE ch=%u sensor=%s low=%u high=%u",
@@ -186,7 +199,8 @@ uint16_t binarySearch(GldAds1256Reader& ads, GldDacMux& dac,
                       GldNullingLogFn logFn, GldNullingTickFn tickFn,
                       const GldNullingConfig& config) {
     const float thresholdV = dynamicThresholdForBaseline(baselineV, config);
-    const float targetV = targetForBaseline(baselineV, thresholdV);
+    const float targetV = fmaxf(targetForBaseline(baselineV, thresholdV),
+                                 requiredFinalVoltage(config));
     emitLog(logFn, "NULLING_BIN_START ch=%u sensor=%s low=%u high=%u threshold=%.6f target=%.6f",
             static_cast<unsigned>(ch), sensorName(ch),
             static_cast<unsigned>(low), static_cast<unsigned>(high),
@@ -202,7 +216,7 @@ uint16_t binarySearch(GldAds1256Reader& ads, GldDacMux& dac,
                 static_cast<unsigned>(low), static_cast<unsigned>(high),
                 static_cast<unsigned>(mid), snap.voltage, delta,
                 snap.valid ? 1u : 0u, writeOk ? 1u : 0u);
-        if (!snap.valid || !crossedBaselineThreshold(snap.voltage, baselineV, thresholdV)) {
+        if (!snap.valid || !meetsNullingTarget(snap.voltage, baselineV, thresholdV, config)) {
             low = mid;
         } else {
             high = mid;
@@ -240,9 +254,10 @@ bool confirmCode(GldAds1256Reader& ads, GldDacMux& dac,
         start = max<int>(board::GLD_DAC_CODE_MIN, end - windowSize + 1);
     }
     const float thresholdV = dynamicThresholdForBaseline(baselineV, config);
-    const float targetV = targetForBaseline(baselineV, thresholdV);
+    const float targetV = fmaxf(targetForBaseline(baselineV, thresholdV),
+                                 requiredFinalVoltage(config));
     emitLog(logFn, "NULLING_CONFIRM_START ch=%u sensor=%s start=%d end=%d minFinalV=%.6f threshold=%.6f target=%.6f wide=%u",
-            static_cast<unsigned>(ch), sensorName(ch), start, end, config.minFinalV,
+            static_cast<unsigned>(ch), sensorName(ch), start, end, requiredFinalVoltage(config),
             thresholdV, targetV, wideSearch ? 1u : 0u);
 
     struct Candidate { uint16_t code; float voltage; };
@@ -254,7 +269,7 @@ bool confirmCode(GldAds1256Reader& ads, GldDacMux& dac,
         settle(tickFn);
         const Snapshot snap = readAverage(ads, ch, CONFIRM_COUNT, tickFn);
         const float delta = snap.voltage - baselineV;
-        const bool aboveMin = snap.voltage >= config.minFinalV;
+        const bool aboveMin = snap.voltage >= requiredFinalVoltage(config);
         const bool crossed = crossedBaselineThreshold(snap.voltage, baselineV, thresholdV);
         emitLog(logFn, "NULLING_CONFIRM_STEP ch=%u sensor=%s code=%d voltage=%.9f delta=%.6f valid=%u aboveMin=%u crossed=%u write=%u",
                 static_cast<unsigned>(ch), sensorName(ch), code,
@@ -263,7 +278,7 @@ bool confirmCode(GldAds1256Reader& ads, GldDacMux& dac,
 
         if (!writeOk || !snap.valid) continue;
 
-        if (crossed) {
+        if (crossed && aboveMin) {
             if (candidateCount < static_cast<int>(CONFIRM_WINDOW_WIDE)) {
                 candidates[candidateCount++] = {static_cast<uint16_t>(code), snap.voltage};
             }
@@ -286,7 +301,7 @@ bool confirmCode(GldAds1256Reader& ads, GldDacMux& dac,
                 static_cast<unsigned>(candidateCode), verify.voltage, verifyDelta,
                 verify.valid ? 1u : 0u);
 
-        if (verify.valid && crossedBaselineThreshold(verify.voltage, baselineV, thresholdV)) {
+        if (verify.valid && meetsNullingTarget(verify.voltage, baselineV, thresholdV, config)) {
             dacCode = candidateCode;
             emitLog(logFn, "NULLING_CONFIRM_OK ch=%u sensor=%s code=%u voltage=%.9f delta=%.6f threshold=%.6f target=%.6f mode=baseline_threshold_verified",
                     static_cast<unsigned>(ch), sensorName(ch),
@@ -410,9 +425,10 @@ ChannelResult nullOneChannel(GldAds1256Reader& ads, GldDacMux& dac,
     // under the threshold on this independent final read. Keep nudging the DAC
     // code up one LSB at a time and re-checking before failing.
     const float thresholdV = dynamicThresholdForBaseline(r.baselineV, config);
-    const float targetV = targetForBaseline(r.baselineV, thresholdV);
+    const float targetV = fmaxf(targetForBaseline(r.baselineV, thresholdV),
+                                 requiredFinalVoltage(config));
     uint8_t finalBumps = 0;
-    while (!crossedBaselineThreshold(after.voltage, r.baselineV, thresholdV) &&
+    while (!meetsNullingTarget(after.voltage, r.baselineV, thresholdV, config) &&
            finalBumps < FINAL_CHECK_MAX_BUMPS &&
            selected < board::GLD_DAC_CODE_MAX) {
         ++selected;
@@ -441,7 +457,7 @@ ChannelResult nullOneChannel(GldAds1256Reader& ads, GldDacMux& dac,
     }
 
     const float afterDelta = after.voltage - r.baselineV;
-    if (!crossedBaselineThreshold(after.voltage, r.baselineV, thresholdV)) {
+    if (!meetsNullingTarget(after.voltage, r.baselineV, thresholdV, config)) {
         r.errorCode = 7;
         emitLog(logFn, "NULLING_CH_FAIL ch=%u sensor=%s stage=final_check error=%u reason=%s after=%.9f delta=%.6f threshold=%.6f target=%.6f bumps=%u",
                 static_cast<unsigned>(ch), sensorName(ch),
@@ -476,7 +492,7 @@ GldNullingServiceResult runNullingService(GldAds1256Reader& ads,
             static_cast<unsigned>(AVG_COUNT),
             static_cast<unsigned>(CONFIRM_COUNT),
             static_cast<unsigned long>(SETTLE_MS),
-            config.thresholdV, BASELINE_THRESHOLD_RATIO, config.minFinalV);
+            config.thresholdV, BASELINE_THRESHOLD_RATIO, requiredFinalVoltage(config));
 
     if (!ads.ready()) {
         serviceTick(tickFn);
@@ -553,7 +569,8 @@ GldFullScaleSweepResult runFullScaleSweep(GldAds1256Reader& ads,
                                           uint16_t restoreCode,
                                           uint16_t stepSize,
                                           GldNullingLogFn logFn,
-                                          GldNullingTickFn tickFn) {
+                                          GldNullingTickFn tickFn,
+                                          GldFullScaleSweepCancelFn cancelFn) {
     GldFullScaleSweepResult out{};
     out.success = false;
     out.status = GldNullingStatus::Ok;
@@ -584,6 +601,17 @@ GldFullScaleSweepResult runFullScaleSweep(GldAds1256Reader& ads,
     bool anyValidSample = false;
     for (;;) {
         serviceTick(tickFn);
+        if (cancelFn && cancelFn()) {
+            const bool restoreOk = dac.writeDac(channel, restoreCode);
+            settle(tickFn);
+            out.cancelled = true;
+            out.success = restoreOk;
+            if (!restoreOk) out.status = GldNullingStatus::DacNotReady;
+            emitLog(logFn, "FULLSCALE_CANCELLED ch=%u sensor=%s restoreCode=%u restoreOk=%u",
+                    static_cast<unsigned>(channel), sensorName(channel),
+                    static_cast<unsigned>(restoreCode), restoreOk ? 1u : 0u);
+            return out;
+        }
         const bool writeOk = dac.writeDac(channel, static_cast<uint16_t>(code));
         settle(tickFn);
         const Snapshot snap = readAverage(ads, channel, AVG_COUNT, tickFn);
@@ -638,7 +666,12 @@ bool loadNullingConfig(GldNullingConfig& out) {
     if (!prefs.begin(NVS_CONFIG_NAMESPACE, true)) return false;
     const size_t read = prefs.getBytes(NVS_CONFIG_KEY, &out, sizeof(out));
     prefs.end();
-    return read == sizeof(GldNullingConfig) && isNullingConfigValid(out);
+    if (read != sizeof(GldNullingConfig) || !isNullingConfigValid(out)) return false;
+    // Keep an older persisted negative floor from weakening the positive-result
+    // invariant after firmware upgrade. It is normalized in RAM; a subsequent
+    // config Apply persists the normalized value.
+    out.minFinalV = fmaxf(out.minFinalV, 0.0f);
+    return true;
 }
 
 const char* gldNullingStatusName(GldNullingStatus s) {

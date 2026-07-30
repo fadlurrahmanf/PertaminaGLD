@@ -21,6 +21,7 @@ from __future__ import annotations
 import argparse
 import base64
 import binascii
+from collections import deque
 import hashlib
 import hmac
 import json
@@ -150,6 +151,8 @@ class SerialBridge:
         self._lock = threading.Lock()
         self._reader_thread: threading.Thread | None = None
         self._stop = threading.Event()
+        self._recent_lines: deque[dict[str, Any]] = deque(maxlen=160)
+        self._line_sequence = 0
         self.port = ""
         self.baud = 115200
 
@@ -220,6 +223,15 @@ class SerialBridge:
             ser = self._serial
             return {"connected": ser is not None and getattr(ser, "is_open", False), "port": self.port, "baud": self.baud}
 
+    def recent_lines(self, after: int = 0) -> dict[str, Any]:
+        with self._lock:
+            return {"sequence": self._line_sequence, "lines": [item for item in self._recent_lines if item["sequence"] > after]}
+
+    def _record_line(self, line: str) -> None:
+        with self._lock:
+            self._line_sequence += 1
+            self._recent_lines.append({"sequence": self._line_sequence, "line": line})
+
     def write_line(self, line: str, require_connected: bool = True) -> dict[str, Any]:
         if not line.endswith("\n"):
             line += "\n"
@@ -253,6 +265,7 @@ class SerialBridge:
                 raw, pending = pending.split(b"\n", 1)
                 line = raw.decode("utf-8", errors="replace").strip("\r")
                 if line:
+                    self._record_line(line)
                     self._emit("serial_line", {"line": line})
         self._emit("serial_status", {"connected": False})
 
@@ -1112,6 +1125,17 @@ class Handler(SimpleHTTPRequestHandler):
                 return json_response(self, current_wifi_credentials())
             if path == "/api/ports":
                 return json_response(self, {"ports": get_serial_bridge(1).list_ports()})
+            if path == "/api/serial/status":
+                slot = parse_slot((parse_qs(urlparse(self.path).query).get("slot") or [1])[0])
+                return json_response(self, get_serial_bridge(slot).status())
+            if path == "/api/serial/recent":
+                query = parse_qs(urlparse(self.path).query)
+                slot = parse_slot((query.get("slot") or [1])[0])
+                try:
+                    after = max(0, int((query.get("after") or [0])[0]))
+                except (TypeError, ValueError):
+                    after = 0
+                return json_response(self, get_serial_bridge(slot).recent_lines(after))
             if path == "/api/firmware/package":
                 package_env = (parse_qs(urlparse(self.path).query).get("env") or [""])[0]
                 if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", package_env):

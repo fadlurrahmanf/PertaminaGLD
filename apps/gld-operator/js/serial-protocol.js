@@ -119,14 +119,8 @@ export function resetDeviceSnapshot() {
   setText("gasValue", "n/a");
   setText("confidenceValue", "-%");
   setText("powerMode", "Unknown");
-  setText("externalPower", "Unknown");
   setText("batteryValue", "Unknown");
-  setText("batteryValueMirror", "Unknown");
   setText("loraValue", "Unknown");
-  setText("adsHealth", "Unknown");
-  setText("mcpHealth", "Unknown");
-  setText("dacHealth", "Unknown");
-  setText("mlHealth", "Unknown");
   updateAlarmState(false);
   renderSensorCheck();
   resetQcStatus();
@@ -164,19 +158,11 @@ function updateStatus(status) {
 
   const power = status.power || {};
   setText("powerMode", power.mode);
-  setText("externalPower", power.externalPower === true ? "Yes" : power.externalPower === false ? "No" : "Unknown");
   // batteryValid is false whenever the GLD is on external 24V/5V power (no
   // battery sensed) - batteryMv is then a sentinel (65535), not a real
   // reading, so show "-" instead of that raw number.
   const batteryText = power.batteryValid && Number.isFinite(power.batteryMv) ? `${power.batteryMv} mV` : "-";
   setText("batteryValue", batteryText);
-  setText("batteryValueMirror", batteryText);
-
-  const boot = status.bootHealth || {};
-  setText("adsHealth", boot.adsReady === true ? "Ready" : "Not ready");
-  setText("mcpHealth", Number.isFinite(boot.mcpOkCount) ? `${boot.mcpOkCount}/8` : "Unknown");
-  setText("dacHealth", boot.dacReady === true ? "Ready" : "Not ready");
-  setText("mlHealth", boot.mlReady === true ? "Ready" : "Not ready");
 
   const model = status.model || {};
   const bindingStatus = $("modelNullingBindingStatus");
@@ -203,9 +189,17 @@ function maybeAppendTelemetry(status) {
   const telemetry = status.telemetry;
   if (!telemetry || !telemetry.valid || !Array.isArray(telemetry.sensorVoltage)) return;
 
+  // GET_STATUS can arrive more often than the GLD completes an ADS scan. The
+  // firmware's sampleMs is the scan identity; never turn repeated replies for
+  // that same scan into artificial chart/history samples.
+  const sampleMs = Number(telemetry.sampleMs);
+  const previous = state.history.at(-1);
+  if (Number.isFinite(sampleMs) && previous?.sampleMs === sampleMs) return;
+
   const ts = Date.now();
   state.history.push({
     ts,
+    sampleMs: Number.isFinite(sampleMs) ? sampleMs : null,
     deviceId: status.deviceId || state.info?.deviceId || "",
     mode: status.mode || state.mode,
     gasName: telemetry.gasName || formatGas(telemetry.gasClass),

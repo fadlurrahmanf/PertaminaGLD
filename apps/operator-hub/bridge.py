@@ -22,6 +22,7 @@ import subprocess
 import sys
 import threading
 import time
+import urllib.error
 import urllib.request
 import webbrowser
 from http import HTTPStatus
@@ -78,6 +79,222 @@ CHILD_APPS = {
 CREATE_NEW_PROCESS_GROUP = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
 child_processes: dict[str, subprocess.Popen] = {}
 mqtt_degraded = False
+HUB_API_TOKEN = secrets.token_urlsafe(32)
+simple_activity: list[dict[str, object]] = []
+simple_activity_lock = threading.Lock()
+
+
+def json_response(handler: SimpleHTTPRequestHandler, payload: object, status: HTTPStatus = HTTPStatus.OK) -> None:
+    body = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+    handler.send_response(status)
+    handler.send_header("Content-Type", "application/json")
+    handler.send_header("Content-Length", str(len(body)))
+    handler.send_header("Cache-Control", "no-store")
+    handler.end_headers()
+    handler.wfile.write(body)
+
+
+def read_json(handler: SimpleHTTPRequestHandler, limit: int = 16 * 1024) -> dict[str, object]:
+    raw_length = handler.headers.get("Content-Length", "0")
+    try:
+        length = int(raw_length)
+    except ValueError as exc:
+        raise ValueError("invalid Content-Length") from exc
+    if length < 2 or length > limit:
+        raise ValueError("invalid request size")
+    parsed = json.loads(handler.rfile.read(length).decode("utf-8"))
+    if not isinstance(parsed, dict):
+        raise ValueError("JSON object required")
+    return parsed
+
+
+def add_activity(device: str, action: str, detail: str) -> None:
+    item = {"time": time.strftime("%H:%M:%S"), "device": device, "action": action, "detail": detail}
+    with simple_activity_lock:
+        simple_activity.insert(0, item)
+        del simple_activity[12:]
+
+
+def latest_package(device: str) -> dict[str, object]:
+    environment = {"gld": "gld", "ch": "ch", "gw": "gw"}[device]
+    manifest_path = HUB_DIR / "firmware-packages" / environment / "latest" / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    return {"environment": environment, "firmwareVersion": manifest.get("firmwareVersion"), "protocolVersion": manifest.get("protocolVersion")}
+
+
+def child_request(host: str, device: str, method: str, path: str, payload: dict[str, object] | None = None) -> dict[str, object]:
+    """Server-side allow-listed proxy. Child CSRF tokens never reach the UI."""
+    cfg = CHILD_APPS[device]
+    base = f"http://{host}:{cfg['port']}"
+    try:
+        with urllib.request.urlopen(f"{base}/api/health", timeout=2) as health:
+            token = json.loads(health.read().decode("utf-8")).get("csrfToken")
+        if not isinstance(token, str) or len(token) < 16:
+            raise RuntimeError("child bridge did not provide an API token")
+        body = json.dumps(payload).encode("utf-8") if payload is not None else None
+        req = urllib.request.Request(f"{base}{path}", data=body, method=method)
+        req.add_header("X-GLD-Bridge-Token" if device == "gld" else "X-CH-Bridge-Token" if device == "ch" else "X-GW-Bridge-Token", token)
+        if body is not None:
+            req.add_header("Content-Type", "application/json")
+        with urllib.request.urlopen(req, timeout=12) as response:
+            parsed = json.loads(response.read().decode("utf-8"))
+            return parsed if isinstance(parsed, dict) else {"result": parsed}
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")[:300]
+        raise RuntimeError(detail or f"child request failed ({exc.code})") from exc
+
+
+def recent_matching(host: str, device: str, prefix: str, after: int, timeout: float = 5.0) -> dict[str, object] | None:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        recent = child_request(host, device, "GET", f"/api/serial/recent?slot=1&after={after}")
+        for item in recent.get("lines", []):
+            line = str(item.get("line", ""))
+            if line.startswith(prefix):
+                raw = line[len(prefix):].strip()
+                try:
+                    parsed = json.loads(raw)
+                    if isinstance(parsed, dict):
+                        return parsed
+                except json.JSONDecodeError:
+                    continue
+        time.sleep(0.15)
+    return None
+
+
+def simple_device_state(host: str, device: str, query: bool = False) -> dict[str, object]:
+    status = child_request(host, device, "GET", "/api/serial/status?slot=1")
+    state: dict[str, object] = {"device": device, "connected": bool(status.get("connected")), "port": status.get("port"), "info": None}
+    if not state["connected"]:
+        return state
+    recent = child_request(host, device, "GET", "/api/serial/recent?slot=1&after=0")
+    after = int(recent.get("sequence") or 0)
+    if query:
+        command = "GET_GATEWAY_ADDRESS" if device == "gw" else "GET_INFO"
+        child_request(host, device, "POST", "/api/serial/write", {"slot": 1, "line": command})
+    prefix = "GW_GATEWAY_ADDRESS_JSON" if device == "gw" else "GLD_INFO_JSON" if device == "gld" else "CH_INFO_JSON"
+    info = recent_matching(host, device, prefix, after if query else 0, 2.5 if query else 0.1)
+    if device == "gw" and query and info:
+        current = child_request(host, device, "GET", "/api/serial/recent?slot=1&after=0")
+        child_request(host, device, "POST", "/api/serial/write", {"slot": 1, "line": "GET_STATUS"})
+        runtime = recent_matching(host, device, "GW_STATUS_JSON", int(current.get("sequence") or 0), 2.5)
+        if runtime:
+            info.update(runtime)
+    elif device == "gld" and query and info:
+        current = child_request(host, device, "GET", "/api/serial/recent?slot=1&after=0")
+        child_request(host, device, "POST", "/api/serial/write", {"slot": 1, "line": "GET_STATUS"})
+        runtime = recent_matching(host, device, "GLD_STATUS_JSON", int(current.get("sequence") or 0), 2.5)
+        if runtime and "radioReady" not in info:
+            lora = runtime.get("lora")
+            if isinstance(lora, dict) and isinstance(lora.get("beginState"), (int, float)):
+                info["radioReady"] = lora["beginState"] == 0
+    state["info"] = info
+    return state
+
+
+def wait_for_readback(host: str, device: str, port: str, timeout: float = 20.0) -> dict[str, object]:
+    """After a deliberate reboot/flash, wait for the serial device then read its identity again."""
+    deadline = time.monotonic() + timeout
+    last_error = "device did not reappear"
+    while time.monotonic() < deadline:
+        time.sleep(1.0)
+        try:
+            state = simple_device_state(host, device, query=True)
+            if state.get("connected") and state.get("info"):
+                return state
+        except Exception as exc:
+            last_error = str(exc)
+        try:
+            child_request(host, device, "POST", "/api/serial/disconnect", {"slot": 1})
+            child_request(host, device, "POST", "/api/serial/connect", {"slot": 1, "port": port, "baud": 115200})
+        except Exception as exc:
+            last_error = str(exc)
+    raise RuntimeError(f"device did not return for verified read-back: {last_error}")
+
+
+def send_and_confirm(host: str, device: str, line: str, ack_marker: str) -> dict[str, object]:
+    before = child_request(host, device, "GET", "/api/serial/recent?slot=1&after=0")
+    sequence = int(before.get("sequence") or 0)
+    sent = child_request(host, device, "POST", "/api/serial/write", {"slot": 1, "line": line})
+    deadline = time.monotonic() + 5.0
+    while time.monotonic() < deadline:
+        recent = child_request(host, device, "GET", f"/api/serial/recent?slot=1&after={sequence}")
+        for item in recent.get("lines", []):
+            text = str(item.get("line", ""))
+            if ack_marker not in text:
+                continue
+            if "status=error" in text or '"status":"error"' in text or '"status":"rejected"' in text:
+                raise RuntimeError(f"device rejected configuration: {text}")
+            return {"sent": sent, "ack": text}
+        time.sleep(0.15)
+    raise RuntimeError("command sent but no firmware ACK was received; do not assume configuration was saved")
+
+
+def gld_boot_report(status: dict[str, object]) -> dict[str, object]:
+    """Convert the firmware's GLD_STATUS_JSON boot fields into an operator report."""
+    boot = status.get("bootHealth") if isinstance(status.get("bootHealth"), dict) else {}
+    telemetry = status.get("telemetry") if isinstance(status.get("telemetry"), dict) else {}
+    lora = status.get("lora") if isinstance(status.get("lora"), dict) else {}
+
+    def check(label: str, ok: bool | None, detail: str) -> dict[str, object]:
+        return {"label": label, "ok": ok, "detail": detail}
+
+    ads_ready = boot.get("adsReady")
+    ads_ok = ads_ready if isinstance(ads_ready, bool) else None
+    ads_reason = str(boot.get("adsReason") or "")
+    ads_detail = "ADS1256 siap" if ads_ok else (
+        f"ADS1256 tidak siap{'; ' + ads_reason if ads_reason else ''}" if ads_ok is False else "Belum ada bukti boot ADS1256"
+    )
+
+    mcp_values = boot.get("mcpOk")
+    mcp_count = sum(value is True for value in mcp_values) if isinstance(mcp_values, list) else boot.get("mcpOkCount")
+    mcp_known = isinstance(mcp_count, (int, float))
+    mcp_ok = int(mcp_count) >= 8 if mcp_known else None
+    mcp_detail = "MCP4725 terdeteksi pada semua 8 kanal" if mcp_ok else (
+        f"MCP4725 terdeteksi {int(mcp_count) if mcp_known else '?'}/8; periksa kanal TCA, alamat MCP, dan catu daya" if mcp_ok is False else "Belum ada bukti boot MCP4725"
+    )
+
+    control_values = boot.get("mcpControlOk")
+    control_count = sum(value is True for value in control_values) if isinstance(control_values, list) else boot.get("mcpControlOkCount")
+    control_tested = boot.get("mcpControlTested") is True
+    dac_ready = boot.get("dacReady")
+    dac_known = control_tested or isinstance(dac_ready, bool)
+    dac_ok = (int(control_count) >= 8 if control_tested and isinstance(control_count, (int, float)) else dac_ready) if dac_known else None
+    dac_detail = "Uji tulis DAC lulus pada semua kanal" if dac_ok else (
+        f"Uji tulis DAC lulus {int(control_count) if isinstance(control_count, (int, float)) else 0}/8" if control_tested else "DAC tidak siap; periksa MCP4725/TCA dan catu daya"
+    ) if dac_ok is False else "Belum ada bukti uji DAC"
+
+    begin_state = lora.get("beginState")
+    radio_ready = boot.get("radioReady")
+    lora_known = isinstance(radio_ready, bool) or isinstance(begin_state, (int, float))
+    lora_ok = (radio_ready is True or begin_state == 0) if lora_known else None
+    lora_detail = "Radio LoRa siap" if lora_ok else (
+        f"Radio LoRa tidak siap; begin state {begin_state}" if lora_ok is False else "Belum ada bukti boot LoRa"
+    )
+
+    ml_ready = boot.get("mlReady")
+    ml_ok = ml_ready if isinstance(ml_ready, bool) else None
+    ml_detail = "Model ML siap" if ml_ok else ("Model ML tidak siap; periksa artefak model dan PSRAM" if ml_ok is False else "Belum ada bukti boot model ML")
+
+    sensor_status = telemetry.get("sensorStatus")
+    sensor_valid = telemetry.get("valid")
+    sensor_ok = sensor_valid is True and isinstance(sensor_status, list) and len(sensor_status) >= 8 and all(int(value) == 0 for value in sensor_status)
+    sensor_known = sensor_valid is True or ads_ok is False or mcp_ok is False
+    sensor_detail = "Semua 8 pembacaan sensor valid" if sensor_ok else (
+        "Pembacaan sensor belum valid; selesaikan masalah ADS/MCP atau tunggu telemetri" if sensor_known else "Belum ada telemetri sensor setelah boot check"
+    )
+
+    checks = [
+        check("ADS1256", ads_ok, ads_detail),
+        check("MCP4725", mcp_ok, mcp_detail),
+        check("DAC Control", dac_ok, dac_detail),
+        check("LoRa", lora_ok, lora_detail),
+        check("ML Model", ml_ok, ml_detail),
+        check("Sensor Read", sensor_ok if sensor_known else None, sensor_detail),
+    ]
+    passed = sum(item["ok"] is True for item in checks)
+    failed = sum(item["ok"] is False for item in checks)
+    return {"total": len(checks), "passed": passed, "failed": failed, "unknown": len(checks) - passed - failed, "checks": checks}
 
 
 def validate_host(host: str) -> str:
@@ -255,13 +472,219 @@ class Handler(SimpleHTTPRequestHandler):
         pass
 
     def do_GET(self) -> None:  # noqa: N802
-        if self.path.split("?", 1)[0] == "/api/status":
+        path = self.path.split("?", 1)[0]
+        if path == "/api/status":
             self._handle_status()
             return
-        if self.path.split("?", 1)[0] == "/api/preflight":
+        if path == "/api/preflight":
             self._handle_preflight()
             return
+        if path == "/api/simple/bootstrap":
+            return json_response(self, {"apiToken": HUB_API_TOKEN, "activity": simple_activity})
+        if path == "/api/simple/overview":
+            return self._handle_simple_overview()
+        if path == "/api/simple/ports":
+            return self._handle_simple_ports()
         super().do_GET()
+
+    def do_POST(self) -> None:  # noqa: N802
+        try:
+            if self.headers.get("X-Operator-Hub-Token") != HUB_API_TOKEN:
+                return json_response(self, {"error": "invalid API token"}, HTTPStatus.FORBIDDEN)
+            payload = read_json(self)
+            path = self.path.split("?", 1)[0]
+            if path == "/api/simple/connect":
+                return self._simple_connect(payload)
+            if path == "/api/simple/disconnect":
+                return self._simple_disconnect(payload)
+            if path == "/api/simple/refresh":
+                return self._simple_refresh(payload)
+            if path == "/api/simple/test-device":
+                return self._simple_test_device(payload)
+            if path == "/api/simple/restart":
+                return self._simple_command(payload, "RESTART", "restart")
+            if path == "/api/simple/config/id":
+                return self._simple_config_id(payload)
+            if path == "/api/simple/config/star-frequency":
+                return self._simple_config_frequency(payload)
+            if path == "/api/simple/firmware/upload":
+                return self._simple_firmware_upload(payload)
+            return json_response(self, {"error": "not found"}, HTTPStatus.NOT_FOUND)
+        except Exception as exc:
+            device = str(locals().get("payload", {}).get("device") or "hub")
+            port = str(locals().get("payload", {}).get("port") or "")
+            add_activity(device, "Failed request", f"{port + '; ' if port else ''}{path if 'path' in locals() else 'unknown'}: {exc}")
+            return json_response(self, {"error": str(exc)}, HTTPStatus.BAD_REQUEST)
+
+    def _simple_device(self, payload: dict[str, object]) -> str:
+        device = str(payload.get("device") or "")
+        if device not in CHILD_APPS:
+            raise ValueError("device must be gld, ch, or gw")
+        return device
+
+    def _simple_connect(self, payload: dict[str, object]) -> None:
+        device = self._simple_device(payload)
+        port = str(payload.get("port") or "").upper()
+        if not port.startswith("COM") or not port[3:].isdigit():
+            raise ValueError("valid COM port required")
+        host = self.server.server_address[0] or "127.0.0.1"
+        child_request(host, device, "POST", "/api/serial/connect", {"slot": 1, "port": port, "baud": 115200})
+        state = simple_device_state(host, device, query=True)
+        add_activity(device, "Connect", f"{port}; connected and identified")
+        json_response(self, state)
+
+    def _simple_disconnect(self, payload: dict[str, object]) -> None:
+        device = self._simple_device(payload)
+        host = self.server.server_address[0] or "127.0.0.1"
+        result = child_request(host, device, "POST", "/api/serial/disconnect", {"slot": 1})
+        add_activity(device, "Disconnect", f"{result.get('port') or 'COM'}; serial disconnected")
+        json_response(self, result)
+
+    def _simple_refresh(self, payload: dict[str, object]) -> None:
+        device = self._simple_device(payload)
+        host = self.server.server_address[0] or "127.0.0.1"
+        json_response(self, simple_device_state(host, device, query=True))
+
+    def _simple_test_device(self, payload: dict[str, object]) -> None:
+        device = self._simple_device(payload)
+        if device != "gld":
+            raise ValueError("Test Device Boot Report is currently available for GLD only")
+        host = self.server.server_address[0] or "127.0.0.1"
+        state = simple_device_state(host, device, query=True)
+        if not state.get("connected") or not state.get("info"):
+            raise RuntimeError("connect and identify the GLD first")
+        before = child_request(host, device, "GET", "/api/serial/recent?slot=1&after=0")
+        sequence = int(before.get("sequence") or 0)
+        child_request(host, device, "POST", "/api/serial/write", {"slot": 1, "line": "RUN_BOOT_CHECK"})
+        status = recent_matching(host, device, "GLD_STATUS_JSON", sequence, timeout=18.0)
+        if not status:
+            raise RuntimeError("Boot Report did not return; keep the device connected and try again")
+        report = gld_boot_report(status)
+        result = "all checks OK" if report["failed"] == 0 and report["unknown"] == 0 else f"{report['failed']} error, {report['unknown']} pending"
+        add_activity(device, "Test Device", f"{state.get('port') or 'COM'}; {report['passed']}/{report['total']} OK; {result}")
+        json_response(self, {"report": report, "status": status})
+
+    def _simple_command(self, payload: dict[str, object], command: str, action: str) -> None:
+        device = self._simple_device(payload)
+        host = self.server.server_address[0] or "127.0.0.1"
+        state = simple_device_state(host, device)
+        if not state["connected"]:
+            raise RuntimeError("connect and identify the device first")
+        result = child_request(host, device, "POST", "/api/serial/write", {"slot": 1, "line": command})
+        add_activity(device, action, f"{state.get('port') or 'COM'}; command sent")
+        json_response(self, result)
+
+    def _simple_config_id(self, payload: dict[str, object]) -> None:
+        device = self._simple_device(payload)
+        value = str(payload.get("value") or "").upper()
+        if not __import__("re").fullmatch(r"[0-9A-F]{4}", value):
+            raise ValueError("ID must be 4 hexadecimal digits")
+        number = int(value, 16)
+        if device == "gld" and not 0x1001 <= number <= 0xFEFF:
+            raise ValueError("GLD ID must be 1001-FEFF")
+        if device == "ch" and not 0x0010 <= number <= 0x0FFF:
+            raise ValueError("CH ID must be 0010-0FFF")
+        if device == "gw" and not 0x0001 <= number <= 0x000F:
+            raise ValueError("Gateway ID must be 0001-000F")
+        host = self.server.server_address[0] or "127.0.0.1"
+        state = simple_device_state(host, device)
+        if not state["connected"] or not state.get("info"):
+            raise RuntimeError("connect and identify the device first")
+        command = (f"SET_DEVICE_ID_JSON {{\"deviceId\":\"{value}\",\"reboot\":true}}" if device == "gld" else
+                   f"SET_CH_ADDRESS_JSON {{\"chId\":\"{value}\",\"reboot\":true}}" if device == "ch" else
+                   f"SET_GATEWAY_ADDRESS_JSON {{\"gatewayId\":\"0x{value}\"}}")
+        ack_marker = "SET_DEVICE_ID" if device == "gld" else "SET_CH_ADDRESS_JSON" if device == "ch" else "SET_GATEWAY_ADDRESS_JSON"
+        result = send_and_confirm(host, device, command, ack_marker)
+        readback = wait_for_readback(host, device, str(state["port"]))
+        persisted = (readback.get("info") or {}).get("deviceId" if device == "gld" else "chId" if device == "ch" else "gatewayId")
+        if str(persisted).upper().removeprefix("0X") != value:
+            raise RuntimeError(f"firmware ACK was received but read-back differs: {persisted}")
+        add_activity(device, "Set ID", f"{state.get('port')}; {value} saved and read back")
+        json_response(self, {"ok": True, "confirmation": result, "readback": readback})
+
+    def _simple_config_frequency(self, payload: dict[str, object]) -> None:
+        device = self._simple_device(payload)
+        if device not in {"gld", "ch"}:
+            raise ValueError("Gateway Mesh radio is fixed and cannot be edited here")
+        try:
+            frequency = float(payload.get("freqMHz"))
+        except (TypeError, ValueError) as exc:
+            raise ValueError("frequency required") from exc
+        if not 920.0 <= frequency <= 923.0:
+            raise ValueError("STAR frequency must be 920.0-923.0 MHz")
+        host = self.server.server_address[0] or "127.0.0.1"
+        state = simple_device_state(host, device, query=True)
+        info = state.get("info")
+        if not state["connected"] or not isinstance(info, dict):
+            raise RuntimeError("connect and identify the device first")
+        radio = info.get("starLora")
+        if not isinstance(radio, dict):
+            raise RuntimeError("current STAR radio configuration was not returned by the device")
+        required = ("bwKHz", "sf", "cr", "syncWord", "txPowerDbm") if device == "ch" else ("bwKHz", "sf", "cr", "syncWord", "txPowerDbm", "preamble", "tcxoVoltage", "xtalVoltage")
+        if any(key not in radio for key in required):
+            raise RuntimeError("incomplete current radio configuration; switch to Expert to inspect firmware compatibility")
+        updated = {key: radio[key] for key in required}
+        updated["freqMHz"] = frequency
+        updated["reboot"] = True
+        command = f"SET_STAR_LORA_JSON {json.dumps(updated, separators=(',', ':'))}" if device == "ch" else f"SET_LORA_CONFIG_JSON {json.dumps(updated, separators=(',', ':'))}"
+        result = send_and_confirm(host, device, command, "SET_STAR_LORA_JSON" if device == "ch" else "SET_LORA_CONFIG")
+        readback = wait_for_readback(host, device, str(state["port"]))
+        stored_radio = (readback.get("info") or {}).get("starLora")
+        if not isinstance(stored_radio, dict) or abs(float(stored_radio.get("freqMHz")) - frequency) > 0.001:
+            raise RuntimeError("firmware ACK was received but STAR frequency read-back differs")
+        add_activity(device, "Set STAR frequency", f"{state.get('port')}; {frequency:.3f} MHz saved and read back")
+        json_response(self, {"ok": True, "confirmation": result, "readback": readback})
+
+    def _simple_firmware_upload(self, payload: dict[str, object]) -> None:
+        """Flash only the packaged latest production image with explicit NVS-reset consent."""
+        device = self._simple_device(payload)
+        port = str(payload.get("port") or "").upper()
+        if not __import__("re").fullmatch(r"COM\d+", port):
+            raise ValueError("valid COM port required")
+        env = {"gld": "gld", "ch": "ch", "gw": "gw"}[device]
+        reset_nvs = bool(payload.get("resetNvs"))
+        if reset_nvs and payload.get("resetNvsConfirmation") != "RESET NVS":
+            raise ValueError("Reset NVS requires the explicit confirmation RESET NVS")
+        host = self.server.server_address[0] or "127.0.0.1"
+        state = simple_device_state(host, device, query=True)
+        if not state.get("connected") or not state.get("info"):
+            raise RuntimeError("connect and identify the device first")
+        if state.get("port") != port:
+            raise RuntimeError("selected port must match the identified device")
+        package = child_request(host, device, "GET", f"/api/firmware/package?env={env}")
+        request: dict[str, object] = {"env": env, "port": port, "manifest": package.get("manifest"), "packageFiles": package.get("packageFiles"), "resetNvs": reset_nvs, "slot": 1}
+        info = state.get("info") if isinstance(state.get("info"), dict) else {}
+        identifier = info.get("deviceId" if device == "gld" else "chId" if device == "ch" else "gatewayId")
+        if not isinstance(identifier, str):
+            raise RuntimeError("identified device ID is required before upload")
+        request["targetDeviceId"] = identifier.removeprefix("0x").removeprefix("0X")
+        result = child_request(host, device, "POST", "/api/firmware/upload", request)
+        readback = wait_for_readback(host, device, port, timeout=35.0)
+        expected_version = (package.get("manifest") or {}).get("firmwareVersion")
+        actual_version = (readback.get("info") or {}).get("firmwareVersion")
+        if expected_version and actual_version != expected_version:
+            raise RuntimeError(f"flash completed but firmware read-back differs: expected {expected_version}, got {actual_version}")
+        add_activity(device, "Firmware upload", f"{port}; latest {env} verified; NVS {'reset' if reset_nvs else 'preserved'}")
+        json_response(self, {"upload": result, "readback": readback})
+
+    def _handle_simple_ports(self) -> None:
+        from urllib.parse import parse_qs, urlparse
+        device = (parse_qs(urlparse(self.path).query).get("device") or [""])[0]
+        if device not in CHILD_APPS:
+            return json_response(self, {"error": "device must be gld, ch, or gw"}, HTTPStatus.BAD_REQUEST)
+        host = self.server.server_address[0] or "127.0.0.1"
+        json_response(self, child_request(host, device, "GET", "/api/ports"))
+
+    def _handle_simple_overview(self) -> None:
+        host = self.server.server_address[0] or "127.0.0.1"
+        devices: dict[str, object] = {}
+        for device in CHILD_APPS:
+            try:
+                devices[device] = simple_device_state(host, device, query=True)
+            except Exception as exc:
+                devices[device] = {"device": device, "connected": False, "error": str(exc)}
+        packages = {device: latest_package(device) for device in CHILD_APPS}
+        json_response(self, {"devices": devices, "packages": packages, "activity": simple_activity, "mesh": "Fixed by design; use Expert only to inspect."})
 
     def _handle_preflight(self) -> None:
         # Recomputed on every request rather than cached from startup, so a

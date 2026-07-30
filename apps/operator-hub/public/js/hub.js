@@ -1,141 +1,17 @@
-// Operator Hub: tab switcher that iframes the GLD/CH/Gateway bridge UIs,
-// each already running as its own local bridge.py on its own port. This
-// module never talks to those bridges directly (their CORS allowlists are
-// same-origin only) - status comes from the hub's own /api/status, which the
-// hub bridge checks server-side.
-
-const APPS = {
-  gld: { label: "GLD", port: 5174 },
-  ch: { label: "CH", port: 5273 },
-  gw: { label: "Gateway", port: 5373 }
-};
-
-const frame = document.getElementById("appFrame");
-const banner = document.getElementById("stageBanner");
-const readiness = document.getElementById("readiness");
-const refreshButton = document.getElementById("refreshReadinessBtn");
-const landing = document.getElementById("landing");
-const homeButton = document.getElementById("homeBtn");
-const tabButtons = Array.from(document.querySelectorAll(".tab"));
-const launchButtons = Array.from(document.querySelectorAll("[data-launch-app]"));
-let activeApp = null;
-let lastStatus = {};
-let mqttDegraded = false;
-
-function updateReadiness(report) {
-  if (!readiness) return;
-  const checks = Array.isArray(report.checks) ? report.checks : [];
-  const problems = checks.filter((check) => check.state !== "ok");
-  readiness.classList.toggle("ready", report.readyForFlash === true);
-  readiness.classList.toggle("attention", report.readyForFlash !== true);
-  readiness.textContent = report.readyForFlash === true
-    ? "Upload setup: ready"
-    : `Upload setup: ${problems.length} warning${problems.length === 1 ? "" : "s"}`;
-  readiness.title = checks.map((check) => `[${check.state.toUpperCase()}] ${check.label}: ${check.detail}`).join("\n");
-}
-
-async function loadPreflight() {
-  try {
-    const res = await fetch("/api/preflight", { cache: "no-store" });
-    updateReadiness(await res.json());
-  } catch {
-    if (readiness) readiness.textContent = "Upload setup: unavailable";
-  }
-}
-
-function urlFor(app) {
-  return `${location.protocol}//${location.hostname}:${APPS[app].port}/`;
-}
-
-function selectTab(app, { force = false } = {}) {
-  if (!APPS[app]) return;
-  if (activeApp === app && !force) return;
-  activeApp = app;
-  landing.hidden = true;
-  frame.hidden = false;
-  for (const btn of tabButtons) {
-    btn.classList.toggle("active", btn.dataset.app === app);
-  }
-  const targetUrl = urlFor(app);
-  if (frame.dataset.loadedUrl !== targetUrl) {
-    frame.src = targetUrl;
-    frame.dataset.loadedUrl = targetUrl;
-  }
-  updateBanner();
-}
-
-function showHome() {
-  activeApp = null;
-  landing.hidden = false;
-  frame.hidden = true;
-  frame.removeAttribute("src");
-  delete frame.dataset.loadedUrl;
-  banner.hidden = true;
-  for (const btn of tabButtons) btn.classList.remove("active");
-}
-
-function updateBanner() {
-  if (!activeApp) {
-    banner.hidden = true;
-    return;
-  }
-  const status = lastStatus[activeApp];
-  if (!status || status.up !== true) {
-    banner.hidden = false;
-    banner.textContent = `${APPS[activeApp].label} bridge not reachable on port ${APPS[activeApp].port}. Start it (its run-*.bat) and reload this tab.`;
-  } else if (status.identityOk === false) {
-    banner.hidden = false;
-    banner.textContent = `Something other than the ${APPS[activeApp].label} bridge is answering on port ${APPS[activeApp].port}. Close that process and reload this tab.`;
-  } else if (activeApp === "gw" && mqttDegraded) {
-    banner.hidden = false;
-    banner.textContent = "MQTT unavailable: no LAN connection was detected at startup. Gateway topology/MQTT features are degraded; reconnect to a LAN and restart the Hub.";
-  } else {
-    banner.hidden = true;
-  }
-}
-
-function isAppReady(status) {
-  return !!status && status.up === true && status.identityOk !== false;
-}
-
-async function pollStatus() {
-  try {
-    const res = await fetch("/api/status", { cache: "no-store" });
-    const payload = await res.json();
-    lastStatus = payload.apps || {};
-    mqttDegraded = payload.mqttDegraded === true;
-    for (const [app, status] of Object.entries(lastStatus)) {
-      const dot = document.querySelector(`[data-dot="${app}"]`);
-      if (dot) {
-        const ready = isAppReady(status);
-        dot.classList.toggle("up", ready);
-        dot.classList.toggle("down", !ready);
-      }
-    }
-    updateBanner();
-  } catch {
-    // Hub bridge itself unreachable - leave dots in their last known state.
-  }
-}
-
-function init() {
-  for (const btn of tabButtons) {
-    btn.addEventListener("click", () => selectTab(btn.dataset.app));
-  }
-  for (const btn of launchButtons) {
-    btn.addEventListener("click", () => selectTab(btn.dataset.launchApp));
-  }
-  homeButton.addEventListener("click", showHome);
-  if (refreshButton) {
-    refreshButton.addEventListener("click", loadPreflight);
-  }
-  showHome();
-  pollStatus();
-  loadPreflight();
-  setInterval(pollStatus, 4000);
-  // /api/preflight recomputes on every request (packages can go bad or get
-  // fixed after startup), so poll it too, not just once at load.
-  setInterval(loadPreflight, 20000);
-}
-
-init();
+const devices={gld:{label:'GLD',name:'Gas Leak Detector',glyph:'G'},ch:{label:'CH',name:'Cluster Head',glyph:'C'},gw:{label:'Gateway',name:'Network Gateway',glyph:'W'}};
+let token='',active='gld',overview={},lastTestReport=null;const $=id=>document.getElementById(id),notice=$('notice');
+async function api(path,body){const response=await fetch(path,{method:body?'POST':'GET',headers:body?{'Content-Type':'application/json','X-Operator-Hub-Token':token}:{},body:body?JSON.stringify(body):undefined,cache:'no-store'});const data=await response.json();if(!response.ok)throw Error(data.error||'Permintaan gagal');return data}
+function show(message,kind=''){notice.textContent=message;notice.className=`notice ${kind}`}
+function renderActivity(items=[]){$('activity').innerHTML=items.length?items.map(item=>`<li><b>${item.time} / ${(devices[item.device]||{}).label||item.device}</b>${item.action}<br>${item.detail}</li>`).join(''):'<li><b>Belum ada aktivitas</b>Semua tindakan perangkat akan tercatat di sini.</li>'}
+function renderTestReport(report){const details=$('testDeviceDetails'),list=$('testDeviceList'),summary=$('testDeviceSummary');if(!report){details.hidden=true;list.replaceChildren();summary.textContent='Hubungkan perangkat dahulu';summary.className='';return}const suffix=report.failed?` / error ${report.failed}`:report.unknown?` / ${report.unknown} menunggu`:'';summary.textContent=`${report.passed}/${report.total} OK${suffix}`;summary.className=report.failed?'fail':report.unknown?'':'ok';details.hidden=false;list.replaceChildren(...(report.checks||[]).map(item=>{const line=document.createElement('li');line.className=item.ok===false?'fail':'';line.textContent=`${item.label}: ${item.ok===true?'OK':item.ok===false?'Error':'Menunggu'} - ${item.detail}`;return line}))}
+function isReady(value){return value===true||value===1}
+function valueInfo(info){if(!info)return [];const ready=active==='ch'?info.radio?.starReady:active==='gw'?info.meshReady:info.radioReady;if(active==='gld')return [['Device ID',info.deviceId],['Firmware',info.firmwareVersion],['Mode',info.mode],['STAR',info.starLora?.freqMHz?`${info.starLora.freqMHz} MHz`:'-'],['Radio',isReady(ready)?'Ready':ready===false||ready===0?'Tidak siap':'Menunggu']];if(active==='ch')return [['CH Address',info.chId],['Firmware',info.firmwareVersion],['STAR',info.starLora?.freqMHz?`${info.starLora.freqMHz} MHz`:'-'],['Radio STAR',isReady(ready)?'Ready':'Tidak siap'],['Mesh',info.meshLora?.freqMHz?`${info.meshLora.freqMHz} MHz`:'Fixed']];return [['Gateway ID',info.gatewayId],['Firmware',info.firmwareVersion],['Radio Mesh',isReady(ready)?'Ready':'Tidak siap'],['Mesh','Fixed by design']]}
+function render(){const state=overview.devices?.[active]||{device:active},spec=devices[active],identified=Boolean(state.connected&&state.info),info=state.info;$('devicePanel').hidden=false;$('deviceName').textContent=spec.name;$('deviceGlyph').textContent=spec.glyph;$('connectionText').textContent=state.connected?(identified?`${state.port||'COM'} tersambung dan teridentifikasi.`:`${state.port||'COM'} tersambung, menunggu identitas.`):'Belum tersambung. Pilih COM untuk memulai.';$('connectionIndicator').textContent=identified?'Online':'Offline';$('connectionIndicator').classList.toggle('online',identified);$('connectBtn').disabled=Boolean(state.connected);$('disconnectBtn').disabled=!state.connected;$('statusList').innerHTML=valueInfo(info).map(([key,value])=>`<div><dt>${key}</dt><dd>${value??'-'}</dd></div>`).join('')||'<div><dt>Status</dt><dd>Menunggu perangkat</dd></div>';$('idInput').value=active==='gld'?info?.deviceId||'':active==='ch'?info?.chId||'':String(info?.gatewayId||'').replace(/^0x/i,'');$('freqInput').value=info?.starLora?.freqMHz??'';$('starCard').hidden=active==='gw';$('testDeviceCard').hidden=active!=='gld';$('testDeviceBtn').disabled=!identified||active!=='gld';renderTestReport(active==='gld'?lastTestReport:null);const pack=overview.packages?.[active];$('packageVersion').textContent=pack?.firmwareVersion?`Latest / ${pack.firmwareVersion} / ${pack.environment}`:'Package terbaru tidak tersedia';renderActivity(overview.activity)}
+async function loadPorts(){try{const data=await api(`/api/simple/ports?device=${active}`),ports=Array.isArray(data.ports||data)?data.ports||data:[];$('portSelect').innerHTML='<option value="">Pilih COM port</option>'+ports.map(port=>{const value=typeof port==='string'?port:port.path||port.port,detail=typeof port==='string'?'':port.description||'';return `<option value="${value}" title="${detail}">${value}${detail?` - ${detail}`:''}</option>`}).join('')}catch{$('portSelect').innerHTML='<option value="">COM tidak tersedia</option>'}}
+async function refresh(query=false){overview=await api('/api/simple/overview');render();if(query&&overview.devices?.[active]?.connected){overview.devices[active]=await api('/api/simple/refresh',{device:active});render()}}
+async function action(path,body,success){try{show('Memproses - menunggu ACK dan read-back perangkat...');await api(path,body);show(success,'ok');await refresh()}catch(error){show(error.message,'bad')}}
+function buildTabs(){const tabs=$('deviceTabs');tabs.innerHTML=Object.entries(devices).map(([id,device])=>`<button class="device-tab ${id===active?'active':''}" data-device="${id}" type="button"><span class="glyph">${device.glyph}</span><span><strong>${device.label}</strong><small>${device.name}</small></span></button>`).join('');tabs.onclick=async event=>{const selected=event.target.closest('[data-device]')?.dataset.device;if(!selected)return;active=selected;lastTestReport=null;[...tabs.children].forEach(tab=>tab.classList.toggle('active',tab.dataset.device===active));await loadPorts();render()}}
+async function upload(){const port=overview.devices?.[active]?.port||$('portSelect').value,reset=$('resetNvs').checked;if(!port){show('Hubungkan dan identifikasi perangkat terlebih dahulu.','bad');return}if(!confirm(`Upload firmware ${devices[active].label} terbaru ke ${port}?${reset?' NVS AKAN DIHAPUS.':' NVS tidak akan di-reset.'}`))return;let confirmation='';if(reset){confirmation=prompt('Ketik RESET NVS untuk melanjutkan.')||'';if(confirmation!=='RESET NVS'){show('Reset NVS dibatalkan.','bad');return}}await action('/api/simple/firmware/upload',{device:active,port,resetNvs:reset,resetNvsConfirmation:confirmation},reset?'Upload selesai; NVS telah di-reset dan firmware terverifikasi.':'Upload selesai; NVS tetap tersimpan dan firmware terverifikasi.')}
+async function testDevice(){try{show('Menjalankan Boot Report perangkat...');const result=await api('/api/simple/test-device',{device:active});lastTestReport=result.report;render();show(result.report.failed?`Test Device selesai: ${result.report.passed}/${result.report.total} OK, error ${result.report.failed}.`:`Test Device selesai: ${result.report.passed}/${result.report.total} OK.`,result.report.failed?'bad':'ok');await refresh()}catch(error){show(error.message,'bad')}}
+async function connectDevice(){try{show('Menghubungkan dan membaca identitas perangkat...');await api('/api/simple/connect',{device:active,port:$('portSelect').value});await refresh();if(active==='gld'){show('GLD tersambung. Menjalankan Test Device otomatis...');await testDevice()}else show('Perangkat tersambung dan teridentifikasi.','ok')}catch(error){show(error.message,'bad')}}
+async function init(){const boot=await api('/api/simple/bootstrap');token=boot.apiToken;show('Menyudahi sesi serial sebelumnya...');await Promise.allSettled(Object.keys(devices).map(device=>api('/api/simple/disconnect',{device})));buildTabs();$('connectBtn').onclick=connectDevice;$('disconnectBtn').onclick=()=>action('/api/simple/disconnect',{device:active},'Koneksi perangkat ditutup.');$('refreshBtn').onclick=()=>refresh(true).catch(error=>show(error.message,'bad'));$('restartBtn').onclick=()=>confirm(`Restart ${devices[active].label} sekarang?`)&&action('/api/simple/restart',{device:active},'Perintah restart dikirim.');$('uploadBtn').onclick=upload;$('testDeviceBtn').onclick=testDevice;$('saveIdBtn').onclick=()=>action('/api/simple/config/id',{device:active,value:$('idInput').value},'ID tersimpan dan terverifikasi.');$('saveFreqBtn').onclick=()=>action('/api/simple/config/star-frequency',{device:active,freqMHz:$('freqInput').value},'STAR Frequency tersimpan dan terverifikasi.');$('expertBtn').onclick=()=>{location.assign(`http://${location.hostname}:${active==='gld'?5174:active==='ch'?5273:5373}/`)};await refresh();await loadPorts();$('runtimeText').textContent='Runtime siap';show('Sesi baru siap. Hubungkan perangkat untuk memulai.')}init().catch(error=>show(error.message,'bad'));

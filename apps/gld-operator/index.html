@@ -26,6 +26,7 @@
         </div>
 
         <div class="strip-actions">
+          <a class="return-simple-hub" href="http://127.0.0.1:5173/">&larr; Simple Hub</a>
           <button id="opsPanelBtn" type="button">Ops Panel</button>
           <button id="firmwareUploadBtn" type="button">Firmware Upload</button>
           <button id="themeToggleBtn" type="button">Dark Mode</button>
@@ -85,29 +86,12 @@
               <div id="sensorChannelsRight" class="sensor-channel-list" aria-label="Sensor channels 5-8 voltage and gain"></div>
             </div>
             <div id="legend" class="legend"></div>
+            <section class="chart-analysis" aria-labelledby="chartAnalysisTitle">
+              <div class="chart-analysis-head"><div><p class="eyebrow">LIVE ANALYSIS</p><h3 id="chartAnalysisTitle">Analisis seri aktif</h3></div><small>Mengikuti zoom grafik</small></div>
+              <div class="chart-analysis-scroll"><table class="chart-analysis-table"><thead><tr><th>Sensor</th><th>Saat ini</th><th>Gain</th><th>&Delta;</th><th>Arah</th><th>Durasi</th><th>Peak-to-peak</th><th>Tren 1 menit</th><th>Status</th></tr></thead><tbody id="chartAnalysisBody"><tr><td colspan="9">Menunggu telemetri.</td></tr></tbody></table></div>
+            </section>
           </div>
 
-          <details class="module disclosure">
-            <summary>Power and Boot Health details</summary>
-            <div class="grid-two">
-              <section class="module module--compact">
-                <h2>Power</h2>
-                <dl class="kv">
-                  <div><dt>External</dt><dd id="externalPower">Unknown</dd></div>
-                  <div><dt>Battery</dt><dd id="batteryValueMirror">Unknown</dd></div>
-                </dl>
-              </section>
-              <section class="module module--compact">
-                <h2>Boot Health</h2>
-                <dl class="kv">
-                  <div><dt>ADS</dt><dd id="adsHealth">Unknown</dd></div>
-                  <div><dt>MCP</dt><dd id="mcpHealth">Unknown</dd></div>
-                  <div><dt>DAC</dt><dd id="dacHealth">Unknown</dd></div>
-                  <div><dt>ML</dt><dd id="mlHealth">Unknown</dd></div>
-                </dl>
-              </section>
-            </div>
-          </details>
         </section>
 
         <section id="dataset" class="view">

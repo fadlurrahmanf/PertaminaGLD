@@ -1271,6 +1271,7 @@ void emitInfoJson() {
     starLora["tcxoVoltage"] = runtimeConfig.loraTcxoVoltage;
     starLora["xtalVoltage"] = runtimeConfig.loraXtalVoltage;
     starLora["runtime"] = true;
+    doc["radioReady"] = radioReady;
     JsonObject appConfig = doc.createNestedObject("appConfig");
     appConfig["wifiSsid"] = runtimeConfig.wifiSsid;
     appConfig["mqttHost"] = runtimeConfig.mqttHost;

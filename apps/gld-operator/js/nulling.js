@@ -483,16 +483,24 @@ export function renderNullingChannels(container = elements.nullingChannels, chan
     const stageRows = nullingStageDetailRows(channel.stages);
     const sourceRow = nullingDacSourceRow(channel);
     if (stageRows.length || sourceRow) {
-      const disclosure = document.createElement("details");
+      const alwaysVisible = container === elements.nullingChannels;
+      const disclosure = document.createElement(alwaysVisible ? "section" : "details");
       disclosure.className = "disclosure nulling-stage-detail";
-      disclosure.open = state.nullingExpandedChannels.has(channel.index);
-      disclosure.addEventListener("toggle", () => {
-        if (disclosure.open) state.nullingExpandedChannels.add(channel.index);
-        else state.nullingExpandedChannels.delete(channel.index);
-      });
-      const summary = document.createElement("summary");
-      summary.textContent = "Stage detail";
-      disclosure.append(summary);
+      if (alwaysVisible) {
+        const label = document.createElement("strong");
+        label.className = "nulling-stage-label";
+        label.textContent = "Stage detail";
+        disclosure.append(label);
+      } else {
+        disclosure.open = state.nullingExpandedChannels.has(channel.index);
+        disclosure.addEventListener("toggle", () => {
+          if (disclosure.open) state.nullingExpandedChannels.add(channel.index);
+          else state.nullingExpandedChannels.delete(channel.index);
+        });
+        const summary = document.createElement("summary");
+        summary.textContent = "Stage detail";
+        disclosure.append(summary);
+      }
 
       const kv = document.createElement("dl");
       kv.className = "kv";

@@ -1,68 +1,31 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pertamina GLD — Operator Hub</title>
-  <link rel="stylesheet" href="./css/tokens.css?v=1" />
-  <link rel="stylesheet" href="./css/hub.css?v=1" />
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Pertamina GLD - Operator Hub</title>
+  <link rel="stylesheet" href="./css/tokens.css"><link rel="stylesheet" href="./css/hub.css?v=6">
 </head>
 <body>
-  <div class="shell">
-    <header class="strip">
-      <button class="brand brand-button" id="homeBtn" type="button" title="Back to operator selection">
-        <span class="eyebrow">Pertamina GLD</span>
-        <h1>Operator Hub</h1>
-      </button>
-      <nav class="tabs" id="tabs">
-        <button class="tab" data-app="gld" type="button">
-          <span class="dot" data-dot="gld"></span> GLD
-        </button>
-        <button class="tab" data-app="ch" type="button">
-          <span class="dot" data-dot="ch"></span> CH
-        </button>
-        <button class="tab" data-app="gw" type="button">
-          <span class="dot" data-dot="gw"></span> Gateway
-        </button>
-      </nav>
-      <div class="readiness" id="readiness" title="Checking startup requirements">Setup: checking</div>
-      <button class="refresh-btn" id="refreshReadinessBtn" type="button" title="Recheck firmware packages, runtimes, and ports">Refresh readiness</button>
-    </header>
-    <main class="stage">
-      <div class="stage-banner" id="stageBanner" hidden></div>
-      <section class="landing" id="landing" aria-labelledby="landingTitle">
-        <div class="landing-copy">
-          <span class="eyebrow">Select workspace</span>
-          <h2 id="landingTitle">Choose an operator console</h2>
-          <p>Choose the device group you want to operate. You can return here anytime by clicking Operator Hub.</p>
-        </div>
-        <div class="operator-grid">
-          <button class="operator-card" data-launch-app="gld" type="button">
-            <span class="operator-mark">GLD</span>
-            <span class="operator-card-copy">
-              <strong>Gas Leak Detector</strong>
-              <small>Sensor, data, calibration, and GLD operations</small>
-            </span>
-          </button>
-          <button class="operator-card" data-launch-app="ch" type="button">
-            <span class="operator-mark">CH</span>
-            <span class="operator-card-copy">
-              <strong>Cluster Head</strong>
-              <small>LoRa node, serial, routing, and firmware operations</small>
-            </span>
-          </button>
-          <button class="operator-card" data-launch-app="gw" type="button">
-            <span class="operator-mark">GW</span>
-            <span class="operator-card-copy">
-              <strong>Gateway</strong>
-              <small>Wi-Fi, MQTT, topology, and gateway operations</small>
-            </span>
-          </button>
-        </div>
-      </section>
-      <iframe id="appFrame" class="app-frame" title="Operator app" hidden></iframe>
-    </main>
-  </div>
-  <script type="module" src="./js/hub.js"></script>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Operator Hub home"><span class="brand-mark">P</span><span><small>PERTAMINA GLD</small><strong>Operator Hub</strong></span></a>
+    <div class="topbar-status"><span class="pulse"></span><span id="runtimeText">Local runtime</span></div>
+    <div class="quick-firmware"><span id="packageVersion" class="package-version">Package terbaru: memuat...</span><button id="uploadBtn" class="primary" type="button">Upload firmware</button><label class="reset"><input id="resetNvs" type="checkbox"><span>Reset NVS</span></label></div>
+    <button id="expertBtn" class="expert-button" type="button">Expert Console <span>&nearr;</span></button>
+  </header>
+  <main class="shell">
+    <section class="operator-flow" aria-label="Alur operator"><div class="flow-title"><span class="eyebrow">SIMPLE OPERATOR FLOW</span><b>Mulai dari perangkat yang ingin dioperasikan.</b></div><ol><li><span>1</span><div><b>Pilih perangkat</b><small>GLD, CH, atau Gateway</small></div></li><li><span>2</span><div><b>Hubungkan COM</b><small>Identitas dibaca otomatis</small></div></li><li><span>3</span><div><b>Periksa status</b><small>Pastikan radio siap</small></div></li><li><span>4</span><div><b>Lakukan tindakan</b><small>Selalu terverifikasi</small></div></li></ol></section>
+    <section class="device-rail" id="deviceTabs" aria-label="Pilih perangkat"></section>
+    <p id="notice" class="notice" role="status">Memuat status perangkat...</p>
+    <section class="workspace" id="devicePanel" hidden>
+      <aside class="device-overview card"><div class="card-kicker">PERANGKAT TERPILIH</div><div class="device-title"><span id="deviceGlyph" class="glyph">G</span><div><h2 id="deviceName">GLD</h2><p id="connectionText">Belum tersambung.</p></div></div><dl id="statusList" class="status-list"></dl><button id="refreshBtn" class="refresh-button" type="button"><span>&#x21bb;</span> Refresh status</button></aside>
+      <div class="actions-column">
+        <section class="connect-card card"><div class="card-head"><div><p class="card-kicker">01 / CONNECTION</p><h3>Hubungkan perangkat</h3></div><span class="connection-indicator" id="connectionIndicator">Offline</span></div><div class="connect-controls"><label>PORT COM<select id="portSelect"><option>Memuat port...</option></select></label><div class="button-row"><button id="connectBtn" class="primary" type="button">Connect</button><button id="disconnectBtn" class="secondary" type="button">Disconnect</button></div></div></section>
+        <section id="testDeviceCard" class="test-card card"><div><p class="card-kicker">02 / TEST DEVICE</p><h3>Periksa kesiapan perangkat</h3><p>Menjalankan Boot Report tanpa mengubah konfigurasi.</p></div><div class="test-action"><button id="testDeviceBtn" class="primary" type="button">Test Device</button><strong id="testDeviceSummary">Hubungkan perangkat dahulu</strong></div><details id="testDeviceDetails" hidden><summary>Lihat detail pemeriksaan</summary><ul id="testDeviceList"></ul></details></section>
+        <details class="settings-card card"><summary class="card-head"><div><p class="card-kicker">03 / BASIC SETTINGS</p><h3>Identitas &amp; radio</h3></div><span class="guard-badge">BUKA PENGATURAN</span></summary><div class="setting-grid"><label>DEVICE ID<input id="idInput" maxlength="4" placeholder="0000" autocomplete="off"></label><button id="saveIdBtn" class="secondary apply" type="button">Simpan ID</button><label id="starCard">STAR FREQUENCY <span class="unit">MHz</span><input id="freqInput" type="number" min="920" max="923" step="0.1" placeholder="920.0"></label><button id="saveFreqBtn" class="secondary apply" type="button">Simpan STAR</button></div><div class="mesh-lock"><span class="lock">&#x1f512;</span><div><b>Mesh radio dikunci</b><small>Konfigurasi Mesh mengikuti desain jaringan dan hanya dapat dilihat di Expert.</small></div></div></details>
+      </div>
+      <aside class="side-column"><section class="restart-card card"><p class="card-kicker">DEVICE CONTROL</p><h3>Restart perangkat</h3><p>Gunakan setelah inspeksi atau perubahan yang membutuhkan boot ulang.</p><button id="restartBtn" class="outline-danger" type="button">&#x21bb; Restart</button></section><section class="history-card card"><div class="card-head"><div><p class="card-kicker">ACTIVITY</p><h3>Aktivitas terbaru</h3></div></div><ol id="activity"></ol></section></aside>
+    </section>
+  </main>
+  <script type="module" src="./js/hub.js?v=5"></script>
 </body>
 </html>

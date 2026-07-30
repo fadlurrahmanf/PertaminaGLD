@@ -109,6 +109,166 @@ export function renderLegend(labels, legendEl = elements.legend, channelIndices 
   });
 }
 
+const ANALYSIS_MIN_SAMPLES = 5;
+const ANALYSIS_ONE_MINUTE_MS = 60 * 1000;
+const ANALYSIS_DIRECTION_WINDOW_MS = 5 * 1000;
+const analysisDirectionState = new Map();
+
+function analysisCell(text, className = "") {
+  const cell = document.createElement("td");
+  if (className) cell.className = className;
+  cell.textContent = text;
+  return cell;
+}
+
+function formatAnalysisVoltage(value) {
+  return Number.isFinite(value) ? `${value.toFixed(6)} V` : "-";
+}
+
+function formatAnalysisMilliVolts(value) {
+  return Number.isFinite(value) ? `${(value * 1000).toFixed(2)} mV` : "-";
+}
+
+function formatAnalysisDuration(milliseconds) {
+  if (!Number.isFinite(milliseconds) || milliseconds < 0) return "-";
+  const totalSeconds = Math.floor(milliseconds / 1000);
+  const seconds = totalSeconds % 60;
+  const totalMinutes = Math.floor(totalSeconds / 60);
+  if (totalMinutes < 1) return `${String(seconds).padStart(2, "0")}s`;
+  const minutes = totalMinutes % 60;
+  const hours = Math.floor(totalMinutes / 60);
+  if (hours < 1) return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function analysisDirection(delta) {
+  return delta > 0 ? "+" : delta < 0 ? "-" : "=";
+}
+
+function directionReferencePoint(points, latestTimestamp) {
+  if (!Number.isFinite(latestTimestamp)) return null;
+  const target = latestTimestamp - ANALYSIS_DIRECTION_WINDOW_MS;
+  for (let index = points.length - 1; index >= 0; index -= 1) {
+    if (points[index].ts <= target) return points[index];
+  }
+  return null;
+}
+
+function trackedAnalysisDirectionDuration(channel, direction, timestamp, sampleCount) {
+  if (!Number.isFinite(timestamp)) return { duration: NaN, changed: false };
+  const previous = analysisDirectionState.get(channel);
+  // A fresh/cleared history begins a new direction session. Otherwise only a
+  // displayed direction change resets its clock; zoom changes do not impose a
+  // one-minute ceiling on the duration.
+  if (sampleCount < 2 || !previous || previous.direction !== direction || timestamp < previous.lastTimestamp) {
+    const changed = Boolean(previous && previous.direction !== direction && previous.direction !== "=" && direction !== "=" && sampleCount >= 2);
+    analysisDirectionState.set(channel, { direction, since: timestamp, lastTimestamp: timestamp });
+    return { duration: 0, changed };
+  }
+  previous.lastTimestamp = timestamp;
+  return { duration: timestamp - previous.since, changed: false };
+}
+
+function analysisTrend(points, now) {
+  const minutePoints = points.filter((point) => point.ts >= now - ANALYSIS_ONE_MINUTE_MS);
+  if (minutePoints.length < 2) return { value: NaN, text: "Mengumpulkan", tone: "collecting" };
+  const first = minutePoints[0];
+  const last = minutePoints.at(-1);
+  const elapsedMinutes = (last.ts - first.ts) / 60000;
+  if (!Number.isFinite(elapsedMinutes) || elapsedMinutes <= 0) return { value: NaN, text: "Mengumpulkan", tone: "collecting" };
+  const value = (last.value - first.value) / elapsedMinutes;
+  const sign = value > 0 ? "+" : value < 0 ? "-" : "=";
+  return { value, text: `${sign}${Math.abs(value * 1000).toFixed(2)} mV/min`, tone: value > 0 ? "up" : value < 0 ? "down" : "flat" };
+}
+
+function analysisStability(current, peakToPeak, trend, sampleCount) {
+  if (sampleCount < ANALYSIS_MIN_SAMPLES || !Number.isFinite(peakToPeak) || !Number.isFinite(trend.value)) {
+    return { text: "Mengumpulkan", tone: "collecting" };
+  }
+  // Relative limits let every MQ channel use a tolerance proportional to its
+  // present voltage, with small absolute floors for low-voltage channels.
+  const reference = Math.max(Math.abs(current), 0.002);
+  const stableSpan = Math.max(0.00020, reference * 0.015);
+  const warnSpan = stableSpan * 3;
+  const stableTrend = Math.max(0.00010, reference * 0.006);
+  const warnTrend = stableTrend * 3;
+  const absTrend = Math.abs(trend.value);
+  if (peakToPeak <= stableSpan && absTrend <= stableTrend) return { text: "Stabil", tone: "stable" };
+  if (peakToPeak <= warnSpan && absTrend <= warnTrend) return { text: "Bergerak", tone: "moving" };
+  return { text: "Fluktuatif", tone: "unstable" };
+}
+
+function renderRunningAnalysisTable() {
+  const body = $("chartAnalysisBody");
+  if (!body || !elements.rangeSelect) return;
+  const now = Date.now();
+  const rangeMs = Number(elements.rangeSelect.value) * 1000;
+  const visible = state.history.filter((point) => point.ts >= now - rangeMs);
+  const labels = latestFeatureOrder(visible);
+  body.replaceChildren();
+  if (!visible.length) {
+    const row = document.createElement("tr");
+    row.append(analysisCell("Menunggu telemetri.", "chart-analysis-empty"));
+    row.firstChild.colSpan = 9;
+    body.append(row);
+    return;
+  }
+
+  for (const ch of ALL_SENSOR_CHANNELS) {
+    const points = visible
+      .map((point) => ({ ts: point.ts, value: Number(point.sensorVoltage?.[ch]), gain: Number(point.sensorGain?.[ch]) }))
+      .filter((point) => Number.isFinite(point.value));
+    // Direction is deliberately independent from the chart zoom: it always
+    // compares the present sample with the newest valid sample at least five
+    // seconds earlier in the retained telemetry stream.
+    const historyPoints = state.history
+      .map((point) => ({ ts: point.ts, value: Number(point.sensorVoltage?.[ch]) }))
+      .filter((point) => Number.isFinite(point.value));
+    const row = document.createElement("tr");
+    if (!isSensorChartSeriesVisible(ch)) row.classList.add("is-hidden");
+    const last = points.at(-1);
+    const current = last?.value;
+    const directionReference = directionReferencePoint(historyPoints, last?.ts);
+    const delta = directionReference && last ? last.value - directionReference.value : NaN;
+    const direction = Number.isFinite(delta) ? analysisDirection(delta) : "—";
+    const previousDirection = analysisDirectionState.get(ch);
+    const directionState = direction === "—"
+      ? { duration: previousDirection && Number.isFinite(last?.ts) ? last.ts - previousDirection.since : NaN, changed: false }
+      : trackedAnalysisDirectionDuration(ch, direction, last?.ts, points.length);
+    const min = points.length ? Math.min(...points.map((point) => point.value)) : NaN;
+    const max = points.length ? Math.max(...points.map((point) => point.value)) : NaN;
+    const peakToPeak = Number.isFinite(min) && Number.isFinite(max) ? max - min : NaN;
+    const trend = analysisTrend(points, now);
+    const evaluatedStability = analysisStability(current, peakToPeak, trend, points.length);
+    // Status intentionally communicates just the confirmed five-second
+    // direction. A direction younger than ten seconds is not confirmed yet.
+    const directionConfirmed = Number.isFinite(directionState.duration) && directionState.duration >= 10_000;
+    const status = !directionConfirmed || direction === "=" || direction === "—"
+      ? { text: "Stabil", tone: "stable" }
+      : direction === "+"
+        ? { text: "Menaik", tone: "up" }
+        : { text: "Menurun", tone: "down" };
+    const gainValues = [...new Set(points.map((point) => point.gain).filter(Number.isFinite))];
+    const gain = Number.isFinite(last?.gain) ? `x${last.gain}` : "-";
+    const gainTone = gainValues.length > 1 ? "gain-shift" : "";
+    row.classList.add(`status-${status.tone}`);
+    if (directionState.changed) row.classList.add("direction-flash");
+    row.style.setProperty("--series-color", CHART_COLORS[ch]);
+    row.append(
+      analysisCell(labels[ch] || SENSOR_NAMES[ch] || `CH${ch + 1}`, "sensor"),
+      analysisCell(formatAnalysisVoltage(current), "current"),
+      analysisCell(gain, gainTone),
+      analysisCell(formatAnalysisMilliVolts(delta), delta > 0 ? "up" : delta < 0 ? "down" : "flat"),
+      analysisCell(direction, direction === "+" ? "up" : direction === "-" ? "down" : "flat"),
+      analysisCell(formatAnalysisDuration(directionState.duration)),
+      analysisCell(formatAnalysisMilliVolts(peakToPeak), evaluatedStability.tone),
+      analysisCell(trend.text, trend.tone),
+      analysisCell(status.text, status.tone)
+    );
+    body.append(row);
+  }
+}
+
 // Draws one chart instance into `canvas`, reading its zoom range from
 // `rangeSelect` and its legend into `legendEl`. `markers` is an optional
 // list of { ts, color, label } vertical lines (used for dataset START/STOP).
@@ -220,6 +380,9 @@ export function drawOneChart(canvas, rangeSelect, legendEl, markers = [], channe
     ctx.lineWidth = 1.8;
     ctx.strokeStyle = CHART_COLORS[ch];
     let started = false;
+    let firstValue = null;
+    let firstY = null;
+    let lastValue = null;
     let lastY = null;
     for (const point of visible) {
       const value = point.sensorVoltage[ch];
@@ -229,12 +392,26 @@ export function drawOneChart(canvas, rangeSelect, legendEl, markers = [], channe
       if (!started) {
         ctx.moveTo(x, y);
         started = true;
+        firstValue = value;
+        firstY = y;
       } else {
         ctx.lineTo(x, y);
       }
+      lastValue = value;
       lastY = y;
     }
     ctx.stroke();
+
+    // Direction at the left edge uses exactly the visible chart range: a
+    // minus means the series began higher than its present value, a plus
+    // means it rose, and equals means no net change in the displayed range.
+    if (firstY != null && Number.isFinite(firstValue) && Number.isFinite(lastValue)) {
+      const direction = firstValue > lastValue ? "−" : lastValue > firstValue ? "+" : "=";
+      ctx.fillStyle = CHART_COLORS[ch];
+      ctx.font = "700 15px 'Cascadia Mono', monospace";
+      ctx.textBaseline = "middle";
+      ctx.fillText(direction, pad.left + 5, firstY);
+    }
 
     // End-of-series label at the chart's right edge, pinned to that
     // channel's most recent value so it rides up/down with the live line.
@@ -338,6 +515,7 @@ function datasetSessionMarkers() {
 export function drawChart() {
   const visibleRunningChannels = ALL_SENSOR_CHANNELS.filter(isSensorChartSeriesVisible);
   drawOneChart(elements.sensorChart, elements.rangeSelect, elements.legend, [], visibleRunningChannels);
+  renderRunningAnalysisTable();
   drawOneChart(elements.datasetChart, elements.datasetRangeSelect, elements.datasetLegend, datasetSessionMarkers());
 }
 

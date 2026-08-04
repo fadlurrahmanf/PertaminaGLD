@@ -75,6 +75,7 @@ export function emitMockInfo() {
       appPing: true,
       getInfo: true,
       getStatus: true,
+      lightweightTelemetry: "GET_TELEMETRY",
       serialAppConfig: true,
       serialDeviceId: true,
       serialChAddress: "SET_CH_ADDRESS_JSON chId",
@@ -86,7 +87,7 @@ export function emitMockInfo() {
   handleLine(`GLD_INFO_JSON ${JSON.stringify(info)}`);
 }
 
-export function emitMockStatus() {
+function createMockStatus() {
   const t = Date.now() / 1000;
   const voltage = Array.from({ length: 8 }, (_, index) => {
     return 0.08 * Math.sin(t * (0.35 + index * 0.04) + index) + index * 0.012;
@@ -114,6 +115,7 @@ export function emitMockStatus() {
     },
     telemetry: {
       valid: true,
+      sampleMs: Math.floor(performance.now()),
       gasClass: 0,
       gasName: alarm ? "methane" : "Clean_Air",
       confidence: alarm ? 87 : 99,
@@ -124,8 +126,26 @@ export function emitMockStatus() {
       featureOrder: ["MQ8", "MQ135", "MQ3", "MQ5", "MQ4", "MQ7", "MQ6", "MQ2"]
     }
   };
+  return status;
+}
+
+export function emitMockStatus() {
+  const status = createMockStatus();
   handleLine(`GLD_STATUS_JSON ${JSON.stringify(status)}`);
   if (state.mode === "nulling") emitMockNullingProgress();
+}
+
+export function emitMockTelemetry() {
+  const status = createMockStatus();
+  const telemetry = {
+    deviceId: status.deviceId,
+    mode: status.mode,
+    uptimeMs: status.uptimeMs,
+    alarmLatched: status.alarmLatched,
+    model: { inferenceValid: true, sensorFault: false },
+    telemetry: status.telemetry
+  };
+  handleLine(`GLD_TELEMETRY_JSON ${JSON.stringify(telemetry)}`);
 }
 
 function startMockNulling() {
@@ -183,6 +203,7 @@ function emitMockNullingProgress() {
 export function handleMockCommand(command) {
   if (command === "GET_INFO" || command === "APP_PING") emitMockInfo();
   if (command === "GET_STATUS" || command === "RUN_BOOT_CHECK") emitMockStatus();
+  if (command === "GET_TELEMETRY") emitMockTelemetry();
   if (command === "RESTART") {
     handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("RESTART", "ok", true))}`);
     state.mode = "inference";

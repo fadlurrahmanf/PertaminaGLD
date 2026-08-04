@@ -958,6 +958,7 @@ def test_gld_unified_runtime_scaffolds_present():
     assert "APP_PING" in command_src
     assert "GET_INFO" in command_src
     assert "GET_STATUS" in command_src
+    assert "GET_TELEMETRY" in command_src
     assert "RESTART" in command_src
     assert "RUN_BOOT_CHECK" in command_src
     assert "RUN_ADS_MCP_SWEEP" in command_src
@@ -973,9 +974,11 @@ def test_gld_unified_runtime_scaffolds_present():
     assert "GldSerialCommandType::AppPing" in command_src
     assert "GldSerialCommandType::GetInfo" in command_src
     assert "GldSerialCommandType::GetStatus" in command_src
+    assert "GldSerialCommandType::GetTelemetry" in command_src
     assert "Unknown" in command_header
     assert "Restart" in command_header
     assert "RunBootCheck" in command_header
+    assert "GetTelemetry" in command_header
     assert "RunAdsMcpSweep" in command_header
     assert "SleepNow" in command_header
     assert "ServiceHoldOff" in command_header
@@ -1209,6 +1212,7 @@ def test_gld_unified_runtime_scaffolds_present():
     assert "js/main.js?v=20260715-manifold-1" not in operator_index
     assert "js/main.js?v=20260716-fullscale-sweep-1" in operator_index
     assert 'command === "GET_STATUS" || command === "RUN_BOOT_CHECK"' in operator_app
+    assert 'command === "GET_TELEMETRY"' in operator_app
     assert "SET_LORA_CONFIG_JSON" in operator_app
     assert "export async function applyLoraConfig()" in operator_app
     assert "syncLoraConfigFields" in operator_app

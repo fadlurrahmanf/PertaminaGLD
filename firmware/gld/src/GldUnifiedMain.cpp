@@ -1199,6 +1199,7 @@ void addCapabilities(JsonObject caps) {
     caps["appPing"] = true;
     caps["getInfo"] = true;
     caps["getStatus"] = true;
+    caps["lightweightTelemetry"] = "GET_TELEMETRY";
     caps["serialAckJson"] = true;
     caps["runningTelemetry"] = true;
     caps["modeSwitchReboots"] = true;
@@ -1241,6 +1242,26 @@ void addTelemetry(JsonObject telemetry) {
         status.add(latestSensorStatus[ch]);
         order.add(pgl::gld::board::SENSOR_NAMES[ch]);
     }
+}
+
+// This is deliberately separate from GET_STATUS: the operator requests it on
+// every Running poll, while GET_STATUS remains the complete configuration and
+// diagnostic snapshot used after connect and operator actions.
+void emitTelemetryJson() {
+    static StaticJsonDocument<1536> doc;
+    doc.clear();
+    doc["deviceId"] = runtimeConfig.deviceId;
+    doc["mode"] = pgl::gld::gldModeName(currentMode);
+    doc["uptimeMs"] = static_cast<uint32_t>(millis());
+    doc["alarmLatched"] = pgl::gld::readGldAlarmLatched();
+
+    JsonObject model = doc.createNestedObject("model");
+    model["inferenceValid"] = lastInferenceValid;
+    model["sensorFault"] = sensorFaultActive;
+
+    JsonObject telemetry = doc.createNestedObject("telemetry");
+    addTelemetry(telemetry);
+    rawJsonLine("GLD_TELEMETRY_JSON", doc);
 }
 
 void emitInfoJson() {
@@ -2300,6 +2321,9 @@ void handleSerialCommand(const pgl::gld::GldSerialCommand& command) {
             break;
         case pgl::gld::GldSerialCommandType::GetStatus:
             emitStatusJson();
+            break;
+        case pgl::gld::GldSerialCommandType::GetTelemetry:
+            emitTelemetryJson();
             break;
         case pgl::gld::GldSerialCommandType::Restart:
             restartFromSerialCommand();

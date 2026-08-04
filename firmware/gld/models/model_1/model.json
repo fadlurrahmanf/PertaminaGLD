@@ -1,0 +1,8 @@
+{
+  "slot": "model_1",
+  "label": "Model 1",
+  "state": "available",
+  "source": "firmware/gld/model",
+  "profileId": "cnn-dualbranch-datasheet-v1-unbound",
+  "note": "Current compiled GLD model. Its package remains environment gld until a dedicated model-variant build is introduced."
+}

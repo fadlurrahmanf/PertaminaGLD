@@ -46,8 +46,10 @@ for ($i = 0; $i -le 5; $i++) {
     [void]$grid.Append("<line x1='$left' y1='$($y.ToString('F1',$ci))' x2='$($left+$plotWidth)' y2='$($y.ToString('F1',$ci))' stroke='#3c3526' stroke-width='1'/><text x='$($left-12)' y='$(($y+5).ToString('F1',$ci))' fill='#cfc8b8' text-anchor='end' font-size='14'>$($value.ToString('F2',$ci)) mV</text>")
 }
 
-$dutyMarks = @($points | Group-Object Duty | ForEach-Object { $_.Group[0] } | Sort-Object X)
-$marks = foreach ($mark in $dutyMarks) { "<line x1='$((PX $mark.X).ToString('N1',[Globalization.CultureInfo]::InvariantCulture))' y1='$top' x2='$((PX $mark.X).ToString('N1',[Globalization.CultureInfo]::InvariantCulture))' y2='$($top+$plotHeight)' stroke='#f0ad4e' stroke-width='1' stroke-dasharray='5,5'/><text x='$((PX $mark.X+1).ToString('N1',[Globalization.CultureInfo]::InvariantCulture))' y='$($top+18)' fill='#f0ad4e' font-size='13'>$($mark.Duty)%</text>" }
+# Group by phase as well as duty: recovery-to-baseline has several 100% phases
+# and each must appear as a separate boundary on the live graph.
+$dutyMarks = @($points | Group-Object { "$($_.Phase)|$($_.Duty)" } | ForEach-Object { $_.Group[0] } | Sort-Object X)
+$marks = foreach ($mark in $dutyMarks) { "<line x1='$((PX $mark.X).ToString('N1',[Globalization.CultureInfo]::InvariantCulture))' y1='$top' x2='$((PX $mark.X).ToString('N1',[Globalization.CultureInfo]::InvariantCulture))' y2='$($top+$plotHeight)' stroke='#f0ad4e' stroke-width='1' stroke-dasharray='5,5'/><text x='$((PX $mark.X+1).ToString('N1',[Globalization.CultureInfo]::InvariantCulture))' y='$($top+18)' fill='#f0ad4e' font-size='13'>$($mark.Phase) ($($mark.Duty)%)</text>" }
 $svg = @"
 <svg xmlns="http://www.w3.org/2000/svg" width="$width" height="$height" viewBox="0 0 $width $height">
 <rect width="100%" height="100%" fill="#15120e"/>

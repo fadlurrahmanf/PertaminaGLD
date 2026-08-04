@@ -763,6 +763,24 @@ export function updateTelemetryCollectionProgress() {
   elements.telemetryBaselineProgressValue.textContent = `${baselinePercent}%`;
 }
 
+function updateLightweightTelemetry(message) {
+  // Preserve the last complete snapshot: a lightweight poll intentionally has
+  // no power, boot, LoRa, nulling, or NVS fields to avoid serial overhead.
+  const status = {
+    ...(state.status || {}),
+    deviceId: message.deviceId || state.status?.deviceId || state.info?.deviceId,
+    mode: message.mode || state.mode,
+    uptimeMs: message.uptimeMs,
+    alarmLatched: message.alarmLatched ?? state.status?.alarmLatched,
+    model: { ...(state.status?.model || {}), ...(message.model || {}) },
+    telemetry: message.telemetry
+  };
+  state.status = status;
+  state.mode = status.mode || state.mode;
+  updateStatus(status);
+  maybeAppendTelemetry(status);
+}
+
 function sensorWindowSamples(index) {
   const cutoff = Date.now() - SENSOR_TREND_WINDOW_MS;
   return state.history.filter((sample) => sample.ts >= cutoff && Number.isFinite(Number(sample.sensorVoltage?.[index])));
@@ -1050,6 +1068,13 @@ export function handleLine(rawLine) {
       return;
     }
 
+    const telemetry = parseJsonAfter("GLD_TELEMETRY_JSON", line);
+    if (telemetry) {
+      clearSerialResponseWatch();
+      updateLightweightTelemetry(telemetry);
+      return;
+    }
+
     const qcStatus = parseJsonAfter("GLD_QC_STATUS_JSON", line);
     if (qcStatus) {
       clearSerialResponseWatch();
@@ -1251,6 +1276,12 @@ function setPollButtonLabel(text) {
   });
 }
 
+function telemetryPollCommand() {
+  return state.info?.capabilities?.lightweightTelemetry === "GET_TELEMETRY"
+    ? "GET_TELEMETRY"
+    : "GET_STATUS";
+}
+
 export function togglePolling() {
   if (state.polling) {
     stopPolling();
@@ -1262,8 +1293,8 @@ export function togglePolling() {
     const intervalMs = pollIntervalMs();
     state.polling = true;
     setPollButtonLabel(`Stop Poll (${intervalMs}ms)`);
-    state.pollTimer = setInterval(() => sendCommand("GET_STATUS"), intervalMs);
-    sendCommand("GET_STATUS");
+    state.pollTimer = setInterval(() => sendCommand(telemetryPollCommand()), intervalMs);
+    sendCommand(telemetryPollCommand());
   }
   saveUiSession({ polling: state.polling });
 }

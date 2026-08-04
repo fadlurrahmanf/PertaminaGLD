@@ -223,7 +223,7 @@ def send_and_confirm(host: str, device: str, line: str, ack_marker: str) -> dict
             text = str(item.get("line", ""))
             if ack_marker not in text:
                 continue
-            if "status=error" in text or '"status":"error"' in text or '"status":"rejected"' in text:
+            if "status=error" in text or "status=rejected" in text or '"status":"error"' in text or '"status":"rejected"' in text:
                 raise RuntimeError(f"device rejected configuration: {text}")
             return {"sent": sent, "ack": text}
         time.sleep(0.15)
@@ -295,6 +295,40 @@ def gld_boot_report(status: dict[str, object]) -> dict[str, object]:
     passed = sum(item["ok"] is True for item in checks)
     failed = sum(item["ok"] is False for item in checks)
     return {"total": len(checks), "passed": passed, "failed": failed, "unknown": len(checks) - passed - failed, "checks": checks}
+
+
+def readiness_report(checks: list[dict[str, object]]) -> dict[str, object]:
+    passed = sum(item["ok"] is True for item in checks)
+    failed = sum(item["ok"] is False for item in checks)
+    return {"total": len(checks), "passed": passed, "failed": failed, "unknown": len(checks) - passed - failed, "checks": checks}
+
+
+def ch_readiness_report(info: object) -> dict[str, object]:
+    data = info if isinstance(info, dict) else {}
+    radio = data.get("radio") if isinstance(data.get("radio"), dict) else {}
+    ch_id = str(data.get("chId") or "")
+    root_id = str(data.get("rootGatewayId") or "")
+    star_ready = radio.get("starReady") in (1, True)
+    mesh_ready = radio.get("meshReady") in (1, True)
+    checks = [
+        {"label": "CH identity", "ok": bool(ch_id), "detail": ch_id or "CH ID tidak terbaca"},
+        {"label": "Root Gateway", "ok": bool(root_id), "detail": root_id or "Root Gateway ID tidak terbaca"},
+        {"label": "Radio STAR", "ok": star_ready, "detail": "STAR siap" if star_ready else "Radio STAR tidak siap"},
+        {"label": "Radio Mesh", "ok": mesh_ready, "detail": "Mesh siap" if mesh_ready else "Radio Mesh tidak siap"},
+    ]
+    return readiness_report(checks)
+
+
+def gateway_readiness_report(info: object) -> dict[str, object]:
+    data = info if isinstance(info, dict) else {}
+    gateway_id = str(data.get("gatewayId") or "")
+    checks = [
+        {"label": "Gateway identity", "ok": bool(gateway_id), "detail": gateway_id or "Gateway ID tidak terbaca"},
+        {"label": "Radio Mesh", "ok": data.get("meshReady") in (1, True), "detail": "Mesh siap" if data.get("meshReady") in (1, True) else "Mesh tidak siap"},
+        {"label": "Wi-Fi", "ok": data.get("wifi") in (1, True), "detail": "Wi-Fi tersambung" if data.get("wifi") in (1, True) else "Wi-Fi belum tersambung"},
+        {"label": "MQTT", "ok": data.get("mqtt") in (1, True), "detail": "MQTT tersambung" if data.get("mqtt") in (1, True) else "MQTT belum tersambung"},
+    ]
+    return readiness_report(checks)
 
 
 def validate_host(host: str) -> str:
@@ -507,6 +541,14 @@ class Handler(SimpleHTTPRequestHandler):
                 return self._simple_config_id(payload)
             if path == "/api/simple/config/star-frequency":
                 return self._simple_config_frequency(payload)
+            if path == "/api/simple/config/target-ch":
+                return self._simple_config_target_ch(payload)
+            if path == "/api/simple/config/root-gateway":
+                return self._simple_config_root_gateway(payload)
+            if path == "/api/simple/config/wifi":
+                return self._simple_config_wifi(payload)
+            if path == "/api/simple/config/mqtt":
+                return self._simple_config_mqtt(payload)
             if path == "/api/simple/firmware/upload":
                 return self._simple_firmware_upload(payload)
             return json_response(self, {"error": "not found"}, HTTPStatus.NOT_FOUND)
@@ -547,12 +589,15 @@ class Handler(SimpleHTTPRequestHandler):
 
     def _simple_test_device(self, payload: dict[str, object]) -> None:
         device = self._simple_device(payload)
-        if device != "gld":
-            raise ValueError("Test Device Boot Report is currently available for GLD only")
         host = self.server.server_address[0] or "127.0.0.1"
         state = simple_device_state(host, device, query=True)
         if not state.get("connected") or not state.get("info"):
-            raise RuntimeError("connect and identify the GLD first")
+            raise RuntimeError("connect and identify the device first")
+        if device != "gld":
+            report = ch_readiness_report(state["info"]) if device == "ch" else gateway_readiness_report(state["info"])
+            result = "all checks OK" if report["failed"] == 0 and report["unknown"] == 0 else f"{report['failed']} error, {report['unknown']} pending"
+            add_activity(device, "Test Device", f"{state.get('port') or 'COM'}; {report['passed']}/{report['total']} OK; {result}")
+            return json_response(self, {"report": report, "status": state["info"]})
         before = child_request(host, device, "GET", "/api/serial/recent?slot=1&after=0")
         sequence = int(before.get("sequence") or 0)
         child_request(host, device, "POST", "/api/serial/write", {"slot": 1, "line": "RUN_BOOT_CHECK"})
@@ -634,6 +679,86 @@ class Handler(SimpleHTTPRequestHandler):
             raise RuntimeError("firmware ACK was received but STAR frequency read-back differs")
         add_activity(device, "Set STAR frequency", f"{state.get('port')}; {frequency:.3f} MHz saved and read back")
         json_response(self, {"ok": True, "confirmation": result, "readback": readback})
+
+    def _simple_config_target_ch(self, payload: dict[str, object]) -> None:
+        if self._simple_device(payload) != "gld":
+            raise ValueError("Target CH is a GLD setting")
+        value = str(payload.get("value") or "").upper().removeprefix("0X")
+        if not __import__("re").fullmatch(r"[0-9A-F]{4}", value) or not 0x0010 <= int(value, 16) <= 0x0FFF:
+            raise ValueError("Target CH ID must be 0010-0FFF")
+        host = self.server.server_address[0] or "127.0.0.1"
+        state = simple_device_state(host, "gld")
+        if not state.get("connected") or not state.get("info"):
+            raise RuntimeError("connect and identify the GLD first")
+        result = send_and_confirm(host, "gld", f'SET_CH_ADDRESS_JSON {{"chId":"{value}","reboot":true}}', "SET_CH_ADDRESS")
+        readback = wait_for_readback(host, "gld", str(state["port"]))
+        stored = str((readback.get("info") or {}).get("targetChId") or "").upper().removeprefix("0X")
+        if stored != value:
+            raise RuntimeError(f"firmware ACK was received but Target CH read-back differs: {stored or '-'}")
+        add_activity("gld", "Set Target CH", f"{state.get('port')}; {value} saved and read back")
+        json_response(self, {"ok": True, "confirmation": result, "readback": readback})
+
+    def _simple_config_root_gateway(self, payload: dict[str, object]) -> None:
+        if self._simple_device(payload) != "ch":
+            raise ValueError("Root Gateway is a CH setting")
+        value = str(payload.get("value") or "").upper().removeprefix("0X")
+        if not __import__("re").fullmatch(r"[0-9A-F]{4}", value) or not 0x0001 <= int(value, 16) <= 0x000F:
+            raise ValueError("Root Gateway ID must be 0001-000F")
+        host = self.server.server_address[0] or "127.0.0.1"
+        state = simple_device_state(host, "ch")
+        if not state.get("connected") or not state.get("info"):
+            raise RuntimeError("connect and identify the CH first")
+        result = send_and_confirm(host, "ch", f'SET_ROOT_GATEWAY_JSON {{"gatewayId":"{value}"}}', "SET_ROOT_GATEWAY_JSON")
+        readback = wait_for_readback(host, "ch", str(state["port"]))
+        stored = str((readback.get("info") or {}).get("rootGatewayId") or "").upper().removeprefix("0X")
+        if stored != value:
+            raise RuntimeError(f"firmware ACK was received but Root Gateway read-back differs: {stored or '-'}")
+        add_activity("ch", "Set Root Gateway", f"{state.get('port')}; {value} saved and read back")
+        json_response(self, {"ok": True, "confirmation": result, "readback": readback})
+
+    def _simple_config_wifi(self, payload: dict[str, object]) -> None:
+        if self._simple_device(payload) != "gw":
+            raise ValueError("Wi-Fi is a Gateway setting")
+        ssid, password = str(payload.get("ssid") or ""), str(payload.get("password") or "")
+        if not ssid:
+            raise ValueError("Wi-Fi SSID is required")
+        host = self.server.server_address[0] or "127.0.0.1"
+        state = simple_device_state(host, "gw")
+        if not state.get("connected") or not state.get("info"):
+            raise RuntimeError("connect and identify the Gateway first")
+        result = send_and_confirm(host, "gw", f'SET_WIFI_CONFIG_JSON {json.dumps({"ssid": ssid, "password": password, "reboot": True}, separators=(",", ":"))}', "SET_WIFI_CONFIG")
+        readback = wait_for_readback(host, "gw", str(state["port"]))
+        wifi_test = send_and_confirm(host, "gw", "TEST_WIFI", "TEST_WIFI")
+        if "connected=1" not in str(wifi_test.get("ack") or ""):
+            raise RuntimeError("Wi-Fi settings were saved but the Gateway did not connect")
+        add_activity("gw", "Set Wi-Fi", f"{state.get('port')}; saved, restarted, and Wi-Fi verified")
+        json_response(self, {"ok": True, "confirmation": result, "readback": readback, "wifiTest": wifi_test})
+
+    def _simple_config_mqtt(self, payload: dict[str, object]) -> None:
+        if self._simple_device(payload) != "gw":
+            raise ValueError("MQTT is a Gateway setting")
+        host_name, username, password = str(payload.get("host") or ""), str(payload.get("username") or ""), str(payload.get("password") or "")
+        try:
+            port = int(payload.get("port"))
+        except (TypeError, ValueError) as exc:
+            raise ValueError("MQTT port is required") from exc
+        if not host_name or not 1 <= port <= 65535:
+            raise ValueError("MQTT host and port are required")
+        host = self.server.server_address[0] or "127.0.0.1"
+        state = simple_device_state(host, "gw")
+        if not state.get("connected") or not state.get("info"):
+            raise RuntimeError("connect and identify the Gateway first")
+        wifi_test = send_and_confirm(host, "gw", "TEST_WIFI", "TEST_WIFI")
+        if "connected=1" not in str(wifi_test.get("ack") or ""):
+            raise RuntimeError("Wi-Fi must pass its test before MQTT can be configured")
+        config = {"host": host_name, "port": port, "username": username, "password": password}
+        result = send_and_confirm(host, "gw", f"SET_MQTT_CONFIG_JSON {json.dumps(config, separators=(',', ':'))}", "SET_MQTT_CONFIG")
+        time.sleep(1.0)
+        mqtt_test = send_and_confirm(host, "gw", "TEST_MQTT", "TEST_MQTT")
+        if "connected=1" not in str(mqtt_test.get("ack") or ""):
+            raise RuntimeError("MQTT settings were saved but the Gateway did not connect")
+        add_activity("gw", "Set MQTT", f"{state.get('port')}; saved and MQTT verified")
+        json_response(self, {"ok": True, "confirmation": result, "wifiTest": wifi_test, "mqttTest": mqtt_test})
 
     def _simple_firmware_upload(self, payload: dict[str, object]) -> None:
         """Flash only the packaged latest production image with explicit NVS-reset consent."""

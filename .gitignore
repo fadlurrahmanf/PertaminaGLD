@@ -17,6 +17,11 @@ ActivityAI/*activity.md
 docs/chat/
 docs/resume.md
 archive/
+!archive/
+archive/*
+!archive/apps/
+!archive/apps/gld-operator-backup/
+!archive/apps/gld-operator-backup/**
 firmware/versions/backups/
 
 # GLD firmware config (may contain WiFi/MQTT credentials)

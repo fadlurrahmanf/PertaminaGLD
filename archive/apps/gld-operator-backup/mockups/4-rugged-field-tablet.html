@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Design 4 — Rugged Field Tablet</title>
+<style>
+  :root{
+    --bg:#161616;
+    --panel:#222222;
+    --panel-2:#2a2a2a;
+    --border:#3a3a3a;
+    --orange:#ff7a00;
+    --red:#ff1f1f;
+    --green:#3ddc6b;
+    --text:#ffffff;
+    --muted:#b0b0b0;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,'Segoe UI',sans-serif;}
+  .shell{display:flex;flex-direction:column;min-height:100vh;}
+  .topbar{
+    background:repeating-linear-gradient(135deg,#1a1a1a,#1a1a1a 14px,#221a0d 14px,#221a0d 28px);
+    border-bottom:4px solid var(--orange);
+    padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem;
+  }
+  .brand{font-weight:900;font-size:22px;letter-spacing:.02em;text-transform:uppercase;}
+  .brand span{color:var(--orange);}
+  .status{margin-left:auto;font-size:14px;font-weight:700;padding:8px 16px;background:var(--panel);border:2px solid var(--green);color:var(--green);text-transform:uppercase;}
+  .main{flex:1;padding:1rem 1.25rem;}
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1rem;}
+  .tile{background:var(--panel);border:3px solid var(--border);padding:16px;text-align:center;}
+  .tile .lbl{font-size:13px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.04em;}
+  .tile .val{font-size:32px;font-weight:900;margin:6px 0;}
+  .btnrow{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1rem;}
+  .bigbtn{
+    background:var(--panel-2);border:3px solid var(--border);color:var(--text);
+    font-size:16px;font-weight:900;text-transform:uppercase;padding:20px 10px;cursor:pointer;letter-spacing:.02em;
+  }
+  .bigbtn.primary{background:var(--orange);color:#1a1200;border-color:var(--orange);}
+  .bigbtn.danger{border-color:var(--red);color:var(--red);}
+  .panel-box{background:var(--panel);border:3px solid var(--border);padding:1rem;margin-bottom:1rem;}
+  .panel-box h3{margin:0 0 1rem;font-size:16px;font-weight:900;text-transform:uppercase;letter-spacing:.03em;border-bottom:3px solid var(--border);padding-bottom:.6rem;}
+  .chart-fake{height:170px;background:#1a1a1a;border:2px solid var(--border);position:relative;}
+  .chart-fake svg{position:absolute;inset:0;width:100%;height:100%;}
+  .ch-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+  .ch{background:var(--panel-2);border:3px solid var(--green);padding:12px;text-align:center;font-weight:900;font-size:15px;text-transform:uppercase;}
+  .ch.mid{border-color:var(--orange);}
+  .ch.wait{border-color:var(--border);color:var(--muted);}
+  .bottombar{position:sticky;bottom:0;background:var(--panel);border-top:4px solid var(--orange);padding:.9rem 1.25rem;display:flex;gap:10px;}
+  .bottombar button{flex:1;padding:16px;font-size:15px;font-weight:900;text-transform:uppercase;border:2px solid var(--border);background:var(--panel-2);color:var(--text);}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="topbar">
+    <div class="brand">GLD <span>Operator</span></div>
+    <div class="status">Connected · COM10</div>
+  </div>
+  <div class="main">
+    <div class="grid">
+      <div class="tile"><div class="lbl">Gas</div><div class="val">n/a</div></div>
+      <div class="tile"><div class="lbl">Mode</div><div class="val">RUN</div></div>
+      <div class="tile"><div class="lbl">Battery</div><div class="val">92%</div></div>
+      <div class="tile"><div class="lbl">LoRa</div><div class="val">OK</div></div>
+    </div>
+    <div class="btnrow">
+      <button class="bigbtn primary">Ping</button>
+      <button class="bigbtn">Status</button>
+      <button class="bigbtn">Dataset</button>
+      <button class="bigbtn danger">Mute Alarm</button>
+    </div>
+    <div class="panel-box">
+      <h3>Sensor telemetry</h3>
+      <div class="chart-fake">
+        <svg viewBox="0 0 400 170" preserveAspectRatio="none">
+          <polyline fill="none" stroke="#ff7a00" stroke-width="3" points="0,120 40,110 80,130 120,90 160,100 200,70 240,95 280,60 320,80 360,50 400,65"/>
+        </svg>
+      </div>
+    </div>
+    <div class="panel-box">
+      <h3>Nulling channels</h3>
+      <div class="ch-grid">
+        <div class="ch">CH1 Pass</div>
+        <div class="ch">CH2 Pass</div>
+        <div class="ch mid">CH3 Binary</div>
+        <div class="ch wait">CH4 Wait</div>
+      </div>
+    </div>
+  </div>
+  <div class="bottombar">
+    <button>Sensor Check</button>
+    <button>Nulling</button>
+    <button>Log</button>
+    <button>Firmware</button>
+  </div>
+</div>
+</body>
+</html>

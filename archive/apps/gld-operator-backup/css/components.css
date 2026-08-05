@@ -1,0 +1,441 @@
+/* ---- Tags (status pills) ---- */
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  max-width: 100%;
+  padding: 0 10px;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 999px;
+  color: var(--ink-muted);
+  background: var(--panel-black);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.03em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#alarmBadge {
+  min-width: 132px;
+}
+
+.tag--ok {
+  border-color: rgba(107, 212, 122, 0.6);
+  color: #baf7c8;
+}
+
+.tag--warn {
+  border-color: rgba(255, 164, 0, 0.6);
+  color: #ffd699;
+}
+
+.tag--alarm,
+.tag--error {
+  border-color: var(--hazard-red);
+  color: #ffb8b3;
+}
+
+.tag--alarm {
+  animation: tag-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes tag-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.5); }
+  50% { box-shadow: 0 0 0 5px rgba(255, 59, 48, 0); }
+}
+
+/* ---- Gauge cards (the 4 headline metric cards + dataset session cards) ---- */
+
+.gauge-card {
+  display: grid;
+  gap: 4px;
+  padding: var(--space-3);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  background: var(--panel-steel-raised);
+}
+
+.gauge-card > span {
+  color: var(--ink-muted);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.gauge-card > strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--paper);
+  font-family: var(--font-mono);
+  font-size: 20px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gauge-card > small {
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+/* ---- Fleet ---- */
+
+.fleet-card {
+  display: grid;
+  gap: 4px;
+  padding: var(--space-3);
+  border: 1px solid var(--hairline);
+  border-left: 3px solid var(--hairline-strong);
+  border-radius: var(--radius);
+  background: var(--panel-black);
+}
+
+.fleet-card.active {
+  border-left-color: var(--phosphor-amber);
+}
+
+.fleet-card.alarm {
+  border-left-color: var(--hazard-red);
+}
+
+.fleet-card > span {
+  color: var(--ink-muted);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.fleet-card > strong {
+  font-family: var(--font-mono);
+  font-size: 16px;
+}
+
+.fleet-card > small {
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.fleet-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.fleet-card-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.fleet-card-actions button {
+  min-height: 26px;
+  padding: 0 8px;
+  font-size: 11px;
+}
+
+#addSlotBtn {
+  width: 100%;
+}
+
+/* ---- Buttons in busy state ---- */
+
+button.is-busy {
+  position: relative;
+  padding-left: 30px;
+}
+
+button.is-busy::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  width: 13px;
+  height: 13px;
+  margin-top: -7px;
+  border: 2px solid rgba(237, 230, 214, 0.3);
+  border-top-color: var(--phosphor-amber);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ---- Status line / hint text ---- */
+
+.status-line {
+  margin: 0 0 var(--space-2);
+  color: var(--ink-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.status-line.error {
+  color: #ffb8b3;
+}
+
+.dataset-hint {
+  margin: 0 0 var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  background: var(--panel-black);
+  color: var(--ink-muted);
+  font-size: 12px;
+}
+
+/* ---- Option row (checkbox) ---- */
+
+.option-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  cursor: pointer;
+}
+
+.option-row input {
+  width: auto;
+  min-height: auto;
+  margin-top: 3px;
+}
+
+.option-row span {
+  display: grid;
+  gap: 2px;
+}
+
+.option-row small {
+  color: var(--ink-muted);
+}
+
+/* ---- Progress bar ---- */
+
+.progress-track {
+  position: relative;
+  height: 8px;
+  margin-bottom: var(--space-3);
+  border-radius: 999px;
+  background: var(--panel-black);
+  overflow: hidden;
+}
+
+.progress-track span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0%;
+  background: var(--phosphor-amber);
+  transition: width 200ms ease;
+}
+
+/* ---- Terminal / log ---- */
+
+.terminal {
+  min-height: 160px;
+  max-height: 46vh;
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  background: var(--panel-black);
+  color: var(--phosphor-amber);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.terminal.tall {
+  min-height: 320px;
+  max-height: 64vh;
+}
+
+.terminal.compact-log {
+  min-height: 160px;
+  max-height: 28vh;
+}
+
+.terminal-row {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.terminal-row input {
+  flex: 1;
+}
+
+/* ---- kv list ---- */
+
+.kv {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.kv div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding-bottom: var(--space-1);
+  border-bottom: 1px dotted var(--hairline);
+}
+
+.kv dt {
+  color: var(--ink-muted);
+  font-size: 12px;
+}
+
+.kv dd {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-align: right;
+}
+
+.setup-kv div {
+  border-bottom: none;
+}
+
+/* ---- Dataset rows table ---- */
+
+.dataset-table-wrap {
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.data-table th, .data-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--hairline);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.data-table th {
+  color: var(--ink-muted);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ---- Channel cards (nulling / sensor check / boot report) ---- */
+
+.channel-card {
+  display: grid;
+  gap: 6px;
+  min-height: 108px;
+  padding: var(--space-3);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  background: var(--panel-black);
+}
+
+.channel-card.active {
+  border-color: var(--signal-cyan);
+}
+
+.channel-card.pass {
+  border-color: var(--status-ok);
+}
+
+.channel-card.fail {
+  border-color: var(--hazard-red);
+}
+
+.channel-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.channel-card-head strong {
+  font-family: var(--font-mono);
+  color: var(--paper);
+}
+
+.channel-stage {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--paper);
+}
+
+.channel-card-head span,
+.channel-card small {
+  min-width: 0;
+  color: var(--ink-muted);
+  font-size: 11px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.channel-card-head span {
+  overflow: hidden;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- Chart ---- */
+
+.chart-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.chart-wrap canvas {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: var(--radius);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.legend-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+/* ---- Port setup detail ---- */
+
+.port-row {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.port-detail {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: 12px;
+}

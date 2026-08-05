@@ -1,0 +1,132 @@
+// Generic DOM helpers: text/badge updates, banners, busy-spinner wrapper,
+// tab switching, form field helpers, small download/format utilities.
+
+import { $, elements, state } from "./state.js";
+import { drawChart } from "./chart.js";
+
+export function nowText() {
+  return new Date().toLocaleTimeString("en-GB", { hour12: false });
+}
+
+export function setBadge(el, text, kind = "") {
+  el.textContent = text;
+  el.className = `tag ${kind ? `tag--${kind}` : ""}`.trim();
+}
+
+export function setText(id, value) {
+  const element = $(id);
+  if (!element) return;
+  element.textContent = value == null || value === "" ? "Unknown" : String(value);
+}
+
+let bannerHideTimer = null;
+
+export function showBanner(message, kind = "error") {
+  elements.globalBannerText.textContent = message;
+  elements.globalBanner.className = `alert-bar ${kind !== "error" ? `alert-bar--${kind}` : ""}`.trim();
+  elements.globalBanner.hidden = false;
+  clearTimeout(bannerHideTimer);
+  if (kind !== "error") {
+    bannerHideTimer = setTimeout(() => hideBanner(), 6000);
+  }
+}
+
+export function hideBanner() {
+  elements.globalBanner.hidden = true;
+}
+
+export async function withBusy(button, busyLabel, fn) {
+  if (!button) return fn();
+  const original = button.textContent;
+  const wasDisabled = button.disabled;
+  button.disabled = true;
+  button.classList.add("is-busy");
+  button.textContent = busyLabel;
+  try {
+    return await fn();
+  } finally {
+    button.disabled = wasDisabled;
+    button.classList.remove("is-busy");
+    button.textContent = original;
+  }
+}
+
+export function appendLog(line, direction = "in") {
+  const prefix = direction === "out" ? ">>" : "<<";
+  const entry = `${nowText()} ${prefix} ${line}`;
+  state.logs.push(entry);
+  if (state.logs.length > 3000) state.logs.splice(0, state.logs.length - 3000);
+  elements.serialLog.textContent = state.logs.join("\n");
+  elements.serialLog.scrollTop = elements.serialLog.scrollHeight;
+}
+
+export function setSetupOpen(open) {
+  elements.setupPanel.classList.toggle("open", open);
+  elements.setupPanel.setAttribute("aria-hidden", open ? "false" : "true");
+}
+
+export function switchTab(tabId) {
+  document.querySelectorAll(".tab").forEach((button) => {
+    button.classList.toggle("active", button.dataset.tab === tabId);
+  });
+  document.querySelectorAll(".view").forEach((view) => {
+    view.classList.toggle("active", view.id === tabId);
+  });
+  drawChart();
+}
+
+export function getField(id) {
+  return $(id).value.trim();
+}
+
+export function setField(id, value) {
+  if (value != null && value !== "") $(id).value = value;
+}
+
+export function numberField(id) {
+  return Number($(id).value);
+}
+
+export function downloadText(filename, text, type = "text/plain") {
+  const url = URL.createObjectURL(new Blob([text], { type }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+export function csvCell(value) {
+  const text = String(value);
+  return /[",\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+}
+
+export function stamp() {
+  return new Date().toISOString().replace(/[-:]/g, "").replace(/\..+/, "");
+}
+
+export function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export function exportLog() {
+  downloadText(`GLD_serial_${stamp()}.log`, `${state.logs.join("\n")}\n`);
+}
+
+const FORM_STORAGE_IDS = ["datasetLabel", "targetSamples", "sampleIntervalMs", "maxDurationMs", "fanOnMs", "postFanSettleMs", "wifiSsid", "mqttHost", "mqttPort", "mqttUser", "topicRoot", "firmwareEnv", "targetDeviceId", "targetChAddress", "manualPortInput"];
+
+export function saveForm() {
+  const data = Object.fromEntries(FORM_STORAGE_IDS.map((id) => [id, $(id).value]));
+  localStorage.setItem("gldOperatorWeb.form", JSON.stringify(data));
+}
+
+export function loadForm() {
+  try {
+    const data = JSON.parse(localStorage.getItem("gldOperatorWeb.form") || "{}");
+    Object.entries(data).forEach(([id, value]) => {
+      if ($(id)) $(id).value = value;
+    });
+  } catch {}
+}

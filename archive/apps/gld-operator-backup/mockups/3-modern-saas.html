@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Design 3 — Modern SaaS Dashboard</title>
+<style>
+  :root{
+    --bg:#0a0a0f;
+    --panel:#16161d;
+    --panel-2:#1d1d26;
+    --border:rgba(255,255,255,.08);
+    --violet:#8b5cf6;
+    --violet-soft:rgba(139,92,246,.14);
+    --teal:#22d3ee;
+    --green:#34d399;
+    --red:#f87171;
+    --text:#e5e5ea;
+    --muted:#8b8b96;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;}
+  .shell{display:flex;min-height:100vh;}
+  .rail{width:64px;background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:1rem 0;gap:14px;}
+  .rail .logo{width:34px;height:34px;border-radius:10px;background:var(--violet);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;margin-bottom:10px;}
+  .rail .icn{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;cursor:pointer;}
+  .rail .icn.active{background:var(--violet-soft);color:var(--violet);}
+  .content{flex:1;padding:1.5rem 2rem;max-width:1100px;}
+  .header{display:flex;align-items:center;margin-bottom:1.5rem;gap:1rem;}
+  .header h1{font-size:20px;margin:0;font-weight:600;}
+  .header .sub{font-size:12.5px;color:var(--muted);margin-top:2px;}
+  .badge{margin-left:auto;display:flex;gap:8px;}
+  .badge span{font-size:12px;padding:5px 12px;border-radius:20px;background:var(--panel-2);border:1px solid var(--border);}
+  .badge .ok{color:var(--green);}
+  .tabs{display:flex;gap:4px;background:var(--panel-2);border-radius:10px;padding:4px;margin-bottom:1.25rem;width:fit-content;}
+  .tab{padding:7px 14px;border-radius:8px;font-size:12.5px;color:var(--muted);cursor:pointer;}
+  .tab.active{background:var(--violet);color:#fff;font-weight:600;}
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.25rem;}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px;position:relative;overflow:hidden;}
+  .card::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--violet);}
+  .card.teal::before{background:var(--teal);}
+  .card .lbl{font-size:11.5px;color:var(--muted);}
+  .card .val{font-size:22px;font-weight:600;margin:6px 0 2px;}
+  .card .sub{font-size:12px;color:var(--muted);}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1.25rem;}
+  .panel h3{margin:0 0 1rem;font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px;}
+  .panel h3 .dot{width:7px;height:7px;border-radius:50%;background:var(--teal);}
+  .chart-fake{height:190px;border-radius:10px;background:var(--panel-2);position:relative;}
+  .chart-fake svg{position:absolute;inset:0;width:100%;height:100%;}
+  .ch-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+  .ch{background:var(--panel-2);border:1px solid var(--border);border-radius:10px;padding:12px;}
+  .ch .top{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:8px;}
+  .ch .badge2{font-size:11px;padding:3px 8px;border-radius:20px;background:rgba(52,211,153,.14);color:var(--green);font-weight:600;}
+  .ch .badge2.mid{background:rgba(139,92,246,.14);color:var(--violet);}
+  .ch .badge2.wait{background:rgba(255,255,255,.06);color:var(--muted);}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="rail">
+    <div class="logo">G</div>
+    <div class="icn active">Run</div>
+    <div class="icn">Chk</div>
+    <div class="icn">Set</div>
+    <div class="icn">Null</div>
+    <div class="icn">Log</div>
+    <div class="icn">Fw</div>
+  </div>
+  <div class="content">
+    <div class="header">
+      <div><h1>Running console</h1><div class="sub">Device F001 · Slot 1 · Bench COM10</div></div>
+      <div class="badge"><span class="ok">● Connected</span><span>115200 baud</span></div>
+    </div>
+    <div class="tabs">
+      <div class="tab active">Running</div>
+      <div class="tab">Sensor Check</div>
+      <div class="tab">Dataset</div>
+      <div class="tab">Nulling</div>
+      <div class="tab">Log</div>
+    </div>
+    <div class="cards">
+      <div class="card"><div class="lbl">Gas</div><div class="val">n/a</div><div class="sub">confidence -%</div></div>
+      <div class="card teal"><div class="lbl">Mode</div><div class="val">Running</div><div class="sub">external power</div></div>
+      <div class="card"><div class="lbl">Battery</div><div class="val">92%</div><div class="sub">LoRa linked</div></div>
+      <div class="card teal"><div class="lbl">Boot health</div><div class="val">8 / 8</div><div class="sub">ADS ready</div></div>
+    </div>
+    <div class="panel">
+      <h3><span class="dot"></span>Sensor telemetry</h3>
+      <div class="chart-fake">
+        <svg viewBox="0 0 400 190" preserveAspectRatio="none">
+          <polyline fill="none" stroke="#8b5cf6" stroke-width="2" points="0,140 40,130 80,145 120,110 160,120 200,90 240,105 280,75 320,90 360,60 400,72"/>
+          <polyline fill="none" stroke="#22d3ee" stroke-width="2" points="0,160 40,155 80,158 120,148 160,150 200,140 240,145 280,132 320,138 360,124 400,130"/>
+        </svg>
+      </div>
+    </div>
+    <div class="panel">
+      <h3><span class="dot"></span>Nulling channels</h3>
+      <div class="ch-row">
+        <div class="ch"><div class="top"><span>CH1</span><span class="badge2">Pass</span></div>DAC 451 · 1.02V</div>
+        <div class="ch"><div class="top"><span>CH2</span><span class="badge2 mid">Binary</span></div>bracket [200,600]</div>
+        <div class="ch"><div class="top"><span>CH3</span><span class="badge2">Pass</span></div>DAC 388 · 0.88V</div>
+        <div class="ch"><div class="top"><span>CH4</span><span class="badge2 wait">Waiting</span></div>queued</div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

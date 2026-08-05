@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>GLD Operator</title>
+    <link rel="stylesheet" href="./style.css?v=20260715-1000">
+  </head>
+  <body>
+    <main class="console-shell">
+      <header class="rack-header">
+        <div class="rack-brand">
+          <p class="rack-eyebrow">PERTAMINA GLD</p>
+          <h1>Operator Console</h1>
+        </div>
+
+        <div class="readout-strip" aria-label="Live GLD status">
+          <span id="connectionBadge" class="tag">disconnected</span>
+          <span id="bridgeBadge" class="tag">bridge: checking</span>
+          <span class="readout-chip"><span>Port</span><strong id="portLabel">browser selected</strong></span>
+          <span class="readout-chip"><span>ID</span><strong id="topDeviceStatus">Unknown</strong></span>
+          <span class="readout-chip"><span>Mode</span><strong id="topModeStatus">Unknown</strong></span>
+          <span class="readout-chip"><span>Gas</span><strong id="topGasStatus">n/a</strong></span>
+          <span class="readout-chip"><span>Conf</span><strong id="topConfidenceStatus">-%</strong></span>
+          <span id="alarmBadge" class="tag tag--ok">No active alarms</span>
+        </div>
+
+        <div class="rack-actions">
+          <button id="portSetupBtn" type="button">Port Setup</button>
+          <button id="alarmMuteBtn" type="button">Mute Alarm</button>
+          <button id="mockBtn" type="button">Mock GLD</button>
+        </div>
+      </header>
+
+      <div id="globalBanner" class="alert-bar" hidden>
+        <span id="globalBannerText"></span>
+        <button id="globalBannerDismiss" type="button">Dismiss</button>
+      </div>
+
+      <section class="console-body">
+        <aside class="control-deck">
+          <section class="module module--compact">
+            <div class="module-head">
+              <h2>Fleet</h2>
+              <span id="fleetCountBadge" class="tag tag--ok">1 / 8 slots</span>
+            </div>
+            <div class="fleet-card active">
+              <span>Active GLD - Slot <span id="activeSlotLabel">1</span></span>
+              <strong id="sideDeviceSummary">Unknown</strong>
+              <small id="sidePortSummary">No port selected</small>
+            </div>
+            <div id="fleetExtra" class="fleet-list"></div>
+            <button id="addSlotBtn" type="button">+ Add Slot</button>
+          </section>
+
+          <section class="module module--compact">
+            <div class="module-head">
+              <h2>Commands</h2>
+              <span id="protocolLabel" class="tag">waiting</span>
+            </div>
+            <div class="control-grid">
+              <button data-command="APP_PING" type="button">Ping</button>
+              <button data-command="GET_INFO" type="button">Info</button>
+              <button data-command="GET_STATUS" type="button">Status</button>
+              <button id="refreshLoopBtn" type="button">Poll 1s</button>
+            </div>
+          </section>
+
+          <section class="module module--compact">
+            <div class="module-head">
+              <h2>Mode</h2>
+            </div>
+            <div class="control-grid">
+              <button data-mode="inference" type="button">Running</button>
+              <button data-mode="dataset" type="button">Dataset</button>
+              <button data-mode="nulling" type="button">Nulling</button>
+            </div>
+          </section>
+        </aside>
+
+        <section class="workspace">
+          <nav class="tab-rail" aria-label="Operator views">
+            <button class="tab active" data-tab="running" type="button">Running</button>
+            <button class="tab" data-tab="sensor-check" type="button">Sensor Check</button>
+            <button class="tab" data-tab="dataset" type="button">Dataset</button>
+            <button class="tab" data-tab="nulling" type="button">Nulling</button>
+            <button class="tab" data-tab="log" type="button">Log</button>
+            <button class="tab" data-tab="expert" type="button">Expert</button>
+            <button class="tab" data-tab="firmware" type="button">Firmware</button>
+          </nav>
+
+          <section id="running" class="view active">
+            <div class="gauge-row">
+              <article class="gauge-card">
+                <span>Device</span>
+                <strong id="deviceId">Unknown</strong>
+                <small id="firmwareValue">Unknown</small>
+              </article>
+              <article class="gauge-card">
+                <span>Mode</span>
+                <strong id="modeValue">Unknown</strong>
+                <small id="powerMode">Unknown</small>
+              </article>
+              <article class="gauge-card">
+                <span>Gas</span>
+                <strong id="gasValue">n/a</strong>
+                <small id="confidenceValue">-%</small>
+              </article>
+              <article class="gauge-card">
+                <span>LoRa</span>
+                <strong id="loraValue">Unknown</strong>
+                <small id="batteryValue">Unknown</small>
+              </article>
+            </div>
+
+            <div class="module">
+              <div class="module-head module-head--wrap">
+                <h2>Sensor Telemetry</h2>
+                <div class="toolbar">
+                  <select id="rangeSelect" aria-label="Chart range">
+                    <option value="10">10 sec</option>
+                    <option value="30">30 sec</option>
+                    <option value="60" selected>1 min</option>
+                    <option value="300">5 min</option>
+                    <option value="600">10 min</option>
+                    <option value="1800">30 min</option>
+                    <option value="3600">1 hour</option>
+                  </select>
+                  <button id="clearChartBtn" type="button">Clear</button>
+                  <button id="exportCsvBtn" type="button">Export CSV</button>
+                </div>
+              </div>
+              <div class="chart-wrap">
+                <canvas id="sensorChart" width="1200" height="420"></canvas>
+              </div>
+              <div id="legend" class="legend"></div>
+            </div>
+
+            <details class="module disclosure">
+              <summary>Power and Boot Health details</summary>
+              <div class="grid-two">
+                <section class="module module--compact">
+                  <h2>Power</h2>
+                  <dl class="kv">
+                    <div><dt>External</dt><dd id="externalPower">Unknown</dd></div>
+                    <div><dt>Battery</dt><dd id="batteryValueMirror">Unknown</dd></div>
+                  </dl>
+                </section>
+                <section class="module module--compact">
+                  <h2>Boot Health</h2>
+                  <dl class="kv">
+                    <div><dt>ADS</dt><dd id="adsHealth">Unknown</dd></div>
+                    <div><dt>MCP</dt><dd id="mcpHealth">Unknown</dd></div>
+                    <div><dt>DAC</dt><dd id="dacHealth">Unknown</dd></div>
+                    <div><dt>ML</dt><dd id="mlHealth">Unknown</dd></div>
+                  </dl>
+                </section>
+              </div>
+            </details>
+          </section>
+
+          <section id="sensor-check" class="view">
+            <div class="module">
+              <div class="module-head module-head--wrap">
+                <h2>MQ Sensor Check</h2>
+                <div class="toolbar">
+                  <button id="refreshSensorCheckBtn" type="button">Refresh Status</button>
+                  <button data-command="RUN_BOOT_CHECK" type="button">Run Boot Check</button>
+                  <button id="clearSensorCheckBtn" type="button">Clear</button>
+                </div>
+              </div>
+              <div id="sensorCheckSummary" class="status-line">Waiting for GLD status.</div>
+              <div id="sensorCheckMeta" class="status-line">ADS: Unknown - MCP: Unknown - Latest telemetry: none</div>
+              <div class="module-head module-head--inner">
+                <h3>Boot IC Report</h3>
+              </div>
+              <div id="bootReportSummary" class="status-line">Waiting for boot report.</div>
+              <div id="bootReportGrid" class="channel-grid" aria-label="Boot IC report"></div>
+              <div class="module-head module-head--inner">
+                <h3>MQ Channels</h3>
+              </div>
+              <div id="sensorCheckChannels" class="channel-grid" aria-label="MQ sensor presence"></div>
+            </div>
+          </section>
+
+          <section id="dataset" class="view">
+            <div class="module">
+              <div class="module-head module-head--wrap">
+                <h2>Dataset Parameters</h2>
+                <div class="toolbar">
+                  <button id="applyConfigBtn" type="button">Apply GLD Settings</button>
+                  <button id="switchDatasetBtn" type="button">Switch to Dataset</button>
+                  <button id="startDatasetBtn" type="button">Start Dataset</button>
+                  <button id="stopDatasetBtn" type="button">Stop Dataset</button>
+                </div>
+              </div>
+              <div class="form-grid">
+                <label>Label<input id="datasetLabel" value="clear_air_test"></label>
+                <label>Target Samples<input id="targetSamples" type="number" min="1" value="100"></label>
+                <label>Interval Ms<input id="sampleIntervalMs" type="number" min="500" step="50" value="500"></label>
+                <label>Max Duration Ms<input id="maxDurationMs" type="number" min="0" value="0"></label>
+                <label>Fan On Ms<input id="fanOnMs" type="number" min="0" value="1000"></label>
+                <label>Post Fan Settle Ms<input id="postFanSettleMs" type="number" min="0" value="0"></label>
+              </div>
+              <label class="option-row">
+                <input id="datasetNullingFirst" type="checkbox">
+                <span>
+                  <strong>Run nulling before dataset</strong>
+                  <small>Default off. Enable only when this GLD needs a fresh nulling profile before capturing data.</small>
+                </span>
+              </label>
+
+              <div class="module-head module-head--inner">
+                <h3>WiFi and MQTT</h3>
+                <div class="toolbar">
+                  <button id="useThisPcBtn" type="button">Use this PC</button>
+                  <button id="testMqttBtn" type="button">Test Broker</button>
+                </div>
+              </div>
+              <div id="mqttTestStatus" class="status-line">Broker reachability not tested yet.</div>
+              <div class="form-grid">
+                <label>WiFi SSID<input id="wifiSsid" autocomplete="off"></label>
+                <label>WiFi Password<input id="wifiPassword" type="password" autocomplete="off"></label>
+                <label>MQTT Host<input id="mqttHost" value="127.0.0.1"></label>
+                <label>MQTT Port<input id="mqttPort" type="number" min="1" max="65535" value="1884"></label>
+                <label>MQTT User<input id="mqttUser" autocomplete="off"></label>
+                <label>MQTT Password<input id="mqttPass" type="password" autocomplete="off"></label>
+                <label>Topic Root<input id="topicRoot" value="gas-leak-detector"></label>
+              </div>
+            </div>
+
+            <div class="module">
+              <div class="module-head module-head--wrap">
+                <h2>Dataset Session Monitor</h2>
+                <div class="toolbar">
+                  <button id="saveDatasetCsvBtn" type="button">Save CSV</button>
+                  <button id="downloadDatasetCsvBtn" type="button">Download CSV</button>
+                  <button id="openDatasetFolderBtn" type="button">Open Folder</button>
+                  <button id="clearDatasetSessionBtn" type="button">Clear Session</button>
+                </div>
+              </div>
+              <div class="gauge-row">
+                <article class="gauge-card">
+                  <span>Status</span>
+                  <strong id="datasetStateValue">Idle</strong>
+                  <small id="datasetPhaseValue">No active session</small>
+                </article>
+                <article class="gauge-card">
+                  <span>Progress</span>
+                  <strong id="datasetProgressValue">0 / 0</strong>
+                  <small id="datasetElapsedValue">Elapsed 00:00</small>
+                </article>
+                <article class="gauge-card">
+                  <span>Rows</span>
+                  <strong id="datasetRowsValue">0</strong>
+                  <small id="datasetLastSampleValue">No samples</small>
+                </article>
+                <article class="gauge-card">
+                  <span>Output</span>
+                  <strong id="datasetOutputName">Not saved</strong>
+                  <small id="datasetOutputPath">Waiting for session</small>
+                </article>
+              </div>
+              <div class="progress-track" aria-label="Dataset capture progress">
+                <span id="datasetProgressBar"></span>
+              </div>
+              <p id="datasetLastEvent" class="status-line">No dataset command sent.</p>
+              <p id="datasetHint" class="dataset-hint">No active dataset session.</p>
+              <button id="runNullingNowBtn" type="button" hidden>Run Nulling Now</button>
+              <div class="dataset-table-wrap">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Time</th>
+                      <th>Source</th>
+                      <th>Seq</th>
+                      <th>Label</th>
+                      <th>MQ8</th>
+                      <th>MQ135</th>
+                      <th>MQ3</th>
+                      <th>MQ5</th>
+                      <th>MQ4</th>
+                      <th>MQ7</th>
+                      <th>MQ6</th>
+                      <th>MQ2</th>
+                    </tr>
+                  </thead>
+                  <tbody id="datasetRowsBody">
+                    <tr><td colspan="12">No dataset rows captured.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+          <section id="nulling" class="view">
+            <div class="module">
+              <div class="module-head module-head--wrap">
+                <h2>Nulling Process</h2>
+                <div class="toolbar">
+                  <button data-mode="nulling" type="button">Switch to Nulling</button>
+                  <button id="clearNullingBtn" type="button">Clear</button>
+                </div>
+              </div>
+              <div id="nullingSummary" class="status-line">No nulling activity.</div>
+              <div id="nullingMeta" class="status-line">Retry armed: no - Attempts: 0</div>
+              <div id="nullingChannels" class="channel-grid" aria-label="Nulling channel progress"></div>
+              <div class="module-head module-head--inner">
+                <h3>Raw Nulling Log</h3>
+              </div>
+              <pre id="nullingLog" class="terminal compact-log"></pre>
+            </div>
+
+            <div class="module">
+              <div class="module-head module-head--wrap">
+                <h2>Nulling Thresholds</h2>
+                <div class="toolbar">
+                  <button id="applyNullingConfigBtn" type="button">Apply Thresholds</button>
+                  <button id="refreshNullingConfigBtn" type="button">Refresh from GLD</button>
+                </div>
+              </div>
+              <div class="status-line">
+                Threshold follows each channel baseline: target = baseline + max(abs(baseline) / 2,
+                minimum delta threshold). Values apply on the next nulling run and persist on the GLD.
+              </div>
+              <div class="form-grid">
+                <label>Minimum Delta Threshold (V)
+                  <input id="nullingThresholdV" type="number" step="0.00001" min="0.00001" max="2.497" value="0.00001">
+                </label>
+                <label>Minimum Final Voltage (Legacy)
+                  <input id="nullingMinFinalV" type="number" step="0.001" min="-2.497" max="2.497" value="0">
+                </label>
+              </div>
+            </div>
+          </section>
+
+          <section id="log" class="view">
+            <div class="module">
+              <div class="module-head module-head--wrap">
+                <h2>Serial Log</h2>
+                <div class="toolbar">
+                  <button id="downloadLogBtn" type="button">Download Log</button>
+                  <button id="saveSessionLogBtn" type="button">Save Log to Disk</button>
+                  <button id="clearLogBtn" type="button">Clear</button>
+                </div>
+              </div>
+              <pre id="serialLog" class="terminal tall"></pre>
+            </div>
+          </section>
+
+          <section id="expert" class="view">
+            <div class="module">
+              <div class="module-head module-head--wrap">
+                <h2>Expert Terminal</h2>
+                <div class="toolbar">
+                  <button id="unlockExpertBtn" type="button">Unlock</button>
+                </div>
+              </div>
+              <div class="terminal-row">
+                <input id="rawCommand" placeholder="GET_STATUS" disabled>
+                <button id="sendRawBtn" type="button" disabled>Send</button>
+              </div>
+            </div>
+            <div class="module">
+              <div class="module-head module-head--wrap">
+                <h2>Timeout Settings</h2>
+                <div class="toolbar">
+                  <button id="applyTimeoutsBtn" type="button">Apply</button>
+                </div>
+              </div>
+              <div class="form-grid">
+                <label>Serial Response Timeout Ms<input id="timeoutSerialResponseMs" type="number" min="500" step="500" value="5000"></label>
+                <label>Dataset Ready Timeout Ms<input id="timeoutDatasetReadyMs" type="number" min="5000" step="1000" value="40000"></label>
+                <label>Dataset Stuck Threshold Ms<input id="timeoutDatasetStuckMs" type="number" min="1000" step="500" value="7000"></label>
+              </div>
+            </div>
+          </section>
+
+          <section id="firmware" class="view">
+            <div class="module">
+              <div class="module-head module-head--wrap">
+                <h2>Firmware and ID</h2>
+                <div class="toolbar">
+                  <button id="loadManifestBtn" type="button">Load Manifest</button>
+                  <button id="checkPortLockBtn" type="button">Check COM Lock</button>
+                  <button id="uploadFirmwareBtn" type="button" disabled title="Unlock Expert Terminal first">Upload Firmware</button>
+                  <button id="injectIdBtn" type="button" disabled title="Unlock Expert Terminal first">Inject ID</button>
+                  <button id="injectChBtn" type="button" disabled title="Unlock Expert Terminal first">Apply CH Address</button>
+                </div>
+              </div>
+              <div id="firmwareLockStatus" class="status-line">Firmware actions are locked. Unlock from the Expert tab first.</div>
+              <div id="firmwarePortStatus" class="status-line">COM lock status unknown. Click "Check COM Lock".</div>
+              <div class="form-grid">
+                <label>PlatformIO Env<input id="firmwareEnv" value="gld"></label>
+                <label>Target GLD ID<input id="targetDeviceId" value="F001" maxlength="4"></label>
+                <label>Package Device ID<input id="packageDeviceId" value="F000" maxlength="16" readonly></label>
+                <label>Manifest File<input id="manifestFile" type="file" accept=".json"></label>
+                <label>Target CH Address (hex)<input id="targetChAddress" value="0064" maxlength="4"></label>
+                <label>Current CH Address<input id="currentChAddress" value="" maxlength="4" readonly></label>
+              </div>
+              <div id="chAddressStatus" class="status-line">CH address must be 4 hex chars, not 0000/FFFF, and not the Gateway ID (006F) or the GLD's own ID.</div>
+              <pre id="manifestPreview" class="terminal"></pre>
+            </div>
+          </section>
+        </section>
+      </section>
+
+      <section id="setupPanel" class="setup-panel" aria-hidden="true">
+        <div class="setup-backdrop" data-close-setup></div>
+        <aside class="setup-card" aria-label="Port setup">
+          <div class="module-head">
+            <h2>Port Setup</h2>
+            <button id="closeSetupBtn" type="button">Close</button>
+          </div>
+          <dl class="kv setup-kv">
+            <div><dt>Baud</dt><dd>115200</dd></div>
+            <div><dt>Protocol</dt><dd>app serial bridge</dd></div>
+          </dl>
+          <div class="port-row">
+            <select id="portSelect" aria-label="Serial port">
+              <option value="">Browser permission dialog</option>
+            </select>
+            <button id="refreshPortsBtn" type="button">Scan</button>
+          </div>
+          <div class="port-row manual-port-row">
+            <input id="manualPortInput" value="COM10" aria-label="Manual COM port" placeholder="COM10">
+            <button id="useManualPortBtn" type="button">Use Manual</button>
+          </div>
+          <p id="portDetail" class="port-detail">No serial port selected.</p>
+          <div class="connect-actions">
+            <button id="connectBtn" type="button" class="primary">Connect Serial</button>
+            <button id="disconnectBtn" type="button" disabled>Disconnect</button>
+          </div>
+        </aside>
+      </section>
+    </main>
+
+    <script type="module" src="./js/main.js?v=20260715-1000"></script>
+  </body>
+</html>

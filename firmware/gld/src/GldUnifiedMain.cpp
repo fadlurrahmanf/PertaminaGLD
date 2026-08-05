@@ -40,7 +40,7 @@
 #endif
 #include "ProtocolConstants.h"
 #include "ModelMetadata.h"
-#include "../model/NeuralNetwork.h"
+#include "NeuralNetwork.h"
 
 namespace {
 
@@ -1948,9 +1948,16 @@ void onVerifyCleanAirForNulling() {
         emitCommandAck("VERIFY_CLEAN_AIR_FOR_NULLING", "rejected", "clean-air verification is allowed only in inference mode", false);
         return;
     }
-    if (batteryPowerMode || batteryPendingAlarm.active) {
+    // A retained battery-delivery record must not prevent a 24 V operator
+    // from confirming clean air and re-calibrating the sensor.  The record is
+    // deliberately retained here; it remains owned by the battery-session
+    // delivery flow and is not erased by a nulling acknowledgement.
+    if (batteryPowerMode) {
         emitCommandAck("VERIFY_CLEAN_AIR_FOR_NULLING", "rejected", "battery alarm state cannot be cleared for nulling", false);
         return;
+    }
+    if (batteryPendingAlarm.active) {
+        logPrintln("GLD_NULLING_PENDING_BATTERY_ALARM_RETAINED external_power=1");
     }
     const bool wasLatched = pgl::gld::readGldAlarmLatched();
     if (wasLatched && !pgl::gld::writeGldAlarmLatched(false)) {

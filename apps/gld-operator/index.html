@@ -600,9 +600,9 @@
             <select id="firmwareUploadEnv" aria-label="Firmware environment"><option value="gld">GLD</option><option value="gldFieldtest">GLD Fieldtest</option></select>
           </label>
           <label class="upload-dialog-field">Model yang di-inject
-            <select id="firmwareUploadModel" aria-label="Model yang di-inject"><option value="model_1">Model 1 — current GLD model</option><option value="model_2" disabled>Model 2 — artefak belum tersedia</option><option value="model_3" disabled>Model 3 — artefak belum tersedia</option><option value="model_4" disabled>Model 4 — artefak belum tersedia</option></select>
+            <select id="firmwareUploadModel" aria-label="Model yang di-inject"><option value="model_1">Model 1 — Board 1 (CO2, Clean_Air, H2, LPG)</option><option value="model_2">Model 2 — Board 2 (CO2, Clean_Air, H2, LPG)</option><option value="model_3" disabled>Model 3 — artefak belum tersedia</option><option value="model_4" disabled>Model 4 — artefak belum tersedia</option></select>
           </label>
-          <p id="firmwareUploadModelStatus" class="status-line">Model 1 memakai model yang saat ini dikompilasi pada package GLD.</p>
+          <p id="firmwareUploadModelStatus" class="status-line">Pilih Model 1 atau Model 2 sesuai board yang akan diprogram.</p>
           <label class="upload-dialog-field">Target COM
             <select id="firmwareUploadPort" aria-label="Target COM for firmware upload"></select>
           </label>
@@ -642,6 +642,6 @@
       </div>
     </div>
 
-    <script type="module" src="./js/main.js?v=20260805-serial-recovery-1"></script>
+    <script type="module" src="./js/main.js?v=20260805-model-packages-1"></script>
   </body>
 </html>

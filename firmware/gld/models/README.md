@@ -3,9 +3,8 @@
 Each slot represents one independently compiled GLD inference model.  A slot
 is selectable in Operator Hub only after its verified firmware package exists.
 
-The active legacy source in `../model/` is registered as `model_1`.  It stays
-there until the model-variant build pipeline is introduced, so the current
-production build remains byte-for-byte governed by its existing source filter.
+`model_1` is the default source for the GLD production environment. Select
+`model_2` only for a Board 2 package; its build overrides the default slot.
 
 For a new slot, provide a compatible set of artifacts before enabling it:
 

@@ -2,9 +2,9 @@
 
 #include "ProtocolConstants.h"
 
-#include "../model/ModelMetadata.h"
-#include "../model/NeuralNetwork.h"
-#include "../model/cnn_gas_datasheet_normalize_params.h"
+#include "ModelMetadata.h"
+#include "NeuralNetwork.h"
+#include "cnn_gas_datasheet_normalize_params.h"
 
 namespace pgl::gld::cnn {
 

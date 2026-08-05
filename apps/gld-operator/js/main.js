@@ -22,7 +22,7 @@ import {
   testMqttBroker, saveSessionLog, refreshDatasetWaitingState,
   beginDatasetSwitch, markDatasetWizardStarted, initDatasetWizard, refreshGldAesKeyStatus
 } from "./dataset.js";
-import { loadManifestFile, uploadFirmware, initFirmwareUploadDialog, injectDeviceId, injectChAddress, applyLoraConfig, checkPortLock } from "./firmware.js";
+import { loadManifestFile, uploadFirmware, initFirmwareUploadDialog, injectDeviceId, injectChAddress, applyLoraConfig, checkPortLock } from "./firmware.js?v=20260805-model-packages-1";
 import { syncDeviceSummary, renderFleetPanel, addFleetSlot } from "./fleet.js";
 import { toggleMock } from "./mock.js";
 import { initQcTab, switchQcTab, switchQcGroup, restoreQcLatch } from "./qc.js";

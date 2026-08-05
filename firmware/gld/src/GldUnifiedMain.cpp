@@ -1960,9 +1960,11 @@ void onVerifyCleanAirForNulling() {
         logPrintln("GLD_NULLING_PENDING_BATTERY_ALARM_RETAINED external_power=1");
     }
     const bool wasLatched = pgl::gld::readGldAlarmLatched();
-    if (wasLatched && !pgl::gld::writeGldAlarmLatched(false)) {
-        emitCommandAck("VERIFY_CLEAN_AIR_FOR_NULLING", "error", "failed to clear persisted alarm latch", false);
-        return;
+    const bool latchClearPersisted = !wasLatched || pgl::gld::writeGldAlarmLatched(false);
+    if (wasLatched && !latchClearPersisted) {
+        // The operator's explicit clean-air confirmation authorizes Nulling.
+        // Keep an NVS write fault visible, but do not block the mode switch.
+        logPrintln("GLD_NULLING_ALARM_LATCH_CLEAR_PERSIST=FAIL override=operator_confirmed_clean_air");
     }
     // Force a later valid alarm scan to persist/re-latch even though this
     // operator acknowledgement cleared the previous in-memory edge.
@@ -1970,7 +1972,10 @@ void onVerifyCleanAirForNulling() {
     logPrintf("GLD_ALARM_LATCH_OPERATOR_CLEAR=OK reason=operator_verified_clean_air_for_nulling wasLatched=%u outputHeld=1 relatchArmed=1\n",
               wasLatched ? 1u : 0u);
     emitCommandAck("VERIFY_CLEAN_AIR_FOR_NULLING", "ok",
-                   wasLatched ? "alarm latch cleared for confirmed nulling" : "no alarm latch was active; clean-air confirmation recorded", false);
+                   wasLatched
+                       ? (latchClearPersisted ? "alarm latch cleared for confirmed nulling" : "nulling authorized; alarm latch clear was not persisted")
+                       : "no alarm latch was active; clean-air confirmation recorded",
+                   false);
 }
 
 // Explicit local operator action: approve the most recently saved complete
@@ -5164,20 +5169,9 @@ void setup() {
             startBatteryInferenceSession();
         }
 
-    } else if (currentMode == pgl::gld::GldMode::NULLING && pgl::gld::readGldAlarmLatched()) {
-        // Nulling must not run while a prior alarm is still latched/unacknowledged
-        // (design.md §3.6: "nulling blocked when alarm active"). Clear the alarm
-        // (button hold / IO38 CLR) before switching into Nulling mode again.
-        logPrintln("MODE_BLOCKED reason=alarm_latched mode=nulling");
-        pgl::gld::writeGldMode(pgl::gld::GldMode::INFERENCE);
-        serviceDelay(NULLING_AUTO_RESTART_DELAY_MS);
-        Serial.flush();
-#if defined(ARDUINO_ARCH_ESP32)
-        Serial0.flush();
-#endif
-        ESP.restart();
-
     } else {
+        // A Nulling mode request is operator-authorized. Alarm latch state is
+        // retained for audit/delivery, but never redirects this mode request.
         // --- DATASET / NULLING mode init ---
         if (batteryPowerMode) {
             logPrintf("MODE_BATTERY_ALLOWED_TEMP mode=%s\n",

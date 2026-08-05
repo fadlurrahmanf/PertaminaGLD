@@ -20,9 +20,9 @@ import {
   renderDatasetSession, applyGldSettings, publishDatasetCommand, confirmDatasetConfig,
   downloadDatasetCsv, openDatasetFolder, clearDatasetSession, useLocalhost,
   testMqttBroker, saveSessionLog, refreshDatasetWaitingState,
-  beginDatasetSwitch, markDatasetWizardStarted, initDatasetWizard, refreshGldAesKeyStatus
-} from "./dataset.js";
-import { loadManifestFile, uploadFirmware, initFirmwareUploadDialog, injectDeviceId, injectChAddress, applyLoraConfig, checkPortLock } from "./firmware.js?v=20260805-model-packages-1";
+  beginDatasetSwitch, markDatasetWizardStarted, initDatasetWizard, refreshGldAesKeyStatus, syncGldAesKey
+} from "./dataset.js?v=20260805-aes-key-button-1";
+import { loadManifestFile, uploadFirmware, initFirmwareUploadDialog, injectDeviceId, injectChAddress, applyLoraConfig, checkPortLock } from "./firmware.js?v=20260805-aes-sync-status-1";
 import { syncDeviceSummary, renderFleetPanel, addFleetSlot } from "./fleet.js";
 import { toggleMock } from "./mock.js";
 import { initQcTab, switchQcTab, switchQcGroup, restoreQcLatch } from "./qc.js";
@@ -114,6 +114,7 @@ function setupEvents() {
     renderSensorCheck();
   });
   $("applyConfigBtn").addEventListener("click", () => withBusy($("applyConfigBtn"), "Applying...", applyGldSettings));
+  $("syncAesKeyBtn").addEventListener("click", () => withBusy($("syncAesKeyBtn"), "Syncing...", syncGldAesKey));
   $("applyNullingConfigBtn").addEventListener("click", applyNullingConfig);
   $("refreshNullingConfigBtn").addEventListener("click", () => sendCommand("GET_STATUS"));
   $("switchDatasetBtn").addEventListener("click", () => withBusy($("switchDatasetBtn"), "Switching...", beginDatasetSwitch));

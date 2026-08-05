@@ -37,12 +37,6 @@ PROFILE_BY_ENV = {
     "gw": "Gateway ESP32-S3 R8N16",
     "gw_hello_ack_fieldtest": "Gateway ESP32-S3 R8N16 field-test",
 }
-MODEL_SLOT_BY_ENV = {
-    "gld_model_1": "model_1",
-    "gld_model_2": "model_2",
-}
-
-
 def _sha256(path: pathlib.Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as stream:
@@ -125,7 +119,6 @@ def write_operator_package(source, target, env):
             "deviceId": "ANY",
             "boardProfile": PROFILE_BY_ENV[environment],
             "environment": environment,
-            **({"modelSlot": MODEL_SLOT_BY_ENV[environment]} if environment in MODEL_SLOT_BY_ENV else {}),
             "firmwareVersion": versions["GLD_FIRMWARE_VERSION"],
             "protocolVersion": versions["PROTOCOL_VERSION"],
             "configSchemaVersion": versions["CONFIG_SCHEMA_VERSION"],

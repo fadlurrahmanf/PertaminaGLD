@@ -137,12 +137,34 @@ function updateModelSelection() {
   return applies ? model : null;
 }
 
+async function refreshFirmwareUploadPorts() {
+  const portSelect = $("firmwareUploadPort");
+  if (!portSelect) return "";
+  const previouslySelected = String(portSelect.value || elements.portSelect.value || getField("manualPortInput") || "");
+  try {
+    const result = await bridgeFetch("/api/ports");
+    const ports = Array.isArray(result.ports) ? result.ports : [];
+    portSelect.replaceChildren(...ports.map((port) => {
+      const path = String(port.path || "").toUpperCase();
+      const detail = port.description ? ` — ${port.description}` : "";
+      return new Option(`${path}${detail}`, path, false, path === previouslySelected.toUpperCase());
+    }));
+    if (!ports.length) portSelect.append(new Option("No serial ports detected", ""));
+    return portSelect.value;
+  } catch (error) {
+    // Fall back to the Port Setup list when the bridge scan itself is unavailable.
+    portSelect.replaceChildren(...Array.from(elements.portSelect.options).map((option) =>
+      new Option(option.text, option.value, false, option.value === previouslySelected)
+    ));
+    return portSelect.value;
+  }
+}
+
 export async function uploadFirmware() {
   switchTab("expert");
   if (state.bridgeAvailable) await refreshPorts(true);
   const portSelect = $("firmwareUploadPort");
-  const selectedPort = elements.portSelect.value;
-  portSelect.replaceChildren(...Array.from(elements.portSelect.options).map((option) => new Option(option.text, option.value, false, option.value === selectedPort)));
+  await refreshFirmwareUploadPorts();
   updateModelSelection();
   await loadBuiltinPackage($("firmwareUploadEnv").value);
   const ready = Boolean(state.manifest && /^COM\d+$/i.test(portSelect.value));
@@ -244,6 +266,9 @@ export function initFirmwareUploadDialog() {
   });
   $("firmwareUploadModel")?.addEventListener("change", async () => {
     await loadBuiltinPackage($("firmwareUploadEnv").value);
+    $("firmwareUploadConfirmBtn").disabled = !state.manifest || !/^COM\d+$/i.test($("firmwareUploadPort").value);
+  });
+  $("firmwareUploadPort")?.addEventListener("change", () => {
     $("firmwareUploadConfirmBtn").disabled = !state.manifest || !/^COM\d+$/i.test($("firmwareUploadPort").value);
   });
 }

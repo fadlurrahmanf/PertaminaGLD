@@ -879,6 +879,25 @@ export async function restoreGldConfigAfterReset() {
   }
 }
 
+export async function syncGldAesKey() {
+  const status = await bridgeFetch("/api/gld-key-status");
+  if (!status?.configured) {
+    showAlert("AES key sync masih off. Konfigurasi key server belum tersedia pada bridge.", "warn");
+    return null;
+  }
+  if (!(await showConfirm(`Provision AES key ID ${status.keyId} ke GLD lalu reboot? WiFi/MQTT dan nulling tidak diubah.`, "warn", "Sync AES Key"))) {
+    return null;
+  }
+  const ack = await applyAndAlert(`SET_APP_CONFIG_JSON ${JSON.stringify({ reboot: true })}`, "SET_APP_CONFIG", "Sync AES Key");
+  if (ack?.status === "ok") {
+    const line = "AES key berhasil diprovision. GLD sedang reboot; cek GLD_LORA_TX_RESULT=PASS setelah tersambung kembali.";
+    const el = $("gldAesKeyStatus");
+    if (el) el.textContent = line;
+    appendLog("AES_KEY_SYNC=OK provisioned from server canonical key", "in");
+  }
+  return ack;
+}
+
 export async function applyGldSettings() {
   const payload = buildGldConfigPayload();
   if (!payload.ssid || !payload.mqttHost || !payload.topicRoot || !payload.mqttPort) {

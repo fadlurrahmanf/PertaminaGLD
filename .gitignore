@@ -9,6 +9,7 @@ firmware/config/*.env
 **/flows_cred.json
 **/settings.local.js
 **/credentials.local.json
+**/startup.local.json
 
 # Local AI agent/session state
 .codex/

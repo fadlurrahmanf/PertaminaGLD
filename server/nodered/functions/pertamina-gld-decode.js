@@ -508,11 +508,24 @@ function rememberGldResponse(outer) {
 function rememberGldDevice(outer, event) {
     const targetOverrides = envGldTargetOverrides();
     const configuredTargetChIdHex = event && targetOverrides[event.nodeIdHex];
+    // Prefer the actual routed/transport CH. A static GLD->CH map is only a
+    // compatibility fallback; GLDs may move between CHs at runtime.
+    const transportChIdHex = outer && isChId(outer.srcId) ? outer.srcIdHex : undefined;
+    const discovery = getGldDiscoveryState();
+    const knownParentChIdHex = Object.entries(discovery).find(([, entry]) =>
+        entry && entry.devices && entry.devices[event && event.nodeIdHex]);
+    const learnedParentChIdHex = knownParentChIdHex ? knownParentChIdHex[0] : undefined;
     const chIdHex = (outer && outer.responseTargetChIdHex) ||
+        // Unsolicited alarm frames can arrive through a neighboring CH. Keep
+        // the learned parent from the last valid pull instead of re-parenting.
+        learnedParentChIdHex ||
+        transportChIdHex ||
         configuredTargetChIdHex ||
         (outer && resolveGldResponseOwner(outer));
     if (!chIdHex || !event || event.ok !== true) return;
-    const discovery = getGldDiscoveryState();
+    // Do not let replayed/older alarm frames move a device to another CH.
+    if (event.replayStatus === "new-record-lower-sequence-or-restart" ||
+        event.replayStatus === "replay") return;
     const entry = discovery[chIdHex] || { status: "unsolicited", hopList: [], devices: {} };
     entry.devices = entry.devices || {};
     entry.devices[event.nodeIdHex] = {
@@ -531,6 +544,12 @@ function rememberGldDevice(outer, event) {
         gatewayIdHex: outer && outer.gatewayIdHex,
         lastSeenAt: event.receivedAt
     };
+    // A GLD has one current parent. Remove stale copies left under a
+    // previous CH so the topology cannot jump to an older/wrong attachment.
+    for (const [otherChIdHex, otherEntry] of Object.entries(discovery)) {
+        if (otherChIdHex === chIdHex || !otherEntry || !otherEntry.devices) continue;
+        delete otherEntry.devices[event.nodeIdHex];
+    }
     discovery[chIdHex] = entry;
     flow.set("pglGldDiscovery", discovery);
 }
@@ -1001,6 +1020,9 @@ function normalizeInput(input) {
         }
     }
     if (input && typeof input === "object") {
+        if (input.kind === "gateway-status") {
+            return { kind: "gatewayStatus", status: input };
+        }
         if (input.gateway_id !== undefined && Array.isArray(input.events)) {
             return { kind: "gatewayStatus", status: input };
         }

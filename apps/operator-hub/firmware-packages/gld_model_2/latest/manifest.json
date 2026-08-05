@@ -10,17 +10,17 @@
   "configSchemaVersion": "0.1.0",
   "chip": "esp32s3",
   "baud": 460800,
-  "createdAtUtc": "20260805T043021Z",
+  "createdAtUtc": "20260805T045819Z",
   "source": {
-    "gitCommit": "aafcf722df98956e74d9dd0fe370677b8a0cfaf7",
+    "gitCommit": "e66748441c237f9f2366549998fde383d58e95c1",
     "gitTreeState": "operator-hub-auto",
     "platformioCoreVersion": "PlatformIO post-build hook",
-    "platformioIniSha256": "47b525354ee2816bcf3cec7efa3bcb7075a6272a75eea0af92ab40462f1a5eec",
+    "platformioIniSha256": "8d6f081883a7967423b4977f00ab9a024e51786bf9894274cced886dcf444eb7",
     "buildCommand": "pio run -e gld_model_2",
-    "buildStartedAtUtc": "20260805T043021Z",
-    "buildCompletedAtUtc": "20260805T043021Z"
+    "buildStartedAtUtc": "20260805T045819Z",
+    "buildCompletedAtUtc": "20260805T045819Z"
   },
-  "flashSetSha256": "33ae60d99a7d5f5f91f3610ee6cf2e8c3ac1eaf9fb100470d39749b93edab43a",
+  "flashSetSha256": "f308cf464b39d80e1fd22bc869b8c6eaec6311abbaf40818b9a07e343711ad10",
   "flashFiles": [
     {
       "path": "bootloader.bin",
@@ -43,8 +43,8 @@
     {
       "path": "firmware.bin",
       "offset": "0x00010000",
-      "size": 1017744,
-      "sha256": "7e2dbd6137e3f40f990a12fc5b696c2dbe64bb750b2d50b5cbdbd4902e8f13f5"
+      "size": 1017824,
+      "sha256": "2f7c097014a18bb5994a2045ac09e9e01edee7f2c31d03e793c91915411b280f"
     }
   ]
 }

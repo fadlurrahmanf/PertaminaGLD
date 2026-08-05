@@ -2218,6 +2218,20 @@ const nodes = [
     y: 330,
     wires: [[id("decode")]]
   }),
+  nodeBase("mqtt in", "mqtt_gateway_status", {
+    name: "MQTT Gateway status",
+    topic: "gld/gateway/status",
+    qos: "0",
+    datatype: "auto-detect",
+    broker,
+    nl: false,
+    rap: true,
+    rh: 0,
+    inputs: 0,
+    x: 180,
+    y: 360,
+    wires: [[id("decode_gateway_status")]]
+  }),
   nodeBase("mqtt in", "mqtt_raw", {
     name: "MQTT Gateway raw",
     topic: "gld/gateway/raw",
@@ -2229,7 +2243,7 @@ const nodes = [
     rh: 0,
     inputs: 0,
     x: 180,
-    y: 380,
+    y: 390,
     wires: [[id("decode")]]
   }),
   nodeBase("mqtt in", "mqtt_pertamina_uplink", {
@@ -2243,7 +2257,7 @@ const nodes = [
     rh: 0,
     inputs: 0,
     x: 190,
-    y: 440,
+    y: 450,
     wires: [[id("decode")]]
   }),
   nodeBase("function", "decode", {
@@ -2262,6 +2276,24 @@ const nodes = [
       [id("mqtt_events"), id("debug_events"), id("compact_topology_debug"), id("field_test_log")],
       [id("mqtt_decoded"), id("compact_decoded_debug"), id("http_decode_ok"), id("field_test_log")],
       [id("mqtt_error"), id("debug_error"), id("http_decode_error"), id("field_test_log")]
+    ]
+  }),
+  nodeBase("function", "decode_gateway_status", {
+    name: "decode Gateway status (no republish)",
+    func: decodeFunction,
+    outputs: 4,
+    timeout: 0,
+    noerr: 0,
+    initialize: "",
+    finalize: "",
+    libs: [{ var: "fs", module: "fs" }, { var: "path", module: "path" }],
+    x: 700,
+    y: 200,
+    wires: [
+      [id("debug_status"), id("field_test_log")],
+      [id("debug_events"), id("compact_topology_debug"), id("field_test_log")],
+      [id("compact_decoded_debug"), id("field_test_log")],
+      [id("mqtt_error"), id("debug_error"), id("field_test_log")]
     ]
   }),
   nodeBase("function", "http_decode_ok", {

@@ -8,8 +8,45 @@ let token = "";
 let active = "gld";
 let overview = {};
 let lastTestReport = null;
+const testReportsByDevice = {};
+let initialFirmwareRequired = false;
+let settingsOpened = false;
+let reviewStep = 0;
+let uploadEvents = null;
+let uploadBusy = false;
+let uploadProgress = 0;
+let uploadLines = [];
+let uploadEventsReady = false;
+let uploadFlashDone = false;
+let uploadReadbackVerified = false;
+let uploadSuccessShown = false;
+const simulationMode = new URLSearchParams(location.search).get("simulate");
 const $ = (id) => document.getElementById(id);
 const notice = $("notice");
+
+function prepareThreeStepWorkflow() {
+  $("operatorSteps").innerHTML = `
+    <li><button class="step-button" data-step="1" type="button" aria-label="Kembali ke tahap Hubungkan">1</button><div><b>Hubungkan</b><small>Port COM</small></div></li>
+    <li><button class="step-button" data-step="2" type="button" aria-label="Kembali ke tahap Test Device">2</button><div><b>Test Device</b><small>Kesiapan</small></div></li>
+    <li><button class="step-button" data-step="3" type="button" aria-label="Kembali ke tahap Konfigurasi">3</button><div><b>Konfigurasi</b><small>Parameter</small></div></li>`;
+  $("nextAction").textContent = "Hubungkan perangkat untuk memulai.";
+  document.querySelector(".connect-card .card-kicker").textContent = "TAHAP 1 DARI 3 / HUBUNGKAN";
+  document.querySelector("#testDeviceCard .card-kicker").textContent = "TAHAP 2 DARI 3 / TEST DEVICE";
+  $("continueBtn").innerHTML = "Lanjutkan ke Konfigurasi <span>&rarr;</span>";
+  document.querySelector("#settingsCard .card-kicker").textContent = "TAHAP 3 DARI 3 / KONFIGURASI";
+  document.querySelector("#firmwareStage .card-kicker").textContent = "KONFIGURASI SELESAI";
+  $("testDeviceCard").insertAdjacentHTML("beforeend", '<button id="testUploadFirmwareBtn" class="test-upload-option secondary" type="button">Upload firmware</button>');
+  const actions = document.querySelector("#firmwareStage .firmware-actions");
+  actions.insertAdjacentHTML("beforeend", '<button id="restartWorkflowBtn" class="secondary" type="button">Kembali ke awal</button>');
+}
+
+document.addEventListener("click", (event) => {
+  const button = event.target.closest("button:not(:disabled)");
+  if (!button) return;
+  button.classList.remove("click-feedback");
+  void button.offsetWidth;
+  button.classList.add("click-feedback");
+});
 
 async function api(path, body) {
   const response = await fetch(path, {
@@ -26,6 +63,158 @@ async function api(path, body) {
 function show(message, kind = "") {
   notice.textContent = message;
   notice.className = `notice ${kind}`;
+}
+
+function setUploadBusy(busy) {
+  uploadBusy = busy;
+  if (!busy) {
+    render();
+    return;
+  }
+  ["initialFirmwareBtn", "testUploadFirmwareBtn", "connectBtn", "disconnectBtn"].forEach((id) => { $(id).disabled = true; });
+  document.querySelectorAll("#deviceTabs button").forEach((button) => { button.disabled = true; });
+}
+
+function renderUploadProgress({ percent = uploadProgress, stage, line, error = false } = {}) {
+  uploadProgress = Math.max(uploadProgress, Math.min(100, Math.round(percent)));
+  if (line) {
+    uploadLines.push(line);
+    uploadLines = uploadLines.slice(-8);
+  }
+  $("uploadProgress").hidden = false;
+  $("uploadProgress").classList.toggle("error", error);
+  $("uploadProgressPercent").textContent = `${uploadProgress}%`;
+  $("uploadProgressStage").textContent = stage || "Mengunggah firmware...";
+  $("uploadProgressBar").style.width = `${uploadProgress}%`;
+  $("uploadProgressLog").textContent = uploadLines.join("\n") || "Menunggu log upload...";
+  $("uploadProgressLog").scrollTop = $("uploadProgressLog").scrollHeight;
+}
+
+function completeUploadProgress() {
+  if (uploadSuccessShown) return;
+  uploadSuccessShown = true;
+  renderUploadProgress({ percent: 100, stage: "Firmware, reboot, dan read-back identitas terverifikasi.", line: "VERIFIED read-back selesai" });
+  window.setTimeout(() => {
+    $("uploadProgress").hidden = true;
+    const toast = $("uploadSuccessToast");
+    toast.hidden = false;
+    toast.classList.remove("show");
+    void toast.offsetWidth;
+    toast.classList.add("show");
+    window.setTimeout(() => {
+      toast.classList.remove("show");
+      toast.hidden = true;
+    }, 2700);
+  }, 450);
+}
+
+function markReadbackVerified() {
+  uploadReadbackVerified = true;
+  if (uploadFlashDone || !uploadEventsReady) return completeUploadProgress();
+  renderUploadProgress({ percent: 99, stage: "Read-back identitas selesai. Menunggu konfirmasi flash...", line: "READBACK verified; waiting for UPLOAD_DONE" });
+}
+
+async function openUploadEvents(device) {
+  if (!token || !window.EventSource) return;
+  const source = new EventSource(`/api/simple/upload-events?device=${encodeURIComponent(device)}&token=${encodeURIComponent(token)}`);
+  uploadEvents = source;
+  const handle = (type, event) => {
+    const payload = JSON.parse(event.data || "{}");
+    if (type === "upload_start") {
+      return renderUploadProgress({ percent: 1, stage: "Menyiapkan firmware utama...", line: `UPLOAD_START ${payload.cmd || "flash"}` });
+    }
+    if (type === "upload_done") {
+      uploadFlashDone = true;
+      if (uploadReadbackVerified) return completeUploadProgress();
+      return renderUploadProgress({ percent: 99, stage: "Flash selesai. Menunggu reboot dan read-back...", line: `UPLOAD_DONE code=${payload.code ?? 0}` });
+    }
+    if (type === "upload_error") return renderUploadProgress({ stage: "Upload gagal.", line: `UPLOAD_ERROR ${payload.message || "unknown error"}`, error: true });
+    if (type === "upload_progress") {
+      if (payload.primary !== true) return;
+      return renderUploadProgress({
+        percent: Math.min(99, Number(payload.filePercent)),
+        stage: "Memprogram firmware utama ke board...",
+      });
+    }
+    const line = String(payload.line || "");
+    renderUploadProgress({ percent: uploadProgress, stage: "Memprogram firmware utama ke board...", line });
+  };
+  ["upload_start", "upload_progress", "upload_done", "upload_error", "upload_line"].forEach((type) => source.addEventListener(type, (event) => handle(type, event)));
+  await new Promise((resolve) => {
+    const ready = () => { uploadEventsReady = true; resolve(); };
+    source.addEventListener("open", ready, { once: true });
+    source.addEventListener("error", ready, { once: true });
+    window.setTimeout(ready, 900);
+  });
+}
+
+function closeUploadEvents() {
+  uploadEvents?.close();
+  uploadEvents = null;
+}
+
+async function runFirmwareUpload(payload) {
+  uploadProgress = 0;
+  uploadLines = ["Menyiapkan upload dan menghubungkan log flash..."];
+  uploadEventsReady = false;
+  uploadFlashDone = false;
+  uploadReadbackVerified = false;
+  uploadSuccessShown = false;
+  $("uploadProgress").classList.remove("error");
+  $("uploadSuccessToast").hidden = true;
+  renderUploadProgress({ percent: 1, stage: "Menyiapkan upload..." });
+  setUploadBusy(true);
+  await openUploadEvents(payload.device);
+  try {
+    const result = await api("/api/simple/firmware/upload", payload);
+    markReadbackVerified();
+    return result;
+  } catch (error) {
+    renderUploadProgress({ stage: `Upload gagal: ${error.message}`, line: `ERROR ${error.message}`, error: true });
+    throw error;
+  } finally {
+    window.setTimeout(closeUploadEvents, 400);
+    setUploadBusy(false);
+  }
+}
+
+function requestConfirmation({ title, message, actionLabel = "Lanjutkan", phrase = "" }) {
+  const dialog = $("confirmDialog");
+  const phraseWrap = $("confirmPhraseWrap");
+  const phraseInput = $("confirmPhraseInput");
+  const error = $("confirmDialogError");
+  $("confirmDialogTitle").textContent = title;
+  $("confirmDialogMessage").textContent = message;
+  $("confirmDialogAccept").textContent = actionLabel;
+  $("confirmPhraseExpected").textContent = phrase;
+  phraseWrap.hidden = !phrase;
+  phraseInput.value = "";
+  error.hidden = true;
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (approved) => {
+      if (settled) return;
+      settled = true;
+      dialog.close();
+      resolve(approved);
+    };
+    $("confirmDialogCancel").onclick = () => finish(false);
+    $("confirmDialogAccept").onclick = () => {
+      if (phrase && phraseInput.value.trim() !== phrase) {
+        error.textContent = `Ketik ${phrase} dengan tepat untuk melanjutkan.`;
+        error.hidden = false;
+        phraseInput.focus();
+        return;
+      }
+      finish(true);
+    };
+    dialog.oncancel = (event) => {
+      event.preventDefault();
+      finish(false);
+    };
+    dialog.showModal();
+    if (phrase) phraseInput.focus();
+  });
 }
 
 function renderActivity(items = []) {
@@ -100,29 +289,48 @@ function setStepState(identified) {
   const testPassed = lastTestReport && lastTestReport.failed === 0 && lastTestReport.unknown === 0;
   const steps = [...$("operatorSteps").children];
   steps.forEach((step) => step.classList.remove("done", "active"));
-  steps[0]?.classList.add("done");
   if (!identified) {
-    steps[1]?.classList.add("active");
+    steps[0]?.classList.add("active");
   } else if (!testPassed) {
+    steps[0]?.classList.add("done");
+    steps[1]?.classList.add("active");
+  } else if (!settingsOpened) {
+    steps[0]?.classList.add("done");
     steps[1]?.classList.add("done");
     steps[2]?.classList.add("active");
   } else {
+    steps[0]?.classList.add("done");
     steps[1]?.classList.add("done");
-    steps[2]?.classList.add("done");
-    steps[3]?.classList.add("active");
+    steps[2]?.classList.add("active");
   }
+  steps.forEach((step) => {
+    const button = step.querySelector(".step-button");
+    if (!button) return;
+    const available = step.classList.contains("done") || step.classList.contains("active");
+    button.disabled = !available;
+    button.setAttribute("aria-current", step.classList.contains("active") ? "step" : "false");
+  });
   $("settingsCard").classList.toggle("locked", !testPassed);
   $("firmwareStage").classList.toggle("locked", !testPassed);
-  $("futureStages").hidden = !testPassed;
-  $("secondaryDetails").hidden = !testPassed;
-  document.querySelector(".workspace").classList.toggle("single-task", !testPassed);
-  $("continueBtn").hidden = !testPassed;
+  document.querySelector("#settingsCard .guard-badge").hidden = Boolean(testPassed);
+  const reviewingEarlierStep = reviewStep > 0 && reviewStep <= 2;
+  $("futureStages").hidden = !testPassed || !settingsOpened || reviewingEarlierStep;
+  $("secondaryDetails").hidden = !testPassed || !settingsOpened || reviewingEarlierStep;
+  const workspace = document.querySelector(".workspace");
+  const simpleView = !identified || reviewStep === 1 ? "connect"
+    : !testPassed || reviewStep === 2 ? "test" : "settings";
+  workspace.dataset.simpleView = simpleView;
+  $("devicePanel").dataset.simpleView = simpleView;
+  workspace.classList.toggle("single-task", !testPassed);
+  workspace.classList.toggle("review-connect", Boolean(identified && reviewStep === 1));
+  workspace.classList.toggle("settings-stage", Boolean(testPassed && settingsOpened && !reviewingEarlierStep));
+  $("continueBtn").hidden = !testPassed || settingsOpened;
   $("testDeviceCopy").textContent = testPassed
-    ? "Perangkat lulus pemeriksaan. Anda dapat mengatur parameter atau lanjut menggunakan perangkat."
+    ? settingsOpened ? "Test Device sudah lulus. Parameter perangkat dapat ditinjau atau diubah di tahap berikutnya." : "Perangkat lulus pemeriksaan. Tekan Lanjutkan untuk membuka tahap pengaturan."
     : "Hubungkan perangkat lalu jalankan pemeriksaan tanpa mengubah konfigurasi.";
   const next = !identified ? "Pilih COM lalu hubungkan perangkat; nama COM selalu mengikuti komputer saat ini."
     : !testPassed ? "Perangkat teridentifikasi. Lanjutkan dengan Test Device."
-      : "Perangkat siap. Atur parameter hanya bila diperlukan.";
+      : settingsOpened ? "Parameter siap ditinjau. Perangkat siap digunakan." : "Test Device lulus. Lanjutkan ke Pengaturan bila parameter perlu diubah.";
   $("nextAction").textContent = next;
   return Boolean(testPassed);
 }
@@ -131,10 +339,13 @@ function render() {
   const state = overview.devices?.[active] || { device: active };
   const spec = devices[active];
   const identified = Boolean(state.connected && state.info);
+  const needsInitialFirmware = Boolean(initialFirmwareRequired && state.connected && !state.info);
   const info = state.info;
   $("devicePanel").hidden = false;
   document.querySelector(".workspace").classList.toggle("connected", identified);
+  document.querySelector(".workspace").classList.toggle("initial-firmware", needsInitialFirmware);
   $("deviceName").textContent = spec.name;
+  $("connectionTitle").textContent = `Hubungkan ${spec.name}`;
   $("testDeviceName").textContent = spec.name;
   $("testDevicePort").textContent = identified
     ? `${state.port || "COM"} — ${spec.label} terdeteksi dan terhubung.`
@@ -153,25 +364,31 @@ function render() {
   $("idInput").value = active === "gld" ? info?.deviceId || "" : active === "ch" ? info?.chId || "" : String(info?.gatewayId || "").replace(/^0x/i, "");
   $("freqInput").value = info?.starLora?.freqMHz ?? "";
   $("targetChInput").value = String(info?.targetChId || "").replace(/^0x/i, "");
-  $("rootGatewayInput").value = String(info?.rootGatewayId || "").replace(/^0x/i, "");
+  $("rootGatewayInput").value = active === "ch" ? String(info?.rootGatewayId || "").replace(/^0x/i, "") : "";
   $("starCard").hidden = active === "gw";
   $("saveFreqBtn").hidden = active === "gw";
   $("targetChCard").hidden = active !== "gld";
   $("saveTargetChBtn").hidden = active !== "gld";
-  $("rootGatewayCard").hidden = active !== "ch";
-  $("saveRootGatewayBtn").hidden = active !== "ch";
+  const isClusterHead = active === "ch";
+  $("rootGatewayCard").hidden = !isClusterHead;
+  $("saveRootGatewayBtn").hidden = !isClusterHead;
   $("gatewayNetworkCard").hidden = active !== "gw";
   $("testDeviceBtn").disabled = !identified;
+  $("testUploadFirmwareBtn").disabled = !identified;
+  $("initialFirmwareCard").hidden = !needsInitialFirmware;
+  $("initialFirmwarePort").textContent = `${state.port || "COM"} — ${spec.label}`;
   renderTestReport(lastTestReport);
   if (identified && !lastTestReport) {
     $("testDeviceSummary").textContent = "Siap diperiksa";
   }
   const pack = overview.packages?.[active];
-  const uploadLabel = pack?.firmwareVersion ? `Upload ${spec.label} ${pack.firmwareVersion} ke ${state.port || "COM"}` : `Upload firmware ${spec.label}`;
-  $("packageVersion").textContent = pack?.firmwareVersion ? `Latest / ${pack.firmwareVersion} / ${pack.environment}` : "Package terbaru tidak tersedia";
-  $("uploadBtn").textContent = uploadLabel;
+  $("packageVersion").textContent = pack?.firmwareVersion
+    ? `Firmware ${pack.firmwareVersion} / ${pack.environment} terdeteksi`
+    : "Versi firmware tidak terbaca";
   const testPassed = setStepState(identified);
-  $("uploadBtn").disabled = !testPassed;
+  $("readyDeviceCopy").textContent = testPassed
+    ? "Test Device lulus. Perangkat siap digunakan."
+    : "Selesaikan Test Device untuk memastikan perangkat siap digunakan.";
   renderActivity(overview.activity);
   renderLastResult(overview.activity);
 }
@@ -217,31 +434,23 @@ function buildTabs() {
     const selected = event.target.closest("[data-device]")?.dataset.device;
     if (!selected) return;
     active = selected;
-    lastTestReport = null;
+    lastTestReport = testReportsByDevice[active] || null;
+    initialFirmwareRequired = false;
+    settingsOpened = false;
+    reviewStep = 0;
     [...tabs.children].forEach((tab) => tab.classList.toggle("active", tab.dataset.device === active));
     await loadPorts();
     render();
   };
 }
 
-async function upload() {
-  const port = overview.devices?.[active]?.port || $("portSelect").value;
-  const reset = $("resetNvs").checked;
-  if (!port) return show("Hubungkan dan identifikasi perangkat terlebih dahulu.", "bad");
-  if (!confirm(`Upload firmware ${devices[active].label} terbaru ke ${port}?${reset ? " NVS AKAN DIHAPUS." : " NVS tidak akan di-reset."}`)) return;
-  let confirmation = "";
-  if (reset) {
-    confirmation = prompt("Ketik RESET NVS untuk melanjutkan.") || "";
-    if (confirmation !== "RESET NVS") return show("Reset NVS dibatalkan.", "bad");
-  }
-  await action("/api/simple/firmware/upload", { device: active, port, resetNvs: reset, resetNvsConfirmation: confirmation }, reset ? "Upload selesai; NVS telah di-reset dan firmware terverifikasi." : "Upload selesai; NVS tetap tersimpan dan firmware terverifikasi.");
-}
-
 async function testDevice() {
   try {
+    reviewStep = 2;
     show("Menjalankan pemeriksaan kesiapan perangkat...");
     const result = await api("/api/simple/test-device", { device: active });
     lastTestReport = result.report;
+    testReportsByDevice[active] = result.report;
     render();
     show(result.report.failed ? `Test Device selesai: ${result.report.passed}/${result.report.total} OK, error ${result.report.failed}.` : `Test Device selesai: ${result.report.passed}/${result.report.total} OK.`, result.report.failed ? "bad" : "ok");
     await refresh();
@@ -250,11 +459,38 @@ async function testDevice() {
   }
 }
 
+function navigateToStep(stepNumber) {
+  const step = $("operatorSteps").querySelector(`[data-step="${stepNumber}"]`)?.closest("li");
+  if (!step || (!step.classList.contains("done") && !step.classList.contains("active"))) return;
+  const testPassed = Boolean(lastTestReport && lastTestReport.failed === 0 && lastTestReport.unknown === 0);
+  if (stepNumber === 1) {
+    reviewStep = 1;
+  } else if (stepNumber === 2) {
+    reviewStep = 2;
+  } else if (stepNumber === 3 && testPassed) {
+    settingsOpened = true;
+    reviewStep = 3;
+  } else {
+    return;
+  }
+  render();
+  const target = stepNumber === 1 ? document.querySelector(".connect-card")
+    : stepNumber === 2 ? $("testDeviceCard") : $("settingsCard");
+  target?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
 async function connectDevice() {
   try {
+    settingsOpened = false;
+    reviewStep = 0;
     show("Menghubungkan dan membaca identitas perangkat...");
-    await api("/api/simple/connect", { device: active, port: $("portSelect").value });
+    const result = await api("/api/simple/connect", { device: active, port: $("portSelect").value });
+    initialFirmwareRequired = Boolean(result.needsInitialFirmware || (result.connected && !result.info));
     await refresh();
+    if (initialFirmwareRequired) {
+      show(`${devices[active].label} terhubung, tetapi firmware tidak terdeteksi. Upload Firmware Awal diperlukan.`, "bad");
+      return;
+    }
     show(`${devices[active].label} tersambung. Menjalankan Test Device otomatis...`);
     await testDevice();
   } catch (error) {
@@ -262,7 +498,72 @@ async function connectDevice() {
   }
 }
 
+async function initialFirmwareUpload() {
+  const port = overview.devices?.[active]?.port || $("portSelect").value;
+  if (!port) return show("Pilih dan hubungkan COM board baru terlebih dahulu.", "bad");
+  const approved = await requestConfirmation({
+    title: `Upload firmware awal ${devices[active].label}?`,
+    message: `Target ${port}. NVS akan di-reset dan ID default firmware akan digunakan. Setelah reboot, Hub wajib membaca ulang versi dan identitas board.`,
+    actionLabel: "Upload firmware awal"
+  });
+  if (!approved) return show("Upload firmware awal dibatalkan.");
+  try {
+    show("Mengunggah firmware awal; progres dan log flash ditampilkan di bawah.");
+    await runFirmwareUpload({ device: active, port, initialFirmware: true, resetNvs: true, resetNvsConfirmation: "RESET NVS" });
+    initialFirmwareRequired = false;
+    await refresh(true);
+    show("Firmware awal terverifikasi. Menjalankan Test Device...");
+    await testDevice();
+  } catch (error) {
+    show(error.message, "bad");
+  }
+}
+
+async function manualFirmwareUpload() {
+  const port = overview.devices?.[active]?.port || $("portSelect").value;
+  if (!port) return show("Hubungkan dan identifikasi perangkat terlebih dahulu.", "bad");
+  const approved = await requestConfirmation({
+    title: `Upload firmware ${devices[active].label}?`,
+    message: `Target ${port}. NVS tetap dipertahankan; konfigurasi perangkat tidak di-reset.`,
+    actionLabel: "Upload firmware"
+  });
+  if (!approved) return show("Upload firmware dibatalkan.");
+  try {
+    show("Mengunggah firmware; progres dan log flash ditampilkan di bawah.");
+    await runFirmwareUpload({ device: active, port, resetNvs: false });
+    await refresh(true);
+    show("Firmware terverifikasi. Menjalankan Test Device ulang...");
+    await testDevice();
+  } catch (error) {
+    show(error.message, "bad");
+  }
+}
+
 async function init() {
+  prepareThreeStepWorkflow();
+  if (simulationMode === "ch-com6" || simulationMode === "ch-com6-new") {
+    const unprogrammed = simulationMode === "ch-com6-new";
+    active = "ch";
+    initialFirmwareRequired = unprogrammed;
+    overview = {
+      devices: {
+        gld: { device: "gld", connected: false },
+        ch: { device: "ch", connected: unprogrammed, port: "COM6" },
+        gw: { device: "gw", connected: false }
+      },
+      packages: { ch: { firmwareVersion: "preview", environment: "ch" } },
+      activity: []
+    };
+    buildTabs();
+    render();
+    $("portSelect").innerHTML = '<option value="COM6" selected>COM6 - USB Serial CH340 (COM6)</option>';
+    $("connectBtn").disabled = true;
+    $("disconnectBtn").disabled = true;
+    $("initialFirmwareBtn").onclick = initialFirmwareUpload;
+    $("runtimeText").textContent = unprogrammed ? "Simulasi board baru" : "Simulasi CH / COM6";
+    show(unprogrammed ? "Simulasi: CH pada COM6 terhubung, tetapi firmware belum terdeteksi. Tidak ada koneksi serial yang dibuka." : "Simulasi CH pada COM6 - tidak ada koneksi serial yang dibuka.", "ok");
+    return;
+  }
   const boot = await api("/api/simple/bootstrap");
   token = boot.apiToken;
   show("Menyudahi sesi serial sebelumnya...");
@@ -270,21 +571,33 @@ async function init() {
   buildTabs();
   $("connectBtn").onclick = connectDevice;
   $("disconnectBtn").onclick = () => action("/api/simple/disconnect", { device: active }, "Koneksi perangkat ditutup.");
-  $("refreshBtn").onclick = () => refresh(true).catch((error) => show(error.message, "bad"));
-  $("restartBtn").onclick = () => confirm(`Restart ${devices[active].label} sekarang?`) && action("/api/simple/restart", { device: active }, "Perintah restart dikirim.");
-  $("uploadBtn").onclick = upload;
-  $("testDeviceBtn").onclick = testDevice;
-  $("continueBtn").onclick = () => {
-    const card = $("settingsCard");
-    card.open = true;
-    card.scrollIntoView({ behavior: "smooth", block: "start" });
+  $("restartBtn").onclick = async () => {
+    const approved = await requestConfirmation({
+      title: `Restart ${devices[active].label}?`,
+      message: "Koneksi serial akan terputus sesaat saat board melakukan boot ulang.",
+      actionLabel: "Restart board"
+    });
+    if (approved) await action("/api/simple/restart", { device: active }, "Perintah restart dikirim.");
   };
-  $("settingsCard").addEventListener("toggle", (event) => {
-    if ($("settingsCard").classList.contains("locked") && event.currentTarget.open) {
-      event.currentTarget.open = false;
-      show("Selesaikan Test Device sebelum membuka pengaturan.", "bad");
-    }
-  });
+  $("initialFirmwareBtn").onclick = initialFirmwareUpload;
+  $("testDeviceBtn").onclick = testDevice;
+  $("testUploadFirmwareBtn").onclick = manualFirmwareUpload;
+  $("continueBtn").onclick = () => {
+    settingsOpened = true;
+    reviewStep = 3;
+    render();
+    $("settingsCard").scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+  $("restartWorkflowBtn").onclick = () => {
+    settingsOpened = false;
+    reviewStep = 1;
+    render();
+    document.querySelector(".connect-card")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+  $("operatorSteps").onclick = (event) => {
+    const stepNumber = Number(event.target.closest(".step-button")?.dataset.step);
+    if (stepNumber) navigateToStep(stepNumber);
+  };
   $("saveIdBtn").onclick = () => action("/api/simple/config/id", { device: active, value: $("idInput").value }, "ID tersimpan dan terverifikasi.");
   $("saveFreqBtn").onclick = () => action("/api/simple/config/star-frequency", { device: active, freqMHz: $("freqInput").value }, "STAR Frequency tersimpan dan terverifikasi.");
   $("saveTargetChBtn").onclick = () => action("/api/simple/config/target-ch", { device: "gld", value: $("targetChInput").value }, "Target CH tersimpan dan terverifikasi.");

@@ -321,6 +321,7 @@ bool     lastBootMcpControlTested = false;
 uint8_t  lastBootMcpControlOkCount = 0;
 bool     lastBootMcpControlOk[pgl::gld::board::SENSOR_COUNT]{};
 bool     batteryPowerMode = false;
+bool     external24VPowerMode = false;
 bool     batteryCyclePoweredOff = false;
 bool     batteryFaultPowerOffArmed = false;
 bool     powerTransitionShutdownPending = false;
@@ -2709,6 +2710,7 @@ void completeBatterySessionAndPowerOff(const char* reason) {
 void applyRuntimePowerReading(const pgl::gld::GldPowerReading& power,
                               const char* source,
                               bool immediate = false) {
+    external24VPowerMode = power.mode == pgl::gld::GldPowerMode::External24V;
     const bool requestedBatteryMode = TFBG_CONTINUOUS_BATTERY || !power.externalPower;
     if (requestedBatteryMode == batteryPowerMode) {
         powerModeCandidateCount = 0;
@@ -5295,6 +5297,17 @@ void setup() {
 void loop() {
     firmwareServiceTick();
     reconcileRuntimePowerMode();
+    // In external 24V mode the DC fan is a continuous-running load.
+    // Keep this override after power reconciliation so it also applies when
+    // the runtime power mode changes while the firmware is already running.
+    static bool fanForcedOnFor24V = false;
+    if (external24VPowerMode) {
+        optionalDigitalWrite(pgl::gld::board::PIN_DC_FAN, HIGH);
+        fanForcedOnFor24V = true;
+    } else if (fanForcedOnFor24V) {
+        optionalDigitalWrite(pgl::gld::board::PIN_DC_FAN, LOW);
+        fanForcedOnFor24V = false;
+    }
     if (powerTransitionShutdownPending) {
         completeBatterySessionAndPowerOff("unsupported_mode_power_transition");
         return;

@@ -13,6 +13,7 @@ CORS allowlist is same-origin only).
 from __future__ import annotations
 
 import argparse
+import hmac
 import json
 import os
 import secrets
@@ -28,6 +29,7 @@ import webbrowser
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 
 HUB_DIR = Path(__file__).resolve().parent
 if str(HUB_DIR) not in sys.path:
@@ -122,7 +124,14 @@ def latest_package(device: str) -> dict[str, object]:
     return {"environment": environment, "firmwareVersion": manifest.get("firmwareVersion"), "protocolVersion": manifest.get("protocolVersion")}
 
 
-def child_request(host: str, device: str, method: str, path: str, payload: dict[str, object] | None = None) -> dict[str, object]:
+def child_request(
+    host: str,
+    device: str,
+    method: str,
+    path: str,
+    payload: dict[str, object] | None = None,
+    timeout: float = 12.0,
+) -> dict[str, object]:
     """Server-side allow-listed proxy. Child CSRF tokens never reach the UI."""
     cfg = CHILD_APPS[device]
     base = f"http://{host}:{cfg['port']}"
@@ -136,12 +145,25 @@ def child_request(host: str, device: str, method: str, path: str, payload: dict[
         req.add_header("X-GLD-Bridge-Token" if device == "gld" else "X-CH-Bridge-Token" if device == "ch" else "X-GW-Bridge-Token", token)
         if body is not None:
             req.add_header("Content-Type", "application/json")
-        with urllib.request.urlopen(req, timeout=12) as response:
+        with urllib.request.urlopen(req, timeout=timeout) as response:
             parsed = json.loads(response.read().decode("utf-8"))
             return parsed if isinstance(parsed, dict) else {"result": parsed}
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")[:300]
         raise RuntimeError(detail or f"child request failed ({exc.code})") from exc
+
+
+def child_event_request(host: str, device: str):
+    """Open a child SSE stream without exposing its CSRF token to the UI."""
+    cfg = CHILD_APPS[device]
+    base = f"http://{host}:{cfg['port']}"
+    with urllib.request.urlopen(f"{base}/api/health", timeout=2) as health:
+        token = json.loads(health.read().decode("utf-8")).get("csrfToken")
+    if not isinstance(token, str) or len(token) < 16:
+        raise RuntimeError("child bridge did not provide an API token")
+    req = urllib.request.Request(f"{base}/api/events", method="GET")
+    req.add_header("X-GLD-Bridge-Token" if device == "gld" else "X-CH-Bridge-Token" if device == "ch" else "X-GW-Bridge-Token", token)
+    return urllib.request.urlopen(req, timeout=30)
 
 
 def recent_matching(host: str, device: str, prefix: str, after: int, timeout: float = 5.0) -> dict[str, object] | None:
@@ -158,6 +180,19 @@ def recent_matching(host: str, device: str, prefix: str, after: int, timeout: fl
                         return parsed
                 except json.JSONDecodeError:
                     continue
+        time.sleep(0.15)
+    return None
+
+
+def recent_line_sequence(host: str, device: str, prefixes: str | tuple[str, ...], after: int, timeout: float = 5.0) -> int | None:
+    """Wait for a non-JSON serial milestone and return its sequence number."""
+    expected = (prefixes,) if isinstance(prefixes, str) else prefixes
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        recent = child_request(host, device, "GET", f"/api/serial/recent?slot=1&after={after}")
+        for item in recent.get("lines", []):
+            if str(item.get("line", "")).startswith(expected):
+                return int(item.get("sequence") or after)
         time.sleep(0.15)
     return None
 
@@ -519,6 +554,8 @@ class Handler(SimpleHTTPRequestHandler):
             return self._handle_simple_overview()
         if path == "/api/simple/ports":
             return self._handle_simple_ports()
+        if path == "/api/simple/upload-events":
+            return self._serve_simple_upload_events()
         super().do_GET()
 
     def do_POST(self) -> None:  # noqa: N802
@@ -572,7 +609,9 @@ class Handler(SimpleHTTPRequestHandler):
         host = self.server.server_address[0] or "127.0.0.1"
         child_request(host, device, "POST", "/api/serial/connect", {"slot": 1, "port": port, "baud": 115200})
         state = simple_device_state(host, device, query=True)
-        add_activity(device, "Connect", f"{port}; connected and identified")
+        state["needsInitialFirmware"] = bool(state.get("connected") and not state.get("info"))
+        detail = f"{port}; connected and identified" if state.get("info") else f"{port}; connected but firmware identity was not detected"
+        add_activity(device, "Connect", detail)
         json_response(self, state)
 
     def _simple_disconnect(self, payload: dict[str, object]) -> None:
@@ -601,10 +640,42 @@ class Handler(SimpleHTTPRequestHandler):
         before = child_request(host, device, "GET", "/api/serial/recent?slot=1&after=0")
         sequence = int(before.get("sequence") or 0)
         child_request(host, device, "POST", "/api/serial/write", {"slot": 1, "line": "RUN_BOOT_CHECK"})
-        status = recent_matching(host, device, "GLD_STATUS_JSON", sequence, timeout=18.0)
+        completed_sequence = recent_line_sequence(
+            host,
+            device,
+            # Some already-deployed GLD v0.8.18 images do not yet emit the
+            # explicit final marker. Their final MCP-control probe is the
+            # equivalent diagnostic milestone; query GET_STATUS only after it.
+            ("RUN_BOOT_CHECK_DONE", "BOOT_PROBE_MCP_CONTROL=done"),
+            sequence,
+            timeout=35.0,
+        )
+        if completed_sequence is None:
+            raise RuntimeError("Boot Check did not finish; keep the device connected and try again")
+        # RUN_BOOT_CHECK can emit interim telemetry while the diagnostics run.
+        # Read explicit, freshly requested snapshots only after its completion.
+        # The first one can precede the next sensor scan, so wait briefly for a
+        # known Sensor Read result rather than scoring that transient as 1/6.
+        status: dict[str, object] | None = None
+        report: dict[str, object] | None = None
+        sensor_known = False
+        sensor_deadline = time.monotonic() + 10.0
+        while time.monotonic() < sensor_deadline:
+            recent = child_request(host, device, "GET", "/api/serial/recent?slot=1&after=0")
+            status_sequence = int(recent.get("sequence") or completed_sequence)
+            child_request(host, device, "POST", "/api/serial/write", {"slot": 1, "line": "GET_STATUS"})
+            candidate = recent_matching(host, device, "GLD_STATUS_JSON", status_sequence, timeout=2.0)
+            if candidate:
+                status = candidate
+                report = gld_boot_report(status)
+                sensor_known = report["checks"][-1]["ok"] is not None
+                if sensor_known:
+                    break
+            time.sleep(0.35)
         if not status:
-            raise RuntimeError("Boot Report did not return; keep the device connected and try again")
-        report = gld_boot_report(status)
+            raise RuntimeError("Boot Check finished but final status did not return; keep the device connected and try again")
+        if report is None:
+            report = gld_boot_report(status)
         result = "all checks OK" if report["failed"] == 0 and report["unknown"] == 0 else f"{report['failed']} error, {report['unknown']} pending"
         add_activity(device, "Test Device", f"{state.get('port') or 'COM'}; {report['passed']}/{report['total']} OK; {result}")
         json_response(self, {"report": report, "status": status})
@@ -767,38 +838,89 @@ class Handler(SimpleHTTPRequestHandler):
         if not __import__("re").fullmatch(r"COM\d+", port):
             raise ValueError("valid COM port required")
         env = {"gld": "gld", "ch": "ch", "gw": "gw"}[device]
-        reset_nvs = bool(payload.get("resetNvs"))
+        initial_firmware = bool(payload.get("initialFirmware"))
+        reset_nvs = True if initial_firmware else bool(payload.get("resetNvs"))
         if reset_nvs and payload.get("resetNvsConfirmation") != "RESET NVS":
             raise ValueError("Reset NVS requires the explicit confirmation RESET NVS")
         host = self.server.server_address[0] or "127.0.0.1"
-        state = simple_device_state(host, device, query=True)
-        if not state.get("connected") or not state.get("info"):
-            raise RuntimeError("connect and identify the device first")
+        state = simple_device_state(host, device, query=not initial_firmware)
+        if not state.get("connected"):
+            raise RuntimeError("connect the device first")
         if state.get("port") != port:
-            raise RuntimeError("selected port must match the identified device")
+            raise RuntimeError("selected port must match the connected device")
+        if not initial_firmware and not state.get("info"):
+            raise RuntimeError("connect and identify the device first")
         package = child_request(host, device, "GET", f"/api/firmware/package?env={env}")
         request: dict[str, object] = {"env": env, "port": port, "manifest": package.get("manifest"), "packageFiles": package.get("packageFiles"), "resetNvs": reset_nvs, "slot": 1}
         info = state.get("info") if isinstance(state.get("info"), dict) else {}
         identifier = info.get("deviceId" if device == "gld" else "chId" if device == "ch" else "gatewayId")
+        if initial_firmware:
+            identifier = {"gld": "1001", "ch": "0010", "gw": "0001"}[device]
         if not isinstance(identifier, str):
             raise RuntimeError("identified device ID is required before upload")
         request["targetDeviceId"] = identifier.removeprefix("0x").removeprefix("0X")
-        result = child_request(host, device, "POST", "/api/firmware/upload", request)
+        # A packaged ESP flash normally takes far longer than the short API timeout
+        # used for status/configuration calls. Keep this bounded, but do not mark a
+        # legitimate flash as failed after only 12 seconds.
+        result = child_request(host, device, "POST", "/api/firmware/upload", request, timeout=240.0)
         readback = wait_for_readback(host, device, port, timeout=35.0)
         expected_version = (package.get("manifest") or {}).get("firmwareVersion")
         actual_version = (readback.get("info") or {}).get("firmwareVersion")
         if expected_version and actual_version != expected_version:
             raise RuntimeError(f"flash completed but firmware read-back differs: expected {expected_version}, got {actual_version}")
-        add_activity(device, "Firmware upload", f"{port}; latest {env} verified; NVS {'reset' if reset_nvs else 'preserved'}")
-        json_response(self, {"upload": result, "readback": readback})
+        readback_id = (readback.get("info") or {}).get("deviceId" if device == "gld" else "chId" if device == "ch" else "gatewayId")
+        actual_id = str(readback_id or "").upper().removeprefix("0X")
+        expected_id = str(identifier).upper().removeprefix("0X")
+        if actual_id != expected_id:
+            raise RuntimeError(f"flash completed but identity read-back differs: expected {expected_id}, got {readback_id}")
+        action = "Initial firmware upload" if initial_firmware else "Firmware upload"
+        add_activity(device, action, f"{port}; latest {env} verified; NVS {'reset' if reset_nvs else 'preserved'}")
+        json_response(self, {"upload": result, "readback": readback, "initialFirmware": initial_firmware})
 
     def _handle_simple_ports(self) -> None:
-        from urllib.parse import parse_qs, urlparse
         device = (parse_qs(urlparse(self.path).query).get("device") or [""])[0]
         if device not in CHILD_APPS:
             return json_response(self, {"error": "device must be gld, ch, or gw"}, HTTPStatus.BAD_REQUEST)
         host = self.server.server_address[0] or "127.0.0.1"
         json_response(self, child_request(host, device, "GET", "/api/ports"))
+
+    def _serve_simple_upload_events(self) -> None:
+        """Forward only verified-flash events for the selected device to Simple Hub."""
+        query = parse_qs(urlparse(self.path).query)
+        device = (query.get("device") or [""])[0]
+        supplied = (query.get("token") or [""])[0]
+        if device not in CHILD_APPS or not hmac.compare_digest(supplied, HUB_API_TOKEN):
+            return json_response(self, {"error": "invalid event stream request"}, HTTPStatus.FORBIDDEN)
+        host = self.server.server_address[0] or "127.0.0.1"
+        try:
+            child_stream = child_event_request(host, device)
+        except Exception as exc:
+            return json_response(self, {"error": str(exc)}, HTTPStatus.BAD_GATEWAY)
+        self.send_response(HTTPStatus.OK)
+        self.send_header("Content-Type", "text/event-stream")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Connection", "keep-alive")
+        self.end_headers()
+        allowed = {"upload_start", "upload_progress", "upload_line", "upload_done", "upload_error"}
+        event_name = ""
+        try:
+            self.wfile.write(b": connected\n\n")
+            self.wfile.flush()
+            for raw in child_stream:
+                line = raw.decode("utf-8", errors="replace").rstrip("\r\n")
+                if line.startswith("event: "):
+                    event_name = line[7:].strip()
+                elif line.startswith("data: ") and event_name in allowed:
+                    self.wfile.write(f"event: {event_name}\n".encode("utf-8"))
+                    self.wfile.write(f"{line}\n\n".encode("utf-8"))
+                    self.wfile.flush()
+                    event_name = ""
+                elif not line:
+                    event_name = ""
+        except (BrokenPipeError, ConnectionResetError, TimeoutError, OSError):
+            pass
+        finally:
+            child_stream.close()
 
     def _handle_simple_overview(self) -> None:
         host = self.server.server_address[0] or "127.0.0.1"

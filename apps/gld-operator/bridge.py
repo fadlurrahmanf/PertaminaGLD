@@ -1076,6 +1076,9 @@ def _firmware_upload_reserved(payload: dict[str, Any], slot: int = 1) -> dict[st
             "cmd": f"verified shared esptool flash ({len(verified_files)} files)",
             "firmwareVersion": manifest["firmwareVersion"],
             "gitCommit": manifest["source"]["gitCommit"],
+            # Esptool restarts its displayed percentage for every binary. Send
+            # verified sizes so the Hub can render one aggregate package percent.
+            "files": [{"path": item["path"], "bytes": len(content)} for item, content in verified_files],
         })
         proc = subprocess.Popen(
             cmd,
@@ -1087,8 +1090,25 @@ def _firmware_upload_reserved(payload: dict[str, Any], slot: int = 1) -> dict[st
             errors="replace",
         )
         assert proc.stdout is not None
+        primary_file_index = max(range(len(verified_files)), key=lambda index: len(verified_files[index][1]))
         for line in proc.stdout:
-            events.emit("upload_line", {"line": line.rstrip("\r\n")})
+            clean_line = line.rstrip("\r\n")
+            match = re.search(r"Writing at 0x([0-9a-fA-F]+).*?\(\s*(\d+)\s*%\s*\)", clean_line)
+            if match:
+                address = int(match.group(1), 16)
+                local_percent = min(100, int(match.group(2)))
+                for index, (item, content) in enumerate(verified_files):
+                    offset = int(str(item["offset"]), 0)
+                    if offset <= address < offset + len(content):
+                        events.emit("upload_progress", {
+                            "fileIndex": index,
+                            "fileCount": len(verified_files),
+                            "filePath": item["path"],
+                            "filePercent": local_percent,
+                            "primary": index == primary_file_index,
+                        })
+                        break
+            events.emit("upload_line", {"line": clean_line})
         code = proc.wait()
     if code != 0:
         message = f"esptool flash failed with exit code {code}"

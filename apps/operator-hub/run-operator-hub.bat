@@ -1,5 +1,6 @@
 @echo off
 setlocal
+title Operator_Hub
 cd /d "%~dp0"
 set PYTHONUTF8=1
 set "PY_EXE=%~dp0..\gld-operator\python-embed\python.exe"

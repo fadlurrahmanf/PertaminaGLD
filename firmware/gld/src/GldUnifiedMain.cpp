@@ -39,8 +39,8 @@
 #include "GldSelfTestConfig.h"
 #endif
 #include "ProtocolConstants.h"
-#include "../model/ModelMetadata.h"
-#include "../model/NeuralNetwork.h"
+#include "ModelMetadata.h"
+#include "NeuralNetwork.h"
 
 namespace {
 
@@ -321,6 +321,7 @@ bool     lastBootMcpControlTested = false;
 uint8_t  lastBootMcpControlOkCount = 0;
 bool     lastBootMcpControlOk[pgl::gld::board::SENSOR_COUNT]{};
 bool     batteryPowerMode = false;
+bool     external24VPowerMode = false;
 bool     batteryCyclePoweredOff = false;
 bool     batteryFaultPowerOffArmed = false;
 bool     powerTransitionShutdownPending = false;
@@ -1199,6 +1200,7 @@ void addCapabilities(JsonObject caps) {
     caps["appPing"] = true;
     caps["getInfo"] = true;
     caps["getStatus"] = true;
+    caps["lightweightTelemetry"] = "GET_TELEMETRY";
     caps["serialAckJson"] = true;
     caps["runningTelemetry"] = true;
     caps["modeSwitchReboots"] = true;
@@ -1243,6 +1245,26 @@ void addTelemetry(JsonObject telemetry) {
     }
 }
 
+// This is deliberately separate from GET_STATUS: the operator requests it on
+// every Running poll, while GET_STATUS remains the complete configuration and
+// diagnostic snapshot used after connect and operator actions.
+void emitTelemetryJson() {
+    static StaticJsonDocument<1536> doc;
+    doc.clear();
+    doc["deviceId"] = runtimeConfig.deviceId;
+    doc["mode"] = pgl::gld::gldModeName(currentMode);
+    doc["uptimeMs"] = static_cast<uint32_t>(millis());
+    doc["alarmLatched"] = pgl::gld::readGldAlarmLatched();
+
+    JsonObject model = doc.createNestedObject("model");
+    model["inferenceValid"] = lastInferenceValid;
+    model["sensorFault"] = sensorFaultActive;
+
+    JsonObject telemetry = doc.createNestedObject("telemetry");
+    addTelemetry(telemetry);
+    rawJsonLine("GLD_TELEMETRY_JSON", doc);
+}
+
 void emitInfoJson() {
     static StaticJsonDocument<1536> doc;
     doc.clear();
@@ -1271,6 +1293,7 @@ void emitInfoJson() {
     starLora["tcxoVoltage"] = runtimeConfig.loraTcxoVoltage;
     starLora["xtalVoltage"] = runtimeConfig.loraXtalVoltage;
     starLora["runtime"] = true;
+    doc["radioReady"] = radioReady;
     JsonObject appConfig = doc.createNestedObject("appConfig");
     appConfig["wifiSsid"] = runtimeConfig.wifiSsid;
     appConfig["mqttHost"] = runtimeConfig.mqttHost;
@@ -1925,14 +1948,23 @@ void onVerifyCleanAirForNulling() {
         emitCommandAck("VERIFY_CLEAN_AIR_FOR_NULLING", "rejected", "clean-air verification is allowed only in inference mode", false);
         return;
     }
-    if (batteryPowerMode || batteryPendingAlarm.active) {
+    // A retained battery-delivery record must not prevent a 24 V operator
+    // from confirming clean air and re-calibrating the sensor.  The record is
+    // deliberately retained here; it remains owned by the battery-session
+    // delivery flow and is not erased by a nulling acknowledgement.
+    if (batteryPowerMode) {
         emitCommandAck("VERIFY_CLEAN_AIR_FOR_NULLING", "rejected", "battery alarm state cannot be cleared for nulling", false);
         return;
     }
+    if (batteryPendingAlarm.active) {
+        logPrintln("GLD_NULLING_PENDING_BATTERY_ALARM_RETAINED external_power=1");
+    }
     const bool wasLatched = pgl::gld::readGldAlarmLatched();
-    if (wasLatched && !pgl::gld::writeGldAlarmLatched(false)) {
-        emitCommandAck("VERIFY_CLEAN_AIR_FOR_NULLING", "error", "failed to clear persisted alarm latch", false);
-        return;
+    const bool latchClearPersisted = !wasLatched || pgl::gld::writeGldAlarmLatched(false);
+    if (wasLatched && !latchClearPersisted) {
+        // The operator's explicit clean-air confirmation authorizes Nulling.
+        // Keep an NVS write fault visible, but do not block the mode switch.
+        logPrintln("GLD_NULLING_ALARM_LATCH_CLEAR_PERSIST=FAIL override=operator_confirmed_clean_air");
     }
     // Force a later valid alarm scan to persist/re-latch even though this
     // operator acknowledgement cleared the previous in-memory edge.
@@ -1940,7 +1972,10 @@ void onVerifyCleanAirForNulling() {
     logPrintf("GLD_ALARM_LATCH_OPERATOR_CLEAR=OK reason=operator_verified_clean_air_for_nulling wasLatched=%u outputHeld=1 relatchArmed=1\n",
               wasLatched ? 1u : 0u);
     emitCommandAck("VERIFY_CLEAN_AIR_FOR_NULLING", "ok",
-                   wasLatched ? "alarm latch cleared for confirmed nulling" : "no alarm latch was active; clean-air confirmation recorded", false);
+                   wasLatched
+                       ? (latchClearPersisted ? "alarm latch cleared for confirmed nulling" : "nulling authorized; alarm latch clear was not persisted")
+                       : "no alarm latch was active; clean-air confirmation recorded",
+                   false);
 }
 
 // Explicit local operator action: approve the most recently saved complete
@@ -2299,6 +2334,9 @@ void handleSerialCommand(const pgl::gld::GldSerialCommand& command) {
             break;
         case pgl::gld::GldSerialCommandType::GetStatus:
             emitStatusJson();
+            break;
+        case pgl::gld::GldSerialCommandType::GetTelemetry:
+            emitTelemetryJson();
             break;
         case pgl::gld::GldSerialCommandType::Restart:
             restartFromSerialCommand();
@@ -2684,6 +2722,7 @@ void completeBatterySessionAndPowerOff(const char* reason) {
 void applyRuntimePowerReading(const pgl::gld::GldPowerReading& power,
                               const char* source,
                               bool immediate = false) {
+    external24VPowerMode = power.mode == pgl::gld::GldPowerMode::External24V;
     const bool requestedBatteryMode = TFBG_CONTINUOUS_BATTERY || !power.externalPower;
     if (requestedBatteryMode == batteryPowerMode) {
         powerModeCandidateCount = 0;
@@ -5130,20 +5169,9 @@ void setup() {
             startBatteryInferenceSession();
         }
 
-    } else if (currentMode == pgl::gld::GldMode::NULLING && pgl::gld::readGldAlarmLatched()) {
-        // Nulling must not run while a prior alarm is still latched/unacknowledged
-        // (design.md §3.6: "nulling blocked when alarm active"). Clear the alarm
-        // (button hold / IO38 CLR) before switching into Nulling mode again.
-        logPrintln("MODE_BLOCKED reason=alarm_latched mode=nulling");
-        pgl::gld::writeGldMode(pgl::gld::GldMode::INFERENCE);
-        serviceDelay(NULLING_AUTO_RESTART_DELAY_MS);
-        Serial.flush();
-#if defined(ARDUINO_ARCH_ESP32)
-        Serial0.flush();
-#endif
-        ESP.restart();
-
     } else {
+        // A Nulling mode request is operator-authorized. Alarm latch state is
+        // retained for audit/delivery, but never redirects this mode request.
         // --- DATASET / NULLING mode init ---
         if (batteryPowerMode) {
             logPrintf("MODE_BATTERY_ALLOWED_TEMP mode=%s\n",
@@ -5270,6 +5298,17 @@ void setup() {
 void loop() {
     firmwareServiceTick();
     reconcileRuntimePowerMode();
+    // In external 24V mode the DC fan is a continuous-running load.
+    // Keep this override after power reconciliation so it also applies when
+    // the runtime power mode changes while the firmware is already running.
+    static bool fanForcedOnFor24V = false;
+    if (external24VPowerMode) {
+        optionalDigitalWrite(pgl::gld::board::PIN_DC_FAN, HIGH);
+        fanForcedOnFor24V = true;
+    } else if (fanForcedOnFor24V) {
+        optionalDigitalWrite(pgl::gld::board::PIN_DC_FAN, LOW);
+        fanForcedOnFor24V = false;
+    }
     if (powerTransitionShutdownPending) {
         completeBatterySessionAndPowerOff("unsupported_mode_power_transition");
         return;

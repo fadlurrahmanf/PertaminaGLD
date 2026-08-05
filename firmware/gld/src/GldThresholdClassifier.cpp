@@ -101,6 +101,7 @@ const char* gldGasClassName(uint8_t gasClass) {
         case pgl::protocol::GLD_GAS_BUTANE:  return "butane";
         case pgl::protocol::GLD_GAS_METHANE: return "methane";
         case pgl::protocol::GLD_GAS_ANOMALY: return "CO2";
+        case pgl::protocol::GLD_GAS_H2:      return "H2";
         default:                              return "unknown";
     }
 }

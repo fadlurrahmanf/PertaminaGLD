@@ -4,22 +4,22 @@
   "deviceId": "ANY",
   "boardProfile": "Gateway ESP32-S3 R8N16",
   "environment": "gw",
-  "firmwareVersion": "0.8.14",
+  "firmwareVersion": "0.8.18",
   "protocolVersion": "0.2.0",
   "configSchemaVersion": "0.1.0",
   "chip": "esp32s3",
   "baud": 460800,
-  "createdAtUtc": "20260728T070710Z",
+  "createdAtUtc": "20260730T054432Z",
   "source": {
-    "gitCommit": "ac18d1f3dd3e65230783fb1b6f3a994b7bd36ea9",
+    "gitCommit": "0f074022a8a2bea6466a9059d7af28d07e2eac53",
     "gitTreeState": "operator-hub-auto",
     "platformioCoreVersion": "PlatformIO post-build hook",
-    "platformioIniSha256": "c4dee057d1994a6ef0f5dda5ee997f0f4d66ac82005cd0ba02835380f117c700",
+    "platformioIniSha256": "45bc154271223c3fb1d06cde7de6e3abd1e09071a5d0e0d7e6645c79154768f6",
     "buildCommand": "pio run -e gw",
-    "buildStartedAtUtc": "20260728T070710Z",
-    "buildCompletedAtUtc": "20260728T070710Z"
+    "buildStartedAtUtc": "20260730T054432Z",
+    "buildCompletedAtUtc": "20260730T054432Z"
   },
-  "flashSetSha256": "2bccac66a241d54af552e7ace2d43a6ac62cf5944a8d92ece765e12a4eea68c9",
+  "flashSetSha256": "520e2a593b56930a844ddc486f20e6f54e4edc77c36b4c81aecaac479e3b7d6e",
   "flashFiles": [
     {
       "path": "bootloader.bin",
@@ -42,8 +42,8 @@
     {
       "path": "firmware.bin",
       "offset": "0x00010000",
-      "size": 814912,
-      "sha256": "62578eb4375310d98c45b1f1ba434e3de24a446fdf2f07d5422921fe6cd0e4cf"
+      "size": 815744,
+      "sha256": "a10ecceb502d6764edbb143b485cbd2f0e862d323ddf02127621e51f2fc09b87"
     }
   ]
 }

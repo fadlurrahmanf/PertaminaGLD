@@ -14,6 +14,7 @@ enum class GldSerialCommandType : uint8_t {
     AppPing,
     GetInfo,
     GetStatus,
+    GetTelemetry,
     Restart,
     RunBootCheck,
     RunAdsMcpSweep,
@@ -51,6 +52,7 @@ struct GldSerialCommand {
 // - APP_PING
 // - GET_INFO
 // - GET_STATUS
+// - GET_TELEMETRY
 // - RESTART
 // - RUN_BOOT_CHECK
 // - RUN_ADS_MCP_SWEEP

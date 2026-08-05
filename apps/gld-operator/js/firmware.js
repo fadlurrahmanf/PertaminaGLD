@@ -8,6 +8,13 @@ import { applyAndAlert, sendCommand } from "./serial-protocol.js";
 import { requireUnlock } from "./security.js";
 import { restoreGldConfigAfterReset } from "./dataset.js";
 
+const GLD_MODEL_SLOTS = {
+  model_1: { label: "Model 1", available: true, environment: "gld_model_1", detail: "Model Board 1: CO2, Clean_Air, H2, LPG." },
+  model_2: { label: "Model 2", available: true, environment: "gld_model_2", detail: "Model Board 2: CO2, Clean_Air, H2, LPG." },
+  model_3: { label: "Model 3", available: false, detail: "Artefak dan package Model 3 belum tersedia." },
+  model_4: { label: "Model 4", available: false, detail: "Artefak dan package Model 4 belum tersedia." }
+};
+
 export async function loadManifestFile(fileList) {
   const files = Array.from(fileList || []);
   if (!files.length) return;
@@ -111,12 +118,54 @@ function setUploadDialogStatus(message, state = "") {
   status.setAttribute("aria-busy", String(state === "loading"));
 }
 
+function selectedModelSlot() {
+  return GLD_MODEL_SLOTS[$("firmwareUploadModel")?.value] || GLD_MODEL_SLOTS.model_1;
+}
+
+function updateModelSelection() {
+  const environment = $("firmwareUploadEnv")?.value;
+  const selector = $("firmwareUploadModel");
+  const status = $("firmwareUploadModelStatus");
+  const model = selectedModelSlot();
+  const applies = environment === "gld";
+  if (selector) selector.disabled = !applies;
+  if (status) {
+    status.textContent = applies
+      ? `${model.label}: ${model.detail}`
+      : "Pilihan model hanya berlaku untuk environment GLD production.";
+  }
+  return applies ? model : null;
+}
+
+async function refreshFirmwareUploadPorts() {
+  const portSelect = $("firmwareUploadPort");
+  if (!portSelect) return "";
+  const previouslySelected = String(portSelect.value || elements.portSelect.value || getField("manualPortInput") || "");
+  try {
+    const result = await bridgeFetch("/api/ports");
+    const ports = Array.isArray(result.ports) ? result.ports : [];
+    portSelect.replaceChildren(...ports.map((port) => {
+      const path = String(port.path || "").toUpperCase();
+      const detail = port.description ? ` — ${port.description}` : "";
+      return new Option(`${path}${detail}`, path, false, path === previouslySelected.toUpperCase());
+    }));
+    if (!ports.length) portSelect.append(new Option("No serial ports detected", ""));
+    return portSelect.value;
+  } catch (error) {
+    // Fall back to the Port Setup list when the bridge scan itself is unavailable.
+    portSelect.replaceChildren(...Array.from(elements.portSelect.options).map((option) =>
+      new Option(option.text, option.value, false, option.value === previouslySelected)
+    ));
+    return portSelect.value;
+  }
+}
+
 export async function uploadFirmware() {
   switchTab("expert");
   if (state.bridgeAvailable) await refreshPorts(true);
   const portSelect = $("firmwareUploadPort");
-  const selectedPort = elements.portSelect.value;
-  portSelect.replaceChildren(...Array.from(elements.portSelect.options).map((option) => new Option(option.text, option.value, false, option.value === selectedPort)));
+  await refreshFirmwareUploadPorts();
+  updateModelSelection();
   await loadBuiltinPackage($("firmwareUploadEnv").value);
   const ready = Boolean(state.manifest && /^COM\d+$/i.test(portSelect.value));
   $("firmwareUploadConfirmBtn").disabled = !ready;
@@ -125,11 +174,20 @@ export async function uploadFirmware() {
 }
 
 async function loadBuiltinPackage(environment) {
+  const model = updateModelSelection();
+  if (model && !model.available) {
+    state.manifest = null;
+    state.manifestPackageFiles = new Map();
+    $("firmwareUploadPackage").textContent = `${model.label} belum memiliki package firmware yang dapat diverifikasi.`;
+    return;
+  }
   try {
-    const result = await bridgeFetch(`/api/firmware/package?env=${encodeURIComponent(environment)}`);
+    const packageEnvironment = model?.environment || environment;
+    const result = await bridgeFetch(`/api/firmware/package?env=${encodeURIComponent(packageEnvironment)}`);
     state.manifest = result.manifest;
     state.manifestPackageFiles = new Map(Object.entries(result.packageFiles || {}));
-    $("firmwareUploadPackage").textContent = `Package: ${state.manifest.environment} v${state.manifest.firmwareVersion}`;
+    const modelText = model ? ` · ${model.label}` : "";
+    $("firmwareUploadPackage").textContent = `Package: ${state.manifest.environment} v${state.manifest.firmwareVersion}${modelText}`;
   } catch (error) {
     state.manifest = null;
     state.manifestPackageFiles = new Map();
@@ -202,7 +260,15 @@ export function initFirmwareUploadDialog() {
   document.querySelectorAll("[data-upload-dialog-close]").forEach((node) => node.addEventListener("click", () => setUploadDialog(false)));
   $("firmwareUploadConfirmBtn")?.addEventListener("click", performFirmwareUpload);
   $("firmwareUploadEnv")?.addEventListener("change", async (event) => {
+    updateModelSelection();
     await loadBuiltinPackage(event.target.value);
+    $("firmwareUploadConfirmBtn").disabled = !state.manifest || !/^COM\d+$/i.test($("firmwareUploadPort").value);
+  });
+  $("firmwareUploadModel")?.addEventListener("change", async () => {
+    await loadBuiltinPackage($("firmwareUploadEnv").value);
+    $("firmwareUploadConfirmBtn").disabled = !state.manifest || !/^COM\d+$/i.test($("firmwareUploadPort").value);
+  });
+  $("firmwareUploadPort")?.addEventListener("change", () => {
     $("firmwareUploadConfirmBtn").disabled = !state.manifest || !/^COM\d+$/i.test($("firmwareUploadPort").value);
   });
 }

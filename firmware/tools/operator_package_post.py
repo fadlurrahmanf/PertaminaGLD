@@ -27,6 +27,8 @@ FLASH_FILES = (
 )
 PROFILE_BY_ENV = {
     "gld": "WROOM-1U-N16R8",
+    "gld_model_1": "WROOM-1U-N16R8 / Model 1",
+    "gld_model_2": "WROOM-1U-N16R8 / Model 2",
     "gldFieldtest": "WROOM-1U-N16R8 field-test",
     "gldFieldtestSensorlessAlarm": "WROOM-1U-N16R8 sensorless alarm field-test",
     "gldFieldtestSensorlessClear": "WROOM-1U-N16R8 sensorless clear field-test",
@@ -35,8 +37,6 @@ PROFILE_BY_ENV = {
     "gw": "Gateway ESP32-S3 R8N16",
     "gw_hello_ack_fieldtest": "Gateway ESP32-S3 R8N16 field-test",
 }
-
-
 def _sha256(path: pathlib.Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as stream:

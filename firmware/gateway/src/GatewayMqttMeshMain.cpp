@@ -1756,6 +1756,13 @@ void emitGatewayAddressJson() {
               gatewayId, pgl::config::GATEWAY_ID_MIN, pgl::config::GATEWAY_ID_MAX);
 }
 
+void emitGatewayStatusJson() {
+    const bool wifiConnected = WiFi.status() == WL_CONNECTED;
+    logPrintf("GW_STATUS_JSON {\"gatewayId\":\"0x%04X\",\"firmwareVersion\":\"%s\",\"protocolVersion\":\"%s\",\"meshReady\":%u,\"wifi\":%u,\"mqtt\":%u}\n",
+              gatewayId, pgl::firmware::GATEWAY_FIRMWARE_VERSION, pgl::firmware::PROTOCOL_VERSION,
+              meshReady ? 1 : 0, wifiConnected ? 1 : 0, mqtt.connected() ? 1 : 0);
+}
+
 void handleSetGatewayAddressJson(const char* payload) {
     StaticJsonDocument<192> doc;
     if (deserializeJson(doc, payload)) {
@@ -1813,6 +1820,8 @@ void handleSerialLine(const char* line) {
         handleSetGatewayAddressJson(line + kGatewayAddressPrefixLen);
     } else if (strcmp(line, "GET_GATEWAY_ADDRESS") == 0) {
         emitGatewayAddressJson();
+    } else if (strcmp(line, "GET_STATUS") == 0) {
+        emitGatewayStatusJson();
     }
 }
 

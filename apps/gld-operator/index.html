@@ -26,6 +26,7 @@
         </div>
 
         <div class="strip-actions">
+          <a class="return-simple-hub" href="http://127.0.0.1:5173/">&larr; Simple Hub</a>
           <button id="opsPanelBtn" type="button">Ops Panel</button>
           <button id="firmwareUploadBtn" type="button">Firmware Upload</button>
           <button id="themeToggleBtn" type="button">Dark Mode</button>
@@ -60,9 +61,14 @@
                   <label>6m <progress id="telemetryBaselineProgress" max="100" value="0"></progress><output id="telemetryBaselineProgressValue">0%</output></label>
                 </div>
                 <div class="telemetry-result" aria-live="polite">
-                  <span>Gas</span>
-                  <strong id="gasValue">n/a</strong>
-                  <small>Confidence <output id="confidenceValue">-%</output></small>
+                  <div class="telemetry-result-item">
+                    <span>Gas</span>
+                    <strong id="gasValue">n/a</strong>
+                  </div>
+                  <div class="telemetry-result-item">
+                    <span>Confidence</span>
+                    <output id="confidenceValue">-%</output>
+                  </div>
                 </div>
               </div>
               <div class="toolbar">
@@ -85,29 +91,12 @@
               <div id="sensorChannelsRight" class="sensor-channel-list" aria-label="Sensor channels 5-8 voltage and gain"></div>
             </div>
             <div id="legend" class="legend"></div>
+            <section class="chart-analysis" aria-labelledby="chartAnalysisTitle">
+              <div class="chart-analysis-head"><div><p class="eyebrow">LIVE ANALYSIS</p><h3 id="chartAnalysisTitle">Analisis seri aktif</h3></div><small>Mengikuti zoom grafik</small></div>
+              <div class="chart-analysis-scroll"><table class="chart-analysis-table"><thead><tr><th>Sensor</th><th>Saat ini</th><th>Gain</th><th>&Delta;</th><th>Arah</th><th>Durasi</th><th>Peak-to-peak</th><th>Tren 1 menit</th><th>Status</th></tr></thead><tbody id="chartAnalysisBody"><tr><td colspan="9">Menunggu telemetri.</td></tr></tbody></table></div>
+            </section>
           </div>
 
-          <details class="module disclosure">
-            <summary>Power and Boot Health details</summary>
-            <div class="grid-two">
-              <section class="module module--compact">
-                <h2>Power</h2>
-                <dl class="kv">
-                  <div><dt>External</dt><dd id="externalPower">Unknown</dd></div>
-                  <div><dt>Battery</dt><dd id="batteryValueMirror">Unknown</dd></div>
-                </dl>
-              </section>
-              <section class="module module--compact">
-                <h2>Boot Health</h2>
-                <dl class="kv">
-                  <div><dt>ADS</dt><dd id="adsHealth">Unknown</dd></div>
-                  <div><dt>MCP</dt><dd id="mcpHealth">Unknown</dd></div>
-                  <div><dt>DAC</dt><dd id="dacHealth">Unknown</dd></div>
-                  <div><dt>ML</dt><dd id="mlHealth">Unknown</dd></div>
-                </dl>
-              </section>
-            </div>
-          </details>
         </section>
 
         <section id="dataset" class="view">
@@ -534,9 +523,13 @@
             <label>MQTT Password<input id="mqttPass" type="password" autocomplete="off"></label>
             <label>Topic Root<input id="topicRoot" value="gas-leak-detector"></label>
           </div>
-          <button id="applyConfigBtn" type="button" class="primary">Apply GLD Settings</button>
+          <div class="toolbar">
+            <button id="applyConfigBtn" type="button" class="primary">Apply GLD Settings</button>
+            <button id="syncAesKeyBtn" type="button">Sync AES Key</button>
+          </div>
           <p id="datasetGldConfigStatus" class="status-line">Not applied yet this session.</p>
           <p id="gldAesKeyStatus" class="status-line">AES key sync: checking...</p>
+          <p class="status-line">Sync AES Key hanya menulis key enkripsi dari konfigurasi server lalu me-reboot GLD; WiFi, MQTT, nulling, dan parameter lain tidak diubah.</p>
 
           <div class="module-head module-head--inner">
             <h3>Capture Parameters</h3>
@@ -610,6 +603,10 @@
           <label class="upload-dialog-field">Firmware environment
             <select id="firmwareUploadEnv" aria-label="Firmware environment"><option value="gld">GLD</option><option value="gldFieldtest">GLD Fieldtest</option></select>
           </label>
+          <label class="upload-dialog-field">Model yang di-inject
+            <select id="firmwareUploadModel" aria-label="Model yang di-inject"><option value="model_1">Model 1 — Board 1 (CO2, Clean_Air, H2, LPG)</option><option value="model_2">Model 2 — Board 2 (CO2, Clean_Air, H2, LPG)</option><option value="model_3" disabled>Model 3 — artefak belum tersedia</option><option value="model_4" disabled>Model 4 — artefak belum tersedia</option></select>
+          </label>
+          <p id="firmwareUploadModelStatus" class="status-line">Pilih Model 1 atau Model 2 sesuai board yang akan diprogram.</p>
           <label class="upload-dialog-field">Target COM
             <select id="firmwareUploadPort" aria-label="Target COM for firmware upload"></select>
           </label>
@@ -649,6 +646,6 @@
       </div>
     </div>
 
-    <script type="module" src="./js/main.js?v=20260723-reset-nvs-1"></script>
+    <script type="module" src="./js/main.js?v=20260805-aes-key-button-1"></script>
   </body>
 </html>

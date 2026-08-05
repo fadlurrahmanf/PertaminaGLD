@@ -63,7 +63,7 @@ bool validMode(GldMode mode) {
 
 bool validPendingAlarmSemantics(const GldPendingAlarm& pending) {
     return pending.gasClass != pgl::protocol::GLD_GAS_CLEAR &&
-           pending.gasClass <= pgl::protocol::GLD_GAS_ANOMALY &&
+           pending.gasClass <= pgl::protocol::GLD_GAS_H2 &&
            pending.confidence > 0 &&
            pending.confidence <= 100;
 }

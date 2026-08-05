@@ -4,7 +4,7 @@
 import { $, elements, state, encoder, SENSOR_NAMES, SENSOR_MUX_CHANNELS, SENSOR_STATUS_NAMES, SERIAL_RESPONSE_TIMEOUT_MS, DEFAULT_POLL_INTERVAL_MS, CHART_COLORS } from "./state.js";
 import { setText, setBadge, appendLog, getField, setField, wait, showAlert, saveUiSession } from "./ui.js";
 import { syncDeviceSummary, renderFleetPanel } from "./fleet.js";
-import { pruneHistory, drawChart } from "./chart.js";
+import { pruneHistory, drawChart, isSensorChartSeriesVisible, toggleSensorChartSeries } from "./chart.js";
 import { renderNullingChannels, latestFeatureOrderForNulling, updateNullingMeta, appendNulling } from "./nulling.js";
 import {
   updateDatasetFromStatus, maybeCaptureDatasetTelemetry, trackDatasetRuntimeLine, handleDatasetSerialLine
@@ -45,6 +45,7 @@ const GAS_CLASS_NAMES = {
   3: "propane",
   4: "butane",
   6: "CO2",
+  7: "H2",
 };
 
 export function formatGas(gasClass) {
@@ -83,6 +84,11 @@ function syncLoraConfigFields(lora) {
 
 // ---- response watch ----
 
+const MAX_CONSECUTIVE_SERIAL_TIMEOUTS = 2;
+let consecutiveSerialTimeouts = 0;
+let recoveryRequested = false;
+let skippedPollLogged = false;
+
 function serialCommandName(command) {
   return String(command || "").trim().split(/\s+/)[0] || "COMMAND";
 }
@@ -91,6 +97,17 @@ export function clearSerialResponseWatch() {
   if (!state.pendingSerialRequest) return;
   clearTimeout(state.pendingSerialRequest.timer);
   state.pendingSerialRequest = null;
+}
+
+export function resetSerialLiveness() {
+  consecutiveSerialTimeouts = 0;
+  recoveryRequested = false;
+  skippedPollLogged = false;
+}
+
+function recordSerialResponse() {
+  clearSerialResponseWatch();
+  resetSerialLiveness();
 }
 
 export function startSerialResponseWatch(command) {
@@ -102,6 +119,26 @@ export function startSerialResponseWatch(command) {
     appendLog(`NO_RESPONSE ${cmd} after ${SERIAL_RESPONSE_TIMEOUT_MS}ms`, "in");
     setBadge(elements.protocolLabel, `${cmd}: no response`, "warn");
     state.pendingSerialRequest = null;
+    consecutiveSerialTimeouts += 1;
+    if (consecutiveSerialTimeouts < MAX_CONSECUTIVE_SERIAL_TIMEOUTS) {
+      // Do exactly one liveness probe instead of resuming a high-rate poll.
+      // A late response resets the counter and cancels this probe.
+      setTimeout(() => {
+        if (!state.connected || state.pendingSerialRequest || consecutiveSerialTimeouts !== 1) return;
+        appendLog("SERIAL_LIVENESS_PROBE APP_PING after first timeout", "in");
+        sendCommand("APP_PING");
+      }, 250);
+      return;
+    }
+    if (recoveryRequested) return;
+
+    recoveryRequested = true;
+    stopPolling();
+    appendLog("SERIAL_UNRESPONSIVE polling stopped; controlled reconnect requested", "in");
+    setBadge(elements.connectionBadge, "GLD unresponsive; recovering...", "warn");
+    window.dispatchEvent(new CustomEvent("gld-serial-unresponsive", {
+      detail: { slot: state.activeSlot, command: cmd }
+    }));
   }, SERIAL_RESPONSE_TIMEOUT_MS);
   state.pendingSerialRequest = { cmd, startedAt, timer };
 }
@@ -119,14 +156,8 @@ export function resetDeviceSnapshot() {
   setText("gasValue", "n/a");
   setText("confidenceValue", "-%");
   setText("powerMode", "Unknown");
-  setText("externalPower", "Unknown");
   setText("batteryValue", "Unknown");
-  setText("batteryValueMirror", "Unknown");
   setText("loraValue", "Unknown");
-  setText("adsHealth", "Unknown");
-  setText("mcpHealth", "Unknown");
-  setText("dacHealth", "Unknown");
-  setText("mlHealth", "Unknown");
   updateAlarmState(false);
   renderSensorCheck();
   resetQcStatus();
@@ -164,19 +195,11 @@ function updateStatus(status) {
 
   const power = status.power || {};
   setText("powerMode", power.mode);
-  setText("externalPower", power.externalPower === true ? "Yes" : power.externalPower === false ? "No" : "Unknown");
   // batteryValid is false whenever the GLD is on external 24V/5V power (no
   // battery sensed) - batteryMv is then a sentinel (65535), not a real
   // reading, so show "-" instead of that raw number.
   const batteryText = power.batteryValid && Number.isFinite(power.batteryMv) ? `${power.batteryMv} mV` : "-";
   setText("batteryValue", batteryText);
-  setText("batteryValueMirror", batteryText);
-
-  const boot = status.bootHealth || {};
-  setText("adsHealth", boot.adsReady === true ? "Ready" : "Not ready");
-  setText("mcpHealth", Number.isFinite(boot.mcpOkCount) ? `${boot.mcpOkCount}/8` : "Unknown");
-  setText("dacHealth", boot.dacReady === true ? "Ready" : "Not ready");
-  setText("mlHealth", boot.mlReady === true ? "Ready" : "Not ready");
 
   const model = status.model || {};
   const bindingStatus = $("modelNullingBindingStatus");
@@ -203,9 +226,17 @@ function maybeAppendTelemetry(status) {
   const telemetry = status.telemetry;
   if (!telemetry || !telemetry.valid || !Array.isArray(telemetry.sensorVoltage)) return;
 
+  // GET_STATUS can arrive more often than the GLD completes an ADS scan. The
+  // firmware's sampleMs is the scan identity; never turn repeated replies for
+  // that same scan into artificial chart/history samples.
+  const sampleMs = Number(telemetry.sampleMs);
+  const previous = state.history.at(-1);
+  if (Number.isFinite(sampleMs) && previous?.sampleMs === sampleMs) return;
+
   const ts = Date.now();
   state.history.push({
     ts,
+    sampleMs: Number.isFinite(sampleMs) ? sampleMs : null,
     deviceId: status.deviceId || state.info?.deviceId || "",
     mode: status.mode || state.mode,
     gasName: telemetry.gasName || formatGas(telemetry.gasClass),
@@ -769,6 +800,24 @@ export function updateTelemetryCollectionProgress() {
   elements.telemetryBaselineProgressValue.textContent = `${baselinePercent}%`;
 }
 
+function updateLightweightTelemetry(message) {
+  // Preserve the last complete snapshot: a lightweight poll intentionally has
+  // no power, boot, LoRa, nulling, or NVS fields to avoid serial overhead.
+  const status = {
+    ...(state.status || {}),
+    deviceId: message.deviceId || state.status?.deviceId || state.info?.deviceId,
+    mode: message.mode || state.mode,
+    uptimeMs: message.uptimeMs,
+    alarmLatched: message.alarmLatched ?? state.status?.alarmLatched,
+    model: { ...(state.status?.model || {}), ...(message.model || {}) },
+    telemetry: message.telemetry
+  };
+  state.status = status;
+  state.mode = status.mode || state.mode;
+  updateStatus(status);
+  maybeAppendTelemetry(status);
+}
+
 function sensorWindowSamples(index) {
   const cutoff = Date.now() - SENSOR_TREND_WINDOW_MS;
   return state.history.filter((sample) => sample.ts >= cutoff && Number.isFinite(Number(sample.sensorVoltage?.[index])));
@@ -953,8 +1002,20 @@ function buildSensorChannelCard(channel) {
   const swatch = document.createElement("i");
   swatch.className = "legend-swatch";
   swatch.style.background = CHART_COLORS[channel.index];
-  const title = document.createElement("strong");
+  const seriesVisible = isSensorChartSeriesVisible(channel.index);
+  const title = document.createElement("button");
+  title.type = "button";
+  title.className = `chart-series-toggle${seriesVisible ? "" : " is-hidden"}`;
   title.textContent = channel.sensor;
+  title.title = seriesVisible
+    ? `Sembunyikan seri ${channel.sensor} dari grafik Running`
+    : `Tampilkan seri ${channel.sensor} pada grafik Running`;
+  title.setAttribute("aria-pressed", String(seriesVisible));
+  title.setAttribute("aria-label", title.title);
+  title.addEventListener("click", () => {
+    toggleSensorChartSeries(channel.index);
+    renderSensorChannels(sensorPresenceFromStatus());
+  });
   const trendEl = document.createElement("span");
   trendEl.className = `sensor-trend ${trend.tone}`;
   trendEl.textContent = trend.text;
@@ -1027,7 +1088,7 @@ export function handleLine(rawLine) {
   try {
     const info = parseJsonAfter("GLD_INFO_JSON", line);
     if (info) {
-      clearSerialResponseWatch();
+      recordSerialResponse();
       state.info = info;
       state.mode = info.mode || state.mode;
       updateInfo(info);
@@ -1036,7 +1097,7 @@ export function handleLine(rawLine) {
 
     const status = parseJsonAfter("GLD_STATUS_JSON", line);
     if (status) {
-      clearSerialResponseWatch();
+      recordSerialResponse();
       state.status = status;
       state.mode = status.mode || state.mode;
       updateStatus(status);
@@ -1044,16 +1105,23 @@ export function handleLine(rawLine) {
       return;
     }
 
+    const telemetry = parseJsonAfter("GLD_TELEMETRY_JSON", line);
+    if (telemetry) {
+      recordSerialResponse();
+      updateLightweightTelemetry(telemetry);
+      return;
+    }
+
     const qcStatus = parseJsonAfter("GLD_QC_STATUS_JSON", line);
     if (qcStatus) {
-      clearSerialResponseWatch();
+      recordSerialResponse();
       updateQcStatus(qcStatus);
       return;
     }
 
     const ack = parseJsonAfter("GLD_CMD_ACK_JSON", line);
     if (ack) {
-      clearSerialResponseWatch();
+      recordSerialResponse();
       if (ack.mode) state.mode = ack.mode;
       if (ack.deviceId) setText("deviceId", ack.deviceId);
       if (ack.cmd === "SET_DEVICE_ID" && ack.status === "ok") setText("deviceId", ack.deviceId);
@@ -1245,6 +1313,32 @@ function setPollButtonLabel(text) {
   });
 }
 
+function telemetryPollCommand() {
+  return state.info?.capabilities?.lightweightTelemetry === "GET_TELEMETRY"
+    ? "GET_TELEMETRY"
+    : null;
+}
+
+function pollTelemetryOnce() {
+  if (state.pendingSerialRequest) {
+    if (!skippedPollLogged) {
+      appendLog("POLL_SKIPPED waiting for previous serial response", "in");
+      skippedPollLogged = true;
+    }
+    return;
+  }
+  const command = telemetryPollCommand();
+  if (!command) {
+    if (!skippedPollLogged) {
+      appendLog("POLL_WAITING GET_INFO capability; full GET_STATUS is not repeated", "in");
+      skippedPollLogged = true;
+    }
+    return;
+  }
+  skippedPollLogged = false;
+  sendCommand(command);
+}
+
 export function togglePolling() {
   if (state.polling) {
     stopPolling();
@@ -1256,8 +1350,8 @@ export function togglePolling() {
     const intervalMs = pollIntervalMs();
     state.polling = true;
     setPollButtonLabel(`Stop Poll (${intervalMs}ms)`);
-    state.pollTimer = setInterval(() => sendCommand("GET_STATUS"), intervalMs);
-    sendCommand("GET_STATUS");
+    state.pollTimer = setInterval(pollTelemetryOnce, intervalMs);
+    pollTelemetryOnce();
   }
   saveUiSession({ polling: state.polling });
 }

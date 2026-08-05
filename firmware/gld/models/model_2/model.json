@@ -1,0 +1,10 @@
+{
+  "slot": "model_2",
+  "label": "Model 2",
+  "state": "available",
+  "source": "C:/Users/MSI/Downloads/MODEL UNTUK BOARD/MODEL UNTUK BOARD/Board 2",
+  "profileId": "cnn-dualbranch-board-2-v1",
+  "environment": "gld_model_2",
+  "classes": ["CO2", "Clean_Air", "H2", "LPG"],
+  "note": "Package gld_model_2 sudah berhasil dibangun dan siap dipilih untuk upload."
+}

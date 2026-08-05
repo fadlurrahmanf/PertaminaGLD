@@ -45,6 +45,10 @@ bool decodeLine(const char* line, GldSerialCommand& outCommand) {
         outCommand.type = GldSerialCommandType::GetStatus;
         return true;
     }
+    if (strcmp(line, "GET_TELEMETRY") == 0) {
+        outCommand.type = GldSerialCommandType::GetTelemetry;
+        return true;
+    }
     if (strcmp(line, "RESTART") == 0) {
         outCommand.type = GldSerialCommandType::Restart;
         return true;

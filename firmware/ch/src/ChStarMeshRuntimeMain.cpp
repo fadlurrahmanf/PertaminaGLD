@@ -2490,9 +2490,10 @@ void emitInfoJson() {
     logPrintf("\"starLora\":{\"freqMHz\":%.1f,\"bwKHz\":%.0f,\"sf\":%u,\"cr\":%u,\"syncWord\":%u,\"txPowerDbm\":%d},",
               static_cast<double>(STAR_FREQ_MHZ), static_cast<double>(STAR_BW_KHZ),
               STAR_SF, STAR_CR, STAR_SYNC_WORD, STAR_TX_POWER_DBM);
-    logPrintf("\"meshLora\":{\"freqMHz\":%.1f,\"bwKHz\":%.0f,\"sf\":%u,\"cr\":%u,\"syncWord\":%u,\"txPowerDbm\":%d}}\n",
+    logPrintf("\"meshLora\":{\"freqMHz\":%.1f,\"bwKHz\":%.0f,\"sf\":%u,\"cr\":%u,\"syncWord\":%u,\"txPowerDbm\":%d},\"radio\":{\"starReady\":%u,\"meshReady\":%u}}\n",
               static_cast<double>(MESH_FREQ_MHZ), static_cast<double>(MESH_BW_KHZ),
-              MESH_SF, MESH_CR, MESH_SYNC_WORD, MESH_TX_POWER_DBM);
+              MESH_SF, MESH_CR, MESH_SYNC_WORD, MESH_TX_POWER_DBM,
+              starReady ? 1 : 0, meshReady ? 1 : 0);
 }
 
 void emitStatusJson() {

@@ -1,0 +1,6 @@
+{
+  "slot": "model_3",
+  "label": "Model 3",
+  "state": "awaiting-artifacts",
+  "note": "Disabled: no independently exported and validated model artifacts have been supplied."
+}

@@ -148,6 +148,9 @@ export const state = {
     tplAutoInject: false
   },
   history: [],
+  // Running-chart display selection only. Telemetry collection, CSV export,
+  // Dataset capture, and ML input remain complete and unaffected.
+  hiddenSensorChartChannels: new Set(),
   info: null,
   status: null,
   alarmActive: false,

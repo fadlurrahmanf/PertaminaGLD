@@ -39,7 +39,7 @@
 #include "GldSelfTestConfig.h"
 #endif
 #include "ProtocolConstants.h"
-#include "../model/ModelMetadata.h"
+#include "ModelMetadata.h"
 #include "../model/NeuralNetwork.h"
 
 namespace {

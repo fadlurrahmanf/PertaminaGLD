@@ -66,6 +66,9 @@ constexpr uint8_t GLD_GAS_PROPANE = 3;
 constexpr uint8_t GLD_GAS_BUTANE = 4;
 constexpr uint8_t GLD_GAS_RESERVED = 5;
 constexpr uint8_t GLD_GAS_ANOMALY = 6;
+// Append-only: CH/Gateway relay this encrypted byte opaquely, while GLD and
+// Server decode it. Keep all existing wire values stable.
+constexpr uint8_t GLD_GAS_H2 = 7;
 
 constexpr uint8_t GLD_LEL_THRESHOLD_PERCENT = 30;
 constexpr uint16_t GLD_BATTERY_MV_INVALID = 0xFFFF;

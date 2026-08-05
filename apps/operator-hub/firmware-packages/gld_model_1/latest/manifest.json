@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 2,
+  "packageType": "pertamina-gld-prebuilt-firmware",
+  "deviceId": "ANY",
+  "boardProfile": "WROOM-1U-N16R8 / Model 1",
+  "environment": "gld_model_1",
+  "modelSlot": "model_1",
+  "firmwareVersion": "0.8.18",
+  "protocolVersion": "0.2.0",
+  "configSchemaVersion": "0.1.0",
+  "chip": "esp32s3",
+  "baud": 460800,
+  "createdAtUtc": "20260805T043116Z",
+  "source": {
+    "gitCommit": "aafcf722df98956e74d9dd0fe370677b8a0cfaf7",
+    "gitTreeState": "operator-hub-auto",
+    "platformioCoreVersion": "PlatformIO post-build hook",
+    "platformioIniSha256": "47b525354ee2816bcf3cec7efa3bcb7075a6272a75eea0af92ab40462f1a5eec",
+    "buildCommand": "pio run -e gld_model_1",
+    "buildStartedAtUtc": "20260805T043116Z",
+    "buildCompletedAtUtc": "20260805T043116Z"
+  },
+  "flashSetSha256": "a1fa48f0c4f8efd71eec5b17c65cb61c3b19082189ac0cd681eef1b5bc3a04db",
+  "flashFiles": [
+    {
+      "path": "bootloader.bin",
+      "offset": "0x00000000",
+      "size": 15104,
+      "sha256": "2a71d69b471e20c2bac7fb469f3c6a807b3ebee780e348e5889db0da849ca363"
+    },
+    {
+      "path": "partitions.bin",
+      "offset": "0x00008000",
+      "size": 3072,
+      "sha256": "bd0f7954aca2ef7d925ee21aaa1f3dc8822d1d6ce5cbbd26a135e5886bfff6ce"
+    },
+    {
+      "path": "boot_app0.bin",
+      "offset": "0x0000E000",
+      "size": 8192,
+      "sha256": "f94c5d786a7a8fab06ac5d10e33bf37711a6697636dc037559ea19cc410a17f0"
+    },
+    {
+      "path": "firmware.bin",
+      "offset": "0x00010000",
+      "size": 1017744,
+      "sha256": "4981c8219f6f8ebbb1a5fc427eb9baab8219d408a3203181ef1db1c091e0ceb7"
+    }
+  ]
+}

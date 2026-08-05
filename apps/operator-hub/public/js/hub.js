@@ -217,6 +217,47 @@ function requestConfirmation({ title, message, actionLabel = "Lanjutkan", phrase
   });
 }
 
+function requestFirmwareUploadOptions({ device, port }) {
+  const spec = devices[device];
+  const dialog = document.createElement("dialog");
+  const modelPicker = device === "gld" ? `
+    <label>MODEL YANG DI-INJECT
+      <select id="firmwareUploadModel"><option value="model_1">Model 1 - Board 1</option><option value="model_2">Model 2 - Board 2</option><option disabled>Model 3 - artefak belum tersedia</option><option disabled>Model 4 - artefak belum tersedia</option></select>
+      <small>Model yang dipilih menentukan package firmware yang di-flash.</small>
+    </label>` : "";
+  dialog.className = "firmware-upload-dialog";
+  dialog.innerHTML = `<form method="dialog">
+    <p class="card-kicker">UPLOAD FIRMWARE</p>
+    <h2>Upload Firmware ${spec.label}</h2>
+    <p id="firmwareUploadPackageLabel" class="firmware-upload-package">Package: ${spec.label} / ${device === "gld" ? "Model 1" : "default"}</p>
+    <label>FIRMWARE ENVIRONMENT<select id="firmwareUploadEnvironment"><option>${spec.label}</option></select></label>
+    ${modelPicker}
+    <label>TARGET COM<select id="firmwareUploadPort"><option>${port}</option></select></label>
+    <label class="firmware-reset"><input type="checkbox" id="firmwareUploadReset"> Reset NVS?</label>
+    <p class="firmware-upload-help">Unchecked: retain all NVS parameters. Checked: erase NVS, then boot with all defaults embedded in this firmware.</p>
+    <p id="firmwareUploadError" class="confirm-dialog-error" hidden></p>
+    <div class="confirm-dialog-actions"><button id="firmwareUploadCancel" class="secondary" value="cancel">Batal</button><button id="firmwareUploadAccept" class="primary" value="default">Upload</button></div>
+  </form>`;
+  document.body.append(dialog);
+  return new Promise((resolve) => {
+    const reset = dialog.querySelector("#firmwareUploadReset");
+    const model = dialog.querySelector("#firmwareUploadModel");
+    const packageLabel = dialog.querySelector("#firmwareUploadPackageLabel");
+    const error = dialog.querySelector("#firmwareUploadError");
+    const finish = (result) => { dialog.close(); dialog.remove(); resolve(result); };
+    dialog.querySelector("#firmwareUploadCancel").onclick = () => finish(null);
+    model?.addEventListener("change", () => {
+      packageLabel.textContent = `Package: ${spec.label} / ${model.value === "model_2" ? "Model 2" : "Model 1"}`;
+    });
+    dialog.querySelector("#firmwareUploadAccept").onclick = (event) => {
+      event.preventDefault();
+      finish({ model: model?.value || "model_1", resetNvs: reset.checked, resetNvsConfirmation: reset.checked ? "RESET NVS" : "" });
+    };
+    dialog.oncancel = (event) => { event.preventDefault(); finish(null); };
+    dialog.showModal();
+  });
+}
+
 function renderActivity(items = []) {
   $("activity").innerHTML = items.length
     ? items.map((item) => `<li><b>${item.time} / ${(devices[item.device] || {}).label || item.device}</b>${item.action}<br>${item.detail}</li>`).join("")
@@ -522,15 +563,11 @@ async function initialFirmwareUpload() {
 async function manualFirmwareUpload() {
   const port = overview.devices?.[active]?.port || $("portSelect").value;
   if (!port) return show("Hubungkan dan identifikasi perangkat terlebih dahulu.", "bad");
-  const approved = await requestConfirmation({
-    title: `Upload firmware ${devices[active].label}?`,
-    message: `Target ${port}. NVS tetap dipertahankan; konfigurasi perangkat tidak di-reset.`,
-    actionLabel: "Upload firmware"
-  });
-  if (!approved) return show("Upload firmware dibatalkan.");
+  const options = await requestFirmwareUploadOptions({ device: active, port });
+  if (!options) return show("Upload firmware dibatalkan.");
   try {
     show("Mengunggah firmware; progres dan log flash ditampilkan di bawah.");
-    await runFirmwareUpload({ device: active, port, resetNvs: false });
+    await runFirmwareUpload({ device: active, port, ...options });
     await refresh(true);
     show("Firmware terverifikasi. Menjalankan Test Device ulang...");
     await testDevice();

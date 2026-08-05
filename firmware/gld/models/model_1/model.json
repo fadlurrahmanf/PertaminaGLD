@@ -1,8 +1,10 @@
 {
   "slot": "model_1",
   "label": "Model 1",
-  "state": "available",
-  "source": "firmware/gld/model",
-  "profileId": "cnn-dualbranch-datasheet-v1-unbound",
-  "note": "Current compiled GLD model. Its package remains environment gld until a dedicated model-variant build is introduced."
+  "state": "build-pending",
+  "source": "C:/Users/MSI/Downloads/MODEL UNTUK BOARD/MODEL UNTUK BOARD/Board 1",
+  "profileId": "cnn-dualbranch-board-1-v1",
+  "environment": "gld_model_1",
+  "classes": ["CO2", "Clean_Air", "H2", "LPG"],
+  "note": "Package becomes selectable only after the isolated build passes."
 }

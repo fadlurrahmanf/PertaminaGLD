@@ -27,6 +27,8 @@ FLASH_FILES = (
 )
 PROFILE_BY_ENV = {
     "gld": "WROOM-1U-N16R8",
+    "gld_model_1": "WROOM-1U-N16R8 / Model 1",
+    "gld_model_2": "WROOM-1U-N16R8 / Model 2",
     "gldFieldtest": "WROOM-1U-N16R8 field-test",
     "gldFieldtestSensorlessAlarm": "WROOM-1U-N16R8 sensorless alarm field-test",
     "gldFieldtestSensorlessClear": "WROOM-1U-N16R8 sensorless clear field-test",
@@ -34,6 +36,10 @@ PROFILE_BY_ENV = {
     "chFieldtest": "CH3 ESP32-S3 R8N16 field-test",
     "gw": "Gateway ESP32-S3 R8N16",
     "gw_hello_ack_fieldtest": "Gateway ESP32-S3 R8N16 field-test",
+}
+MODEL_SLOT_BY_ENV = {
+    "gld_model_1": "model_1",
+    "gld_model_2": "model_2",
 }
 
 
@@ -119,6 +125,7 @@ def write_operator_package(source, target, env):
             "deviceId": "ANY",
             "boardProfile": PROFILE_BY_ENV[environment],
             "environment": environment,
+            **({"modelSlot": MODEL_SLOT_BY_ENV[environment]} if environment in MODEL_SLOT_BY_ENV else {}),
             "firmwareVersion": versions["GLD_FIRMWARE_VERSION"],
             "protocolVersion": versions["PROTOCOL_VERSION"],
             "configSchemaVersion": versions["CONFIG_SCHEMA_VERSION"],

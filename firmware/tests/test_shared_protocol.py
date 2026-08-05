@@ -130,7 +130,7 @@ def crc16_ccitt_false(data: bytes) -> int:
 
 
 def encode_plain(gas_class: int, confidence: int, battery_mv: int) -> bytes:
-    assert 0 <= gas_class <= 6
+    assert 0 <= gas_class <= 7
     assert 0 <= confidence <= 100
     return bytes([gas_class, confidence]) + battery_mv.to_bytes(2, "big")
 

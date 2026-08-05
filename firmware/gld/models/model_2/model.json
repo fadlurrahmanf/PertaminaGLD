@@ -1,6 +1,10 @@
 {
   "slot": "model_2",
   "label": "Model 2",
-  "state": "awaiting-artifacts",
-  "note": "Disabled: no independently exported and validated model artifacts have been supplied."
+  "state": "build-pending",
+  "source": "C:/Users/MSI/Downloads/MODEL UNTUK BOARD/MODEL UNTUK BOARD/Board 2",
+  "profileId": "cnn-dualbranch-board-2-v1",
+  "environment": "gld_model_2",
+  "classes": ["CO2", "Clean_Air", "H2", "LPG"],
+  "note": "Package becomes selectable only after the isolated build passes."
 }

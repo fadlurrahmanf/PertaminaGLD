@@ -88,6 +88,9 @@
   <style>
     .test-upload-option{width:100%;margin-top:2px;border-color:#a8662c;color:#ffc18c}
   </style>
+  <style>
+    .firmware-upload-dialog{width:min(520px,calc(100vw - 32px));padding:0;border:1px solid #426068;border-radius:18px;background:#102126;color:#edf5f3;box-shadow:0 28px 90px #000b}.firmware-upload-dialog::backdrop{background:#020809bb;backdrop-filter:blur(3px)}.firmware-upload-dialog form{display:grid;gap:14px;padding:27px}.firmware-upload-dialog h2{margin:0;font-size:24px}.firmware-upload-package{margin:-8px 0 3px;color:#ff9c4e;font:700 13px ui-monospace,Consolas,monospace}.firmware-upload-dialog label{display:grid;gap:7px;color:#b9cbc8;font-size:13px;font-weight:800;letter-spacing:.07em}.firmware-upload-dialog select,.firmware-upload-dialog input:not([type="checkbox"]){height:47px;width:100%;padding:0 13px;border:1px solid #426068;border-radius:9px;background:#0b191d;color:#edf5f3;font:700 15px ui-monospace,Consolas,monospace}.firmware-upload-dialog select:disabled{opacity:1;color:#edf5f3}.firmware-upload-dialog small,.firmware-upload-help{margin:0;color:#b9cbc8;font-size:13px;font-weight:400;letter-spacing:0;line-height:1.45}.firmware-upload-dialog .firmware-reset{display:flex;align-items:center;gap:8px;color:#edf5f3;font-size:15px;letter-spacing:0}.firmware-upload-dialog .firmware-reset input{width:17px;height:17px;accent-color:#ff7a18}.firmware-upload-dialog .confirm-dialog-actions{margin-top:2px}
+  </style>
 </head>
 <body>
   <header class="topbar">
@@ -118,6 +121,6 @@
   </main>
   <dialog id="confirmDialog" class="confirm-dialog" aria-labelledby="confirmDialogTitle"><div class="confirm-dialog-card"><p id="confirmDialogKicker" class="card-kicker">KONFIRMASI</p><h2 id="confirmDialogTitle">Lanjutkan tindakan?</h2><p id="confirmDialogMessage"></p><label id="confirmPhraseWrap" hidden>Ketik <b id="confirmPhraseExpected">RESET NVS</b> untuk melanjutkan<input id="confirmPhraseInput" autocomplete="off"></label><p id="confirmDialogError" class="confirm-dialog-error" hidden></p><div class="confirm-dialog-actions"><button id="confirmDialogCancel" class="secondary" type="button">Batal</button><button id="confirmDialogAccept" class="primary" type="button">Lanjutkan</button></div></div></dialog>
   <aside id="uploadSuccessToast" class="upload-success" role="status" aria-live="polite" hidden><strong>Upload Success</strong><span>Firmware dan identitas telah terverifikasi.</span></aside>
-  <script type="module" src="./js/hub.js?v=34"></script>
+  <script type="module" src="./js/hub.js?v=36"></script>
 </body>
 </html>

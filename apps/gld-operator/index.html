@@ -61,9 +61,14 @@
                   <label>6m <progress id="telemetryBaselineProgress" max="100" value="0"></progress><output id="telemetryBaselineProgressValue">0%</output></label>
                 </div>
                 <div class="telemetry-result" aria-live="polite">
-                  <span>Gas</span>
-                  <strong id="gasValue">n/a</strong>
-                  <small>Confidence <output id="confidenceValue">-%</output></small>
+                  <div class="telemetry-result-item">
+                    <span>Gas</span>
+                    <strong id="gasValue">n/a</strong>
+                  </div>
+                  <div class="telemetry-result-item">
+                    <span>Confidence</span>
+                    <output id="confidenceValue">-%</output>
+                  </div>
                 </div>
               </div>
               <div class="toolbar">
@@ -637,6 +642,6 @@
       </div>
     </div>
 
-    <script type="module" src="./js/main.js?v=20260804-model-slots-1"></script>
+    <script type="module" src="./js/main.js?v=20260805-serial-recovery-1"></script>
   </body>
 </html>

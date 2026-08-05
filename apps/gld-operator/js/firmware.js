@@ -9,8 +9,8 @@ import { requireUnlock } from "./security.js";
 import { restoreGldConfigAfterReset } from "./dataset.js";
 
 const GLD_MODEL_SLOTS = {
-  model_1: { label: "Model 1", available: true, detail: "Model yang saat ini dikompilasi pada package GLD." },
-  model_2: { label: "Model 2", available: false, detail: "Artefak dan package Model 2 belum tersedia." },
+  model_1: { label: "Model 1", available: true, environment: "gld_model_1", detail: "Model Board 1: CO2, Clean_Air, H2, LPG." },
+  model_2: { label: "Model 2", available: true, environment: "gld_model_2", detail: "Model Board 2: CO2, Clean_Air, H2, LPG." },
   model_3: { label: "Model 3", available: false, detail: "Artefak dan package Model 3 belum tersedia." },
   model_4: { label: "Model 4", available: false, detail: "Artefak dan package Model 4 belum tersedia." }
 };
@@ -160,7 +160,8 @@ async function loadBuiltinPackage(environment) {
     return;
   }
   try {
-    const result = await bridgeFetch(`/api/firmware/package?env=${encodeURIComponent(environment)}`);
+    const packageEnvironment = model?.environment || environment;
+    const result = await bridgeFetch(`/api/firmware/package?env=${encodeURIComponent(packageEnvironment)}`);
     state.manifest = result.manifest;
     state.manifestPackageFiles = new Map(Object.entries(result.packageFiles || {}));
     const modelText = model ? ` · ${model.label}` : "";

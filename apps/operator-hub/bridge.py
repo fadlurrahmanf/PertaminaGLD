@@ -40,12 +40,13 @@ if str(HUB_DIR) not in sys.path:
 from preflight import print_report, run_preflight
 
 APPS_DIR = HUB_DIR.parent
+ARCHIVE_APPS_DIR = APPS_DIR.parent / "archive" / "apps"
 # Only this directory is served over HTTP. bridge.py, preflight.py,
 # firmware-packages/, and the README stay outside the web root.
 PUBLIC_DIR = HUB_DIR / "public"
 # Kept outside apps/operator-hub entirely so it can never be served, even by
 # mistake, alongside the static UI.
-RUNTIME_DIR = APPS_DIR / "runtime" / "operator-hub"
+RUNTIME_DIR = ARCHIVE_APPS_DIR / "runtime" / "operator-hub"
 BROKER_CREDENTIALS_PATH = RUNTIME_DIR / "credentials.local.json"
 
 # The child bridges accept unauthenticated serial, MQTT, and firmware-flash
@@ -837,7 +838,13 @@ class Handler(SimpleHTTPRequestHandler):
         port = str(payload.get("port") or "").upper()
         if not __import__("re").fullmatch(r"COM\d+", port):
             raise ValueError("valid COM port required")
-        env = {"gld": "gld", "ch": "ch", "gw": "gw"}[device]
+        model = str(payload.get("model") or "model_1")
+        if device == "gld":
+            env = {"model_1": "gld_model_1", "model_2": "gld_model_2"}.get(model)
+            if not env:
+                raise ValueError("selected GLD model package is not available")
+        else:
+            env = {"ch": "ch", "gw": "gw"}[device]
         initial_firmware = bool(payload.get("initialFirmware"))
         reset_nvs = True if initial_firmware else bool(payload.get("resetNvs"))
         if reset_nvs and payload.get("resetNvsConfirmation") != "RESET NVS":

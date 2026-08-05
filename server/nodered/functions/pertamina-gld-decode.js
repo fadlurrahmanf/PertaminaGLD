@@ -5,7 +5,8 @@ const GAS_CLASS = {
     3: "propane",
     4: "butane",
     5: "reserve",
-    6: "anomaly"
+    6: "anomaly",
+    7: "H2"
 };
 
 const MSG_SENSOR_DATA = 0x10;
@@ -577,7 +578,7 @@ function decryptGldPayload(record) {
     const batteryMv = be16(plaintext, 2);
     const gasName = GAS_CLASS[gasClass] || "invalid";
     const confidenceValid = confidence <= 100;
-    const gasClassValid = gasClass <= 6;
+    const gasClassValid = gasClass <= 7;
 
     return {
         decryptOk: true,

@@ -45,6 +45,7 @@ const GAS_CLASS_NAMES = {
   3: "propane",
   4: "butane",
   6: "CO2",
+  7: "H2",
 };
 
 export function formatGas(gasClass) {
@@ -83,6 +84,11 @@ function syncLoraConfigFields(lora) {
 
 // ---- response watch ----
 
+const MAX_CONSECUTIVE_SERIAL_TIMEOUTS = 2;
+let consecutiveSerialTimeouts = 0;
+let recoveryRequested = false;
+let skippedPollLogged = false;
+
 function serialCommandName(command) {
   return String(command || "").trim().split(/\s+/)[0] || "COMMAND";
 }
@@ -91,6 +97,17 @@ export function clearSerialResponseWatch() {
   if (!state.pendingSerialRequest) return;
   clearTimeout(state.pendingSerialRequest.timer);
   state.pendingSerialRequest = null;
+}
+
+export function resetSerialLiveness() {
+  consecutiveSerialTimeouts = 0;
+  recoveryRequested = false;
+  skippedPollLogged = false;
+}
+
+function recordSerialResponse() {
+  clearSerialResponseWatch();
+  resetSerialLiveness();
 }
 
 export function startSerialResponseWatch(command) {
@@ -102,6 +119,26 @@ export function startSerialResponseWatch(command) {
     appendLog(`NO_RESPONSE ${cmd} after ${SERIAL_RESPONSE_TIMEOUT_MS}ms`, "in");
     setBadge(elements.protocolLabel, `${cmd}: no response`, "warn");
     state.pendingSerialRequest = null;
+    consecutiveSerialTimeouts += 1;
+    if (consecutiveSerialTimeouts < MAX_CONSECUTIVE_SERIAL_TIMEOUTS) {
+      // Do exactly one liveness probe instead of resuming a high-rate poll.
+      // A late response resets the counter and cancels this probe.
+      setTimeout(() => {
+        if (!state.connected || state.pendingSerialRequest || consecutiveSerialTimeouts !== 1) return;
+        appendLog("SERIAL_LIVENESS_PROBE APP_PING after first timeout", "in");
+        sendCommand("APP_PING");
+      }, 250);
+      return;
+    }
+    if (recoveryRequested) return;
+
+    recoveryRequested = true;
+    stopPolling();
+    appendLog("SERIAL_UNRESPONSIVE polling stopped; controlled reconnect requested", "in");
+    setBadge(elements.connectionBadge, "GLD unresponsive; recovering...", "warn");
+    window.dispatchEvent(new CustomEvent("gld-serial-unresponsive", {
+      detail: { slot: state.activeSlot, command: cmd }
+    }));
   }, SERIAL_RESPONSE_TIMEOUT_MS);
   state.pendingSerialRequest = { cmd, startedAt, timer };
 }
@@ -1051,7 +1088,7 @@ export function handleLine(rawLine) {
   try {
     const info = parseJsonAfter("GLD_INFO_JSON", line);
     if (info) {
-      clearSerialResponseWatch();
+      recordSerialResponse();
       state.info = info;
       state.mode = info.mode || state.mode;
       updateInfo(info);
@@ -1060,7 +1097,7 @@ export function handleLine(rawLine) {
 
     const status = parseJsonAfter("GLD_STATUS_JSON", line);
     if (status) {
-      clearSerialResponseWatch();
+      recordSerialResponse();
       state.status = status;
       state.mode = status.mode || state.mode;
       updateStatus(status);
@@ -1070,21 +1107,21 @@ export function handleLine(rawLine) {
 
     const telemetry = parseJsonAfter("GLD_TELEMETRY_JSON", line);
     if (telemetry) {
-      clearSerialResponseWatch();
+      recordSerialResponse();
       updateLightweightTelemetry(telemetry);
       return;
     }
 
     const qcStatus = parseJsonAfter("GLD_QC_STATUS_JSON", line);
     if (qcStatus) {
-      clearSerialResponseWatch();
+      recordSerialResponse();
       updateQcStatus(qcStatus);
       return;
     }
 
     const ack = parseJsonAfter("GLD_CMD_ACK_JSON", line);
     if (ack) {
-      clearSerialResponseWatch();
+      recordSerialResponse();
       if (ack.mode) state.mode = ack.mode;
       if (ack.deviceId) setText("deviceId", ack.deviceId);
       if (ack.cmd === "SET_DEVICE_ID" && ack.status === "ok") setText("deviceId", ack.deviceId);
@@ -1279,7 +1316,27 @@ function setPollButtonLabel(text) {
 function telemetryPollCommand() {
   return state.info?.capabilities?.lightweightTelemetry === "GET_TELEMETRY"
     ? "GET_TELEMETRY"
-    : "GET_STATUS";
+    : null;
+}
+
+function pollTelemetryOnce() {
+  if (state.pendingSerialRequest) {
+    if (!skippedPollLogged) {
+      appendLog("POLL_SKIPPED waiting for previous serial response", "in");
+      skippedPollLogged = true;
+    }
+    return;
+  }
+  const command = telemetryPollCommand();
+  if (!command) {
+    if (!skippedPollLogged) {
+      appendLog("POLL_WAITING GET_INFO capability; full GET_STATUS is not repeated", "in");
+      skippedPollLogged = true;
+    }
+    return;
+  }
+  skippedPollLogged = false;
+  sendCommand(command);
 }
 
 export function togglePolling() {
@@ -1293,8 +1350,8 @@ export function togglePolling() {
     const intervalMs = pollIntervalMs();
     state.polling = true;
     setPollButtonLabel(`Stop Poll (${intervalMs}ms)`);
-    state.pollTimer = setInterval(() => sendCommand(telemetryPollCommand()), intervalMs);
-    sendCommand(telemetryPollCommand());
+    state.pollTimer = setInterval(pollTelemetryOnce, intervalMs);
+    pollTelemetryOnce();
   }
   saveUiSession({ polling: state.polling });
 }

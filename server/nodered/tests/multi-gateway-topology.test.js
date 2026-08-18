@@ -29,6 +29,18 @@ function runDecoder(payload, store) {
   );
 }
 
+const statusStore = {};
+const statusResult = runDecoder({
+  kind: "gateway-status",
+  gatewayId: 0x0001,
+  state: "alive",
+  wifi: true,
+  mqtt: true
+}, statusStore);
+assert.deepEqual(Object.keys(statusStore.pglTopology.gateways), ["0x0001"]);
+assert.equal(statusResult[0].payload.kind, "gateway-status");
+assert.equal(statusResult[0].payload.gatewayIdHex, "0x0001");
+
 function topologyEvent(gatewayId, clusterId, parentId, report = "ch-hello", extra = {}) {
   return Object.assign({
     kind: "ch-topology",
@@ -74,6 +86,12 @@ for (const badCluster of [0x000F, 0x1000, 0x1001, 0xFF00]) {
 }
 
 const generatedFlow = JSON.parse(fs.readFileSync(flowPath, "utf8"));
+const gatewayStatusInput = generatedFlow.find((node) => node.type === "mqtt in" && node.topic === "gld/gateway/status");
+assert(gatewayStatusInput, "generated flow must subscribe to periodic Gateway status");
+const gatewayStatusDecoder = generatedFlow.find((node) => node.type === "function" && node.name === "decode Gateway status (no republish)");
+assert(gatewayStatusDecoder, "generated flow must decode Gateway status without republishing it");
+assert.deepEqual(gatewayStatusInput.wires, [[gatewayStatusDecoder.id]]);
+assert(!gatewayStatusDecoder.wires.flat().some((wireId) => wireId.endsWith("mqtt_status")), "Gateway status decoder must not create an MQTT status loop");
 const topologyNode = generatedFlow.find((node) => node.type === "function" && node.name === "build topology JSON");
 assert(topologyNode, "generated topology JSON function must exist");
 const topologyFn = vm.runInNewContext(`(function(msg, flow, env) {\n${topologyNode.func}\n})`, { console });

@@ -19,6 +19,19 @@ Jalur utama kasus sebenarnya adalah MQTT/LAN dari Gateway ke server, bukan AP.
 - `.env.example`
   - Contoh variabel lokal. Jangan commit `.env` berisi secret produksi.
 
+## Secret AES dan status deployment
+
+`GLD_AES128_KEY_HEX`, `GLD_KEY_ID`, dan `PGL_COMMAND_AUTH_TOKEN` adalah
+secret runtime. Generator tidak pernah menyalin nilainya ke
+`pertamina-gld-server.flow.json`; Node-RED yang berjalan harus menerima ketiga
+variabel tersebut dari service environment atau secret store-nya sendiri.
+
+Operator Hub hanya membaca `server/nodered/.env` sebagai sumber provisioning
+untuk GLD. Status **source siap** berarti bridge dapat mengirim key ke GLD,
+bukan bukti flow Node-RED yang sedang berjalan sudah di-deploy atau direstart
+dengan key tersebut. Setelah mengubah secret, update environment proses
+Node-RED lalu deploy/restart Node-RED melalui prosedur server yang berwenang.
+
 ## Jalur Input
 
 Flow menyediakan:

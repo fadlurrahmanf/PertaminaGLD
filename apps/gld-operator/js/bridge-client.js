@@ -5,7 +5,7 @@
 import { elements, state, decoder } from "./state.js";
 import { setBadge, setText, appendLog, showBanner, switchTab, setSetupOpen, wait, saveUiSession } from "./ui.js";
 import { syncDeviceSummary, renderFleetPanel, updateFleetFromLine } from "./fleet.js";
-import { handleLine, clearSerialResponseWatch, resetSerialLiveness, sendCommand, resetDeviceSnapshot, stopPolling } from "./serial-protocol.js";
+import { handleLine, clearSerialResponseWatch, clearSerialCommandQueue, resetSerialLiveness, sendCommand, resetDeviceSnapshot, stopPolling } from "./serial-protocol.js";
 import { setDatasetState, handleDatasetMqttEvent, renderDatasetSession } from "./dataset.js";
 
 const DEFAULT_BRIDGE_ORIGIN = "http://127.0.0.1:5174";
@@ -173,7 +173,10 @@ function startBridgeEvents() {
     updateFleetFromLine(slot, "");
     if (slot !== state.activeSlot) return;
     state.connected = Boolean(payload.connected);
-    if (!payload.connected) clearSerialResponseWatch();
+    if (!payload.connected) {
+      clearSerialResponseWatch();
+      clearSerialCommandQueue();
+    }
     updateConnectionUi(payload.connected ? "connected" : "bridge ready", "ok");
     if (payload.port) elements.portLabel.textContent = payload.port;
   });
@@ -181,6 +184,7 @@ function startBridgeEvents() {
     const payload = JSON.parse(event.data);
     if ((payload.slot || 1) !== state.activeSlot) return;
     clearSerialResponseWatch();
+    clearSerialCommandQueue();
     state.connected = false;
     appendLog(`SERIAL_ERROR ${payload.message}`, "in");
     setBadge(elements.connectionBadge, "serial error", "error");
@@ -194,6 +198,9 @@ function startBridgeEvents() {
   source.addEventListener("upload_line", (event) => {
     const payload = JSON.parse(event.data);
     appendLog(payload.line, "in");
+  });
+  source.addEventListener("upload_progress", (event) => {
+    window.dispatchEvent(new CustomEvent("gld-upload-progress", { detail: JSON.parse(event.data) }));
   });
   source.addEventListener("upload_done", (event) => {
     const payload = JSON.parse(event.data);

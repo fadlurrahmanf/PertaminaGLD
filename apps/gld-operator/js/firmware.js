@@ -11,7 +11,7 @@ import { restoreGldConfigAfterReset } from "./dataset.js";
 const GLD_MODEL_SLOTS = {
   model_1: { label: "Model 1", available: true, environment: "gld_model_1", detail: "Model Board 1: CO2, Clean_Air, H2, LPG." },
   model_2: { label: "Model 2", available: true, environment: "gld_model_2", detail: "Model Board 2: CO2, Clean_Air, H2, LPG." },
-  model_3: { label: "Model 3", available: false, detail: "Artefak dan package Model 3 belum tersedia." },
+  model_3: { label: "Model 3", available: true, environment: "gld_model_3", detail: "Board 2 cadangan v2: Clean_Air, H2, LPG." },
   model_4: { label: "Model 4", available: false, detail: "Artefak dan package Model 4 belum tersedia." }
 };
 
@@ -118,6 +118,25 @@ function setUploadDialogStatus(message, state = "") {
   status.setAttribute("aria-busy", String(state === "loading"));
 }
 
+function setUploadProgress(percent, label = "") {
+  const wrap = $("firmwareUploadProgress");
+  const bar = $("firmwareUploadProgressBar");
+  const value = $("firmwareUploadProgressValue");
+  const text = $("firmwareUploadProgressLabel");
+  if (!wrap || !bar || !value || !text) return;
+  const normalized = Math.max(0, Math.min(100, Number(percent) || 0));
+  wrap.hidden = false;
+  bar.value = normalized;
+  value.textContent = `${normalized}%`;
+  if (label) text.textContent = label;
+}
+
+export function handleFirmwareUploadProgress(payload) {
+  const percent = Number(payload?.packagePercent);
+  if (!Number.isFinite(percent)) return;
+  setUploadProgress(percent, `Memprogram ${payload.filePath || "firmware"}…`);
+}
+
 function selectedModelSlot() {
   return GLD_MODEL_SLOTS[$("firmwareUploadModel")?.value] || GLD_MODEL_SLOTS.model_1;
 }
@@ -167,6 +186,7 @@ export async function uploadFirmware() {
   await refreshFirmwareUploadPorts();
   updateModelSelection();
   await loadBuiltinPackage($("firmwareUploadEnv").value);
+  setUploadProgress(0, "Menunggu upload dimulai…");
   const ready = Boolean(state.manifest && /^COM\d+$/i.test(portSelect.value));
   $("firmwareUploadConfirmBtn").disabled = !ready;
   setUploadDialogStatus(ready ? "Ready to upload." : "Choose a valid package and COM port first.");
@@ -222,12 +242,14 @@ async function performFirmwareUpload() {
   $("firmwareResetNvs").disabled = true;
   setUploadDialogStatus(`Disconnecting serial, then uploading to ${port}…`, "loading");
   try {
+    setUploadProgress(0, "Menyiapkan upload…");
     await disconnectSerial();
     const packageFiles = await readPackageFiles(state.manifest);
     const result = await bridgeFetch("/api/firmware/upload", {
       method: "POST",
       body: JSON.stringify({ env, port, targetDeviceId, resetNvs: $("firmwareResetNvs").checked, manifest: state.manifest, packageFiles, slot: state.activeSlot })
     });
+    setUploadProgress(100, "Upload firmware selesai.");
     setUploadDialogStatus(result.nvsReset
       ? `NVS direset. Connecting to ${port} dengan default firmware…`
       : `Upload berhasil. Parameter NVS dipertahankan. Connecting to ${port}…`, "success");
@@ -256,6 +278,7 @@ async function performFirmwareUpload() {
 }
 
 export function initFirmwareUploadDialog() {
+  window.addEventListener("gld-upload-progress", (event) => handleFirmwareUploadProgress(event.detail));
   $("firmwareUploadCancelBtn")?.addEventListener("click", () => setUploadDialog(false));
   document.querySelectorAll("[data-upload-dialog-close]").forEach((node) => node.addEventListener("click", () => setUploadDialog(false)));
   $("firmwareUploadConfirmBtn")?.addEventListener("click", performFirmwareUpload);

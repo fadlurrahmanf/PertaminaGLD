@@ -1,6 +1,10 @@
 {
   "slot": "model_3",
-  "label": "Model 3",
-  "state": "awaiting-artifacts",
-  "note": "Disabled: no independently exported and validated model artifacts have been supplied."
+  "label": "Model 3 - Board 2 cadangan (3 kelas) v2",
+  "state": "available",
+  "source": "C:/Users/MSI/Downloads/Board 2 cadangan (3 kelas)/Board 2 cadangan (3 kelas)",
+  "profileId": "cnn-dualbranch-board-2-3class-v2",
+  "environment": "gld_model_3",
+  "classes": ["Clean_Air", "H2", "LPG"],
+  "note": "Package gld_model_3 dibuat dari artefak Board 2 cadangan 3 kelas v2; pilih di Operator Hub untuk upload, tetapi inferensi fail-closed sampai validasi board disetujui, lalu nulling dan bind ulang dilakukan."
 }

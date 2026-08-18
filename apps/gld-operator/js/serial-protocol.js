@@ -88,6 +88,7 @@ const MAX_CONSECUTIVE_SERIAL_TIMEOUTS = 2;
 let consecutiveSerialTimeouts = 0;
 let recoveryRequested = false;
 let skippedPollLogged = false;
+const serialCommandQueue = [];
 
 function serialCommandName(command) {
   return String(command || "").trim().split(/\s+/)[0] || "COMMAND";
@@ -99,15 +100,41 @@ export function clearSerialResponseWatch() {
   state.pendingSerialRequest = null;
 }
 
+export function clearSerialCommandQueue() {
+  serialCommandQueue.length = 0;
+}
+
 export function resetSerialLiveness() {
   consecutiveSerialTimeouts = 0;
   recoveryRequested = false;
   skippedPollLogged = false;
 }
 
-function recordSerialResponse() {
+function expectedResponses(command) {
+  const cmd = serialCommandName(command);
+  if (cmd === "GET_INFO") return ["info"];
+  if (cmd === "GET_STATUS") return ["status"];
+  if (cmd === "GET_TELEMETRY") return ["telemetry"];
+  if (cmd === "GET_QC_STATUS") return ["qc"];
+  return [`ack:${cmd}`];
+}
+
+function flushQueuedSerialCommand() {
+  if (state.pendingSerialRequest || !serialCommandQueue.length) return;
+  const next = serialCommandQueue.shift();
+  // Keep commands serialized: a response can only satisfy the request that
+  // produced it, never a later poll or click.
+  queueMicrotask(() => sendCommand(next));
+}
+
+function recordSerialResponse(kind, ackCommand = "") {
+  const pending = state.pendingSerialRequest;
+  if (!pending) return;
+  const response = kind === "ack" ? `ack:${ackCommand}` : kind;
+  if (!pending.expected.includes(response)) return;
   clearSerialResponseWatch();
   resetSerialLiveness();
+  flushQueuedSerialCommand();
 }
 
 export function startSerialResponseWatch(command) {
@@ -128,6 +155,7 @@ export function startSerialResponseWatch(command) {
         appendLog("SERIAL_LIVENESS_PROBE APP_PING after first timeout", "in");
         sendCommand("APP_PING");
       }, 250);
+      flushQueuedSerialCommand();
       return;
     }
     if (recoveryRequested) return;
@@ -140,7 +168,7 @@ export function startSerialResponseWatch(command) {
       detail: { slot: state.activeSlot, command: cmd }
     }));
   }, SERIAL_RESPONSE_TIMEOUT_MS);
-  state.pendingSerialRequest = { cmd, startedAt, timer };
+  state.pendingSerialRequest = { cmd, startedAt, timer, expected: expectedResponses(cmd) };
 }
 
 // ---- device snapshot ----
@@ -1088,7 +1116,7 @@ export function handleLine(rawLine) {
   try {
     const info = parseJsonAfter("GLD_INFO_JSON", line);
     if (info) {
-      recordSerialResponse();
+      recordSerialResponse("info");
       state.info = info;
       state.mode = info.mode || state.mode;
       updateInfo(info);
@@ -1097,7 +1125,7 @@ export function handleLine(rawLine) {
 
     const status = parseJsonAfter("GLD_STATUS_JSON", line);
     if (status) {
-      recordSerialResponse();
+      recordSerialResponse("status");
       state.status = status;
       state.mode = status.mode || state.mode;
       updateStatus(status);
@@ -1107,21 +1135,21 @@ export function handleLine(rawLine) {
 
     const telemetry = parseJsonAfter("GLD_TELEMETRY_JSON", line);
     if (telemetry) {
-      recordSerialResponse();
+      recordSerialResponse("telemetry");
       updateLightweightTelemetry(telemetry);
       return;
     }
 
     const qcStatus = parseJsonAfter("GLD_QC_STATUS_JSON", line);
     if (qcStatus) {
-      recordSerialResponse();
+      recordSerialResponse("qc");
       updateQcStatus(qcStatus);
       return;
     }
 
     const ack = parseJsonAfter("GLD_CMD_ACK_JSON", line);
     if (ack) {
-      recordSerialResponse();
+      recordSerialResponse("ack", ack.cmd);
       if (ack.mode) state.mode = ack.mode;
       if (ack.deviceId) setText("deviceId", ack.deviceId);
       if (ack.cmd === "SET_DEVICE_ID" && ack.status === "ok") setText("deviceId", ack.deviceId);
@@ -1325,6 +1353,12 @@ function pollTelemetryOnce() {
       appendLog("POLL_SKIPPED waiting for previous serial response", "in");
       skippedPollLogged = true;
     }
+    return;
+  }
+
+  if (state.pendingSerialRequest) {
+    serialCommandQueue.push(command);
+    appendLog(`SEND_QUEUED waiting for ${state.pendingSerialRequest.cmd}: ${trimmedLine}`, "in");
     return;
   }
   const command = telemetryPollCommand();

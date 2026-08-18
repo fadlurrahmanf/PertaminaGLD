@@ -25,21 +25,6 @@
         "name": "PGL_FIELD_TEST_LOG_DIR",
         "value": "D:\\Github\\PertaminaGLD\\server\\nodered\\field-test-logs",
         "type": "str"
-      },
-      {
-        "name": "GLD_KEY_ID",
-        "value": "1",
-        "type": "str"
-      },
-      {
-        "name": "GLD_AES128_KEY_HEX",
-        "value": "6838604492A0CC48ADCC634617C5982D",
-        "type": "str"
-      },
-      {
-        "name": "PGL_COMMAND_AUTH_TOKEN",
-        "value": "30bbTsjzshecpPk-6HvmUN0iJD8fLri_xGX2gzsAWJM",
-        "type": "str"
       }
     ]
   },

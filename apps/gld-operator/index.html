@@ -525,11 +525,11 @@
           </div>
           <div class="toolbar">
             <button id="applyConfigBtn" type="button" class="primary">Apply GLD Settings</button>
-            <button id="syncAesKeyBtn" type="button">Sync AES Key</button>
+            <button id="syncAesKeyBtn" type="button">Provision AES Key to GLD</button>
           </div>
           <p id="datasetGldConfigStatus" class="status-line">Not applied yet this session.</p>
           <p id="gldAesKeyStatus" class="status-line">AES key sync: checking...</p>
-          <p class="status-line">Sync AES Key hanya menulis key enkripsi dari konfigurasi server lalu me-reboot GLD; WiFi, MQTT, nulling, dan parameter lain tidak diubah.</p>
+          <p class="status-line">Provision AES Key hanya mengirim key dari bridge ke GLD lalu me-reboot GLD. Tombol ini tidak mengubah atau membuktikan konfigurasi Node-RED.</p>
 
           <div class="module-head module-head--inner">
             <h3>Capture Parameters</h3>
@@ -601,18 +601,22 @@
           <h2 id="firmwareUploadDialogTitle">Upload Firmware</h2>
           <p id="firmwareUploadPackage" class="status-line">No firmware package loaded.</p>
           <label class="upload-dialog-field">Firmware environment
-            <select id="firmwareUploadEnv" aria-label="Firmware environment"><option value="gld">GLD</option><option value="gldFieldtest">GLD Fieldtest</option></select>
+            <select id="firmwareUploadEnv" aria-label="Firmware environment"><option value="gld">GLD</option><option value="gld_v2">GLD2 - Board GLD V2</option><option value="gldFieldtest">GLD Fieldtest</option></select>
           </label>
           <label class="upload-dialog-field">Model yang di-inject
-            <select id="firmwareUploadModel" aria-label="Model yang di-inject"><option value="model_1">Model 1 — Board 1 (CO2, Clean_Air, H2, LPG)</option><option value="model_2">Model 2 — Board 2 (CO2, Clean_Air, H2, LPG)</option><option value="model_3" disabled>Model 3 — artefak belum tersedia</option><option value="model_4" disabled>Model 4 — artefak belum tersedia</option></select>
+            <select id="firmwareUploadModel" aria-label="Model yang di-inject"><option value="model_1">Model 1 — Board 1</option><option value="model_2">Model 2 — Board 2</option><option value="model_3">Model 3 — Board 2 v2</option><option value="model_4" disabled>Model 4 — artefak belum tersedia</option></select>
           </label>
-          <p id="firmwareUploadModelStatus" class="status-line">Pilih Model 1 atau Model 2 sesuai board yang akan diprogram.</p>
+          <p id="firmwareUploadModelStatus" class="status-line">Pilih model yang sesuai dengan board dan paket firmware yang akan diprogram.</p>
           <label class="upload-dialog-field">Target COM
             <select id="firmwareUploadPort" aria-label="Target COM for firmware upload"></select>
           </label>
           <label class="upload-dialog-field"><input id="firmwareResetNvs" type="checkbox"> Reset NVS?</label>
           <p class="status-line">Unchecked: retain all NVS parameters. Checked: erase NVS, then boot with all defaults embedded in this firmware, including GLD ID <code>1001</code>.</p>
           <p id="firmwareUploadStatus" class="status-line" aria-live="polite">Choose the COM port to flash.</p>
+          <div id="firmwareUploadProgress" class="firmware-upload-progress" hidden aria-live="polite">
+            <div><span id="firmwareUploadProgressLabel">Menyiapkan upload…</span><output id="firmwareUploadProgressValue">0%</output></div>
+            <progress id="firmwareUploadProgressBar" max="100" value="0">0%</progress>
+          </div>
           <div class="modal-actions">
             <button id="firmwareUploadCancelBtn" type="button">Cancel</button>
             <button id="firmwareUploadConfirmBtn" type="button" class="primary">Upload</button>
@@ -646,6 +650,6 @@
       </div>
     </div>
 
-    <script type="module" src="./js/main.js?v=20260805-aes-key-button-1"></script>
+  <script type="module" src="./js/main.js?v=20260811-aes-provision-status-1"></script>
   </body>
 </html>

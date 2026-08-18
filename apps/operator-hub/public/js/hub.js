@@ -130,10 +130,9 @@ async function openUploadEvents(device) {
     }
     if (type === "upload_error") return renderUploadProgress({ stage: "Upload gagal.", line: `UPLOAD_ERROR ${payload.message || "unknown error"}`, error: true });
     if (type === "upload_progress") {
-      if (payload.primary !== true) return;
       return renderUploadProgress({
-        percent: Math.min(99, Number(payload.filePercent)),
-        stage: "Memprogram firmware utama ke board...",
+        percent: Math.min(99, Number(payload.packagePercent ?? payload.filePercent)),
+        stage: "Memprogram package firmware ke board...",
       });
     }
     const line = String(payload.line || "");
@@ -217,13 +216,13 @@ function requestConfirmation({ title, message, actionLabel = "Lanjutkan", phrase
   });
 }
 
-function requestFirmwareUploadOptions({ device, port }) {
+function requestFirmwareUploadOptions({ device, port, initialFirmware = false }) {
   const spec = devices[device];
   const dialog = document.createElement("dialog");
   const modelPicker = device === "gld" ? `
-    <label>MODEL YANG DI-INJECT
-      <select id="firmwareUploadModel"><option value="model_1">Model 1 - Board 1</option><option value="model_2">Model 2 - Board 2</option><option disabled>Model 3 - artefak belum tersedia</option><option disabled>Model 4 - artefak belum tersedia</option></select>
-      <small>Model yang dipilih menentukan package firmware yang di-flash.</small>
+    <label>PAKET FIRMWARE GLD
+      <select id="firmwareUploadModel"><option value="model_1">Model 1 - Board 1</option><option value="model_2">Model 2 - Board 2</option><option value="model_3">Model 3 - Board 2 v2</option><option value="gld_v2">GLD2 - Board GLD V2</option><option disabled>Model 4 - artefak belum tersedia</option></select>
+      <small>Pilih package sesuai board yang akan di-flash.</small>
     </label>` : "";
   dialog.className = "firmware-upload-dialog";
   dialog.innerHTML = `<form method="dialog">
@@ -233,8 +232,8 @@ function requestFirmwareUploadOptions({ device, port }) {
     <label>FIRMWARE ENVIRONMENT<select id="firmwareUploadEnvironment"><option>${spec.label}</option></select></label>
     ${modelPicker}
     <label>TARGET COM<select id="firmwareUploadPort"><option>${port}</option></select></label>
-    <label class="firmware-reset"><input type="checkbox" id="firmwareUploadReset"> Reset NVS?</label>
-    <p class="firmware-upload-help">Unchecked: retain all NVS parameters. Checked: erase NVS, then boot with all defaults embedded in this firmware.</p>
+    <label class="firmware-reset"><input type="checkbox" id="firmwareUploadReset"${initialFirmware ? " checked disabled" : ""}> Reset NVS?</label>
+    <p class="firmware-upload-help">${initialFirmware ? "Firmware awal selalu mereset NVS. Identitas default akan dibaca ulang setelah board reboot." : "Unchecked: retain all NVS parameters. Checked: erase NVS, then boot with all defaults embedded in this firmware."}</p>
     <p id="firmwareUploadError" class="confirm-dialog-error" hidden></p>
     <div class="confirm-dialog-actions"><button id="firmwareUploadCancel" class="secondary" value="cancel">Batal</button><button id="firmwareUploadAccept" class="primary" value="default">Upload</button></div>
   </form>`;
@@ -247,11 +246,13 @@ function requestFirmwareUploadOptions({ device, port }) {
     const finish = (result) => { dialog.close(); dialog.remove(); resolve(result); };
     dialog.querySelector("#firmwareUploadCancel").onclick = () => finish(null);
     model?.addEventListener("change", () => {
-      packageLabel.textContent = `Package: ${spec.label} / ${model.value === "model_2" ? "Model 2" : "Model 1"}`;
+      const labels = { model_1: "Model 1", model_2: "Model 2", model_3: "Model 3", gld_v2: "GLD2 - Board GLD V2" };
+      packageLabel.textContent = `Package: ${spec.label} / ${labels[model.value] || "Model 1"}`;
     });
     dialog.querySelector("#firmwareUploadAccept").onclick = (event) => {
       event.preventDefault();
-      finish({ model: model?.value || "model_1", resetNvs: reset.checked, resetNvsConfirmation: reset.checked ? "RESET NVS" : "" });
+      const resetNvs = initialFirmware || reset.checked;
+      finish({ model: model?.value || "model_1", resetNvs, resetNvsConfirmation: resetNvs ? "RESET NVS" : "" });
     };
     dialog.oncancel = (event) => { event.preventDefault(); finish(null); };
     dialog.showModal();
@@ -542,15 +543,11 @@ async function connectDevice() {
 async function initialFirmwareUpload() {
   const port = overview.devices?.[active]?.port || $("portSelect").value;
   if (!port) return show("Pilih dan hubungkan COM board baru terlebih dahulu.", "bad");
-  const approved = await requestConfirmation({
-    title: `Upload firmware awal ${devices[active].label}?`,
-    message: `Target ${port}. NVS akan di-reset dan ID default firmware akan digunakan. Setelah reboot, Hub wajib membaca ulang versi dan identitas board.`,
-    actionLabel: "Upload firmware awal"
-  });
-  if (!approved) return show("Upload firmware awal dibatalkan.");
+  const options = await requestFirmwareUploadOptions({ device: active, port, initialFirmware: true });
+  if (!options) return show("Upload firmware awal dibatalkan.");
   try {
     show("Mengunggah firmware awal; progres dan log flash ditampilkan di bawah.");
-    await runFirmwareUpload({ device: active, port, initialFirmware: true, resetNvs: true, resetNvsConfirmation: "RESET NVS" });
+    await runFirmwareUpload({ device: active, port, initialFirmware: true, ...options });
     initialFirmwareRequired = false;
     await refresh(true);
     show("Firmware awal terverifikasi. Menjalankan Test Device...");

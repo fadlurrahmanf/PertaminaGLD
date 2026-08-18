@@ -21,7 +21,7 @@ import {
   downloadDatasetCsv, openDatasetFolder, clearDatasetSession, useLocalhost,
   testMqttBroker, saveSessionLog, refreshDatasetWaitingState,
   beginDatasetSwitch, markDatasetWizardStarted, initDatasetWizard, refreshGldAesKeyStatus, syncGldAesKey
-} from "./dataset.js?v=20260805-aes-key-button-1";
+} from "./dataset.js?v=20260811-aes-provision-status-1";
 import { loadManifestFile, uploadFirmware, initFirmwareUploadDialog, injectDeviceId, injectChAddress, applyLoraConfig, checkPortLock } from "./firmware.js?v=20260805-aes-sync-status-1";
 import { syncDeviceSummary, renderFleetPanel, addFleetSlot } from "./fleet.js";
 import { toggleMock } from "./mock.js";

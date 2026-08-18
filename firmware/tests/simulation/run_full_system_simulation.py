@@ -111,24 +111,34 @@ def _get_ml_classification_impl():
     import numpy as np
     import tflite_runtime.interpreter as tflite
 
+    # Match the active production Model 1 firmware path: dual INT8 inputs,
+    # min-max ADC normalization, then sensitivity-derived evidence features.
+    # This deliberately does not revive the removed legacy StandardScaler.
+    model_dir = REPO_ROOT / "firmware/gld/models/model_1"
     physical_order_text = (REPO_ROOT / "firmware/gld/include/BoardPins.h").read_text(encoding="utf-8")
     match = re.search(r"SENSOR_NAMES\[SENSOR_COUNT\]\s*=\s*\{([^}]*)\}", physical_order_text)
     physical_order = re.findall(r'"(\w+)"', match.group(1))
 
-    scaler_text = (REPO_ROOT / "firmware/gld/model/scaler_params.cpp").read_text(encoding="utf-8")
+    normalize_text = (model_dir / "cnn_gas_datasheet_normalize_params.h").read_text(encoding="utf-8")
 
-    def parse_scaler(array_name):
-        block = re.search(array_name + r"\[8\]\s*=\s*\{(.*?)\}", scaler_text, re.S).group(1)
-        pairs = re.findall(r"([\d.]+),\s*//\s*ch\d+\s+(\w+?)V", block)
-        return [float(v) for v, _ in pairs], [lbl for _, lbl in pairs]
+    def parse_array(array_name, count):
+        block = re.search(array_name + r"\[[^]]+\]\s*=\s*\{(.*?)\}", normalize_text, re.S).group(1)
+        values = [float(value) for value in re.findall(r"(-?(?:\d+\.\d*|\d*\.\d+|\d+)(?:[eE][-+]?\d+)?)f", block)]
+        assert len(values) == count, f"{array_name} expected {count} values"
+        return np.array(values, dtype=np.float32)
 
-    means, mean_labels = parse_scaler("feature_means")
-    stds, _ = parse_scaler("feature_stds")
-    assert mean_labels == physical_order
-    mean_by_sensor = dict(zip(mean_labels, means))
-    std_by_sensor = dict(zip(mean_labels, stds))
+    adc_min = parse_array("CNN_GAS_ADC_MIN", 8)
+    adc_max = parse_array("CNN_GAS_ADC_MAX", 8)
+    evidence_min = parse_array("CNN_GAS_EVIDENCE_MIN", 7)
+    evidence_max = parse_array("CNN_GAS_EVIDENCE_MAX", 7)
+    names = re.findall(r'"(\w+)"', re.search(r"CNN_GAS_ADC_NAMES\[CNN_GAS_N_ADC\]\s*=\s*\{([^}]*)\}", normalize_text).group(1))
+    assert names == physical_order
+    sensitivity_text = (model_dir / "cnn_gas_sensitivity_table.h").read_text(encoding="utf-8")
+    rows = re.findall(r"\{([^{}]+)\}", sensitivity_text)
+    sensitivity = np.array([[float(value.rstrip("f")) for value in re.findall(r"-?\d+(?:\.\d+)?f", row)] for row in rows], dtype=np.float32)
+    assert sensitivity.shape == (8, 7)
 
-    model_text = (REPO_ROOT / "firmware/gld/model/model_data.cpp").read_text(encoding="utf-8")
+    model_text = (model_dir / "model_data.cpp").read_text(encoding="utf-8")
     hex_bytes = re.findall(r"0x[0-9a-fA-F]{2}", model_text)
     model_bytes = bytes(int(b, 16) for b in hex_bytes)
     model_path = BUILD_DIR / "_sim_model.tflite"
@@ -136,22 +146,30 @@ def _get_ml_classification_impl():
 
     interp = tflite.Interpreter(model_path=str(model_path))
     interp.allocate_tensors()
-    in_idx = interp.get_input_details()[0]["index"]
-    out_idx = interp.get_output_details()[0]["index"]
+    inputs = interp.get_input_details()
+    adc_input = next(item for item in inputs if len(item["shape"]) == 3)
+    evidence_input = next(item for item in inputs if len(item["shape"]) == 2)
+    out_detail = interp.get_output_details()[0]
 
     # A genuine LPG-leak-like sensor signature: MQ5 (LPG-sensitive, per
     # GldThresholdClassifier.cpp) elevated well above its trained baseline,
     # everything else at baseline.
-    raw = np.array([mean_by_sensor[s] for s in physical_order], dtype=np.float32)
+    raw = (adc_min + adc_max) / 2.0
     lpg_idx = physical_order.index("MQ5")
-    raw[lpg_idx] = mean_by_sensor["MQ5"] + 4 * std_by_sensor["MQ5"]
-    z = np.array(
-        [(raw[i] - mean_by_sensor[physical_order[i]]) / std_by_sensor[physical_order[i]] for i in range(8)],
-        dtype=np.float32,
-    )
-    interp.set_tensor(in_idx, np.array([z], dtype=np.float32))
+    raw[lpg_idx] = adc_min[lpg_idx] + 0.9 * (adc_max[lpg_idx] - adc_min[lpg_idx])
+    adc_norm = (raw - adc_min) / (adc_max - adc_min)
+    evidence_norm = (adc_norm @ sensitivity - evidence_min) / (evidence_max - evidence_min)
+
+    def quantize(values, detail):
+        scale, zero_point = detail["quantization"]
+        assert scale > 0
+        return np.clip(np.rint(values / scale) + zero_point, -128, 127).astype(np.int8)
+
+    interp.set_tensor(adc_input["index"], quantize(adc_norm, adc_input).reshape(adc_input["shape"]))
+    interp.set_tensor(evidence_input["index"], quantize(evidence_norm, evidence_input).reshape(evidence_input["shape"]))
     interp.invoke()
-    out = interp.get_tensor(out_idx)[0]
+    output_scale, output_zero_point = out_detail["quantization"]
+    out = (interp.get_tensor(out_detail["index"])[0].astype(np.float32) - output_zero_point) * output_scale
     gas_class = int(np.argmax(out))
     confidence = int(round(float(out[gas_class]) * 100))
     print(f"[ml] real TFLite model classified the synthetic MQ5-elevated input as "

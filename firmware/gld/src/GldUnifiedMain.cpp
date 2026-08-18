@@ -22,6 +22,7 @@
 #include "GldDatasetValidator.h"
 #include "GldFrameBuilder.h"
 #include "GldModeManager.h"
+#include "GldModbusRtu.h"
 #include "GldMovingAverage.h"
 #include "GldModelBinding.h"
 #include "GldNullingProfile.h"
@@ -29,6 +30,7 @@
 #include "GldQcProfile.h"
 #include "GldQcService.h"
 #include "GldPower.h"
+#include "GldPcf8574.h"
 #include "GldThresholdClassifier.h"
 #include "GldConfig.h"
 #include "FirmwareConfig.h"
@@ -191,7 +193,9 @@ constexpr bool ALLOW_UNAUTHENTICATED_ALARM_ACK = true;
 constexpr bool ALLOW_UNAUTHENTICATED_ALARM_ACK = false;
 #endif
 
-#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8
+#if PGL_GLD_BOARD_PROFILE_GLD2
+constexpr const char* BOARD_PROFILE = "GLD2 WROOM-1U-N16R8";
+#elif PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8
 constexpr const char* BOARD_PROFILE = "WROOM-1U-N16R8";
 #else
 constexpr const char* BOARD_PROFILE = "4D-ESP32S3";
@@ -208,6 +212,13 @@ static_assert(BATTERY_ALARM_TX_ATTEMPTS > 0,
 static_assert(pgl::gld::board::PIN_USER_BUTTON == 16, "Unexpected GLD CFG pin");
 static_assert(pgl::gld::board::PIN_STATUS_LED == 39, "Unexpected GLD status LED pin");
 #endif
+#if PGL_GLD_BOARD_PROFILE_GLD2
+static_assert(pgl::gld::board::PIN_USER_BUTTON == 5, "Unexpected GLD2 CFG pin");
+static_assert(pgl::gld::board::PIN_STATUS_LED == 6, "Unexpected GLD2 status LED pin");
+static_assert(pgl::gld::board::PIN_ALARM_LAMP == 40, "Unexpected GLD2 ALARM pin");
+static_assert(pgl::gld::board::PIN_ADS1256_RESET == 48, "Unexpected GLD2 ADS reset pin");
+static_assert(pgl::gld::board::PIN_ADS1256_PDOWN == 45, "Unexpected GLD2 ADS power-down pin");
+#endif
 
 // ---------------------------------------------------------------------------
 // Runtime objects
@@ -222,6 +233,10 @@ PubSubClient         mqtt(wifiClient);
 Module*              loraModule = nullptr;
 SX1262*              loraRadio  = nullptr;
 NeuralNetwork*       network    = nullptr;
+#if PGL_GLD_BOARD_PROFILE_GLD2
+pgl::gld::GldModbusRtu modbusRtu;
+#endif
+pgl::gld::GldPcf8574 pcf8574;
 
 // Runtime state
 bool adsReady   = false;
@@ -251,6 +266,7 @@ uint8_t  nullingAttemptCount = 0;
 pgl::gld::GldNullingConfig nullingConfig{};
 
 bool modelProfileMatchesActiveNulling();
+bool readStpSource24V();
 
 struct DatasetQueuedPayload {
     char payload[DATASET_PAYLOAD_BYTES]{};
@@ -322,6 +338,11 @@ uint8_t  lastBootMcpControlOkCount = 0;
 bool     lastBootMcpControlOk[pgl::gld::board::SENSOR_COUNT]{};
 bool     batteryPowerMode = false;
 bool     external24VPowerMode = false;
+uint16_t lastKnownBatteryMv = 0;
+bool     lastKnownExternalPower = false;
+bool     modbusReady = false;
+bool     pcfReady = false;
+bool     pcfAllLoadSwitchesOn = false;
 bool     batteryCyclePoweredOff = false;
 bool     batteryFaultPowerOffArmed = false;
 bool     powerTransitionShutdownPending = false;
@@ -470,7 +491,7 @@ uint32_t     stepStartMs    = 0;
 uint32_t     targetSamples  = 0;
 uint32_t     sampleIntervalMs = DATASET_MIN_SAMPLE_INTERVAL_MS;
 uint32_t     maxDurationMs  = 0;
-bool         useFanIntake   = true;
+bool         useFanIntake   = pgl::gld::board::HAS_DC_FAN;
 uint32_t     fanOnMs        = 1000;
 uint32_t     postFanSettleMs = 0;
 
@@ -1281,6 +1302,24 @@ void emitInfoJson() {
     doc["batteryServiceHold"] = serviceHoldActive;
     doc["baud"] = 115200;
     doc["sensorCount"] = pgl::gld::board::SENSOR_COUNT;
+    JsonObject modbus = doc.createNestedObject("modbus");
+    modbus["available"] = pgl::gld::board::HAS_RS485;
+    modbus["ready"] = modbusReady;
+#if PGL_GLD_BOARD_PROFILE_GLD2
+    modbus["role"] = "slave";
+    modbus["unitId"] = pgl::gld::GldModbusRtu::kDefaultUnitId;
+    modbus["baud"] = pgl::gld::GldModbusRtu::kDefaultBaud;
+    modbus["format"] = "8N1";
+    modbus["readOnly"] = true;
+#endif
+    JsonObject pcf = doc.createNestedObject("pcf8574");
+    pcf["available"] = pgl::gld::board::HAS_PCF8574;
+    pcf["ready"] = pcfReady;
+    pcf["allLoadSwitchesOn"] = pcfAllLoadSwitchesOn;
+    if (pgl::gld::board::HAS_PCF8574) {
+        pcf["address"] = pgl::gld::board::PCF8574_ADDR;
+        pcf["outputs"] = pcf8574.outputs();
+    }
     doc["mqttTopicRoot"] = runtimeConfig.topicRoot;
     JsonObject starLora = doc.createNestedObject("starLora");
     starLora["freqMHz"] = runtimeConfig.loraFreqMHz;
@@ -1337,6 +1376,10 @@ void emitStatusJson() {
     powerObj["batteryLow"] = power.batteryLow;
     powerObj["batteryCritical"] = power.batteryCritical;
     powerObj["sourceAmbiguous"] = power.powerSourceAmbiguous;
+    powerObj["stpRaw"] = pgl::gld::board::PIN_POWER_SOURCE_STATUS >= 0
+        ? digitalRead(pgl::gld::board::PIN_POWER_SOURCE_STATUS) : -1;
+    powerObj["stpSource"] = pgl::gld::board::PIN_POWER_SOURCE_STATUS < 0
+        ? "unavailable" : (readStpSource24V() ? "24V" : "BATTERY");
     powerObj["serviceHoldActive"] = serviceHoldActive;
     powerObj["serviceHoldEffective"] = batteryPowerMode &&
         (serviceHoldActive || batteryPersistenceFaultHold ||
@@ -1443,6 +1486,7 @@ void emitStatusJson() {
     dataset["sampleIntervalMs"] = sampleIntervalMs;
     dataset["maxDurationMs"] = maxDurationMs;
     dataset["useFanIntake"] = useFanIntake;
+    dataset["fanAvailable"] = pgl::gld::board::HAS_DC_FAN;
     dataset["fanOnMs"] = fanOnMs;
     dataset["postFanSettleMs"] = postFanSettleMs;
     dataset["nullingProfileId"] = nullingProfileId;
@@ -1489,6 +1533,17 @@ void emitStatusJson() {
 
     JsonObject telemetry = doc.createNestedObject("telemetry");
     addTelemetry(telemetry);
+    JsonObject modbus = doc.createNestedObject("modbus");
+    modbus["available"] = pgl::gld::board::HAS_RS485;
+    modbus["ready"] = modbusReady;
+    JsonObject pcf = doc.createNestedObject("pcf8574");
+    pcf["available"] = pgl::gld::board::HAS_PCF8574;
+    pcf["ready"] = pcfReady;
+    pcf["allLoadSwitchesOn"] = pcfAllLoadSwitchesOn;
+    if (pgl::gld::board::HAS_PCF8574) {
+        pcf["address"] = pgl::gld::board::PCF8574_ADDR;
+        pcf["outputs"] = pcf8574.outputs();
+    }
     doc["alarmLatched"] = pgl::gld::readGldAlarmLatched();
 
     rawJsonLine("GLD_STATUS_JSON", doc);
@@ -2508,7 +2563,7 @@ bool serviceHoldBlocksClr() {
 }
 
 void blinkServiceHoldEnabled() {
-#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8
+#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 || PGL_GLD_BOARD_PROFILE_GLD2
     // IO39 is the active-low status LED on this production profile. On the
     // legacy profile GPIO39 is LoRa RST, so this indication is compiled out.
     for (uint8_t i = 0; i < 2; ++i) {
@@ -2722,6 +2777,8 @@ void completeBatterySessionAndPowerOff(const char* reason) {
 void applyRuntimePowerReading(const pgl::gld::GldPowerReading& power,
                               const char* source,
                               bool immediate = false) {
+    lastKnownBatteryMv = power.batteryMv;
+    lastKnownExternalPower = power.externalPower;
     external24VPowerMode = power.mode == pgl::gld::GldPowerMode::External24V;
     const bool requestedBatteryMode = TFBG_CONTINUOUS_BATTERY || !power.externalPower;
     if (requestedBatteryMode == batteryPowerMode) {
@@ -2791,9 +2848,40 @@ void reconcileRuntimePowerMode() {
     applyRuntimePowerReading(pgl::gld::readGldPower(), "periodic", false);
 }
 
+bool readStpSource24V() {
+    return pgl::gld::board::PIN_POWER_SOURCE_STATUS >= 0 &&
+           digitalRead(pgl::gld::board::PIN_POWER_SOURCE_STATUS) == HIGH;
+}
+
+void maintainModbusRtu() {
+#if PGL_GLD_BOARD_PROFILE_GLD2
+    if (!modbusReady) return;
+    uint16_t statusBits = 0;
+    statusBits |= adsReady ? (1U << 0) : 0U;
+    statusBits |= dacReady ? (1U << 1) : 0U;
+    statusBits |= radioReady ? (1U << 2) : 0U;
+    statusBits |= mlReady ? (1U << 3) : 0U;
+    statusBits |= lastInferenceValid ? (1U << 4) : 0U;
+    statusBits |= lastAlarm ? (1U << 5) : 0U;
+    statusBits |= readStpSource24V() ? (1U << 6) : 0U;
+    statusBits |= lastKnownExternalPower ? (1U << 7) : 0U;
+    pgl::gld::GldModbusRtuSnapshot snapshot{};
+    snapshot.statusBits = statusBits;
+    snapshot.gasClass = lastResult.gasClass;
+    snapshot.confidence = lastResult.confidence;
+    snapshot.batteryMv = lastKnownBatteryMv;
+    snapshot.source24V = readStpSource24V() ? 1U : 0U;
+    snapshot.externalPower = lastKnownExternalPower ? 1U : 0U;
+    snapshot.txCounterLow = static_cast<uint16_t>(txCounter & 0xFFFFU);
+    snapshot.nodeId = runtimeConfig.nodeId;
+    modbusRtu.poll(snapshot);
+#endif
+}
+
 void firmwareServiceTick() {
     maintainServiceHoldButton();
     checkSerial();
+    maintainModbusRtu();
     maintainWdtKeepalive();
 }
 
@@ -2837,6 +2925,7 @@ void setupPins() {
     optionalPinMode(pgl::gld::board::PIN_BUZZER,     OUTPUT); optionalDigitalWrite(pgl::gld::board::PIN_BUZZER,     ACTIVE_LOW_OUTPUT_OFF);
     optionalPinMode(pgl::gld::board::PIN_DC_FAN,     OUTPUT); optionalDigitalWrite(pgl::gld::board::PIN_DC_FAN,     LOW);
     optionalPinMode(pgl::gld::board::PIN_STATUS_LED, OUTPUT); optionalDigitalWrite(pgl::gld::board::PIN_STATUS_LED, ACTIVE_LOW_OUTPUT_OFF);
+    optionalPinMode(pgl::gld::board::PIN_POWER_SOURCE_STATUS, INPUT);
 }
 
 const char* passFail(bool ok) {
@@ -2869,6 +2958,7 @@ struct BootAdsReport {
 
 struct BootI2cReport {
     bool tcaOk = false;
+    bool pcfOk = false;
     bool mcpOk[pgl::gld::board::SENSOR_COUNT]{};
     uint8_t mcpAddrMask[pgl::gld::board::SENSOR_COUNT]{};
     uint8_t mcpOkCount = 0;
@@ -3122,6 +3212,9 @@ BootI2cReport probeBootI2c() {
 #endif
     firmwareServiceTick();
     report.tcaOk = i2cAck(pgl::gld::board::TCA9548A_ADDR);
+    if (pgl::gld::board::HAS_PCF8574) {
+        report.pcfOk = i2cAck(pgl::gld::board::PCF8574_ADDR);
+    }
     for (uint8_t sensor = 0; sensor < pgl::gld::board::SENSOR_COUNT; ++sensor) {
         firmwareServiceTick();
         const uint8_t muxChannel = static_cast<uint8_t>(pgl::gld::board::SENSOR_TO_MUX_CH[sensor]);
@@ -3193,8 +3286,9 @@ BootDiagnosticsResult runBootHardwareDiagnostics(bool externalPower) {
 
     logPrintln("BOOT_PROBE_I2C=start");
     result.i2c = probeBootI2c();
-    logPrintf("BOOT_PROBE_I2C=done tcaOk=%u mcpOkCount=%u/%u mcpMask=0x%02X\n",
+    logPrintf("BOOT_PROBE_I2C=done tcaOk=%u pcfOk=%u mcpOkCount=%u/%u mcpMask=0x%02X\n",
               result.i2c.tcaOk ? 1 : 0,
+              result.i2c.pcfOk ? 1 : 0,
               result.i2c.mcpOkCount,
               pgl::gld::board::SENSOR_COUNT,
               bootBoolMask(result.i2c.mcpOk));
@@ -3296,6 +3390,11 @@ void printBootIcReport(const pgl::gld::GldPowerReading& power,
     snprintf(detail, sizeof(detail), "addr=0x%02X",
              pgl::gld::board::TCA9548A_ADDR);
     bootTableRow("TCA9548A", "I2C ACK", okNotOk(i2cReport.tcaOk), detail);
+
+    if (pgl::gld::board::HAS_PCF8574) {
+        snprintf(detail, sizeof(detail), "addr=0x%02X", pgl::gld::board::PCF8574_ADDR);
+        bootTableRow("PCF8574", "I2C ACK", okNotOk(i2cReport.pcfOk), detail);
+    }
 
     for (uint8_t sensor = 0; sensor < pgl::gld::board::SENSOR_COUNT; ++sensor) {
         char icName[24];
@@ -3550,8 +3649,11 @@ void handleDatasetTopic(const char* payload, unsigned int length) {
                                ? DATASET_MIN_SAMPLE_INTERVAL_MS
                                : requestedSampleIntervalMs;
         maxDurationMs    = doc["max_duration_ms"]    | 0u;
-        useFanIntake     = doc["use_fan_intake"]     | true;
-        fanOnMs          = doc["fan_on_ms"]          | 1000u;
+        useFanIntake     = pgl::gld::board::HAS_DC_FAN &&
+                           (doc["use_fan_intake"] | true);
+        fanOnMs          = pgl::gld::board::HAS_DC_FAN
+                               ? (doc["fan_on_ms"] | 1000u)
+                               : 0u;
         postFanSettleMs  = doc["post_fan_settle_ms"] | 0u;
         datasetSeq     = 0;
         datasetRejectedSamples = 0;
@@ -5002,7 +5104,7 @@ void runDatasetStateMachine() {
     switch (sampleStep) {
         case SampleStep::None:
             if (now - lastScanMs >= sampleIntervalMs) {
-                if (useFanIntake && fanOnMs > 0) {
+                if (pgl::gld::board::HAS_DC_FAN && useFanIntake && fanOnMs > 0) {
                     optionalDigitalWrite(pgl::gld::board::PIN_DC_FAN, HIGH);
                     stepStartMs = now;
                     sampleStep  = SampleStep::FanOn;
@@ -5058,6 +5160,15 @@ void setup() {
     serviceHoldActive = pgl::gld::readGldServiceHold();
     batteryPendingAlarm = pgl::gld::readGldPendingAlarm();
     setupPins();
+#if PGL_GLD_BOARD_PROFILE_GLD2
+    pcfReady = pcf8574.begin(Wire);
+    pcfAllLoadSwitchesOn = pcfReady && pcf8574.enableAllLoadSwitches();
+    modbusReady = modbusRtu.begin(pgl::gld::GldModbusRtu::kDefaultUnitId,
+                                  pgl::gld::GldModbusRtu::kDefaultBaud,
+                                  pgl::gld::board::PIN_RS485_DIR,
+                                  pgl::gld::board::PIN_RS485_RX,
+                                  pgl::gld::board::PIN_RS485_TX);
+#endif
     const bool persistedAlarmLatched = pgl::gld::readGldAlarmLatched();
     if (persistedAlarmLatched || batteryPendingAlarm.active) {
         (void)updateAlarmOutputs(true);
@@ -5081,11 +5192,27 @@ void setup() {
               BOARD_PROFILE);
 
     const pgl::gld::GldPowerReading power = pgl::gld::readGldPower();
+    lastKnownBatteryMv = power.batteryMv;
+    lastKnownExternalPower = power.externalPower;
     logPrintf("GLD_POWER mode=%s externalPower=%u batteryMv=%u batterySense=%s ambiguous=%u\n",
               pgl::gld::gldPowerModeName(power.mode),
               power.externalPower ? 1 : 0, power.batteryMv,
               pgl::gld::gldBatterySenseStatusName(power.batterySenseStatus),
               power.powerSourceAmbiguous ? 1u : 0u);
+#if PGL_GLD_BOARD_PROFILE_GLD2
+    logPrintf("GLD2_PCF8574 ready=%u addr=0x%02X outputs=0x%02X allLoadSwitchesOn=%u\n",
+              pcfReady ? 1u : 0u,
+              pgl::gld::board::PCF8574_ADDR,
+              pcf8574.outputs(),
+              pcfAllLoadSwitchesOn ? 1u : 0u);
+    logPrintf("GLD2_ST_P raw=%d source=%s\n",
+              digitalRead(pgl::gld::board::PIN_POWER_SOURCE_STATUS),
+              readStpSource24V() ? "24V" : "BATTERY");
+    logPrintf("GLD2_MODBUS role=slave ready=%u unitId=%u baud=%lu format=8N1 readOnly=1\n",
+              modbusReady ? 1u : 0u,
+              static_cast<unsigned>(pgl::gld::GldModbusRtu::kDefaultUnitId),
+              static_cast<unsigned long>(pgl::gld::GldModbusRtu::kDefaultBaud));
+#endif
     batteryPowerMode = TFBG_CONTINUOUS_BATTERY || !power.externalPower;
     powerModeCandidateBattery = batteryPowerMode;
     powerModeCandidateCount = 0;
@@ -5302,7 +5429,7 @@ void loop() {
     // Keep this override after power reconciliation so it also applies when
     // the runtime power mode changes while the firmware is already running.
     static bool fanForcedOnFor24V = false;
-    if (external24VPowerMode) {
+    if (pgl::gld::board::HAS_DC_FAN && external24VPowerMode) {
         optionalDigitalWrite(pgl::gld::board::PIN_DC_FAN, HIGH);
         fanForcedOnFor24V = true;
     } else if (fanForcedOnFor24V) {

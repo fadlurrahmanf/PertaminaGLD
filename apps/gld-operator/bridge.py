@@ -210,7 +210,11 @@ class SerialBridge:
         self._serial: Any = None
         self._lock = threading.Lock()
         self._reader_thread: threading.Thread | None = None
-        self._stop = threading.Event()
+        self._reader_stop = threading.Event()
+        # Each COM connection owns an immutable serial handle, stop event, and
+        # generation.  A stale reader must never report a newly reconnected
+        # port as disconnected.
+        self._generation = 0
         self._recent_lines: deque[dict[str, Any]] = deque(maxlen=160)
         self._line_sequence = 0
         self.port = ""
@@ -259,22 +263,38 @@ class SerialBridge:
             self._serial = ser
             self.port = port
             self.baud = baud
-            self._stop.clear()
-        self._reader_thread = threading.Thread(target=self._read_loop, name="gld-serial-reader", daemon=True)
+            self._generation += 1
+            generation = self._generation
+            self._reader_stop = threading.Event()
+            stop_event = self._reader_stop
+        self._reader_thread = threading.Thread(
+            target=self._read_loop,
+            args=(ser, stop_event, generation),
+            name="gld-serial-reader",
+            daemon=True,
+        )
         self._reader_thread.start()
         self._emit("serial_status", {"connected": True, "port": port, "baud": baud})
         return {"connected": True, "port": port, "baud": baud}
 
     def disconnect(self) -> dict[str, Any]:
-        self._stop.set()
+        reader: threading.Thread | None
         with self._lock:
             ser = self._serial
             self._serial = None
+            self._generation += 1
+            self._reader_stop.set()
+            reader = self._reader_thread
+            self._reader_thread = None
         if ser is not None:
             try:
                 ser.close()
             except Exception:
                 pass
+        # Serial reads use a short timeout, so this normally returns within
+        # 200 ms.  Waiting here prevents an old loop from racing a reconnect.
+        if reader is not None and reader is not threading.current_thread():
+            reader.join(timeout=1.0)
         self._emit("serial_status", {"connected": False})
         return {"connected": False}
 
@@ -312,11 +332,9 @@ class SerialBridge:
         self._emit("serial_tx", {"line": event_line})
         return {"ok": True}
 
-    def _read_loop(self) -> None:
+    def _read_loop(self, ser: Any, stop_event: threading.Event, generation: int) -> None:
         pending = b""
-        while not self._stop.is_set():
-            with self._lock:
-                ser = self._serial
+        while not stop_event.is_set():
             if ser is None or not ser.is_open:
                 break
             try:
@@ -333,7 +351,13 @@ class SerialBridge:
                 if line:
                     self._record_line(line)
                     self._emit("serial_line", {"line": line})
-        self._emit("serial_status", {"connected": False})
+        with self._lock:
+            still_active = self._generation == generation and self._serial is ser
+            if still_active:
+                self._serial = None
+                self._reader_thread = None
+        if still_active:
+            self._emit("serial_status", {"connected": False})
 
 
 MAX_SLOTS = 8
@@ -1091,6 +1115,11 @@ def _firmware_upload_reserved(payload: dict[str, Any], slot: int = 1) -> dict[st
         )
         assert proc.stdout is not None
         primary_file_index = max(range(len(verified_files)), key=lambda index: len(verified_files[index][1]))
+        total_flash_bytes = sum(len(content) for _, content in verified_files)
+        # Esptool restarts its percentage for every binary. Track each verified
+        # file separately, then report a byte-weighted percentage for the
+        # complete package instead of treating app.bin as the whole upload.
+        file_progress = [0 for _ in verified_files]
         for line in proc.stdout:
             clean_line = line.rstrip("\r\n")
             match = re.search(r"Writing at 0x([0-9a-fA-F]+).*?\(\s*(\d+)\s*%\s*\)", clean_line)
@@ -1100,11 +1129,17 @@ def _firmware_upload_reserved(payload: dict[str, Any], slot: int = 1) -> dict[st
                 for index, (item, content) in enumerate(verified_files):
                     offset = int(str(item["offset"]), 0)
                     if offset <= address < offset + len(content):
+                        file_progress[index] = max(file_progress[index], local_percent)
+                        package_percent = round(sum(
+                            len(file_content) * file_progress[file_index] / 100
+                            for file_index, (_, file_content) in enumerate(verified_files)
+                        ) * 100 / total_flash_bytes) if total_flash_bytes else 0
                         events.emit("upload_progress", {
                             "fileIndex": index,
                             "fileCount": len(verified_files),
                             "filePath": item["path"],
                             "filePercent": local_percent,
+                            "packagePercent": package_percent,
                             "primary": index == primary_file_index,
                         })
                         break
@@ -1272,7 +1307,15 @@ class Handler(SimpleHTTPRequestHandler):
                 canonical = load_canonical_gld_aes_key()
                 return json_response(
                     self,
-                    {"configured": canonical is not None, "keyId": canonical["keyId"] if canonical else None},
+                    {
+                        "configured": canonical is not None,
+                        "keyId": canonical["keyId"] if canonical else None,
+                        "source": "server/nodered/.env" if canonical else None,
+                        # This bridge can read the local provisioning source but cannot
+                        # authenticate to, or inspect, a remote/running Node-RED flow.
+                        # Do not present source readiness as deployment proof.
+                        "nodeRedDeployment": "unverified",
+                    },
                 )
             if path == "/api/dataset/output-dir":
                 return json_response(self, dataset_output_info())

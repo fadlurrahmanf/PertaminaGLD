@@ -840,7 +840,12 @@ class Handler(SimpleHTTPRequestHandler):
             raise ValueError("valid COM port required")
         model = str(payload.get("model") or "model_1")
         if device == "gld":
-            env = {"model_1": "gld_model_1", "model_2": "gld_model_2"}.get(model)
+            env = {
+                "model_1": "gld_model_1",
+                "model_2": "gld_model_2",
+                "model_3": "gld_model_3",
+                "gld_v2": "gld_v2",
+            }.get(model)
             if not env:
                 raise ValueError("selected GLD model package is not available")
         else:
@@ -880,9 +885,21 @@ class Handler(SimpleHTTPRequestHandler):
         expected_id = str(identifier).upper().removeprefix("0X")
         if actual_id != expected_id:
             raise RuntimeError(f"flash completed but identity read-back differs: expected {expected_id}, got {readback_id}")
+        aes_key_restored = False
+        # Reset NVS also erases the GLD AES provisioning. When the child GLD
+        # bridge has a canonical Node-RED key, its serial-write path injects
+        # that key into this otherwise-empty config command. Wait for the
+        # second reboot/read-back so a successful Simple-Hub upload does not
+        # silently leave LoRa TX blocked.
+        if device == "gld" and reset_nvs:
+            key_status = child_request(host, "gld", "GET", "/api/gld-key-status")
+            if bool(key_status.get("configured")):
+                send_and_confirm(host, "gld", 'SET_APP_CONFIG_JSON {"reboot":true}', "SET_APP_CONFIG")
+                readback = wait_for_readback(host, device, port, timeout=35.0)
+                aes_key_restored = True
         action = "Initial firmware upload" if initial_firmware else "Firmware upload"
-        add_activity(device, action, f"{port}; latest {env} verified; NVS {'reset' if reset_nvs else 'preserved'}")
-        json_response(self, {"upload": result, "readback": readback, "initialFirmware": initial_firmware})
+        add_activity(device, action, f"{port}; latest {env} verified; NVS {'reset' if reset_nvs else 'preserved'}; AES {'restored' if aes_key_restored else 'unchanged'}")
+        json_response(self, {"upload": result, "readback": readback, "initialFirmware": initial_firmware, "aesKeyRestored": aes_key_restored})
 
     def _handle_simple_ports(self) -> None:
         device = (parse_qs(urlparse(self.path).query).get("device") or [""])[0]

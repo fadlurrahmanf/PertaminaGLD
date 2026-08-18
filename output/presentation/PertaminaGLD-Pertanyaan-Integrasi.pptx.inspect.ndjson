@@ -1,0 +1,231 @@
+{"kind":"deck","id":"pr/fhrz5z","name":"Deck"}
+{"kind":"layout","layoutId":"e0d1eaf0-323f-4a0e-8639-fc71f34a8a69","name":"Master","type":"master"}
+{"kind":"layout","layoutId":"16452bcd-0fe5-4b23-a757-5e1fc78af60a","name":"Title Slide","type":"title"}
+{"kind":"slide","id":"sl/3v75d1","slide":1,"title":"PERTAMINA × LGU","textShapes":4}
+{"kind":"textbox","id":"sh/g3yt0vmd","slide":1,"name":"eyebrow","text":"PERTAMINA × LGU","textPreview":"PERTAMINA × LGU","textChars":15,"textLines":1,"bbox":[42,42,500,40]}
+{"kind":"textbox","id":"sh/v25srq5s","slide":1,"name":"cover-title","text":"Kesiapan Integrasi\nGLD · CH · Gateway · Server","textPreview":"Kesiapan Integrasi | GLD · CH · Gateway · Server","textChars":46,"textLines":2,"bbox":[42,175,1030,245]}
+{"kind":"textbox","id":"sh/u1wbyl47","slide":1,"name":"cover-subtitle","text":"Daftar pertanyaan dan keputusan sebelum pemasangan awal","textPreview":"Daftar pertanyaan dan keputusan sebelum pemasangan awal","textChars":55,"textLines":1,"bbox":[42,505,800,55]}
+{"kind":"shape","id":"sh/tgnapgn2","slide":1,"name":"accent-rule","bbox":[1010,505,180,7]}
+{"kind":"textbox","id":"sh/8fetwbmh","slide":1,"name":"text","text":"13 Agustus 2026","textPreview":"13 Agustus 2026","textChars":15,"textLines":1,"bbox":[42,600,400,35]}
+{"kind":"notes","id":"nt/3v75d1","slide":1,"text":"[Sources]\nCatatan rapat yang diberikan pengguna, 13 Agustus 2026.\nRepository PertaminaGLD: dokumen desain dan source firmware (audit read-only)."}
+{"kind":"slide","id":"sl/gogy8f","slide":2,"title":"Tujuan rapat: menetapkan prasyarat sebelum tanggal pemasangan","textShapes":16}
+{"kind":"textbox","id":"sh/29ozatgz","slide":2,"name":"slide-title","text":"Tujuan rapat: menetapkan prasyarat sebelum tanggal pemasangan","textPreview":"Tujuan rapat: menetapkan prasyarat sebelum tanggal pemasangan","textChars":61,"textLines":1,"bbox":[42,34,1140,72]}
+{"kind":"textbox","id":"sh/pczi58za","slide":2,"name":"page","text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[1184,660,54,24]}
+{"kind":"textbox","id":"sh/obqhc3yp","slide":2,"name":"text","text":"Tanggal pemasangan awal baru dapat dijanjikan setelah empat kelompok keputusan ditutup bersama.","textPreview":"Tanggal pemasangan awal baru dapat dijanjikan setelah empat kelompok keputusan ditutup bersama.","textChars":95,"textLines":1,"bbox":[42,120,1100,60]}
+{"kind":"shape","id":"sh/f6x0zyh8","slide":2,"name":"gate-0","bbox":[42,235,260,235]}
+{"kind":"textbox","id":"sh/eloz6tgn","slide":2,"name":"text","text":"01","textPreview":"01","textChars":2,"textLines":1,"bbox":[60,252,70,55]}
+{"kind":"textbox","id":"sh/18fi18ze","slide":2,"name":"text","text":"Fisik siap","textPreview":"Fisik siap","textChars":10,"textLines":1,"bbox":[60,325,224,48]}
+{"kind":"textbox","id":"sh/076h83yt","slide":2,"name":"text","text":"Power, mounting, antena, akses","textPreview":"Power, mounting, antena, akses","textChars":30,"textLines":1,"bbox":[60,390,224,92]}
+{"kind":"shape","id":"sh/z210bihc","slide":2,"name":"gate-1","bbox":[342,235,260,235]}
+{"kind":"textbox","id":"sh/yhsj2xgr","slide":2,"name":"text","text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[360,252,70,55]}
+{"kind":"textbox","id":"sh/gvqtsfqp","slide":2,"name":"text","text":"Jaringan siap","textPreview":"Jaringan siap","textChars":13,"textLines":1,"bbox":[360,325,224,48]}
+{"kind":"textbox","id":"sh/hwza1k7a","slide":2,"name":"text","text":"IP, firewall, broker, security","textPreview":"IP, firewall, broker, security","textChars":30,"textLines":1,"bbox":[360,390,224,92]}
+{"kind":"shape","id":"sh/ut8rq58z","slide":2,"name":"gate-2","bbox":[642,235,260,235]}
+{"kind":"textbox","id":"sh/vuhszapk","slide":2,"name":"text","text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[660,252,70,55]}
+{"kind":"textbox","id":"sh/8rq9ovqt","slide":2,"name":"text","text":"Server siap","textPreview":"Server siap","textChars":11,"textLines":1,"bbox":[660,325,224,48]}
+{"kind":"textbox","id":"sh/9szax07e","slide":2,"name":"text","text":"VM/OS, database, hak admin","textPreview":"VM/OS, database, hak admin","textChars":26,"textLines":1,"bbox":[660,390,224,92]}
+{"kind":"shape","id":"sh/mporml8n","slide":2,"name":"gate-3","bbox":[942,235,260,235]}
+{"kind":"textbox","id":"sh/7qxsvqp8","slide":2,"name":"text","text":"04","textPreview":"04","textChars":2,"textLines":1,"bbox":[960,252,70,55]}
+{"kind":"textbox","id":"sh/kn69kvqh","slide":2,"name":"text","text":"SAT disepakati","textPreview":"SAT disepakati","textChars":14,"textLines":1,"bbox":[960,325,224,48]}
+{"kind":"textbox","id":"sh/lofat072","slide":2,"name":"text","text":"Uji normal, alarm, command, recovery","textPreview":"Uji normal, alarm, command, recovery","textChars":36,"textLines":1,"bbox":[960,390,224,92]}
+{"kind":"textbox","id":"sh/1k7qxcj6","slide":2,"name":"text","text":"Output yang diminta dari Pertamina: PIC, keputusan teknis, bukti kesiapan, dan target tanggal per item.","textPreview":"Output yang diminta dari Pertamina: PIC, keputusan teknis, bukti kesiapan, dan target tanggal per item.","textChars":103,"textLines":1,"bbox":[42,570,1130,50]}
+{"kind":"notes","id":"nt/gogy8f","slide":2,"text":"[Sources]\nCatatan rapat pengguna.\ndocs/design/gw-server/final_design.md\ndocs/design/gld-ch/payload-contract.draft.md"}
+{"kind":"slide","id":"sl/0hkx20","slide":3,"title":"Arsitektur end-to-end: data naik, kontrol kembali melalui jalur yang sama","textShapes":13}
+{"kind":"textbox","id":"sh/903mtkje","slide":3,"name":"slide-title","text":"Arsitektur end-to-end: data naik, kontrol kembali melalui jalur yang sama","textPreview":"Arsitektur end-to-end: data naik, kontrol kembali melalui jalur yang sama","textChars":73,"textLines":1,"bbox":[42,34,1140,72]}
+{"kind":"textbox","id":"sh/mxcny50n","slide":3,"name":"page","text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[1184,660,54,24]}
+{"kind":"shape","id":"sh/7yl4ra18","slide":3,"name":"data-arrow-1","bbox":[272,290,63,35]}
+{"kind":"shape","id":"sh/kvu5wfih","slide":3,"name":"data-arrow-2","bbox":[565,290,45,35]}
+{"kind":"shape","id":"sh/lw3mpkj2","slide":3,"name":"data-arrow-3","bbox":[840,290,45,35]}
+{"kind":"shape","id":"sh/ytc3u50r","slide":3,"name":"control-arrow-1","bbox":[272,390,63,35]}
+{"kind":"shape","id":"sh/zul4na1c","slide":3,"name":"control-arrow-2","bbox":[565,390,45,35]}
+{"kind":"shape","id":"sh/cralsvil","slide":3,"name":"control-arrow-3","bbox":[840,390,45,35]}
+{"kind":"shape","id":"sh/xsjml0j6","slide":3,"name":"node-0","bbox":[42,220,230,230]}
+{"kind":"textbox","id":"sh/hkfelgve","slide":3,"name":"text","text":"GLD","textPreview":"GLD","textChars":3,"textLines":1,"bbox":[60,248,194,44]}
+{"kind":"textbox","id":"sh/gj6dsbet","slide":3,"name":"text","text":"Sensor gas\n24 VDC","textPreview":"Sensor gas | 24 VDC","textChars":17,"textLines":2,"bbox":[60,322,194,75]}
+{"kind":"shape","id":"sh/vixwjqd8","slide":3,"name":"node-1","bbox":[335,220,230,230]}
+{"kind":"textbox","id":"sh/uhovqlwn","slide":3,"name":"text","text":"CH","textPreview":"CH","textChars":2,"textLines":1,"bbox":[353,248,194,44]}
+{"kind":"textbox","id":"sh/tgfehgf2","slide":3,"name":"text","text":"STAR receiver\nCache + MESH","textPreview":"STAR receiver | Cache + MESH","textChars":26,"textLines":2,"bbox":[353,322,194,75]}
+{"kind":"shape","id":"sh/8f6dobex","slide":3,"name":"node-2","bbox":[610,220,230,230]}
+{"kind":"textbox","id":"sh/7exwf6xc","slide":3,"name":"text","text":"GATEWAY","textPreview":"GATEWAY","textChars":7,"textLines":1,"bbox":[628,248,194,44]}
+{"kind":"textbox","id":"sh/6d4vm1wr","slide":3,"name":"text","text":"LoRa MESH\nWi-Fi + MQTT","textPreview":"LoRa MESH | Wi-Fi + MQTT","textChars":22,"textLines":2,"bbox":[628,322,194,75]}
+{"kind":"shape","id":"sh/lcvedwf6","slide":3,"name":"node-3","bbox":[885,220,230,230]}
+{"kind":"textbox","id":"sh/kbmdkrel","slide":3,"name":"text","text":"SERVER","textPreview":"SERVER","textChars":6,"textLines":1,"bbox":[903,248,194,44]}
+{"kind":"textbox","id":"sh/cvqd0bmh","slide":3,"name":"text","text":"Broker · Node-RED\nDB · Dashboard","textPreview":"Broker · Node-RED | DB · Dashboard","textChars":32,"textLines":2,"bbox":[903,322,194,75]}
+{"kind":"textbox","id":"sh/dwze9wn2","slide":3,"name":"text","text":"DATA / ALARM →","textPreview":"DATA / ALARM →","textChars":14,"textLines":1,"bbox":[42,155,300,32]}
+{"kind":"textbox","id":"sh/qt8vy14b","slide":3,"name":"text","text":"← COMMAND / ACK","textPreview":"← COMMAND / ACK","textChars":15,"textLines":1,"bbox":[42,493,300,32]}
+{"kind":"shape","id":"sh/buhw765w","slide":3,"name":"normal-alarm-note","bbox":[42,555,1138,65]}
+{"kind":"textbox","id":"sh/or6dwrml","slide":3,"name":"text","text":"Normal: disimpan di cache CH lalu diambil (pull)  ·  Alarm: dikirim segera (push) dan di-ACK berjenjang","textPreview":"Normal: disimpan di cache CH lalu diambil (pull)  ·  Alarm: dikirim segera (push) dan di-ACK berjenjang","textChars":103,"textLines":1,"bbox":[60,573,1100,32]}
+{"kind":"notes","id":"nt/0hkx20","slide":3,"text":"[Sources]\ndocs/design/gld/final_design.md:594-595\ndocs/design/gld-ch/payload-contract.draft.md:177-202\ndocs/design/gw-server/final_design.md:38-47"}
+{"kind":"slide","id":"sl/vjzu48","slide":4,"title":"Empat layer memisahkan kebutuhan lapangan, jaringan, proses data, dan pengguna","textShapes":11}
+{"kind":"textbox","id":"sh/pozi1876","slide":4,"name":"slide-title","text":"Empat layer memisahkan kebutuhan lapangan, jaringan, proses data, dan pengguna","textPreview":"Empat layer memisahkan kebutuhan lapangan, jaringan, proses data, dan pengguna","textChars":78,"textLines":1,"bbox":[42,34,1140,72]}
+{"kind":"textbox","id":"sh/21ozqtof","slide":4,"name":"page","text":"04","textPreview":"04","textChars":2,"textLines":1,"bbox":[1184,660,54,24]}
+{"kind":"shape","id":"sh/32x0zyp0","slide":4,"name":"layer-0","bbox":[42,155,1138,88]}
+{"kind":"textbox","id":"sh/crq1w36h","slide":4,"name":"text","text":"04  APPLICATION","textPreview":"04  APPLICATION","textChars":15,"textLines":1,"bbox":[62,175,285,42]}
+{"kind":"textbox","id":"sh/dszi5872","slide":4,"name":"text","text":"Dashboard web · alarm · histori · user/role · audit · laporan","textPreview":"Dashboard web · alarm · histori · user/role · audit · laporan","textChars":61,"textLines":1,"bbox":[360,175,790,48]}
+{"kind":"shape","id":"sh/qp8judor","slide":4,"name":"layer-1","bbox":[42,270,1138,88]}
+{"kind":"textbox","id":"sh/rqh03ypw","slide":4,"name":"text","text":"03  DATA PROCESSING","textPreview":"03  DATA PROCESSING","textChars":19,"textLines":1,"bbox":[62,290,285,42]}
+{"kind":"textbox","id":"sh/0va10n6t","slide":4,"name":"text","text":"MQTT broker · validasi · decrypt · dedup · database · integrasi alarm","textPreview":"MQTT broker · validasi · decrypt · dedup · database · integrasi alarm","textChars":69,"textLines":1,"bbox":[360,290,790,48]}
+{"kind":"shape","id":"sh/1wji9sne","slide":4,"name":"layer-2","bbox":[42,385,1138,88]}
+{"kind":"textbox","id":"sh/d0belk7i","slide":4,"name":"text","text":"02  NETWORKING","textPreview":"02  NETWORKING","textChars":14,"textLines":1,"bbox":[62,405,285,42]}
+{"kind":"textbox","id":"sh/cz2xsfqx","slide":4,"name":"text","text":"LoRa STAR/MESH · Wi-Fi · IP/DNS/NTP · firewall · MQTT · TLS/ACL","textPreview":"LoRa STAR/MESH · Wi-Fi · IP/DNS/NTP · firewall · MQTT · TLS/ACL","textChars":63,"textLines":1,"bbox":[360,405,790,48]}
+{"kind":"shape","id":"sh/rytwzapc","slide":4,"name":"layer-3","bbox":[42,500,1138,88]}
+{"kind":"textbox","id":"sh/qxkfq58r","slide":4,"name":"text","text":"01  PHYSICAL","textPreview":"01  PHYSICAL","textChars":12,"textLines":1,"bbox":[62,520,285,42]}
+{"kind":"textbox","id":"sh/1ovypk7e","slide":4,"name":"text","text":"GLD · CH · GW · server/VM · power · mounting · antenna · cable · protection","textPreview":"GLD · CH · GW · server/VM · power · mounting · antenna · cable · protection","textChars":75,"textLines":1,"bbox":[360,520,790,48]}
+{"kind":"textbox","id":"sh/03mxwfqt","slide":4,"name":"text","text":"Security dan operasional berlaku lintas layer—bukan hanya urusan Wi-Fi.","textPreview":"Security dan operasional berlaku lintas layer—bukan hanya urusan Wi-Fi.","textChars":71,"textLines":1,"bbox":[42,635,1138,35]}
+{"kind":"notes","id":"nt/vjzu48","slide":4,"text":"[Sources]\nPemetaan integrasi berdasarkan catatan rapat dan source PertaminaGLD.\ndocs/design/gw-server/final_design.md:58-104\ndocs/design/ch/final_design.md:174-194"}
+{"kind":"slide","id":"sl/7gkw4n","slide":5,"title":"Pertanyaan Physical Layer: titik pemasangan harus jelas dan tersertifikasi","textShapes":11}
+{"kind":"textbox","id":"sh/8r2pcfyl","slide":5,"name":"slide-title","text":"Pertanyaan Physical Layer: titik pemasangan harus jelas dan tersertifikasi","textPreview":"Pertanyaan Physical Layer: titik pemasangan harus jelas dan tersertifikasi","textChars":74,"textLines":1,"bbox":[42,34,1140,72]}
+{"kind":"textbox","id":"sh/nqt83ahg","slide":5,"name":"page","text":"05","textPreview":"05","textChars":2,"textLines":1,"bbox":[1184,660,54,24]}
+{"kind":"textbox","id":"sh/mpk7a5gv","slide":5,"name":"text","text":"GLD","textPreview":"GLD","textChars":3,"textLines":1,"bbox":[42,140,200,36]}
+{"kind":"shape","id":"sh/xgvq94zi","slide":5,"name":"bullet-0","bbox":[42,194,9,9]}
+{"kind":"textbox","id":"sh/wf2pgzyx","slide":5,"name":"bullet-text-0","text":"Di mana titik 24 VDC per GLD, polaritas, grounding, MCB/fuse, konektor, dan hasil ukur?","textPreview":"Di mana titik 24 VDC per GLD, polaritas, grounding, MCB/fuse, konektor, dan hasil ukur?","textChars":87,"textLines":1,"bbox":[67,185,530,55]}
+{"kind":"shape","id":"sh/vet87uhc","slide":5,"name":"bullet-1","bbox":[42,252,9,9]}
+{"kind":"textbox","id":"sh/adk7epgr","slide":5,"name":"bullet-text-1","text":"Apakah kapasitas 2 A tersedia per titik dekat sensor existing?","textPreview":"Apakah kapasitas 2 A tersedia per titik dekat sensor existing?","textChars":62,"textLines":1,"bbox":[67,243,530,55]}
+{"kind":"shape","id":"sh/5kvqd4ze","slide":5,"name":"bullet-2","bbox":[42,310,9,9]}
+{"kind":"textbox","id":"sh/4jmpkzyt","slide":5,"name":"bullet-text-2","text":"Apakah area termasuk hazardous area; standar enclosure, gland, kabel, surge, dan sertifikasi apa?","textPreview":"Apakah area termasuk hazardous area; standar enclosure, gland, kabel, surge, dan sertifikasi apa?","textChars":97,"textLines":1,"bbox":[67,301,530,55]}
+{"kind":"textbox","id":"sh/a547ih4n","slide":5,"name":"text","text":"CH · PANEL SURYA · ANTENA","textPreview":"CH · PANEL SURYA · ANTENA","textChars":25,"textLines":1,"bbox":[645,140,500,36]}
+{"kind":"shape","id":"sh/b6dorm5s","slide":5,"name":"bullet-0","bbox":[645,194,9,9]}
+{"kind":"textbox","id":"sh/w7mpkrmd","slide":5,"name":"bullet-text-0","text":"Batas tinggi/posisi antenna, rute kabel, grounding dan lightning protection?","textPreview":"Batas tinggi/posisi antenna, rute kabel, grounding dan lightning protection?","textChars":76,"textLines":1,"bbox":[670,185,520,55]}
+{"kind":"shape","id":"sh/x8v6twny","slide":5,"name":"bullet-1","bbox":[645,252,9,9]}
+{"kind":"textbox","id":"sh/y947m14j","slide":5,"name":"bullet-text-1","text":"Standar kabel panel surya–CH, baterai yang diizinkan, orientasi panel, dan beban angin?","textPreview":"Standar kabel panel surya–CH, baterai yang diizinkan, orientasi panel, dan beban angin?","textChars":87,"textLines":1,"bbox":[670,243,520,55]}
+{"kind":"shape","id":"sh/juxov654","slide":5,"name":"bullet-2","bbox":[645,310,9,9]}
+{"kind":"textbox","id":"sh/kv6pobmp","slide":5,"name":"bullet-text-2","text":"Ukuran mounting/lubang, baut/mur/bracket, tangga, kunci akses, serta PIC penyedia?","textPreview":"Ukuran mounting/lubang, baut/mur/bracket, tangga, kunci akses, serta PIC penyedia?","textChars":82,"textLines":1,"bbox":[670,301,520,55]}
+{"kind":"shape","id":"sh/lwfqxgna","slide":5,"name":"physical-callout","bbox":[42,584,1148,66]}
+{"kind":"textbox","id":"sh/edk7ax4f","slide":5,"name":"text","text":"Catatan “power 24 V selesai” perlu ditutup dengan lokasi terminal dan bukti ukur saat serah terima.","textPreview":"Catatan “power 24 V selesai” perlu ditutup dengan lokasi terminal dan bukti ukur saat serah terima.","textChars":99,"textLines":1,"bbox":[60,602,1110,34]}
+{"kind":"notes","id":"nt/7gkw4n","slide":5,"text":"[Sources]\nCatatan rapat pengguna.\ndocs/design/gld/final_design.md:167-179 (mode power firmware; bukan bukti rating 2 A)."}
+{"kind":"slide","id":"sl/8m5ck2","slide":6,"title":"Pertanyaan Networking Layer: definisikan jalur IP, broker, dan kontrol akses","textShapes":10}
+{"kind":"textbox","id":"sh/onyhgne5","slide":6,"name":"slide-title","text":"Pertanyaan Networking Layer: definisikan jalur IP, broker, dan kontrol akses","textPreview":"Pertanyaan Networking Layer: definisikan jalur IP, broker, dan kontrol akses","textChars":76,"textLines":1,"bbox":[42,34,1140,72]}
+{"kind":"textbox","id":"sh/3mp07ixk","slide":6,"name":"page","text":"06","textPreview":"06","textChars":2,"textLines":1,"bbox":[1184,660,54,24]}
+{"kind":"textbox","id":"sh/2lgzedwf","slide":6,"name":"text","text":"“Satu jaringan” tidak harus satu SSID.","textPreview":"“Satu jaringan” tidak harus satu SSID.","textChars":38,"textLines":1,"bbox":[42,125,650,46]}
+{"kind":"textbox","id":"sh/1k7i58fu","slide":6,"name":"text","text":"Yang wajib: Gateway memperoleh IP dan dapat mencapai broker melalui routing/firewall yang disetujui.","textPreview":"Yang wajib: Gateway memperoleh IP dan dapat mencapai broker melalui routing/firewall yang disetujui.","textChars":100,"textLines":1,"bbox":[42,175,745,60]}
+{"kind":"shape","id":"sh/gjyhcne9","slide":6,"name":"bullet-0","bbox":[42,264,9,9]}
+{"kind":"textbox","id":"sh/fip03ixo","slide":6,"name":"bullet-text-0","text":"SSID/VLAN/subnet, DHCP reservation atau static IP, DNS, NTP, proxy/captive portal?","textPreview":"SSID/VLAN/subnet, DHCP reservation atau static IP, DNS, NTP, proxy/captive portal?","textChars":82,"textLines":1,"bbox":[67,255,1115,55]}
+{"kind":"shape","id":"sh/exwzadw3","slide":6,"name":"bullet-1","bbox":[42,322,9,9]}
+{"kind":"textbox","id":"sh/twni18fi","slide":6,"name":"bullet-text-1","text":"Registrasi MAC: format, daftar device, PIC approval, dan SLA aktivasi?","textPreview":"Registrasi MAC: format, daftar device, PIC approval, dan SLA aktivasi?","textChars":70,"textLines":1,"bbox":[67,313,1115,55]}
+{"kind":"shape","id":"sh/sveh83ex","slide":6,"name":"bullet-2","bbox":[42,380,9,9]}
+{"kind":"textbox","id":"sh/i1knydc3","slide":6,"name":"bullet-text-2","text":"Wi-Fi PSK atau WPA2/3-Enterprise/802.1X? Jika enterprise: EAP, CA, identity, client certificate?","textPreview":"Wi-Fi PSK atau WPA2/3-Enterprise/802.1X? Jika enterprise: EAP, CA, identity, client certificate?","textChars":96,"textLines":1,"bbox":[67,371,1115,55]}
+{"kind":"shape","id":"sh/32to7ito","slide":6,"name":"bullet-3","bbox":[42,438,9,9]}
+{"kind":"textbox","id":"sh/43250nu9","slide":6,"name":"bullet-text-3","text":"Broker disediakan Pertamina atau LGU; FQDN/IP, port produksi, arah firewall, QoS dan topic ACL?","textPreview":"Broker disediakan Pertamina atau LGU; FQDN/IP, port produksi, arah firewall, QoS dan topic ACL?","textChars":95,"textLines":1,"bbox":[67,429,1115,55]}
+{"kind":"shape","id":"sh/54v69sbu","slide":6,"name":"bullet-4","bbox":[42,496,9,9]}
+{"kind":"textbox","id":"sh/uxknudc7","slide":6,"name":"bullet-text-4","text":"Apakah TLS/mTLS wajib; siapa menerbitkan dan merotasi certificate/secret?","textPreview":"Apakah TLS/mTLS wajib; siapa menerbitkan dan merotasi certificate/secret?","textChars":73,"textLines":1,"bbox":[67,487,1115,55]}
+{"kind":"shape","id":"sh/vyto3yds","slide":6,"name":"source-gap","bbox":[835,122,345,72]}
+{"kind":"textbox","id":"sh/gz25w3ux","slide":6,"name":"text","text":"Source GW saat ini:\nWi-Fi station + plain MQTT","textPreview":"Source GW saat ini: | Wi-Fi station + plain MQTT","textChars":46,"textLines":2,"bbox":[853,138,310,44]}
+{"kind":"notes","id":"nt/8m5ck2","slide":6,"text":"[Sources]\nfirmware/gateway/src/GatewayMqttMeshMain.cpp:636-655, 788-828, 1589-1686\nfirmware/config/ServerConfig.h:36-64\nfirmware/config/GwConfig.h:97-103"}
+{"kind":"slide","id":"sl/oojbcr","slide":7,"title":"Pertanyaan Data Processing: Pertamina perlu menetapkan platform server dan ke...","textShapes":11}
+{"kind":"textbox","id":"sh/bmh0zyxg","slide":7,"name":"slide-title","text":"Pertanyaan Data Processing: Pertamina perlu menetapkan platform server dan kebijakan data","textPreview":"Pertanyaan Data Processing: Pertamina perlu menetapkan platform server dan kebijakan data","textChars":89,"textLines":1,"bbox":[42,34,1140,72]}
+{"kind":"textbox","id":"sh/wnqhs3e1","slide":7,"name":"page","text":"07","textPreview":"07","textChars":2,"textLines":1,"bbox":[1184,660,54,24]}
+{"kind":"shape","id":"sh/xozi18fm","slide":7,"name":"server-column","bbox":[42,150,545,430]}
+{"kind":"textbox","id":"sh/mhozmtwz","slide":7,"name":"text","text":"PLATFORM SERVER","textPreview":"PLATFORM SERVER","textChars":15,"textLines":1,"bbox":[62,172,500,38]}
+{"kind":"shape","id":"sh/nix0vyx4","slide":7,"name":"bullet-0","bbox":[62,239,9,9]}
+{"kind":"textbox","id":"sh/ojqho3ep","slide":7,"name":"bullet-text-0","text":"Server berupa VM atau bare-metal? Lokasi, availability, CPU/RAM/storage, UPS?","textPreview":"Server berupa VM atau bare-metal? Lokasi, availability, CPU/RAM/storage, UPS?","textChars":77,"textLines":1,"bbox":[87,230,475,93]}
+{"kind":"shape","id":"sh/9kzix8fa","slide":7,"name":"bullet-1","bbox":[62,335,9,9]}
+{"kind":"textbox","id":"sh/etozi9wn","slide":7,"name":"bullet-text-1","text":"OS dan versi; hak admin; kebijakan Docker, Node.js/Node-RED, broker, antivirus, patching?","textPreview":"OS dan versi; hak admin; kebijakan Docker, Node.js/Node-RED, broker, antivirus, patching?","textChars":89,"textLines":1,"bbox":[87,326,475,93]}
+{"kind":"shape","id":"sh/zexgrex8","slide":7,"name":"bullet-2","bbox":[62,431,9,9]}
+{"kind":"textbox","id":"sh/bex0jqdo","slide":7,"name":"bullet-text-2","text":"Database standar; retention, backup/restore, archive, kapasitas dan ownership DBA?","textPreview":"Database standar; retention, backup/restore, archive, kapasitas dan ownership DBA?","textChars":82,"textLines":1,"bbox":[87,422,475,93]}
+{"kind":"shape","id":"sh/adoza5cj","slide":7,"name":"data-column","bbox":[625,150,555,430]}
+{"kind":"textbox","id":"sh/xgfil0vu","slide":7,"name":"text","text":"OPERASI DATA","textPreview":"OPERASI DATA","textChars":12,"textLines":1,"bbox":[645,172,510,38]}
+{"kind":"shape","id":"sh/wf6hcvu9","slide":7,"name":"bullet-0","bbox":[645,239,9,9]}
+{"kind":"textbox","id":"sh/jix0nad0","slide":7,"name":"bullet-text-0","text":"NTP/timezone dan timestamp authoritative; toleransi duplikat, keterlambatan, restart?","textPreview":"NTP/timezone dan timestamp authoritative; toleransi duplikat, keterlambatan, restart?","textChars":85,"textLines":1,"bbox":[670,230,485,93]}
+{"kind":"shape","id":"sh/yhoze5cf","slide":7,"name":"bullet-1","bbox":[645,335,9,9]}
+{"kind":"textbox","id":"sh/l4zipkv6","slide":7,"name":"bullet-text-1","text":"Integrasi alarm ke SCADA/DCS/email/SMS/ticketing; severity, PIC, ACK dan SLA?","textPreview":"Integrasi alarm ke SCADA/DCS/email/SMS/ticketing; severity, PIC, ACK dan SLA?","textChars":77,"textLines":1,"bbox":[670,326,485,93]}
+{"kind":"shape","id":"sh/kj6hgful","slide":7,"name":"bullet-2","bbox":[645,431,9,9]}
+{"kind":"textbox","id":"sh/fmdgb6dw","slide":7,"name":"bullet-text-2","text":"Monitoring broker/flow/database, log retention, RTO/RPO dan maintenance window?","textPreview":"Monitoring broker/flow/database, log retention, RTO/RPO dan maintenance window?","textChars":79,"textLines":1,"bbox":[670,422,485,93]}
+{"kind":"textbox","id":"sh/el4z2lwb","slide":7,"name":"text","text":"Repo membuktikan flow Node-RED/decode/decrypt/topology; bukan spesifikasi server produksi Pertamina.","textPreview":"Repo membuktikan flow Node-RED/decode/decrypt/topology; bukan spesifikasi server produksi Pertamina.","textChars":100,"textLines":1,"bbox":[42,615,1138,36]}
+{"kind":"notes","id":"nt/oojbcr","slide":7,"text":"[Sources]\nserver/nodered/flows/flows.json\ndocs/design/server/final_design.md:96-136\ndocs/design/gw-server/final_design.md:58-104"}
+{"kind":"slide","id":"sl/wzai1g","slide":8,"title":"Kapasitas payload harus disepakati per layer, bukan satu angka umum","textShapes":14}
+{"kind":"textbox","id":"sh/rqx4rqlc","slide":8,"name":"slide-title","text":"Kapasitas payload harus disepakati per layer, bukan satu angka umum","textPreview":"Kapasitas payload harus disepakati per layer, bukan satu angka umum","textChars":67,"textLines":1,"bbox":[42,34,1140,72]}
+{"kind":"textbox","id":"sh/cr6l0vmx","slide":8,"name":"page","text":"08","textPreview":"08","textChars":2,"textLines":1,"bbox":[1184,660,54,24]}
+{"kind":"shape","id":"sh/dsfmt03i","slide":8,"name":"metric-0","bbox":[42,170,350,235]}
+{"kind":"textbox","id":"sh/eto3254n","slide":8,"name":"text","text":"39 B","textPreview":"39 B","textChars":4,"textLines":1,"bbox":[64,195,306,70]}
+{"kind":"textbox","id":"sh/zux4val8","slide":8,"name":"text","text":"GLD LoRa AppFrame","textPreview":"GLD LoRa AppFrame","textChars":17,"textLines":1,"bbox":[64,285,306,40]}
+{"kind":"textbox","id":"sh/0v6l4fmt","slide":8,"name":"text","text":"8 header + 29 encrypted + 2 CRC","textPreview":"8 header + 29 encrypted + 2 CRC","textChars":31,"textLines":1,"bbox":[64,340,306,48]}
+{"kind":"shape","id":"sh/1wzmxk3e","slide":8,"name":"metric-1","bbox":[432,170,350,235]}
+{"kind":"textbox","id":"sh/mx836pkz","slide":8,"name":"text","text":"44 B","textPreview":"44 B","textChars":4,"textLines":1,"bbox":[454,195,306,70]}
+{"kind":"textbox","id":"sh/nyh4zalk","slide":8,"name":"text","text":"Alarm single-record MESH","textPreview":"Alarm single-record MESH","textChars":24,"textLines":1,"bbox":[454,285,306,40]}
+{"kind":"textbox","id":"sh/ny5wbits","slide":8,"name":"text","text":"34 record + 10 frame overhead","textPreview":"34 record + 10 frame overhead","textChars":29,"textLines":1,"bbox":[454,340,306,48]}
+{"kind":"shape","id":"sh/mxwv2dsn","slide":8,"name":"metric-2","bbox":[822,170,350,235]}
+{"kind":"textbox","id":"sh/9knedsby","slide":8,"name":"text","text":"Variabel","textPreview":"Variabel","textChars":8,"textLines":1,"bbox":[844,195,306,70]}
+{"kind":"textbox","id":"sh/ozed4nad","slide":8,"name":"text","text":"MQTT JSON","textPreview":"MQTT JSON","textChars":9,"textLines":1,"bbox":[844,285,306,40]}
+{"kind":"textbox","id":"sh/zulc7itw","slide":8,"name":"text","text":"Frame hex + metadata + radio metrics","textPreview":"Frame hex + metadata + radio metrics","textChars":36,"textLines":1,"bbox":[844,340,306,48]}
+{"kind":"shape","id":"sh/etcvydcb","slide":8,"name":"bullet-0","bbox":[42,469,9,9]}
+{"kind":"textbox","id":"sh/1wne98b2","slide":8,"name":"bullet-text-0","text":"Apakah target periode normal 10 detik berlaku per GLD? Berapa maksimum GLD/CH/GW dan burst alarm?","textPreview":"Apakah target periode normal 10 detik berlaku per GLD? Berapa maksimum GLD/CH/GW dan burst alarm?","textChars":97,"textLines":1,"bbox":[67,460,1113,52]}
+{"kind":"shape","id":"sh/0vud03ah","slide":8,"name":"bullet-1","bbox":[42,524,9,9]}
+{"kind":"textbox","id":"sh/jqpwj2t0","slide":8,"name":"bullet-text-1","text":"Minta batas broker: maximum payload, message rate, connection, QoS, retained dan LWT.","textPreview":"Minta batas broker: maximum payload, message rate, connection, QoS, retained dan LWT.","textChars":85,"textLines":1,"bbox":[67,515,1113,52]}
+{"kind":"shape","id":"sh/ypgvaxsf","slide":8,"name":"bullet-2","bbox":[42,579,9,9]}
+{"kind":"textbox","id":"sh/ul0z21cn","slide":8,"name":"bullet-text-2","text":"Ukur sampel MQTT aktual sebelum sizing; angka ±90 byte dari catatan rapat belum menjadi kontrak semua layer.","textPreview":"Ukur sampel MQTT aktual sebelum sizing; angka ±90 byte dari catatan rapat belum menjadi kontrak semua layer.","textChars":108,"textLines":1,"bbox":[67,570,1113,52]}
+{"kind":"notes","id":"nt/wzai1g","slide":8,"text":"[Sources]\ndocs/design/gld-ch/payload-contract.draft.md:20-44, 116-166, 192-242\nfirmware/gateway/src/GatewayMqttMeshMain.cpp:1281-1325\nfirmware/config/GwConfig.h:27-35 (status GW 10 detik; buffer bukan ukuran payload)."}
+{"kind":"slide","id":"sl/t0oxui","slide":9,"title":"Pertanyaan Application Layer: sepakati siapa memakai sistem dan apa yang dian...","textShapes":10}
+{"kind":"textbox","id":"sh/toruxoji","slide":9,"name":"slide-title","text":"Pertanyaan Application Layer: sepakati siapa memakai sistem dan apa yang dianggap berhasil","textPreview":"Pertanyaan Application Layer: sepakati siapa memakai sistem dan apa yang dianggap berhasil","textChars":90,"textLines":1,"bbox":[42,34,1140,72]}
+{"kind":"textbox","id":"sh/610b2907","slide":9,"name":"page","text":"09","textPreview":"09","textChars":2,"textLines":1,"bbox":[1184,660,54,24]}
+{"kind":"shape","id":"sh/rm9sve1c","slide":9,"name":"app-0","bbox":[42,155,545,185]}
+{"kind":"textbox","id":"sh/4zit0zi1","slide":9,"name":"text","text":"AKSES","textPreview":"AKSES","textChars":5,"textLines":1,"bbox":[62,175,500,35]}
+{"kind":"textbox","id":"sh/50rat4jm","slide":9,"name":"text","text":"Viewer/operator/admin? SSO/LDAP/AD, MFA, session timeout, audit log?","textPreview":"Viewer/operator/admin? SSO/LDAP/AD, MFA, session timeout, audit log?","textChars":68,"textLines":1,"bbox":[62,227,500,82]}
+{"kind":"shape","id":"sh/ix0by90v","slide":9,"name":"app-1","bbox":[645,155,545,185]}
+{"kind":"textbox","id":"sh/jy9sru1g","slide":9,"name":"text","text":"DASHBOARD","textPreview":"DASHBOARD","textChars":9,"textLines":1,"bbox":[665,175,500,35]}
+{"kind":"textbox","id":"sh/ov2tc3i5","slide":9,"name":"text","text":"Topologi, health, histori/trend, filter site/device, alarm ACK, report/export?","textPreview":"Topologi, health, histori/trend, filter site/device, alarm ACK, report/export?","textChars":78,"textLines":1,"bbox":[665,227,500,82]}
+{"kind":"shape","id":"sh/pwvu58jq","slide":9,"name":"app-2","bbox":[42,390,545,185]}
+{"kind":"textbox","id":"sh/h8fqhsbu","slide":9,"name":"text","text":"OPERASI","textPreview":"OPERASI","textChars":7,"textLines":1,"bbox":[62,410,500,35]}
+{"kind":"textbox","id":"sh/w76p8nu9","slide":9,"name":"text","text":"Concurrent users, browser/resolusi/bahasa, SLA, support dan maintenance window?","textPreview":"Concurrent users, browser/resolusi/bahasa, SLA, support dan maintenance window?","textChars":79,"textLines":1,"bbox":[62,462,500,82]}
+{"kind":"shape","id":"sh/v6x8fito","slide":9,"name":"app-3","bbox":[645,390,545,185]}
+{"kind":"textbox","id":"sh/u5o76xc3","slide":9,"name":"text","text":"ACCEPTANCE","textPreview":"ACCEPTANCE","textChars":10,"textLines":1,"bbox":[665,410,500,35]}
+{"kind":"textbox","id":"sh/94vqdsby","slide":9,"name":"text","text":"Skenario UAT, data pembanding, kriteria lulus, PIC dan penandatangan sign-off?","textPreview":"Skenario UAT, data pembanding, kriteria lulus, PIC dan penandatangan sign-off?","textChars":78,"textLines":1,"bbox":[665,462,500,82]}
+{"kind":"notes","id":"nt/t0oxui","slide":9,"text":"[Sources]\nCatatan rapat pengguna.\ndocs/design/gw-server/final_design.md:186-195"}
+{"kind":"slide","id":"sl/2ze1gd","slide":10,"title":"Pembagian tanggung jawab mencegah item kritis jatuh di antara dua tim","textShapes":17}
+{"kind":"textbox","id":"sh/pwjqpkba","slide":10,"name":"slide-title","text":"Pembagian tanggung jawab mencegah item kritis jatuh di antara dua tim","textPreview":"Pembagian tanggung jawab mencegah item kritis jatuh di antara dua tim","textChars":69,"textLines":1,"bbox":[42,34,1140,72]}
+{"kind":"textbox","id":"sh/2t8re5cj","slide":10,"name":"page","text":"10","textPreview":"10","textChars":2,"textLines":1,"bbox":[1184,660,54,24]}
+{"kind":"shape","id":"sh/3uh8nat4","slide":10,"name":"lgu","bbox":[42,145,355,435]}
+{"kind":"textbox","id":"sh/cza9kfu1","slide":10,"name":"text","text":"LGU","textPreview":"LGU","textChars":3,"textLines":1,"bbox":[62,165,310,40]}
+{"kind":"shape","id":"sh/d0jqtkb6","slide":10,"name":"bullet-0","bbox":[62,239,9,9]}
+{"kind":"textbox","id":"sh/qxsripcv","slide":10,"name":"bullet-text-0","text":"Perangkat, firmware, diagram dan daftar MAC/device ID","textPreview":"Perangkat, firmware, diagram dan daftar MAC/device ID","textChars":53,"textLines":1,"bbox":[87,230,285,69]}
+{"kind":"shape","id":"sh/by18ratg","slide":10,"name":"bullet-1","bbox":[62,311,9,9]}
+{"kind":"textbox","id":"sh/s36p8vuh","slide":10,"name":"bullet-text-1","text":"Drawing mounting dan kebutuhan power/network","textPreview":"Drawing mounting dan kebutuhan power/network","textChars":44,"textLines":1,"bbox":[87,302,285,69]}
+{"kind":"shape","id":"sh/t4zqh0v2","slide":10,"name":"bullet-2","bbox":[62,383,9,9]}
+{"kind":"textbox","id":"sh/xkbup07m","slide":10,"name":"bullet-text-2","text":"Spec MQTT/payload dan installer dashboard","textPreview":"Spec MQTT/payload dan installer dashboard","textChars":41,"textLines":1,"bbox":[87,374,285,69]}
+{"kind":"shape","id":"sh/wj2dgvqh","slide":10,"name":"bullet-3","bbox":[62,455,9,9]}
+{"kind":"textbox","id":"sh/bi9cnqpw","slide":10,"name":"bullet-text-3","text":"Commissioning script, dokumentasi dan training","textPreview":"Commissioning script, dokumentasi dan training","textChars":46,"textLines":1,"bbox":[87,446,285,69]}
+{"kind":"shape","id":"sh/ah0vel8b","slide":10,"name":"pertamina","bbox":[462,145,355,435]}
+{"kind":"textbox","id":"sh/lobut07y","slide":10,"name":"text","text":"PERTAMINA","textPreview":"PERTAMINA","textChars":9,"textLines":1,"bbox":[482,165,310,40]}
+{"kind":"shape","id":"sh/kn2dkvqd","slide":10,"name":"bullet-0","bbox":[482,239,9,9]}
+{"kind":"textbox","id":"sh/jmtcrqps","slide":10,"name":"bullet-text-0","text":"Power/proteksi, izin, akses dan infrastruktur mounting","textPreview":"Power/proteksi, izin, akses dan infrastruktur mounting","textChars":54,"textLines":1,"bbox":[507,230,285,69]}
+{"kind":"shape","id":"sh/ylkvil87","slide":10,"name":"bullet-1","bbox":[482,311,9,9]}
+{"kind":"textbox","id":"sh/tcvexk7u","slide":10,"name":"bullet-text-1","text":"SSID/VLAN/IP/DNS/NTP/firewall/NAC","textPreview":"SSID/VLAN/IP/DNS/NTP/firewall/NAC","textChars":33,"textLines":1,"bbox":[507,302,285,69]}
+{"kind":"shape","id":"sh/8bmdofqp","slide":10,"name":"bullet-2","bbox":[482,383,9,9]}
+{"kind":"textbox","id":"sh/svuxkjyl","slide":10,"name":"bullet-text-2","text":"Server/VM/OS, broker/DB policy, account/certificate","textPreview":"Server/VM/OS, broker/DB policy, account/certificate","textChars":51,"textLines":1,"bbox":[507,374,285,69]}
+{"kind":"shape","id":"sh/tg3ytof6","slide":10,"name":"bullet-3","bbox":[482,455,9,9]}
+{"kind":"textbox","id":"sh/6tsfi9gf","slide":10,"name":"bullet-text-3","text":"Retention, integrasi alarm, SLA dan security approval","textPreview":"Retention, integrasi alarm, SLA dan security approval","textChars":53,"textLines":1,"bbox":[507,446,285,69]}
+{"kind":"shape","id":"sh/ru1wrex0","slide":10,"name":"shared","bbox":[882,145,298,435]}
+{"kind":"textbox","id":"sh/0juxo3ex","slide":10,"name":"text","text":"BERSAMA","textPreview":"BERSAMA","textChars":7,"textLines":1,"bbox":[902,165,255,40]}
+{"kind":"shape","id":"sh/1k3yxof2","slide":10,"name":"bullet-0","bbox":[902,239,9,9]}
+{"kind":"textbox","id":"sh/ehcfmtwr","slide":10,"name":"bullet-text-0","text":"Site & radio survey","textPreview":"Site & radio survey","textChars":19,"textLines":1,"bbox":[927,230,220,69]}
+{"kind":"shape","id":"sh/filgvyxc","slide":10,"name":"bullet-1","bbox":[902,311,9,9]}
+{"kind":"textbox","id":"sh/wnaxczyd","slide":10,"name":"bullet-text-1","text":"Cybersecurity review","textPreview":"Cybersecurity review","textChars":20,"textLines":1,"bbox":[927,302,220,69]}
+{"kind":"shape","id":"sh/hojel4fy","slide":10,"name":"bullet-2","bbox":[902,383,9,9]}
+{"kind":"textbox","id":"sh/ju9876ls","slide":10,"name":"bullet-text-2","text":"FAT / SAT / UAT","textPreview":"FAT / SAT / UAT","textChars":15,"textLines":1,"bbox":[927,374,220,69]}
+{"kind":"shape","id":"sh/yt0re1k7","slide":10,"name":"bullet-3","bbox":[902,455,9,9]}
+{"kind":"textbox","id":"sh/lwra9w3y","slide":10,"name":"bullet-text-3","text":"Rollback, handover, sign-off","textPreview":"Rollback, handover, sign-off","textChars":28,"textLines":1,"bbox":[927,446,220,69]}
+{"kind":"notes","id":"nt/2ze1gd","slide":10,"text":"[Sources]\nRangkuman tanggung jawab dari catatan rapat dan audit integrasi PertaminaGLD."}
+{"kind":"slide","id":"sl/w3nxem","slide":11,"title":"Keputusan yang diminta: tutup readiness gate, lalu tetapkan tanggal pemasangan","textShapes":15}
+{"kind":"textbox","id":"sh/svmhovm5","slide":11,"name":"slide-title","text":"Keputusan yang diminta: tutup readiness gate, lalu tetapkan tanggal pemasangan","textPreview":"Keputusan yang diminta: tutup readiness gate, lalu tetapkan tanggal pemasangan","textChars":78,"textLines":1,"bbox":[42,34,1140,72]}
+{"kind":"textbox","id":"sh/7ud0vq50","slide":11,"name":"page","text":"11","textPreview":"11","textChars":2,"textLines":1,"bbox":[1184,660,54,24]}
+{"kind":"shape","id":"sh/6t4zml4f","slide":11,"name":"step-no-0","bbox":[42,145,75,75]}
+{"kind":"textbox","id":"sh/58vitgnu","slide":11,"name":"text","text":"1","textPreview":"1","textChars":1,"textLines":1,"bbox":[42,162,75,40]}
+{"kind":"textbox","id":"sh/k7mhkbm9","slide":11,"name":"text","text":"PHYSICAL","textPreview":"PHYSICAL","textChars":8,"textLines":1,"bbox":[150,149,230,38]}
+{"kind":"textbox","id":"sh/j6d0r65o","slide":11,"name":"text","text":"Titik power, mounting, antenna route, akses dan sertifikasi disetujui","textPreview":"Titik power, mounting, antenna route, akses dan sertifikasi disetujui","textChars":69,"textLines":1,"bbox":[390,149,790,58]}
+{"kind":"shape","id":"sh/i54zi143","slide":11,"name":"step-line-0","bbox":[79,220,0,30]}
+{"kind":"shape","id":"sh/p4zi5kny","slide":11,"name":"step-no-1","bbox":[42,250,75,75]}
+{"kind":"textbox","id":"sh/43q1wfmd","slide":11,"name":"text","text":"2","textPreview":"2","textChars":1,"textLines":1,"bbox":[42,267,75,40]}
+{"kind":"textbox","id":"sh/6l8r6xcb","slide":11,"name":"text","text":"NETWORK","textPreview":"NETWORK","textChars":7,"textLines":1,"bbox":[150,254,230,38]}
+{"kind":"textbox","id":"sh/7mh8z2dw","slide":11,"name":"text","text":"GW mendapat IP; broker reachable; MQTT CONNACK + ACL publish/subscribe terbukti","textPreview":"GW mendapat IP; broker reachable; MQTT CONNACK + ACL publish/subscribe terbukti","textChars":79,"textLines":1,"bbox":[390,254,790,58]}
+{"kind":"shape","id":"sh/8nq987uh","slide":11,"name":"step-line-1","bbox":[79,325,0,30]}
+{"kind":"shape","id":"sh/toza1cvm","slide":11,"name":"step-no-2","bbox":[42,355,75,75]}
+{"kind":"textbox","id":"sh/yxor2xcz","slide":11,"name":"text","text":"3","textPreview":"3","textChars":1,"textLines":1,"bbox":[42,372,75,40]}
+{"kind":"textbox","id":"sh/jih8v2dk","slide":11,"name":"text","text":"SERVER","textPreview":"SERVER","textChars":6,"textLines":1,"bbox":[150,359,230,38]}
+{"kind":"textbox","id":"sh/kjq94nu5","slide":11,"name":"text","text":"OS/spec/admin window; broker, Node-RED, database dan HTTPS siap","textPreview":"OS/spec/admin window; broker, Node-RED, database dan HTTPS siap","textChars":63,"textLines":1,"bbox":[390,359,790,58]}
+{"kind":"shape","id":"sh/lkzqxsvq","slide":11,"name":"step-line-2","bbox":[79,430,0,30]}
+{"kind":"shape","id":"sh/itsrehcj","slide":11,"name":"step-no-3","bbox":[42,460,75,75]}
+{"kind":"textbox","id":"sh/3e1s7mt4","slide":11,"name":"text","text":"4","textPreview":"4","textChars":1,"textLines":1,"bbox":[42,477,75,40]}
+{"kind":"textbox","id":"sh/fmtwjup4","slide":11,"name":"text","text":"SAT","textPreview":"SAT","textChars":3,"textLines":1,"bbox":[150,464,230,38]}
+{"kind":"textbox","id":"sh/el0fapoj","slide":11,"name":"text","text":"Normal, alarm, topology, command, restart/reconnect, outage recovery dan dashboard lulus","textPreview":"Normal, alarm, topology, command, restart/reconnect, outage recovery dan dashboard lulus","textChars":88,"textLines":1,"bbox":[390,464,790,58]}
+{"kind":"shape","id":"sh/1obylk7a","slide":11,"name":"decision","bbox":[42,590,1138,63]}
+{"kind":"textbox","id":"sh/0n2xcz6p","slide":11,"name":"text","text":"Mohon Pertamina menetapkan PIC dan target tanggal untuk setiap gate; jadwal pemasangan mengikuti gate terakhir yang selesai.","textPreview":"Mohon Pertamina menetapkan PIC dan target tanggal untuk setiap gate; jadwal pemasangan mengikuti gate terakhir yang selesai.","textChars":124,"textLines":1,"bbox":[60,606,1100,35]}
+{"kind":"notes","id":"nt/w3nxem","slide":11,"text":"[Sources]\nCatatan rapat pengguna.\nAcceptance synthesis from source-backed integration audit."}

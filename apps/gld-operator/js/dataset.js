@@ -819,17 +819,17 @@ function renderDatasetRows() {
 
 // ---- config + commands ----
 
-// Reflects server/nodered/.env, which SET_APP_CONFIG_JSON auto-provisions
-// from on every Apply GLD Settings (see inject_canonical_aes_key in
-// apps/gld-operator/bridge.py) - this is read-only status, not a form field.
+// Reflects the local provisioning source read by the bridge. It intentionally
+// does not claim that the running Node-RED process has been deployed/restarted
+// with the same environment.
 export async function refreshGldAesKeyStatus() {
   const el = $("gldAesKeyStatus");
   if (!el) return;
   try {
     const status = await bridgeFetch("/api/gld-key-status");
     el.textContent = status?.configured
-      ? `AES key sync: on - Apply GLD Settings will provision this device with Node-RED's key (keyId ${status.keyId}).`
-      : "AES key sync: off - server/nodered/.env has no GLD_AES128_KEY_HEX yet, so Apply GLD Settings will not touch the device's key.";
+      ? `AES source siap (key ID ${status.keyId}). Provision hanya mengirim key ke GLD; Node-RED live belum diverifikasi.`
+      : "AES source belum tersedia pada bridge. GLD tidak akan diprovision.";
   } catch {
     el.textContent = "AES key sync: unavailable (could not reach the bridge).";
   }
@@ -882,18 +882,18 @@ export async function restoreGldConfigAfterReset() {
 export async function syncGldAesKey() {
   const status = await bridgeFetch("/api/gld-key-status");
   if (!status?.configured) {
-    showAlert("AES key sync masih off. Konfigurasi key server belum tersedia pada bridge.", "warn");
+    showAlert("AES source belum tersedia pada bridge.", "warn");
     return null;
   }
-  if (!(await showConfirm(`Provision AES key ID ${status.keyId} ke GLD lalu reboot? WiFi/MQTT dan nulling tidak diubah.`, "warn", "Sync AES Key"))) {
+  if (!(await showConfirm(`Kirim AES key ID ${status.keyId} dari bridge ke GLD lalu reboot? Ini tidak mengubah Node-RED; pastikan Node-RED sudah dijalankan dengan environment key yang sama.`, "warn", "Provision AES Key to GLD"))) {
     return null;
   }
-  const ack = await applyAndAlert(`SET_APP_CONFIG_JSON ${JSON.stringify({ reboot: true })}`, "SET_APP_CONFIG", "Sync AES Key");
+  const ack = await applyAndAlert(`SET_APP_CONFIG_JSON ${JSON.stringify({ reboot: true })}`, "SET_APP_CONFIG", "Provision AES Key to GLD");
   if (ack?.status === "ok") {
-    const line = "AES key berhasil diprovision. GLD sedang reboot; cek GLD_LORA_TX_RESULT=PASS setelah tersambung kembali.";
+    const line = "AES key diprovision ke GLD. GLD sedang reboot; status Node-RED live belum diverifikasi.";
     const el = $("gldAesKeyStatus");
     if (el) el.textContent = line;
-    appendLog("AES_KEY_SYNC=OK provisioned from server canonical key", "in");
+    appendLog("AES_KEY_PROVISION=OK sent from bridge source to GLD; Node-RED deployment unverified", "in");
   }
   return ack;
 }

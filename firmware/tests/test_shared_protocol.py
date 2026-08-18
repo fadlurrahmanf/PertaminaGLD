@@ -1724,32 +1724,31 @@ def test_lora_link_selftest_scaffold_present():
     assert "LoRaHealthPayload" not in gld_tx
 
 
-def test_scaler_params_stay_in_physical_channel_order():
-    # Regression guard for audit finding C1: scaler_params.cpp feature_means/
-    # feature_stds must be indexed in physical hardware channel order
-    # (BoardPins.h SENSOR_NAMES), not in whatever order the training pipeline
-    # happened to export its columns in. Six of eight channels were silently
-    # standardized with another sensor's statistics before this was caught.
+def test_active_model_normalization_stays_in_physical_channel_order():
+    # Model slots use min-max normalization, not the removed legacy
+    # scaler_params.cpp StandardScaler arrays.  Keep the deployment contract
+    # guarded for every currently selectable production slot.
     board_pins = pathlib.Path("firmware/gld/include/BoardPins.h").read_text(encoding="utf-8")
-    scaler_src = pathlib.Path("firmware/gld/model/scaler_params.cpp").read_text(encoding="utf-8")
 
     sensor_names_match = re.search(r'SENSOR_NAMES\[SENSOR_COUNT\]\s*=\s*\{([^}]*)\}', board_pins)
     assert sensor_names_match, "could not find SENSOR_NAMES array in BoardPins.h"
     physical_order = re.findall(r'"(\w+)"', sensor_names_match.group(1))
     assert physical_order == ["MQ8", "MQ135", "MQ3", "MQ5", "MQ4", "MQ7", "MQ6", "MQ2"]
 
-    for array_name in ("feature_means", "feature_stds"):
-        block_match = re.search(array_name + r'\[8\]\s*=\s*\{(.*?)\}', scaler_src, re.S)
-        assert block_match, f"could not find {array_name} in scaler_params.cpp"
-        labels = re.findall(r'//\s*ch(\d+)\s+(\w+?)V', block_match.group(1))
-        assert len(labels) == 8, f"{array_name} must have exactly 8 labeled entries"
-        for ch_str, sensor in labels:
-            ch = int(ch_str)
-            assert sensor == physical_order[ch], (
-                f"{array_name} index {ch} is labeled {sensor}V but physical "
-                f"channel {ch} is {physical_order[ch]} per BoardPins.h "
-                f"SENSOR_NAMES - this is exactly the C1 ordering bug"
-            )
+    for slot in ("model_1", "model_2"):
+        normalize_src = pathlib.Path(
+            f"firmware/gld/models/{slot}/cnn_gas_datasheet_normalize_params.h"
+        ).read_text(encoding="utf-8")
+        names_match = re.search(r'CNN_GAS_ADC_NAMES\[CNN_GAS_N_ADC\]\s*=\s*\{([^}]*)\}', normalize_src)
+        assert names_match, f"{slot} must declare CNN_GAS_ADC_NAMES"
+        assert re.findall(r'"(\w+)"', names_match.group(1)) == physical_order, (
+            f"{slot} ADC feature order must match BoardPins.h SENSOR_NAMES"
+        )
+        for array_name in ("CNN_GAS_ADC_MIN", "CNN_GAS_ADC_MAX"):
+            block_match = re.search(array_name + r'\[CNN_GAS_N_ADC\]\s*=\s*\{(.*?)\}', normalize_src, re.S)
+            assert block_match, f"{slot} must declare {array_name}"
+            values = re.findall(r'-?[\d.]+f', block_match.group(1))
+            assert len(values) == 8, f"{slot} {array_name} must contain 8 values"
 
 
 def test_ch_mesh_relay_sends_hop_by_hop_alarm_ack_to_child():

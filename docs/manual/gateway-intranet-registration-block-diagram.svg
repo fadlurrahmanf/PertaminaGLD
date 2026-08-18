@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900" role="img" aria-labelledby="title desc">
+  <title id="title">Block Diagram Registrasi Gateway GLD ke Intranet Pertamina</title>
+  <desc id="desc">Diagram aliran data dari GLD dan CH melalui Gateway, Wi-Fi intranet, registrasi dan firewall IT, menuju server MQTT. Data wajib adalah MAC address Gateway, alamat server, dan port tujuan. Item opsional dicantumkan pada legend.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L12,6 L0,12 Z" fill="#175a8a"/>
+    </marker>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#12344d" flood-opacity="0.16"/>
+    </filter>
+    <style>
+      .title { font: 700 32px Arial, sans-serif; fill: #12344d; }
+      .subtitle { font: 400 17px Arial, sans-serif; fill: #496476; }
+      .box-title { font: 700 19px Arial, sans-serif; fill: #12344d; }
+      .box-text { font: 400 16px Arial, sans-serif; fill: #26485f; }
+      .required { font: 700 16px Arial, sans-serif; fill: #a32626; }
+      .arrow-label { font: 700 15px Arial, sans-serif; fill: #175a8a; }
+      .legend-title { font: 700 21px Arial, sans-serif; fill: #12344d; }
+      .legend-text { font: 400 16px Arial, sans-serif; fill: #26485f; }
+      .legend-strong { font: 700 16px Arial, sans-serif; fill: #12344d; }
+    </style>
+  </defs>
+  <rect width="1400" height="900" fill="#f5f8fa"/>
+  <text x="700" y="62" text-anchor="middle" class="title">Registrasi Gateway GLD ke Intranet Pertamina</text>
+  <text x="700" y="94" text-anchor="middle" class="subtitle">Alur koneksi perangkat dan informasi yang perlu disampaikan kepada tim IT</text>
+  <g filter="url(#shadow)">
+    <rect x="55" y="185" width="230" height="180" rx="18" fill="#ffffff" stroke="#9bb2c2" stroke-width="2"/>
+    <rect x="335" y="155" width="285" height="240" rx="18" fill="#eaf4fb" stroke="#3282b8" stroke-width="3"/>
+    <rect x="670" y="185" width="230" height="180" rx="18" fill="#ffffff" stroke="#9bb2c2" stroke-width="2"/>
+    <rect x="950" y="165" width="395" height="220" rx="18" fill="#fff4e8" stroke="#d3842f" stroke-width="3"/>
+  </g>
+  <circle cx="170" cy="231" r="25" fill="#dceaf2" stroke="#6f91a8" stroke-width="2"/>
+  <path d="M157 236 C163 219,177 219,183 236 M160 226 C166 215,174 215,180 226 M167 216 C169 213,171 213,173 216" fill="none" stroke="#26485f" stroke-width="3" stroke-linecap="round"/>
+  <text x="170" y="286" text-anchor="middle" class="box-title">Perangkat GLD / CH</text>
+  <text x="170" y="318" text-anchor="middle" class="box-text">Sumber data sensor</text>
+  <text x="170" y="342" text-anchor="middle" class="box-text">melalui LoRa / MESH</text>
+  <rect x="430" y="197" width="95" height="68" rx="10" fill="#ffffff" stroke="#3282b8" stroke-width="2"/>
+  <circle cx="453" cy="231" r="7" fill="#2d9b67"/>
+  <path d="M479 244 C485 225,501 225,507 244 M484 233 C489 220,497 220,502 233 M492 221 L492 221" fill="none" stroke="#175a8a" stroke-width="3" stroke-linecap="round"/>
+  <text x="477" y="300" text-anchor="middle" class="box-title">GATEWAY GLD</text>
+  <text x="477" y="331" text-anchor="middle" class="required">WAJIB</text>
+  <text x="477" y="356" text-anchor="middle" class="box-text">MAC address Wi-Fi Gateway</text>
+  <text x="477" y="378" text-anchor="middle" class="box-text">[AA:BB:CC:DD:EE:FF]</text>
+  <path d="M733 246 C741 223,765 219,780 233 C789 215,821 217,827 241 C850 239,858 270,840 280 L737 280 C714 275,714 252,733 246 Z" fill="#eaf0f4" stroke="#6f91a8" stroke-width="2"/>
+  <text x="785" y="312" text-anchor="middle" class="box-title">Intranet Pertamina</text>
+  <text x="785" y="338" text-anchor="middle" class="box-text">Access point, registrasi</text>
+  <text x="785" y="360" text-anchor="middle" class="box-text">perangkat, dan firewall IT</text>
+  <rect x="1100" y="201" width="96" height="68" rx="8" fill="#ffffff" stroke="#d3842f" stroke-width="2"/>
+  <line x1="1115" y1="220" x2="1181" y2="220" stroke="#d3842f" stroke-width="3"/>
+  <line x1="1115" y1="237" x2="1181" y2="237" stroke="#d3842f" stroke-width="3"/>
+  <circle cx="1121" cy="253" r="4" fill="#2d9b67"/>
+  <text x="1148" y="300" text-anchor="middle" class="box-title">SERVER / BROKER MQTT</text>
+  <text x="1148" y="329" text-anchor="middle" class="required">WAJIB</text>
+  <text x="1148" y="353" text-anchor="middle" class="box-text">Alamat: [IP / HOSTNAME SERVER]</text>
+  <text x="1148" y="376" text-anchor="middle" class="box-text">Port tujuan: TCP 1884</text>
+  <line x1="285" y1="275" x2="325" y2="275" stroke="#175a8a" stroke-width="4" marker-end="url(#arrow)"/>
+  <text x="305" y="253" text-anchor="middle" class="arrow-label">LoRa</text>
+  <line x1="620" y1="275" x2="660" y2="275" stroke="#175a8a" stroke-width="4" marker-end="url(#arrow)"/>
+  <text x="640" y="253" text-anchor="middle" class="arrow-label">Wi-Fi</text>
+  <line x1="900" y1="275" x2="940" y2="275" stroke="#175a8a" stroke-width="4" marker-end="url(#arrow)"/>
+  <text x="920" y="244" text-anchor="middle" class="arrow-label">Outbound</text>
+  <rect x="300" y="430" width="800" height="62" rx="12" fill="#e9f6ef" stroke="#2d9b67" stroke-width="2"/>
+  <text x="700" y="456" text-anchor="middle" class="legend-strong">OUTBOUND</text>
+  <text x="700" y="480" text-anchor="middle" class="legend-text">Koneksi dimulai oleh Gateway menuju server, bukan server membuka koneksi baru ke Gateway.</text>
+  <rect x="55" y="540" width="1290" height="300" rx="18" fill="#ffffff" stroke="#9bb2c2" stroke-width="2"/>
+  <text x="90" y="585" class="legend-title">LEGEND — Data Registrasi</text>
+  <rect x="90" y="616" width="560" height="178" rx="12" fill="#fff0f0" stroke="#c94d4d" stroke-width="2"/>
+  <circle cx="126" cy="651" r="11" fill="#c94d4d"/>
+  <text x="150" y="657" class="legend-strong">WAJIB disampaikan kepada tim IT</text>
+  <text x="126" y="694" class="legend-text">1. MAC address Wi-Fi Gateway</text>
+  <text x="126" y="728" class="legend-text">2. Alamat server tujuan (IP atau hostname)</text>
+  <text x="126" y="762" class="legend-text">3. Port tujuan (TCP 1884)</text>
+  <rect x="690" y="616" width="620" height="178" rx="12" fill="#f3f6f8" stroke="#9bb2c2" stroke-width="2"/>
+  <circle cx="726" cy="651" r="11" fill="#8299a8"/>
+  <text x="750" y="657" class="legend-strong">OPSIONAL / mengikuti kebijakan tim IT</text>
+  <text x="726" y="694" class="legend-text">DHCP reservation atau IP statis • VLAN khusus IoT</text>
+  <text x="726" y="728" class="legend-text">DNS untuk hostname • Metode keamanan Wi-Fi / 802.1X</text>
+  <text x="726" y="762" class="legend-text">Nama lokasi dan PIC • Pembatasan akses internet</text>
+  <text x="700" y="876" text-anchor="middle" class="subtitle">Dokumen registrasi jaringan — Gateway Pertamina GLD</text>
+</svg>

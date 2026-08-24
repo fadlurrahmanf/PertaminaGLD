@@ -12,20 +12,25 @@ import {
 } from "./bridge-client.js";
 import { requireUnlock } from "./security.js";
 import {
-  sendCommand, applyAndAlert, togglePolling, stopPolling, renderSensorCheck, toggleAlarmMute, updateAlarmState, updateTelemetryCollectionProgress
+  sendCommand, applyAndAlert, setSensorPowerAndWait, togglePolling, stopPolling, renderSensorCheck, toggleAlarmMute, updateAlarmState, updateTelemetryCollectionProgress
 } from "./serial-protocol.js";
 import { drawChart, renderLegend, exportCsv } from "./chart.js";
-import { applyNullingConfig, requestFullNulling, updateNullingMeta, renderNullingChannels } from "./nulling.js";
+import { applyNullingConfig, requestFullNulling, requestManualNullingRetry, requestFailedNullingRetry, updateNullingMeta, renderNullingChannels, toggleNullingLogPause, applyNullingLogPauseVisibility, copyNullingLog, exportNullingLog, resetNullingMcpIndicator } from "./nulling.js";
 import {
   renderDatasetSession, applyGldSettings, publishDatasetCommand, confirmDatasetConfig,
   downloadDatasetCsv, openDatasetFolder, clearDatasetSession, useLocalhost,
   testMqttBroker, saveSessionLog, refreshDatasetWaitingState,
   beginDatasetSwitch, markDatasetWizardStarted, initDatasetWizard, refreshGldAesKeyStatus, syncGldAesKey
 } from "./dataset.js?v=20260811-aes-provision-status-1";
-import { loadManifestFile, uploadFirmware, initFirmwareUploadDialog, injectDeviceId, injectChAddress, applyLoraConfig, checkPortLock } from "./firmware.js?v=20260805-aes-sync-status-1";
+import { loadManifestFile, uploadFirmware, initFirmwareUploadDialog, injectDeviceId, injectChAddress, applyLoraConfig, checkPortLock } from "./firmware.js?v=20260819-upload-verification-1";
 import { syncDeviceSummary, renderFleetPanel, addFleetSlot } from "./fleet.js";
 import { toggleMock } from "./mock.js";
 import { initQcTab, switchQcTab, switchQcGroup, restoreQcLatch } from "./qc.js";
+
+function requestFullNullingWithRealtime() {
+  if (!state.polling) togglePolling();
+  requestFullNulling();
+}
 
 function setupEvents() {
   elements.portSetupBtn.addEventListener("click", () => {
@@ -96,18 +101,28 @@ function setupEvents() {
   });
   $("pauseLogBtn")?.addEventListener("click", togglePauseLog);
   $("downloadLogBtn").addEventListener("click", exportLog);
+  $("pauseNullingLogBtn")?.addEventListener("click", toggleNullingLogPause);
+  $("copyNullingLogBtn")?.addEventListener("click", () => { void copyNullingLog(); });
+  $("downloadNullingLogBtn")?.addEventListener("click", exportNullingLog);
   $("clearLogBtn").addEventListener("click", () => {
     state.logs = [];
     elements.serialLog.textContent = "";
   });
   $("clearNullingBtn").addEventListener("click", () => {
     state.nullingLogs = [];
+    state.nullingLogPausedCount = 0;
     elements.nullingLog.textContent = "";
+    applyNullingLogPauseVisibility();
     elements.nullingSummary.textContent = "No nulling activity.";
+    resetNullingMcpIndicator();
     updateNullingMeta();
     renderNullingChannels();
   });
-  $("refreshSensorCheckBtn").addEventListener("click", () => sendCommand("GET_STATUS"));
+  $("refreshSensorCheckBtn").addEventListener("click", () => withBusy(
+    $("refreshSensorCheckBtn"),
+    "Refreshing...",
+    () => sendCommand("GET_STATUS")
+  ));
   $("clearSensorCheckBtn").addEventListener("click", () => {
     state.status = null;
     state.bootDiagnostics = { reportSeen: false, bootRows: {}, probes: {}, lastLine: "" };
@@ -117,6 +132,22 @@ function setupEvents() {
   $("syncAesKeyBtn").addEventListener("click", () => withBusy($("syncAesKeyBtn"), "Syncing...", syncGldAesKey));
   $("applyNullingConfigBtn").addEventListener("click", applyNullingConfig);
   $("refreshNullingConfigBtn").addEventListener("click", () => sendCommand("GET_STATUS"));
+  $("retryNullingBtn")?.addEventListener("click", async () => {
+    try {
+      if (!state.polling) togglePolling();
+      await withBusy($("retryNullingBtn"), "Memulai ulang…", requestManualNullingRetry);
+    } catch (error) {
+      await showAlert(`Retry Nulling gagal: ${error.message}`, "error", "Retry Nulling");
+    }
+  });
+  $("retryFailedNullingBtn")?.addEventListener("click", async () => {
+    try {
+      if (!state.polling) togglePolling();
+      await withBusy($("retryFailedNullingBtn"), "Mengulang gagal…", requestFailedNullingRetry);
+    } catch (error) {
+      await showAlert(`Retry Failed gagal: ${error.message}`, "error", "Retry Failed");
+    }
+  });
   $("switchDatasetBtn").addEventListener("click", () => withBusy($("switchDatasetBtn"), "Switching...", beginDatasetSwitch));
   $("startDatasetBtn").addEventListener("click", () => {
     markDatasetWizardStarted();
@@ -152,8 +183,37 @@ function setupEvents() {
   elements.addSlotBtn.addEventListener("click", addFleetSlot);
   elements.runNullingNowBtn.addEventListener("click", () => {
     switchTab("nulling");
-    requestFullNulling();
+    requestFullNullingWithRealtime();
   });
+  for (const container of [elements.sensorChannelsLeft, elements.sensorChannelsRight]) {
+    container?.addEventListener("click", async (event) => {
+      const button = event.target.closest("[data-sensor-power-channel]");
+      if (!button || button.disabled) return;
+      if (!await requireUnlock()) return;
+      const channel = Number(button.dataset.sensorPowerChannel);
+      const enabled = button.dataset.sensorPowerEnabled === "true";
+      try {
+        await withBusy(button, "Menunggu…", async () => {
+          await setSensorPowerAndWait(channel, enabled);
+        });
+      } catch (error) {
+        showBanner(`Power ${enabled ? "ON" : "OFF"} belum terkonfirmasi: ${error.message}`, "warn");
+      }
+    });
+  }
+  for (const [id, enabled] of [["sensorPowerAllOnBtn", true], ["sensorPowerAllOffBtn", false]]) {
+    $(id)?.addEventListener("click", async () => {
+      if (!await requireUnlock()) return;
+      const button = $(id);
+      try {
+        await withBusy(button, "Menunggu…", async () => {
+          await setSensorPowerAndWait("all", enabled);
+        });
+      } catch (error) {
+        showBanner(`Power semua modul belum terkonfirmasi: ${error.message}`, "warn");
+      }
+    });
+  }
   $("saveSessionLogBtn")?.addEventListener("click", () => saveSessionLog(state.dataset.sessionId || stamp(), "serial"));
 
   document.querySelectorAll("[data-command]").forEach((button) => {
@@ -161,7 +221,7 @@ function setupEvents() {
   });
   document.querySelectorAll("[data-mode]").forEach((button) => {
     button.addEventListener("click", () => {
-      if (button.dataset.mode === "nulling") requestFullNulling();
+      if (button.dataset.mode === "nulling") requestFullNullingWithRealtime();
       else sendCommand(`SET_MODE ${button.dataset.mode}`);
     });
   });
@@ -251,6 +311,7 @@ async function bootstrap() {
   setInterval(refreshDatasetWaitingState, 1000);
   updateNullingMeta();
   renderNullingChannels();
+  applyNullingLogPauseVisibility();
   initQcTab();
   renderSensorCheck();
   drawChart();

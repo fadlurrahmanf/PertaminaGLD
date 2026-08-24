@@ -1,0 +1,13 @@
+{
+  "status": "pass",
+  "checkedAt": "2026-08-19T06:46:41.863Z",
+  "workspace": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision",
+  "finalPptx": "D:\\Github\\PertaminaGLD\\output\\presentation\\Presentasi-Rapat-Cilacap-Terkonfirmasi-2026-08-19.pptx",
+  "starterPptx": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision\\template-starter.pptx",
+  "mapPath": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision\\template-frame-map.json",
+  "starterLayoutDir": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision\\template-starter-layout",
+  "finalLayoutDir": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision\\final-layout",
+  "editDir": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision",
+  "issueCount": 0,
+  "issues": []
+}

@@ -1,0 +1,2656 @@
+{
+  "schema": "openai.presentation.layout/v4",
+  "unit": "px",
+  "slide": {
+    "aid": "sl/4uk4w9",
+    "id": "4uk4w9",
+    "slide": 7,
+    "layoutId": "6a1a93d3-ea1d-429f-9522-c5e67327db04",
+    "layoutName": "Title Slide",
+    "layoutType": "title",
+    "masterLayoutId": "ea845d38-f203-4a15-8d29-592c4f07080e",
+    "masterLayoutName": "Master",
+    "backgroundColor": "#FFFFFF",
+    "frame": {
+      "left": 0,
+      "top": 0,
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "theme": {
+    "colorSchemeName": "ChatGPT",
+    "colors": {
+      "accent1": "#156082",
+      "accent2": "#E97132",
+      "accent3": "#196B24",
+      "accent4": "#0F9ED5",
+      "accent5": "#A02B93",
+      "accent6": "#4EA72E",
+      "bg1": "#FFFFFF",
+      "bg2": "#000000",
+      "tx1": "#1F1F1F",
+      "tx2": "#FFFFFF",
+      "dk1": "#000000",
+      "lt1": "#FFFFFF",
+      "dk2": "#0E2841",
+      "lt2": "#E8E8E8",
+      "hlink": "#467886",
+      "folHlink": "#96607D"
+    },
+    "typefaces": [
+      "Arial"
+    ]
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "6a1a93d3-ea1d-429f-9522-c5e67327db04",
+      "name": "Title Slide",
+      "type": "title",
+      "parentLayoutId": "ea845d38-f203-4a15-8d29-592c4f07080e",
+      "elements": []
+    },
+    {
+      "scope": "master",
+      "id": "ea845d38-f203-4a15-8d29-592c4f07080e",
+      "name": "Master",
+      "type": "master",
+      "elements": []
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/2d4vudkn",
+      "id": "1",
+      "name": "section-7",
+      "bbox": [
+        52,
+        30,
+        480,
+        18
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.0"
+      },
+      "geometry": "rect",
+      "text": "GLD FAT",
+      "textPreview": "GLD FAT",
+      "resolvedFontSize": 14,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 14,
+        "typeface": "Arial",
+        "color": "#667085",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "GLD FAT"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "GLD FAT",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 14,
+            "typeface": "Arial",
+            "color": "#667085",
+            "bold": true,
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "GLD FAT",
+              "anchor": 1,
+              "fontSize": 14,
+              "typeface": "Arial",
+              "color": "#667085",
+              "bold": true,
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 2,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/p0vu5sje",
+      "id": "2",
+      "name": "title-7",
+      "bbox": [
+        52,
+        58,
+        1176,
+        60
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.1"
+      },
+      "geometry": "rect",
+      "text": "FAT menentukan kebutuhan daya final GLD",
+      "textPreview": "FAT menentukan kebutuhan daya final GLD",
+      "resolvedFontSize": 48,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 48,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "FAT menentukan kebutuhan daya final GLD"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "FAT menentukan kebutuhan daya final GLD",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 48,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "FAT menentukan kebutuhan daya final GLD",
+              "anchor": 1,
+              "fontSize": 48,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 3,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/4zmdwn2t",
+      "id": "3",
+      "name": "footer-rule-7",
+      "bbox": [
+        52,
+        668,
+        1176,
+        1
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.2"
+      },
+      "geometry": "line",
+      "lineColor": "#B8BCC4",
+      "lineWidth": 1
+    },
+    {
+      "order": 4,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/r2dw7i1k",
+      "id": "4",
+      "name": "footer-left-7",
+      "bbox": [
+        52,
+        680,
+        360,
+        20
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.3"
+      },
+      "geometry": "rect",
+      "text": "INTERNAL • 18 AGUSTUS 2026",
+      "textPreview": "INTERNAL • 18 AGUSTUS 2026",
+      "resolvedFontSize": 14,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 14,
+        "typeface": "Arial",
+        "color": "#667085",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "INTERNAL • 18 AGUSTUS 2026"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "INTERNAL • 18 AGUSTUS 2026",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 14,
+            "typeface": "Arial",
+            "color": "#667085",
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "INTERNAL • 18 AGUSTUS 2026",
+              "anchor": 1,
+              "fontSize": 14,
+              "typeface": "Arial",
+              "color": "#667085",
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 5,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/q14vyxkz",
+      "id": "5",
+      "name": "footer-number-7",
+      "bbox": [
+        1178,
+        680,
+        50,
+        20
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.4"
+      },
+      "geometry": "rect",
+      "text": "07",
+      "textPreview": "07",
+      "resolvedFontSize": 14,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 14,
+        "typeface": "Arial",
+        "color": "#667085",
+        "alignment": "right",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "07"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "07",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 14,
+            "typeface": "Arial",
+            "color": "#667085",
+            "alignment": "right",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "07",
+              "anchor": 1,
+              "fontSize": 14,
+              "typeface": "Arial",
+              "color": "#667085",
+              "alignment": "right",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 6,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/d4ve9sja",
+      "id": "6",
+      "name": "fat-track",
+      "bbox": [
+        86,
+        580,
+        1100,
+        1
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.5"
+      },
+      "geometry": "line",
+      "lineColor": "#111827",
+      "lineWidth": 1
+    },
+    {
+      "order": 7,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/c3md0n2p",
+      "id": "7",
+      "name": "fat-dot-1",
+      "bbox": [
+        86,
+        574,
+        12,
+        12
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.6"
+      },
+      "geometry": "ellipse",
+      "fillColor": "#111827"
+    },
+    {
+      "order": 8,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/z6xwb21g",
+      "id": "8",
+      "name": "fat-dot-2",
+      "bbox": [
+        458,
+        574,
+        12,
+        12
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.7"
+      },
+      "geometry": "ellipse",
+      "fillColor": "#111827"
+    },
+    {
+      "order": 9,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/e5ov2xkv",
+      "id": "9",
+      "name": "fat-dot-3",
+      "bbox": [
+        830,
+        574,
+        12,
+        12
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.8"
+      },
+      "geometry": "ellipse",
+      "fillColor": "#111827"
+    },
+    {
+      "order": 10,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/szm94vut",
+      "id": "10",
+      "name": "fat-card-1",
+      "bbox": [
+        86,
+        154,
+        330,
+        360
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.9"
+      },
+      "geometry": "rect",
+      "fillColor": "#F7F7F7",
+      "lineWidth": 0
+    },
+    {
+      "order": 11,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/t0fqx0ve",
+      "id": "11",
+      "name": "fat-card-2",
+      "bbox": [
+        458,
+        154,
+        330,
+        360
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.10"
+      },
+      "geometry": "rect",
+      "fillColor": "#F7F7F7",
+      "lineWidth": 0
+    },
+    {
+      "order": 12,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/6x4r2lcn",
+      "id": "12",
+      "name": "fat-card-3",
+      "bbox": [
+        830,
+        154,
+        356,
+        360
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.11"
+      },
+      "geometry": "rect",
+      "fillColor": "#F7F7F7",
+      "lineWidth": 0
+    },
+    {
+      "order": 13,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/ryd8vqd8",
+      "id": "13",
+      "name": "fat-1-title",
+      "bbox": [
+        116,
+        186,
+        270,
+        30
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.12"
+      },
+      "geometry": "rect",
+      "text": "1. IDENTIFIKASI",
+      "textPreview": "1. IDENTIFIKASI",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 24,
+        "typeface": "Arial",
+        "color": "#3D8DFF",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "1. IDENTIFIKASI"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "1. IDENTIFIKASI",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 24,
+            "typeface": "Arial",
+            "color": "#3D8DFF",
+            "bold": true,
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "1. IDENTIFIKASI",
+              "anchor": 1,
+              "fontSize": 24,
+              "typeface": "Arial",
+              "color": "#3D8DFF",
+              "bold": true,
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 14,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/gn698vup",
+      "id": "14",
+      "name": "fat-1-body",
+      "bbox": [
+        116,
+        242,
+        270,
+        210
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.13"
+      },
+      "geometry": "rect",
+      "text": "• Manufacturer / MPN / lot delapan MQ\n• Resistance heater saat dingin\n• Fan/alarm dan power source aktual\n• Cable length dan gauge desain",
+      "textPreview": "• Manufacturer / MPN / lot delapan MQ | • Resistance heater saat dingin | • Fan/alarm dan power source aktual | • Cable length dan gauge ...",
+      "resolvedFontSize": 21,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 21,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 8,
+        "lines": [
+          {
+            "index": 1,
+            "text": "• Manufacturer / MPN / lot"
+          },
+          {
+            "index": 2,
+            "text": "delapan MQ"
+          },
+          {
+            "index": 3,
+            "text": "• Resistance heater saat"
+          },
+          {
+            "index": 4,
+            "text": "dingin"
+          },
+          {
+            "index": 5,
+            "text": "• Fan/alarm dan power"
+          },
+          {
+            "index": 6,
+            "text": "source aktual"
+          },
+          {
+            "index": 7,
+            "text": "• Cable length dan gauge"
+          },
+          {
+            "index": 8,
+            "text": "desain"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "• Manufacturer / MPN / lot delapan MQ\n• Resistance heater saat dingin\n• Fan/alarm dan power source aktual\n• Cable length dan gauge desain",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 21,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "• Manufacturer / MPN / lot delapan MQ\n• Resistance heater saat dingin\n• Fan/alarm dan power source aktual\n• Cable length dan gauge desain",
+              "anchor": 1,
+              "fontSize": 21,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 15,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/1ofq10va",
+      "id": "15",
+      "name": "fat-2-title",
+      "bbox": [
+        488,
+        186,
+        270,
+        30
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.14"
+      },
+      "geometry": "rect",
+      "text": "2. PENGUKURAN",
+      "textPreview": "2. PENGUKURAN",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 24,
+        "typeface": "Arial",
+        "color": "#3D8DFF",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "2. PENGUKURAN"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "2. PENGUKURAN",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 24,
+            "typeface": "Arial",
+            "color": "#3D8DFF",
+            "bold": true,
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "2. PENGUKURAN",
+              "anchor": 1,
+              "fontSize": 24,
+              "typeface": "Arial",
+              "color": "#3D8DFF",
+              "bold": true,
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 16,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/elor65cz",
+      "id": "16",
+      "name": "fat-2-body",
+      "bbox": [
+        488,
+        242,
+        270,
+        220
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.15"
+      },
+      "geometry": "rect",
+      "text": "• ≥20 cold-start setelah OFF ≥30 menit\n• Profil arus sampai 120 menit\n• Log input 24 V, rail 5 V/3,3 V, heater\n• Capture peak dengan instrument memadai",
+      "textPreview": "• ≥20 cold-start setelah OFF ≥30 menit | • Profil arus sampai 120 menit | • Log input 24 V, rail 5 V/3,3 V, heater | • Capture peak denga...",
+      "resolvedFontSize": 21,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 21,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 8,
+        "lines": [
+          {
+            "index": 1,
+            "text": "• ≥20 cold-start setelah OFF"
+          },
+          {
+            "index": 2,
+            "text": "≥30 menit"
+          },
+          {
+            "index": 3,
+            "text": "• Profil arus sampai 120"
+          },
+          {
+            "index": 4,
+            "text": "menit"
+          },
+          {
+            "index": 5,
+            "text": "• Log input 24 V, rail 5 V/3,3"
+          },
+          {
+            "index": 6,
+            "text": "V, heater"
+          },
+          {
+            "index": 7,
+            "text": "• Capture peak dengan"
+          },
+          {
+            "index": 8,
+            "text": "instrument memadai"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "• ≥20 cold-start setelah OFF ≥30 menit\n• Profil arus sampai 120 menit\n• Log input 24 V, rail 5 V/3,3 V, heater\n• Capture peak dengan instrument memadai",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 21,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "• ≥20 cold-start setelah OFF ≥30 menit\n• Profil arus sampai 120 menit\n• Log input 24 V, rail 5 V/3,3 V, heater\n• Capture peak dengan instrument memadai",
+              "anchor": 1,
+              "fontSize": 21,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 17,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/fmx8zad4",
+      "id": "17",
+      "name": "fat-3-title",
+      "bbox": [
+        860,
+        186,
+        296,
+        30
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.16"
+      },
+      "geometry": "rect",
+      "text": "3. STRESS & ACCEPT",
+      "textPreview": "3. STRESS & ACCEPT",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 24,
+        "typeface": "Arial",
+        "color": "#3D8DFF",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "3. STRESS & ACCEPT"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "3. STRESS & ACCEPT",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 24,
+            "typeface": "Arial",
+            "color": "#3D8DFF",
+            "bold": true,
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "3. STRESS & ACCEPT",
+              "anchor": 1,
+              "fontSize": 24,
+              "typeface": "Arial",
+              "color": "#3D8DFF",
+              "bold": true,
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 18,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/orq9cfu1",
+      "id": "18",
+      "name": "fat-3-body",
+      "bbox": [
+        860,
+        242,
+        296,
+        220
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.17"
+      },
+      "geometry": "rect",
+      "text": "• All-heater + LoRa + RS485 + LED\n• Alarm/fan terpisah dan bersamaan\n• Kabel terpanjang + closed enclosure\n• Tanpa current-limit/reset; steady ≤80% rating",
+      "textPreview": "• All-heater + LoRa + RS485 + LED | • Alarm/fan terpisah dan bersamaan | • Kabel terpanjang + closed enclosure | • Tanpa current-limit/re...",
+      "resolvedFontSize": 21,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 21,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 8,
+        "lines": [
+          {
+            "index": 1,
+            "text": "• All-heater + LoRa + RS485 +"
+          },
+          {
+            "index": 2,
+            "text": "LED"
+          },
+          {
+            "index": 3,
+            "text": "• Alarm/fan terpisah dan"
+          },
+          {
+            "index": 4,
+            "text": "bersamaan"
+          },
+          {
+            "index": 5,
+            "text": "• Kabel terpanjang + closed"
+          },
+          {
+            "index": 6,
+            "text": "enclosure"
+          },
+          {
+            "index": 7,
+            "text": "• Tanpa current-limit/reset;"
+          },
+          {
+            "index": 8,
+            "text": "steady ≤80% rating"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "• All-heater + LoRa + RS485 + LED\n• Alarm/fan terpisah dan bersamaan\n• Kabel terpanjang + closed enclosure\n• Tanpa current-limit/reset; steady ≤80% rating",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 21,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "• All-heater + LoRa + RS485 + LED\n• Alarm/fan terpisah dan bersamaan\n• Kabel terpanjang + closed enclosure\n• Tanpa current-limit/reset; steady ≤80% rating",
+              "anchor": 1,
+              "fontSize": 21,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 19,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/psza5kbm",
+      "id": "19",
+      "name": "fat-label-1",
+      "bbox": [
+        86,
+        610,
+        300,
+        24
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.18"
+      },
+      "geometry": "rect",
+      "text": "INPUT TERVERIFIKASI",
+      "textPreview": "INPUT TERVERIFIKASI",
+      "resolvedFontSize": 17,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 17,
+        "typeface": "Arial",
+        "color": "#111827",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "INPUT TERVERIFIKASI"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "INPUT TERVERIFIKASI",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 17,
+            "typeface": "Arial",
+            "color": "#111827",
+            "bold": true,
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "INPUT TERVERIFIKASI",
+              "anchor": 1,
+              "fontSize": 17,
+              "typeface": "Arial",
+              "color": "#111827",
+              "bold": true,
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 20,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/x8vqpk3q",
+      "id": "20",
+      "name": "fat-label-2",
+      "bbox": [
+        458,
+        610,
+        300,
+        24
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.19"
+      },
+      "geometry": "rect",
+      "text": "WAVEFORM & THERMAL",
+      "textPreview": "WAVEFORM & THERMAL",
+      "resolvedFontSize": 17,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 17,
+        "typeface": "Arial",
+        "color": "#111827",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "WAVEFORM & THERMAL"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "WAVEFORM & THERMAL",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 17,
+            "typeface": "Arial",
+            "color": "#111827",
+            "bold": true,
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "WAVEFORM & THERMAL",
+              "anchor": 1,
+              "fontSize": 17,
+              "typeface": "Arial",
+              "color": "#111827",
+              "bold": true,
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 21,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/c7m9gfm5",
+      "id": "21",
+      "name": "fat-label-3",
+      "bbox": [
+        830,
+        610,
+        356,
+        24
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.20"
+      },
+      "geometry": "rect",
+      "text": "KEPUTUSAN 1 A / 2 A",
+      "textPreview": "KEPUTUSAN 1 A / 2 A",
+      "resolvedFontSize": 17,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 17,
+        "typeface": "Arial",
+        "color": "#111827",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "KEPUTUSAN 1 A / 2 A"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "KEPUTUSAN 1 A / 2 A",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 17,
+            "typeface": "Arial",
+            "color": "#111827",
+            "bold": true,
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "KEPUTUSAN 1 A / 2 A",
+              "anchor": 1,
+              "fontSize": 17,
+              "typeface": "Arial",
+              "color": "#111827",
+              "bold": true,
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    }
+  ],
+  "composeRuns": [
+    {
+      "index": 1,
+      "frame": {
+        "left": 0,
+        "top": 0,
+        "width": 1280,
+        "height": 720
+      },
+      "baseUnit": 1,
+      "root": {
+        "path": "0",
+        "kind": "layers",
+        "name": "fat-three-card-timeline",
+        "requestedSize": {
+          "width": {
+            "mode": "fill",
+            "value": 1
+          },
+          "height": {
+            "mode": "fill",
+            "value": 1
+          }
+        },
+        "intrinsicSize": {
+          "width": 1228,
+          "height": 700
+        },
+        "frame": {
+          "left": 0,
+          "top": 0,
+          "width": 1280,
+          "height": 720
+        },
+        "children": [
+          {
+            "path": "0.0",
+            "kind": "text",
+            "name": "section-7",
+            "position": {
+              "left": 52,
+              "top": 30
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 480
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 18
+              }
+            },
+            "intrinsicSize": {
+              "width": 480,
+              "height": 18
+            },
+            "frame": {
+              "left": 52,
+              "top": 30,
+              "width": 480,
+              "height": 18
+            },
+            "snappedFrame": {
+              "left": 52,
+              "top": 30,
+              "width": 480,
+              "height": 18
+            },
+            "children": [],
+            "text": "GLD FAT",
+            "transform": "none",
+            "element": {
+              "aid": "sh/2d4vudkn",
+              "id": "1",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.1",
+            "kind": "text",
+            "name": "title-7",
+            "position": {
+              "left": 52,
+              "top": 58
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 1176
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 60
+              }
+            },
+            "intrinsicSize": {
+              "width": 1176,
+              "height": 60
+            },
+            "frame": {
+              "left": 52,
+              "top": 58,
+              "width": 1176,
+              "height": 60
+            },
+            "snappedFrame": {
+              "left": 52,
+              "top": 58,
+              "width": 1176,
+              "height": 60
+            },
+            "children": [],
+            "text": "FAT menentukan kebutuhan daya final GLD",
+            "transform": "none",
+            "element": {
+              "aid": "sh/p0vu5sje",
+              "id": "2",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.2",
+            "kind": "shape",
+            "name": "footer-rule-7",
+            "position": {
+              "left": 52,
+              "top": 668
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 1176
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 1
+              }
+            },
+            "intrinsicSize": {
+              "width": 1176,
+              "height": 1
+            },
+            "frame": {
+              "left": 52,
+              "top": 668,
+              "width": 1176,
+              "height": 1
+            },
+            "snappedFrame": {
+              "left": 52,
+              "top": 668,
+              "width": 1176,
+              "height": 1
+            },
+            "children": [],
+            "geometry": "line",
+            "element": {
+              "aid": "sh/4zmdwn2t",
+              "id": "3",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.3",
+            "kind": "text",
+            "name": "footer-left-7",
+            "position": {
+              "left": 52,
+              "top": 680
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 360
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 20
+              }
+            },
+            "intrinsicSize": {
+              "width": 360,
+              "height": 20
+            },
+            "frame": {
+              "left": 52,
+              "top": 680,
+              "width": 360,
+              "height": 20
+            },
+            "snappedFrame": {
+              "left": 52,
+              "top": 680,
+              "width": 360,
+              "height": 20
+            },
+            "children": [],
+            "text": "INTERNAL • 18 AGUSTUS 2026",
+            "transform": "none",
+            "element": {
+              "aid": "sh/r2dw7i1k",
+              "id": "4",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.4",
+            "kind": "text",
+            "name": "footer-number-7",
+            "position": {
+              "left": 1178,
+              "top": 680
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 50
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 20
+              }
+            },
+            "intrinsicSize": {
+              "width": 50,
+              "height": 20
+            },
+            "frame": {
+              "left": 1178,
+              "top": 680,
+              "width": 50,
+              "height": 20
+            },
+            "snappedFrame": {
+              "left": 1178,
+              "top": 680,
+              "width": 50,
+              "height": 20
+            },
+            "children": [],
+            "text": "07",
+            "transform": "none",
+            "element": {
+              "aid": "sh/q14vyxkz",
+              "id": "5",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.5",
+            "kind": "shape",
+            "name": "fat-track",
+            "position": {
+              "left": 86,
+              "top": 580
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 1100
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 1
+              }
+            },
+            "intrinsicSize": {
+              "width": 1100,
+              "height": 1
+            },
+            "frame": {
+              "left": 86,
+              "top": 580,
+              "width": 1100,
+              "height": 1
+            },
+            "snappedFrame": {
+              "left": 86,
+              "top": 580,
+              "width": 1100,
+              "height": 1
+            },
+            "children": [],
+            "geometry": "line",
+            "element": {
+              "aid": "sh/d4ve9sja",
+              "id": "6",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.6",
+            "kind": "shape",
+            "name": "fat-dot-1",
+            "position": {
+              "left": 86,
+              "top": 574
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 12
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 12
+              }
+            },
+            "intrinsicSize": {
+              "width": 12,
+              "height": 12
+            },
+            "frame": {
+              "left": 86,
+              "top": 574,
+              "width": 12,
+              "height": 12
+            },
+            "snappedFrame": {
+              "left": 86,
+              "top": 574,
+              "width": 12,
+              "height": 12
+            },
+            "children": [],
+            "geometry": "ellipse",
+            "element": {
+              "aid": "sh/c3md0n2p",
+              "id": "7",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.7",
+            "kind": "shape",
+            "name": "fat-dot-2",
+            "position": {
+              "left": 458,
+              "top": 574
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 12
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 12
+              }
+            },
+            "intrinsicSize": {
+              "width": 12,
+              "height": 12
+            },
+            "frame": {
+              "left": 458,
+              "top": 574,
+              "width": 12,
+              "height": 12
+            },
+            "snappedFrame": {
+              "left": 458,
+              "top": 574,
+              "width": 12,
+              "height": 12
+            },
+            "children": [],
+            "geometry": "ellipse",
+            "element": {
+              "aid": "sh/z6xwb21g",
+              "id": "8",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.8",
+            "kind": "shape",
+            "name": "fat-dot-3",
+            "position": {
+              "left": 830,
+              "top": 574
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 12
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 12
+              }
+            },
+            "intrinsicSize": {
+              "width": 12,
+              "height": 12
+            },
+            "frame": {
+              "left": 830,
+              "top": 574,
+              "width": 12,
+              "height": 12
+            },
+            "snappedFrame": {
+              "left": 830,
+              "top": 574,
+              "width": 12,
+              "height": 12
+            },
+            "children": [],
+            "geometry": "ellipse",
+            "element": {
+              "aid": "sh/e5ov2xkv",
+              "id": "9",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.9",
+            "kind": "shape",
+            "name": "fat-card-1",
+            "position": {
+              "left": 86,
+              "top": 154
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 330
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 360
+              }
+            },
+            "intrinsicSize": {
+              "width": 330,
+              "height": 360
+            },
+            "frame": {
+              "left": 86,
+              "top": 154,
+              "width": 330,
+              "height": 360
+            },
+            "snappedFrame": {
+              "left": 86,
+              "top": 154,
+              "width": 330,
+              "height": 360
+            },
+            "children": [],
+            "geometry": "rect",
+            "element": {
+              "aid": "sh/szm94vut",
+              "id": "10",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.10",
+            "kind": "shape",
+            "name": "fat-card-2",
+            "position": {
+              "left": 458,
+              "top": 154
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 330
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 360
+              }
+            },
+            "intrinsicSize": {
+              "width": 330,
+              "height": 360
+            },
+            "frame": {
+              "left": 458,
+              "top": 154,
+              "width": 330,
+              "height": 360
+            },
+            "snappedFrame": {
+              "left": 458,
+              "top": 154,
+              "width": 330,
+              "height": 360
+            },
+            "children": [],
+            "geometry": "rect",
+            "element": {
+              "aid": "sh/t0fqx0ve",
+              "id": "11",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.11",
+            "kind": "shape",
+            "name": "fat-card-3",
+            "position": {
+              "left": 830,
+              "top": 154
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 356
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 360
+              }
+            },
+            "intrinsicSize": {
+              "width": 356,
+              "height": 360
+            },
+            "frame": {
+              "left": 830,
+              "top": 154,
+              "width": 356,
+              "height": 360
+            },
+            "snappedFrame": {
+              "left": 830,
+              "top": 154,
+              "width": 356,
+              "height": 360
+            },
+            "children": [],
+            "geometry": "rect",
+            "element": {
+              "aid": "sh/6x4r2lcn",
+              "id": "12",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.12",
+            "kind": "text",
+            "name": "fat-1-title",
+            "position": {
+              "left": 116,
+              "top": 186
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 270
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 30
+              }
+            },
+            "intrinsicSize": {
+              "width": 270,
+              "height": 30
+            },
+            "frame": {
+              "left": 116,
+              "top": 186,
+              "width": 270,
+              "height": 30
+            },
+            "snappedFrame": {
+              "left": 116,
+              "top": 186,
+              "width": 270,
+              "height": 30
+            },
+            "children": [],
+            "text": "1. IDENTIFIKASI",
+            "transform": "none",
+            "element": {
+              "aid": "sh/ryd8vqd8",
+              "id": "13",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.13",
+            "kind": "text",
+            "name": "fat-1-body",
+            "position": {
+              "left": 116,
+              "top": 242
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 270
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 210
+              }
+            },
+            "intrinsicSize": {
+              "width": 270,
+              "height": 210
+            },
+            "frame": {
+              "left": 116,
+              "top": 242,
+              "width": 270,
+              "height": 210
+            },
+            "snappedFrame": {
+              "left": 116,
+              "top": 242,
+              "width": 270,
+              "height": 210
+            },
+            "children": [],
+            "text": "• Manufacturer / MPN / lot delapan MQ\n• Resistance heater saat dingin\n• Fan/alarm dan power source aktual\n• Cable length dan gauge desain",
+            "transform": "none",
+            "element": {
+              "aid": "sh/gn698vup",
+              "id": "14",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.14",
+            "kind": "text",
+            "name": "fat-2-title",
+            "position": {
+              "left": 488,
+              "top": 186
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 270
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 30
+              }
+            },
+            "intrinsicSize": {
+              "width": 270,
+              "height": 30
+            },
+            "frame": {
+              "left": 488,
+              "top": 186,
+              "width": 270,
+              "height": 30
+            },
+            "snappedFrame": {
+              "left": 488,
+              "top": 186,
+              "width": 270,
+              "height": 30
+            },
+            "children": [],
+            "text": "2. PENGUKURAN",
+            "transform": "none",
+            "element": {
+              "aid": "sh/1ofq10va",
+              "id": "15",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.15",
+            "kind": "text",
+            "name": "fat-2-body",
+            "position": {
+              "left": 488,
+              "top": 242
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 270
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 220
+              }
+            },
+            "intrinsicSize": {
+              "width": 270,
+              "height": 220
+            },
+            "frame": {
+              "left": 488,
+              "top": 242,
+              "width": 270,
+              "height": 220
+            },
+            "snappedFrame": {
+              "left": 488,
+              "top": 242,
+              "width": 270,
+              "height": 220
+            },
+            "children": [],
+            "text": "• ≥20 cold-start setelah OFF ≥30 menit\n• Profil arus sampai 120 menit\n• Log input 24 V, rail 5 V/3,3 V, heater\n• Capture peak dengan instrument memadai",
+            "transform": "none",
+            "element": {
+              "aid": "sh/elor65cz",
+              "id": "16",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.16",
+            "kind": "text",
+            "name": "fat-3-title",
+            "position": {
+              "left": 860,
+              "top": 186
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 296
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 30
+              }
+            },
+            "intrinsicSize": {
+              "width": 296,
+              "height": 30
+            },
+            "frame": {
+              "left": 860,
+              "top": 186,
+              "width": 296,
+              "height": 30
+            },
+            "snappedFrame": {
+              "left": 860,
+              "top": 186,
+              "width": 296,
+              "height": 30
+            },
+            "children": [],
+            "text": "3. STRESS & ACCEPT",
+            "transform": "none",
+            "element": {
+              "aid": "sh/fmx8zad4",
+              "id": "17",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.17",
+            "kind": "text",
+            "name": "fat-3-body",
+            "position": {
+              "left": 860,
+              "top": 242
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 296
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 220
+              }
+            },
+            "intrinsicSize": {
+              "width": 296,
+              "height": 220
+            },
+            "frame": {
+              "left": 860,
+              "top": 242,
+              "width": 296,
+              "height": 220
+            },
+            "snappedFrame": {
+              "left": 860,
+              "top": 242,
+              "width": 296,
+              "height": 220
+            },
+            "children": [],
+            "text": "• All-heater + LoRa + RS485 + LED\n• Alarm/fan terpisah dan bersamaan\n• Kabel terpanjang + closed enclosure\n• Tanpa current-limit/reset; steady ≤80% rating",
+            "transform": "none",
+            "element": {
+              "aid": "sh/orq9cfu1",
+              "id": "18",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.18",
+            "kind": "text",
+            "name": "fat-label-1",
+            "position": {
+              "left": 86,
+              "top": 610
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 300
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 24
+              }
+            },
+            "intrinsicSize": {
+              "width": 300,
+              "height": 24
+            },
+            "frame": {
+              "left": 86,
+              "top": 610,
+              "width": 300,
+              "height": 24
+            },
+            "snappedFrame": {
+              "left": 86,
+              "top": 610,
+              "width": 300,
+              "height": 24
+            },
+            "children": [],
+            "text": "INPUT TERVERIFIKASI",
+            "transform": "none",
+            "element": {
+              "aid": "sh/psza5kbm",
+              "id": "19",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.19",
+            "kind": "text",
+            "name": "fat-label-2",
+            "position": {
+              "left": 458,
+              "top": 610
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 300
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 24
+              }
+            },
+            "intrinsicSize": {
+              "width": 300,
+              "height": 24
+            },
+            "frame": {
+              "left": 458,
+              "top": 610,
+              "width": 300,
+              "height": 24
+            },
+            "snappedFrame": {
+              "left": 458,
+              "top": 610,
+              "width": 300,
+              "height": 24
+            },
+            "children": [],
+            "text": "WAVEFORM & THERMAL",
+            "transform": "none",
+            "element": {
+              "aid": "sh/x8vqpk3q",
+              "id": "20",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.20",
+            "kind": "text",
+            "name": "fat-label-3",
+            "position": {
+              "left": 830,
+              "top": 610
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 356
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 24
+              }
+            },
+            "intrinsicSize": {
+              "width": 356,
+              "height": 24
+            },
+            "frame": {
+              "left": 830,
+              "top": 610,
+              "width": 356,
+              "height": 24
+            },
+            "snappedFrame": {
+              "left": 830,
+              "top": 610,
+              "width": 356,
+              "height": 24
+            },
+            "children": [],
+            "text": "KEPUTUSAN 1 A / 2 A",
+            "transform": "none",
+            "element": {
+              "aid": "sh/c7m9gfm5",
+              "id": "21",
+              "kind": "shape"
+            }
+          }
+        ],
+        "padding": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        },
+        "alignItems": "stretch",
+        "justifyItems": "stretch",
+        "contentFrame": {
+          "left": 0,
+          "top": 0,
+          "width": 1280,
+          "height": 720
+        },
+        "items": [
+          {
+            "path": "0.0",
+            "frame": {
+              "left": 52,
+              "top": 30,
+              "width": 480,
+              "height": 18
+            }
+          },
+          {
+            "path": "0.1",
+            "frame": {
+              "left": 52,
+              "top": 58,
+              "width": 1176,
+              "height": 60
+            }
+          },
+          {
+            "path": "0.2",
+            "frame": {
+              "left": 52,
+              "top": 668,
+              "width": 1176,
+              "height": 1
+            }
+          },
+          {
+            "path": "0.3",
+            "frame": {
+              "left": 52,
+              "top": 680,
+              "width": 360,
+              "height": 20
+            }
+          },
+          {
+            "path": "0.4",
+            "frame": {
+              "left": 1178,
+              "top": 680,
+              "width": 50,
+              "height": 20
+            }
+          },
+          {
+            "path": "0.5",
+            "frame": {
+              "left": 86,
+              "top": 580,
+              "width": 1100,
+              "height": 1
+            }
+          },
+          {
+            "path": "0.6",
+            "frame": {
+              "left": 86,
+              "top": 574,
+              "width": 12,
+              "height": 12
+            }
+          },
+          {
+            "path": "0.7",
+            "frame": {
+              "left": 458,
+              "top": 574,
+              "width": 12,
+              "height": 12
+            }
+          },
+          {
+            "path": "0.8",
+            "frame": {
+              "left": 830,
+              "top": 574,
+              "width": 12,
+              "height": 12
+            }
+          },
+          {
+            "path": "0.9",
+            "frame": {
+              "left": 86,
+              "top": 154,
+              "width": 330,
+              "height": 360
+            }
+          },
+          {
+            "path": "0.10",
+            "frame": {
+              "left": 458,
+              "top": 154,
+              "width": 330,
+              "height": 360
+            }
+          },
+          {
+            "path": "0.11",
+            "frame": {
+              "left": 830,
+              "top": 154,
+              "width": 356,
+              "height": 360
+            }
+          },
+          {
+            "path": "0.12",
+            "frame": {
+              "left": 116,
+              "top": 186,
+              "width": 270,
+              "height": 30
+            }
+          },
+          {
+            "path": "0.13",
+            "frame": {
+              "left": 116,
+              "top": 242,
+              "width": 270,
+              "height": 210
+            }
+          },
+          {
+            "path": "0.14",
+            "frame": {
+              "left": 488,
+              "top": 186,
+              "width": 270,
+              "height": 30
+            }
+          },
+          {
+            "path": "0.15",
+            "frame": {
+              "left": 488,
+              "top": 242,
+              "width": 270,
+              "height": 220
+            }
+          },
+          {
+            "path": "0.16",
+            "frame": {
+              "left": 860,
+              "top": 186,
+              "width": 296,
+              "height": 30
+            }
+          },
+          {
+            "path": "0.17",
+            "frame": {
+              "left": 860,
+              "top": 242,
+              "width": 296,
+              "height": 220
+            }
+          },
+          {
+            "path": "0.18",
+            "frame": {
+              "left": 86,
+              "top": 610,
+              "width": 300,
+              "height": 24
+            }
+          },
+          {
+            "path": "0.19",
+            "frame": {
+              "left": 458,
+              "top": 610,
+              "width": 300,
+              "height": 24
+            }
+          },
+          {
+            "path": "0.20",
+            "frame": {
+              "left": 830,
+              "top": 610,
+              "width": 356,
+              "height": 24
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

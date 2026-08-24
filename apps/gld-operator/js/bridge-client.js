@@ -21,17 +21,33 @@ export function bridgeUrl(path) {
 }
 
 export async function bridgeFetch(path, options = {}) {
-  const response = await fetch(bridgeUrl(path), {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(bridgeToken ? { "X-GLD-Bridge-Token": bridgeToken } : {}),
-      ...(options.headers || {})
+  const { timeoutMs = 15_000, signal: callerSignal, ...fetchOptions } = options;
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+  const abortFromCaller = () => controller.abort();
+  callerSignal?.addEventListener("abort", abortFromCaller, { once: true });
+  try {
+    const response = await fetch(bridgeUrl(path), {
+      ...fetchOptions,
+      signal: controller.signal,
+      headers: {
+        "Content-Type": "application/json",
+        ...(bridgeToken ? { "X-GLD-Bridge-Token": bridgeToken } : {}),
+        ...(fetchOptions.headers || {})
+      }
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || `${response.status} ${response.statusText}`);
+    return payload;
+  } catch (error) {
+    if (controller.signal.aborted && !callerSignal?.aborted) {
+      throw new Error(`bridge request timed out after ${Math.ceil(timeoutMs / 1000)} seconds`);
     }
-  });
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.error || `${response.status} ${response.statusText}`);
-  return payload;
+    throw error;
+  } finally {
+    window.clearTimeout(timeout);
+    callerSignal?.removeEventListener("abort", abortFromCaller);
+  }
 }
 
 export async function initBridge() {
@@ -100,6 +116,11 @@ function installSerialRecoveryListener() {
       await sendCommand("GET_INFO");
       await wait(300);
       await sendCommand("GET_STATUS");
+      await wait(300);
+      // A full Nulling run restarts the ESP.  Its completion profile lives in
+      // NVS, so fetch it explicitly after reconnect rather than relying on
+      // transient NULLING_ lines that may have occurred during the reboot.
+      await sendCommand("GET_QC_STATUS");
       appendLog("SERIAL_RECOVERY handshake sent; waiting for GLD response", "in");
     } catch (error) {
       appendLog(`SERIAL_RECOVERY_ERROR ${error.message}`, "in");

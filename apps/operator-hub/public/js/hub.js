@@ -20,6 +20,7 @@ let uploadEventsReady = false;
 let uploadFlashDone = false;
 let uploadReadbackVerified = false;
 let uploadSuccessShown = false;
+let testDeviceRunning = false;
 const simulationMode = new URLSearchParams(location.search).get("simulate");
 const $ = (id) => document.getElementById(id);
 const notice = $("notice");
@@ -415,7 +416,9 @@ function render() {
   $("rootGatewayCard").hidden = !isClusterHead;
   $("saveRootGatewayBtn").hidden = !isClusterHead;
   $("gatewayNetworkCard").hidden = active !== "gw";
-  $("testDeviceBtn").disabled = !identified;
+  $("testDeviceBtn").disabled = !identified || testDeviceRunning;
+  $("testDeviceBtn").textContent = testDeviceRunning ? "Memeriksa…" : "Test Device";
+  $("testDeviceCard").classList.toggle("testing", testDeviceRunning);
   $("testUploadFirmwareBtn").disabled = !identified;
   $("initialFirmwareCard").hidden = !needsInitialFirmware;
   $("initialFirmwarePort").textContent = `${state.port || "COM"} — ${spec.label}`;
@@ -487,9 +490,12 @@ function buildTabs() {
 }
 
 async function testDevice() {
+  if (testDeviceRunning) return;
+  testDeviceRunning = true;
   try {
     reviewStep = 2;
-    show("Menjalankan pemeriksaan kesiapan perangkat...");
+    show("Memeriksa kesiapan perangkat — menunggu respons Boot Report…", "waiting");
+    render();
     const result = await api("/api/simple/test-device", { device: active });
     lastTestReport = result.report;
     testReportsByDevice[active] = result.report;
@@ -498,6 +504,9 @@ async function testDevice() {
     await refresh();
   } catch (error) {
     show(error.message, "bad");
+  } finally {
+    testDeviceRunning = false;
+    render();
   }
 }
 

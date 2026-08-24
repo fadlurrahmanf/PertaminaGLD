@@ -1,0 +1,25 @@
+INTENTIONAL DEPARTURES FROM COPIED SOURCE SLIDES
+
+Slides 1-5
+- Replace evidence-gap framing with the user's confirmed meeting facts, Cilacap scope, SRU location, and discussion status.
+- Retain all original frames, geometry, images, fonts, and page furniture.
+
+Slides 6-8
+- Freeze GLD supply at 24 VDC/2 A and CH energy at one LiitoKala 4000 mAh battery plus two 6 W panels.
+- Remove provisional 1 A alternatives and unconfirmed CH component language.
+- Preserve the circuit finding that a 16 V protection component sits on the 24 V input path.
+
+Slides 9-11
+- Reframe Gateway, network, security, server, and dashboard content as a discussion agenda because these topics have not yet been discussed or agreed.
+- Remove claims that could be read as already-approved production requirements.
+
+Slides 12-14
+- Replace the LPG-area hold narrative with the confirmed decision to move installation to the SRU area.
+- Use the authorized temporary mounting label "... cm".
+- Revise the roadmap so "three weeks from 10 August 2026" means a visit.
+
+Slides 15-16
+- Use organization-level ownership that the user confirmed exists.
+- Convert the closing slide from decision requests into the confirmed baseline and next actions.
+
+No source slide, master, layout, image, or inherited structural element is omitted or replaced.

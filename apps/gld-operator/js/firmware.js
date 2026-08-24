@@ -134,7 +134,16 @@ function setUploadProgress(percent, label = "") {
 export function handleFirmwareUploadProgress(payload) {
   const percent = Number(payload?.packagePercent);
   if (!Number.isFinite(percent)) return;
-  setUploadProgress(percent, `Memprogram ${payload.filePath || "firmware"}…`);
+  // A 100% "Writing at" line only means the last byte reached the transport.
+  // Keep the UI at 99% until esptool exits after its hash verification; this
+  // prevents a dead serial link from looking like a completed firmware flash.
+  const writingComplete = percent >= 100;
+  setUploadProgress(
+    writingComplete ? 99 : percent,
+    writingComplete
+      ? "Menunggu verifikasi flash…"
+      : `Memprogram ${payload.filePath || "firmware"}…`,
+  );
 }
 
 function selectedModelSlot() {
@@ -247,6 +256,10 @@ async function performFirmwareUpload() {
     const packageFiles = await readPackageFiles(state.manifest);
     const result = await bridgeFetch("/api/firmware/upload", {
       method: "POST",
+      // The bridge independently stops an unresponsive esptool after 120 s.
+      // Leave a small delivery margin so the browser never waits forever if
+      // the bridge itself stalls before it can return that error.
+      timeoutMs: 135_000,
       body: JSON.stringify({ env, port, targetDeviceId, resetNvs: $("firmwareResetNvs").checked, manifest: state.manifest, packageFiles, slot: state.activeSlot })
     });
     setUploadProgress(100, "Upload firmware selesai.");

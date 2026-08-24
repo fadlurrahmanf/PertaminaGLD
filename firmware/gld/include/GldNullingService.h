@@ -20,7 +20,8 @@ enum class GldNullingStatus : uint8_t {
 struct GldNullingServiceResult {
     GldNullingProfile profile;
     GldNullingStatus  status;
-    uint8_t           successCount;  // out of 8
+    uint8_t           successCount;  // out of attemptedCount
+    uint8_t           attemptedCount;
 };
 
 struct GldNullingSingleResult {
@@ -45,13 +46,15 @@ using GldFullScaleSweepCancelFn = bool (*)();
 // Run the nulling algorithm on all 8 sensor channels.
 // ads and dac must be initialized (begin() called) before calling.
 // The profile dacCodes are applied to the DAC hardware after each channel.
-// config.thresholdV is the minimum floor for the dynamic baseline-relative
-// threshold used by range search, binary search, confirm, and final check.
+// config.thresholdV is the requested maximum absolute bridge residual. The
+// service scans coarse/mid/fine DAC candidates and selects the smallest stable
+// absolute voltage; the hardware stability floor is enforced as well.
 GldNullingServiceResult runNullingService(GldAds1256Reader& ads,
                                           GldDacMux& dac,
                                           GldNullingLogFn logFn = nullptr,
                                           GldNullingTickFn tickFn = nullptr,
-                                          const GldNullingConfig& config = GldNullingConfig{});
+                                          const GldNullingConfig& config = GldNullingConfig{},
+                                          uint8_t channelMask = 0xFFu);
 
 // Runs the same nulling algorithm as runNullingService(), but for exactly one
 // sensor channel (0..7) instead of all 8 - used by the QC tab to test a

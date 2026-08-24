@@ -92,7 +92,18 @@ constexpr uint16_t MQTT_BUFFER_SIZE   = GLD_MQTT_BUFFER_SIZE;
 constexpr uint8_t  MIN_PRIMED_COUNT   = pgl::gld::GLD_SENSOR_MOVING_AVERAGE_WINDOW;
 constexpr uint8_t  BOOT_SENSOR_SNAPSHOT_COUNT = 5;
 constexpr uint32_t BOOT_DAC_SETTLE_MS = 5;
+constexpr uint32_t BOOT_SENSOR_MODULE_POWER_SETTLE_MS = 500;
+constexpr uint16_t BOOT_DAC_SENSOR_POWER_SETTLE_MS = 500;
+constexpr uint16_t NORMAL_DAC_SENSOR_POWER_SETTLE_MS = 50;
 constexpr uint16_t BOOT_I2C_TIMEOUT_MS = 50;
+// GLD2 carries an SHT40 directly on the root I2C bus.  It is not behind the
+// TCA9548A, so always deselect the TCA before addressing it.
+constexpr uint8_t SHT40_I2C_ADDR = 0x44;
+constexpr uint8_t SHT40_MEASURE_HIGH_PRECISION_CMD = 0xFD;
+constexpr uint32_t SHT40_CONVERSION_MS = 10;
+constexpr uint32_t SHT40_SAMPLE_INTERVAL_MS = 100;
+constexpr uint32_t TCA_PRESENCE_PROBE_INTERVAL_MS = 500;
+constexpr uint32_t NON_BATTERY_DAC_VERIFY_INTERVAL_MS = 5000;
 constexpr uint8_t  BOOT_MCP_TEST_EDGE_COUNT = 10;
 constexpr uint16_t BOOT_MCP_TEST_LOW_START = pgl::gld::board::GLD_DAC_CODE_MIN;
 constexpr uint16_t BOOT_MCP_TEST_LOW_END =
@@ -117,7 +128,6 @@ constexpr uint8_t ADS1256_REG_STATUS = 0x00;
 constexpr uint8_t ADS1256_REG_MUX = 0x01;
 constexpr uint8_t ADS1256_REG_ADCON = 0x02;
 constexpr uint8_t ADS1256_REG_DRATE = 0x03;
-constexpr uint32_t NULLING_RETRY_DELAY_MS = 5000;
 constexpr uint32_t NULLING_AUTO_RESTART_DELAY_MS = 800;
 constexpr uint32_t BATTERY_FAULT_SERIAL_HOLD_MS = 10000;
 constexpr uint32_t BATTERY_SENSOR_WARMUP_MS = GLD_BATTERY_SENSOR_WARMUP_MS;
@@ -245,6 +255,22 @@ bool radioReady = false;
 bool mlReady    = false;
 bool nullDone   = false;
 bool nullingRetryArmed = false;
+bool nullingRetryAvailable = false;
+bool nullingRetryFailedAvailable = false;
+uint8_t nullingRetryChannelMask = 0xFFu;
+pgl::gld::GldNullingServiceResult pendingNullingResult{};
+bool pendingNullingResultValid = false;
+
+uint8_t pendingNullingFailedMask() {
+    if (!pendingNullingResultValid) return 0u;
+    uint8_t mask = 0u;
+    for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
+        if (pendingNullingResult.profile.channelOk[ch] == 0u) {
+            mask |= static_cast<uint8_t>(1u << ch);
+        }
+    }
+    return mask;
+}
 bool nullingProfileApplied = false;
 bool lastInferenceValid = false;
 bool sensorFaultActive = false;
@@ -343,6 +369,13 @@ bool     lastKnownExternalPower = false;
 bool     modbusReady = false;
 bool     pcfReady = false;
 bool     pcfAllLoadSwitchesOn = false;
+bool     sht40Detected = false;
+bool     sht40Valid = false;
+float    sht40TemperatureC = NAN;
+float    sht40RelativeHumidity = NAN;
+uint32_t lastSht40SampleMs = 0;
+bool     tca9548aDetected = false;
+uint32_t lastTca9548aProbeMs = 0;
 bool     batteryCyclePoweredOff = false;
 bool     batteryFaultPowerOffArmed = false;
 bool     powerTransitionShutdownPending = false;
@@ -412,6 +445,15 @@ float    latestSensorVoltage[pgl::gld::board::SENSOR_COUNT]{};
 uint8_t  latestSensorGain[pgl::gld::board::SENSOR_COUNT]{};
 uint8_t  latestSensorStatus[pgl::gld::board::SENSOR_COUNT]{};
 bool     latestTelemetryValid = false;
+uint16_t runtimeMcpReadback[pgl::gld::board::SENSOR_COUNT]{};
+bool     runtimeMcpReadbackVerified[pgl::gld::board::SENSOR_COUNT]{};
+uint32_t runtimeMcpVerifiedAtMs[pgl::gld::board::SENSOR_COUNT]{};
+uint32_t lastNonBatteryDacVerifyMs = 0;
+uint8_t  nextNonBatteryDacVerifyChannel = 0;
+
+bool runtimeDacVerificationReady();
+void recordRuntimeDacVerification(uint8_t channel, uint16_t expected, uint16_t readback,
+                                  bool readOk, const char* source, bool logPass);
 
 // Marks the NVS-stored board deployment config as deliberately set via
 // SET_APP_CONFIG_JSON, matching design.md's BoardDeploymentConfig ctrlword gate.
@@ -1228,6 +1270,7 @@ void addCapabilities(JsonObject caps) {
     caps["datasetControlPath"] = "mqtt";
     caps["nullingConfig"] = "SET_NULLING_CONFIG_JSON thresholdV,minFinalV";
     caps["sessionMcp"] = "SET_SESSION_MCP_JSON channel,code (volatile inference-only)";
+    caps["sensorModulePower"] = "SET_SENSOR_POWER_JSON channel,enabled or all,enabled (GLD2 PCF8574/TPS22919 only; volatile)";
     caps["modelNullingBinding"] = "BIND_MODEL_TO_ACTIVE_NULLING_PROFILE";
     caps["qcTracking"] = "SET_QC_RESULT_JSON channel,pass,timestamp / GET_QC_STATUS";
     caps["nullingSingleChannel"] = "RUN_NULLING_SINGLE_JSON channel";
@@ -1239,11 +1282,112 @@ void addCapabilities(JsonObject caps) {
     caps["serialLoraConfig"] = "SET_LORA_CONFIG_JSON freqMHz,bwKHz,sf,cr,syncWord,txPowerDbm,preamble,tcxoVoltage,xtalVoltage";
     caps["liveLoraReinit"] = true;
     caps["runBootCheck"] = true;
+    caps["i2cScan"] = "RUN_I2C_SCAN (manual only)";
+    caps["tcaChannelScan"] = "RUN_TCA_CHANNEL_SCAN (manual only)";
     caps["adsMcpSweep"] = "RUN_ADS_MCP_SWEEP";
     caps["sleepNow"] = "SLEEP_NOW";
     caps["batteryServiceHold"] = "CFG press-release toggle / SERVICE_HOLD_OFF";
     caps["securityProvisioning"] = "SET_APP_CONFIG_JSON aesKeyHex";
     caps["authenticatedDownlink"] = true;
+}
+
+uint8_t sht40Crc8(const uint8_t* data, size_t length) {
+    uint8_t crc = 0xFF;
+    for (size_t index = 0; index < length; ++index) {
+        crc ^= data[index];
+        for (uint8_t bit = 0; bit < 8; ++bit) {
+            crc = (crc & 0x80U) != 0U
+                ? static_cast<uint8_t>((crc << 1U) ^ 0x31U)
+                : static_cast<uint8_t>(crc << 1U);
+        }
+    }
+    return crc;
+}
+
+// This sends only an I2C address phase to the root-bus TCA9548A; it does not
+// select, deselect, or otherwise alter any mux channel. It therefore remains
+// safe to call from the service ticks used by blocking Nulling work.
+void serviceTca9548aPresenceProbe() {
+#if PGL_GLD_BOARD_PROFILE_GLD2
+    const uint32_t now = millis();
+    if (lastTca9548aProbeMs != 0 && now - lastTca9548aProbeMs < TCA_PRESENCE_PROBE_INTERVAL_MS) return;
+    Wire.beginTransmission(pgl::gld::board::TCA9548A_ADDR);
+    tca9548aDetected = Wire.endTransmission() == 0;
+    lastTca9548aProbeMs = now;
+#endif
+}
+
+void serviceSht40() {
+#if PGL_GLD_BOARD_PROFILE_GLD2
+    const uint32_t now = millis();
+    if (lastSht40SampleMs != 0 && now - lastSht40SampleMs < SHT40_SAMPLE_INTERVAL_MS) return;
+    lastSht40SampleMs = now;
+
+    // A selected TCA channel could contain another device at 0x44. Deselect
+    // it first so this command is sent only to the root-bus SHT40.
+    Wire.beginTransmission(pgl::gld::board::TCA9548A_ADDR);
+    Wire.write(static_cast<uint8_t>(0));
+    tca9548aDetected = Wire.endTransmission() == 0;
+    lastTca9548aProbeMs = now;
+
+    Wire.beginTransmission(SHT40_I2C_ADDR);
+    Wire.write(SHT40_MEASURE_HIGH_PRECISION_CMD);
+    if (Wire.endTransmission() != 0) {
+        sht40Detected = false;
+        sht40Valid = false;
+        return;
+    }
+    sht40Detected = true;
+
+    delay(SHT40_CONVERSION_MS);
+    const uint8_t received = Wire.requestFrom(static_cast<int>(SHT40_I2C_ADDR), 6);
+    if (received != 6) {
+        while (Wire.available()) Wire.read();
+        sht40Valid = false;
+        return;
+    }
+
+    uint8_t payload[6]{};
+    for (uint8_t index = 0; index < sizeof(payload); ++index) payload[index] = Wire.read();
+    if (sht40Crc8(payload, 2) != payload[2] || sht40Crc8(payload + 3, 2) != payload[5]) {
+        sht40Valid = false;
+        return;
+    }
+
+    const uint16_t rawTemperature = static_cast<uint16_t>((payload[0] << 8U) | payload[1]);
+    const uint16_t rawHumidity = static_cast<uint16_t>((payload[3] << 8U) | payload[4]);
+    sht40TemperatureC = -45.0f + 175.0f * (static_cast<float>(rawTemperature) / 65535.0f);
+    const float relativeHumidity = -6.0f + 125.0f * (static_cast<float>(rawHumidity) / 65535.0f);
+    sht40RelativeHumidity = constrain(relativeHumidity, 0.0f, 100.0f);
+    sht40Valid = std::isfinite(sht40TemperatureC) && std::isfinite(sht40RelativeHumidity);
+#endif
+}
+
+void addEnvironmentJson(JsonObject parent) {
+    JsonObject environment = parent.createNestedObject("environment");
+#if PGL_GLD_BOARD_PROFILE_GLD2
+    environment["available"] = true;
+    environment["detected"] = sht40Detected;
+    environment["valid"] = sht40Valid;
+    environment["sensor"] = "SHT40";
+    environment["address"] = "0x44";
+    environment["sampleMs"] = lastSht40SampleMs;
+    environment["sampleAgeMs"] = lastSht40SampleMs == 0 ? -1 : static_cast<uint32_t>(millis() - lastSht40SampleMs);
+    JsonObject tca = environment.createNestedObject("tca9548a");
+    tca["address"] = "0x71";
+    tca["detected"] = tca9548aDetected;
+    tca["sampleMs"] = lastTca9548aProbeMs;
+    tca["sampleAgeMs"] = lastTca9548aProbeMs == 0 ? -1 : static_cast<uint32_t>(millis() - lastTca9548aProbeMs);
+    if (sht40Valid) {
+        environment["temperatureC"] = sht40TemperatureC;
+        environment["relativeHumidityPct"] = sht40RelativeHumidity;
+    }
+#else
+    environment["available"] = false;
+    environment["valid"] = false;
+    JsonObject tca = environment.createNestedObject("tca9548a");
+    tca["detected"] = false;
+#endif
 }
 
 void addTelemetry(JsonObject telemetry) {
@@ -1258,11 +1402,38 @@ void addTelemetry(JsonObject telemetry) {
     JsonArray gain = telemetry.createNestedArray("sensorGain");
     JsonArray status = telemetry.createNestedArray("sensorStatus");
     JsonArray order = telemetry.createNestedArray("featureOrder");
+    JsonArray dacCode = telemetry.createNestedArray("dacCodeApplied");
+    JsonArray dacVerified = telemetry.createNestedArray("dacVerified");
+    JsonArray dacVerifiedAtMs = telemetry.createNestedArray("dacVerifiedAtMs");
     for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
         voltage.add(latestSensorVoltage[ch]);
         gain.add(latestSensorGain[ch]);
         status.add(latestSensorStatus[ch]);
         order.add(pgl::gld::board::SENSOR_NAMES[ch]);
+        dacCode.add(dac.lastValue(ch));
+        dacVerified.add(runtimeMcpReadbackVerified[ch]);
+        dacVerifiedAtMs.add(runtimeMcpVerifiedAtMs[ch]);
+    }
+}
+
+// GLD2's PCF8574 drives TPS22919 EN0..EN7. The PCF8574 is output-only in
+// this application, so this reports the last PCF command, not a measured
+// voltage at each H1..H8 module connector.
+void addSensorPowerJson(JsonObject parent) {
+    JsonObject sensorPower = parent.createNestedObject("sensorPower");
+    sensorPower["available"] = pgl::gld::board::HAS_PCF8574;
+    sensorPower["ready"] = pcfReady;
+    sensorPower["commanded"] = true;
+    if (!pgl::gld::board::HAS_PCF8574) return;
+
+    const uint8_t outputs = pcf8574.outputs();
+    sensorPower["outputMask"] = outputs;
+    JsonArray channels = sensorPower.createNestedArray("channels");
+    JsonArray enChannels = sensorPower.createNestedArray("enChannels");
+    for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
+        const uint8_t en = pgl::gld::board::SENSOR_TO_POWER_EN[ch];
+        channels.add((outputs & static_cast<uint8_t>(1u << en)) != 0);
+        enChannels.add(en);
     }
 }
 
@@ -1270,7 +1441,7 @@ void addTelemetry(JsonObject telemetry) {
 // every Running poll, while GET_STATUS remains the complete configuration and
 // diagnostic snapshot used after connect and operator actions.
 void emitTelemetryJson() {
-    static StaticJsonDocument<1536> doc;
+    static StaticJsonDocument<1792> doc;
     doc.clear();
     doc["deviceId"] = runtimeConfig.deviceId;
     doc["mode"] = pgl::gld::gldModeName(currentMode);
@@ -1283,6 +1454,8 @@ void emitTelemetryJson() {
 
     JsonObject telemetry = doc.createNestedObject("telemetry");
     addTelemetry(telemetry);
+    addEnvironmentJson(doc.as<JsonObject>());
+    addSensorPowerJson(doc.as<JsonObject>());
     rawJsonLine("GLD_TELEMETRY_JSON", doc);
 }
 
@@ -1315,11 +1488,13 @@ void emitInfoJson() {
     JsonObject pcf = doc.createNestedObject("pcf8574");
     pcf["available"] = pgl::gld::board::HAS_PCF8574;
     pcf["ready"] = pcfReady;
-    pcf["allLoadSwitchesOn"] = pcfAllLoadSwitchesOn;
+    pcf["allLoadSwitchesOn"] = pgl::gld::board::HAS_PCF8574 &&
+        pcfAllLoadSwitchesOn;
     if (pgl::gld::board::HAS_PCF8574) {
         pcf["address"] = pgl::gld::board::PCF8574_ADDR;
         pcf["outputs"] = pcf8574.outputs();
     }
+    addSensorPowerJson(doc.as<JsonObject>());
     doc["mqttTopicRoot"] = runtimeConfig.topicRoot;
     JsonObject starLora = doc.createNestedObject("starLora");
     starLora["freqMHz"] = runtimeConfig.loraFreqMHz;
@@ -1437,8 +1612,14 @@ void emitStatusJson() {
     boot["modelProfileReady"] = modelProfileReady;
 
     JsonArray runtimeMcpCode = doc.createNestedArray("runtimeMcpCode");
+    JsonArray runtimeMcpReadbackJson = doc.createNestedArray("runtimeMcpReadback");
+    JsonArray runtimeMcpVerifiedJson = doc.createNestedArray("runtimeMcpVerified");
+    JsonArray runtimeMcpVerifiedAtMsJson = doc.createNestedArray("runtimeMcpVerifiedAtMs");
     for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
         runtimeMcpCode.add(dac.lastValue(ch));
+        runtimeMcpReadbackJson.add(runtimeMcpReadback[ch]);
+        runtimeMcpVerifiedJson.add(runtimeMcpReadbackVerified[ch]);
+        runtimeMcpVerifiedAtMsJson.add(runtimeMcpVerifiedAtMs[ch]);
     }
 
     JsonObject modelStatus = doc.createNestedObject("model");
@@ -1451,6 +1632,7 @@ void emitStatusJson() {
     modelStatus["bindingModelMatches"] = modelBindingLoaded &&
         modelBinding.modelFingerprint == pgl::gld::modelBindingFingerprint(
             pgl::gld::model::PROFILE_ID, pgl::gld::model::SCALER_PROFILE_ID);
+    modelStatus["dacVerificationReady"] = runtimeDacVerificationReady();
     modelStatus["profileReady"] = modelProfileReady;
     modelStatus["inferenceValid"] = lastInferenceValid;
     modelStatus["sensorFault"] = sensorFaultActive;
@@ -1526,6 +1708,9 @@ void emitStatusJson() {
     JsonObject nulling = doc.createNestedObject("nulling");
     nulling["done"] = nullDone;
     nulling["retryArmed"] = nullingRetryArmed;
+    nulling["retryAvailable"] = nullingRetryAvailable;
+    nulling["retryFailedAvailable"] = nullingRetryFailedAvailable;
+    nulling["retryFailedMask"] = pendingNullingFailedMask();
     nulling["attemptCount"] = nullingAttemptCount;
     nulling["nextRetryMs"] = nextNullingRetryMs;
     nulling["thresholdV"] = nullingConfig.thresholdV;
@@ -1533,17 +1718,20 @@ void emitStatusJson() {
 
     JsonObject telemetry = doc.createNestedObject("telemetry");
     addTelemetry(telemetry);
+    addEnvironmentJson(doc.as<JsonObject>());
     JsonObject modbus = doc.createNestedObject("modbus");
     modbus["available"] = pgl::gld::board::HAS_RS485;
     modbus["ready"] = modbusReady;
     JsonObject pcf = doc.createNestedObject("pcf8574");
     pcf["available"] = pgl::gld::board::HAS_PCF8574;
     pcf["ready"] = pcfReady;
-    pcf["allLoadSwitchesOn"] = pcfAllLoadSwitchesOn;
+    pcf["allLoadSwitchesOn"] = pgl::gld::board::HAS_PCF8574 &&
+        pcfAllLoadSwitchesOn;
     if (pgl::gld::board::HAS_PCF8574) {
         pcf["address"] = pgl::gld::board::PCF8574_ADDR;
         pcf["outputs"] = pcf8574.outputs();
     }
+    addSensorPowerJson(doc.as<JsonObject>());
     doc["alarmLatched"] = pgl::gld::readGldAlarmLatched();
 
     rawJsonLine("GLD_STATUS_JSON", doc);
@@ -1555,6 +1743,9 @@ void emitStatusJson() {
 
 void serviceDelay(uint32_t durationMs);
 void runBootCheckFromSerialCommand();
+void runCurrentStateCheckFromSerialCommand();
+void runI2cScanFromSerialCommand();
+void runTcaChannelScanFromSerialCommand();
 void runAdsMcpSweepFromSerialCommand();
 void sleepNowFromSerialCommand();
 bool serviceHoldBlocksClr();
@@ -1931,8 +2122,8 @@ void onSetNullingConfigJson(const char* payload) {
         emitCommandAck("SET_NULLING_CONFIG", "rejected", "thresholdV must be > 0 and <= VREF", false);
         return;
     }
-    if (minFinalV < 0.0f || minFinalV > pgl::gld::GLD_ADS1256_VREF_VOLTS) {
-        emitCommandAck("SET_NULLING_CONFIG", "rejected", "minFinalV must be >= 0 and <= VREF", false);
+    if (minFinalV < -pgl::gld::GLD_ADS1256_VREF_VOLTS || minFinalV > pgl::gld::GLD_ADS1256_VREF_VOLTS) {
+        emitCommandAck("SET_NULLING_CONFIG", "rejected", "minFinalV must be within -VREF..VREF", false);
         return;
     }
 
@@ -1983,14 +2174,93 @@ void onSetSessionMcpJson(const char* payload) {
         emitCommandAck("SET_SESSION_MCP", "error", "DAC not ready", false);
         return;
     }
-    if (!dac.writeDac(static_cast<uint8_t>(channel), static_cast<uint16_t>(code))) {
+    const uint8_t channelIndex = static_cast<uint8_t>(channel);
+    const bool isolateForVerify = !batteryPowerMode && pgl::gld::board::HAS_PCF8574;
+    if (isolateForVerify) {
+        dac.captureSensorPowerState();
+        dac.setAutomaticSensorPowerControl(true);
+        dac.setRestoreSensorPowerAfterWrite(false);
+        dac.setSensorPowerSettleMs(500);
+    }
+    const bool writeOk = dac.writeDac(channelIndex, static_cast<uint16_t>(code));
+    uint16_t readback = 0;
+    const bool readOk = writeOk && dac.readDac(channelIndex, readback);
+    const bool powerRestored = !isolateForVerify || dac.restoreSensorPower();
+    if (isolateForVerify) {
+        dac.setAutomaticSensorPowerControl(false);
+        dac.setRestoreSensorPowerAfterWrite(true);
+        dac.setSensorPowerSettleMs(50);
+    }
+    recordRuntimeDacVerification(channelIndex, static_cast<uint16_t>(code), readback,
+                                 readOk && powerRestored, "session_write", true);
+    if (!writeOk || !readOk || readback != static_cast<uint16_t>(code) || !powerRestored) {
         dacReady = false;
-        emitCommandAck("SET_SESSION_MCP", "error", "DAC apply failed", false);
+        emitCommandAck("SET_SESSION_MCP", "error", "DAC apply/readback verification failed", false);
         return;
     }
 
     logPrintf("GLD_SESSION_MCP_APPLY=OK channel=%ld code=%ld persisted=0\n", channel, code);
     emitCommandAck("SET_SESSION_MCP", "ok", "session MCP applied; not saved", false);
+    emitStatusJson();
+}
+
+// GLD2 routes PCF8574 P0..P7 to the active-HIGH EN inputs of the eight
+// TPS22919 sensor-module load switches.  This is intentionally a volatile
+// commissioning control: boot always returns every sensor module to ON and
+// the command never modifies a Nulling profile, model binding, or NVS.
+void onSetSensorPowerJson(const char* payload) {
+    StaticJsonDocument<96> doc;
+    if (deserializeJson(doc, payload)) {
+        emitCommandAck("SET_SENSOR_POWER", "error", "invalid json", false);
+        return;
+    }
+    if (!doc.containsKey("enabled") || !doc["enabled"].is<bool>()) {
+        emitCommandAck("SET_SENSOR_POWER", "rejected", "enabled boolean is required", false);
+        return;
+    }
+    const bool all = doc["all"] | false;
+    const bool hasChannel = doc.containsKey("channel") && doc["channel"].is<long>();
+    if (!all && !hasChannel) {
+        emitCommandAck("SET_SENSOR_POWER", "rejected", "channel integer or all=true is required", false);
+        return;
+    }
+    const long channel = hasChannel ? doc["channel"].as<long>() : -1;
+    const bool enabled = doc["enabled"].as<bool>();
+    if (!all && (channel < 0 || channel >= pgl::gld::board::SENSOR_COUNT)) {
+        emitCommandAck("SET_SENSOR_POWER", "rejected", "channel must be 0..7", false);
+        return;
+    }
+    if (!pgl::gld::board::HAS_PCF8574) {
+        emitCommandAck("SET_SENSOR_POWER", "rejected", "sensor module power control requires GLD2 PCF8574 hardware", false);
+        return;
+    }
+    if (!pcfReady || !pcf8574.ready()) {
+        emitCommandAck("SET_SENSOR_POWER", "error", "PCF8574 is not ready", false);
+        return;
+    }
+
+    const uint8_t current = pcf8574.outputs();
+    uint8_t next = current;
+    uint8_t enChannel = 0;
+    if (all) {
+        next = enabled ? pgl::gld::board::PCF8574_ALL_LOAD_SWITCHES_ON : 0x00;
+    } else {
+        enChannel = pgl::gld::board::SENSOR_TO_POWER_EN[channel];
+        const uint8_t bit = static_cast<uint8_t>(1u << enChannel);
+        next = enabled
+            ? static_cast<uint8_t>(current | bit)
+            : static_cast<uint8_t>(current & static_cast<uint8_t>(~bit));
+    }
+    if (!pcf8574.writeOutputs(next)) {
+        pcfReady = false;
+        pcfAllLoadSwitchesOn = false;
+        emitCommandAck("SET_SENSOR_POWER", "error", "PCF8574 output write failed", false);
+        return;
+    }
+    pcfAllLoadSwitchesOn = next == pgl::gld::board::PCF8574_ALL_LOAD_SWITCHES_ON;
+    logPrintf("GLD_SENSOR_POWER_APPLY=OK scope=%s sensor=%ld en=%u enabled=%u outputs=0x%02X persisted=0\n",
+              all ? "all" : "single", channel, static_cast<unsigned>(enChannel), enabled ? 1u : 0u, pcf8574.outputs());
+    emitCommandAck("SET_SENSOR_POWER", "ok", enabled ? "sensor module enabled; not saved" : "sensor module disabled; not saved", false);
     emitStatusJson();
 }
 
@@ -2210,6 +2480,7 @@ void emitQcStatusJson() {
 // Forward declaration - defined further down near the nulling retry state
 // machine, but the QC tab's single-channel nulling command needs it here.
 bool ensureNullingHardwareReady();
+void requestNullingRetryFromSerialCommand(bool failedOnly = false);
 void checkSerial();
 void firmwareServiceTick();
 
@@ -2399,6 +2670,15 @@ void handleSerialCommand(const pgl::gld::GldSerialCommand& command) {
         case pgl::gld::GldSerialCommandType::RunBootCheck:
             runBootCheckFromSerialCommand();
             break;
+        case pgl::gld::GldSerialCommandType::RunCurrentStateCheck:
+            runCurrentStateCheckFromSerialCommand();
+            break;
+        case pgl::gld::GldSerialCommandType::RunI2cScan:
+            runI2cScanFromSerialCommand();
+            break;
+        case pgl::gld::GldSerialCommandType::RunTcaChannelScan:
+            runTcaChannelScanFromSerialCommand();
+            break;
         case pgl::gld::GldSerialCommandType::RunAdsMcpSweep:
             runAdsMcpSweepFromSerialCommand();
             break;
@@ -2426,8 +2706,17 @@ void handleSerialCommand(const pgl::gld::GldSerialCommand& command) {
         case pgl::gld::GldSerialCommandType::SetSessionMcpJson:
             onSetSessionMcpJson(command.payload);
             break;
+        case pgl::gld::GldSerialCommandType::SetSensorPowerJson:
+            onSetSensorPowerJson(command.payload);
+            break;
         case pgl::gld::GldSerialCommandType::VerifyCleanAirForNulling:
             onVerifyCleanAirForNulling();
+            break;
+        case pgl::gld::GldSerialCommandType::RetryNulling:
+            requestNullingRetryFromSerialCommand();
+            break;
+        case pgl::gld::GldSerialCommandType::RetryFailedNulling:
+            requestNullingRetryFromSerialCommand(true);
             break;
         case pgl::gld::GldSerialCommandType::BindModelToActiveNullingProfile:
             onBindModelToActiveNullingProfile();
@@ -2805,6 +3094,18 @@ void applyRuntimePowerReading(const pgl::gld::GldPowerReading& power,
     const bool previousBatteryMode = batteryPowerMode;
     batteryPowerMode = requestedBatteryMode;
     powerModeCandidateCount = 0;
+#if PGL_GLD_BOARD_PROFILE_GLD2
+    dac.setAutomaticSensorPowerControl(batteryPowerMode);
+    if (!batteryPowerMode && pcfReady) {
+        uint8_t liveOutputs = 0;
+        const bool readOk = pcf8574.readOutputs(liveOutputs);
+        pcfAllLoadSwitchesOn = readOk &&
+                                liveOutputs == pgl::gld::board::PCF8574_ALL_LOAD_SWITCHES_ON;
+        logPrintf("GLD2_PCF8574_SYNC source=%s read=%u outputs=0x%02X allLoadSwitchesOn=%u\n",
+                  source != nullptr ? source : "runtime", readOk ? 1u : 0u,
+                  pcf8574.outputs(), pcfAllLoadSwitchesOn ? 1u : 0u);
+    }
+#endif
     logPrintf("GLD_POWER_TRANSITION source=%s fromBattery=%u toBattery=%u mode=%s batterySense=%s ambiguous=%u batteryMv=%u\n",
               source != nullptr ? source : "runtime",
               previousBatteryMode ? 1u : 0u,
@@ -2880,6 +3181,7 @@ void maintainModbusRtu() {
 
 void firmwareServiceTick() {
     maintainServiceHoldButton();
+    serviceTca9548aPresenceProbe();
     checkSerial();
     maintainModbusRtu();
     maintainWdtKeepalive();
@@ -2957,8 +3259,11 @@ struct BootAdsReport {
 };
 
 struct BootI2cReport {
+    bool fullBusScanPerformed = false;
     bool tcaOk = false;
     bool pcfOk = false;
+    uint8_t detectedAddressCount = 0;
+    char detectedAddresses[80]{};
     bool mcpOk[pgl::gld::board::SENSOR_COUNT]{};
     uint8_t mcpAddrMask[pgl::gld::board::SENSOR_COUNT]{};
     uint8_t mcpOkCount = 0;
@@ -3050,6 +3355,20 @@ void armBootReportRecoveryIfNeeded(const BootAdsReport& adsReport,
         return;
     }
 
+    // A missing MCP4725 must remain visible to the operator, but it is not a
+    // safe reason to repeatedly reboot a 24 V GLD2 while its sensor modules
+    // are being powered, wired, or diagnosed one by one.
+    if (strcmp(reason, "mcp_boot_fail") == 0) {
+        bootRecoveryArmed = false;
+        bootRecoveryRestartAllowed = false;
+        bootRecoveryNonAdsFailure = true;
+        bootRecoveryRestartCount = 0;
+        copyBounded(bootRecoveryReason, sizeof(bootRecoveryReason), reason);
+        setRecoveryReason(reason);
+        logPrintln("BOOT_RECOVERY_DISABLED reason=mcp_boot_fail action=keep_running");
+        return;
+    }
+
     bootRecoveryArmed = true;
     bootRecoveryNonAdsFailure = bootReportHasNonAdsFailure(i2cReport, mcpControl,
                                                            radioChecked, radioOk,
@@ -3138,12 +3457,13 @@ bool tcaSelect(uint8_t muxChannel) {
     return ok;
 }
 
-void tcaDisableAll() {
+bool tcaDisableAll() {
     firmwareServiceTick();
     Wire.beginTransmission(pgl::gld::board::TCA9548A_ADDR);
     Wire.write(static_cast<uint8_t>(0));
-    Wire.endTransmission();
+    const bool ok = Wire.endTransmission() == 0;
     firmwareServiceTick();
+    return ok;
 }
 
 void probeInputPullLevels(int pin, int& pulldownLevel, int& pullupLevel) {
@@ -3204,23 +3524,195 @@ uint8_t scanMcpAddressMaskOnSelectedMux() {
     return mask;
 }
 
-BootI2cReport probeBootI2c() {
+void scanI2cBus(BootI2cReport& report) {
+    size_t used = 0;
+    for (uint8_t addr = 0x03; addr <= 0x77; ++addr) {
+        if (!i2cAck(addr)) continue;
+        ++report.detectedAddressCount;
+        const int written = snprintf(report.detectedAddresses + used,
+                                     sizeof(report.detectedAddresses) - used,
+                                     "%s0x%02X", used == 0 ? "" : ",", addr);
+        if (written < 0 || static_cast<size_t>(written) >= sizeof(report.detectedAddresses) - used) {
+            copyBounded(report.detectedAddresses, sizeof(report.detectedAddresses), "truncated");
+            return;
+        }
+        used += static_cast<size_t>(written);
+    }
+    if (used == 0) copyBounded(report.detectedAddresses, sizeof(report.detectedAddresses), "none");
+}
+
+void scanSelectedI2cBus(char* addresses, size_t addressesSize, uint8_t& count) {
+    count = 0;
+    size_t used = 0;
+    for (uint8_t addr = 0x03; addr <= 0x77; ++addr) {
+        if (!i2cAck(addr)) continue;
+        ++count;
+        const int written = snprintf(addresses + used, addressesSize - used,
+                                     "%s0x%02X", used == 0 ? "" : ",", addr);
+        if (written < 0 || static_cast<size_t>(written) >= addressesSize - used) {
+            copyBounded(addresses, addressesSize, "truncated");
+            return;
+        }
+        used += static_cast<size_t>(written);
+    }
+    if (used == 0) copyBounded(addresses, addressesSize, "none");
+}
+
+BootI2cReport probeBootI2c(bool scanFullBus) {
     BootI2cReport report{};
     Wire.begin(pgl::gld::board::PIN_I2C_SDA, pgl::gld::board::PIN_I2C_SCL);
 #if defined(ARDUINO_ARCH_ESP32)
     Wire.setTimeOut(BOOT_I2C_TIMEOUT_MS);
 #endif
     firmwareServiceTick();
-    report.tcaOk = i2cAck(pgl::gld::board::TCA9548A_ADDR);
+
+    // A GLD2 boot report is an isolated electrical diagnostic. Leaving every
+    // TPS22919 enabled (PCF=0xFF) permits all external modules to load or hold
+    // their downstream I2C branches at once. Start from deterministic 0x00;
+    // the report owns no pre-boot power state and deliberately leaves 0x00.
+    bool bootIsolationActive = false;
     if (pgl::gld::board::HAS_PCF8574) {
         report.pcfOk = i2cAck(pgl::gld::board::PCF8574_ADDR);
+        if (report.pcfOk && !pcfReady) {
+            pcfReady = pcf8574.begin(Wire);
+            logPrintf("GLD2_MCP_BOOT_SCAN pcfReinitBeforeIsolation=%u\n", pcfReady ? 1u : 0u);
+        }
+        if (report.pcfOk && pcfReady) {
+            const bool offOk = pcf8574.writeOutputs(
+                pgl::gld::board::PCF8574_ALL_LOAD_SWITCHES_OFF);
+            bootIsolationActive = offOk;
+            pcfAllLoadSwitchesOn = false;
+            logPrintf("GLD2_MCP_BOOT_SCAN isolateAll beforeRoot pcf=0x00 off=%u\n",
+                      offOk ? 1u : 0u);
+            if (offOk) {
+                serviceDelay(BOOT_SENSOR_MODULE_POWER_SETTLE_MS);
+            }
+        }
     }
+    if (scanFullBus) {
+        report.fullBusScanPerformed = true;
+        scanI2cBus(report);
+    }
+    const bool rootScanSawTca = report.fullBusScanPerformed &&
+                                strstr(report.detectedAddresses, "0x71") != nullptr;
+    const bool directTcaAck = i2cAck(pgl::gld::board::TCA9548A_ADDR);
+    report.tcaOk = directTcaAck || rootScanSawTca;
+    if (rootScanSawTca && !directTcaAck) {
+        logPrintln("GLD2_MCP_BOOT_SCAN usingRootTcaAck=1 directTcaAck=0");
+    }
+
+    // GLD2 module discovery follows the verified physical header pairings:
+    // EN0->SCL7/SDA7, EN1->SCL0/SDA0, EN2->SCL1/SDA1, EN3->SCL4/SDA4,
+    // EN4->SCL3/SDA3, EN5->SCL2/SDA2, EN6->SCL6/SDA6, EN7->SCL5/SDA5.
+    // Every boot report enables exactly one TPS22919 per scan, irrespective
+    // of power mode, and leaves all EN lines OFF afterward.
+    if (report.tcaOk && report.pcfOk && pgl::gld::board::HAS_PCF8574 && !pcfReady) {
+        pcfReady = pcf8574.begin(Wire);
+        logPrintf("GLD2_MCP_BOOT_SCAN pcfReinitAfterRootAck=%u\n", pcfReady ? 1u : 0u);
+    }
+    bool isolatedMcpScanPerformed = false;
+    if (report.tcaOk && report.pcfOk && pcfReady && bootIsolationActive) {
+        uint8_t outputs = pgl::gld::board::PCF8574_ALL_LOAD_SWITCHES_OFF;
+        const bool resetOutputsOk = true;
+        // Scan channel is the user-visible header order, not the literal U33
+        // mux number. For example scan channel 0 is H2/EN0/SCL7/SDA7 and it
+        // therefore writes physical TCA mux 7.
+        for (uint8_t scanChannel = 0; scanChannel < pgl::gld::board::SENSOR_COUNT;
+             ++scanChannel) {
+            const uint8_t en = pgl::gld::board::SENSOR_TO_POWER_EN[scanChannel];
+            outputs = static_cast<uint8_t>(1U << en);
+            const bool powerOk = pcf8574.writeOutputs(outputs);
+            if (powerOk) {
+                serviceDelay(BOOT_SENSOR_MODULE_POWER_SETTLE_MS);
+            }
+
+            const uint8_t muxChannel = pgl::gld::board::SENSOR_TO_MUX_CH[scanChannel];
+            const bool selected = tcaSelect(muxChannel);
+            char addresses[80]{};
+            uint8_t count = 0;
+            if (selected) {
+                scanSelectedI2cBus(addresses, sizeof(addresses), count);
+            } else {
+                copyBounded(addresses, sizeof(addresses), "not_selected");
+            }
+            // This is the authoritative MCP result: precisely one TPS22919
+            // branch is powered and its matching TCA channel is selected.
+            // A later all-modules-on scan cannot distinguish equal 0x60
+            // addresses and must not overwrite this evidence.
+            const bool mcpDetected = selected && strstr(addresses, "0x60") != nullptr;
+            report.mcpAddrMask[scanChannel] = mcpDetected ? 0x01 : 0x00;
+            report.mcpOk[scanChannel] = mcpDetected;
+            if (mcpDetected) ++report.mcpOkCount;
+            const bool deselected = tcaDisableAll();
+            const bool rootTcaRecovered = deselected && i2cAck(pgl::gld::board::TCA9548A_ADDR);
+            const bool powerOffAfterScan = pcf8574.writeOutputs(
+                pgl::gld::board::PCF8574_ALL_LOAD_SWITCHES_OFF);
+            logPrintf("GLD2_MCP_BOOT_SCAN channel=%u header=%s sensor=%s en=%u pcfOutputs=0x%02X "
+                      "pcfResetOk=%u pcfWriteOk=%u tcaMux=%u lines=SCL%u/SDA%u selected=%u "
+                      "count=%u addrs=%s tcaOff=%u rootTcaAck=%u sensorOff=%u\n",
+                      static_cast<unsigned>(scanChannel), pgl::gld::board::SENSOR_HEADERS[scanChannel],
+                      pgl::gld::board::SENSOR_NAMES[scanChannel], static_cast<unsigned>(en), outputs,
+                      resetOutputsOk ? 1u : 0u,
+                      powerOk ? 1u : 0u, static_cast<unsigned>(muxChannel),
+                      static_cast<unsigned>(muxChannel), static_cast<unsigned>(muxChannel),
+                      selected ? 1u : 0u, static_cast<unsigned>(count), addresses,
+                      deselected ? 1u : 0u, rootTcaRecovered ? 1u : 0u,
+                      powerOffAfterScan ? 1u : 0u);
+        }
+        isolatedMcpScanPerformed = true;
+    } else if (report.tcaOk && report.pcfOk && pcfReady && !bootIsolationActive) {
+        logPrintln("GLD2_MCP_BOOT_SCAN skipped isolation_failed=1");
+    } else if (report.tcaOk) {
+        logPrintf("GLD2_MCP_BOOT_SCAN skipped tcaOk=1 pcfOk=%u pcfReady=%u\n",
+                  report.pcfOk ? 1u : 0u, pcfReady ? 1u : 0u);
+    }
+
+    if (!isolatedMcpScanPerformed) {
+        for (uint8_t sensor = 0; sensor < pgl::gld::board::SENSOR_COUNT; ++sensor) {
+            firmwareServiceTick();
+            const uint8_t muxChannel = static_cast<uint8_t>(pgl::gld::board::SENSOR_TO_MUX_CH[sensor]);
+            const bool muxOk = report.tcaOk && tcaSelect(muxChannel);
+            report.mcpAddrMask[sensor] = muxOk ? scanMcpAddressMaskOnSelectedMux() : 0;
+            report.mcpOk[sensor] = (report.mcpAddrMask[sensor] & 0x01) != 0;
+            if (report.mcpOk[sensor]) ++report.mcpOkCount;
+        }
+    }
+    tcaDisableAll();
+    if (bootIsolationActive) {
+        const bool finalOffOk = pcf8574.writeOutputs(
+            pgl::gld::board::PCF8574_ALL_LOAD_SWITCHES_OFF);
+        pcfAllLoadSwitchesOn = false;
+        logPrintf("GLD2_MCP_BOOT_SCAN completePcf=0x00 finalOff=%u\n",
+                  finalOffOk ? 1u : 0u);
+    }
+    return report;
+}
+
+// Observational I2C check for the operator's current sensor-power state.
+// It never writes PCF8574/EN, never initializes GldDacMux, and never writes a
+// DAC code. A powered-off module is intentionally reported as unavailable.
+BootI2cReport probeCurrentStateI2c(bool scanFullBus) {
+    BootI2cReport report{};
+    Wire.begin(pgl::gld::board::PIN_I2C_SDA, pgl::gld::board::PIN_I2C_SCL);
+#if defined(ARDUINO_ARCH_ESP32)
+    Wire.setTimeOut(BOOT_I2C_TIMEOUT_MS);
+#endif
+    firmwareServiceTick();
+    if (scanFullBus) {
+        report.fullBusScanPerformed = true;
+        scanI2cBus(report);
+    }
+    const bool rootScanSawTca = report.fullBusScanPerformed &&
+                                strstr(report.detectedAddresses, "0x71") != nullptr;
+    report.tcaOk = i2cAck(pgl::gld::board::TCA9548A_ADDR) || rootScanSawTca;
+    report.pcfOk = pgl::gld::board::HAS_PCF8574 && i2cAck(pgl::gld::board::PCF8574_ADDR);
+
     for (uint8_t sensor = 0; sensor < pgl::gld::board::SENSOR_COUNT; ++sensor) {
         firmwareServiceTick();
         const uint8_t muxChannel = static_cast<uint8_t>(pgl::gld::board::SENSOR_TO_MUX_CH[sensor]);
-        const bool muxOk = report.tcaOk && tcaSelect(muxChannel);
-        report.mcpAddrMask[sensor] = muxOk ? scanMcpAddressMaskOnSelectedMux() : 0;
-        report.mcpOk[sensor] = (report.mcpAddrMask[sensor] & 0x01) != 0;
+        const bool selected = report.tcaOk && tcaSelect(muxChannel);
+        report.mcpAddrMask[sensor] = selected ? scanMcpAddressMaskOnSelectedMux() : 0;
+        report.mcpOk[sensor] = (report.mcpAddrMask[sensor] & 0x01U) != 0;
         if (report.mcpOk[sensor]) ++report.mcpOkCount;
     }
     tcaDisableAll();
@@ -3234,12 +3726,20 @@ BootMcpControlReport testBootMcpControl(bool externalPower) {
     }
 
     report.tested = true;
-    if (!dacReady) {
-        (void)dac.begin(Wire);
-        dacReady = dac.ready();
-    }
+    dac.setSensorPowerSettleMs(BOOT_DAC_SENSOR_POWER_SETTLE_MS);
+    dac.setRestoreSensorPowerAfterWrite(false);
+    // A DAC edge test is part of Boot IC Report, so it follows the same
+    // one-TPS22919-at-a-time rule as MCP discovery even on external 24 V.
+    // GldDacMux restores the PCF mask it captured on exit.
+    const bool diagnosticPowerIsolation = pgl::gld::board::HAS_PCF8574 && pcfReady;
+    dac.setAutomaticSensorPowerControl(diagnosticPowerIsolation);
+    (void)dac.begin(Wire, &pcf8574);
+    dacReady = dac.ready();
     report.dacReady = dacReady;
     if (!dacReady) {
+        dac.setAutomaticSensorPowerControl(batteryPowerMode);
+        dac.setRestoreSensorPowerAfterWrite(true);
+        dac.setSensorPowerSettleMs(NORMAL_DAC_SENSOR_POWER_SETTLE_MS);
         return report;
     }
 
@@ -3259,10 +3759,17 @@ BootMcpControlReport testBootMcpControl(bool externalPower) {
         report.writeLow[sensor] = lowOk;
         report.writeHigh[sensor] = highOk;
     }
+    const bool restorePowerOk = dac.restoreSensorPower();
+    dac.setAutomaticSensorPowerControl(batteryPowerMode);
+    dac.setRestoreSensorPowerAfterWrite(true);
+    dac.setSensorPowerSettleMs(NORMAL_DAC_SENSOR_POWER_SETTLE_MS);
+    if (!restorePowerOk) {
+        report.dacReady = false;
+    }
     return report;
 }
 
-BootDiagnosticsResult runBootHardwareDiagnostics(bool externalPower) {
+BootDiagnosticsResult runBootHardwareDiagnostics(bool externalPower, bool automaticSensorPowerControl) {
     BootDiagnosticsResult result{};
 
     logPrintln("BOOT_PROBE_ADS=start");
@@ -3285,8 +3792,11 @@ BootDiagnosticsResult runBootHardwareDiagnostics(bool externalPower) {
               result.ads.drate);
 
     logPrintln("BOOT_PROBE_I2C=start");
-    result.i2c = probeBootI2c();
-    logPrintf("BOOT_PROBE_I2C=done tcaOk=%u pcfOk=%u mcpOkCount=%u/%u mcpMask=0x%02X\n",
+    result.i2c = probeBootI2c(externalPower);
+    logPrintf("BOOT_PROBE_I2C=done fullScan=%u allAddresses=%s allCount=%u tcaOk=%u pcfOk=%u mcpOkCount=%u/%u mcpMask=0x%02X\n",
+              result.i2c.fullBusScanPerformed ? 1 : 0,
+              result.i2c.fullBusScanPerformed ? result.i2c.detectedAddresses : "skipped",
+              static_cast<unsigned>(result.i2c.detectedAddressCount),
               result.i2c.tcaOk ? 1 : 0,
               result.i2c.pcfOk ? 1 : 0,
               result.i2c.mcpOkCount,
@@ -3346,6 +3856,152 @@ uint8_t bootBoolMask(const bool values[pgl::gld::board::SENSOR_COUNT]) {
     return mask;
 }
 
+// Boot diagnostics deliberately end with every TPS22919 OFF.  In a non-battery
+// runtime, normal operation then explicitly enables every sensor rail.  This
+// is a runtime policy decision, not restoration of an unknown pre-boot state.
+void enableNonBatteryRuntimeSensorPower(const char* source) {
+#if PGL_GLD_BOARD_PROFILE_GLD2
+    if (batteryPowerMode || !pgl::gld::board::HAS_PCF8574 || !pcfReady) {
+        return;
+    }
+    // Boot DAC control ends after a TCA channel selection. Return to the root
+    // bus before updating PCF8574, otherwise the very first non-battery
+    // runtime power-on can NACK and leaves Nulling with every sensor OFF.
+    bool enabled = false;
+    uint8_t attempts = 0;
+    for (; attempts < 3 && !enabled; ++attempts) {
+        (void)tcaDisableAll();
+        enabled = pcf8574.writeOutputs(pgl::gld::board::PCF8574_ALL_LOAD_SWITCHES_ON);
+        if (!enabled) {
+            pcfReady = pcf8574.begin(Wire);
+            serviceDelay(20);
+        }
+    }
+    pcfAllLoadSwitchesOn = enabled;
+    logPrintf("GLD2_RUNTIME_SENSOR_POWER source=%s outputs=0x%02X enabled=%u attempts=%u\n",
+              source != nullptr ? source : "boot",
+              pcf8574.outputs(), enabled ? 1u : 0u, static_cast<unsigned>(attempts));
+#else
+    (void)source;
+#endif
+}
+
+// A nulling run writes every MCP4725.  On GLD2, each MCP sits behind a
+// TPS22919-powered sensor module, so do not rely on the old PCF cache or a
+// preceding inference session: explicitly command and verify all rails ON.
+bool ensureNullingSensorPowerReady(const char* source) {
+#if PGL_GLD_BOARD_PROFILE_GLD2
+    if (batteryPowerMode || !pgl::gld::board::HAS_PCF8574) return true;
+    if (!pcfReady) {
+        pcfReady = pcf8574.begin(Wire);
+        logPrintf("NULLING_SENSOR_POWER_PCF_REBEGIN=%s source=%s\n",
+                  pcfReady ? "PASS" : "FAIL",
+                  source != nullptr ? source : "unknown");
+    }
+    if (!pcfReady) {
+        pcfAllLoadSwitchesOn = false;
+        logPrintf("NULLING_SENSOR_POWER_READY=FAIL source=%s reason=pcf_not_ready\n",
+                  source != nullptr ? source : "unknown");
+        return false;
+    }
+    enableNonBatteryRuntimeSensorPower(source);
+    uint8_t liveOutputs = pcf8574.outputs();
+    const bool readOk = pcf8574.readOutputs(liveOutputs);
+    const bool allOn = pcfAllLoadSwitchesOn && readOk &&
+                       liveOutputs == pgl::gld::board::PCF8574_ALL_LOAD_SWITCHES_ON;
+    pcfAllLoadSwitchesOn = allOn;
+    logPrintf("NULLING_SENSOR_POWER_READY=%s source=%s outputs=0x%02X read=%u\n",
+              allOn ? "PASS" : "FAIL", source != nullptr ? source : "unknown",
+              liveOutputs, readOk ? 1u : 0u);
+    return allOn;
+#else
+    (void)source;
+    return true;
+#endif
+}
+
+// On the affected GLD2 bench unit, every MCP4725 answers during the isolated
+// boot test but all eight NACK when every TPS22919 rail is held ON.  Keep the
+// thermal warmup all-ON, then isolate only the active module for DAC writes.
+// The original PCF mask is captured and restored after the full service.
+bool runNullingMcpWritePreflight(const char* source, uint8_t channelMask = 0xFFu) {
+#if PGL_GLD_BOARD_PROFILE_GLD2
+    if (batteryPowerMode || !pgl::gld::board::HAS_PCF8574) return true;
+
+    dac.captureSensorPowerState();
+    dac.setAutomaticSensorPowerControl(true);
+    dac.setRestoreSensorPowerAfterWrite(false);
+    bool allWritesOk = true;
+    for (uint8_t channel = 0; channel < pgl::gld::board::SENSOR_COUNT; ++channel) {
+        if ((channelMask & static_cast<uint8_t>(1u << channel)) == 0u) continue;
+        const bool writeOk = dac.writeDac(channel, 0);
+        logPrintf("NULLING_MCP_PREFLIGHT source=%s ch=%u sensor=%s mux=%u address=0x%02X code=0 ack=%u\n",
+                  source != nullptr ? source : "unknown",
+                  static_cast<unsigned>(channel), pgl::gld::board::SENSOR_NAMES[channel],
+                  static_cast<unsigned>(pgl::gld::board::SENSOR_TO_MUX_CH[channel]),
+                  static_cast<unsigned>(pgl::gld::board::MCP4725_ADDR), writeOk ? 1u : 0u);
+        allWritesOk = allWritesOk && writeOk;
+        if (!writeOk) break;
+    }
+    const bool restored = dac.restoreSensorPower();
+    dac.setAutomaticSensorPowerControl(false);
+    dac.setRestoreSensorPowerAfterWrite(true);
+    uint8_t outputs = pcf8574.outputs();
+    const bool readOk = pcf8574.readOutputs(outputs);
+    pcfAllLoadSwitchesOn = restored && readOk &&
+                            outputs == pgl::gld::board::PCF8574_ALL_LOAD_SWITCHES_ON;
+    const bool pass = allWritesOk && pcfAllLoadSwitchesOn;
+    logPrintf("NULLING_MCP_PREFLIGHT_DONE=%s source=%s restore=0x%02X read=%u\n",
+              pass ? "PASS" : "FAIL", source != nullptr ? source : "unknown",
+              outputs, readOk ? 1u : 0u);
+    return pass;
+#else
+    (void)source;
+    return true;
+#endif
+}
+
+bool armNullingMcpIsolation() {
+#if PGL_GLD_BOARD_PROFILE_GLD2
+    if (batteryPowerMode || !pgl::gld::board::HAS_PCF8574) return true;
+    dac.captureSensorPowerState();
+    dac.setAutomaticSensorPowerControl(true);
+    dac.setRestoreSensorPowerAfterWrite(false);
+    logPrintln("NULLING_MCP_ISOLATION=ARMED policy=one_active_rail_after_warmup");
+#endif
+    return true;
+}
+
+bool restoreNullingMcpIsolation() {
+#if PGL_GLD_BOARD_PROFILE_GLD2
+    if (batteryPowerMode || !pgl::gld::board::HAS_PCF8574) return true;
+    const bool restored = dac.restoreSensorPower();
+    dac.setAutomaticSensorPowerControl(false);
+    dac.setRestoreSensorPowerAfterWrite(true);
+    uint8_t outputs = pcf8574.outputs();
+    const bool readOk = pcf8574.readOutputs(outputs);
+    pcfAllLoadSwitchesOn = restored && readOk &&
+                            outputs == pgl::gld::board::PCF8574_ALL_LOAD_SWITCHES_ON;
+    const bool pass = pcfAllLoadSwitchesOn;
+    logPrintf("NULLING_MCP_ISOLATION_RESTORE=%s outputs=0x%02X read=%u\n",
+              pass ? "PASS" : "FAIL", outputs, readOk ? 1u : 0u);
+    return pass;
+#else
+    return true;
+#endif
+}
+
+pgl::gld::GldNullingServiceResult runNullingServiceWithMcpIsolation(uint8_t channelMask = 0xFFu) {
+    (void)armNullingMcpIsolation();
+    pgl::gld::GldNullingServiceResult result =
+        pgl::gld::runNullingService(ads, dac, nullingLogLine, firmwareServiceTick, nullingConfig, channelMask);
+    if (!restoreNullingMcpIsolation()) {
+        result.status = pgl::gld::GldNullingStatus::DacNotReady;
+        result.successCount = 0;
+    }
+    return result;
+}
+
 void printBootIcReport(const pgl::gld::GldPowerReading& power,
                        const BootAdsReport& adsReport,
                        const BootI2cReport& i2cReport,
@@ -3359,6 +4015,11 @@ void printBootIcReport(const pgl::gld::GldPowerReading& power,
                        const char* modeDetail) {
     char detail[256];
 
+    if (i2cReport.fullBusScanPerformed) {
+        logPrintf("GLD2_I2C_SCAN range=0x03-0x77 count=%u addrs=%s\n",
+                  static_cast<unsigned>(i2cReport.detectedAddressCount),
+                  i2cReport.detectedAddresses);
+    }
     logPrintln("[BOOT_IC_REPORT]");
     logPrintln("+-----------------+--------------------+-----------+------------------------------------------+");
     logPrintln("| IC/Fungsi       | Check              | Status    | Detail                                   |");
@@ -3386,6 +4047,13 @@ void printBootIcReport(const pgl::gld::GldPowerReading& power,
              pgl::gld::board::PIN_I2C_SDA,
              pgl::gld::board::PIN_I2C_SCL);
     bootTableRow("I2C_BUS", "pins", "OK", detail);
+
+    if (i2cReport.fullBusScanPerformed) {
+        snprintf(detail, sizeof(detail), "count=%u addrs=%s",
+                 static_cast<unsigned>(i2cReport.detectedAddressCount),
+                 i2cReport.detectedAddresses);
+        bootTableRow("I2C_SCAN", "0x03-0x77", "INFO", detail);
+    }
 
     snprintf(detail, sizeof(detail), "addr=0x%02X",
              pgl::gld::board::TCA9548A_ADDR);
@@ -3701,6 +4369,10 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 // Nulling helpers
 // ---------------------------------------------------------------------------
 
+void armNullingRetry(const char* reason);
+const char* nullingRetryReason(pgl::gld::GldNullingStatus status);
+void rememberIncompleteNullingResult(const pgl::gld::GldNullingServiceResult& result);
+
 bool initNulling(bool runIfMissing) {
     nullingProfileApplied = false;
     pgl::gld::GldNullingProfile profile{};
@@ -3726,12 +4398,24 @@ bool initNulling(bool runIfMissing) {
         return false;
     }
     logPrintln("NULLING_NVS_LOAD=empty running_nulling_now");
+    if (!ensureNullingSensorPowerReady("init_nulling")) {
+        logPrintln("NULLING_RUN=BLOCKED reason=sensor_power_not_ready");
+        armNullingRetry("sensor_power_not_ready");
+        return false;
+    }
+    if (!runNullingMcpWritePreflight("init_nulling")) {
+        logPrintln("NULLING_RUN=BLOCKED reason=mcp_preflight_failed");
+        armNullingRetry("mcp_preflight_failed");
+        return false;
+    }
     const pgl::gld::GldNullingServiceResult result =
-        pgl::gld::runNullingService(ads, dac, nullingLogLine, firmwareServiceTick, nullingConfig);
+        runNullingServiceWithMcpIsolation();
     logPrintf("NULLING_RUN status=%s successCount=%u\n",
               pgl::gld::gldNullingStatusName(result.status), result.successCount);
     if (result.status != pgl::gld::GldNullingStatus::Ok ||
         result.successCount != pgl::gld::board::SENSOR_COUNT) {
+        rememberIncompleteNullingResult(result);
+        armNullingRetry(nullingRetryReason(result.status));
         return false;
     }
     pgl::gld::GldNullingProfile toSave = result.profile;
@@ -3770,15 +4454,38 @@ const char* nullingRetryReason(pgl::gld::GldNullingStatus status) {
 
 void armNullingRetry(const char* reason) {
     nullDone = false;
+    nullingRetryArmed = false;
+    nullingRetryAvailable = true;
+    nullingRetryFailedAvailable = pendingNullingFailedMask() != 0u;
+    nextNullingRetryMs = 0;
+    logPrintf("NULLING_RETRY_REQUIRED reason=%s action=operator_retry\n", reason);
+    emitStatusJson();
+}
+
+void requestNullingRetryFromSerialCommand(bool failedOnly) {
+    const char* commandName = failedOnly ? "RETRY_FAILED_NULLING" : "RETRY_NULLING";
+    if (currentMode != pgl::gld::GldMode::NULLING) {
+        emitCommandAck(commandName, "rejected", "retry is available only in nulling mode", false);
+        return;
+    }
+    if (!nullingRetryAvailable) {
+        emitCommandAck(commandName, "rejected", "no failed nulling run is waiting for retry", false);
+        return;
+    }
+    if (failedOnly && !nullingRetryFailedAvailable) {
+        emitCommandAck(commandName, "rejected", "no failed channels are available for targeted retry", false);
+        return;
+    }
+    nullingRetryAvailable = false;
+    nullingRetryFailedAvailable = false;
     nullingRetryArmed = true;
-    const uint32_t now = millis();
-    const uint32_t delayMs = bootRecoveryDelayActive()
-                                 ? static_cast<uint32_t>(bootRecoveryDueMs - now)
-                                 : NULLING_RETRY_DELAY_MS;
-    nextNullingRetryMs = now + delayMs;
-    logPrintf("NULLING_RETRY_SCHEDULED reason=%s delayMs=%lu\n",
-              reason,
-              static_cast<unsigned long>(delayMs));
+    nullingRetryChannelMask = failedOnly ? pendingNullingFailedMask() : 0xFFu;
+    nextNullingRetryMs = millis();
+    logPrintf("NULLING_RETRY_ACCEPTED attempt=%u policy=%s channelMask=0x%02X\n",
+              static_cast<unsigned>(nullingAttemptCount + 1U), failedOnly ? "failed_only" : "all",
+              static_cast<unsigned>(nullingRetryChannelMask));
+    emitCommandAck(commandName, "ok", failedOnly ? "failed-channel nulling retry queued" : "full nulling retry queued", false);
+    emitStatusJson();
 }
 
 
@@ -3788,7 +4495,7 @@ bool ensureNullingHardwareReady() {
         logPrintf("NULLING_ADS_REBEGIN=%s\n", passFail(adsReady));
     }
     if (!dacReady) {
-        dacReady = dac.begin(Wire);
+        dacReady = dac.begin(Wire, &pcf8574);
         logPrintf("NULLING_DAC_REBEGIN=%s\n", passFail(dacReady));
     }
     return adsReady && dacReady;
@@ -3825,6 +4532,34 @@ bool saveCompleteNullingProfile(const pgl::gld::GldNullingServiceResult& result,
     return saved;
 }
 
+void rememberIncompleteNullingResult(const pgl::gld::GldNullingServiceResult& result) {
+    pendingNullingResult = result;
+    pendingNullingResultValid = true;
+}
+
+pgl::gld::GldNullingServiceResult mergeFailedOnlyRetry(
+    const pgl::gld::GldNullingServiceResult& retryResult, uint8_t retryMask) {
+    if (!pendingNullingResultValid) return retryResult;
+    for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
+        if ((retryMask & static_cast<uint8_t>(1u << ch)) == 0u) continue;
+        pendingNullingResult.profile.dacCode[ch] = retryResult.profile.dacCode[ch];
+        pendingNullingResult.profile.baselineV[ch] = retryResult.profile.baselineV[ch];
+        pendingNullingResult.profile.afterV[ch] = retryResult.profile.afterV[ch];
+        pendingNullingResult.profile.channelOk[ch] = retryResult.profile.channelOk[ch];
+    }
+    uint8_t successes = 0u;
+    for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
+        if (pendingNullingResult.profile.channelOk[ch] != 0u) ++successes;
+    }
+    pendingNullingResult.successCount = successes;
+    pendingNullingResult.attemptedCount = pgl::gld::board::SENSOR_COUNT;
+    pendingNullingResult.status = successes == pgl::gld::board::SENSOR_COUNT
+        ? pgl::gld::GldNullingStatus::Ok
+        : (successes == 0u ? pgl::gld::GldNullingStatus::AllChannelsFailed
+                           : pgl::gld::GldNullingStatus::PartialSuccess);
+    return pendingNullingResult;
+}
+
 void returnToRunningAfterNulling(const pgl::gld::GldNullingProfile& profile) {
     logPrintf("NULLING_AUTO_MODE_SWITCH target=running mode=inference profileId=%u delayMs=%lu\n",
               profile.profileId,
@@ -3844,9 +4579,14 @@ void returnToRunningAfterNulling(const pgl::gld::GldNullingProfile& profile) {
 
 void runNullingRetryAttempt() {
     nullingRetryArmed = false;
+    nullingRetryAvailable = false;
     ++nullingAttemptCount;
-    logPrintf("NULLING_RETRY_START attempt=%u\n",
-              static_cast<unsigned>(nullingAttemptCount));
+    const uint8_t retryMask = nullingRetryChannelMask;
+    const bool failedOnly = retryMask != 0xFFu;
+    nullingRetryChannelMask = 0xFFu;
+    logPrintf("NULLING_RETRY_START attempt=%u policy=%s channelMask=0x%02X\n",
+              static_cast<unsigned>(nullingAttemptCount), failedOnly ? "failed_only" : "all",
+              static_cast<unsigned>(retryMask));
 
     if (!ensureNullingHardwareReady()) {
         logPrintf("NULLING_RETRY_BLOCKED adsReady=%u dacReady=%u\n",
@@ -3854,9 +4594,24 @@ void runNullingRetryAttempt() {
         armNullingRetry("hardware_not_ready");
         return;
     }
+    if (!ensureNullingSensorPowerReady("manual_retry")) {
+        logPrintln("NULLING_RUN=BLOCKED reason=sensor_power_not_ready");
+        armNullingRetry("sensor_power_not_ready");
+        return;
+    }
+    if (!runNullingMcpWritePreflight("manual_retry", retryMask)) {
+        logPrintln("NULLING_RUN=BLOCKED reason=mcp_preflight_failed");
+        armNullingRetry("mcp_preflight_failed");
+        return;
+    }
 
-    const pgl::gld::GldNullingServiceResult result =
-        pgl::gld::runNullingService(ads, dac, nullingLogLine, firmwareServiceTick, nullingConfig);
+    pgl::gld::GldNullingServiceResult result =
+        runNullingServiceWithMcpIsolation(retryMask);
+    if (failedOnly) {
+        result = mergeFailedOnlyRetry(result, retryMask);
+    } else {
+        rememberIncompleteNullingResult(result);
+    }
     logPrintf("NULLING_RETRY_DONE status=%s successCount=%u\n",
               pgl::gld::gldNullingStatusName(result.status), result.successCount);
 
@@ -3864,6 +4619,7 @@ void runNullingRetryAttempt() {
     if (saveCompleteNullingProfile(result, toSave)) {
         logPrintln("NULLING_RUNTIME_RESULT=PASS");
         nullDone = true;
+        pendingNullingResultValid = false;
         returnToRunningAfterNulling(toSave);
         return;
     }
@@ -3873,7 +4629,50 @@ void runNullingRetryAttempt() {
     logPrintln(result.status == pgl::gld::GldNullingStatus::PartialSuccess
                ? "NULLING_RUNTIME_RESULT=PARTIAL_RETRY"
                : "NULLING_RUNTIME_RESULT=FAIL_RETRY");
+    rememberIncompleteNullingResult(result);
     armNullingRetry(fullOk ? "nvs_save_failed" : nullingRetryReason(result.status));
+}
+
+bool runtimeDacVerificationReady() {
+    if (batteryPowerMode || !pgl::gld::board::HAS_PCF8574) return true;
+    for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
+        if (!runtimeMcpReadbackVerified[ch]) return false;
+    }
+    return true;
+}
+
+void recordRuntimeDacVerification(uint8_t channel, uint16_t expected, uint16_t readback,
+                                  bool readOk, const char* source, bool logPass) {
+    const bool match = readOk && readback == expected;
+    runtimeMcpReadback[channel] = readback;
+    runtimeMcpReadbackVerified[channel] = match;
+    runtimeMcpVerifiedAtMs[channel] = match ? millis() : 0;
+    if (logPass || !match) {
+        logPrintf("RUNTIME_DAC_VERIFY source=%s ch=%u sensor=%s expected=%u readback=%u read=%u match=%u\n",
+                  source, static_cast<unsigned>(channel), pgl::gld::board::SENSOR_NAMES[channel],
+                  static_cast<unsigned>(expected), static_cast<unsigned>(readback),
+                  readOk ? 1u : 0u, match ? 1u : 0u);
+    }
+}
+
+// Non-battery inference keeps all rails powered.  This periodic readback uses
+// only the TCA selection and never changes PCF/EN or writes a DAC value.  One
+// channel per interval bounds I2C traffic while making a lost/reset MCP state
+// visible within a full eight-channel cycle.
+void serviceNonBatteryDacVerification() {
+#if PGL_GLD_BOARD_PROFILE_GLD2
+    if (batteryPowerMode || currentMode != pgl::gld::GldMode::INFERENCE || !dacReady || !dac.ready()) return;
+    const uint32_t now = millis();
+    if (now - lastNonBatteryDacVerifyMs < NON_BATTERY_DAC_VERIFY_INTERVAL_MS) return;
+    lastNonBatteryDacVerifyMs = now;
+    const uint8_t channel = nextNonBatteryDacVerifyChannel;
+    nextNonBatteryDacVerifyChannel = static_cast<uint8_t>(
+        (nextNonBatteryDacVerifyChannel + 1U) % pgl::gld::board::SENSOR_COUNT);
+    uint16_t readback = 0;
+    const uint16_t expected = dac.lastValue(channel);
+    const bool readOk = dac.readDac(channel, readback);
+    recordRuntimeDacVerification(channel, expected, readback, readOk, "periodic", false);
+#endif
 }
 
 bool applySavedNullingProfileOnly() {
@@ -3893,7 +4692,7 @@ bool applySavedNullingProfileOnly() {
     }
 
     if (!dacReady) {
-        dacReady = dac.begin(Wire);
+        dacReady = dac.begin(Wire, &pcf8574);
         logPrintf("BOOT_NULLING_DAC_BEGIN=%s\n", passFail(dacReady));
     }
     if (!dacReady) {
@@ -3902,11 +4701,32 @@ bool applySavedNullingProfileOnly() {
         return false;
     }
 
+    // The saved profile is applied before normal inference. MCP4725 modules
+    // share address 0x60, so select one TPS22919 branch for each write, then
+    // restore the non-battery runtime mask (0xFF). Without this, an all-ON
+    // boot can NACK a later channel and leave the DAC at the boot-test value.
+    dac.setAutomaticSensorPowerControl(true);
+    dac.captureSensorPowerState();
+    dac.setSensorPowerSettleMs(500);
+    dac.setRestoreSensorPowerAfterWrite(false);
     bool allApplied = true;
     for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
         allApplied = dac.writeDac(ch, profile.dacCode[ch]) && allApplied;
     }
+    bool allReadBack = true;
+    for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
+        uint16_t readback = 0;
+        const bool readOk = dac.readDac(ch, readback);
+        const bool match = readOk && readback == profile.dacCode[ch];
+        recordRuntimeDacVerification(ch, profile.dacCode[ch], readback, readOk, "boot_apply", true);
+        logPrintf("BOOT_NULLING_DAC_VERIFY ch=%u sensor=%s requested=%u readback=%u read=%u match=%u\n",
+                  static_cast<unsigned>(ch), pgl::gld::board::SENSOR_NAMES[ch],
+                  static_cast<unsigned>(profile.dacCode[ch]), static_cast<unsigned>(readback),
+                  readOk ? 1u : 0u, match ? 1u : 0u);
+        allReadBack = allReadBack && match;
+    }
     serviceDelay(BOOT_DAC_SETTLE_MS);
+    allApplied = allApplied && allReadBack;
     if (allApplied) {
         nullingProfileId = profile.profileId;
         nullingProfileApplied = true;
@@ -3914,9 +4734,19 @@ bool applySavedNullingProfileOnly() {
         const bool resetOk = dac.writeAll(0);
         logPrintf("BOOT_NULLING_PROFILE_SAFE_RESET=%s\n", resetOk ? "OK" : "FAIL");
     }
+    const bool powerRestored = dac.restoreSensorPower();
+    dac.setAutomaticSensorPowerControl(false);
+    dac.setRestoreSensorPowerAfterWrite(true);
+    dac.setSensorPowerSettleMs(50);
+    allApplied = allApplied && powerRestored;
+    logPrintf("BOOT_NULLING_PROFILE_POWER_RESTORE=%s\n", powerRestored ? "OK" : "FAIL");
     logPrintf("BOOT_NULLING_PROFILE_APPLY=%s profileId=%u\n",
               allApplied ? "OK" : "FAIL",
               profile.profileId);
+    // Boot emits a preliminary status before I2C and the stored DAC profile
+    // are ready.  Publish another snapshot here so Operator never keeps the
+    // boot-default code 0 after a verified profile apply.
+    emitStatusJson();
     return allApplied;
 }
 
@@ -3981,7 +4811,8 @@ void runBootCheckFromSerialCommand() {
               pgl::gld::gldPowerModeName(power.mode),
               power.externalPower ? 1 : 0);
 
-    const BootDiagnosticsResult bootDiagnostics = runBootHardwareDiagnostics(power.externalPower);
+    const BootDiagnosticsResult bootDiagnostics = runBootHardwareDiagnostics(power.externalPower,
+                                                                              batteryPowerMode);
 
     char modeDetail[128];
     bool modeReady = false;
@@ -4032,6 +4863,132 @@ void runBootCheckFromSerialCommand() {
     logPrintln("RUN_BOOT_CHECK_DONE");
 }
 
+void runCurrentStateCheckFromSerialCommand() {
+    emitCommandAck("RUN_CURRENT_STATE_CHECK", "ok", "checking current state without changing sensor power", false);
+
+    const pgl::gld::GldPowerReading power = pgl::gld::readGldPower();
+    applyRuntimePowerReading(power, "run_current_state_check", true);
+    logPrintf("RUN_CURRENT_STATE_CHECK_START mode=%s power=%s externalPower=%u pcfOutputs=0x%02X\n",
+              pgl::gld::gldModeName(currentMode), pgl::gld::gldPowerModeName(power.mode),
+              power.externalPower ? 1u : 0u, pcfReady ? pcf8574.outputs() : 0u);
+
+    adsReady = ads.begin(gldSpi);
+    const BootAdsReport adsReport = probeBootAds(adsReady);
+    // This command is deliberately observational and bounded.  A full root
+    // scan on 0x03..0x77 can exceed the normal serial timeout on an I2C retry,
+    // so only probe the required root addresses and currently powered branches.
+    const BootI2cReport i2cReport = probeCurrentStateI2c(false);
+
+    lastBootAdsDrdyLevel = adsReport.drdyLevel;
+    lastBootAdsDrdyPulldownLevel = adsReport.drdyPulldownLevel;
+    lastBootAdsDrdyPullupLevel = adsReport.drdyPullupLevel;
+    lastBootAdsMisoPulldownLevel = adsReport.misoPulldownLevel;
+    lastBootAdsMisoPullupLevel = adsReport.misoPullupLevel;
+    lastBootAdsCsLevel = adsReport.csLevel;
+    lastBootAdsSyncLevel = adsReport.syncLevel;
+    lastBootAdsStatus = adsReport.status;
+    lastBootAdsMux = adsReport.mux;
+    lastBootAdsAdcon = adsReport.adcon;
+    lastBootAdsDrate = adsReport.drate;
+    lastBootAdsReason = adsReport.reason;
+    lastBootTcaOk = i2cReport.tcaOk;
+    lastBootMcpOkCount = i2cReport.mcpOkCount;
+    for (uint8_t sensor = 0; sensor < pgl::gld::board::SENSOR_COUNT; ++sensor) {
+        lastBootMcpOk[sensor] = i2cReport.mcpOk[sensor];
+        lastBootMcpAddrMask[sensor] = i2cReport.mcpAddrMask[sensor];
+    }
+
+    logPrintf("RUN_CURRENT_STATE_CHECK_I2C tcaOk=%u pcfOk=%u mcpOkCount=%u/%u pcfOutputs=0x%02X\n",
+              i2cReport.tcaOk ? 1u : 0u, i2cReport.pcfOk ? 1u : 0u,
+              i2cReport.mcpOkCount, pgl::gld::board::SENSOR_COUNT,
+              pcfReady ? pcf8574.outputs() : 0u);
+    emitStatusJson();
+    logPrintln("RUN_CURRENT_STATE_CHECK_DONE no_sensor_power_or_dac_write=1");
+}
+
+void runI2cScanFromSerialCommand() {
+    emitCommandAck("RUN_I2C_SCAN", "ok", "running manual I2C scan", false);
+
+    Wire.begin(pgl::gld::board::PIN_I2C_SDA, pgl::gld::board::PIN_I2C_SCL);
+#if defined(ARDUINO_ARCH_ESP32)
+    Wire.setTimeOut(BOOT_I2C_TIMEOUT_MS);
+#endif
+
+    char addresses[80]{};
+    size_t used = 0;
+    uint8_t count = 0;
+    for (uint8_t addr = 0x03; addr <= 0x77; ++addr) {
+        if (!i2cAck(addr)) continue;
+        ++count;
+        const int written = snprintf(addresses + used, sizeof(addresses) - used,
+                                     "%s0x%02X", used == 0 ? "" : ",", addr);
+        if (written < 0 || static_cast<size_t>(written) >= sizeof(addresses) - used) {
+            copyBounded(addresses, sizeof(addresses), "truncated");
+            break;
+        }
+        used += static_cast<size_t>(written);
+    }
+    if (count == 0) copyBounded(addresses, sizeof(addresses), "none");
+    logPrintf("I2C_MANUAL_SCAN range=0x03-0x77 count=%u addrs=%s\n",
+              static_cast<unsigned>(count), addresses);
+    emitCommandAck("RUN_I2C_SCAN", "ok", addresses, false);
+}
+
+void runTcaChannelScanFromSerialCommand() {
+    emitCommandAck("RUN_TCA_CHANNEL_SCAN", "ok", "scanning MCP addresses on TCA channels", false);
+
+    Wire.begin(pgl::gld::board::PIN_I2C_SDA, pgl::gld::board::PIN_I2C_SCL);
+#if defined(ARDUINO_ARCH_ESP32)
+    Wire.setTimeOut(BOOT_I2C_TIMEOUT_MS);
+#endif
+
+    if (!i2cAck(pgl::gld::board::TCA9548A_ADDR)) {
+        emitCommandAck("RUN_TCA_CHANNEL_SCAN", "error", "TCA9548A 0x71 did not ACK", false);
+        return;
+    }
+
+    // Preserve the operator-commanded sensor-power state. In particular, a
+    // GLD2 that boots with every module OFF must remain OFF after this scan.
+    const uint8_t originalPcfOutputs = pcf8574.outputs();
+    const uint8_t testPatterns[] = {0xFF, 0x00};
+    for (const uint8_t outputs : testPatterns) {
+        const bool pcfWriteOk = pcf8574.writeOutputs(outputs);
+        delay(25);
+        for (uint8_t muxChannel = 0; muxChannel < 8; ++muxChannel) {
+            const bool selected = tcaSelect(muxChannel);
+            char addresses[80]{};
+            size_t used = 0;
+            uint8_t count = 0;
+            if (selected) {
+                for (uint8_t addr = pgl::gld::board::MCP4725_ADDR;
+                     addr < static_cast<uint8_t>(pgl::gld::board::MCP4725_ADDR + 8U);
+                     ++addr) {
+                    if (!i2cAck(addr)) continue;
+                    ++count;
+                    const int written = snprintf(addresses + used, sizeof(addresses) - used,
+                                                 "%s0x%02X", used == 0 ? "" : ",", addr);
+                    if (written < 0 || static_cast<size_t>(written) >= sizeof(addresses) - used) {
+                        copyBounded(addresses, sizeof(addresses), "truncated");
+                        break;
+                    }
+                    used += static_cast<size_t>(written);
+                }
+            }
+            if (count == 0) copyBounded(addresses, sizeof(addresses), "none");
+            logPrintf("TCA_MCP_SCAN pcf=0x%02X pcfWrite=%u mux=%u selected=%u range=0x60-0x67 count=%u addrs=%s\n",
+                      outputs, pcfWriteOk ? 1u : 0u, static_cast<unsigned>(muxChannel),
+                      selected ? 1u : 0u, static_cast<unsigned>(count), addresses);
+        }
+    }
+    tcaDisableAll();
+    const bool restored = pcf8574.writeOutputs(originalPcfOutputs);
+    pcfAllLoadSwitchesOn = restored &&
+                            originalPcfOutputs == pgl::gld::board::PCF8574_ALL_LOAD_SWITCHES_ON;
+    logPrintf("TCA_MCP_SCAN restorePcf=0x%02X restoreOk=%u\n",
+              pcf8574.outputs(), restored ? 1u : 0u);
+    emitCommandAck("RUN_TCA_CHANNEL_SCAN", "ok", "complete; see TCA_CHANNEL_SCAN lines", false);
+}
+
 struct DiagnosticAdsAverage {
     pgl::gld::GldAds1256Status status = pgl::gld::GldAds1256Status::NotReady;
     int32_t raw = 0;
@@ -4075,7 +5032,7 @@ void runAdsMcpSweepFromSerialCommand() {
         logPrintf("ADS_MCP_SWEEP_ADS_BEGIN=%s\n", passFail(adsReady));
     }
     if (!dacReady) {
-        dacReady = dac.begin(Wire);
+        dacReady = dac.begin(Wire, &pcf8574);
         logPrintf("ADS_MCP_SWEEP_DAC_BEGIN=%s\n", passFail(dacReady));
     }
 
@@ -4407,7 +5364,7 @@ bool runScan(bool requireCompleteBatch = false) {
 #endif
     } else {
         lastInferenceValid = allValid && primed && mlReady && nullingProfileApplied &&
-                             modelProfileReady &&
+                             modelProfileReady && runtimeDacVerificationReady() &&
                              runInference(mavVoltage);
     }
     sensorFaultActive = FIELDTEST_MODEL_UNVERIFIED ? !(allValid && primed)
@@ -5162,7 +6119,9 @@ void setup() {
     setupPins();
 #if PGL_GLD_BOARD_PROFILE_GLD2
     pcfReady = pcf8574.begin(Wire);
-    pcfAllLoadSwitchesOn = pcfReady && pcf8574.enableAllLoadSwitches();
+    // Do not alter PCF8574/EN until the actual power mode is known below.
+    // On external power, this boot path must preserve every sensor rail.
+    pcfAllLoadSwitchesOn = false;
     modbusReady = modbusRtu.begin(pgl::gld::GldModbusRtu::kDefaultUnitId,
                                   pgl::gld::GldModbusRtu::kDefaultBaud,
                                   pgl::gld::board::PIN_RS485_DIR,
@@ -5199,12 +6158,25 @@ void setup() {
               power.externalPower ? 1 : 0, power.batteryMv,
               pgl::gld::gldBatterySenseStatusName(power.batterySenseStatus),
               power.powerSourceAmbiguous ? 1u : 0u);
+    batteryPowerMode = TFBG_CONTINUOUS_BATTERY || !power.externalPower;
 #if PGL_GLD_BOARD_PROFILE_GLD2
-    logPrintf("GLD2_PCF8574 ready=%u addr=0x%02X outputs=0x%02X allLoadSwitchesOn=%u\n",
+    dac.setAutomaticSensorPowerControl(batteryPowerMode);
+    bool pcfOutputsRead = false;
+    if (pcfReady && !batteryPowerMode) {
+        // This is observational only: it refreshes the app's PCF status
+        // without sending an output byte or changing any TPS22919 EN line.
+        uint8_t liveOutputs = 0;
+        pcfOutputsRead = pcf8574.readOutputs(liveOutputs);
+        pcfAllLoadSwitchesOn = pcfOutputsRead &&
+                                liveOutputs == pgl::gld::board::PCF8574_ALL_LOAD_SWITCHES_ON;
+    }
+    logPrintf("GLD2_PCF8574 ready=%u addr=0x%02X outputs=0x%02X allLoadSwitchesOn=%u powerPolicy=%s read=%u\n",
               pcfReady ? 1u : 0u,
               pgl::gld::board::PCF8574_ADDR,
               pcf8574.outputs(),
-              pcfAllLoadSwitchesOn ? 1u : 0u);
+              pcfAllLoadSwitchesOn ? 1u : 0u,
+              batteryPowerMode ? "automatic" : "preserve",
+              pcfOutputsRead ? 1u : 0u);
     logPrintf("GLD2_ST_P raw=%d source=%s\n",
               digitalRead(pgl::gld::board::PIN_POWER_SOURCE_STATUS),
               readStpSource24V() ? "24V" : "BATTERY");
@@ -5213,7 +6185,6 @@ void setup() {
               static_cast<unsigned>(pgl::gld::GldModbusRtu::kDefaultUnitId),
               static_cast<unsigned long>(pgl::gld::GldModbusRtu::kDefaultBaud));
 #endif
-    batteryPowerMode = TFBG_CONTINUOUS_BATTERY || !power.externalPower;
     powerModeCandidateBattery = batteryPowerMode;
     powerModeCandidateCount = 0;
     lastPowerReconcileMs = millis();
@@ -5233,7 +6204,8 @@ void setup() {
     emitInfoJson();
     emitStatusJson();
 
-    const BootDiagnosticsResult bootDiagnostics = runBootHardwareDiagnostics(power.externalPower);
+    const BootDiagnosticsResult bootDiagnostics = runBootHardwareDiagnostics(power.externalPower,
+                                                                              batteryPowerMode);
     const BootAdsReport& bootAds = bootDiagnostics.ads;
     const BootI2cReport& bootI2c = bootDiagnostics.i2c;
     const BootMcpControlReport& bootMcpControl = bootDiagnostics.mcpControl;
@@ -5285,6 +6257,7 @@ void setup() {
                               ? (adsReady && radioReady)
                               : (adsReady && radioReady && mlReady && nullingProfileApplied && modelProfileReady),
                           modeDetail);
+        enableNonBatteryRuntimeSensorPower("boot_inference_after_report");
         armBootReportRecoveryIfNeeded(bootAds, bootI2c, bootMcpControl,
                                       !SENSORLESS_BENCH, radioReady,
                                       !(FIELDTEST_MODEL_UNVERIFIED || SIMULATED_MODEL_OUTPUT),
@@ -5305,7 +6278,10 @@ void setup() {
                       pgl::gld::gldModeName(currentMode));
             pulseWdtKeepaliveNow();
         }
-        dacReady = dac.begin(Wire);
+        // Dataset/nulling initializes its runtime before the later report is
+        // rendered; its diagnostic phase has nevertheless already completed.
+        enableNonBatteryRuntimeSensorPower("boot_service_runtime");
+        dacReady = dac.begin(Wire, &pcf8574);
         logPrintf("DAC_MUX_BEGIN_RESULT=%s\n", dacReady ? "PASS" : "FAIL");
         pulseWdtKeepaliveNow();
 
@@ -5362,11 +6338,17 @@ void setup() {
                                               false, false,
                                               false, false);
                 armNullingRetry("hardware_not_ready");
+            } else if (!ensureNullingSensorPowerReady("boot_nulling")) {
+                logPrintln("NULLING_RUN=BLOCKED reason=sensor_power_not_ready");
+                armNullingRetry("sensor_power_not_ready");
+            } else if (!runNullingMcpWritePreflight("boot_nulling")) {
+                logPrintln("NULLING_RUN=BLOCKED reason=mcp_preflight_failed");
+                armNullingRetry("mcp_preflight_failed");
             } else {
                 logPrintln("NULLING_RUN=start");
 
                 const pgl::gld::GldNullingServiceResult result =
-                    pgl::gld::runNullingService(ads, dac, nullingLogLine, firmwareServiceTick, nullingConfig);
+                    runNullingServiceWithMcpIsolation();
                 logPrintf("NULLING_RUN_DONE status=%s successCount=%u\n",
                           pgl::gld::gldNullingStatusName(result.status), result.successCount);
 
@@ -5415,6 +6397,7 @@ void setup() {
                         armBootReportRecoveryIfNeeded(bootAds, bootI2c, bootMcpControl,
                                                       false, false,
                                                       false, false);
+                        rememberIncompleteNullingResult(result);
                         armNullingRetry(fullOk ? "nvs_save_failed" : nullingRetryReason(result.status));
                 }
             }
@@ -5425,6 +6408,9 @@ void setup() {
 void loop() {
     firmwareServiceTick();
     reconcileRuntimePowerMode();
+    // SHT40 has its own cached global values. Status/telemetry serialization
+    // only snapshots this cache; it never starts a measurement itself.
+    serviceSht40();
     // In external 24V mode the DC fan is a continuous-running load.
     // Keep this override after power reconciliation so it also applies when
     // the runtime power mode changes while the firmware is already running.
@@ -5445,6 +6431,7 @@ void loop() {
     if (currentMode == pgl::gld::GldMode::INFERENCE) {
         const uint32_t now = millis();
         maintainAdsRecovery("inference_ads_not_ready");
+        serviceNonBatteryDacVerification();
 
         if (batteryPowerMode && !TFBG_CONTINUOUS_BATTERY) {
             // One-shot wake cycle: warm-up, 10 complete valid sample batches,

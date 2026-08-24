@@ -1,0 +1,117 @@
+{
+  "outputSlides": [
+    {
+      "outputSlide": 1,
+      "sourceSlide": 1,
+      "narrativeRole": "opening thesis",
+      "reuseMode": "duplicate-slide",
+      "editTargets": [{"action":"rewrite","sourceElementIds":["sh/wn6dc7eh","sh/547294r6","sh/k3yl0zql","sh/65g3298r","sh/fu94fe98"]}]
+    },
+    {
+      "outputSlide": 2,
+      "sourceSlide": 2,
+      "narrativeRole": "outline map",
+      "reuseMode": "duplicate-slide",
+      "editTargets": [{"action":"rewrite","sourceElementIds":["sh/r65knqtk","sh/9072xkry","sh/b29kza94","sh/a10jqpsj","sh/x4r21kru","tb/fm9kvatk"]}]
+    },
+    {
+      "outputSlide": 3,
+      "sourceSlide": 3,
+      "narrativeRole": "meeting summary",
+      "reuseMode": "duplicate-slide",
+      "editTargets": [{"action":"rewrite","sourceElementIds":["sh/ja54na9g","sh/cza94vmx","sh/298ryl4v","sh/3ah8rqlg","sh/obq90bml","sh/pcjqtg36","sh/m5cra54z","sh/n6ls3alk","sh/n2l4fq98","sh/943mhgre","sh/83ulovat","sh/v6l4jq94","sh/x8nml0ra"]}]
+    },
+    {
+      "outputSlide": 4,
+      "sourceSlide": 4,
+      "narrativeRole": "architecture map",
+      "reuseMode": "duplicate-slide",
+      "editTargets": [{"action":"rewrite","sourceElementIds":["sh/tsrqlc7u","sh/1cj2d8b6","sh/rm1k7yt4","sh/ql8jytsj","sh/doj29oba","sh/w72947yt","sh/x8vaxsfe","sh/a5kr2xg3","sh/v6tsv2xo","sh/g36tgryd","sh/h4fa9wfy","sh/p0batw72","sh/oz29krqh","sh/3ytsrmpw","sh/2xkrih8b","sh/1wbapc7q","sh/fu9sn2p0","sh/et0reh8f"]}]
+    },
+    {
+      "outputSlide": 5,
+      "sourceSlide": 5,
+      "narrativeRole": "status table",
+      "reuseMode": "duplicate-slide",
+      "editTargets": [{"action":"rewrite","sourceElementIds":["sh/n6dcr65o","sh/dgbulwnm","sh/z2tcnm5s","sh/yhkbe1o7","sh/l4bupwny","tb/vex4n2t4"]}]
+    },
+    {
+      "outputSlide": 6,
+      "sourceSlide": 6,
+      "narrativeRole": "power metric and verification",
+      "reuseMode": "duplicate-slide",
+      "editTargets": [{"action":"rewrite","sourceElementIds":["sh/svmt4v6t","sh/yhg7epsj","sh/87ipkzal","sh/98rqt4r6","sh/7m98ru9g","sh/oryp8fah","sh/h4bupgn6","sh/w32twb6l","sh/u1kbu1ov","sh/5svutgni","sh/47mt0b6x","sh/j6dcr65c","sh/i54bylor","sh/twfux0ne"]}]
+    },
+    {
+      "outputSlide": 7,
+      "sourceSlide": 7,
+      "narrativeRole": "FAT process",
+      "reuseMode": "duplicate-slide",
+      "editTargets": [{"action":"rewrite","sourceElementIds":["sh/4fm1wb6p","sh/cb2tkvap","sh/ydkbm5sv","sh/zedcfa9g","sh/cbq1sv25","sh/n6x0fqlo","sh/25ojml43","sh/p8fih03e","sh/o761ov2t","sh/f2d0b6lc","sh/eh4jil4r","sh/id4ju1oz","sh/jedkn654"]}]
+    },
+    {
+      "outputSlide": 8,
+      "sourceSlide": 8,
+      "narrativeRole": "CH implementation summary",
+      "reuseMode": "duplicate-slide",
+      "editTargets": [{"action":"rewrite","sourceElementIds":["sh/ehgvihwr","sh/18byd4zy","sh/ri9g7uhw","sh/6h0fypgb","sh/sjix0zy1","sh/je9g3ahk","sh/id0fu50z","sh/o7ydoret","sh/98rehwve","sh/n6pwfmd8","sh/0jydkreh"]}]
+    },
+    {
+      "outputSlide": 9,
+      "sourceSlide": 9,
+      "narrativeRole": "Gateway discussion agenda",
+      "reuseMode": "duplicate-slide",
+      "editTargets": [{"action":"rewrite","sourceElementIds":["sh/cnu1kzyd","sh/1cfmhgne","sh/nex4jq5k","sh/mdonql4z","sh/9gzml0nq","sh/bih4na5w","sh/ah8nu54b","sh/p0ji9kf2","sh/2xsjepgb","sh/3y107axw"]}]
+    },
+    {
+      "outputSlide": 10,
+      "sourceSlide": 10,
+      "narrativeRole": "security discussion comparison",
+      "reuseMode": "duplicate-slide",
+      "editTargets": [{"action":"rewrite","sourceElementIds":["sh/ozitcv29","sh/xc3mho32","sh/zelojyl8","sh/ydcnatkn","sh/l036l83y","sh/725onyl4","sh/m1cnetkj","sh/s7yt4b21","sh/r6pcv6lw","sh/0bit8b2d","sh/1cru1g3y","sh/fapcz6ls"]}]
+    },
+    {
+      "outputSlide": 11,
+      "sourceSlide": 11,
+      "narrativeRole": "server discussion agenda",
+      "reuseMode": "duplicate-slide",
+      "editTargets": [{"action":"rewrite","sourceElementIds":["sh/tsnip0ny","sh/xcryxg7y","sh/n69grmpw","sh/250zy18b","sh/98rytw72","sh/ofqtgnyt","sh/9gza9sze","sh/mdobedg3","sh/nehs7iho","sh/0b6tc3yx","sh/1cfa58zi","sh/epobatgr","sh/zaxs3yhc","sh/cn6t83y1","sh/dofa18z6"]}]
+    },
+    {
+      "outputSlide": 12,
+      "sourceSlide": 12,
+      "narrativeRole": "location decision summary",
+      "reuseMode": "duplicate-slide",
+      "editTargets": [{"action":"rewrite","sourceElementIds":["sh/9sj65kn2","sh/1gbm9s3a","sh/ra943il8","sh/q903ad4n","sh/sb2lcnmd","sh/b6d4f2lc","sh/a543mx4r","sh/wvupgz6t","sh/xw3q94ne","sh/atc7epon","sh/orapcf6h"]}]
+    },
+    {
+      "outputSlide": 13,
+      "sourceSlide": 13,
+      "narrativeRole": "mounting survey summary",
+      "reuseMode": "duplicate-slide",
+      "editTargets": [{"action":"rewrite","sourceElementIds":["sh/t8fy5k3i","sh/q50nydsj","sh/o3i5w3ad","sh/p4r6p8by","sh/21gnuts7","sh/32ponyts","sh/gzy5s3a1","sh/hcfy9k3u","sh/vaxg7ulo"]}]
+    },
+    {
+      "outputSlide": 14,
+      "sourceSlide": 14,
+      "narrativeRole": "roadmap timeline",
+      "reuseMode": "duplicate-slide",
+      "editTargets": [{"action":"rewrite","sourceElementIds":["sh/fqdg3q98","sh/xc7eds76","sh/jepwf2pc","sh/idgvmx8r","sh/b2507exs","sh/kre1k3y9","sh/ls7idofu","sh/y5wjitgj","sh/z650byxo","sh/0buh8zy5","sh/1w3i14fq","sh/hsvy50re","sh/grmxwvqt"]}]
+    },
+    {
+      "outputSlide": 15,
+      "sourceSlide": 15,
+      "narrativeRole": "organizational responsibility split",
+      "reuseMode": "duplicate-slide",
+      "editTargets": [{"action":"rewrite","sourceElementIds":["sh/judsvqxg","sh/547mhg3m","sh/76p4jqls","sh/65gnqlk7","sh/t87ml0ji","sh/wrm9kvep","sh/hsvat0fa","sh/upkrilwj","sh/vqdsrqx4","sh/4vm9ovel","sh/5wvax0f6","sh/it4rm5wv"]}]
+    },
+    {
+      "outputSlide": 16,
+      "sourceSlide": 16,
+      "narrativeRole": "closing action summary",
+      "reuseMode": "duplicate-slide",
+      "editTargets": [{"action":"rewrite","sourceElementIds":["sh/9c7i1o7u","sh/8z2h8bq1","sh/ytkf2h8j","sh/zutgvm94","sh/kv2h4rqp","sh/lwbyxwra","sh/ip4zel83","sh/3qdg7qpo","sh/fm1gzq5o","sh/e1sf65o3","sh/1ojy10ne","sh/gnax8v6t","sh/nqlg3a5k","sh/2pcfa5oz","sh/ps3y5knq","sh/oruhcf65","sh/bulg7u5g","sh/mpgj6t8j","sh/7qp0zepo","sh/8by18jq9"]}]
+    }
+  ],
+  "omittedSourceSlides": []
+}

@@ -125,7 +125,7 @@ def write_operator_package(source, target, env):
             "protocolVersion": versions["PROTOCOL_VERSION"],
             "configSchemaVersion": versions["CONFIG_SCHEMA_VERSION"],
             "chip": "esp32s3",
-            "baud": 460800,
+            "baud": 921600,
             "createdAtUtc": stamp,
             "source": {
                 "gitCommit": _git_commit(repo_root),

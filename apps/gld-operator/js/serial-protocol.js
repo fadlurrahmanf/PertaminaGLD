@@ -15,6 +15,9 @@ import { bridgeFetch, connectBridgeSerialOnly } from "./bridge-client.js";
 
 // ---- generic parse helpers ----
 
+const TCA_ONLINE_SPINNER = ["−", "\\", "|", "/"];
+let tcaOnlineSpinnerIndex = 0;
+
 export function parseJsonAfter(prefix, line) {
   if (!line.startsWith(prefix)) return null;
   const raw = line.slice(prefix.length).trim();
@@ -89,6 +92,9 @@ let consecutiveSerialTimeouts = 0;
 let recoveryRequested = false;
 let skippedPollLogged = false;
 const serialCommandQueue = [];
+let sensorPowerApplyPending = false;
+let pendingSensorPowerConfirmation = null;
+const SENSOR_POWER_CONFIRM_TIMEOUT_MS = 3000;
 
 function serialCommandName(command) {
   return String(command || "").trim().split(/\s+/)[0] || "COMMAND";
@@ -116,7 +122,20 @@ function expectedResponses(command) {
   if (cmd === "GET_STATUS") return ["status"];
   if (cmd === "GET_TELEMETRY") return ["telemetry"];
   if (cmd === "GET_QC_STATUS") return ["qc"];
+  // This command intentionally keeps the serial handler busy until the
+  // firmware has emitted its bounded completion marker.  An immediate ACK
+  // means only that it started; it is not safe to resume the 500 ms poll yet.
+  if (cmd === "RUN_CURRENT_STATE_CHECK") return ["current-state-done"];
   return [`ack:${cmd}`];
+}
+
+function responseTimeoutMs(command) {
+  // The current-state diagnostic probes ADS plus eight TCA branches without
+  // changing sensor power or DAC.  It may take longer than an ordinary poll
+  // on a slow I2C retry, so never classify it as a dead serial port at 5 s.
+  return serialCommandName(command) === "RUN_CURRENT_STATE_CHECK"
+    ? Math.max(SERIAL_RESPONSE_TIMEOUT_MS, 15000)
+    : SERIAL_RESPONSE_TIMEOUT_MS;
 }
 
 function flushQueuedSerialCommand() {
@@ -141,9 +160,10 @@ export function startSerialResponseWatch(command) {
   clearSerialResponseWatch();
   const cmd = serialCommandName(command);
   const startedAt = Date.now();
+  const timeoutMs = responseTimeoutMs(command);
   const timer = setTimeout(() => {
     if (!state.pendingSerialRequest || state.pendingSerialRequest.startedAt !== startedAt) return;
-    appendLog(`NO_RESPONSE ${cmd} after ${SERIAL_RESPONSE_TIMEOUT_MS}ms`, "in");
+    appendLog(`NO_RESPONSE ${cmd} after ${timeoutMs}ms`, "in");
     setBadge(elements.protocolLabel, `${cmd}: no response`, "warn");
     state.pendingSerialRequest = null;
     consecutiveSerialTimeouts += 1;
@@ -167,8 +187,13 @@ export function startSerialResponseWatch(command) {
     window.dispatchEvent(new CustomEvent("gld-serial-unresponsive", {
       detail: { slot: state.activeSlot, command: cmd }
     }));
-  }, SERIAL_RESPONSE_TIMEOUT_MS);
+  }, timeoutMs);
   state.pendingSerialRequest = { cmd, startedAt, timer, expected: expectedResponses(cmd) };
+  return startedAt;
+}
+
+function clearSerialResponseWatchIfStartedAt(startedAt) {
+  if (state.pendingSerialRequest?.startedAt === startedAt) clearSerialResponseWatch();
 }
 
 // ---- device snapshot ----
@@ -228,6 +253,9 @@ function updateStatus(status) {
   // reading, so show "-" instead of that raw number.
   const batteryText = power.batteryValid && Number.isFinite(power.batteryMv) ? `${power.batteryMv} mV` : "-";
   setText("batteryValue", batteryText);
+  renderEnvironment(status.environment);
+  renderSensorPowerControls(status.sensorPower || status.pcf8574);
+  confirmSensorPowerState(status.sensorPower || status.pcf8574);
 
   const model = status.model || {};
   const bindingStatus = $("modelNullingBindingStatus");
@@ -443,9 +471,11 @@ function parseBootDiagnosticLine(line) {
     });
     setBootProbe("mcp", {
       label: "MCP4725 Mux",
-      stage: mcp === "8/8" ? "OK" : mcp,
-      tone: mcp === "8/8" ? "pass" : "fail",
-      detail: `MCP detected ${mcp}${pairs.mcpMask ? `, mask ${pairs.mcpMask}` : ""}; check TCA channels and MCP4725 power/address if below 8/8`
+      stage: mcp === "8/8" ? "OK" : "Diagnostic",
+      tone: mcp === "8/8" ? "pass" : "active",
+      detail: mcp === "8/8"
+        ? "MCP detected on all 8 TCA channels"
+        : `Boot ACK diagnostic ${mcp}${pairs.mcpMask ? `, mask ${pairs.mcpMask}` : ""}; current DAC-control status decides operational readiness`
     });
     renderBootDiagnostics();
     return;
@@ -533,19 +563,23 @@ function bootCardsFromCurrentState() {
   const mcpKnown = Number.isFinite(Number(boot.mcpOkCount)) || Boolean(mcpOkArray);
   const mcpCount = mcpOkArray ? mcpOkArray.filter((v) => optionalBool(v) === true).length : Number(boot.mcpOkCount);
   const mcpAllOk = Number.isFinite(mcpCount) && mcpCount >= 8;
-  cards.push(probes.mcp || rows.mcp || statusBootCard(
-    "mcp",
-    "MCP4725 Mux",
-    mcpKnown ? (mcpAllOk ? "OK" : `${Number.isFinite(mcpCount) ? mcpCount : "?"}/8`) : "Unknown",
-    mcpKnown ? (mcpAllOk ? "pass" : "fail") : "idle",
-    mcpKnown
-      ? (mcpAllOk ? "MCP detected on all 8 TCA channels" : `MCP detected ${Number.isFinite(mcpCount) ? mcpCount : "?"}/8; check TCA channels and MCP4725 power/address`)
-      : "Waiting for I2C boot evidence"
-  ));
-
   const mcpControlOkArray = boot.mcpControlTested === true && Array.isArray(boot.mcpControlOk) ? boot.mcpControlOk : null;
   const mcpControlKnown = boot.mcpControlTested === true || Boolean(mcpControlOkArray);
   const mcpControlCount = mcpControlOkArray ? mcpControlOkArray.filter((v) => optionalBool(v) === true).length : NaN;
+  const mcpOperationalOk = mcpControlKnown && Number.isFinite(mcpControlCount) && mcpControlCount >= 8;
+  const mcpStatusCard = statusBootCard(
+    "mcp",
+    "MCP4725 Mux",
+    mcpOperationalOk ? "OK" : mcpKnown ? (mcpAllOk ? "OK" : `${Number.isFinite(mcpCount) ? mcpCount : "?"}/8`) : "Unknown",
+    mcpOperationalOk ? "pass" : mcpKnown ? (mcpAllOk ? "pass" : "active") : "idle",
+    mcpOperationalOk
+      ? `DAC control passed ${mcpControlCount}/8; boot ACK diagnostic ${Number.isFinite(mcpCount) ? `${mcpCount}/8` : "unknown"}`
+      : mcpKnown
+        ? (mcpAllOk ? "MCP detected on all 8 TCA channels" : `Boot ACK diagnostic ${Number.isFinite(mcpCount) ? mcpCount : "?"}/8; DAC-control result is pending or failed`)
+        : "Waiting for I2C boot evidence"
+  );
+  cards.push(mcpOperationalOk ? mcpStatusCard : (probes.mcp || rows.mcp || mcpStatusCard));
+
   const dacKnown = boot.dacReady === true || boot.dacReady === false || mcpControlKnown;
   const dacAllOk = mcpControlKnown ? Number.isFinite(mcpControlCount) && mcpControlCount >= 8 : boot.dacReady === true;
   cards.push(probes.dac || rows.dac || statusBootCard(
@@ -678,6 +712,17 @@ export function sensorPresenceFromStatus(status = state.status) {
       tone = "fail";
       detail = "Firmware reports sensor fault";
       showReading = false;
+    } else if (state.status?.sensorPower?.available === true && state.status.sensorPower?.ready === true &&
+               state.status.sensorPower?.channels?.[index] === false) {
+      stage = "Power Off";
+      tone = "active";
+      detail = "Module sensor sedang OFF; current-state check tidak mengubah EN";
+      showReading = false;
+    } else if (mcpControlOk === true && mcpOk === false) {
+      stage = telemetry.valid === true && adsStatusNumber === 0 ? "Present" : "DAC Verified";
+      tone = telemetry.valid === true && adsStatusNumber === 0 ? "pass" : "active";
+      detail = `DAC control verified; boot ACK diagnostic has no 0x60 on TCA mux ${muxChannel}`;
+      showReading = telemetry.valid === true && adsStatusNumber === 0 && (hasVoltage || hasGain);
     } else if (mcpOk === false) {
       stage = "MCP Not OK";
       tone = "fail";
@@ -734,12 +779,24 @@ export function sensorPresenceFromStatus(status = state.status) {
       detail = "MCP ready count is below this channel";
     }
 
+    const adsEvidence = telemetry.valid === true
+      ? `ADS AIN${index}: ${adsStatusName || "status tidak tersedia"}`
+      : `ADS AIN${index}: belum ada telemetry`;
+    const mcpBootEvidence = mcpOk === true
+      ? "boot ACK 0x60"
+      : mcpOk === false ? "boot tidak ACK 0x60" : "boot ACK tidak tersedia";
+    const mcpControlEvidence = mcpControlOk === true
+      ? "DAC control OK"
+      : mcpControlOk === false ? "DAC control gagal" : "DAC control belum diuji";
+
     return {
       index,
       sensor,
       stage,
       tone,
       detail: adsStatusName && telemetry.valid === true ? `${detail} (${adsStatusName})` : detail,
+      adsEvidence,
+      mcpEvidence: `MCP/TCA mux ${muxChannel}: ${mcpBootEvidence}; ${mcpControlEvidence}`,
       voltage: showReading && hasVoltage ? voltageNumber.toFixed(6) : "",
       gain: showReading && hasGain ? String(gain) : ""
     };
@@ -758,7 +815,12 @@ export function renderSensorCheck() {
     ? `${fail} MQ sensor ${fail === 1 ? "channel needs" : "channels need"} attention.`
     : present === 8 ? "All 8 MQ sensor channels look present." : `${present}/8 MQ sensor channels confirmed.`;
   const adsReason = boot.adsReason ? ` (${boot.adsReason})` : "";
-  elements.sensorCheckMeta.textContent = `ADS: ${boot.adsReady === true ? "Ready" : boot.adsReady === false ? `Not ready${adsReason}` : "Unknown"} - MCP: ${Number.isFinite(boot.mcpOkCount) ? `${boot.mcpOkCount}/8` : "Unknown"} - Latest telemetry: ${telemetry.valid ? "valid" : "none"}${check ? ` - Check ${check}` : ""}`;
+  const mcpControlCount = boot.mcpControlTested === true && Array.isArray(boot.mcpControlOk)
+    ? boot.mcpControlOk.filter((value) => optionalBool(value) === true).length
+    : NaN;
+  const mcpControlText = Number.isFinite(mcpControlCount) ? `DAC control ${mcpControlCount}/8` : "DAC control unknown";
+  const mcpBootText = Number.isFinite(boot.mcpOkCount) ? `boot ACK ${boot.mcpOkCount}/8` : "boot ACK unknown";
+  elements.sensorCheckMeta.textContent = `ADS: ${boot.adsReady === true ? "Ready" : boot.adsReady === false ? `Not ready${adsReason}` : "Unknown"} - MCP: ${mcpControlText} (${mcpBootText}) - Latest telemetry: ${telemetry.valid ? "valid" : "none"}${check ? ` - Check ${check}` : ""}`;
   renderBootDiagnostics();
   elements.sensorCheckChannels.innerHTML = "";
 
@@ -784,7 +846,12 @@ export function renderSensorCheck() {
     const extra = document.createElement("small");
     extra.textContent = [channel.voltage ? `V ${channel.voltage}` : "", channel.gain ? `gain ${channel.gain}` : ""].filter(Boolean).join(" - ") || "No live reading";
 
-    card.append(head, stage, detail, extra);
+    const ads = document.createElement("small");
+    ads.textContent = channel.adsEvidence;
+    const mcp = document.createElement("small");
+    mcp.textContent = channel.mcpEvidence;
+
+    card.append(head, stage, ads, mcp, detail, extra);
     elements.sensorCheckChannels.append(card);
   }
 
@@ -838,12 +905,163 @@ function updateLightweightTelemetry(message) {
     uptimeMs: message.uptimeMs,
     alarmLatched: message.alarmLatched ?? state.status?.alarmLatched,
     model: { ...(state.status?.model || {}), ...(message.model || {}) },
+    environment: message.environment || state.status?.environment,
+    sensorPower: message.sensorPower || state.status?.sensorPower,
     telemetry: message.telemetry
   };
   state.status = status;
   state.mode = status.mode || state.mode;
   updateStatus(status);
   maybeAppendTelemetry(status);
+}
+
+function renderEnvironment(environment) {
+  const readout = $("environmentReadout");
+  const temperature = $("environmentTemperature");
+  const humidity = $("environmentHumidity");
+  const tcaIndicators = [$("environmentTca"), $("nullingTcaIndicator")].filter(Boolean);
+  if (!readout || !temperature || !humidity) return;
+
+  const available = environment?.available === true;
+  const detected = environment?.detected === true;
+  const valid = environment?.valid === true;
+  const tempC = Number(environment?.temperatureC);
+  const rh = Number(environment?.relativeHumidityPct);
+  const sampleAgeMs = Number(environment?.sampleAgeMs);
+  const hasReading = available && detected && valid && Number.isFinite(tempC) && Number.isFinite(rh);
+
+  readout.classList.toggle("is-ready", hasReading);
+  readout.classList.toggle("is-waiting", available && !hasReading);
+  if (hasReading) {
+    const age = Number.isFinite(sampleAgeMs) && sampleAgeMs >= 0 ? ` · ${sampleAgeMs} ms` : "";
+    temperature.textContent = `Suhu ${tempC.toFixed(1)} °C${age}`;
+    humidity.textContent = `RH ${rh.toFixed(1)} %`;
+  } else if (available && !detected) {
+    temperature.textContent = "Suhu sensor tidak terdeteksi";
+    humidity.textContent = "RH —";
+  } else {
+    temperature.textContent = "Suhu —";
+    humidity.textContent = available ? "RH membaca…" : "RH —";
+  }
+
+  const tcaStatus = environment?.tca9548a;
+  const tcaAddress = tcaStatus?.address || "0x71";
+  const tcaDetected = tcaStatus?.detected === true;
+  const tcaKnown = typeof tcaStatus?.detected === "boolean";
+  const tcaAgeMs = Number(tcaStatus?.sampleAgeMs);
+  const tcaFresh = Number.isFinite(tcaAgeMs) && tcaAgeMs >= 0 && tcaAgeMs <= 1500;
+  const tcaOnline = tcaKnown && tcaDetected && tcaFresh;
+  const tcaSpinner = tcaOnline ? TCA_ONLINE_SPINNER[tcaOnlineSpinnerIndex++ % TCA_ONLINE_SPINNER.length] : "";
+  for (const tca of tcaIndicators) {
+    tca.classList.toggle("is-online", tcaOnline);
+    tca.classList.toggle("is-offline", tcaKnown && (!tcaDetected || !tcaFresh));
+    tca.classList.toggle("is-unknown", !tcaKnown);
+    const tcaLabel = tca.querySelector("span:last-child");
+    if (tcaLabel) {
+      tcaLabel.textContent = !tcaKnown
+        ? `TCA9548A · ${tcaAddress}: menunggu telemetry firmware`
+        : tcaOnline
+          ? `TCA9548A · ${tcaAddress}: online · ${tcaSpinner}`
+          : !tcaDetected
+            ? `TCA9548A · ${tcaAddress}: tidak ACK`
+            : `TCA9548A · ${tcaAddress}: status ACK basi`;
+    }
+  }
+}
+
+function renderSensorPowerControls(sensorPower) {
+  const availability = $("sensorPowerAvailability");
+  const status = $("sensorPowerStatus");
+  if (!availability || !status) return;
+
+  const available = sensorPower?.available === true;
+  const ready = sensorPower?.ready === true;
+  const outputs = Number(sensorPower?.outputMask ?? sensorPower?.outputs);
+  const channels = Array.isArray(sensorPower?.channels) ? sensorPower.channels : null;
+  const enChannels = Array.isArray(sensorPower?.enChannels) ? sensorPower.enChannels : null;
+  const validOutputs = Number.isInteger(outputs) && outputs >= 0 && outputs <= 0xFF;
+  availability.textContent = !available ? "tidak tersedia" : ready ? "PCF8574 siap" : "PCF8574 tidak siap";
+  availability.className = `tag ${available && ready ? "tag--ok" : "tag--warn"}`;
+  $("sensorPowerAllOnBtn").disabled = sensorPowerApplyPending || !available || !ready;
+  $("sensorPowerAllOffBtn").disabled = sensorPowerApplyPending || !available || !ready;
+  status.textContent = !available
+    ? "Kontrol ini hanya tersedia pada board profile GLD2 (PCF8574 EN0–EN7)."
+    : !ready
+      ? "PCF8574 tidak merespons; perubahan power diblokir. Periksa I2C dan supply 3V3."
+      : "Status ini adalah perintah PCF8574 yang tersinkron setelah setiap perubahan EN; bukan pembuktian tegangan +5 V fisik pada modul.";
+
+}
+
+function sensorPowerChannelState(channel) {
+  const sensorPower = state.status?.sensorPower || state.status?.pcf8574;
+  const available = sensorPower?.available === true;
+  const ready = sensorPower?.ready === true;
+  const outputs = Number(sensorPower?.outputMask ?? sensorPower?.outputs);
+  const en = Number(sensorPower?.enChannels?.[channel]);
+  const directState = sensorPower?.channels?.[channel];
+  const on = typeof directState === "boolean"
+    ? directState
+    : Number.isInteger(outputs) && Number.isInteger(en) && Boolean(outputs & (1 << en));
+  return { available, ready, en, on, applying: sensorPowerApplyPending };
+}
+
+function sensorPowerMatchesExpected(sensorPower, expected) {
+  if (sensorPower?.available !== true || sensorPower?.ready !== true) return false;
+  const channels = Array.isArray(sensorPower.channels) ? sensorPower.channels : [];
+  return Object.entries(expected).every(([channel, enabled]) => channels[Number(channel)] === enabled);
+}
+
+function confirmSensorPowerState(sensorPower) {
+  const pending = pendingSensorPowerConfirmation;
+  if (!pending || !sensorPowerMatchesExpected(sensorPower, pending.expected)) return;
+  clearTimeout(pending.timer);
+  pendingSensorPowerConfirmation = null;
+  pending.resolve(sensorPower);
+}
+
+function waitForSensorPowerConfirmation(expected) {
+  return new Promise((resolve, reject) => {
+    if (pendingSensorPowerConfirmation) {
+      clearTimeout(pendingSensorPowerConfirmation.timer);
+      pendingSensorPowerConfirmation.reject(new Error("sensor power action superseded"));
+    }
+    const timer = setTimeout(() => {
+      if (pendingSensorPowerConfirmation?.reject !== reject) return;
+      pendingSensorPowerConfirmation = null;
+      reject(new Error("status power modul belum berubah"));
+    }, SENSOR_POWER_CONFIRM_TIMEOUT_MS);
+    pendingSensorPowerConfirmation = { expected, resolve, reject, timer };
+    confirmSensorPowerState(state.status?.sensorPower || state.status?.pcf8574);
+  });
+}
+
+export async function setSensorPowerAndWait(channel, enabled) {
+  const all = channel === "all";
+  const expected = all
+    ? Object.fromEntries(Array.from({ length: 8 }, (_, index) => [index, enabled]))
+    : { [Number(channel)]: enabled };
+  sensorPowerApplyPending = true;
+  document.querySelectorAll("[data-sensor-power-channel], #sensorPowerAllOnBtn, #sensorPowerAllOffBtn")
+    .forEach((button) => { button.disabled = true; });
+  try {
+    const confirmation = waitForSensorPowerConfirmation(expected);
+    const payload = all
+      ? `SET_SENSOR_POWER_JSON {"all":true,"enabled":${enabled}}`
+      : `SET_SENSOR_POWER_JSON {"channel":${Number(channel)},"enabled":${enabled}}`;
+    const ack = await sendCommandAndWaitAck(payload, "SET_SENSOR_POWER");
+    if (ack.status !== "ok") throw new Error(ack.message || ack.status || "perintah ditolak");
+    // Firmware emits GLD_STATUS_JSON after the ACK. GET_STATUS is queued as a
+    // fallback so the button never re-enables based on an unconfirmed command.
+    sendCommand("GET_STATUS");
+    return await confirmation;
+  } finally {
+    sensorPowerApplyPending = false;
+    if (pendingSensorPowerConfirmation) {
+      clearTimeout(pendingSensorPowerConfirmation.timer);
+      pendingSensorPowerConfirmation = null;
+    }
+    renderSensorPowerControls(state.status?.sensorPower || state.status?.pcf8574);
+  }
 }
 
 function sensorWindowSamples(index) {
@@ -1053,6 +1271,20 @@ function buildSensorChannelCard(channel) {
   key.textContent = `CH${channel.index + 1}`;
   head.append(titleWrap, key);
 
+  const sensorPower = sensorPowerChannelState(channel.index);
+  if (sensorPower.available) {
+    const powerToggle = document.createElement("button");
+    powerToggle.type = "button";
+    powerToggle.className = `sensor-power-card-toggle ${sensorPower.on ? "is-on" : "is-off"}`;
+    powerToggle.disabled = sensorPower.applying || !sensorPower.ready;
+    powerToggle.dataset.sensorPowerChannel = String(channel.index);
+    powerToggle.dataset.sensorPowerEnabled = sensorPower.on ? "false" : "true";
+    powerToggle.textContent = sensorPower.on ? "CMD ON" : "CMD OFF";
+    powerToggle.title = `${channel.sensor} · EN${Number.isInteger(sensorPower.en) ? sensorPower.en : "?"}: ${sensorPower.on ? "matikan" : "nyalakan"} perintah power modul`;
+    powerToggle.setAttribute("aria-label", powerToggle.title);
+    card.append(powerToggle);
+  }
+
   const voltageEl = document.createElement("span");
   voltageEl.className = "channel-stage";
   // Raw reading straight from telemetry, not the toFixed(6) copy Sensor
@@ -1061,9 +1293,30 @@ function buildSensorChannelCard(channel) {
   const voltageNumber = Number(rawVoltage);
   voltageEl.textContent = Number.isFinite(voltageNumber) ? `${voltageNumber} V` : "- V";
 
+  const telemetryDac = Number(state.status?.telemetry?.dacCodeApplied?.[channel.index]);
+  const runtimeDac = Number(state.status?.runtimeMcpCode?.[channel.index]);
+  const appliedDac = Number.isInteger(telemetryDac) ? telemetryDac
+    : Number.isInteger(runtimeDac) ? runtimeDac : null;
+  const telemetryVerified = state.status?.telemetry?.dacVerified?.[channel.index];
+  const runtimeVerified = state.status?.runtimeMcpVerified?.[channel.index];
+  const dacVerified = telemetryVerified === true || runtimeVerified === true;
+  const dacEvidence = document.createElement("span");
+  dacEvidence.className = "sensor-range";
+  dacEvidence.textContent = Number.isInteger(appliedDac)
+    ? `DAC ${appliedDac} · MCP ${dacVerified ? "terverifikasi" : "belum terverifikasi"}`
+    : "DAC belum diterapkan";
+  dacEvidence.title = dacVerified
+    ? "Kode ini dibaca kembali dari register volatile MCP4725 pada TCA channel yang sama sebelum telemetry Inference dipakai."
+    : "Tidak ada readback MCP4725 yang cocok untuk kode DAC ini; angka telemetry tidak boleh dianggap terikat ke DAC.";
+
   const sessionMcpControl = buildSessionMcpControl(channel);
 
-  const gainValue = channel.gain !== "" ? Number(channel.gain) : null;
+  // The analysis table reads the current raw telemetry gain. Do the same here
+  // instead of using the presence-card display value, which is intentionally
+  // blank while a channel is otherwise marked not-ready.
+  const rawGain = state.status?.telemetry?.sensorGain?.[channel.index];
+  const reportedGain = Number(rawGain);
+  const gainValue = GAIN_STEPS.includes(reportedGain) ? reportedGain : null;
   const ladder = document.createElement("div");
   ladder.className = "gain-ladder";
   for (const step of GAIN_STEPS) {
@@ -1073,7 +1326,7 @@ function buildSensorChannelCard(channel) {
     ladder.append(block);
   }
 
-  card.append(head, voltageEl, ...sessionMcpControl, ladder);
+  card.append(head, voltageEl, dacEvidence, ...sessionMcpControl, ladder);
   return card;
 }
 
@@ -1167,6 +1420,11 @@ export function handleLine(rawLine) {
     appendLog(`PARSER_ERROR ${error.message}`, "in");
   }
 
+  if (line.startsWith("RUN_CURRENT_STATE_CHECK_DONE")) {
+    recordSerialResponse("current-state-done");
+    return;
+  }
+
   if (line.startsWith("DATASET_")) {
     handleDatasetSerialLine(line);
   } else if (line.startsWith("NULLING_")) {
@@ -1238,6 +1496,12 @@ export async function sendCommand(command) {
     return;
   }
 
+  if (state.pendingSerialRequest) {
+    serialCommandQueue.push(line);
+    appendLog(`SEND_QUEUED waiting for ${state.pendingSerialRequest.cmd}: ${trimmedLine}`, "in");
+    return;
+  }
+
   if (state.bridgeAvailable) {
     if (!state.connected) {
       try {
@@ -1255,13 +1519,18 @@ export async function sendCommand(command) {
         return;
       }
     }
+    const watchStartedAt = startSerialResponseWatch(line);
     try {
       const result = await bridgeFetch("/api/serial/write", {
         method: "POST",
         body: JSON.stringify({ line: trimmedLine, slot: state.activeSlot })
       });
-      if (result?.ok) startSerialResponseWatch(line);
+      if (!result?.ok) {
+        clearSerialResponseWatchIfStartedAt(watchStartedAt);
+        appendLog(`SEND_ERROR bridge rejected: ${trimmedLine}`, "in");
+      }
     } catch (error) {
+      clearSerialResponseWatchIfStartedAt(watchStartedAt);
       if (await publishMqttModeFallback(trimmedLine, "serial write failed")) return;
       appendLog(`SEND_ERROR ${error.message}`, "in");
     }
@@ -1274,8 +1543,13 @@ export async function sendCommand(command) {
     appendLog("SEND_SKIPPED serial not connected", "in");
     return;
   }
-  await state.writer.write(encoder.encode(line));
-  startSerialResponseWatch(line);
+  const watchStartedAt = startSerialResponseWatch(line);
+  try {
+    await state.writer.write(encoder.encode(line));
+  } catch (error) {
+    clearSerialResponseWatchIfStartedAt(watchStartedAt);
+    throw error;
+  }
 }
 
 // Sends a command, waits for its ack, and pops up the app's own centered
@@ -1356,11 +1630,6 @@ function pollTelemetryOnce() {
     return;
   }
 
-  if (state.pendingSerialRequest) {
-    serialCommandQueue.push(command);
-    appendLog(`SEND_QUEUED waiting for ${state.pendingSerialRequest.cmd}: ${trimmedLine}`, "in");
-    return;
-  }
   const command = telemetryPollCommand();
   if (!command) {
     if (!skippedPollLogged) {

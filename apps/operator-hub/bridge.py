@@ -999,18 +999,22 @@ class Handler(SimpleHTTPRequestHandler):
         self.wfile.write(body)
 
 
-def _wait_for_children_health(host: str, timeout: float = 5.0) -> None:
+def _wait_for_children_health(host: str, timeout: float = 10.0) -> list[str]:
     """Give freshly-launched children a moment to answer /api/health before
-    opening the browser, instead of a fixed blind sleep."""
+    opening the browser, instead of a fixed blind sleep.  A port is ready only
+    when it identifies as the expected child bridge, not merely when a process
+    answers HTTP on that port."""
     deadline = time.monotonic() + timeout
     pending = set(child_processes.keys())
     while pending and time.monotonic() < deadline:
         for name in list(pending):
             cfg = CHILD_APPS[name]
-            if check_health(host, cfg["port"], cfg["appId"]).get("up"):
+            health = check_health(host, cfg["port"], cfg["appId"])
+            if health.get("identityOk"):
                 pending.discard(name)
         if pending:
             time.sleep(0.25)
+    return sorted(pending)
 
 
 def _install_signal_handlers() -> None:
@@ -1032,7 +1036,7 @@ def main() -> int:
     parser.add_argument("--host", default="127.0.0.1", help="loopback address to bind: 127.0.0.1, localhost, or ::1 (no LAN/0.0.0.0)")
     parser.add_argument("--port", default=5173, type=int)
     parser.add_argument("--no-children", action="store_true", help="don't spawn gld/ch/gw bridges (assume already running)")
-    parser.add_argument("--open-browser", action="store_true", help="open the Operator Hub in the default browser after binding the server socket")
+    parser.add_argument("--open-browser", action="store_true", help="open the ready GLD Expert console in the default browser")
     args = parser.parse_args()
 
     # 1. Validate configuration.
@@ -1051,6 +1055,7 @@ def main() -> int:
         return 2
 
     _install_signal_handlers()
+    unavailable: list[str] = []
     try:
         if not args.no_children:
             # 3. Launch children. Broker setup is isolated in its own
@@ -1068,12 +1073,22 @@ def main() -> int:
                 print("HUB_MQTT_DEGRADED no LAN IPv4 detected; Gateway/MQTT is unavailable, GLD/CH serial still work")
             launch_children(host, broker)
             # 4. Wait for health before opening the browser.
-            _wait_for_children_health(host)
+            unavailable = _wait_for_children_health(host)
+            if unavailable:
+                labels = ", ".join(CHILD_APPS[name]["label"] for name in unavailable)
+                print(f"HUB_CHILDREN_NOT_READY {labels}")
+            else:
+                print("HUB_CHILDREN_READY GLD/CH/Gateway bridges passed health identity checks")
 
-        url = f"http://{host}:{args.port}/"
-        print(f"Operator Hub: {url}")
-        if args.open_browser and not webbrowser.open(url):
-            print(f"HUB_BROWSER_OPEN_FAILED Open this URL manually: {url}")
+        hub_url = f"http://{host}:{args.port}/"
+        gld_url = f"http://{host}:{CHILD_APPS['gld']['port']}/"
+        print(f"Operator Hub parent: {hub_url}")
+        print(f"GLD Expert console: {gld_url}")
+        gld_ready = args.no_children or "gld" not in unavailable
+        if args.open_browser and gld_ready and not webbrowser.open(gld_url):
+            print(f"HUB_BROWSER_OPEN_FAILED Open this URL manually: {gld_url}")
+        elif args.open_browser and not gld_ready:
+            print("HUB_BROWSER_NOT_OPENED GLD Expert bridge is not ready")
         print("Press Ctrl+C to stop (this also stops the GLD/CH/Gateway bridges it launched).")
         httpd.serve_forever()
     except KeyboardInterrupt:

@@ -46,14 +46,18 @@ constexpr int PIN_RS485_TX = gld2::PIN_RS485_TX;
 constexpr bool HAS_RS485 = gld2::HAS_RS485;
 constexpr uint8_t SENSOR_COUNT = gld2::SENSOR_COUNT;
 constexpr const char* const* SENSOR_NAMES = gld2::SENSOR_NAMES;
+constexpr const char* const* SENSOR_HEADERS = gld2::SENSOR_HEADERS;
 constexpr uint8_t TCA9548A_ADDR = gld2::TCA9548A_ADDR;
 constexpr uint8_t MCP4725_ADDR = gld2::MCP4725_ADDR;
 constexpr uint8_t PCF8574_ADDR = gld2::PCF8574_ADDR;
 constexpr uint8_t PCF8574_ALL_LOAD_SWITCHES_ON = gld2::PCF8574_ALL_LOAD_SWITCHES_ON;
+constexpr uint8_t PCF8574_ALL_LOAD_SWITCHES_OFF = gld2::PCF8574_ALL_LOAD_SWITCHES_OFF;
 constexpr bool HAS_PCF8574 = true;
 constexpr uint16_t GLD_DAC_CODE_MIN = gld2::GLD_DAC_CODE_MIN;
 constexpr uint16_t GLD_DAC_CODE_MAX = gld2::GLD_DAC_CODE_MAX;
 constexpr const uint8_t* SENSOR_TO_MUX_CH = gld2::SENSOR_TO_MUX_CH;
+constexpr const uint8_t* SENSOR_TO_POWER_EN = gld2::SENSOR_TO_POWER_EN;
+constexpr const uint8_t* POWER_EN_TO_MUX_CH = gld2::POWER_EN_TO_MUX_CH;
 constexpr const uint8_t* SENSOR_TO_ADS_CH = gld2::SENSOR_TO_ADS_CH;
 }  // namespace pgl::gld::board
 
@@ -219,10 +223,12 @@ constexpr uint8_t TCA9548A_ADDR = 0x71;
 constexpr uint8_t MCP4725_ADDR = 0x60;
 constexpr uint8_t PCF8574_ADDR = 0;
 constexpr uint8_t PCF8574_ALL_LOAD_SWITCHES_ON = 0;
+constexpr uint8_t PCF8574_ALL_LOAD_SWITCHES_OFF = 0;
 constexpr bool HAS_PCF8574 = false;
 constexpr uint16_t GLD_DAC_CODE_MIN = 0;
 constexpr uint16_t GLD_DAC_CODE_MAX = 4095;
 constexpr uint8_t SENSOR_TO_MUX_CH[SENSOR_COUNT] = {7, 6, 5, 0, 1, 2, 3, 4};
+constexpr uint8_t SENSOR_TO_POWER_EN[SENSOR_COUNT] = {0, 6, 7, 3, 4, 5, 2, 1};
 constexpr uint8_t SENSOR_TO_ADS_CH[SENSOR_COUNT] = {0, 1, 2, 3, 4, 5, 6, 7};
 
 }  // namespace pgl::gld::board

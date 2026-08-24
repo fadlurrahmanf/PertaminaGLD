@@ -3,8 +3,8 @@
 // detail breakdown (baseline/exponential/binary/confirm + DAC source), and
 // the signature sweep-meter visualizing the binary-search bracket live.
 
-import { $, elements, state, SENSOR_NAMES } from "./state.js";
-import { appendLog, numberField, stamp, showAlert, showConfirm } from "./ui.js";
+import { $, elements, state, SENSOR_NAMES, SENSOR_MUX_CHANNELS } from "./state.js";
+import { appendLog, downloadText, numberField, setPanelOpen, stamp, showAlert, showConfirm } from "./ui.js";
 import { tokenValue, channelIndexFromLog, applyAndAlert, sendCommand, sendCommandAndWaitAck } from "./serial-protocol.js";
 import { saveSessionLog } from "./dataset.js";
 import { renderQcNullingViews } from "./qc.js";
@@ -41,6 +41,15 @@ export function latestFeatureOrderForNulling() {
 
 function summarizeNulling(line) {
   const ch = /ch=(\d+)/.exec(line)?.[1];
+  if (line.startsWith("NULLING_WARMUP_START")) {
+    const total = Number(tokenValue(line, "totalSec"));
+    return Number.isFinite(total) ? `Pemanasan sensor dimulai: ${total} detik.` : "Pemanasan sensor dimulai.";
+  }
+  if (line.startsWith("NULLING_WARMUP remainingSec=")) {
+    const remaining = Number(tokenValue(line, "remainingSec"));
+    return Number.isFinite(remaining) ? `Pemanasan sensor: ${remaining} detik lagi.` : "Pemanasan sensor berlangsung.";
+  }
+  if (line.startsWith("NULLING_WARMUP_DONE")) return "Pemanasan sensor selesai; kalibrasi dimulai.";
   if (line.includes("SERVICE_START")) return "Nulling service started.";
   if (line.includes("BASELINE")) return ch ? `Channel ${Number(ch) + 1} baseline scan.` : "Baseline scan.";
   if (line.includes("EXP_")) return ch ? `Channel ${Number(ch) + 1} exponential range search.` : "Exponential range search.";
@@ -54,8 +63,8 @@ function summarizeNulling(line) {
 const NULLING_FAIL_REASON_TEXT = {
   dac_zero_write_failed: "Could not zero the DAC before the baseline scan",
   baseline_no_valid_samples: "No valid ADC samples during the baseline scan",
-  exponential_range_not_found: "Exponential search never crossed the delta threshold",
-  confirm_failed: "No code in the confirm window crossed the baseline-relative threshold",
+  exponential_range_not_found: "Exponential search never met both the zero-margin and baseline-rise thresholds",
+  confirm_failed: "No code in the confirm window met both the zero-margin and baseline-rise thresholds",
   dac_final_write_failed: "Could not write the final DAC code",
   after_read_invalid: "Final voltage read was invalid",
   after_threshold_not_met: "Final voltage did not reconfirm the baseline-relative threshold",
@@ -107,12 +116,12 @@ function nullingDetail(line) {
 
 function initNullingStages() {
   return {
-    baseline: { started: false, done: false, steps: 0, codeMin: null, codeMax: null, avgCount: null, value: null, validSamples: null },
-    exponential: { started: false, done: false, failed: false, steps: 0, baselineRef: null, threshold: null, target: null, lastCode: null, lastVoltage: null, lastDelta: null, low: null, high: null, failCode: null, maxCode: null },
-    binary: { started: false, done: false, steps: 0, initialLow: null, initialHigh: null, selected: null },
+    baseline: { started: false, done: false, steps: 0, codeMin: null, codeMax: null, avgCount: null, value: null, validSamples: null, rows: [] },
+    exponential: { started: false, done: false, failed: false, steps: 0, baselineRef: null, threshold: null, minFinalV: null, minBracketDac: null, lastCode: null, lastVoltage: null, lastDelta: null, low: null, high: null, failCode: null, maxCode: null, rows: [] },
+    binary: { started: false, done: false, steps: 0, initialLow: null, initialHigh: null, selected: null, rows: [] },
     confirm: {
-      started: false, done: false, failed: false, steps: 0, start: null, end: null, minFinalV: null, threshold: null, target: null, wide: null,
-      thresholdCount: 0, verifyCode: null, verifyVoltage: null, okCode: null, okVoltage: null, okMode: null, bumps: 0
+      started: false, done: false, failed: false, steps: 0, selected: null, start: null, end: null, sampleCount: null, belowCount: null, aboveCount: null, baselineRef: null, minFinalV: null, threshold: null,
+      thresholdCount: 0, verifyCode: null, verifyVoltage: null, okCode: null, okVoltage: null, okMode: null, bumps: 0, rows: []
     },
     failStage: "", failReason: ""
   };
@@ -189,6 +198,10 @@ function nullingChannelsFromLogs(logs, featureOrder = SENSOR_NAMES) {
       s.baseline.avgCount = tokenValue(line, "avgCount");
     } else if (line.startsWith("NULLING_BASELINE_STEP")) {
       s.baseline.steps += 1;
+      s.baseline.rows.push({
+        dac: tokenValue(line, "code"),
+        voltage: tokenValue(line, "voltage")
+      });
     } else if (line.startsWith("NULLING_BASELINE_DONE")) {
       s.baseline.done = true;
       s.baseline.value = tokenValue(line, "baseline");
@@ -197,12 +210,18 @@ function nullingChannelsFromLogs(logs, featureOrder = SENSOR_NAMES) {
       s.exponential.started = true;
       s.exponential.baselineRef = tokenValue(line, "baseline");
       s.exponential.threshold = tokenValue(line, "threshold");
-      s.exponential.target = tokenValue(line, "target");
+      s.exponential.minFinalV = tokenValue(line, "minFinalV");
+      s.exponential.minBracketDac = tokenValue(line, "minBracketDac");
     } else if (line.startsWith("NULLING_EXP_STEP")) {
       s.exponential.steps += 1;
       s.exponential.lastCode = tokenValue(line, "code");
       s.exponential.lastVoltage = tokenValue(line, "voltage");
       s.exponential.lastDelta = tokenValue(line, "delta");
+      s.exponential.rows.push({
+        dac: tokenValue(line, "code"),
+        voltage: tokenValue(line, "voltage"),
+        delta: tokenValue(line, "delta")
+      });
     } else if (line.startsWith("NULLING_EXP_RANGE")) {
       s.exponential.done = true;
       s.exponential.low = tokenValue(line, "low");
@@ -217,22 +236,53 @@ function nullingChannelsFromLogs(logs, featureOrder = SENSOR_NAMES) {
       s.binary.initialHigh = tokenValue(line, "high");
     } else if (line.startsWith("NULLING_BIN_STEP")) {
       s.binary.steps += 1;
+      s.binary.rows.push({
+        high: tokenValue(line, "high"),
+        low: tokenValue(line, "low"),
+        mid: tokenValue(line, "mid"),
+        voltage: tokenValue(line, "voltage"),
+        delta: tokenValue(line, "delta")
+      });
     } else if (line.startsWith("NULLING_BIN_DONE")) {
       s.binary.done = true;
       s.binary.selected = tokenValue(line, "selected");
     } else if (line.startsWith("NULLING_CONFIRM_START")) {
       s.confirm.started = true;
+      s.confirm.selected = tokenValue(line, "selected");
       s.confirm.start = tokenValue(line, "start");
       s.confirm.end = tokenValue(line, "end");
+      s.confirm.sampleCount = tokenValue(line, "samples");
+      s.confirm.belowCount = tokenValue(line, "below");
+      s.confirm.aboveCount = tokenValue(line, "above");
+      s.confirm.baselineRef = tokenValue(line, "baseline");
       s.confirm.minFinalV = tokenValue(line, "minFinalV");
       s.confirm.threshold = tokenValue(line, "threshold");
-      s.confirm.target = tokenValue(line, "target");
-      s.confirm.wide = tokenValue(line, "wide") === "1";
     } else if (line.startsWith("NULLING_CONFIRM_STEP")) {
       s.confirm.steps += 1;
       const v = Number.parseFloat(tokenValue(line, "voltage"));
-      const crossed = tokenValue(line, "crossed");
-      if (crossed === "1" || (crossed === undefined && Number.isFinite(v) && v >= 0)) s.confirm.thresholdCount += 1;
+      const explicitZeroMargin = tokenValue(line, "zeroMargin");
+      const threshold = Number.parseFloat(s.confirm.threshold ?? s.exponential.threshold);
+      const baseline = Number.parseFloat(s.confirm.baselineRef ?? s.exponential.baselineRef);
+      const zeroMargin = explicitZeroMargin === "1"
+        ? true
+        : explicitZeroMargin === "0"
+          ? false
+          : Number.isFinite(v) && Number.isFinite(threshold) ? v >= -threshold : null;
+      if (zeroMargin === true) s.confirm.thresholdCount += 1;
+      const explicitOutBaseline = tokenValue(line, "outBaseline");
+      const outBaseline = explicitOutBaseline === "1"
+        ? true
+        : explicitOutBaseline === "0"
+          ? false
+          : Number.isFinite(v) && Number.isFinite(baseline) && Number.isFinite(threshold)
+            ? v - baseline >= threshold : null;
+      s.confirm.rows.push({
+        dac: tokenValue(line, "code"),
+        voltage: tokenValue(line, "voltage"),
+        delta: tokenValue(line, "delta"),
+        zeroMargin,
+        outBaseline
+      });
     } else if (line.startsWith("NULLING_CONFIRM_VERIFY")) {
       s.confirm.verifyCode = tokenValue(line, "code");
       s.confirm.verifyVoltage = tokenValue(line, "voltage");
@@ -295,10 +345,10 @@ function nullingStageDetailRows(stages) {
   }
 
   const e = stages.exponential;
-  if (e.started && (e.threshold != null || e.target != null)) {
+  if (e.started && (e.threshold != null || e.minFinalV != null)) {
     rows.push({
-      label: "Threshold",
-      value: `target ${e.target ?? "?"} V (delta ${e.threshold ?? "?"} V)`
+      label: "Syarat bracket",
+      value: `DAC bracket ≥ ${e.minBracketDac ?? "?"}; V ≥ −${e.threshold ?? "?"} V; V − baseline ≥ ${e.threshold ?? "?"} V; final ≥ ${e.minFinalV ?? "?"} V`
     });
   }
 
@@ -330,7 +380,7 @@ function nullingStageDetailRows(stages) {
         ? `code ${c.okCode} @ ${c.okVoltage ?? "?"} V (${CONFIRM_MODE_TAG[c.okMode] || "ok"})`
         : c.failed
           ? "failed"
-          : `checking... (${c.steps} codes)`,
+          : `checking... (${c.steps}/${c.sampleCount ?? "?"} codes; −${c.belowCount ?? "?"}/+${c.aboveCount ?? "?"})`,
       fail: c.failed
     });
   }
@@ -436,6 +486,148 @@ function renderSweepMeter(channel) {
   return wrap;
 }
 
+function makeNullingDetailsStage(title, columns, rows, emptyText = "Tahap ini tidak dijalankan.") {
+  const section = document.createElement("section");
+  section.className = "nulling-details-stage";
+  const heading = document.createElement("h3");
+  heading.textContent = title;
+  section.append(heading);
+
+  if (!rows.length) {
+    const empty = document.createElement("p");
+    empty.className = "nulling-details-empty";
+    empty.textContent = emptyText;
+    section.append(empty);
+    return section;
+  }
+
+  const wrap = document.createElement("div");
+  wrap.className = "nulling-details-table-wrap";
+  const table = document.createElement("table");
+  table.className = "nulling-details-table";
+  const thead = document.createElement("thead");
+  const headRow = document.createElement("tr");
+  for (const column of columns) {
+    const cell = document.createElement("th");
+    cell.textContent = column.label;
+    headRow.append(cell);
+  }
+  thead.append(headRow);
+  table.append(thead);
+
+  const body = document.createElement("tbody");
+  for (const row of rows) {
+    const tr = document.createElement("tr");
+    for (const column of columns) {
+      const cell = document.createElement("td");
+      const value = typeof column.value === "function" ? column.value(row) : row[column.value];
+      cell.textContent = value == null || value === "" ? "—" : String(value);
+      if (column.className) cell.className = typeof column.className === "function" ? column.className(row) : column.className;
+      tr.append(cell);
+    }
+    body.append(tr);
+  }
+  table.append(body);
+  wrap.append(table);
+  section.append(wrap);
+  return section;
+}
+
+async function copyNullingDetails(title, summary, content, button) {
+  const text = [title.textContent, summary.textContent, content.innerText]
+    .filter(Boolean)
+    .join("\n\n");
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    const fallback = document.createElement("textarea");
+    fallback.value = text;
+    fallback.setAttribute("readonly", "");
+    fallback.style.position = "fixed";
+    fallback.style.opacity = "0";
+    document.body.append(fallback);
+    fallback.select();
+    const copied = document.execCommand("copy");
+    fallback.remove();
+    if (!copied) {
+      button.textContent = "Copy gagal";
+      setTimeout(() => { button.textContent = "Copy Details"; }, 1800);
+      return;
+    }
+  }
+  button.textContent = "Copied";
+  setTimeout(() => { button.textContent = "Copy Details"; }, 1800);
+}
+
+export function openNullingDetails(channel) {
+  const modal = $("nullingDetailsModal");
+  const title = $("nullingDetailsTitle");
+  const summary = $("nullingDetailsSummary");
+  const content = $("nullingDetailsContent");
+  const copyButton = $("copyNullingDetailsBtn");
+  if (!modal || !title || !summary || !content) return;
+
+  title.textContent = `Nulling Details · CH${channel.index + 1} ${channel.sensor}`;
+  summary.textContent = channel.tone === "pass"
+    ? `Selesai berhasil · DAC akhir ${channel.dac || "—"} · ${channel.detail}`
+    : `Selesai gagal · ${channel.detail}`;
+  const threshold = channel.stages.confirm.threshold ?? channel.stages.exponential.threshold;
+  const minFinalV = channel.stages.confirm.minFinalV ?? channel.stages.exponential.minFinalV;
+  const minBracketDac = channel.stages.exponential.minBracketDac;
+  const criteria = document.createElement("p");
+  criteria.className = "status-line";
+  if (threshold == null) {
+    criteria.textContent = "Threshold run ini tidak tersedia pada log lama.";
+  } else {
+    const thresholdV = Number.parseFloat(threshold);
+    const thresholdText = Number.isFinite(thresholdV)
+      ? `${thresholdV.toFixed(6)} V (${(thresholdV * 1000).toFixed(3)} mV)`
+      : `${threshold} V`;
+    criteria.textContent = `Threshold run ini: ${thresholdText} · DAC bracket Exponential ≥ ${minBracketDac ?? "—"} · Batas nol: V ≥ −${threshold} V · Naik dari baseline: V − baseline ≥ ${threshold} V · Minimum final: V ≥ ${minFinalV ?? "—"} V`;
+  }
+  content.replaceChildren(
+    criteria,
+    makeNullingDetailsStage("1. Baseline", [
+      { label: "DAC", value: "dac" },
+      { label: "Voltage (V)", value: "voltage" }
+    ], channel.stages.baseline.rows),
+    makeNullingDetailsStage("2. Exponential", [
+      { label: "DAC", value: "dac" },
+      { label: "Voltage (V)", value: "voltage" },
+      { label: "Naik dari baseline (V)", value: "delta" }
+    ], channel.stages.exponential.rows),
+    makeNullingDetailsStage("3. Binary Search", [
+      { label: "High", value: "high" },
+      { label: "Low", value: "low" },
+      { label: "Mid", value: "mid" },
+      { label: "Voltage (V)", value: "voltage" },
+      { label: "Naik dari baseline (V)", value: "delta" }
+    ], channel.stages.binary.rows, channel.stages.binary.started && channel.stages.binary.done
+      ? `Tidak ada iterasi: braket ${channel.stages.binary.initialLow}–${channel.stages.binary.initialHigh} sudah selebar 1 DAC, sehingga tidak ada nilai tengah untuk diuji.`
+      : undefined),
+    makeNullingDetailsStage("4. Confirm", [
+      { label: "DAC", value: "dac" },
+      { label: "Voltage (V)", value: "voltage" },
+      { label: "Naik dari baseline (V)", value: "delta" },
+      {
+        label: "Lewati batas nol",
+        value: (row) => row.zeroMargin == null ? "—" : row.zeroMargin ? "Ya" : "Tidak",
+        className: (row) => row.zeroMargin == null ? "" : row.zeroMargin ? "is-ok" : "is-fail"
+      },
+      {
+        label: "Naik ≥ threshold dari baseline",
+        value: (row) => row.outBaseline == null ? "—" : row.outBaseline ? "Ya" : "Tidak",
+        className: (row) => row.outBaseline == null ? "" : row.outBaseline ? "is-ok" : "is-fail"
+      }
+    ], channel.stages.confirm.rows)
+  );
+  if (copyButton) {
+    copyButton.textContent = "Copy Details";
+    copyButton.onclick = () => { void copyNullingDetails(title, summary, content, copyButton); };
+  }
+  setPanelOpen(modal, true);
+}
+
 // ---- rendering ----
 
 // `container` defaults to the Nulling tab's own grid; the QC tab reuses this
@@ -482,7 +674,15 @@ export function renderNullingChannels(container = elements.nullingChannels, chan
 
     const stageRows = nullingStageDetailRows(channel.stages);
     const sourceRow = nullingDacSourceRow(channel);
-    if (stageRows.length || sourceRow) {
+    const hasTerminalResult = channel.stage === "Done" || channel.tone === "fail";
+    if (container === elements.nullingChannels && hasTerminalResult) {
+      const detailsButton = document.createElement("button");
+      detailsButton.type = "button";
+      detailsButton.className = "nulling-details-button";
+      detailsButton.textContent = "Details";
+      detailsButton.addEventListener("click", () => openNullingDetails(channel));
+      card.append(detailsButton);
+    } else if (stageRows.length || sourceRow) {
       const alwaysVisible = container === elements.nullingChannels;
       const disclosure = document.createElement(alwaysVisible ? "section" : "details");
       disclosure.className = "disclosure nulling-stage-detail";
@@ -532,14 +732,55 @@ export function renderNullingChannels(container = elements.nullingChannels, chan
   }
 }
 
+function setNullingMcpIndicator(tone, text) {
+  const indicator = $("nullingMcpIndicator");
+  if (!indicator) return;
+  indicator.classList.toggle("is-online", tone === "online");
+  indicator.classList.toggle("is-offline", tone === "offline");
+  indicator.classList.toggle("is-unknown", tone === "unknown");
+  const label = indicator.querySelector("span:last-child");
+  if (label) label.textContent = text;
+}
+
+export function resetNullingMcpIndicator() {
+  setNullingMcpIndicator("unknown", "MCP4725 · 0x60: menunggu channel Nulling");
+}
+
+function updateNullingMcpIndicator(line) {
+  const channel = channelIndexFromLog(line);
+  if (channel === undefined) return;
+  const sensor = tokenValue(line, "sensor") || SENSOR_NAMES[channel] || `CH${channel + 1}`;
+  const mux = tokenValue(line, "mux") ?? SENSOR_MUX_CHANNELS[channel] ?? "?";
+  const prefix = `MCP4725 · 0x60 · CH${channel + 1} ${sensor} · TCA mux ${mux}`;
+
+  if (line.startsWith("NULLING_CH_START")) {
+    setNullingMcpIndicator("unknown", `${prefix}: menunggu ACK write DAC`);
+    return;
+  }
+
+  const ack = tokenValue(line, "ack") ?? tokenValue(line, "write");
+  if (ack === "1") {
+    setNullingMcpIndicator("online", `${prefix}: ACK write DAC terakhir`);
+  } else if (ack === "0" || line.includes("_WRITE_FAIL") || tokenValue(line, "reason")?.includes("dac_")) {
+    setNullingMcpIndicator("offline", `${prefix}: tidak ACK saat write DAC`);
+  }
+}
+
 export function appendNulling(line) {
   if (line.startsWith("NULLING_SERVICE_START")) {
     state.nullingLogs = [];
+    state.nullingLogPausedCount = 0;
+    resetNullingMcpIndicator();
   }
   state.nullingLogs.push(line);
   if (state.nullingLogs.length > 1200) state.nullingLogs.splice(0, state.nullingLogs.length - 1200);
-  elements.nullingLog.textContent = state.nullingLogs.join("\n");
-  elements.nullingLog.scrollTop = elements.nullingLog.scrollHeight;
+  if (state.nullingLogPaused) {
+    state.nullingLogPausedCount += 1;
+    applyNullingLogPauseVisibility();
+  } else {
+    renderNullingLog();
+  }
+  updateNullingMcpIndicator(line);
   elements.nullingSummary.textContent = summarizeNulling(line);
   renderNullingChannels();
   renderQcNullingViews();
@@ -551,11 +792,25 @@ export function appendNulling(line) {
 export function updateNullingMeta() {
   const nulling = state.status?.nulling || {};
   const retry = nulling.retryArmed === true ? "yes" : "no";
+  const retryAvailable = nulling.retryAvailable === true;
+  const retryFailedAvailable = nulling.retryFailedAvailable === true;
   const attempts = Number.isFinite(nulling.attemptCount) ? nulling.attemptCount : 0;
   const suffix = nulling.done === true ? " - Done" : nulling.running === true ? " - Running" : "";
-  elements.nullingMeta.textContent = `Retry armed: ${retry} - Attempts: ${attempts}${suffix}`;
+  elements.nullingMeta.textContent = retryAvailable
+    ? `Nulling belum lengkap — tinjau Details, lalu pilih Retry All atau Retry Failed. Attempts: ${attempts}`
+    : `Retry armed: ${retry} - Attempts: ${attempts}${suffix}`;
+  const retryButton = $("retryNullingBtn");
+  if (retryButton) {
+    retryButton.hidden = !retryAvailable;
+    retryButton.disabled = !retryAvailable;
+  }
+  const retryFailedButton = $("retryFailedNullingBtn");
+  if (retryFailedButton) {
+    retryFailedButton.hidden = !retryAvailable || !retryFailedAvailable;
+    retryFailedButton.disabled = !retryAvailable || !retryFailedAvailable;
+  }
   if (Number.isFinite(nulling.thresholdV) && document.activeElement !== $("nullingThresholdV")) {
-    $("nullingThresholdV").value = nulling.thresholdV;
+    $("nullingThresholdV").value = nulling.thresholdV * 1000;
   }
   if (Number.isFinite(nulling.minFinalV) && document.activeElement !== $("nullingMinFinalV")) {
     $("nullingMinFinalV").value = nulling.minFinalV;
@@ -563,17 +818,18 @@ export function updateNullingMeta() {
 }
 
 export async function applyNullingConfig() {
-  const thresholdV = numberField("nullingThresholdV");
+  const thresholdMv = numberField("nullingThresholdV");
+  const thresholdV = thresholdMv / 1000;
   const minFinalV = numberField("nullingMinFinalV");
   if (!Number.isFinite(thresholdV) || thresholdV <= 0) {
-    appendLog("NULLING_CONFIG_REJECTED thresholdV must be > 0", "in");
+    appendLog("NULLING_CONFIG_REJECTED rise threshold must be > 0 mV", "in");
     return;
   }
-  if (!Number.isFinite(minFinalV) || minFinalV < 0) {
-    appendLog("NULLING_CONFIG_REJECTED minFinalV must be >= 0", "in");
+  if (!Number.isFinite(minFinalV) || minFinalV < -2.497 || minFinalV > 2.497) {
+    appendLog("NULLING_CONFIG_REJECTED minFinalV must be within -2.497..2.497 V", "in");
     return;
   }
-  await applyAndAlert(`SET_NULLING_CONFIG_JSON ${JSON.stringify({ thresholdV, minFinalV })}`, "SET_NULLING_CONFIG", "Apply Thresholds");
+  await applyAndAlert(`SET_NULLING_CONFIG_JSON ${JSON.stringify({ thresholdV, minFinalV })}`, "SET_NULLING_CONFIG", "Apply Nulling Limits");
 }
 
 export async function requestFullNulling() {
@@ -593,8 +849,88 @@ export async function requestFullNulling() {
       await showAlert(`Nulling dibatalkan: ${ack.message || ack.status}`, "error", "Alarm Latch");
       return;
     }
-    await sendCommand("SET_MODE nulling");
+    const modeAck = await sendCommandAndWaitAck("SET_MODE nulling", "SET_MODE");
+    if (modeAck.status !== "ok") {
+      await showAlert(`Nulling tidak dimulai: ${modeAck.message || modeAck.status}`, "error", "Mode Nulling");
+      return;
+    }
+    appendLog("NULLING_APP_STARTED ESP will reboot; waiting for calibration result and saved profile", "in");
   } catch (error) {
     await showAlert(`Nulling dibatalkan: ${error.message}`, "error", "Alarm Latch");
   }
+}
+
+function renderNullingLog() {
+  if (!elements.nullingLog) return;
+  elements.nullingLog.textContent = state.nullingLogs.join("\n");
+  elements.nullingLog.scrollTop = elements.nullingLog.scrollHeight;
+}
+
+export function applyNullingLogPauseVisibility() {
+  const button = elements.pauseNullingLogBtn;
+  if (!button) return;
+  button.textContent = state.nullingLogPaused
+    ? `Resume${state.nullingLogPausedCount ? ` (${state.nullingLogPausedCount} new)` : ""}`
+    : "Pause";
+  button.classList.toggle("primary", state.nullingLogPaused);
+}
+
+export function toggleNullingLogPause() {
+  state.nullingLogPaused = !state.nullingLogPaused;
+  if (!state.nullingLogPaused) {
+    state.nullingLogPausedCount = 0;
+    renderNullingLog();
+  }
+  applyNullingLogPauseVisibility();
+}
+
+export function exportNullingLog() {
+  downloadText(`GLD_nulling_${stamp()}.log`, `${state.nullingLogs.join("\n")}\n`);
+}
+
+export async function copyNullingLog() {
+  const button = elements.copyNullingLogBtn;
+  if (!state.nullingLogs.length) {
+    if (button) {
+      button.textContent = "Log kosong";
+      setTimeout(() => { button.textContent = "Copy Log"; }, 1800);
+    }
+    return;
+  }
+  const text = `${state.nullingLogs.join("\n")}\n`;
+  let copied = false;
+  try {
+    await navigator.clipboard.writeText(text);
+    copied = true;
+  } catch {
+    const fallback = document.createElement("textarea");
+    fallback.value = text;
+    fallback.setAttribute("readonly", "");
+    fallback.style.position = "fixed";
+    fallback.style.opacity = "0";
+    document.body.append(fallback);
+    fallback.select();
+    copied = document.execCommand("copy");
+    fallback.remove();
+  }
+  if (button) {
+    button.textContent = copied ? "Copied" : "Copy gagal";
+    setTimeout(() => { button.textContent = "Copy Log"; }, 1800);
+  }
+}
+
+export async function requestManualNullingRetry() {
+  const ack = await sendCommandAndWaitAck("RETRY_NULLING", "RETRY_NULLING");
+  if (ack.status !== "ok") {
+    throw new Error(ack.message || ack.status || "Retry nulling ditolak");
+  }
+  appendLog("NULLING_APP_RETRY_REQUESTED full nulling retry queued", "in");
+}
+
+export async function requestFailedNullingRetry() {
+  const ack = await sendCommandAndWaitAck("RETRY_FAILED_NULLING", "RETRY_FAILED_NULLING");
+  if (ack.status !== "ok") {
+    throw new Error(ack.message || ack.status || "Retry channel gagal ditolak");
+  }
+  appendLog("NULLING_APP_RETRY_REQUESTED failed-channel nulling retry queued", "in");
 }

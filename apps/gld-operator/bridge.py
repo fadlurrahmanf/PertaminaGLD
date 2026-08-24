@@ -69,6 +69,8 @@ else:
 APP_DIR = Path(__file__).resolve().parent
 REPO_ROOT = APP_DIR.parents[1]
 FIRMWARE_DIR = REPO_ROOT / "firmware"
+FIRMWARE_UPLOAD_TOTAL_TIMEOUT_SEC = 120.0
+FIRMWARE_UPLOAD_IDLE_TIMEOUT_SEC = 30.0
 DATASET_OUTPUT_DIR = APP_DIR / "output" / "datasets"
 SESSION_LOG_DIR = APP_DIR / "output" / "logs"
 # Node-RED's decoder is the source of truth for which AES key/keyId GLD
@@ -215,7 +217,10 @@ class SerialBridge:
         # generation.  A stale reader must never report a newly reconnected
         # port as disconnected.
         self._generation = 0
-        self._recent_lines: deque[dict[str, Any]] = deque(maxlen=160)
+        # A complete eight-channel Nulling trace contains several thousand
+        # samples. Retain enough history for the Operator Details export after
+        # the board reboots back to Inference.
+        self._recent_lines: deque[dict[str, Any]] = deque(maxlen=6000)
         self._line_sequence = 0
         self.port = ""
         self.baud = 115200
@@ -1120,7 +1125,39 @@ def _firmware_upload_reserved(payload: dict[str, Any], slot: int = 1) -> dict[st
         # file separately, then report a byte-weighted percentage for the
         # complete package instead of treating app.bin as the whole upload.
         file_progress = [0 for _ in verified_files]
-        for line in proc.stdout:
+        output_lines: queue.Queue[str | None] = queue.Queue()
+
+        def forward_upload_output() -> None:
+            assert proc.stdout is not None
+            try:
+                for output_line in proc.stdout:
+                    output_lines.put(output_line)
+            finally:
+                output_lines.put(None)
+
+        reader = threading.Thread(target=forward_upload_output, name="gld-upload-output", daemon=True)
+        reader.start()
+        started_at = time.monotonic()
+        last_output_at = started_at
+        while True:
+            now = time.monotonic()
+            if now - started_at >= FIRMWARE_UPLOAD_TOTAL_TIMEOUT_SEC or now - last_output_at >= FIRMWARE_UPLOAD_IDLE_TIMEOUT_SEC:
+                proc.terminate()
+                try:
+                    proc.wait(timeout=3.0)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+                    proc.wait()
+                message = "esptool stopped responding before flash verification"
+                events.emit("upload_error", {"message": message})
+                raise RuntimeError(message)
+            try:
+                line = output_lines.get(timeout=0.25)
+            except queue.Empty:
+                continue
+            if line is None:
+                break
+            last_output_at = time.monotonic()
             clean_line = line.rstrip("\r\n")
             match = re.search(r"Writing at 0x([0-9a-fA-F]+).*?\(\s*(\d+)\s*%\s*\)", clean_line)
             if match:

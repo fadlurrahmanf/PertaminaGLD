@@ -48,6 +48,17 @@
     .notice-card{margin:16px 0 18px;padding:13px 16px;border:1px solid #294148;border-left:3px solid #38d7ba;border-radius:10px;background:#0d1d21}.notice-card .notice{margin:0;color:#c7d8d5;font-size:13px}.notice-card .notice.ok{color:#67e68d}.notice-card .notice.bad{color:#ff8b93;border-color:#84434a}
   </style>
   <style>
+    /* Test Device is an asynchronous boot-report read; make the wait state visible. */
+    .notice-card:has(.notice.waiting){border-left-color:#ff9a38;background:linear-gradient(90deg,#16282b,#0d1d21)}
+    .notice-card .notice.waiting{display:flex;align-items:center;gap:10px;color:#ffd1a2}
+    .notice-card .notice.waiting:before{content:"";width:12px;height:12px;flex:0 0 12px;border:2px solid #ff9a3855;border-top-color:#ff9a38;border-radius:50%;animation:notice-wait-spin .75s linear infinite}
+    .test-card.testing .test-result{border-color:#c9823c;background:#192b28}
+    .test-card.testing .test-result-copy h3:after{content:"";display:inline-block;width:.55em;height:.55em;margin-left:.55em;border-radius:50%;background:#ff9a38;animation:notice-wait-pulse 1s ease-in-out infinite}
+    @keyframes notice-wait-spin{to{transform:rotate(360deg)}}
+    @keyframes notice-wait-pulse{50%{opacity:.25;transform:scale(.7)}}
+    @media(prefers-reduced-motion:reduce){.notice-card .notice.waiting:before,.test-card.testing .test-result-copy h3:after{animation:none}}
+  </style>
+  <style>
     /* Short, repeatable acknowledgement for every Simple Hub action. */
     button:not(:disabled).click-feedback{animation:button-press .22s cubic-bezier(.2,.75,.3,1);will-change:transform}
     @keyframes button-press{0%{transform:scale(1)}42%{transform:scale(.94)}100%{transform:scale(1)}}

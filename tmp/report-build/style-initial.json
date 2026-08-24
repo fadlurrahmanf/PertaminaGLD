@@ -1,0 +1,170 @@
+{
+  "input": "D:\\Github\\PertaminaGLD\\output\\documents\\PertaminaGLD-Laporan-Internal-Cilacap-dan-Rencana-Tindak-Lanjut-2026-08-18.docx",
+  "fonts_by_char_count": {
+    "Calibri": 54634
+  },
+  "direct_run_formatting_runs": 946,
+  "direct_paragraph_formatting_paragraphs": 767,
+  "heading_like_paragraphs_not_heading_style": [
+    {
+      "para_index": 305,
+      "text": "R-01  ATEX Directive 2014/34/EU: Open official source",
+      "style": "Small Note"
+    },
+    {
+      "para_index": 306,
+      "text": "R-02  Workplace explosive atmospheres Directive 1999/92/EC: Open official source",
+      "style": "Small Note"
+    },
+    {
+      "para_index": 307,
+      "text": "R-03  IECEx Certified Equipment Scheme overview: Open official source",
+      "style": "Small Note"
+    },
+    {
+      "para_index": 308,
+      "text": "R-04  IECEx FAQ / certificate verification guidance: Open official source",
+      "style": "Small Note"
+    },
+    {
+      "para_index": 309,
+      "text": "R-05  IEC 60079-10-1:2020 area classification: Open official source",
+      "style": "Small Note"
+    },
+    {
+      "para_index": 311,
+      "text": "R-07  IEC 60079-0:2026 general requirements: Open official source",
+      "style": "Small Note"
+    },
+    {
+      "para_index": 312,
+      "text": "R-08  IEC 60079-1 flameproof enclosure d: Open official source",
+      "style": "Small Note"
+    },
+    {
+      "para_index": 313,
+      "text": "R-09  IEC 60079-11:2023 intrinsic safety: Open official source",
+      "style": "Small Note"
+    },
+    {
+      "para_index": 314,
+      "text": "R-10  IEC 60079-17 inspection/maintenance: Open official source",
+      "style": "Small Note"
+    },
+    {
+      "para_index": 315,
+      "text": "R-11  BSN SNI IEC 60079 catalog: Open official source",
+      "style": "Small Note"
+    },
+    {
+      "para_index": 316,
+      "text": "R-12  NIST SP 800-82 Rev.3 OT Security: Open official source",
+      "style": "Small Note"
+    },
+    {
+      "para_index": 317,
+      "text": "R-13  OASIS MQTT Version 5.0: Open official source",
+      "style": "Small Note"
+    },
+    {
+      "para_index": 318,
+      "text": "R-14  TI BQ25185 datasheet: Open official source",
+      "style": "Small Note"
+    },
+    {
+      "para_index": 319,
+      "text": "R-15  TI TPS63020: Open official source",
+      "style": "Small Note"
+    },
+    {
+      "para_index": 320,
+      "text": "R-16  TI LMR51450: Open official source",
+      "style": "Small Note"
+    },
+    {
+      "para_index": 321,
+      "text": "R-17  Littelfuse miniSMDC resettable PTC datasheet: Open official source",
+      "style": "Small Note"
+    },
+    {
+      "para_index": 322,
+      "text": "R-18  Espressif ESP32-S3-WROOM-1/1U datasheet: Open official source",
+      "style": "Small Note"
+    },
+    {
+      "para_index": 323,
+      "text": "R-19  EBYTE E22-900MM22S: Open official source",
+      "style": "Small Note"
+    },
+    {
+      "para_index": 324,
+      "text": "R-20  IEC 62133-2 battery safety: Open official source",
+      "style": "Small Note"
+    },
+    {
+      "para_index": 325,
+      "text": "R-21  UN 38.3 test summary resources: Open official source",
+      "style": "Small Note"
+    }
+  ],
+  "examples": {
+    "direct_run_formatting": [
+      {
+        "para_index": 2,
+        "run_text": "PertaminaGLD",
+        "style": "Title"
+      },
+      {
+        "para_index": 3,
+        "run_text": "Laporan Internal Cilacap dan Rencana Tindak Lanjut",
+        "style": "Title"
+      },
+      {
+        "para_index": 4,
+        "run_text": "Audit gabungan GLD1 \u2022 CH \u2022 Gateway \u2022 Server \u2022 Network \u2022 Power \u2022 Mounting \u2022 Hazar",
+        "style": "Subtitle"
+      },
+      {
+        "para_index": 8,
+        "run_text": "Disusun untuk penggunaan internal LGU. Klasifikasi: Internal.",
+        "style": "Small Note"
+      },
+      {
+        "para_index": 9,
+        "run_text": "Tanggal penyusunan: 18 Agustus 2026 \u2022 Zona waktu: Asia/Jakarta",
+        "style": "Small Note"
+      }
+    ],
+    "direct_paragraph_formatting": [
+      {
+        "para_index": 6,
+        "text": "",
+        "style": "Normal"
+      },
+      {
+        "para_index": 7,
+        "text": "",
+        "style": "Normal"
+      },
+      {
+        "para_index": 11,
+        "text": "",
+        "style": "Normal"
+      },
+      {
+        "para_index": 29,
+        "text": "",
+        "style": "Normal"
+      },
+      {
+        "para_index": 31,
+        "text": "",
+        "style": "Normal"
+      }
+    ]
+  },
+  "notes": [
+    "Direct formatting is not always wrong, but it often causes inconsistent output when templates change.",
+    "Heading-like paragraphs not using Heading styles can break TOC and accessibility."
+  ]
+}

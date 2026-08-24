@@ -67,6 +67,28 @@ def _check(check_id: str, label: str, state: str, detail: str) -> dict[str, str]
     return {"id": check_id, "label": label, "state": state, "detail": detail}
 
 
+def _python_module_check(python_exe: Path, module: str, check_id: str, label: str) -> dict[str, str]:
+    """Verify the exact embedded runtime the child bridge will use."""
+    if not python_exe.is_file():
+        return _check(check_id, label, "error", f"Bundled Python is missing: {python_exe}")
+    try:
+        probe = subprocess.run(
+            [str(python_exe), "-c", f"import {module}; print(getattr({module}, '__version__', 'available'))"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return _check(check_id, label, "error", f"Bundled Python runtime check failed: {exc}")
+    if probe.returncode == 0:
+        version = probe.stdout.strip() or "available"
+        return _check(check_id, label, "ok", f"Bundled Python can import {module} ({version}).")
+    failure = next((line.strip() for line in reversed(probe.stderr.splitlines()) if line.strip()), "unknown import error")
+    return _check(check_id, label, "error", f"Bundled Python cannot import {module}: {failure}")
+
+
 def _port_available(host: str, port: int) -> bool:
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
@@ -157,6 +179,9 @@ def run_preflight(host: str = "127.0.0.1", hub_port: int = 5173) -> dict[str, An
         f"{Path(sys.executable).name} {sys.version.split()[0]}" if python_ok else "Python 3.9 or newer is required.",
     ))
 
+    gld_python = APPS_DIR / "gld-operator" / "python-embed" / "python.exe"
+    checks.append(_python_module_check(gld_python, "serial", "gld-pyserial", "GLD serial runtime"))
+
     ch_python = APPS_DIR / "ch-operator" / "python-embed" / "python.exe"
     checks.append(_check(
         "ch-runtime", "CH Operator runtime", "ok" if ch_python.is_file() else "warn",
@@ -179,7 +204,7 @@ def run_preflight(host: str = "127.0.0.1", hub_port: int = 5173) -> dict[str, An
         ))
 
     states = {check["id"]: check["state"] for check in checks}
-    ready_for_flash = all(states.get(check_id) == "ok" for check_id in ("hub-runtime", "ch-runtime", "esptool", "firmware-packages"))
+    ready_for_flash = all(states.get(check_id) == "ok" for check_id in ("hub-runtime", "gld-pyserial", "ch-runtime", "esptool", "firmware-packages"))
     return {
         "checkedAtUtc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "checks": checks,

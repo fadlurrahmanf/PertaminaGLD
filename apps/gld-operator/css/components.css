@@ -275,6 +275,27 @@ button.is-busy::before {
   flex: 1;
 }
 
+/* ---- GLD2 sensor-module power ---- */
+
+.sensor-power-card-toggle {
+  position: absolute;
+  inset-inline-end: var(--space-3);
+  top: 48px;
+  z-index: 1;
+  min-width: 56px;
+  min-height: 36px;
+  padding: 6px 10px;
+  transform: none;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.sensor-power-card-toggle.is-on { border-color: var(--ok); color: var(--ok); }
+.sensor-power-card-toggle.is-off { border-color: var(--alarm); color: var(--alarm); }
+
 /* ---- kv list ---- */
 
 .kv {
@@ -435,9 +456,79 @@ button.is-busy::before {
   text-transform: uppercase;
 }
 
+.nulling-details-content {
+  display: grid;
+  gap: var(--space-4);
+  margin-top: var(--space-3);
+}
+
+.nulling-details-stage {
+  min-width: 0;
+}
+
+.nulling-details-stage h3 {
+  margin: 0 0 var(--space-2);
+  color: var(--accent-2);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.nulling-details-table-wrap {
+  max-height: 220px;
+  overflow: auto;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+}
+
+.nulling-details-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.nulling-details-table th,
+.nulling-details-table td {
+  padding: 7px 9px;
+  border-bottom: 1px solid var(--hairline);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.nulling-details-table th:first-child,
+.nulling-details-table td:first-child {
+  text-align: left;
+}
+
+.nulling-details-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface-2);
+  color: var(--text-muted);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.nulling-details-table tr:last-child td { border-bottom: 0; }
+.nulling-details-table .is-ok { color: var(--ok); }
+.nulling-details-table .is-fail { color: var(--alarm); }
+.nulling-details-empty { color: var(--text-faint); font-size: 12px; }
+
+.nulling-details-button {
+  justify-self: start;
+  min-height: 30px;
+  padding: 4px 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
 /* ---- Channel cards (nulling / sensor check / boot report) ---- */
 
 .channel-card {
+  position: relative;
   display: grid;
   gap: 6px;
   min-height: 108px;
@@ -750,6 +841,89 @@ button.is-busy::before {
   min-width: 0;
 }
 
+.sensor-telemetry-title {
+  display: grid;
+  flex: 1 1 180px;
+  gap: 5px;
+  align-content: start;
+  min-width: 0;
+}
+
+.sensor-telemetry-title h2 {
+  margin: 0;
+}
+
+.environment-readout {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  max-width: 310px;
+  color: var(--text-faint);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.environment-readout__label {
+  color: var(--text-muted);
+}
+
+.environment-readout.is-ready {
+  color: var(--accent-2);
+}
+
+.environment-readout.is-waiting {
+  color: var(--text-muted);
+}
+
+.environment-tca {
+  flex-basis: 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+}
+
+.environment-tca__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.environment-tca.is-online {
+  color: var(--accent-2);
+}
+
+.environment-tca.is-online .environment-tca__dot {
+  background: var(--accent-2);
+}
+
+.environment-tca.is-offline {
+  color: var(--danger);
+}
+
+.environment-tca.is-offline .environment-tca__dot {
+  background: var(--danger);
+}
+
+.nulling-heading-with-status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+}
+
+.nulling-heading-with-status h2 {
+  margin: 0;
+}
+
+.nulling-tca-indicator,
+.nulling-mcp-indicator {
+  flex-basis: auto;
+}
+
 .telemetry-collection-progress {
   gap: var(--space-2);
   color: var(--text-muted);
@@ -772,6 +946,32 @@ button.is-busy::before {
   min-width: 26px;
   color: var(--text-faint);
   text-align: right;
+}
+
+.telemetry-collection-stack {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.sensor-power-all-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.sensor-power-all-controls button {
+  min-height: 25px;
+  padding: 3px 7px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.sensor-power-status {
+  max-width: 280px;
+  color: var(--text-faint);
+  font-size: 10px;
+  line-height: 1.25;
 }
 
 .telemetry-result {

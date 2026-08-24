@@ -17,6 +17,9 @@ enum class GldSerialCommandType : uint8_t {
     GetTelemetry,
     Restart,
     RunBootCheck,
+    RunCurrentStateCheck,
+    RunI2cScan,
+    RunTcaChannelScan,
     RunAdsMcpSweep,
     SleepNow,
     ServiceHoldOff,
@@ -26,7 +29,10 @@ enum class GldSerialCommandType : uint8_t {
     SetLoraConfigJson,
     SetNullingConfigJson,
     SetSessionMcpJson,
+    SetSensorPowerJson,
     VerifyCleanAirForNulling,
+    RetryNulling,
+    RetryFailedNulling,
     BindModelToActiveNullingProfile,
     SetQcResultJson,
     GetQcStatus,
@@ -55,6 +61,9 @@ struct GldSerialCommand {
 // - GET_TELEMETRY
 // - RESTART
 // - RUN_BOOT_CHECK
+// - RUN_CURRENT_STATE_CHECK
+// - RUN_I2C_SCAN
+// - RUN_TCA_CHANNEL_SCAN
 // - RUN_ADS_MCP_SWEEP
 // - SLEEP_NOW
 // - SERVICE_HOLD_OFF
@@ -64,7 +73,11 @@ struct GldSerialCommand {
 // - SET_LORA_CONFIG_JSON {"freqMHz":920.0,"bwKHz":125,"sf":7,"cr":5,"syncWord":18}
 // - SET_NULLING_CONFIG_JSON {"thresholdV":0.00001,"minFinalV":0.0}
 // - SET_SESSION_MCP_JSON {"channel":0,"code":123}  (volatile Running DAC adjustment; never saved)
+// - SET_SENSOR_POWER_JSON {"channel":0,"enabled":true} or {"all":true,"enabled":false}
+//   (GLD2 PCF8574/TPS22919 only; volatile)
 // - VERIFY_CLEAN_AIR_FOR_NULLING  (operator-confirmed clear of an alarm latch before full nulling)
+// - RETRY_NULLING  (operator-authorized retry after an incomplete full nulling run)
+// - RETRY_FAILED_NULLING  (retry only channels that failed the last full/retry attempt)
 // - BIND_MODEL_TO_ACTIVE_NULLING_PROFILE  (explicitly approve latest complete Nulling profile for this compiled model)
 // - SET_QC_RESULT_JSON {"channel":0,"pass":true,"timestamp":"2026-07-16T09:30:00"}
 // - GET_QC_STATUS

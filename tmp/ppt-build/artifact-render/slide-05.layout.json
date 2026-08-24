@@ -1,0 +1,1391 @@
+{
+  "schema": "openai.presentation.layout/v4",
+  "unit": "px",
+  "slide": {
+    "aid": "sl/4phbwt",
+    "id": "4phbwt",
+    "slide": 5,
+    "layoutId": "6a1a93d3-ea1d-429f-9522-c5e67327db04",
+    "layoutName": "Title Slide",
+    "layoutType": "title",
+    "masterLayoutId": "ea845d38-f203-4a15-8d29-592c4f07080e",
+    "masterLayoutName": "Master",
+    "backgroundColor": "#FFFFFF",
+    "frame": {
+      "left": 0,
+      "top": 0,
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "theme": {
+    "colorSchemeName": "ChatGPT",
+    "colors": {
+      "accent1": "#156082",
+      "accent2": "#E97132",
+      "accent3": "#196B24",
+      "accent4": "#0F9ED5",
+      "accent5": "#A02B93",
+      "accent6": "#4EA72E",
+      "bg1": "#FFFFFF",
+      "bg2": "#000000",
+      "tx1": "#1F1F1F",
+      "tx2": "#FFFFFF",
+      "dk1": "#000000",
+      "lt1": "#FFFFFF",
+      "dk2": "#0E2841",
+      "lt2": "#E8E8E8",
+      "hlink": "#467886",
+      "folHlink": "#96607D"
+    },
+    "typefaces": [
+      "Arial"
+    ]
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "6a1a93d3-ea1d-429f-9522-c5e67327db04",
+      "name": "Title Slide",
+      "type": "title",
+      "parentLayoutId": "ea845d38-f203-4a15-8d29-592c4f07080e",
+      "elements": []
+    },
+    {
+      "scope": "master",
+      "id": "ea845d38-f203-4a15-8d29-592c4f07080e",
+      "name": "Master",
+      "type": "master",
+      "elements": []
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/1436xcja",
+      "id": "1",
+      "name": "section-5",
+      "bbox": [
+        52,
+        30,
+        480,
+        18
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.0"
+      },
+      "geometry": "rect",
+      "text": "READINESS",
+      "textPreview": "READINESS",
+      "resolvedFontSize": 14,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 14,
+        "typeface": "Arial",
+        "color": "#667085",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "READINESS"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "READINESS",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 14,
+            "typeface": "Arial",
+            "color": "#667085",
+            "bold": true,
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "READINESS",
+              "anchor": 1,
+              "fontSize": 14,
+              "typeface": "Arial",
+              "color": "#667085",
+              "bold": true,
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 2,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/e1s72xkz",
+      "id": "2",
+      "name": "title-5",
+      "bbox": [
+        52,
+        58,
+        1176,
+        60
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.1"
+      },
+      "geometry": "rect",
+      "text": "Source tersedia; bukti live masih terbatas",
+      "textPreview": "Source tersedia; bukti live masih terbatas",
+      "resolvedFontSize": 48,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 48,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Source tersedia; bukti live masih terbatas"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Source tersedia; bukti live masih terbatas",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 48,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Source tersedia; bukti live masih terbatas",
+              "anchor": 1,
+              "fontSize": 48,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 3,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/f21ov21k",
+      "id": "3",
+      "name": "footer-rule-5",
+      "bbox": [
+        52,
+        668,
+        1176,
+        1
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.2"
+      },
+      "geometry": "line",
+      "lineColor": "#B8BCC4",
+      "lineWidth": 1
+    },
+    {
+      "order": 4,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/szap072t",
+      "id": "4",
+      "name": "footer-left-5",
+      "bbox": [
+        52,
+        680,
+        360,
+        20
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.3"
+      },
+      "geometry": "rect",
+      "text": "INTERNAL • 18 AGUSTUS 2026",
+      "textPreview": "INTERNAL • 18 AGUSTUS 2026",
+      "resolvedFontSize": 14,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 14,
+        "typeface": "Arial",
+        "color": "#667085",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "INTERNAL • 18 AGUSTUS 2026"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "INTERNAL • 18 AGUSTUS 2026",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 14,
+            "typeface": "Arial",
+            "color": "#667085",
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "INTERNAL • 18 AGUSTUS 2026",
+              "anchor": 1,
+              "fontSize": 14,
+              "typeface": "Arial",
+              "color": "#667085",
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 5,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/t0j6tsje",
+      "id": "5",
+      "name": "footer-number-5",
+      "bbox": [
+        1178,
+        680,
+        50,
+        20
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.4"
+      },
+      "geometry": "rect",
+      "text": "05",
+      "textPreview": "05",
+      "resolvedFontSize": 14,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 14,
+        "typeface": "Arial",
+        "color": "#667085",
+        "alignment": "right",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "05"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "05",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 14,
+            "typeface": "Arial",
+            "color": "#667085",
+            "alignment": "right",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "05",
+              "anchor": 1,
+              "fontSize": 14,
+              "typeface": "Arial",
+              "color": "#667085",
+              "alignment": "right",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 6,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/6xs7yxkn",
+      "id": "6",
+      "name": "readiness-sub",
+      "bbox": [
+        52,
+        132,
+        1176,
+        36
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.5"
+      },
+      "geometry": "rect",
+      "text": "Status dibedakan agar rapat tidak mengubah source evidence menjadi klaim lapangan.",
+      "textPreview": "Status dibedakan agar rapat tidak mengubah source evidence menjadi klaim lapangan.",
+      "resolvedFontSize": 22,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 22,
+        "typeface": "Arial",
+        "color": "#667085",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Status dibedakan agar rapat tidak mengubah source evidence menjadi klaim lapangan."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Status dibedakan agar rapat tidak mengubah source evidence menjadi klaim lapangan.",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 22,
+            "typeface": "Arial",
+            "color": "#667085",
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Status dibedakan agar rapat tidak mengubah source evidence menjadi klaim lapangan.",
+              "anchor": 1,
+              "fontSize": 22,
+              "typeface": "Arial",
+              "color": "#667085",
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 7,
+      "kind": "table",
+      "scope": "slide",
+      "aid": "tb/6xgr6p07",
+      "id": "7",
+      "bbox": [
+        52,
+        196,
+        1176,
+        410
+      ],
+      "text": "Area | Terbukti dari desain/source | Masih harus dibuktikan\nGLD | Power tree, 8 socket MQ, firmware/radio path | MPN sensor, cold-start, thermal, F1 24 V, sensing accuracy\nCH | Dual radio, charger/power path, cadence source | Cell/panel, autonomy, enclosure, RF site test\nGateway | Wi-Fi STA, radio–MQTT bridge, queue/status | Unit MAC, onboarding IT, TLS, antenna/PSU field\nServer | Node-RED/dataset components dan generator | Flow sync, production package, backup/restore, live revision\nSite / Ex | Arah meeting dan daftar hold point | Area classification, certificate, permit, installation acceptance",
+      "textPreview": "Area | Terbukti dari desain/source | Masih harus dibuktikan | GLD | Power tree, 8 socket MQ, firmware/radio path | MPN sensor, cold-start...",
+      "rows": 6,
+      "cols": 3,
+      "cells": [
+        {
+          "index": 1,
+          "row": 1,
+          "column": 1,
+          "bbox": [
+            52,
+            196,
+            170,
+            68.33
+          ],
+          "text": "Area",
+          "textPreview": "Area",
+          "fillColor": "#EDEDED",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Area",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Area"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "row": 1,
+          "column": 2,
+          "bbox": [
+            222,
+            196,
+            470,
+            68.33
+          ],
+          "text": "Terbukti dari desain/source",
+          "textPreview": "Terbukti dari desain/source",
+          "fillColor": "#EDEDED",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Terbukti dari desain/source",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Terbukti dari desain/source"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 3,
+          "row": 1,
+          "column": 3,
+          "bbox": [
+            692,
+            196,
+            536,
+            68.33
+          ],
+          "text": "Masih harus dibuktikan",
+          "textPreview": "Masih harus dibuktikan",
+          "fillColor": "#EDEDED",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Masih harus dibuktikan",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Masih harus dibuktikan"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 4,
+          "row": 2,
+          "column": 1,
+          "bbox": [
+            52,
+            264.33,
+            170,
+            68.33
+          ],
+          "text": "GLD",
+          "textPreview": "GLD",
+          "fillColor": "#EAF5FB",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "GLD",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "GLD"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 5,
+          "row": 2,
+          "column": 2,
+          "bbox": [
+            222,
+            264.33,
+            470,
+            68.33
+          ],
+          "text": "Power tree, 8 socket MQ, firmware/radio path",
+          "textPreview": "Power tree, 8 socket MQ, firmware/radio path",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Power tree, 8 socket MQ, firmware/radio path",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Power tree, 8 socket MQ, firmware/radio path"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 6,
+          "row": 2,
+          "column": 3,
+          "bbox": [
+            692,
+            264.33,
+            536,
+            68.33
+          ],
+          "text": "MPN sensor, cold-start, thermal, F1 24 V, sensing accuracy",
+          "textPreview": "MPN sensor, cold-start, thermal, F1 24 V, sensing accuracy",
+          "fillColor": "#FFF9E8",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "MPN sensor, cold-start, thermal, F1 24 V, sensing accuracy",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "MPN sensor, cold-start, thermal, F1 24 V, sensing accuracy"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 7,
+          "row": 3,
+          "column": 1,
+          "bbox": [
+            52,
+            332.67,
+            170,
+            68.33
+          ],
+          "text": "CH",
+          "textPreview": "CH",
+          "fillColor": "#EAF5FB",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "CH",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "CH"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 8,
+          "row": 3,
+          "column": 2,
+          "bbox": [
+            222,
+            332.67,
+            470,
+            68.33
+          ],
+          "text": "Dual radio, charger/power path, cadence source",
+          "textPreview": "Dual radio, charger/power path, cadence source",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Dual radio, charger/power path, cadence source",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Dual radio, charger/power path, cadence source"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 9,
+          "row": 3,
+          "column": 3,
+          "bbox": [
+            692,
+            332.67,
+            536,
+            68.33
+          ],
+          "text": "Cell/panel, autonomy, enclosure, RF site test",
+          "textPreview": "Cell/panel, autonomy, enclosure, RF site test",
+          "fillColor": "#FFF9E8",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Cell/panel, autonomy, enclosure, RF site test",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Cell/panel, autonomy, enclosure, RF site test"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 10,
+          "row": 4,
+          "column": 1,
+          "bbox": [
+            52,
+            401,
+            170,
+            68.33
+          ],
+          "text": "Gateway",
+          "textPreview": "Gateway",
+          "fillColor": "#EAF5FB",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Gateway",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Gateway"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 11,
+          "row": 4,
+          "column": 2,
+          "bbox": [
+            222,
+            401,
+            470,
+            68.33
+          ],
+          "text": "Wi-Fi STA, radio–MQTT bridge, queue/status",
+          "textPreview": "Wi-Fi STA, radio–MQTT bridge, queue/status",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Wi-Fi STA, radio–MQTT bridge, queue/status",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Wi-Fi STA, radio–MQTT bridge, queue/status"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 12,
+          "row": 4,
+          "column": 3,
+          "bbox": [
+            692,
+            401,
+            536,
+            68.33
+          ],
+          "text": "Unit MAC, onboarding IT, TLS, antenna/PSU field",
+          "textPreview": "Unit MAC, onboarding IT, TLS, antenna/PSU field",
+          "fillColor": "#FFF9E8",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Unit MAC, onboarding IT, TLS, antenna/PSU field",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Unit MAC, onboarding IT, TLS, antenna/PSU field"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 13,
+          "row": 5,
+          "column": 1,
+          "bbox": [
+            52,
+            469.33,
+            170,
+            68.33
+          ],
+          "text": "Server",
+          "textPreview": "Server",
+          "fillColor": "#EAF5FB",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Server",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Server"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 14,
+          "row": 5,
+          "column": 2,
+          "bbox": [
+            222,
+            469.33,
+            470,
+            68.33
+          ],
+          "text": "Node-RED/dataset components dan generator",
+          "textPreview": "Node-RED/dataset components dan generator",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Node-RED/dataset components dan generator",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Node-RED/dataset components dan generator"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 15,
+          "row": 5,
+          "column": 3,
+          "bbox": [
+            692,
+            469.33,
+            536,
+            68.33
+          ],
+          "text": "Flow sync, production package, backup/restore, live revision",
+          "textPreview": "Flow sync, production package, backup/restore, live revision",
+          "fillColor": "#FFF9E8",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Flow sync, production package, backup/restore, live revision",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Flow sync, production package, backup/restore, live revision"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 16,
+          "row": 6,
+          "column": 1,
+          "bbox": [
+            52,
+            537.67,
+            170,
+            68.33
+          ],
+          "text": "Site / Ex",
+          "textPreview": "Site / Ex",
+          "fillColor": "#EAF5FB",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Site / Ex",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Site / Ex"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 17,
+          "row": 6,
+          "column": 2,
+          "bbox": [
+            222,
+            537.67,
+            470,
+            68.33
+          ],
+          "text": "Arah meeting dan daftar hold point",
+          "textPreview": "Arah meeting dan daftar hold point",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Arah meeting dan daftar hold point",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Arah meeting dan daftar hold point"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 18,
+          "row": 6,
+          "column": 3,
+          "bbox": [
+            692,
+            537.67,
+            536,
+            68.33
+          ],
+          "text": "Area classification, certificate, permit, installation acceptance",
+          "textPreview": "Area classification, certificate, permit, installation acceptance",
+          "fillColor": "#FFF9E8",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Area classification, certificate, permit, installation acceptance",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Area classification, certificate, permit, installation acceptance"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "composeRuns": [
+    {
+      "index": 1,
+      "frame": {
+        "left": 0,
+        "top": 0,
+        "width": 1280,
+        "height": 720
+      },
+      "baseUnit": 1,
+      "root": {
+        "path": "0",
+        "kind": "layers",
+        "name": "readiness-table",
+        "requestedSize": {
+          "width": {
+            "mode": "fill",
+            "value": 1
+          },
+          "height": {
+            "mode": "fill",
+            "value": 1
+          }
+        },
+        "intrinsicSize": {
+          "width": 1228,
+          "height": 700
+        },
+        "frame": {
+          "left": 0,
+          "top": 0,
+          "width": 1280,
+          "height": 720
+        },
+        "children": [
+          {
+            "path": "0.0",
+            "kind": "text",
+            "name": "section-5",
+            "position": {
+              "left": 52,
+              "top": 30
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 480
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 18
+              }
+            },
+            "intrinsicSize": {
+              "width": 480,
+              "height": 18
+            },
+            "frame": {
+              "left": 52,
+              "top": 30,
+              "width": 480,
+              "height": 18
+            },
+            "snappedFrame": {
+              "left": 52,
+              "top": 30,
+              "width": 480,
+              "height": 18
+            },
+            "children": [],
+            "text": "READINESS",
+            "transform": "none",
+            "element": {
+              "aid": "sh/1436xcja",
+              "id": "1",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.1",
+            "kind": "text",
+            "name": "title-5",
+            "position": {
+              "left": 52,
+              "top": 58
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 1176
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 60
+              }
+            },
+            "intrinsicSize": {
+              "width": 1176,
+              "height": 60
+            },
+            "frame": {
+              "left": 52,
+              "top": 58,
+              "width": 1176,
+              "height": 60
+            },
+            "snappedFrame": {
+              "left": 52,
+              "top": 58,
+              "width": 1176,
+              "height": 60
+            },
+            "children": [],
+            "text": "Source tersedia; bukti live masih terbatas",
+            "transform": "none",
+            "element": {
+              "aid": "sh/e1s72xkz",
+              "id": "2",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.2",
+            "kind": "shape",
+            "name": "footer-rule-5",
+            "position": {
+              "left": 52,
+              "top": 668
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 1176
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 1
+              }
+            },
+            "intrinsicSize": {
+              "width": 1176,
+              "height": 1
+            },
+            "frame": {
+              "left": 52,
+              "top": 668,
+              "width": 1176,
+              "height": 1
+            },
+            "snappedFrame": {
+              "left": 52,
+              "top": 668,
+              "width": 1176,
+              "height": 1
+            },
+            "children": [],
+            "geometry": "line",
+            "element": {
+              "aid": "sh/f21ov21k",
+              "id": "3",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.3",
+            "kind": "text",
+            "name": "footer-left-5",
+            "position": {
+              "left": 52,
+              "top": 680
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 360
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 20
+              }
+            },
+            "intrinsicSize": {
+              "width": 360,
+              "height": 20
+            },
+            "frame": {
+              "left": 52,
+              "top": 680,
+              "width": 360,
+              "height": 20
+            },
+            "snappedFrame": {
+              "left": 52,
+              "top": 680,
+              "width": 360,
+              "height": 20
+            },
+            "children": [],
+            "text": "INTERNAL • 18 AGUSTUS 2026",
+            "transform": "none",
+            "element": {
+              "aid": "sh/szap072t",
+              "id": "4",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.4",
+            "kind": "text",
+            "name": "footer-number-5",
+            "position": {
+              "left": 1178,
+              "top": 680
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 50
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 20
+              }
+            },
+            "intrinsicSize": {
+              "width": 50,
+              "height": 20
+            },
+            "frame": {
+              "left": 1178,
+              "top": 680,
+              "width": 50,
+              "height": 20
+            },
+            "snappedFrame": {
+              "left": 1178,
+              "top": 680,
+              "width": 50,
+              "height": 20
+            },
+            "children": [],
+            "text": "05",
+            "transform": "none",
+            "element": {
+              "aid": "sh/t0j6tsje",
+              "id": "5",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.5",
+            "kind": "text",
+            "name": "readiness-sub",
+            "position": {
+              "left": 52,
+              "top": 132
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 1176
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 36
+              }
+            },
+            "intrinsicSize": {
+              "width": 1176,
+              "height": 36
+            },
+            "frame": {
+              "left": 52,
+              "top": 132,
+              "width": 1176,
+              "height": 36
+            },
+            "snappedFrame": {
+              "left": 52,
+              "top": 132,
+              "width": 1176,
+              "height": 36
+            },
+            "children": [],
+            "text": "Status dibedakan agar rapat tidak mengubah source evidence menjadi klaim lapangan.",
+            "transform": "none",
+            "element": {
+              "aid": "sh/6xs7yxkn",
+              "id": "6",
+              "kind": "shape"
+            }
+          }
+        ],
+        "padding": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        },
+        "alignItems": "stretch",
+        "justifyItems": "stretch",
+        "contentFrame": {
+          "left": 0,
+          "top": 0,
+          "width": 1280,
+          "height": 720
+        },
+        "items": [
+          {
+            "path": "0.0",
+            "frame": {
+              "left": 52,
+              "top": 30,
+              "width": 480,
+              "height": 18
+            }
+          },
+          {
+            "path": "0.1",
+            "frame": {
+              "left": 52,
+              "top": 58,
+              "width": 1176,
+              "height": 60
+            }
+          },
+          {
+            "path": "0.2",
+            "frame": {
+              "left": 52,
+              "top": 668,
+              "width": 1176,
+              "height": 1
+            }
+          },
+          {
+            "path": "0.3",
+            "frame": {
+              "left": 52,
+              "top": 680,
+              "width": 360,
+              "height": 20
+            }
+          },
+          {
+            "path": "0.4",
+            "frame": {
+              "left": 1178,
+              "top": 680,
+              "width": 50,
+              "height": 20
+            }
+          },
+          {
+            "path": "0.5",
+            "frame": {
+              "left": 52,
+              "top": 132,
+              "width": 1176,
+              "height": 36
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

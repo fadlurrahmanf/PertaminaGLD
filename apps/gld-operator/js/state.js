@@ -127,6 +127,8 @@ export const state = {
   dataset: initialDatasetSession(),
   datasetWizard: ["pending", "pending", "pending", "pending", "pending", "pending"],
   nullingLogs: [],
+  nullingLogPaused: false,
+  nullingLogPausedCount: 0,
   nullingExpandedChannels: new Set(),
   bootDiagnostics: {
     reportSeen: false,
@@ -209,6 +211,9 @@ export const elements = {
   datasetNullingFirst: $("datasetNullingFirst"),
   datasetRowsBody: $("datasetRowsBody"),
   nullingLog: $("nullingLog"),
+  pauseNullingLogBtn: $("pauseNullingLogBtn"),
+  copyNullingLogBtn: $("copyNullingLogBtn"),
+  downloadNullingLogBtn: $("downloadNullingLogBtn"),
   nullingSummary: $("nullingSummary"),
   nullingMeta: $("nullingMeta"),
   nullingChannels: $("nullingChannels"),

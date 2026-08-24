@@ -1,0 +1,29 @@
+Source provenance ledger
+
+Local evidence
+- Final internal report completed 18 August 2026; used as the synthesis baseline for all slides.
+- Full meeting recording from 14 August 2026; offline transcription and cross-check used for meeting decisions, targets, and open questions.
+- User-provided field photographs and handwritten notes supplied in the Cilacap evidence folder; used only as discussion evidence, not certification or approval.
+- Current repository source/configuration and read-only audits; used for GLD, CH, Gateway, MQTT, Node-RED, and server statements. Static/source evidence is not live deployment or field proof.
+
+Local image provenance
+- C:\Users\MSI\Downloads\cilacap\GLD.png — user-provided GLD concept photograph.
+- C:\Users\MSI\Downloads\cilacap\CH&GW.png — user-provided CH/Gateway concept photograph.
+- C:\Users\MSI\Downloads\cilacap\WhatsApp Image 2026-08-18 at 16.01.54.jpeg — user-provided historical site map/catatan.
+- C:\Users\MSI\Downloads\cilacap\WhatsApp Image 2026-08-18 at 16.01.55 (1).jpeg — user-provided meeting note with target dates.
+
+Official public sources
+- ATEX Directive 2014/34/EU: https://eur-lex.europa.eu/eli/dir/2014/34
+- IECEx Certified Equipment Scheme: https://www.iecex.com/certified-equipment-scheme/overview/
+- IEC 60079-10-1 area classification: https://webstore.iec.ch/en/publication/63327
+- IEC 60079-14 installation: https://webstore.iec.ch/en/publication/66049
+- NIST SP 800-82 Rev. 3 OT Security: https://csrc.nist.gov/pubs/sp/800/82/r3/final
+- OASIS MQTT Version 5.0: https://docs.oasis-open.org/mqtt/mqtt/v5.0/mqtt-v5.0.html
+- Littelfuse miniSMD resettable PTC datasheet: https://m.littelfuse.com/~/media/electronics/datasheets/resettable_ptcs/littelfuse_ptc_minismdc_datasheet.pdf.pdf
+- TI BQ25185 datasheet: https://www.ti.com/lit/ds/symlink/bq25185.pdf
+
+Speaker-note rule
+- Every slide includes a [Sources] block.
+- Visible slides never display source filenames or local paths.
+- Personal names from non-diarized audio are not used as owners.
+

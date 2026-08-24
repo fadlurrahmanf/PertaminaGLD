@@ -20,6 +20,9 @@ class GldDacMux {
 public:
     bool begin(TwoWire& i2c = Wire, GldPcf8574* sensorPower = nullptr);
     bool writeDac(uint8_t sensorChannel, uint16_t value);
+    // Writes both the volatile DAC register and its EEPROM shadow. Use only
+    // when a saved nulling code differs, never for normal runtime control.
+    bool writeDacPersistent(uint8_t sensorChannel, uint16_t value);
     // Reads the volatile DAC register from the MCP4725 selected by this
     // sensor channel.  This is hardware readback, not the local lastValue
     // cache maintained after a successful write transaction.
@@ -52,6 +55,7 @@ private:
     bool selectMux(uint8_t muxChannel);
     bool selectSensorPower(uint8_t sensorChannel);
     bool writeRaw(uint16_t value);
+    bool writeRawPersistent(uint16_t value);
     bool readRaw(uint16_t& value);
 };
 

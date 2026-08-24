@@ -93,6 +93,7 @@ let recoveryRequested = false;
 let skippedPollLogged = false;
 const serialCommandQueue = [];
 let sensorPowerApplyPending = false;
+let manualAlarmApplyPending = false;
 let pendingSensorPowerConfirmation = null;
 const SENSOR_POWER_CONFIRM_TIMEOUT_MS = 3000;
 
@@ -256,6 +257,7 @@ function updateStatus(status) {
   renderEnvironment(status.environment);
   renderSensorPowerControls(status.sensorPower || status.pcf8574);
   confirmSensorPowerState(status.sensorPower || status.pcf8574);
+  renderManualAlarmControls(status.alarmControl);
 
   const model = status.model || {};
   const bindingStatus = $("modelNullingBindingStatus");
@@ -898,6 +900,11 @@ export function updateTelemetryCollectionProgress() {
 function updateLightweightTelemetry(message) {
   // Preserve the last complete snapshot: a lightweight poll intentionally has
   // no power, boot, LoRa, nulling, or NVS fields to avoid serial overhead.
+  const telemetryPower = message.sensorPower;
+  const telemetryPowerComplete = telemetryPower?.available !== true || (
+    Array.isArray(telemetryPower?.channels) && telemetryPower.channels.length === 8 &&
+    Array.isArray(telemetryPower?.enChannels) && telemetryPower.enChannels.length === 8
+  );
   const status = {
     ...(state.status || {}),
     deviceId: message.deviceId || state.status?.deviceId || state.info?.deviceId,
@@ -906,7 +913,10 @@ function updateLightweightTelemetry(message) {
     alarmLatched: message.alarmLatched ?? state.status?.alarmLatched,
     model: { ...(state.status?.model || {}), ...(message.model || {}) },
     environment: message.environment || state.status?.environment,
-    sensorPower: message.sensorPower || state.status?.sensorPower,
+    // A truncated serial JSON line used to contain outputMask plus only the
+    // first six channel entries. Never let such partial data replace a prior
+    // complete GET_STATUS snapshot and falsely render MQ6/MQ2 as OFF.
+    sensorPower: telemetryPowerComplete ? telemetryPower : state.status?.sensorPower,
     telemetry: message.telemetry
   };
   state.status = status;
@@ -992,6 +1002,22 @@ function renderSensorPowerControls(sensorPower) {
 
 }
 
+function renderManualAlarmControls(alarmControl) {
+  const on = $("manualAlarmOnBtn");
+  const off = $("manualAlarmOffBtn");
+  const availability = $("manualAlarmAvailability");
+  if (!on || !off || !availability) return;
+
+  const available = alarmControl?.manualOnly === true;
+  const commanded = alarmControl?.manualCommanded === true;
+  on.disabled = manualAlarmApplyPending || !available;
+  off.disabled = manualAlarmApplyPending || !available;
+  availability.textContent = !available
+    ? "alarm manual tidak tersedia"
+    : commanded ? "ALARM MANUAL ON" : "alarm manual siap";
+  availability.className = `tag ${available ? (commanded ? "tag--warn" : "tag--ok") : "tag--warn"}`;
+}
+
 function sensorPowerChannelState(channel) {
   const sensorPower = state.status?.sensorPower || state.status?.pcf8574;
   const available = sensorPower?.available === true;
@@ -999,16 +1025,31 @@ function sensorPowerChannelState(channel) {
   const outputs = Number(sensorPower?.outputMask ?? sensorPower?.outputs);
   const en = Number(sensorPower?.enChannels?.[channel]);
   const directState = sensorPower?.channels?.[channel];
-  const on = typeof directState === "boolean"
-    ? directState
-    : Number.isInteger(outputs) && Number.isInteger(en) && Boolean(outputs & (1 << en));
+  // outputMask is the one PCF byte received from firmware.  It is the
+  // authoritative command state; channels[] is a display convenience derived
+  // from that same mask. Prefer the mask so an old/stale channels[] array can
+  // never show a card OFF while the live mask is 0xFF.
+  const hasMaskMapping = Number.isInteger(outputs) && outputs >= 0 && outputs <= 0xFF &&
+    Number.isInteger(en) && en >= 0 && en < 8;
+  const on = hasMaskMapping
+    ? Boolean(outputs & (1 << en))
+    : directState === true;
   return { available, ready, en, on, applying: sensorPowerApplyPending };
 }
 
 function sensorPowerMatchesExpected(sensorPower, expected) {
   if (sensorPower?.available !== true || sensorPower?.ready !== true) return false;
-  const channels = Array.isArray(sensorPower.channels) ? sensorPower.channels : [];
-  return Object.entries(expected).every(([channel, enabled]) => channels[Number(channel)] === enabled);
+  return Object.entries(expected).every(([channel, enabled]) => {
+    const index = Number(channel);
+    const outputs = Number(sensorPower?.outputMask ?? sensorPower?.outputs);
+    const en = Number(sensorPower?.enChannels?.[index]);
+    const hasMaskMapping = Number.isInteger(outputs) && outputs >= 0 && outputs <= 0xFF &&
+      Number.isInteger(en) && en >= 0 && en < 8;
+    const actual = hasMaskMapping
+      ? Boolean(outputs & (1 << en))
+      : sensorPower?.channels?.[index] === true;
+    return actual === enabled;
+  });
 }
 
 function confirmSensorPowerState(sensorPower) {
@@ -1061,6 +1102,22 @@ export async function setSensorPowerAndWait(channel, enabled) {
       pendingSensorPowerConfirmation = null;
     }
     renderSensorPowerControls(state.status?.sensorPower || state.status?.pcf8574);
+  }
+}
+
+export async function setManualAlarmAndWait(enabled) {
+  manualAlarmApplyPending = true;
+  renderManualAlarmControls(state.status?.alarmControl);
+  try {
+    const ack = await sendCommandAndWaitAck(
+      `SET_MANUAL_ALARM_JSON {"enabled":${enabled}}`,
+      "SET_MANUAL_ALARM"
+    );
+    if (ack.status !== "ok") throw new Error(ack.message || ack.status || "perintah ditolak");
+    sendCommand("GET_STATUS");
+  } finally {
+    manualAlarmApplyPending = false;
+    renderManualAlarmControls(state.status?.alarmControl);
   }
 }
 

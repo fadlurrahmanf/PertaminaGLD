@@ -226,6 +226,7 @@ static_assert(pgl::gld::board::PIN_STATUS_LED == 39, "Unexpected GLD status LED 
 static_assert(pgl::gld::board::PIN_USER_BUTTON == 5, "Unexpected GLD2 CFG pin");
 static_assert(pgl::gld::board::PIN_STATUS_LED == 6, "Unexpected GLD2 status LED pin");
 static_assert(pgl::gld::board::PIN_ALARM_LAMP == 40, "Unexpected GLD2 ALARM pin");
+static_assert(pgl::gld::board::PIN_ALARM_ENABLE_BOOST == 15, "Unexpected GLD2 alarm boost-enable pin");
 static_assert(pgl::gld::board::PIN_ADS1256_RESET == 48, "Unexpected GLD2 ADS reset pin");
 static_assert(pgl::gld::board::PIN_ADS1256_PDOWN == 45, "Unexpected GLD2 ADS power-down pin");
 #endif
@@ -287,6 +288,11 @@ uint32_t lastMqttAttemptMs = 0;
 uint32_t lastStatusMs    = 0;
 uint32_t nextNullingRetryMs = 0;
 bool     lastAlarm       = false;
+// Temporary GLD2 commissioning policy: physical ALARM is commanded only by
+// SET_MANUAL_ALARM_JSON, never by inference. This state is intentionally
+// volatile so a reboot always starts with the alarm output OFF.
+constexpr bool MANUAL_ALARM_ONLY = PGL_GLD_BOARD_PROFILE_GLD2;
+bool manualAlarmCommanded = false;
 uint8_t  nullingProfileId = 0;
 uint8_t  nullingAttemptCount = 0;
 pgl::gld::GldNullingConfig nullingConfig{};
@@ -446,6 +452,7 @@ uint8_t  latestSensorGain[pgl::gld::board::SENSOR_COUNT]{};
 uint8_t  latestSensorStatus[pgl::gld::board::SENSOR_COUNT]{};
 bool     latestTelemetryValid = false;
 uint16_t runtimeMcpReadback[pgl::gld::board::SENSOR_COUNT]{};
+uint16_t runtimeMcpExpected[pgl::gld::board::SENSOR_COUNT]{};
 bool     runtimeMcpReadbackVerified[pgl::gld::board::SENSOR_COUNT]{};
 uint32_t runtimeMcpVerifiedAtMs[pgl::gld::board::SENSOR_COUNT]{};
 uint32_t lastNonBatteryDacVerifyMs = 0;
@@ -1271,6 +1278,7 @@ void addCapabilities(JsonObject caps) {
     caps["nullingConfig"] = "SET_NULLING_CONFIG_JSON thresholdV,minFinalV";
     caps["sessionMcp"] = "SET_SESSION_MCP_JSON channel,code (volatile inference-only)";
     caps["sensorModulePower"] = "SET_SENSOR_POWER_JSON channel,enabled or all,enabled (GLD2 PCF8574/TPS22919 only; volatile)";
+    caps["manualAlarm"] = "SET_MANUAL_ALARM_JSON enabled (GLD2 only; inference output disabled)";
     caps["modelNullingBinding"] = "BIND_MODEL_TO_ACTIVE_NULLING_PROFILE";
     caps["qcTracking"] = "SET_QC_RESULT_JSON channel,pass,timestamp / GET_QC_STATUS";
     caps["nullingSingleChannel"] = "RUN_NULLING_SINGLE_JSON channel";
@@ -1396,7 +1404,8 @@ void addTelemetry(JsonObject telemetry) {
     telemetry["gasClass"] = lastResult.gasClass;
     telemetry["gasName"] = pgl::gld::gldGasClassName(lastResult.gasClass);
     telemetry["confidence"] = lastResult.confidence;
-    telemetry["alarm"] = lastAlarm;
+    telemetry["alarm"] = MANUAL_ALARM_ONLY ? manualAlarmCommanded : lastAlarm;
+    telemetry["inferenceAlarm"] = lastAlarm;
 
     JsonArray voltage = telemetry.createNestedArray("sensorVoltage");
     JsonArray gain = telemetry.createNestedArray("sensorGain");
@@ -1410,7 +1419,7 @@ void addTelemetry(JsonObject telemetry) {
         gain.add(latestSensorGain[ch]);
         status.add(latestSensorStatus[ch]);
         order.add(pgl::gld::board::SENSOR_NAMES[ch]);
-        dacCode.add(dac.lastValue(ch));
+        dacCode.add(runtimeMcpExpected[ch]);
         dacVerified.add(runtimeMcpReadbackVerified[ch]);
         dacVerifiedAtMs.add(runtimeMcpVerifiedAtMs[ch]);
     }
@@ -1441,7 +1450,10 @@ void addSensorPowerJson(JsonObject parent) {
 // every Running poll, while GET_STATUS remains the complete configuration and
 // diagnostic snapshot used after connect and operator actions.
 void emitTelemetryJson() {
-    static StaticJsonDocument<1792> doc;
+    // Telemetry includes eight-element voltage/gain/status/DAC arrays plus
+    // GLD2 sensorPower.channels and enChannels. Keep sufficient node metadata
+    // headroom so the final MQ6/MQ2 entries cannot be silently omitted.
+    static StaticJsonDocument<4096> doc;
     doc.clear();
     doc["deviceId"] = runtimeConfig.deviceId;
     doc["mode"] = pgl::gld::gldModeName(currentMode);
@@ -1456,6 +1468,9 @@ void emitTelemetryJson() {
     addTelemetry(telemetry);
     addEnvironmentJson(doc.as<JsonObject>());
     addSensorPowerJson(doc.as<JsonObject>());
+    if (doc.overflowed()) {
+        logPrintln("GLD_TELEMETRY_JSON_OVERFLOW capacity=4096");
+    }
     rawJsonLine("GLD_TELEMETRY_JSON", doc);
 }
 
@@ -1530,7 +1545,11 @@ void emitInfoJson() {
 
 void emitStatusJson() {
     const pgl::gld::GldPowerReading power = pgl::gld::readGldPower();
-    static StaticJsonDocument<4096> doc;
+    // Status carries nested boot, runtime-MCP, power, telemetry, PCF, and
+    // manual-alarm objects. ArduinoJson's memory use exceeds serialized bytes
+    // because every key and nested node needs metadata; 8 KiB leaves measured
+    // headroom rather than silently dropping trailing status fields.
+    static StaticJsonDocument<8192> doc;
     doc.clear();
     char chIdHex[5];
     formatHex4(runtimeConfig.chId, chIdHex, sizeof(chIdHex));
@@ -1616,7 +1635,7 @@ void emitStatusJson() {
     JsonArray runtimeMcpVerifiedJson = doc.createNestedArray("runtimeMcpVerified");
     JsonArray runtimeMcpVerifiedAtMsJson = doc.createNestedArray("runtimeMcpVerifiedAtMs");
     for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
-        runtimeMcpCode.add(dac.lastValue(ch));
+        runtimeMcpCode.add(runtimeMcpExpected[ch]);
         runtimeMcpReadbackJson.add(runtimeMcpReadback[ch]);
         runtimeMcpVerifiedJson.add(runtimeMcpReadbackVerified[ch]);
         runtimeMcpVerifiedAtMsJson.add(runtimeMcpVerifiedAtMs[ch]);
@@ -1732,7 +1751,14 @@ void emitStatusJson() {
         pcf["outputs"] = pcf8574.outputs();
     }
     addSensorPowerJson(doc.as<JsonObject>());
+    JsonObject alarmControl = doc.createNestedObject("alarmControl");
+    alarmControl["manualOnly"] = MANUAL_ALARM_ONLY;
+    alarmControl["manualCommanded"] = manualAlarmCommanded;
     doc["alarmLatched"] = pgl::gld::readGldAlarmLatched();
+
+    if (doc.overflowed()) {
+        logPrintln("GLD_STATUS_JSON_OVERFLOW capacity=8192");
+    }
 
     rawJsonLine("GLD_STATUS_JSON", doc);
 }
@@ -2204,6 +2230,8 @@ void onSetSessionMcpJson(const char* payload) {
     emitStatusJson();
 }
 
+void driveManualAlarmOutputs(bool enabled);
+
 // GLD2 routes PCF8574 P0..P7 to the active-HIGH EN inputs of the eight
 // TPS22919 sensor-module load switches.  This is intentionally a volatile
 // commissioning control: boot always returns every sensor module to ON and
@@ -2262,6 +2290,32 @@ void onSetSensorPowerJson(const char* payload) {
               all ? "all" : "single", channel, static_cast<unsigned>(enChannel), enabled ? 1u : 0u, pcf8574.outputs());
     emitCommandAck("SET_SENSOR_POWER", "ok", enabled ? "sensor module enabled; not saved" : "sensor module disabled; not saved", false);
     emitStatusJson();
+}
+
+void onSetManualAlarmJson(const char* payload) {
+    StaticJsonDocument<64> doc;
+    if (deserializeJson(doc, payload)) {
+        emitCommandAck("SET_MANUAL_ALARM", "error", "invalid json", false);
+        return;
+    }
+    if (!doc.containsKey("enabled") || !doc["enabled"].is<bool>()) {
+        emitCommandAck("SET_MANUAL_ALARM", "rejected", "enabled boolean is required", false);
+        return;
+    }
+#if !PGL_GLD_BOARD_PROFILE_GLD2
+    emitCommandAck("SET_MANUAL_ALARM", "rejected", "manual alarm test requires GLD2 hardware", false);
+    return;
+#else
+    manualAlarmCommanded = doc["enabled"].as<bool>();
+    driveManualAlarmOutputs(manualAlarmCommanded);
+    logPrintf("GLD_ALARM_MANUAL_APPLY enabled=%u inferenceOutput=disabled\n",
+              manualAlarmCommanded ? 1u : 0u);
+    emitCommandAck("SET_MANUAL_ALARM", "ok",
+                   manualAlarmCommanded ? "manual alarm ON; inference output disabled"
+                                        : "manual alarm OFF; inference output disabled",
+                   false);
+    emitStatusJson();
+#endif
 }
 
 // This command is deliberately separate from SET_MODE. It records an
@@ -2708,6 +2762,9 @@ void handleSerialCommand(const pgl::gld::GldSerialCommand& command) {
             break;
         case pgl::gld::GldSerialCommandType::SetSensorPowerJson:
             onSetSensorPowerJson(command.payload);
+            break;
+        case pgl::gld::GldSerialCommandType::SetManualAlarmJson:
+            onSetManualAlarmJson(command.payload);
             break;
         case pgl::gld::GldSerialCommandType::VerifyCleanAirForNulling:
             onVerifyCleanAirForNulling();
@@ -3223,7 +3280,18 @@ void setupPins() {
     pinMode(pgl::gld::board::PIN_LORA_RST,   OUTPUT); digitalWrite(pgl::gld::board::PIN_LORA_RST,   HIGH);
     pinMode(pgl::gld::board::PIN_LORA_RXEN,  OUTPUT); digitalWrite(pgl::gld::board::PIN_LORA_RXEN,  LOW);
     pinMode(pgl::gld::board::PIN_LORA_TXEN,  OUTPUT); digitalWrite(pgl::gld::board::PIN_LORA_TXEN,  LOW);
-    optionalPinMode(pgl::gld::board::PIN_ALARM_LAMP, OUTPUT); optionalDigitalWrite(pgl::gld::board::PIN_ALARM_LAMP, ACTIVE_LOW_OUTPUT_OFF);
+#if PGL_GLD_BOARD_PROFILE_GLD2
+    // GPIO40 drives the Q4 low-side switch through R94; R41 pulls it LOW.
+    // Disable boost and keep the Q4 gate LOW for a deterministic alarm OFF.
+    optionalPinMode(pgl::gld::board::PIN_ALARM_ENABLE_BOOST, OUTPUT);
+    optionalDigitalWrite(pgl::gld::board::PIN_ALARM_ENABLE_BOOST, LOW);
+    optionalPinMode(pgl::gld::board::PIN_ALARM_LAMP, OUTPUT);
+    optionalDigitalWrite(pgl::gld::board::PIN_ALARM_LAMP, LOW);
+#else
+    optionalPinMode(pgl::gld::board::PIN_ALARM_LAMP, OUTPUT);
+    optionalPinMode(pgl::gld::board::PIN_ALARM_ENABLE_BOOST, OUTPUT);
+    optionalDigitalWrite(pgl::gld::board::PIN_ALARM_LAMP, ACTIVE_LOW_OUTPUT_OFF);
+#endif
     optionalPinMode(pgl::gld::board::PIN_BUZZER,     OUTPUT); optionalDigitalWrite(pgl::gld::board::PIN_BUZZER,     ACTIVE_LOW_OUTPUT_OFF);
     optionalPinMode(pgl::gld::board::PIN_DC_FAN,     OUTPUT); optionalDigitalWrite(pgl::gld::board::PIN_DC_FAN,     LOW);
     optionalPinMode(pgl::gld::board::PIN_STATUS_LED, OUTPUT); optionalDigitalWrite(pgl::gld::board::PIN_STATUS_LED, ACTIVE_LOW_OUTPUT_OFF);
@@ -4644,6 +4712,7 @@ bool runtimeDacVerificationReady() {
 void recordRuntimeDacVerification(uint8_t channel, uint16_t expected, uint16_t readback,
                                   bool readOk, const char* source, bool logPass) {
     const bool match = readOk && readback == expected;
+    runtimeMcpExpected[channel] = expected;
     runtimeMcpReadback[channel] = readback;
     runtimeMcpReadbackVerified[channel] = match;
     runtimeMcpVerifiedAtMs[channel] = match ? millis() : 0;
@@ -4661,6 +4730,10 @@ void recordRuntimeDacVerification(uint8_t channel, uint16_t expected, uint16_t r
 // visible within a full eight-channel cycle.
 void serviceNonBatteryDacVerification() {
 #if PGL_GLD_BOARD_PROFILE_GLD2
+    // All external-power sensor rails intentionally remain ON.  Do not make
+    // a shared-address probe during inference: the reliable MCP verification
+    // is the boot/profile-apply readback performed with scoped rail control.
+    if (lastKnownExternalPower) return;
     if (batteryPowerMode || currentMode != pgl::gld::GldMode::INFERENCE || !dacReady || !dac.ready()) return;
     const uint32_t now = millis();
     if (now - lastNonBatteryDacVerifyMs < NON_BATTERY_DAC_VERIFY_INTERVAL_MS) return;
@@ -4669,7 +4742,7 @@ void serviceNonBatteryDacVerification() {
     nextNonBatteryDacVerifyChannel = static_cast<uint8_t>(
         (nextNonBatteryDacVerifyChannel + 1U) % pgl::gld::board::SENSOR_COUNT);
     uint16_t readback = 0;
-    const uint16_t expected = dac.lastValue(channel);
+    const uint16_t expected = runtimeMcpExpected[channel];
     const bool readOk = dac.readDac(channel, readback);
     recordRuntimeDacVerification(channel, expected, readback, readOk, "periodic", false);
 #endif
@@ -4701,28 +4774,40 @@ bool applySavedNullingProfileOnly() {
         return false;
     }
 
-    // The saved profile is applied before normal inference. MCP4725 modules
-    // share address 0x60, so select one TPS22919 branch for each write, then
-    // restore the non-battery runtime mask (0xFF). Without this, an all-ON
-    // boot can NACK a later channel and leave the DAC at the boot-test value.
-    dac.setAutomaticSensorPowerControl(true);
-    dac.captureSensorPowerState();
-    dac.setSensorPowerSettleMs(500);
-    dac.setRestoreSensorPowerAfterWrite(false);
-    bool allApplied = true;
-    for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
-        allApplied = dac.writeDac(ch, profile.dacCode[ch]) && allApplied;
+    // The downstream MCP4725 modules share address 0x60.  Apply/verify a
+    // saved profile with one TPS22919 rail at a time, but commit a differing
+    // code to the MCP EEPROM so it survives the subsequent rail transition.
+    // A matching EEPROM-loaded code is only read, preserving EEPROM endurance.
+    const bool isolateSensorsForApply = pgl::gld::board::HAS_PCF8574 && pcfReady;
+    dac.setAutomaticSensorPowerControl(isolateSensorsForApply);
+    if (isolateSensorsForApply) {
+        dac.captureSensorPowerState();
+        dac.setSensorPowerSettleMs(500);
+        dac.setRestoreSensorPowerAfterWrite(false);
     }
+    bool allApplied = true;
     bool allReadBack = true;
     for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
+        uint16_t before = 0;
+        const bool beforeOk = dac.readDac(ch, before);
+        const bool needsCommit = !beforeOk || before != profile.dacCode[ch];
+        // A matching EEPROM value needs only a volatile refresh. This updates
+        // the runtime cache after Boot IC Report's edge test without another
+        // EEPROM write cycle.
+        const bool writeOk = needsCommit
+                                 ? dac.writeDacPersistent(ch, profile.dacCode[ch])
+                                 : dac.writeDac(ch, profile.dacCode[ch]);
+        if (needsCommit && writeOk) serviceDelay(50);
         uint16_t readback = 0;
-        const bool readOk = dac.readDac(ch, readback);
+        const bool readOk = writeOk && dac.readDac(ch, readback);
         const bool match = readOk && readback == profile.dacCode[ch];
         recordRuntimeDacVerification(ch, profile.dacCode[ch], readback, readOk, "boot_apply", true);
-        logPrintf("BOOT_NULLING_DAC_VERIFY ch=%u sensor=%s requested=%u readback=%u read=%u match=%u\n",
+        logPrintf("BOOT_NULLING_DAC_VERIFY ch=%u sensor=%s requested=%u before=%u beforeRead=%u commit=%u write=%u readback=%u read=%u match=%u\n",
                   static_cast<unsigned>(ch), pgl::gld::board::SENSOR_NAMES[ch],
-                  static_cast<unsigned>(profile.dacCode[ch]), static_cast<unsigned>(readback),
-                  readOk ? 1u : 0u, match ? 1u : 0u);
+                  static_cast<unsigned>(profile.dacCode[ch]), static_cast<unsigned>(before),
+                  beforeOk ? 1u : 0u, needsCommit ? 1u : 0u, writeOk ? 1u : 0u,
+                  static_cast<unsigned>(readback), readOk ? 1u : 0u, match ? 1u : 0u);
+        allApplied = writeOk && allApplied;
         allReadBack = allReadBack && match;
     }
     serviceDelay(BOOT_DAC_SETTLE_MS);
@@ -4734,8 +4819,8 @@ bool applySavedNullingProfileOnly() {
         const bool resetOk = dac.writeAll(0);
         logPrintf("BOOT_NULLING_PROFILE_SAFE_RESET=%s\n", resetOk ? "OK" : "FAIL");
     }
-    const bool powerRestored = dac.restoreSensorPower();
-    dac.setAutomaticSensorPowerControl(false);
+    const bool powerRestored = !isolateSensorsForApply || dac.restoreSensorPower();
+    dac.setAutomaticSensorPowerControl(batteryPowerMode);
     dac.setRestoreSensorPowerAfterWrite(true);
     dac.setSensorPowerSettleMs(50);
     allApplied = allApplied && powerRestored;
@@ -5186,7 +5271,28 @@ bool nonceProvider(uint8_t nonce[pgl::protocol::GLD_AES_GCM_NONCE_SIZE], void* c
     return true;
 }
 
+void driveManualAlarmOutputs(bool enabled) {
+#if PGL_GLD_BOARD_PROFILE_GLD2
+    // GPIO40 drives Q4's gate through R94. Q4's R41 gate pulldown means:
+    // ON  = EN_BOOST HIGH, then ALARM HIGH.
+    // OFF = ALARM LOW, then EN_BOOST LOW.
+    if (enabled) {
+        optionalDigitalWrite(pgl::gld::board::PIN_ALARM_ENABLE_BOOST, HIGH);
+        optionalDigitalWrite(pgl::gld::board::PIN_ALARM_LAMP, HIGH);
+    } else {
+        optionalDigitalWrite(pgl::gld::board::PIN_ALARM_LAMP, LOW);
+        optionalDigitalWrite(pgl::gld::board::PIN_ALARM_ENABLE_BOOST, LOW);
+    }
+#else
+    (void)enabled;
+#endif
+}
+
 void driveAlarmOutputs(bool alarm) {
+    if (MANUAL_ALARM_ONLY) {
+        driveManualAlarmOutputs(manualAlarmCommanded);
+        return;
+    }
     if (FIELDTEST_MODEL_UNVERIFIED) {
         alarm = false;
     }
@@ -5196,6 +5302,10 @@ void driveAlarmOutputs(bool alarm) {
 }
 
 bool updateAlarmOutputs(bool alarm) {
+    if (MANUAL_ALARM_ONLY) {
+        driveManualAlarmOutputs(manualAlarmCommanded);
+        return true;
+    }
     if (FIELDTEST_MODEL_UNVERIFIED) {
         driveAlarmOutputs(false);
         logPrintf("GLD_MODEL_BENCH_ALARM_SUPPRESSED requested=%u\n", alarm ? 1 : 0);

@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pertaminagld.local/schemas/audit-finding.schema.json",
+  "title": "PertaminaGLD Agentic Audit Finding",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "title",
+    "component",
+    "severity",
+    "status",
+    "confidence",
+    "evidenceLevel",
+    "trigger",
+    "impact",
+    "invariant",
+    "evidence",
+    "missingProof",
+    "verificationGate"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^PGL-AUD-[0-9]{3,}$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "component": {
+      "enum": [
+        "gld",
+        "ch",
+        "gateway",
+        "server",
+        "operator-hub",
+        "integration",
+        "repository",
+        "hardware-design"
+      ]
+    },
+    "severity": {
+      "enum": ["P1", "P2", "P3"]
+    },
+    "status": {
+      "enum": ["validated", "candidate", "tbd", "proposal"]
+    },
+    "confidence": {
+      "enum": ["high", "medium", "low"]
+    },
+    "evidenceLevel": {
+      "enum": [
+        "proposal",
+        "source-confirmed",
+        "host-test-proven",
+        "build-confirmed",
+        "runtime-observed",
+        "device-observed",
+        "deployment-observed",
+        "field-observed",
+        "tbd"
+      ]
+    },
+    "scope": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    },
+    "trigger": {
+      "type": "string",
+      "minLength": 1
+    },
+    "impact": {
+      "type": "string",
+      "minLength": 1
+    },
+    "invariant": {
+      "type": "string",
+      "minLength": 1
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["kind", "path", "detail"],
+        "properties": {
+          "kind": {
+            "enum": ["source", "test", "build", "runtime", "device", "deployment", "document"]
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "line": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "detail": {
+            "type": "string",
+            "minLength": 1
+          },
+          "command": {
+            "type": "string",
+            "minLength": 1
+          },
+          "result": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "missingProof": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true
+    },
+    "verificationGate": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "suggestedFix": {
+      "type": "string",
+      "minLength": 1
+    },
+    "secretRedacted": {
+      "type": "boolean",
+      "default": true
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {"const": "validated"}
+        },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "confidence": {"enum": ["high", "medium"]},
+          "evidenceLevel": {
+            "not": {"enum": ["proposal", "tbd"]}
+          }
+        }
+      }
+    }
+  ]
+}

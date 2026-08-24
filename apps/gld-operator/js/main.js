@@ -12,7 +12,7 @@ import {
 } from "./bridge-client.js";
 import { requireUnlock } from "./security.js";
 import {
-  sendCommand, applyAndAlert, setSensorPowerAndWait, togglePolling, stopPolling, renderSensorCheck, toggleAlarmMute, updateAlarmState, updateTelemetryCollectionProgress
+  sendCommand, applyAndAlert, setSensorPowerAndWait, setManualAlarmAndWait, togglePolling, stopPolling, renderSensorCheck, toggleAlarmMute, updateAlarmState, updateTelemetryCollectionProgress
 } from "./serial-protocol.js";
 import { drawChart, renderLegend, exportCsv } from "./chart.js";
 import { applyNullingConfig, requestFullNulling, requestManualNullingRetry, requestFailedNullingRetry, updateNullingMeta, renderNullingChannels, toggleNullingLogPause, applyNullingLogPauseVisibility, copyNullingLog, exportNullingLog, resetNullingMcpIndicator } from "./nulling.js";
@@ -211,6 +211,19 @@ function setupEvents() {
         });
       } catch (error) {
         showBanner(`Power semua modul belum terkonfirmasi: ${error.message}`, "warn");
+      }
+    });
+  }
+  for (const [id, enabled] of [["manualAlarmOnBtn", true], ["manualAlarmOffBtn", false]]) {
+    $(id)?.addEventListener("click", async () => {
+      if (!await requireUnlock()) return;
+      const button = $(id);
+      try {
+        await withBusy(button, "Menunggu…", async () => {
+          await setManualAlarmAndWait(enabled);
+        });
+      } catch (error) {
+        showBanner(`Alarm manual ${enabled ? "ON" : "OFF"} belum diterapkan: ${error.message}`, "warn");
       }
     });
   }

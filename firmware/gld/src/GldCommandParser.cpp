@@ -123,6 +123,12 @@ bool decodeLine(const char* line, GldSerialCommand& outCommand) {
         outCommand.payload[sizeof(outCommand.payload) - 1] = '\0';
         return true;
     }
+    if (strncmp(line, "SET_MANUAL_ALARM_JSON ", 22) == 0) {
+        outCommand.type = GldSerialCommandType::SetManualAlarmJson;
+        strncpy(outCommand.payload, line + 22, sizeof(outCommand.payload) - 1);
+        outCommand.payload[sizeof(outCommand.payload) - 1] = '\0';
+        return true;
+    }
     if (strcmp(line, "VERIFY_CLEAN_AIR_FOR_NULLING") == 0) {
         outCommand.type = GldSerialCommandType::VerifyCleanAirForNulling;
         return true;

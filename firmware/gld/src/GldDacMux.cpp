@@ -12,6 +12,7 @@ namespace {
 
 TCA9548* mux = nullptr;
 constexpr uint8_t MCP4725_DAC_REGISTER = 0x40;
+constexpr uint8_t MCP4725_DAC_AND_EEPROM_REGISTER = 0x60;
 constexpr uint16_t DAC_I2C_TIMEOUT_MS = 50;
 constexpr uint8_t DAC_WRITE_ATTEMPTS = 3;
 
@@ -111,6 +112,24 @@ bool GldDacMux::writeAll(uint16_t value) {
     return true;
 }
 
+bool GldDacMux::writeDacPersistent(uint8_t sensorChannel, uint16_t value) {
+    if (!initialized_ || sensorChannel >= board::SENSOR_COUNT || value > board::GLD_DAC_CODE_MAX) {
+        return false;
+    }
+    if (!selectSensorPower(sensorChannel)) return false;
+
+    const uint8_t muxChannel = static_cast<uint8_t>(board::SENSOR_TO_MUX_CH[sensorChannel]);
+    bool writeOk = false;
+    for (uint8_t attempt = 0; attempt < DAC_WRITE_ATTEMPTS && !writeOk; ++attempt) {
+        if (attempt > 0 && i2c_ != nullptr) recoverTcaRootBus(*i2c_);
+        writeOk = selectMux(muxChannel) && writeRawPersistent(value);
+    }
+    const bool restoreOk = !restoreSensorPowerAfterWrite_ || restoreSensorPower();
+    if (!writeOk || !restoreOk) return false;
+    lastValue_[sensorChannel] = value;
+    return true;
+}
+
 bool GldDacMux::readDac(uint8_t sensorChannel, uint16_t& value) {
     value = 0;
     if (!initialized_ || sensorChannel >= board::SENSOR_COUNT) {
@@ -179,6 +198,17 @@ bool GldDacMux::writeRaw(uint16_t value) {
     const uint8_t low = static_cast<uint8_t>((value & 0x0F) << 4);
     i2c_->beginTransmission(board::MCP4725_ADDR);
     i2c_->write(MCP4725_DAC_REGISTER);
+    i2c_->write(high);
+    i2c_->write(low);
+    return i2c_->endTransmission() == 0;
+}
+
+bool GldDacMux::writeRawPersistent(uint16_t value) {
+    if (i2c_ == nullptr) return false;
+    const uint8_t high = static_cast<uint8_t>(value >> 4);
+    const uint8_t low = static_cast<uint8_t>((value & 0x0F) << 4);
+    i2c_->beginTransmission(board::MCP4725_ADDR);
+    i2c_->write(MCP4725_DAC_AND_EEPROM_REGISTER);
     i2c_->write(high);
     i2c_->write(low);
     return i2c_->endTransmission() == 0;

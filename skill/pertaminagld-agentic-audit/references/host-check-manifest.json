@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "reviewedAtHead": "bbf7d2177609135e11e425682380da31a1ba4cf8",
+  "policy": "Execute only an exact path and SHA-256 match. Skip drifted checks until their side effects and dependencies are reviewed.",
+  "files": [
+    {
+      "path": "firmware/tests/test_shared_protocol.py",
+      "sha256": "06A6560BCC151A8548E7BCA43648EE18A9D80CD22F42109E916D3F63EFDD6EFF"
+    },
+    {
+      "path": "firmware/tests/test_gateway_multi_gateway_isolation.py",
+      "sha256": "4C8E65F044511DCCD5DD8D544BDF7498A0E0529517C19B459D642839D9D86F10"
+    },
+    {
+      "path": "firmware/tests/test_ch_parent_policy.py",
+      "sha256": "1E8DC49A91DAC78EB636C1B995079FC3D285197CC44096330B034F96CB1CA595"
+    },
+    {
+      "path": "server/nodered/tests/replay-policy.test.js",
+      "sha256": "816D597274D090863FFB10F9C2844E13449F243B121D51AAB843642E07766855"
+    },
+    {
+      "path": "server/nodered/tests/multi-gateway-topology.test.js",
+      "sha256": "23E53E8BA1A1F5AE53DCE4E06244E06760D6787C3E25D6D105BB0345100DF55F"
+    },
+    {
+      "path": "server/nodered/tests/gld-request-correlation.test.js",
+      "sha256": "42F74DEC2EBD6FCDE18A135450DB92F2A1820B8378CFB5313A86049660A51770"
+    },
+    {
+      "path": "server/nodered/apply-pertamina-gld-flow.js",
+      "sha256": "C5914E57055BCAA2E22CCD30A356E858767C70DE79E6FCE3EBA55D08EF384C89"
+    }
+  ]
+}

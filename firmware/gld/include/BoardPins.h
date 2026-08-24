@@ -31,6 +31,7 @@ constexpr int PIN_I2C_SDA = gld2::PIN_I2C_SDA;
 constexpr int PIN_I2C_SCL = gld2::PIN_I2C_SCL;
 constexpr int PIN_STATUS_LED = gld2::PIN_STATUS_LED;
 constexpr int PIN_ALARM_LAMP = gld2::PIN_ALARM;
+constexpr int PIN_ALARM_ENABLE_BOOST = gld2::PIN_ALARM_ENABLE_BOOST;
 constexpr int PIN_BUZZER = -1;
 constexpr int PIN_DC_FAN = gld2::PIN_DC_FAN;
 constexpr bool HAS_DC_FAN = gld2::HAS_DC_FAN;
@@ -199,6 +200,7 @@ constexpr int PIN_I2C_SCL = PGL_GLD_PIN_I2C_SCL;
 
 constexpr int PIN_STATUS_LED = PGL_GLD_PIN_STATUS_LED;
 constexpr int PIN_ALARM_LAMP = PGL_GLD_PIN_ALARM_LAMP;
+constexpr int PIN_ALARM_ENABLE_BOOST = -1;
 constexpr int PIN_BUZZER = PGL_GLD_PIN_BUZZER;
 constexpr int PIN_DC_FAN = PGL_GLD_PIN_DC_FAN;
 constexpr bool HAS_DC_FAN = PIN_DC_FAN >= 0;

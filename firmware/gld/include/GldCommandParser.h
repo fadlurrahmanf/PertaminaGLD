@@ -30,6 +30,7 @@ enum class GldSerialCommandType : uint8_t {
     SetNullingConfigJson,
     SetSessionMcpJson,
     SetSensorPowerJson,
+    SetManualAlarmJson,
     VerifyCleanAirForNulling,
     RetryNulling,
     RetryFailedNulling,
@@ -75,6 +76,7 @@ struct GldSerialCommand {
 // - SET_SESSION_MCP_JSON {"channel":0,"code":123}  (volatile Running DAC adjustment; never saved)
 // - SET_SENSOR_POWER_JSON {"channel":0,"enabled":true} or {"all":true,"enabled":false}
 //   (GLD2 PCF8574/TPS22919 only; volatile)
+// - SET_MANUAL_ALARM_JSON {"enabled":true}  (GLD2 manual alarm test; volatile)
 // - VERIFY_CLEAN_AIR_FOR_NULLING  (operator-confirmed clear of an alarm latch before full nulling)
 // - RETRY_NULLING  (operator-authorized retry after an incomplete full nulling run)
 // - RETRY_FAILED_NULLING  (retry only channels that failed the last full/retry attempt)

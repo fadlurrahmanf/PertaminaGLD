@@ -28,8 +28,11 @@ constexpr int PIN_I2C_SDA = 8;
 constexpr int PIN_I2C_SCL = 9;
 
 constexpr int PIN_STATUS_LED = 6;
-// GLD2 has one shared active-low ALARM net, not separate lamp/buzzer outputs.
+// GPIO40 drives R94 into the Q4 (AO3400A) gate. R41 pulls the gate down, so
+// HIGH asserts the low-side alarm load; this is not an active-low signal.
 constexpr int PIN_ALARM = 40;
+// TPS61088 EN: required before the external alarm load is energised.
+constexpr int PIN_ALARM_ENABLE_BOOST = 15;
 constexpr int PIN_DC_FAN = -1;
 constexpr bool HAS_DC_FAN = false;
 

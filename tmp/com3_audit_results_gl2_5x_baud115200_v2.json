@@ -1,0 +1,505 @@
+{
+  "GET_INFO": {
+    "ok_count": 0,
+    "always": false,
+    "frequency": 0.0,
+    "rows": [
+      {
+        "iter": 1,
+        "ok": false,
+        "line_count": 2,
+        "missing": [
+          "GLD_INFO_JSON"
+        ],
+        "tail": [
+          "3. MQ8 : 0.25724V | MQ135 : 0.32327V | MQ3 : 0.03367V | MQ5 : 0.62425V | MQ4 : 0.06362V | MQ7 : 0.06977V | MQ6 : 0.20371V | MQ2 : 0.01876V"
+        ]
+      },
+      {
+        "iter": 2,
+        "ok": false,
+        "line_count": 4,
+        "missing": [
+          "GLD_INFO_JSON"
+        ],
+        "tail": [
+          "GLD_STATUS_JSON {\"deviceId\":\"1001\",\"nodeId\":4097,\"targetChId\":\"0010\",\"mode\":\"inference\",\"uptimeMs\":465082,\"debugEnabled\":true,\"power\":{\"mode\":\"24v\",\"externalPower\":true,\"batteryMv\":65535,\"batteryValid\":false,\"batteryDetected\":false,\"batterySenseStatus\":\"not_detected\",\"batteryLow\":false,\"batteryCritical\":false,\"sourceAmbiguous\":false,\"stpRaw\":1,\"stpSource\":\"24V\",\"serviceHoldActive\":false,\"serviceHoldEffective\":false},\"batterySession\":{\"state\":\"inactive\",\"startedMs\":0,\"stateStartedMs\":0,\"validSampleBatches\":0,\"requiredSampleBatches\":10,\"alarmTxAttempts\":0,\"alarmTxAttemptLimit\":3,\"alarmAckReceived\":false,\"pendingAlarm\":false,\"pendingSaveRequired\":false,\"persistenceFaultHold\":false,\"completionReason\":\"session_done\"},\"bootHealth\":{\"adsReady\":true,\"adsDrdyLevel\":0,\"adsDrdyPulldownLevel\":1,\"adsDrdyPullupLevel\":0,\"adsMisoPulldownLevel\":0,\"adsMisoPullupLevel\":1,\"adsCsLevel\":1,\"adsSyncLevel\":1,\"adsStatus\":54,\"adsMux\":15,\"adsAdcon\":6,\"adsDrate\":240,\"adsReason\":\"ok\",\"tcaOk\":false,\"mcpOkCount\":0,\"mcpOk\":[false,false,false,false,false,false,false,false],\"mcpAddrMask\":[0,0,0,0,0,0,0,0],\"mcpControlTested\":true,\"mcpControlOkCount\":0,\"mcpControlOk\":[false,false,false,false,false,false,false,false],\"dacReady\":false,\"radioReady\":false,\"mlReady\":false,\"nullingProfileApplied\":false,\"modelProfileReady\":false},\"runtimeMcpCode\":[0,0,0,0,0,0,0,0],\"runtimeMcpReadback\":[0,0,0,0,0,0,0,0],\"runtimeMcpVerified\":[false,false,false,false,false,false,false,false],\"runtimeMcpVerifiedAtMs\":[0,0,0,0,0,0,0,0],\"model\":{\"profileId\":\"cnn-dualbranch-board-1-v1\",\"scalerProfileId\":\"cnn-dualbranch-board-1-v1\",\"productionApproved\":true,\"boundNullingProfileId\":1,\"activeNullingProfileId\":0,\"bindingValid\":true,\"bindingModelMatches\":true,\"dacVerificationReady\":false,\"profileReady\":false,\"inferenceValid\":false,\"sensorFault\":false},\"lora\":{\"beginState\":0,\"lastTxState\":0,\"lastTxOk\":false,\"txSeq\":0,\"txCounter\":0,\"aesKeyProvisioned\":false,\"aesKeyPresent\":false,\"aesKeySource\":\"none\",\"keyId\":0,\"lastDownlinkCommandId\":0,\"freqMHz\":920,\"bwKHz\":125,\"sf\":7,\"cr\":5,\"syncWord\":18,\"txPowerDbm\":17,\"preamble\":8,\"tcxoVoltage\":1.600000024,\"xtalVoltage\":0},\"dataset\":{\"state\":\"idle\",\"step\":\"idle\",\"label\":\"\",\"seq\":0,\"targetSamples\":0,\"sampleIntervalMs\":500,\"maxDurationMs\":0,\"useFanIntake\":false,\"fanAvailable\":false,\"fanOnMs\":1000,\"postFanSettleMs\":0,\"nullingProfileId\":0,\"queuePending\":0,\"queueCapacity\":16,\"queueEnqueued\":0,\"queueDropped\":0,\"publishFailCount\":0,\"retryCount\":0,\"retryFailCount\":0,\"rejectedSamples\":0,\"lastRejectReason\":\"none\",\"lastRejectChannel\":-1,\"lastRejectOkFiniteCount\":0,\"lastRejectStatus\":255,\"lastRejectGain\":0,\"lastRejectSaturated\":false},\"recovery\":{\"wifiReconnectCount\":0,\"wifiReconnectFailCount\":0,\"mqttReconnectCount\":0,\"mqttConnectFailCount\":0,\"lastMqttState\":0,\"adsRecoveryCount\":0,\"adsRecoveryFailCount\":0,\"adsReadFailStreak\":0,\"lastReason\":\"none\",\"lastRecoveryMs\":0,\"bootRecoveryArmed\":false,\"bootRecoveryDueMs\":0,\"bootRecoveryReason\":\"none\",\"bootRecoveryNonAdsFailure\":false,\"bootRecoveryRestartCount\":0},\"nulling\":{\"done\":false,\"retryArmed\":false,\"retryAvailable\":false,\"retryFailedAvailable\":false,\"retryFailedMask\":0,\"attemptCount\":0,\"nextRetryMs\":0,\"thresholdV\":0.0001,\"minFinalV\":0},\"telemetry\":{\"valid\":false,\"sampleMs\":0,\"gasClass\":6,\"gasName\":\"CO2\",\"confidence\":0,\"alarm\":false,\"inferenceAlarm\":false,\"sensorVoltage\":[0,0,0,0,0,0,0,0],\"sensorGain\":[0,0,0,0,0,0,0,0],\"sensorStatus\":[0,0,0,0,0,0,0,0],\"featureOrder\":[\"MQ8\",\"MQ135\",\"MQ3\",\"MQ5\",\"MQ4\",\"MQ7\",\"MQ6\",\"MQ2\"],\"dacCodeApplied\":[0,0,0,0,0,0,0,0],\"dacVerified\":[false,false,false,false,false,false,false,false],\"dacVerifiedAtMs\":[0,0,0,0,0,0,0,0]},\"environment\":{\"available\":true,\"detected\":false,\"valid\":false,\"sensor\":\"SHT40\",\"address\":\"0x44\",\"sampleMs\":0,\"sampleAgeMs\":4294967295,\"tca9548a\":{\"address\":\"0x71\",\"detected\":false,\"sampleMs\":464000,\"sampleAgeMs\":1083}},\"modbus\":{\"available\":true,\"ready\":true},\"pcf8574\":{\"available\":true,\"ready\":false,\"allLoadSwitchesOn\":false,\"address\":32,\"outputs\":0},\"sensorPower\":{\"available\":true,\"ready\":false,\"commanded\":true,\"outputMask\":0,\"channels\":[false,false,false,false,false,false,false,false],\"enChannels\":[0,6,7,3,4,5,2,1]},\"alarmControl\":{\"manualOnly\":true,\"manualCommanded\":false},\"alarmLatched\":false}"
+        ]
+      },
+      {
+        "iter": 3,
+        "ok": false,
+        "line_count": 2,
+        "missing": [
+          "GLD_INFO_JSON"
+        ],
+        "tail": [
+          "BOOT_PROBE_I2C=start"
+        ]
+      },
+      {
+        "iter": 4,
+        "ok": false,
+        "line_count": 1,
+        "missing": [
+          "GLD_INFO_JSON"
+        ],
+        "tail": [
+          "GLD_CMD_ACK_JSON {\"deviceId\":\"1001\",\"nodeId\":4097,\"chId\":\"0010\",\"cmd\":\"SERIAL_COMMAND\",\"status\":\"busy\",\"message\":\"command queue is full\",\"rebootExpected\":false,\"mode\":\"inference\",\"uptimeMs\":480606}"
+        ]
+      },
+      {
+        "iter": 5,
+        "ok": false,
+        "line_count": 1,
+        "missing": [
+          "GLD_INFO_JSON"
+        ],
+        "tail": [
+          "GLD_CMD_ACK_JSON {\"deviceId\":\"1001\",\"nodeId\":4097,\"chId\":\"0010\",\"cmd\":\"SERIAL_COMMAND\",\"status\":\"busy\",\"message\":\"command queue is full\",\"rebootExpected\":false,\"mode\":\"inference\",\"uptimeMs\":492624}"
+        ]
+      }
+    ],
+    "must": [
+      "GLD_INFO_JSON"
+    ],
+    "done": [
+      "GLD_INFO_JSON"
+    ],
+    "note": "baseline info/caps"
+  },
+  "GET_STATUS": {
+    "ok_count": 0,
+    "always": false,
+    "frequency": 0.0,
+    "rows": [
+      {
+        "iter": 1,
+        "ok": false,
+        "line_count": 1,
+        "missing": [
+          "GLD_STATUS_JSON"
+        ],
+        "tail": [
+          "GLD_CMD_ACK_JSON {\"deviceId\":\"1001\",\"nodeId\":4097,\"chId\":\"0010\",\"cmd\":\"SERIAL_COMMAND\",\"status\":\"busy\",\"message\":\"command queue is full\",\"rebootExpected\":false,\"mode\":\"inference\",\"uptimeMs\":505642}"
+        ]
+      },
+      {
+        "iter": 2,
+        "ok": false,
+        "line_count": 1,
+        "missing": [
+          "GLD_STATUS_JSON"
+        ],
+        "tail": [
+          "GLD_CMD_ACK_JSON {\"deviceId\":\"1001\",\"nodeId\":4097,\"chId\":\"0010\",\"cmd\":\"SERIAL_COMMAND\",\"status\":\"busy\",\"message\":\"command queue is full\",\"rebootExpected\":false,\"mode\":\"inference\",\"uptimeMs\":519665}"
+        ]
+      },
+      {
+        "iter": 3,
+        "ok": false,
+        "line_count": 1,
+        "missing": [
+          "GLD_STATUS_JSON"
+        ],
+        "tail": [
+          "GLD_CMD_ACK_JSON {\"deviceId\":\"1001\",\"nodeId\":4097,\"chId\":\"0010\",\"cmd\":\"SERIAL_COMMAND\",\"status\":\"busy\",\"message\":\"command queue is full\",\"rebootExpected\":false,\"mode\":\"inference\",\"uptimeMs\":531683}"
+        ]
+      },
+      {
+        "iter": 4,
+        "ok": false,
+        "line_count": 1,
+        "missing": [
+          "GLD_STATUS_JSON"
+        ],
+        "tail": [
+          "GLD_CMD_ACK_JSON {\"deviceId\":\"1001\",\"nodeId\":4097,\"chId\":\"0010\",\"cmd\":\"SERIAL_COMMAND\",\"status\":\"busy\",\"message\":\"command queue is full\",\"rebootExpected\":false,\"mode\":\"inference\",\"uptimeMs\":544701}"
+        ]
+      },
+      {
+        "iter": 5,
+        "ok": false,
+        "line_count": 1,
+        "missing": [
+          "GLD_STATUS_JSON"
+        ],
+        "tail": [
+          "GLD_CMD_ACK_JSON {\"deviceId\":\"1001\",\"nodeId\":4097,\"chId\":\"0010\",\"cmd\":\"SERIAL_COMMAND\",\"status\":\"busy\",\"message\":\"command queue is full\",\"rebootExpected\":false,\"mode\":\"inference\",\"uptimeMs\":558719}"
+        ]
+      }
+    ],
+    "must": [
+      "GLD_STATUS_JSON"
+    ],
+    "done": [
+      "GLD_STATUS_JSON"
+    ],
+    "note": "runtime status"
+  },
+  "RUN_BOOT_CHECK": {
+    "ok_count": 0,
+    "always": false,
+    "frequency": 0.0,
+    "rows": [
+      {
+        "iter": 1,
+        "ok": false,
+        "line_count": 1,
+        "missing": [
+          "RUN_BOOT_CHECK_START",
+          "RUN_BOOT_CHECK_DONE"
+        ],
+        "tail": [
+          "GLD_CMD_ACK_JSON {\"deviceId\":\"1001\",\"nodeId\":4097,\"chId\":\"0010\",\"cmd\":\"SERIAL_COMMAND\",\"status\":\"busy\",\"message\":\"command queue is full\",\"rebootExpected\":false,\"mode\":\"inference\",\"uptimeMs\":570737}"
+        ]
+      },
+      {
+        "iter": 2,
+        "ok": false,
+        "line_count": 1,
+        "missing": [
+          "RUN_BOOT_CHECK_START",
+          "RUN_BOOT_CHECK_DONE"
+        ],
+        "tail": [
+          "GLD_CMD_ACK_JSON {\"deviceId\":\"1001\",\"nodeId\":4097,\"chId\":\"0010\",\"cmd\":\"SERIAL_COMMAND\",\"status\":\"busy\",\"message\":\"command queue is full\",\"rebootExpected\":false,\"mode\":\"inference\",\"uptimeMs\":583760}"
+        ]
+      },
+      {
+        "iter": 3,
+        "ok": false,
+        "line_count": 1,
+        "missing": [
+          "RUN_BOOT_CHECK_START",
+          "RUN_BOOT_CHECK_DONE"
+        ],
+        "tail": [
+          "GLD_CMD_ACK_JSON {\"deviceId\":\"1001\",\"nodeId\":4097,\"chId\":\"0010\",\"cmd\":\"SERIAL_COMMAND\",\"status\":\"busy\",\"message\":\"command queue is full\",\"rebootExpected\":false,\"mode\":\"inference\",\"uptimeMs\":595778}"
+        ]
+      },
+      {
+        "iter": 4,
+        "ok": false,
+        "line_count": 1,
+        "missing": [
+          "RUN_BOOT_CHECK_START",
+          "RUN_BOOT_CHECK_DONE"
+        ],
+        "tail": [
+          "GLD_CMD_ACK_JSON {\"deviceId\":\"1001\",\"nodeId\":4097,\"chId\":\"0010\",\"cmd\":\"SERIAL_COMMAND\",\"status\":\"busy\",\"message\":\"command queue is full\",\"rebootExpected\":false,\"mode\":\"inference\",\"uptimeMs\":609796}"
+        ]
+      },
+      {
+        "iter": 5,
+        "ok": false,
+        "line_count": 1,
+        "missing": [
+          "RUN_BOOT_CHECK_START",
+          "RUN_BOOT_CHECK_DONE"
+        ],
+        "tail": [
+          "GLD_CMD_ACK_JSON {\"deviceId\":\"1001\",\"nodeId\":4097,\"chId\":\"0010\",\"cmd\":\"SERIAL_COMMAND\",\"status\":\"busy\",\"message\":\"command queue is full\",\"rebootExpected\":false,\"mode\":\"inference\",\"uptimeMs\":621814}"
+        ]
+      }
+    ],
+    "must": [
+      "RUN_BOOT_CHECK_START",
+      "RUN_BOOT_CHECK_DONE"
+    ],
+    "done": [
+      "RUN_BOOT_CHECK_DONE"
+    ],
+    "note": "boot diagnostics"
+  },
+  "RUN_CURRENT_STATE_CHECK": {
+    "ok_count": 0,
+    "always": false,
+    "frequency": 0.0,
+    "rows": [
+      {
+        "iter": 1,
+        "ok": false,
+        "line_count": 1,
+        "missing": [
+          "RUN_CURRENT_STATE_CHECK_START",
+          "RUN_CURRENT_STATE_CHECK_DONE"
+        ],
+        "tail": [
+          "GLD_CMD_ACK_JSON {\"deviceId\":\"1001\",\"nodeId\":4097,\"chId\":\"0010\",\"cmd\":\"SERIAL_COMMAND\",\"status\":\"busy\",\"message\":\"command queue is full\",\"rebootExpected\":false,\"mode\":\"inference\",\"uptimeMs\":634837}"
+        ]
+      },
+      {
+        "iter": 2,
+        "ok": false,
+        "line_count": 1,
+        "missing": [
+          "RUN_CURRENT_STATE_CHECK_START",
+          "RUN_CURRENT_STATE_CHECK_DONE"
+        ],
+        "tail": [
+          "GLD_CMD_ACK_JSON {\"deviceId\":\"1001\",\"nodeId\":4097,\"chId\":\"0010\",\"cmd\":\"SERIAL_COMMAND\",\"status\":\"busy\",\"message\":\"command queue is full\",\"rebootExpected\":false,\"mode\":\"inference\",\"uptimeMs\":648856}"
+        ]
+      },
+      {
+        "iter": 3,
+        "ok": false,
+        "line_count": 1,
+        "missing": [
+          "RUN_CURRENT_STATE_CHECK_START",
+          "RUN_CURRENT_STATE_CHECK_DONE"
+        ],
+        "tail": [
+          "GLD_CMD_ACK_JSON {\"deviceId\":\"1001\",\"nodeId\":4097,\"chId\":\"0010\",\"cmd\":\"SERIAL_COMMAND\",\"status\":\"busy\",\"message\":\"command queue is full\",\"rebootExpected\":false,\"mode\":\"inference\",\"uptimeMs\":660874}"
+        ]
+      },
+      {
+        "iter": 4,
+        "ok": false,
+        "line_count": 1,
+        "missing": [
+          "RUN_CURRENT_STATE_CHECK_START",
+          "RUN_CURRENT_STATE_CHECK_DONE"
+        ],
+        "tail": [
+          "GLD_CMD_ACK_JSON {\"deviceId\":\"1001\",\"nodeId\":4097,\"chId\":\"0010\",\"cmd\":\"SERIAL_COMMAND\",\"status\":\"busy\",\"message\":\"command queue is full\",\"rebootExpected\":false,\"mode\":\"inference\",\"uptimeMs\":673893}"
+        ]
+      },
+      {
+        "iter": 5,
+        "ok": false,
+        "line_count": 1,
+        "missing": [
+          "RUN_CURRENT_STATE_CHECK_START",
+          "RUN_CURRENT_STATE_CHECK_DONE"
+        ],
+        "tail": [
+          "GLD_CMD_ACK_JSON {\"deviceId\":\"1001\",\"nodeId\":4097,\"chId\":\"0010\",\"cmd\":\"SERIAL_COMMAND\",\"status\":\"busy\",\"message\":\"command queue is full\",\"rebootExpected\":false,\"mode\":\"inference\",\"uptimeMs\":687916}"
+        ]
+      }
+    ],
+    "must": [
+      "RUN_CURRENT_STATE_CHECK_START",
+      "RUN_CURRENT_STATE_CHECK_DONE"
+    ],
+    "done": [
+      "RUN_CURRENT_STATE_CHECK_DONE"
+    ],
+    "note": "state check"
+  },
+  "RUN_I2C_SCAN": {
+    "ok_count": 0,
+    "always": false,
+    "frequency": 0.0,
+    "rows": [
+      {
+        "iter": 1,
+        "ok": false,
+        "line_count": 1,
+        "missing": [
+          "I2C_MANUAL_SCAN"
+        ],
+        "tail": [
+          "GLD_CMD_ACK_JSON {\"deviceId\":\"1001\",\"nodeId\":4097,\"chId\":\"0010\",\"cmd\":\"SERIAL_COMMAND\",\"status\":\"busy\",\"message\":\"command queue is full\",\"rebootExpected\":false,\"mode\":\"inference\",\"uptimeMs\":699935}"
+        ]
+      },
+      {
+        "iter": 2,
+        "ok": false,
+        "line_count": 1,
+        "missing": [
+          "I2C_MANUAL_SCAN"
+        ],
+        "tail": [
+          "GLD_CMD_ACK_JSON {\"deviceId\":\"1001\",\"nodeId\":4097,\"chId\":\"0010\",\"cmd\":\"SERIAL_COMMAND\",\"status\":\"busy\",\"message\":\"command queue is full\",\"rebootExpected\":false,\"mode\":\"inference\",\"uptimeMs\":711953}"
+        ]
+      },
+      {
+        "iter": 3,
+        "ok": false,
+        "line_count": 1,
+        "missing": [
+          "I2C_MANUAL_SCAN"
+        ],
+        "tail": [
+          "GLD_CMD_ACK_JSON {\"deviceId\":\"1001\",\"nodeId\":4097,\"chId\":\"0010\",\"cmd\":\"SERIAL_COMMAND\",\"status\":\"busy\",\"message\":\"command queue is full\",\"rebootExpected\":false,\"mode\":\"inference\",\"uptimeMs\":724971}"
+        ]
+      },
+      {
+        "iter": 4,
+        "ok": false,
+        "line_count": 1,
+        "missing": [
+          "I2C_MANUAL_SCAN"
+        ],
+        "tail": [
+          "GLD_CMD_ACK_JSON {\"deviceId\":\"1001\",\"nodeId\":4097,\"chId\":\"0010\",\"cmd\":\"SERIAL_COMMAND\",\"status\":\"busy\",\"message\":\"command queue is full\",\"rebootExpected\":false,\"mode\":\"inference\",\"uptimeMs\":738989}"
+        ]
+      },
+      {
+        "iter": 5,
+        "ok": false,
+        "line_count": 1,
+        "missing": [
+          "I2C_MANUAL_SCAN"
+        ],
+        "tail": [
+          "GLD_CMD_ACK_JSON {\"deviceId\":\"1001\",\"nodeId\":4097,\"chId\":\"0010\",\"cmd\":\"SERIAL_COMMAND\",\"status\":\"busy\",\"message\":\"command queue is full\",\"rebootExpected\":false,\"mode\":\"inference\",\"uptimeMs\":751012}"
+        ]
+      }
+    ],
+    "must": [
+      "GLD_CMD_ACK_JSON",
+      "I2C_MANUAL_SCAN"
+    ],
+    "done": [
+      "I2C_MANUAL_SCAN"
+    ],
+    "note": "i2c full scan"
+  },
+  "RUN_TCA_CHANNEL_SCAN": {
+    "ok_count": 0,
+    "always": false,
+    "frequency": 0.0,
+    "rows": [
+      {
+        "iter": 1,
+        "ok": false,
+        "line_count": 1,
+        "missing": [
+          "TCA_MCP_SCAN"
+        ],
+        "tail": [
+          "GLD_CMD_ACK_JSON {\"deviceId\":\"1001\",\"nodeId\":4097,\"chId\":\"0010\",\"cmd\":\"SERIAL_COMMAND\",\"status\":\"busy\",\"message\":\"command queue is full\",\"rebootExpected\":false,\"mode\":\"inference\",\"uptimeMs\":764030}"
+        ]
+      },
+      {
+        "iter": 2,
+        "ok": false,
+        "line_count": 1,
+        "missing": [
+          "TCA_MCP_SCAN"
+        ],
+        "tail": [
+          "GLD_CMD_ACK_JSON {\"deviceId\":\"1001\",\"nodeId\":4097,\"chId\":\"0010\",\"cmd\":\"SERIAL_COMMAND\",\"status\":\"busy\",\"message\":\"command queue is full\",\"rebootExpected\":false,\"mode\":\"inference\",\"uptimeMs\":778048}"
+        ]
+      },
+      {
+        "iter": 3,
+        "ok": false,
+        "line_count": 1,
+        "missing": [
+          "TCA_MCP_SCAN"
+        ],
+        "tail": [
+          "GLD_CMD_ACK_JSON {\"deviceId\":\"1001\",\"nodeId\":4097,\"chId\":\"0010\",\"cmd\":\"SERIAL_COMMAND\",\"status\":\"busy\",\"message\":\"command queue is full\",\"rebootExpected\":false,\"mode\":\"inference\",\"uptimeMs\":790066}"
+        ]
+      },
+      {
+        "iter": 4,
+        "ok": false,
+        "line_count": 1,
+        "missing": [
+          "TCA_MCP_SCAN"
+        ],
+        "tail": [
+          "GLD_CMD_ACK_JSON {\"deviceId\":\"1001\",\"nodeId\":4097,\"chId\":\"0010\",\"cmd\":\"SERIAL_COMMAND\",\"status\":\"busy\",\"message\":\"command queue is full\",\"rebootExpected\":false,\"mode\":\"inference\",\"uptimeMs\":802084}"
+        ]
+      },
+      {
+        "iter": 5,
+        "ok": false,
+        "line_count": 1,
+        "missing": [
+          "TCA_MCP_SCAN"
+        ],
+        "tail": [
+          "GLD_CMD_ACK_JSON {\"deviceId\":\"1001\",\"nodeId\":4097,\"chId\":\"0010\",\"cmd\":\"SERIAL_COMMAND\",\"status\":\"busy\",\"message\":\"command queue is full\",\"rebootExpected\":false,\"mode\":\"inference\",\"uptimeMs\":815107}"
+        ]
+      }
+    ],
+    "must": [
+      "GLD_CMD_ACK_JSON",
+      "TCA_MCP_SCAN"
+    ],
+    "done": [
+      "TCA_MCP_SCAN restorePcf"
+    ],
+    "note": "per TCA channel scan"
+  },
+  "RUN_ADS_MCP_SWEEP": {
+    "ok_count": 0,
+    "always": false,
+    "frequency": 0.0,
+    "rows": [
+      {
+        "iter": 1,
+        "ok": false,
+        "line_count": 1,
+        "missing": [
+          "ADS_MCP_SWEEP_START",
+          "ADS_MCP_SWEEP_DONE"
+        ],
+        "tail": [
+          "GLD_CMD_ACK_JSON {\"deviceId\":\"1001\",\"nodeId\":4097,\"chId\":\"0010\",\"cmd\":\"SERIAL_COMMAND\",\"status\":\"busy\",\"message\":\"command queue is full\",\"rebootExpected\":false,\"mode\":\"inference\",\"uptimeMs\":829125}"
+        ]
+      },
+      {
+        "iter": 2,
+        "ok": false,
+        "line_count": 31,
+        "missing": [
+          "ADS_MCP_SWEEP_START",
+          "ADS_MCP_SWEEP_DONE"
+        ],
+        "tail": [
+          "[BOOT_SENSOR_SAMPLES]"
+        ]
+      },
+      {
+        "iter": 3,
+        "ok": false,
+        "line_count": 3,
+        "missing": [
+          "ADS_MCP_SWEEP_START",
+          "ADS_MCP_SWEEP_DONE"
+        ],
+        "tail": [
+          "2. MQ8 : 0.25598V | MQ135 : 0.31212V | MQ3 : 0.03357V | MQ5 : 0.31212V | MQ4 : 0.06465V | MQ7 : 0.07008V | MQ6 : 0.20328V | MQ2 : 0.04918V"
+        ]
+      },
+      {
+        "iter": 4,
+        "ok": false,
+        "line_count": 2,
+        "missing": [
+          "ADS_MCP_SWEEP_START",
+          "ADS_MCP_SWEEP_DONE"
+        ],
+        "tail": [
+          "3. MQ8 : 0.25773V | MQ135 : 0.32334V | MQ3 : 0.03357V | MQ5 : 0.62425V | MQ4 : 0.06454V | MQ7 : 0.06987V | MQ6 : 0.20493V | MQ2 : 0.01812V"
+        ]
+      },
+      {
+        "iter": 5,
+        "ok": false,
+        "line_count": 2,
+        "missing": [
+          "ADS_MCP_SWEEP_START",
+          "ADS_MCP_SWEEP_DONE"
+        ],
+        "tail": [
+          "4. MQ8 : 0.25790V | MQ135 : 0.32588V | MQ3 : 0.03353V | MQ5 : 0.63124V | MQ4 : 0.06464V | MQ7 : 0.07042V | MQ6 : 0.20503V | MQ2 : 0.01324V"
+        ]
+      }
+    ],
+    "must": [
+      "ADS_MCP_SWEEP_START",
+      "ADS_MCP_SWEEP_DONE"
+    ],
+    "done": [
+      "ADS_MCP_SWEEP_DONE"
+    ],
+    "note": "ADS/MCP sweep"
+  }
+}

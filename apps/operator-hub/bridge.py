@@ -14,11 +14,14 @@ from __future__ import annotations
 
 import argparse
 import hmac
+import ipaddress
 import json
 import os
+import re
 import secrets
 import signal
 import socket
+import ssl
 import subprocess
 import sys
 import threading
@@ -86,6 +89,56 @@ HUB_API_TOKEN = secrets.token_urlsafe(32)
 simple_activity: list[dict[str, object]] = []
 simple_activity_lock = threading.Lock()
 
+BOARD_FORM_FACTORS = (
+    {"value": "small", "label": "Rectangle (kecil)"},
+    {"value": "large", "label": "Circle (besar)"},
+)
+GATEWAY_MQTT_TRANSPORTS = (
+    {"value": "non_tls", "label": "MQTT non-TLS"},
+    {"value": "tls", "label": "MQTT over TLS"},
+)
+GLD_FIRMWARE_MODELS = (
+    {"value": "model_1", "label": "Model 1 - Board 1", "environment": "gld_model_1"},
+    {"value": "model_2", "label": "Model 2 - Board 2", "environment": "gld_model_2"},
+    {"value": "model_3", "label": "Model 3 - Board 2 v2", "environment": "gld_model_3"},
+    {"value": "gld_v2", "label": "GasleakDetector - Board V2", "environment": "gld_v2"},
+)
+FIRMWARE_ENVIRONMENTS = {
+    "ch": {
+        "small": "ch_small",
+        "large": "ch_large",
+    },
+    "gw": {
+        "small": {"non_tls": "gw_small", "tls": "gw_small_tls"},
+        "large": {"non_tls": "gw_large", "tls": "gw_large_tls"},
+    },
+}
+TLS_CA_PEM_MIN_BYTES = 256
+TLS_CA_PEM_MAX_BYTES = 3900
+TLS_NTP_HOST_MAX_CHARS = 64
+GATEWAY_SERIAL_LINE_MAX_BYTES = 6143
+GATEWAY_TEXT_FIELD_MAX_BYTES = {
+    "Wi-Fi SSID": 32,
+    "Wi-Fi password": 64,
+    "MQTT host": 64,
+    "MQTT username": 32,
+    "MQTT password": 64,
+    "NTP host": 64,
+}
+PACKAGE_METADATA_BY_ENVIRONMENT = {
+    "ch_small": {"boardShape": "rectangle"},
+    "ch_large": {"boardShape": "circle"},
+    "gw_small": {"boardShape": "rectangle", "mqttTransport": "non_tls"},
+    "gw_large": {"boardShape": "circle", "mqttTransport": "non_tls"},
+    "gw_small_tls": {"boardShape": "rectangle", "mqttTransport": "tls"},
+    "gw_large_tls": {"boardShape": "circle", "mqttTransport": "tls"},
+}
+DEFAULT_DEVICE_IDENTITIES = {
+    "gld": "1001",
+    "ch": "0010",
+    "gw": "0001",
+}
+
 
 def json_response(handler: SimpleHTTPRequestHandler, payload: object, status: HTTPStatus = HTTPStatus.OK) -> None:
     body = json.dumps(payload, separators=(",", ":")).encode("utf-8")
@@ -95,6 +148,47 @@ def json_response(handler: SimpleHTTPRequestHandler, payload: object, status: HT
     handler.send_header("Cache-Control", "no-store")
     handler.end_headers()
     handler.wfile.write(body)
+
+
+def validate_hub_request_headers(headers: object, bound_port: int) -> tuple[HTTPStatus, str] | None:
+    """Validate the browser authority before exposing Hub API data.
+
+    Binding to loopback is not sufficient on its own: without an exact Host
+    check, a hostile DNS name that resolves to loopback can reach the Hub.  The
+    accepted authorities deliberately include only the three supported
+    loopback spellings and the port that this server actually bound.
+
+    Browsers do not consistently send Origin on same-origin GET requests, so a
+    missing Origin is allowed.  When Origin is present, however, it must be the
+    exact HTTP origin represented by Host; accepting a different loopback alias
+    would not be same-origin in browser terms.
+    """
+    get_all = getattr(headers, "get_all", None)
+    if not callable(get_all):
+        return HTTPStatus.MISDIRECTED_REQUEST, "invalid Host header"
+
+    host_values = get_all("Host") or []
+    if len(host_values) != 1:
+        return HTTPStatus.MISDIRECTED_REQUEST, "exactly one Host header is required"
+
+    authority = str(host_values[0]).strip().lower()
+    allowed_authorities = {
+        f"127.0.0.1:{bound_port}",
+        f"localhost:{bound_port}",
+        f"[::1]:{bound_port}",
+    }
+    if authority not in allowed_authorities:
+        return HTTPStatus.MISDIRECTED_REQUEST, "Host must be an approved loopback authority on the bound port"
+
+    origin_values = get_all("Origin") or []
+    if len(origin_values) > 1:
+        return HTTPStatus.FORBIDDEN, "multiple Origin headers are not allowed"
+    if origin_values:
+        origin = str(origin_values[0]).strip().lower()
+        if origin != f"http://{authority}":
+            return HTTPStatus.FORBIDDEN, "Origin must exactly match the Operator Hub origin"
+
+    return None
 
 
 def read_json(handler: SimpleHTTPRequestHandler, limit: int = 16 * 1024) -> dict[str, object]:
@@ -118,11 +212,307 @@ def add_activity(device: str, action: str, detail: str) -> None:
         del simple_activity[12:]
 
 
-def latest_package(device: str) -> dict[str, object]:
-    environment = {"gld": "gld", "ch": "ch", "gw": "gw"}[device]
+def firmware_package_options() -> dict[str, object]:
+    """Return the server-authoritative choices rendered by Simple Hub.
+
+    Package environment names are derived from these choices; the browser
+    never submits an arbitrary environment string.
+    """
+    selectable_environments = [
+        *(str(model["environment"]) for model in GLD_FIRMWARE_MODELS),
+        *FIRMWARE_ENVIRONMENTS["ch"].values(),
+        *(
+            environment
+            for transports in FIRMWARE_ENVIRONMENTS["gw"].values()
+            for environment in transports.values()
+        ),
+    ]
+    packages = {
+        environment: package_manifest_summary(environment)
+        for environment in selectable_environments
+    }
+    return {
+        "gld": {
+            "models": [dict(model) for model in GLD_FIRMWARE_MODELS],
+            "environments": {
+                str(model["value"]): str(model["environment"])
+                for model in GLD_FIRMWARE_MODELS
+            },
+            "packages": {
+                str(model["environment"]): packages[str(model["environment"])]
+                for model in GLD_FIRMWARE_MODELS
+            },
+        },
+        "ch": {
+            "boards": [dict(option) for option in BOARD_FORM_FACTORS],
+            "environments": dict(FIRMWARE_ENVIRONMENTS["ch"]),
+            "packages": {
+                environment: packages[environment]
+                for environment in FIRMWARE_ENVIRONMENTS["ch"].values()
+            },
+        },
+        "gw": {
+            "boards": [dict(option) for option in BOARD_FORM_FACTORS],
+            "transports": [dict(option) for option in GATEWAY_MQTT_TRANSPORTS],
+            "environments": {
+                board: dict(transports)
+                for board, transports in FIRMWARE_ENVIRONMENTS["gw"].items()
+            },
+            "packages": {
+                environment: packages[environment]
+                for transports in FIRMWARE_ENVIRONMENTS["gw"].values()
+                for environment in transports.values()
+            },
+        },
+    }
+
+
+def resolve_firmware_environment(device: str, payload: dict[str, object]) -> dict[str, object]:
+    """Resolve board/transport choices through a strict allow-list.
+
+    Board shape is mandatory for CH and Gateway. Gateway transport is also
+    mandatory. No legacy fallback may silently choose physical hardware.
+    """
+    if device not in {"ch", "gw"}:
+        raise ValueError("board-specific firmware selection is only valid for CH or Gateway")
+
+    raw_board = str(payload.get("boardFormFactor") or "").strip().lower()
+    raw_transport = str(payload.get("mqttTransport") or "").strip().lower()
+    if raw_board not in FIRMWARE_ENVIRONMENTS[device]:
+        raise ValueError("boardFormFactor must be small (Rectangle) or large (Circle)")
+
+    if device == "ch":
+        if raw_transport:
+            raise ValueError("mqttTransport is not valid for CH firmware")
+        environment = FIRMWARE_ENVIRONMENTS["ch"][raw_board]
+        return {
+            "environment": environment,
+            "boardFormFactor": raw_board,
+            "mqttTransport": None,
+            "legacy": False,
+        }
+
+    if raw_transport not in {"non_tls", "tls"}:
+        raise ValueError("Gateway mqttTransport must be selected as non_tls or tls")
+    environment = FIRMWARE_ENVIRONMENTS["gw"][raw_board][raw_transport]
+    return {
+        "environment": environment,
+        "boardFormFactor": raw_board,
+        "mqttTransport": raw_transport,
+        "legacy": False,
+    }
+
+
+def expected_identity_after_upload(device: str, current_identifier: object, reset_nvs: bool) -> str:
+    """Return the identity that must be observed after the selected upload.
+
+    Identity is stored in NVS by all three product firmwares. A requested NVS
+    erase therefore intentionally restores the compile-time default instead of
+    preserving the currently configured identity.
+    """
+    if device not in DEFAULT_DEVICE_IDENTITIES:
+        raise ValueError("device must be gld, ch, or gw")
+    if reset_nvs:
+        return DEFAULT_DEVICE_IDENTITIES[device]
+    if not isinstance(current_identifier, str) or not current_identifier.strip():
+        raise RuntimeError("identified device ID is required before upload")
+    return current_identifier.strip().upper().removeprefix("0X")
+
+
+def validate_selected_package(package: object, expected_environment: str) -> dict[str, object]:
+    """Fail before flashing if the child returned a different package env."""
+    if not isinstance(package, dict):
+        raise RuntimeError("firmware package response is invalid")
+    manifest = package.get("manifest")
+    if not isinstance(manifest, dict):
+        raise RuntimeError("firmware package manifest is missing")
+    actual_environment = str(manifest.get("environment") or "").strip()
+    if actual_environment != expected_environment:
+        raise RuntimeError(
+            f"firmware package environment mismatch: expected {expected_environment}, got {actual_environment or '-'}"
+        )
+    if not isinstance(package.get("packageFiles"), dict):
+        raise RuntimeError("firmware package files are missing")
+    for field, expected_value in PACKAGE_METADATA_BY_ENVIRONMENT.get(expected_environment, {}).items():
+        if manifest.get(field) != expected_value:
+            raise RuntimeError(
+                f"firmware package {field} mismatch: expected {expected_value}, got {manifest.get(field) or '-'}"
+            )
+    return manifest
+
+
+def validate_ntp_host(value: object) -> str:
+    host = str(value or "").strip().rstrip(".")
+    validate_gateway_text_field("NTP host", host, required=True)
+    if len(host) > TLS_NTP_HOST_MAX_CHARS or "://" in host or "/" in host:
+        raise ValueError("NTP host is required for TLS and must be at most 64 ASCII bytes")
+    try:
+        ipaddress.ip_address(host)
+        return host
+    except ValueError:
+        labels = host.split(".")
+        if any(
+            not label
+            or len(label) > 63
+            or not re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?", label)
+            for label in labels
+        ):
+            raise ValueError("NTP host is not a valid hostname or IP address")
+    return host
+
+
+def validate_tls_ca_pem(value: object) -> str:
+    pem = str(value or "").strip()
+    pem_size = len(pem.encode("utf-8"))
+    if pem_size < TLS_CA_PEM_MIN_BYTES or pem_size > TLS_CA_PEM_MAX_BYTES:
+        raise ValueError("Root CA PEM is required for TLS and must be 256 to 3900 bytes")
+    if "PRIVATE KEY" in pem:
+        raise ValueError("Root CA field must not contain a private key")
+    pattern = re.compile(
+        r"-----BEGIN CERTIFICATE-----\s+[A-Za-z0-9+/=\r\n]+-----END CERTIFICATE-----",
+        re.MULTILINE,
+    )
+    matches = list(pattern.finditer(pem))
+    if not matches:
+        raise ValueError("Root CA PEM must contain one CERTIFICATE block")
+    if len(matches) != 1:
+        raise ValueError("Root CA PEM must contain exactly one CERTIFICATE block")
+    remainder = pattern.sub("", pem)
+    if remainder.strip():
+        raise ValueError("Root CA PEM contains unsupported data outside CERTIFICATE blocks")
+    certificates: list[str] = []
+    for match in matches:
+        certificate = match.group(0).strip()
+        try:
+            der = ssl.PEM_cert_to_DER_cert(certificate)
+        except Exception as exc:
+            raise ValueError("Root CA PEM contains an invalid certificate") from exc
+        # Re-emit one canonical PEM block. This removes legal but potentially
+        # enormous whitespace and makes the exact serial payload predictable.
+        canonical = ssl.DER_cert_to_PEM_cert(der).strip()
+        canonical_size = len(canonical.encode("utf-8"))
+        if canonical_size < TLS_CA_PEM_MIN_BYTES or canonical_size > TLS_CA_PEM_MAX_BYTES:
+            raise ValueError(
+                "Canonical Root CA PEM must be 256 to 3900 bytes for Gateway firmware"
+            )
+        certificates.append(canonical)
+    return "\n".join(certificates)
+
+
+def validate_gateway_text_field(name: str, value: str, *, required: bool = False) -> str:
+    if "\x00" in value:
+        raise ValueError(f"{name} must not contain NUL characters")
+    maximum = GATEWAY_TEXT_FIELD_MAX_BYTES[name]
+    size = len(value.encode("utf-8"))
+    if required and size == 0:
+        raise ValueError(f"{name} is required")
+    if size > maximum:
+        raise ValueError(f"{name} must be at most {maximum} UTF-8 bytes")
+    return value
+
+
+def build_gateway_json_command(command: str, config: dict[str, object]) -> str:
+    line = f"{command} {json.dumps(config, separators=(',', ':'))}"
+    size = len(line.encode("utf-8"))
+    if size > GATEWAY_SERIAL_LINE_MAX_BYTES:
+        raise ValueError(
+            f"Gateway serial command is {size} bytes; firmware accepts at most "
+            f"{GATEWAY_SERIAL_LINE_MAX_BYTES} bytes"
+        )
+    return line
+
+
+def mqtt_configuration_from_payload(
+    payload: dict[str, object],
+    device_info: dict[str, object],
+) -> tuple[dict[str, object], str]:
+    """Build a safe firmware payload and enforce TLS capability markers."""
+    requested = str(payload.get("mqttTransport") or "").strip().lower()
+    actual = str(device_info.get("mqttTransport") or "").strip().lower()
+    if not requested:
+        if actual == "tls":
+            raise ValueError("MQTT transport must be selected explicitly for TLS firmware")
+        requested = "non_tls"  # backward-compatible request from the legacy UI
+    if requested not in {"non_tls", "tls"}:
+        raise ValueError("MQTT transport must be non_tls or tls")
+
+    host_name = str(payload.get("host") or "").strip()
+    username = str(payload.get("username") or "")
+    password = str(payload.get("password") or "")
+    try:
+        port = int(payload.get("port"))
+    except (TypeError, ValueError) as exc:
+        raise ValueError("MQTT port is required") from exc
+    validate_gateway_text_field("MQTT host", host_name, required=True)
+    validate_gateway_text_field("MQTT username", username)
+    validate_gateway_text_field("MQTT password", password)
+    if not 1 <= port <= 65535:
+        raise ValueError("MQTT host and port are required")
+
+    config: dict[str, object] = {
+        "host": host_name,
+        "port": port,
+        "username": username,
+        "password": password,
+    }
+    raw_ca = str(payload.get("tlsCaPem") or "").strip()
+    raw_ntp = str(payload.get("ntpHost") or "").strip()
+    if requested == "tls":
+        if actual != "tls" or device_info.get("tlsCapable") is not True:
+            raise RuntimeError("connected Gateway does not explicitly identify as TLS-capable TLS firmware")
+        config["tlsCaPem"] = validate_tls_ca_pem(raw_ca)
+        config["ntpHost"] = validate_ntp_host(raw_ntp)
+    else:
+        if actual == "tls":
+            raise RuntimeError("connected Gateway identifies as TLS firmware; select MQTT over TLS")
+        if raw_ca or raw_ntp:
+            raise ValueError("Root CA PEM and NTP host are only valid when MQTT over TLS is selected")
+    # Validate the exact JSON representation now, including escaping overhead,
+    # before any secret-bearing line is handed to the child serial bridge.
+    build_gateway_json_command("SET_MQTT_CONFIG_JSON", config)
+    return config, requested
+
+
+def package_manifest_summary(environment: str) -> dict[str, object]:
+    """Read one exact selectable package manifest without breaking overview.
+
+    The legacy ``gld``, ``ch``, and ``gw`` aliases are deliberately not
+    resolved here. Callers must pass the exact environment selected by the
+    operator-facing catalog.
+    """
     manifest_path = HUB_DIR / "firmware-packages" / environment / "latest" / "manifest.json"
-    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    return {"environment": environment, "firmwareVersion": manifest.get("firmwareVersion"), "protocolVersion": manifest.get("protocolVersion")}
+    summary: dict[str, object] = {
+        "environment": environment,
+        "available": False,
+        "firmwareVersion": None,
+        "protocolVersion": None,
+    }
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        summary["error"] = "manifest missing"
+        return summary
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        summary["error"] = "manifest unreadable or invalid"
+        return summary
+    if not isinstance(manifest, dict):
+        summary["error"] = "manifest root is not an object"
+        return summary
+    if str(manifest.get("environment") or "") != environment:
+        summary["error"] = "manifest environment mismatch"
+        return summary
+    version = str(manifest.get("firmwareVersion") or "").strip()
+    if not version:
+        summary["error"] = "firmwareVersion missing"
+        return summary
+    summary.update(
+        {
+            "available": True,
+            "firmwareVersion": version,
+            "protocolVersion": manifest.get("protocolVersion"),
+        }
+    )
+    return summary
 
 
 def child_request(
@@ -220,10 +610,15 @@ def simple_device_state(host: str, device: str, query: bool = False) -> dict[str
         current = child_request(host, device, "GET", "/api/serial/recent?slot=1&after=0")
         child_request(host, device, "POST", "/api/serial/write", {"slot": 1, "line": "GET_STATUS"})
         runtime = recent_matching(host, device, "GLD_STATUS_JSON", int(current.get("sequence") or 0), 2.5)
-        if runtime and "radioReady" not in info:
-            lora = runtime.get("lora")
-            if isinstance(lora, dict) and isinstance(lora.get("beginState"), (int, float)):
-                info["radioReady"] = lora["beginState"] == 0
+        if runtime:
+            # Keep the identity/configuration fields from GLD_INFO_JSON and add
+            # the fresh runtime contract from GLD_STATUS_JSON. Alarm controls
+            # must never be enabled from an old cached status line.
+            info.update(runtime)
+            if "radioReady" not in info:
+                lora = runtime.get("lora")
+                if isinstance(lora, dict) and isinstance(lora.get("beginState"), (int, float)):
+                    info["radioReady"] = lora["beginState"] == 0
     state["info"] = info
     return state
 
@@ -257,13 +652,82 @@ def send_and_confirm(host: str, device: str, line: str, ack_marker: str) -> dict
         recent = child_request(host, device, "GET", f"/api/serial/recent?slot=1&after={sequence}")
         for item in recent.get("lines", []):
             text = str(item.get("line", ""))
-            if ack_marker not in text:
-                continue
             if "status=error" in text or "status=rejected" in text or '"status":"error"' in text or '"status":"rejected"' in text:
                 raise RuntimeError(f"device rejected configuration: {text}")
+            if ack_marker not in text:
+                continue
             return {"sent": sent, "ack": text}
         time.sleep(0.15)
     raise RuntimeError("command sent but no firmware ACK was received; do not assume configuration was saved")
+
+
+def require_gld_alarm_control(state: dict[str, object]) -> dict[str, object]:
+    """Return a complete, current GLD alarm-control contract or fail closed."""
+    if not state.get("connected") or not isinstance(state.get("info"), dict):
+        raise RuntimeError("connect and identify the GLD first")
+    info = state["info"]
+    alarm = info.get("alarmControl")
+    if not isinstance(alarm, dict) or alarm.get("available") is not True:
+        raise RuntimeError("connected GLD firmware does not expose physical alarm control")
+    if alarm.get("mode") not in {"auto", "manual"}:
+        raise RuntimeError("GLD alarm status does not contain a valid AUTO/MANUAL mode")
+    for field in (
+        "modePersisted",
+        "sessionOnly",
+        "resetsToAutoOnBoot",
+        "manualCommanded",
+        "inferenceAlarm",
+        "physicalCommanded",
+    ):
+        if type(alarm.get(field)) is not bool:
+            raise RuntimeError(f"GLD alarm status is incomplete: {field} is not boolean")
+    if alarm.get("modePersisted") is not False or alarm.get("sessionOnly") is not True:
+        raise RuntimeError("GLD alarm-mode contract must be volatile and session-only")
+    if alarm.get("resetsToAutoOnBoot") is not True:
+        raise RuntimeError("GLD alarm-mode contract does not guarantee AUTO after reboot")
+    if alarm.get("outputDrive") != "steady_24v":
+        raise RuntimeError("GLD alarm output-drive contract is missing or incompatible")
+    if alarm.get("externalDevicePattern") != "self_pulsed_1s_on_1s_off":
+        raise RuntimeError("GLD external alarm pattern contract is missing or incompatible")
+    return alarm
+
+
+def wait_for_gateway_mqtt_ready(
+    host: str,
+    expected_transport: str,
+    timeout: float = 60.0,
+) -> dict[str, object]:
+    """Wait for asynchronous Wi-Fi/NTP/TLS/MQTT startup with a firm bound."""
+    deadline = time.monotonic() + timeout
+    last_info: dict[str, object] = {}
+    while time.monotonic() < deadline:
+        state = simple_device_state(host, "gw", query=True)
+        info = state.get("info") if isinstance(state.get("info"), dict) else {}
+        if info:
+            last_info = info
+            actual_transport = str(info.get("mqttTransport") or "")
+            if actual_transport and actual_transport != expected_transport:
+                raise RuntimeError(
+                    f"Gateway reports MQTT transport {actual_transport}, expected {expected_transport}"
+                )
+            if expected_transport == "tls" and info.get("tlsCapable") is not True:
+                raise RuntimeError("Gateway no longer identifies as TLS-capable TLS firmware")
+            if bool(info.get("mqtt")):
+                mqtt_test = send_and_confirm(host, "gw", "TEST_MQTT", "TEST_MQTT")
+                ack = str(mqtt_test.get("ack") or "")
+                if "connected=1" in ack and "subscriptions=1" in ack:
+                    return {"status": info, "test": mqtt_test}
+        time.sleep(1.0)
+
+    if expected_transport == "tls":
+        detail = (
+            f"tlsConfigured={last_info.get('tlsConfigured')}, "
+            f"timeSynchronized={last_info.get('timeSynchronized')}, "
+            f"mqtt={last_info.get('mqtt')}"
+        )
+    else:
+        detail = f"mqtt={last_info.get('mqtt')}"
+    raise RuntimeError(f"Gateway MQTT did not become ready within {int(timeout)} seconds ({detail})")
 
 
 def gld_boot_report(status: dict[str, object]) -> dict[str, object]:
@@ -541,8 +1005,19 @@ class Handler(SimpleHTTPRequestHandler):
     def log_message(self, fmt: str, *args) -> None:
         pass
 
+    def _authorize_api_origin(self) -> bool:
+        failure = validate_hub_request_headers(self.headers, int(self.server.server_address[1]))
+        if failure is None:
+            return True
+        status, message = failure
+        self.close_connection = True
+        json_response(self, {"error": message}, status)
+        return False
+
     def do_GET(self) -> None:  # noqa: N802
         path = self.path.split("?", 1)[0]
+        if path.startswith("/api/") and not self._authorize_api_origin():
+            return
         if path == "/api/status":
             self._handle_status()
             return
@@ -561,10 +1036,14 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_POST(self) -> None:  # noqa: N802
         try:
+            if not self._authorize_api_origin():
+                return
             if self.headers.get("X-Operator-Hub-Token") != HUB_API_TOKEN:
                 return json_response(self, {"error": "invalid API token"}, HTTPStatus.FORBIDDEN)
-            payload = read_json(self)
             path = self.path.split("?", 1)[0]
+            # A public Root CA chain can be larger than ordinary configuration
+            # requests. Keep the larger body allowance scoped to MQTT only.
+            payload = read_json(self, limit=48 * 1024 if path == "/api/simple/config/mqtt" else 16 * 1024)
             if path == "/api/simple/connect":
                 return self._simple_connect(payload)
             if path == "/api/simple/disconnect":
@@ -581,6 +1060,10 @@ class Handler(SimpleHTTPRequestHandler):
                 return self._simple_config_frequency(payload)
             if path == "/api/simple/config/target-ch":
                 return self._simple_config_target_ch(payload)
+            if path == "/api/simple/config/alarm-mode":
+                return self._simple_config_alarm_mode(payload)
+            if path == "/api/simple/config/manual-alarm":
+                return self._simple_config_manual_alarm(payload)
             if path == "/api/simple/config/root-gateway":
                 return self._simple_config_root_gateway(payload)
             if path == "/api/simple/config/wifi":
@@ -770,6 +1253,57 @@ class Handler(SimpleHTTPRequestHandler):
         add_activity("gld", "Set Target CH", f"{state.get('port')}; {value} saved and read back")
         json_response(self, {"ok": True, "confirmation": result, "readback": readback})
 
+    def _simple_config_alarm_mode(self, payload: dict[str, object]) -> None:
+        if self._simple_device(payload) != "gld":
+            raise ValueError("Alarm mode is a GLD setting")
+        mode = str(payload.get("mode") or "").strip().lower()
+        if mode not in {"auto", "manual"}:
+            raise ValueError("alarm mode must be auto or manual")
+        host = self.server.server_address[0] or "127.0.0.1"
+        state = simple_device_state(host, "gld", query=True)
+        require_gld_alarm_control(state)
+        command = f"SET_ALARM_MODE_JSON {json.dumps({'mode': mode}, separators=(',', ':'))}"
+        result = send_and_confirm(host, "gld", command, "SET_ALARM_MODE")
+        readback = simple_device_state(host, "gld", query=True)
+        stored = require_gld_alarm_control(readback)
+        if stored.get("mode") != mode or stored.get("manualCommanded") is not False:
+            raise RuntimeError("firmware ACK was received but session alarm-mode read-back differs")
+        if mode == "manual" and stored.get("physicalCommanded") is not False:
+            raise RuntimeError("firmware ACK was received but MANUAL mode did not reset test output OFF")
+        add_activity(
+            "gld",
+            "Set Alarm Mode",
+            f"{state.get('port')}; {mode.upper()} applied for this session and read back; reboot restores AUTO",
+        )
+        json_response(self, {"ok": True, "confirmation": result, "readback": readback})
+
+    def _simple_config_manual_alarm(self, payload: dict[str, object]) -> None:
+        if self._simple_device(payload) != "gld":
+            raise ValueError("Manual alarm output is a GLD setting")
+        enabled = payload.get("enabled")
+        if type(enabled) is not bool:
+            raise ValueError("manual alarm enabled must be boolean")
+        host = self.server.server_address[0] or "127.0.0.1"
+        state = simple_device_state(host, "gld", query=True)
+        current = require_gld_alarm_control(state)
+        if current.get("mode") != "manual":
+            raise RuntimeError("select and verify session-only MANUAL mode before testing the alarm output")
+        command = f"SET_MANUAL_ALARM_JSON {json.dumps({'enabled': enabled}, separators=(',', ':'))}"
+        result = send_and_confirm(host, "gld", command, "SET_MANUAL_ALARM")
+        readback = simple_device_state(host, "gld", query=True)
+        stored = require_gld_alarm_control(readback)
+        if stored.get("mode") != "manual":
+            raise RuntimeError("firmware ACK was received but GLD is no longer in session-only MANUAL mode")
+        if stored.get("manualCommanded") is not enabled or stored.get("physicalCommanded") is not enabled:
+            raise RuntimeError("firmware ACK was received but manual alarm output read-back differs")
+        label = "ON" if enabled else "OFF"
+        add_activity(
+            "gld",
+            "Test Alarm Output",
+            f"{state.get('port')}; volatile manual output {label} acknowledged and read back",
+        )
+        json_response(self, {"ok": True, "confirmation": result, "readback": readback})
+
     def _simple_config_root_gateway(self, payload: dict[str, object]) -> None:
         if self._simple_device(payload) != "ch":
             raise ValueError("Root Gateway is a CH setting")
@@ -792,13 +1326,19 @@ class Handler(SimpleHTTPRequestHandler):
         if self._simple_device(payload) != "gw":
             raise ValueError("Wi-Fi is a Gateway setting")
         ssid, password = str(payload.get("ssid") or ""), str(payload.get("password") or "")
-        if not ssid:
-            raise ValueError("Wi-Fi SSID is required")
+        validate_gateway_text_field("Wi-Fi SSID", ssid, required=True)
+        validate_gateway_text_field("Wi-Fi password", password)
         host = self.server.server_address[0] or "127.0.0.1"
-        state = simple_device_state(host, "gw")
+        # Query GET_STATUS as part of identification. TLS provisioning is
+        # fail-closed and must see the firmware's canonical transport markers.
+        state = simple_device_state(host, "gw", query=True)
         if not state.get("connected") or not state.get("info"):
             raise RuntimeError("connect and identify the Gateway first")
-        result = send_and_confirm(host, "gw", f'SET_WIFI_CONFIG_JSON {json.dumps({"ssid": ssid, "password": password, "reboot": True}, separators=(",", ":"))}', "SET_WIFI_CONFIG")
+        wifi_command = build_gateway_json_command(
+            "SET_WIFI_CONFIG_JSON",
+            {"ssid": ssid, "password": password, "reboot": True},
+        )
+        result = send_and_confirm(host, "gw", wifi_command, "SET_WIFI_CONFIG")
         readback = wait_for_readback(host, "gw", str(state["port"]))
         wifi_test = send_and_confirm(host, "gw", "TEST_WIFI", "TEST_WIFI")
         if "connected=1" not in str(wifi_test.get("ack") or ""):
@@ -809,51 +1349,70 @@ class Handler(SimpleHTTPRequestHandler):
     def _simple_config_mqtt(self, payload: dict[str, object]) -> None:
         if self._simple_device(payload) != "gw":
             raise ValueError("MQTT is a Gateway setting")
-        host_name, username, password = str(payload.get("host") or ""), str(payload.get("username") or ""), str(payload.get("password") or "")
-        try:
-            port = int(payload.get("port"))
-        except (TypeError, ValueError) as exc:
-            raise ValueError("MQTT port is required") from exc
-        if not host_name or not 1 <= port <= 65535:
-            raise ValueError("MQTT host and port are required")
         host = self.server.server_address[0] or "127.0.0.1"
-        state = simple_device_state(host, "gw")
+        state = simple_device_state(host, "gw", query=True)
         if not state.get("connected") or not state.get("info"):
             raise RuntimeError("connect and identify the Gateway first")
+        info = state["info"] if isinstance(state.get("info"), dict) else {}
+        config, mqtt_transport = mqtt_configuration_from_payload(payload, info)
         wifi_test = send_and_confirm(host, "gw", "TEST_WIFI", "TEST_WIFI")
         if "connected=1" not in str(wifi_test.get("ack") or ""):
             raise RuntimeError("Wi-Fi must pass its test before MQTT can be configured")
-        config = {"host": host_name, "port": port, "username": username, "password": password}
-        result = send_and_confirm(host, "gw", f"SET_MQTT_CONFIG_JSON {json.dumps(config, separators=(',', ':'))}", "SET_MQTT_CONFIG")
-        time.sleep(1.0)
-        mqtt_test = send_and_confirm(host, "gw", "TEST_MQTT", "TEST_MQTT")
-        if "connected=1" not in str(mqtt_test.get("ack") or ""):
-            raise RuntimeError("MQTT settings were saved but the Gateway did not connect")
-        add_activity("gw", "Set MQTT", f"{state.get('port')}; saved and MQTT verified")
-        json_response(self, {"ok": True, "confirmation": result, "wifiTest": wifi_test, "mqttTest": mqtt_test})
+        try:
+            # Do not retain, log, or return the serialized command: it contains
+            # the password and, for TLS, the public Root CA PEM.
+            send_and_confirm(host, "gw", build_gateway_json_command("SET_MQTT_CONFIG_JSON", config), "SET_MQTT_CONFIG")
+        except Exception as exc:
+            raise RuntimeError("Gateway rejected MQTT configuration; credential and CA values were not logged") from exc
+        mqtt_ready = wait_for_gateway_mqtt_ready(host, mqtt_transport)
+        add_activity("gw", "Set MQTT", f"{state.get('port')}; {mqtt_transport} saved and MQTT verified")
+        json_response(
+            self,
+            {
+                "ok": True,
+                "mqttTransport": mqtt_transport,
+                "wifiVerified": True,
+                "mqttVerified": True,
+                "mqttStatus": mqtt_ready["status"],
+            },
+        )
 
     def _simple_firmware_upload(self, payload: dict[str, object]) -> None:
-        """Flash only the packaged latest production image with explicit NVS-reset consent."""
+        """Flash only the exact selected package with explicit NVS-reset consent."""
         device = self._simple_device(payload)
         port = str(payload.get("port") or "").upper()
         if not __import__("re").fullmatch(r"COM\d+", port):
             raise ValueError("valid COM port required")
-        model = str(payload.get("model") or "model_1")
+        model = str(payload.get("model") or "")
         if device == "gld":
-            env = {
-                "model_1": "gld_model_1",
-                "model_2": "gld_model_2",
-                "model_3": "gld_model_3",
-                "gld_v2": "gld_v2",
-            }.get(model)
+            env = next(
+                (
+                    str(option["environment"])
+                    for option in GLD_FIRMWARE_MODELS
+                    if option["value"] == model
+                ),
+                None,
+            )
             if not env:
                 raise ValueError("selected GLD model package is not available")
+            selection: dict[str, object] = {
+                "environment": env,
+                "boardFormFactor": None,
+                "mqttTransport": None,
+                "legacy": False,
+            }
         else:
-            env = {"ch": "ch", "gw": "gw"}[device]
+            selection = resolve_firmware_environment(device, payload)
+            env = str(selection["environment"])
         initial_firmware = bool(payload.get("initialFirmware"))
         reset_nvs = True if initial_firmware else bool(payload.get("resetNvs"))
         if reset_nvs and payload.get("resetNvsConfirmation") != "RESET NVS":
             raise ValueError("Reset NVS requires the explicit confirmation RESET NVS")
+        local_package = package_manifest_summary(env)
+        if local_package.get("available") is not True:
+            raise RuntimeError(
+                f"selected package {env} is unavailable: {local_package.get('error') or 'unknown package error'}"
+            )
         host = self.server.server_address[0] or "127.0.0.1"
         state = simple_device_state(host, device, query=not initial_firmware)
         if not state.get("connected"):
@@ -863,28 +1422,44 @@ class Handler(SimpleHTTPRequestHandler):
         if not initial_firmware and not state.get("info"):
             raise RuntimeError("connect and identify the device first")
         package = child_request(host, device, "GET", f"/api/firmware/package?env={env}")
+        manifest = validate_selected_package(package, env)
         request: dict[str, object] = {"env": env, "port": port, "manifest": package.get("manifest"), "packageFiles": package.get("packageFiles"), "resetNvs": reset_nvs, "slot": 1}
         info = state.get("info") if isinstance(state.get("info"), dict) else {}
-        identifier = info.get("deviceId" if device == "gld" else "chId" if device == "ch" else "gatewayId")
-        if initial_firmware:
-            identifier = {"gld": "1001", "ch": "0010", "gw": "0001"}[device]
-        if not isinstance(identifier, str):
-            raise RuntimeError("identified device ID is required before upload")
-        request["targetDeviceId"] = identifier.removeprefix("0x").removeprefix("0X")
+        current_identifier = info.get("deviceId" if device == "gld" else "chId" if device == "ch" else "gatewayId")
+        expected_identifier = expected_identity_after_upload(device, current_identifier, reset_nvs)
+        request["targetDeviceId"] = expected_identifier
         # A packaged ESP flash normally takes far longer than the short API timeout
         # used for status/configuration calls. Keep this bounded, but do not mark a
         # legitimate flash as failed after only 12 seconds.
         result = child_request(host, device, "POST", "/api/firmware/upload", request, timeout=240.0)
         readback = wait_for_readback(host, device, port, timeout=35.0)
-        expected_version = (package.get("manifest") or {}).get("firmwareVersion")
+        expected_version = manifest.get("firmwareVersion")
         actual_version = (readback.get("info") or {}).get("firmwareVersion")
         if expected_version and actual_version != expected_version:
             raise RuntimeError(f"flash completed but firmware read-back differs: expected {expected_version}, got {actual_version}")
         readback_id = (readback.get("info") or {}).get("deviceId" if device == "gld" else "chId" if device == "ch" else "gatewayId")
         actual_id = str(readback_id or "").upper().removeprefix("0X")
-        expected_id = str(identifier).upper().removeprefix("0X")
+        expected_id = expected_identifier
         if actual_id != expected_id:
             raise RuntimeError(f"flash completed but identity read-back differs: expected {expected_id}, got {readback_id}")
+        if device in {"ch", "gw"}:
+            readback_info = readback.get("info") if isinstance(readback.get("info"), dict) else {}
+            expected_board = "rectangle" if selection.get("boardFormFactor") == "small" else "circle"
+            if readback_info.get("boardProfile") != expected_board:
+                raise RuntimeError(
+                    f"{device.upper()} package flashed but board profile read-back differs: "
+                    f"expected {expected_board}, got {readback_info.get('boardProfile') or '-'}"
+                )
+            if device == "gw":
+                expected_transport = selection.get("mqttTransport")
+                if readback_info.get("mqttTransport") != expected_transport:
+                    raise RuntimeError(
+                        "Gateway package flashed but MQTT transport read-back differs: "
+                        f"expected {expected_transport}, got {readback_info.get('mqttTransport') or '-'}"
+                    )
+                expected_tls_capable = expected_transport == "tls"
+                if readback_info.get("tlsCapable") is not expected_tls_capable:
+                    raise RuntimeError("Gateway TLS capability marker does not match the selected package")
         aes_key_restored = False
         # Reset NVS also erases the GLD AES provisioning. When the child GLD
         # bridge has a canonical Node-RED key, its serial-write path injects
@@ -898,8 +1473,24 @@ class Handler(SimpleHTTPRequestHandler):
                 readback = wait_for_readback(host, device, port, timeout=35.0)
                 aes_key_restored = True
         action = "Initial firmware upload" if initial_firmware else "Firmware upload"
-        add_activity(device, action, f"{port}; latest {env} verified; NVS {'reset' if reset_nvs else 'preserved'}; AES {'restored' if aes_key_restored else 'unchanged'}")
-        json_response(self, {"upload": result, "readback": readback, "initialFirmware": initial_firmware, "aesKeyRestored": aes_key_restored})
+        package_version = str(manifest.get("firmwareVersion") or "unknown")
+        identity_detail = f"identity reset to default {expected_id}" if reset_nvs else f"identity preserved as {expected_id}"
+        add_activity(device, action, f"{port}; exact package {env} v{package_version} verified; NVS {'reset' if reset_nvs else 'preserved'}; {identity_detail}; AES {'restored' if aes_key_restored else 'unchanged'}")
+        json_response(
+            self,
+            {
+                "upload": result,
+                "readback": readback,
+                "initialFirmware": initial_firmware,
+                "aesKeyRestored": aes_key_restored,
+                "identityResetToDefault": reset_nvs,
+                "expectedIdentity": expected_id,
+                "selectedEnvironment": env,
+                "selectedFirmwareVersion": package_version,
+                "boardFormFactor": selection.get("boardFormFactor"),
+                "mqttTransport": selection.get("mqttTransport"),
+            },
+        )
 
     def _handle_simple_ports(self) -> None:
         device = (parse_qs(urlparse(self.path).query).get("device") or [""])[0]
@@ -954,8 +1545,15 @@ class Handler(SimpleHTTPRequestHandler):
                 devices[device] = simple_device_state(host, device, query=True)
             except Exception as exc:
                 devices[device] = {"device": device, "connected": False, "error": str(exc)}
-        packages = {device: latest_package(device) for device in CHILD_APPS}
-        json_response(self, {"devices": devices, "packages": packages, "activity": simple_activity, "mesh": "Fixed by design; use Expert only to inspect."})
+        json_response(
+            self,
+            {
+                "devices": devices,
+                "firmwarePackageOptions": firmware_package_options(),
+                "activity": simple_activity,
+                "mesh": "Fixed by design; use Expert only to inspect.",
+            },
+        )
 
     def _handle_preflight(self) -> None:
         # Recomputed on every request rather than cached from startup, so a

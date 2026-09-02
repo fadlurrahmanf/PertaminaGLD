@@ -5,16 +5,28 @@
 #include <RadioLib.h>
 #include <SPI.h>
 #include <WiFi.h>
+#if defined(PGL_GW_MQTT_TLS)
+#include <WiFiClientSecure.h>
+#endif
 
 #include <cstdarg>
 #include <cstdio>
 #include <cstring>
+#include <ctime>
 
 #include "AppFrame.h"
 #include "FirmwareConfig.h"
 #include "FirmwareVersion.h"
 #include "GwConfig.h"
-#include "GatewayBoardPins.h"
+#if defined(PGL_GW_BOARD_CIRCLE) && defined(PGL_GW_BOARD_RECTANGLE)
+#error "Select exactly one Gateway board profile"
+#elif defined(PGL_GW_BOARD_CIRCLE)
+#include "GatewayBoardPinsCircle.h"
+#elif defined(PGL_GW_BOARD_RECTANGLE)
+#include "GatewayBoardPinsRectangle.h"
+#else
+#error "Select PGL_GW_BOARD_CIRCLE or PGL_GW_BOARD_RECTANGLE"
+#endif
 #include "ProtocolConstants.h"
 #include "ServerNodeCommandRoute.h"
 
@@ -25,20 +37,54 @@ namespace {
 // last saved to NVS via SET_WIFI_CONFIG_JSON (loadNetConfig) - the Operator
 // can push new credentials without a reflash. GLD/CH have no equivalent; this
 // is Gateway-only because its WiFi/MQTT were previously reflash-only.
+constexpr size_t WIFI_SSID_MAX_BYTES = 32;
+constexpr size_t WIFI_PASSWORD_MAX_BYTES = 64;
+constexpr size_t MQTT_HOST_MAX_BYTES = 64;
+constexpr size_t MQTT_USER_MAX_BYTES = 32;
+constexpr size_t MQTT_PASSWORD_MAX_BYTES = 64;
+constexpr size_t TLS_CA_PEM_MAX_BYTES = 3900;
+constexpr size_t NTP_HOST_MAX_BYTES = 64;
+
 struct RuntimeNetConfig {
-    char wifiSsid[33];
-    char wifiPassword[65];
-    char mqttHost[65];
+    char wifiSsid[WIFI_SSID_MAX_BYTES + 1];
+    char wifiPassword[WIFI_PASSWORD_MAX_BYTES + 1];
+    char mqttHost[MQTT_HOST_MAX_BYTES + 1];
     uint16_t mqttPort;
-    char mqttUser[33];
-    char mqttPassword[65];
+    char mqttUser[MQTT_USER_MAX_BYTES + 1];
+    char mqttPassword[MQTT_PASSWORD_MAX_BYTES + 1];
     bool mqttEnabled;
+    bool tlsReady;
+    // A public trust anchor, not a private key. Keeping these fields in both
+    // variants makes TLS -> non-TLS -> TLS transitions deterministic.
+    char tlsCaPem[TLS_CA_PEM_MAX_BYTES + 1];
+    char ntpHost[NTP_HOST_MAX_BYTES + 1];
 };
 
 RuntimeNetConfig netConfig{};
-Preferences netPrefs;
+// Serial command handlers prepare changes here. The live configuration is
+// replaced only after the complete candidate has been persisted and read back.
+RuntimeNetConfig stagedNetConfig{};
+// Shared scratch storage avoids placing another roughly 4 KB TLS-capable
+// configuration object on the Arduino loop-task stack.
+RuntimeNetConfig persistedNetConfig{};
 constexpr uint32_t NET_CONFIG_MAGIC = 0x47574E31; // "GWN1"
-constexpr const char* NET_CONFIG_NAMESPACE = "gwnet";
+constexpr const char* NET_CONFIG_LEGACY_NAMESPACE = "gwnet";
+constexpr const char* NET_CONFIG_SLOT_NAMESPACES[2] = {"gwnet0", "gwnet1"};
+constexpr const char* NET_CONFIG_CONTROL_NAMESPACE = "gwnetctl";
+constexpr uint64_t NET_CONFIG_SELECTOR_PREFIX = 0x47574E5300000000ULL; // "GWNS"
+constexpr uint64_t NET_CONFIG_SELECTOR_PREFIX_MASK = 0xFFFFFFFF00000000ULL;
+constexpr uint32_t NET_CONFIG_MAX_GENERATION = 0x7FFFFFFFU;
+constexpr const char* NET_CONFIG_RECORD_KEYS[] = {
+    "magic", "ssid", "pass", "host", "port", "user", "mqttPass",
+    "mqttOn", "tlsReady", "tlsCaPem", "ntpHost", "generation",
+};
+
+struct NetConfigSelection {
+    bool present;
+    bool valid;
+    uint8_t slot;
+    uint32_t generation;
+};
 
 void copyBounded(char* dest, size_t destSize, const char* src) {
     if (src == nullptr) {
@@ -57,48 +103,417 @@ void loadDefaultNetConfig() {
     copyBounded(netConfig.mqttUser, sizeof(netConfig.mqttUser), pgl::config::gw::MQTT_USER);
     copyBounded(netConfig.mqttPassword, sizeof(netConfig.mqttPassword), pgl::config::gw::MQTT_PASSWORD);
     netConfig.mqttEnabled = true;
+    netConfig.tlsReady = false;
+    netConfig.tlsCaPem[0] = '\0';
+    netConfig.ntpHost[0] = '\0';
+}
+
+bool netConfigsEqual(const RuntimeNetConfig& left, const RuntimeNetConfig& right) {
+    bool equal = strcmp(left.wifiSsid, right.wifiSsid) == 0 &&
+                 strcmp(left.wifiPassword, right.wifiPassword) == 0 &&
+                 strcmp(left.mqttHost, right.mqttHost) == 0 &&
+                 left.mqttPort == right.mqttPort &&
+                 strcmp(left.mqttUser, right.mqttUser) == 0 &&
+                 strcmp(left.mqttPassword, right.mqttPassword) == 0 &&
+                 left.mqttEnabled == right.mqttEnabled &&
+                 left.tlsReady == right.tlsReady;
+    equal = equal && strcmp(left.tlsCaPem, right.tlsCaPem) == 0 &&
+            strcmp(left.ntpHost, right.ntpHost) == 0;
+    return equal;
+}
+
+bool readNetConfigRecord(const char* nameSpace,
+                         bool requireGeneration,
+                         RuntimeNetConfig& output,
+                         uint32_t& generation) {
+    Preferences prefs;
+    if (!prefs.begin(nameSpace, true)) {
+        return false;
+    }
+    const bool baseKeysPresent = prefs.isKey("magic") &&
+                                 prefs.isKey("ssid") &&
+                                 prefs.isKey("pass") &&
+                                 prefs.isKey("host") &&
+                                 prefs.isKey("port") &&
+                                 prefs.isKey("user") &&
+                                 prefs.isKey("mqttPass") &&
+                                 prefs.isKey("mqttOn");
+    const uint32_t magic = prefs.getUInt("magic", 0);
+    const String ssid = prefs.getString("ssid", "");
+    const String pass = prefs.getString("pass", "");
+    const String host = prefs.getString("host", "");
+    const uint16_t port = prefs.getUShort("port", 0);
+    const String user = prefs.getString("user", "");
+    const String mqttPass = prefs.getString("mqttPass", "");
+    const bool mqttEnabled = prefs.getBool("mqttOn", false);
+    const bool tlsReadyPresent = prefs.isKey("tlsReady");
+    const bool tlsReady = prefs.getBool("tlsReady", false);
+    const bool generationPresent = prefs.isKey("generation");
+    const uint32_t storedGeneration = prefs.getUInt("generation", 0);
+    // Optional only when migrating the historical non-TLS single record.
+    // Every new slot stores both keys in every firmware variant.
+    const String tlsCaPem = prefs.getString("tlsCaPem", "");
+    const String ntpHost = prefs.getString("ntpHost", "");
+    prefs.end();
+
+    bool valid = baseKeysPresent && magic == NET_CONFIG_MAGIC &&
+                 ssid.length() > 0 && ssid.length() <= WIFI_SSID_MAX_BYTES &&
+                 pass.length() <= WIFI_PASSWORD_MAX_BYTES &&
+                 host.length() <= MQTT_HOST_MAX_BYTES && port > 0 &&
+                 user.length() <= MQTT_USER_MAX_BYTES &&
+                 mqttPass.length() <= MQTT_PASSWORD_MAX_BYTES;
+    if (requireGeneration) {
+        valid = valid && generationPresent && storedGeneration > 0 &&
+                storedGeneration <= NET_CONFIG_MAX_GENERATION && tlsReadyPresent;
+    }
+    valid = valid && tlsCaPem.length() <= TLS_CA_PEM_MAX_BYTES &&
+            ntpHost.length() <= NTP_HOST_MAX_BYTES;
+    if (!valid) {
+        return false;
+    }
+
+    copyBounded(output.wifiSsid, sizeof(output.wifiSsid), ssid.c_str());
+    copyBounded(output.wifiPassword, sizeof(output.wifiPassword), pass.c_str());
+    copyBounded(output.mqttHost, sizeof(output.mqttHost), host.c_str());
+    output.mqttPort = port;
+    copyBounded(output.mqttUser, sizeof(output.mqttUser), user.c_str());
+    copyBounded(output.mqttPassword, sizeof(output.mqttPassword), mqttPass.c_str());
+    output.mqttEnabled = mqttEnabled;
+    output.tlsReady = tlsReady;
+    copyBounded(output.tlsCaPem, sizeof(output.tlsCaPem), tlsCaPem.c_str());
+    copyBounded(output.ntpHost, sizeof(output.ntpHost), ntpHost.c_str());
+    generation = requireGeneration ? storedGeneration : 0;
+    return true;
+}
+
+NetConfigSelection readActiveNetConfigSelection() {
+    NetConfigSelection selection{false, false, 0, 0};
+    Preferences prefs;
+    if (!prefs.begin(NET_CONFIG_CONTROL_NAMESPACE, true)) {
+        return selection;
+    }
+    selection.present = prefs.isKey("active");
+    const uint64_t encoded = prefs.getULong64("active", 0);
+    prefs.end();
+    if (!selection.present ||
+        (encoded & NET_CONFIG_SELECTOR_PREFIX_MASK) != NET_CONFIG_SELECTOR_PREFIX) {
+        return selection;
+    }
+    const uint32_t payload = static_cast<uint32_t>(encoded & 0xFFFFFFFFULL);
+    selection.slot = static_cast<uint8_t>(payload & 0x01U);
+    selection.generation = payload >> 1U;
+    selection.valid = selection.generation > 0 &&
+                      selection.generation <= NET_CONFIG_MAX_GENERATION;
+    return selection;
+}
+
+uint64_t encodeActiveNetConfigSelection(uint8_t slot, uint32_t generation) {
+    const uint32_t payload = (generation << 1U) | (slot & 0x01U);
+    return NET_CONFIG_SELECTOR_PREFIX | static_cast<uint64_t>(payload);
+}
+
+bool writeActiveNetConfigSelectionAndVerify(uint8_t slot, uint32_t generation) {
+    if (slot > 1 || generation == 0 || generation > NET_CONFIG_MAX_GENERATION) {
+        return false;
+    }
+    const uint64_t encoded = encodeActiveNetConfigSelection(slot, generation);
+    Preferences prefs;
+    if (!prefs.begin(NET_CONFIG_CONTROL_NAMESPACE, false)) {
+        return false;
+    }
+    // One NVS entry binds slot and generation. It is the transaction commit
+    // point and is written only after the inactive slot fully reads back.
+    prefs.putULong64("active", encoded);
+    prefs.end();
+    const NetConfigSelection readback = readActiveNetConfigSelection();
+    return readback.valid && readback.slot == slot &&
+           readback.generation == generation;
+}
+
+bool clearActiveNetConfigSelectionAndVerify() {
+    Preferences prefs;
+    if (!prefs.begin(NET_CONFIG_CONTROL_NAMESPACE, false)) {
+        return false;
+    }
+    const bool removed = !prefs.isKey("active") || prefs.remove("active");
+    prefs.end();
+    const NetConfigSelection readback = readActiveNetConfigSelection();
+    return removed && !readback.present;
+}
+
+bool clearLegacyNetConfigRecordAndVerify() {
+    Preferences probe;
+    if (!probe.begin(NET_CONFIG_LEGACY_NAMESPACE, true)) {
+        // Namespace never existed, so there is no legacy capacity to reclaim.
+        return true;
+    }
+    bool present = false;
+    for (const char* key : NET_CONFIG_RECORD_KEYS) {
+        present = probe.isKey(key) || present;
+    }
+    probe.end();
+    if (!present) {
+        return true;
+    }
+
+    Preferences cleanup;
+    if (!cleanup.begin(NET_CONFIG_LEGACY_NAMESPACE, false)) {
+        return false;
+    }
+    const bool cleared = cleanup.clear();
+    cleanup.end();
+
+    Preferences verify;
+    if (!verify.begin(NET_CONFIG_LEGACY_NAMESPACE, false)) {
+        return false;
+    }
+    bool empty = true;
+    for (const char* key : NET_CONFIG_RECORD_KEYS) {
+        empty = !verify.isKey(key) && empty;
+    }
+    verify.end();
+    return cleared && empty;
+}
+
+bool netConfigSlotIsEmpty(uint8_t slot) {
+    Preferences prefs;
+    if (slot > 1 || !prefs.begin(NET_CONFIG_SLOT_NAMESPACES[slot], false)) {
+        return false;
+    }
+    bool empty = true;
+    for (const char* key : NET_CONFIG_RECORD_KEYS) {
+        empty = !prefs.isKey(key) && empty;
+    }
+    prefs.end();
+    return empty;
+}
+
+bool clearNetConfigSlotAndVerify(uint8_t slot) {
+    Preferences prefs;
+    if (slot > 1 || !prefs.begin(NET_CONFIG_SLOT_NAMESPACES[slot], false)) {
+        return false;
+    }
+    // Erase every old variable-length value, especially the CA PEM, so NVS GC
+    // can reclaim the inactive slot before its replacement is appended.
+    const bool cleared = prefs.clear();
+    prefs.end();
+    return cleared && netConfigSlotIsEmpty(slot);
+}
+
+bool verifyNetConfigSlot(uint8_t slot,
+                         const RuntimeNetConfig& candidate,
+                         uint32_t generation) {
+    uint32_t storedGeneration = 0;
+    return slot <= 1 &&
+           readNetConfigRecord(NET_CONFIG_SLOT_NAMESPACES[slot], true,
+                               persistedNetConfig, storedGeneration) &&
+           storedGeneration == generation &&
+           netConfigsEqual(persistedNetConfig, candidate);
+}
+
+bool writeInactiveNetConfigSlotAndVerify(uint8_t slot,
+                                         const RuntimeNetConfig& candidate,
+                                         uint32_t generation) {
+    if (slot > 1 || generation == 0 || generation > NET_CONFIG_MAX_GENERATION ||
+        !clearNetConfigSlotAndVerify(slot)) {
+        return false;
+    }
+    Preferences prefs;
+    if (!prefs.begin(NET_CONFIG_SLOT_NAMESPACES[slot], false)) {
+        return false;
+    }
+    bool ok = true;
+    ok = (prefs.putString("ssid", candidate.wifiSsid) == strlen(candidate.wifiSsid)) && ok;
+    ok = (prefs.putString("pass", candidate.wifiPassword) == strlen(candidate.wifiPassword)) && ok;
+    ok = (prefs.putString("host", candidate.mqttHost) == strlen(candidate.mqttHost)) && ok;
+    ok = (prefs.putUShort("port", candidate.mqttPort) == sizeof(uint16_t)) && ok;
+    ok = (prefs.putString("user", candidate.mqttUser) == strlen(candidate.mqttUser)) && ok;
+    ok = (prefs.putString("mqttPass", candidate.mqttPassword) == strlen(candidate.mqttPassword)) && ok;
+    ok = (prefs.putBool("mqttOn", candidate.mqttEnabled) == sizeof(bool)) && ok;
+    ok = (prefs.putBool("tlsReady", candidate.tlsReady) == sizeof(bool)) && ok;
+    ok = (prefs.putString("tlsCaPem", candidate.tlsCaPem) == strlen(candidate.tlsCaPem)) && ok;
+    ok = (prefs.putString("ntpHost", candidate.ntpHost) == strlen(candidate.ntpHost)) && ok;
+    ok = (prefs.putUInt("generation", generation) == sizeof(uint32_t)) && ok;
+    if (ok) {
+        ok = prefs.putUInt("magic", NET_CONFIG_MAGIC) == sizeof(uint32_t);
+    }
+    prefs.end();
+    if (!ok) {
+        if (!clearNetConfigSlotAndVerify(slot)) {
+            return false;
+        }
+        return false;
+    }
+    if (!verifyNetConfigSlot(slot, candidate, generation)) {
+        if (!clearNetConfigSlotAndVerify(slot)) {
+            return false;
+        }
+        return false;
+    }
+    return true;
 }
 
 void loadNetConfig() {
     loadDefaultNetConfig();
-    netPrefs.begin(NET_CONFIG_NAMESPACE, true);
-    const uint32_t magic = netPrefs.getUInt("magic", 0);
-    if (magic == NET_CONFIG_MAGIC) {
-        const String ssid = netPrefs.getString("ssid", "");
-        const String pass = netPrefs.getString("pass", "");
-        const String host = netPrefs.getString("host", "");
-        const uint16_t port = netPrefs.getUShort("port", 0);
-        const String user = netPrefs.getString("user", "");
-        const String mqttPass = netPrefs.getString("mqttPass", "");
-        if (ssid.length() > 0) {
-            copyBounded(netConfig.wifiSsid, sizeof(netConfig.wifiSsid), ssid.c_str());
-            copyBounded(netConfig.wifiPassword, sizeof(netConfig.wifiPassword), pass.c_str());
-            copyBounded(netConfig.mqttHost, sizeof(netConfig.mqttHost), host.c_str());
-            if (port > 0) {
-                netConfig.mqttPort = port;
-            }
-            copyBounded(netConfig.mqttUser, sizeof(netConfig.mqttUser), user.c_str());
-            copyBounded(netConfig.mqttPassword, sizeof(netConfig.mqttPassword), mqttPass.c_str());
-            netConfig.mqttEnabled = netPrefs.getBool("mqttOn", true);
-        }
+    const NetConfigSelection selected = readActiveNetConfigSelection();
+    uint32_t generation = 0;
+    if (selected.valid &&
+        readNetConfigRecord(NET_CONFIG_SLOT_NAMESPACES[selected.slot], true,
+                            persistedNetConfig, generation) &&
+        generation == selected.generation) {
+        netConfig = persistedNetConfig;
+        // Safe only after a generation-bound journal commit is recoverable.
+        // This also completes cleanup after power loss immediately post-commit.
+        clearLegacyNetConfigRecordAndVerify();
+        return;
     }
-    netPrefs.end();
+
+    // During first migration, a complete inactive slot can exist before the
+    // selector commit. If the selector is absent/corrupt, the still-valid
+    // legacy record is the only proven committed source and must win first.
+    if (!selected.valid &&
+        readNetConfigRecord(NET_CONFIG_LEGACY_NAMESPACE, false,
+                            persistedNetConfig, generation)) {
+        netConfig = persistedNetConfig;
+        return;
+    }
+
+    // A selector should be atomic, but if it is missing/corrupt or references
+    // a damaged slot, prefer a prior fully valid slot over compile defaults.
+    uint32_t generation0 = 0;
+    uint32_t generation1 = 0;
+    const bool valid0 = readNetConfigRecord(NET_CONFIG_SLOT_NAMESPACES[0], true,
+                                            persistedNetConfig, generation0);
+    const bool valid1 = readNetConfigRecord(NET_CONFIG_SLOT_NAMESPACES[1], true,
+                                            persistedNetConfig, generation1);
+    int fallbackSlot = -1;
+    if (selected.valid) {
+        const uint8_t other = selected.slot ^ 0x01U;
+        if ((other == 0 && valid0) || (other == 1 && valid1)) {
+            fallbackSlot = other;
+        }
+    } else if (valid0 && valid1) {
+        // During failed commit recovery, the older generation is the last
+        // known-good slot; never auto-promote an uncommitted newer candidate.
+        fallbackSlot = generation0 <= generation1 ? 0 : 1;
+    }
+    if (fallbackSlot >= 0 &&
+        readNetConfigRecord(NET_CONFIG_SLOT_NAMESPACES[fallbackSlot], true,
+                            persistedNetConfig, generation)) {
+        netConfig = persistedNetConfig;
+        return;
+    }
+
+    // Preserve migration from the prior single-record implementation. It is
+    // never overwritten by the journal and remains a durable first-save backup.
+    if (readNetConfigRecord(NET_CONFIG_LEGACY_NAMESPACE, false,
+                            persistedNetConfig, generation)) {
+        netConfig = persistedNetConfig;
+    }
 }
 
-bool saveNetConfig() {
-    if (!netPrefs.begin(NET_CONFIG_NAMESPACE, false)) {
+bool saveNetConfig(const RuntimeNetConfig& candidate) {
+    const NetConfigSelection selected = readActiveNetConfigSelection();
+    int currentSlot = -1;
+    uint32_t currentGeneration = 0;
+    uint32_t maxGeneration = 0;
+    bool slotValid[2] = {false, false};
+    bool slotMatchesLive[2] = {false, false};
+    uint32_t slotGenerations[2] = {0, 0};
+
+    for (uint8_t slot = 0; slot < 2; ++slot) {
+        uint32_t slotGeneration = 0;
+        if (!readNetConfigRecord(NET_CONFIG_SLOT_NAMESPACES[slot], true,
+                                 persistedNetConfig, slotGeneration)) {
+            continue;
+        }
+        slotValid[slot] = true;
+        slotMatchesLive[slot] = netConfigsEqual(persistedNetConfig, netConfig);
+        slotGenerations[slot] = slotGeneration;
+        if (slotGeneration > maxGeneration) {
+            maxGeneration = slotGeneration;
+        }
+        if (selected.valid && selected.slot == slot &&
+            selected.generation == slotGeneration) {
+            currentSlot = slot;
+            currentGeneration = slotGeneration;
+        }
+    }
+
+    if (currentSlot < 0 && selected.valid) {
+        const uint8_t other = selected.slot ^ 0x01U;
+        if (slotValid[other] && slotMatchesLive[other]) {
+            currentSlot = other;
+            currentGeneration = slotGenerations[other];
+        }
+    } else if (currentSlot < 0 && slotValid[0] && slotValid[1]) {
+        // With no valid selector, one lone slot may be a first-save candidate
+        // written just before power loss. Only two valid generations prove a
+        // prior committed rollback slot exists; choose the live matching one.
+        if (slotMatchesLive[0] && slotMatchesLive[1]) {
+            currentSlot = slotGenerations[0] <= slotGenerations[1] ? 0 : 1;
+        } else if (slotMatchesLive[0]) {
+            currentSlot = 0;
+        } else if (slotMatchesLive[1]) {
+            currentSlot = 1;
+        }
+        if (currentSlot >= 0) {
+            currentGeneration = slotGenerations[currentSlot];
+        }
+    }
+
+    if (currentSlot >= 0) {
+        if (!selected.valid || selected.slot != currentSlot ||
+            selected.generation != currentGeneration) {
+            if (!writeActiveNetConfigSelectionAndVerify(
+                    static_cast<uint8_t>(currentSlot), currentGeneration)) {
+                return false;
+            }
+        }
+        // Do not allocate/overwrite the second large TLS-capable slot while a
+        // now-redundant single-record copy still consumes the 0x5000 NVS area.
+        if (!clearLegacyNetConfigRecordAndVerify()) {
+            return false;
+        }
+    } else if (selected.present && !clearActiveNetConfigSelectionAndVerify()) {
+        // A stale selector must not already point at the slot being prepared.
         return false;
     }
-    netPrefs.putUInt("magic", NET_CONFIG_MAGIC);
-    netPrefs.putString("ssid", netConfig.wifiSsid);
-    netPrefs.putString("pass", netConfig.wifiPassword);
-    netPrefs.putString("host", netConfig.mqttHost);
-    netPrefs.putUShort("port", netConfig.mqttPort);
-    netPrefs.putString("user", netConfig.mqttUser);
-    netPrefs.putString("mqttPass", netConfig.mqttPassword);
-    netPrefs.putBool("mqttOn", netConfig.mqttEnabled);
-    netPrefs.end();
-    return true;
+
+    if (maxGeneration >= NET_CONFIG_MAX_GENERATION) {
+        return false;
+    }
+    const uint32_t nextGeneration = maxGeneration + 1U;
+    const uint8_t targetSlot = currentSlot >= 0
+        ? (static_cast<uint8_t>(currentSlot) ^ 0x01U)
+        : 0;
+    if (!writeInactiveNetConfigSlotAndVerify(targetSlot, candidate, nextGeneration)) {
+        return false;
+    }
+
+    // Commit is one generation-bound NVS entry written last. Until it reads
+    // back exactly, the old selector and old slot remain the boot source.
+    if (writeActiveNetConfigSelectionAndVerify(targetSlot, nextGeneration)) {
+        // Never make cleanup part of transaction success: the new journal is
+        // already committed. Boot and the next save retry this safely.
+        clearLegacyNetConfigRecordAndVerify();
+        return true;
+    }
+
+    // Roll back the control plane and invalidate the uncommitted candidate.
+    // The prior active slot itself was never changed.
+    const bool candidateInvalidated = clearNetConfigSlotAndVerify(targetSlot);
+    const bool selectorRestored = currentSlot >= 0
+        ? writeActiveNetConfigSelectionAndVerify(
+              static_cast<uint8_t>(currentSlot), currentGeneration)
+        : clearActiveNetConfigSelectionAndVerify();
+    if (!candidateInvalidated || !selectorRestored) {
+        // A false result prevents the handler from mutating live RAM. Boot
+        // recovery also chooses the older valid generation if selector repair
+        // could not be proven.
+        return false;
+    }
+    return false;
 }
 
 struct RuntimeMeshConfig {
@@ -124,7 +539,7 @@ bool isSupportedMeshBandwidth(float value) {
 }
 
 bool isValidMeshConfig(const RuntimeMeshConfig& cfg) {
-    return cfg.freqMHz >= 900.0f && cfg.freqMHz <= 930.0f &&
+    return cfg.freqMHz >= 920.0f && cfg.freqMHz <= 923.0f &&
            isSupportedMeshBandwidth(cfg.bwKHz) &&
            cfg.sf >= 5 && cfg.sf <= 12 &&
            cfg.cr >= 5 && cfg.cr <= 8 &&
@@ -174,6 +589,15 @@ constexpr uint16_t PULL_REQUEST_REPEAT_GAP_MS = pgl::config::gw::PULL_REQUEST_RE
 
 void logPrintln(const char* text);
 void logPrintf(const char* fmt, ...);
+const char* mqttTransportName();
+bool tlsCapable();
+bool tlsConfigured();
+bool timeSynchronized();
+#if defined(PGL_GW_MQTT_TLS)
+bool isValidTlsCaPem(const char* pem);
+bool isValidNtpHost(const char* host);
+void ensureTlsTimeSync();
+#endif
 
 void loadMeshConfig() {
     RuntimeMeshConfig fallback{MESH_FREQ_MHZ, MESH_BW_KHZ, MESH_SF, MESH_CR,
@@ -237,7 +661,11 @@ bool saveMeshConfig(const RuntimeMeshConfig& cfg) {
 
 Module* meshModule = nullptr;
 SX1262* meshRadio = nullptr;
+#if defined(PGL_GW_MQTT_TLS)
+WiFiClientSecure wifiClient;
+#else
 WiFiClient wifiClient;
+#endif
 PubSubClient mqtt(wifiClient);
 
 uint8_t meshSeq = 0;
@@ -250,6 +678,10 @@ bool mqttSubCommands = false;
 bool mqttSubPull = false;
 bool mqttSubNodeCommand = false;
 char mqttClientId[48]{};
+#if defined(PGL_GW_MQTT_TLS)
+bool tlsTimeSyncStarted = false;
+uint32_t lastTlsWaitLogMs = 0;
+#endif
 
 struct PendingMqttPublish {
     bool used;
@@ -304,7 +736,10 @@ void logPrintln(const char* text) {
 }
 
 void logPrintf(const char* fmt, ...) {
-    char buffer[256];
+    // GW_STATUS_JSON is part of the Operator Hub post-flash/TLS readback
+    // contract. Keep deliberate headroom so a modest version/profile change
+    // cannot silently truncate that JSON into an unparsable line.
+    char buffer[512];
     va_list args;
     va_start(args, fmt);
     vsnprintf(buffer, sizeof(buffer), fmt, args);
@@ -794,6 +1229,15 @@ void beginMqtt() {
         logPrintln("GW_CONFIG_ERROR mqttHost=unconfigured action=inject-PGL_SERVER_SITE_MQTT_HOST");
         return;
     }
+#if defined(PGL_GW_MQTT_TLS)
+    if (!tlsConfigured()) {
+        logPrintln("GW_TLS_CONFIG_REQUIRED fields=tlsCaPem,ntpHost mqttBlocked=1");
+        return;
+    }
+    // Never use setInsecure(): every TLS connection is anchored to the
+    // site-provisioned public root CA.
+    wifiClient.setCACert(netConfig.tlsCaPem);
+#endif
     mqtt.setServer(netConfig.mqttHost, netConfig.mqttPort);
     mqtt.setCallback(mqttCallback);
     mqtt.setBufferSize(1024);
@@ -803,6 +1247,18 @@ void ensureMqtt() {
     if (!mqttHostConfigured() || WiFi.status() != WL_CONNECTED || mqtt.connected()) {
         return;
     }
+#if defined(PGL_GW_MQTT_TLS)
+    if (!tlsConfigured()) return;
+    ensureTlsTimeSync();
+    if (!timeSynchronized()) {
+        const uint32_t waitNow = millis();
+        if (waitNow - lastTlsWaitLogMs >= 10000) {
+            lastTlsWaitLogMs = waitNow;
+            logPrintln("GW_TLS_WAIT trustedTime=0 mqttBlocked=1");
+        }
+        return;
+    }
+#endif
     const uint32_t now = millis();
     if (now - lastMqttAttemptMs < MQTT_RETRY_MS) {
         return;
@@ -811,7 +1267,8 @@ void ensureMqtt() {
 
     snprintf(mqttClientId, sizeof(mqttClientId), "pgl-gateway-%04X-%08lX", gatewayId, static_cast<unsigned long>(ESP.getEfuseMac()));
     const bool ok = mqtt.connect(mqttClientId, netConfig.mqttUser, netConfig.mqttPassword);
-    logPrintf("GW_MQTT_CONNECT host=%s port=%u ok=%u\n", netConfig.mqttHost, netConfig.mqttPort, ok ? 1 : 0);
+    logPrintf("GW_MQTT_CONNECT transport=%s host=%s port=%u ok=%u\n",
+              mqttTransportName(), netConfig.mqttHost, netConfig.mqttPort, ok ? 1 : 0);
     if (!ok) {
         return;
     }
@@ -829,7 +1286,7 @@ void ensureMqtt() {
 }
 
 bool publishStatus(const char* state) {
-    StaticJsonDocument<1024> doc;
+    StaticJsonDocument<1280> doc;
     const bool wifiConnected = WiFi.status() == WL_CONNECTED;
     const bool mqttConnected = mqtt.connected();
     doc["kind"] = "gateway-status";
@@ -837,6 +1294,7 @@ bool publishStatus(const char* state) {
     doc["state"] = state;
     doc["firmwareVersion"] = pgl::firmware::GATEWAY_FIRMWARE_VERSION;
     doc["protocolVersion"] = pgl::firmware::PROTOCOL_VERSION;
+    doc["boardProfile"] = pgl::gateway::board::BOARD_PROFILE;
     doc["uptimeMs"] = millis();
     doc["wifi"] = wifiConnected;
     doc["wifiSsid"] = netConfig.wifiSsid;
@@ -844,6 +1302,10 @@ bool publishStatus(const char* state) {
     doc["wifiChannel"] = wifiConnected ? WiFi.channel() : 0;
     doc["wifiMac"] = WiFi.macAddress();
     doc["mqtt"] = mqttConnected;
+    doc["mqttTransport"] = mqttTransportName();
+    doc["tlsCapable"] = tlsCapable();
+    doc["tlsConfigured"] = tlsConfigured();
+    doc["timeSynchronized"] = timeSynchronized();
     doc["mqttHost"] = netConfig.mqttHost;
     doc["mqttPort"] = netConfig.mqttPort;
     doc["mqttAuthConfigured"] = netConfig.mqttUser[0] != '\0' || netConfig.mqttPassword[0] != '\0';
@@ -865,7 +1327,7 @@ bool publishStatus(const char* state) {
     doc["mqttQueueCapacity"] = MQTT_UPLINK_QUEUE_CAPACITY;
     doc["ip"] = wifiConnected ? WiFi.localIP().toString() : "";
 
-    char json[1024];
+    char json[1280];
     const size_t len = serializeJson(doc, json, sizeof(json));
     const bool ok = mqtt.connected() && mqtt.publish(TOPIC_STATUS, reinterpret_cast<const uint8_t*>(json), len);
     logPrintf("GW_MQTT_STATUS state=%s ok=%u\n", state, ok ? 1 : 0);
@@ -1575,6 +2037,8 @@ void printBootHeader() {
     logPrintf("Firmware name: %s\n", pgl::firmware::GATEWAY_FIRMWARE_NAME);
     logPrintf("Firmware version: %s\n", pgl::firmware::GATEWAY_FIRMWARE_VERSION);
     logPrintf("Protocol version: %s\n", pgl::firmware::PROTOCOL_VERSION);
+    logPrintf("Board profile: %s\n", pgl::gateway::board::BOARD_PROFILE);
+    logPrintf("MQTT transport: %s\n", mqttTransportName());
     logPrintf("Build date/time: %s %s Asia/Jakarta\n", __DATE__, __TIME__);
     logPrintf("GW_IDS gateway=0x%04X source=%s\n", gatewayId,
               gatewayIdentityLoadedFromNvs ? "nvs" : "build-default");
@@ -1595,39 +2059,95 @@ void handleSetWifiConfigJson(const char* payload) {
         logPrintln("GW_CMD_ACK cmd=SET_WIFI_CONFIG status=error message=invalid_json reboot=0");
         return;
     }
-    const char* ssid = doc["ssid"] | netConfig.wifiSsid;
-    const char* password = doc["password"] | netConfig.wifiPassword;
+    const char* ssid = doc.containsKey("ssid")
+        ? doc["ssid"].as<const char*>()
+        : netConfig.wifiSsid;
+    const char* password = doc.containsKey("password")
+        ? doc["password"].as<const char*>()
+        : netConfig.wifiPassword;
     const bool reboot = doc["reboot"] | true;
 
-    if (strlen(ssid) == 0) {
+    if (ssid == nullptr || password == nullptr) {
+        logPrintln("GW_CMD_ACK cmd=SET_WIFI_CONFIG status=rejected message=invalid_string_field reboot=0");
+        return;
+    }
+    const size_t ssidBytes = strlen(ssid);
+    const size_t passwordBytes = strlen(password);
+    if (ssidBytes == 0) {
         logPrintln("GW_CMD_ACK cmd=SET_WIFI_CONFIG status=rejected message=ssid_required reboot=0");
         return;
     }
+    if (ssidBytes > WIFI_SSID_MAX_BYTES) {
+        logPrintf("GW_CMD_ACK cmd=SET_WIFI_CONFIG status=rejected message=field_too_long field=ssid maxBytes=%u reboot=0\n",
+                  static_cast<unsigned>(WIFI_SSID_MAX_BYTES));
+        return;
+    }
+    if (passwordBytes > WIFI_PASSWORD_MAX_BYTES) {
+        logPrintf("GW_CMD_ACK cmd=SET_WIFI_CONFIG status=rejected message=field_too_long field=password maxBytes=%u reboot=0\n",
+                  static_cast<unsigned>(WIFI_PASSWORD_MAX_BYTES));
+        return;
+    }
 
-    copyBounded(netConfig.wifiSsid, sizeof(netConfig.wifiSsid), ssid);
-    copyBounded(netConfig.wifiPassword, sizeof(netConfig.wifiPassword), password);
-    netConfig.mqttEnabled = false;
+    const bool hasCombinedMqtt = doc.containsKey("mqttHost");
+    const char* mqttHost = hasCombinedMqtt ? doc["mqttHost"].as<const char*>() : nullptr;
+    const uint16_t mqttPort = hasCombinedMqtt ? (doc["mqttPort"] | netConfig.mqttPort) : 0;
+    const char* mqttUser = hasCombinedMqtt
+        ? (doc.containsKey("mqttUser") ? doc["mqttUser"].as<const char*>() : "")
+        : nullptr;
+    const char* mqttPassword = hasCombinedMqtt
+        ? (doc.containsKey("mqttPass") ? doc["mqttPass"].as<const char*>() : "")
+        : nullptr;
 
     // Backward compatibility for the previous combined payload. New clients
     // omit these fields and must use SET_MQTT_CONFIG_JSON after TEST_WIFI.
-    if (doc.containsKey("mqttHost")) {
-        const char* mqttHost = doc["mqttHost"] | "";
-        const uint16_t mqttPort = doc["mqttPort"] | netConfig.mqttPort;
+    if (hasCombinedMqtt) {
+        if (mqttHost == nullptr || mqttUser == nullptr || mqttPassword == nullptr) {
+            logPrintln("GW_CMD_ACK cmd=SET_WIFI_CONFIG status=rejected message=invalid_mqtt_string_field reboot=0");
+            return;
+        }
         if (strlen(mqttHost) == 0 || mqttPort == 0) {
             logPrintln("GW_CMD_ACK cmd=SET_WIFI_CONFIG status=rejected message=mqttHost_mqttPort_required reboot=0");
             return;
         }
-        copyBounded(netConfig.mqttHost, sizeof(netConfig.mqttHost), mqttHost);
-        netConfig.mqttPort = mqttPort;
-        copyBounded(netConfig.mqttUser, sizeof(netConfig.mqttUser), doc["mqttUser"] | "");
-        copyBounded(netConfig.mqttPassword, sizeof(netConfig.mqttPassword), doc["mqttPass"] | "");
-        netConfig.mqttEnabled = true;
+        if (strlen(mqttHost) > MQTT_HOST_MAX_BYTES) {
+            logPrintf("GW_CMD_ACK cmd=SET_WIFI_CONFIG status=rejected message=field_too_long field=mqttHost maxBytes=%u reboot=0\n",
+                      static_cast<unsigned>(MQTT_HOST_MAX_BYTES));
+            return;
+        }
+        if (strlen(mqttUser) > MQTT_USER_MAX_BYTES) {
+            logPrintf("GW_CMD_ACK cmd=SET_WIFI_CONFIG status=rejected message=field_too_long field=mqttUser maxBytes=%u reboot=0\n",
+                      static_cast<unsigned>(MQTT_USER_MAX_BYTES));
+            return;
+        }
+        if (strlen(mqttPassword) > MQTT_PASSWORD_MAX_BYTES) {
+            logPrintf("GW_CMD_ACK cmd=SET_WIFI_CONFIG status=rejected message=field_too_long field=mqttPass maxBytes=%u reboot=0\n",
+                      static_cast<unsigned>(MQTT_PASSWORD_MAX_BYTES));
+            return;
+        }
     }
 
-    if (!saveNetConfig()) {
+    stagedNetConfig = netConfig;
+    copyBounded(stagedNetConfig.wifiSsid, sizeof(stagedNetConfig.wifiSsid), ssid);
+    copyBounded(stagedNetConfig.wifiPassword, sizeof(stagedNetConfig.wifiPassword), password);
+    stagedNetConfig.mqttEnabled = false;
+    if (hasCombinedMqtt) {
+        copyBounded(stagedNetConfig.mqttHost, sizeof(stagedNetConfig.mqttHost), mqttHost);
+        stagedNetConfig.mqttPort = mqttPort;
+        copyBounded(stagedNetConfig.mqttUser, sizeof(stagedNetConfig.mqttUser), mqttUser);
+        copyBounded(stagedNetConfig.mqttPassword, sizeof(stagedNetConfig.mqttPassword), mqttPassword);
+        stagedNetConfig.mqttEnabled = true;
+    }
+#if !defined(PGL_GW_MQTT_TLS)
+    // A non-TLS firmware commit must never leave a prior TLS trust decision
+    // active. CA/NTP bytes stay schema-stable but require TLS reprovisioning.
+    stagedNetConfig.tlsReady = false;
+#endif
+
+    if (!saveNetConfig(stagedNetConfig)) {
         logPrintln("GW_CMD_ACK cmd=SET_WIFI_CONFIG status=error message=nvs_save_failed reboot=0");
         return;
     }
+    netConfig = stagedNetConfig;
     logPrintf("GW_CMD_ACK cmd=SET_WIFI_CONFIG status=ok message=saved reboot=%u\n", reboot ? 1 : 0);
     if (reboot) {
         Serial.flush();
@@ -1647,43 +2167,114 @@ void handleTestWifi() {
 
 void handleTestMqtt() {
     const bool connected = mqtt.connected();
-    logPrintf("GW_CMD_ACK cmd=TEST_MQTT status=%s connected=%u state=%d host=%s port=%u auth=%u subscriptions=%u\n",
+    logPrintf("GW_CMD_ACK cmd=TEST_MQTT status=%s connected=%u state=%d host=%s port=%u auth=%u subscriptions=%u mqttTransport=%s tlsCapable=%u tlsConfigured=%u timeSynchronized=%u\n",
               connected ? "ok" : "error",
               connected ? 1 : 0,
               mqtt.state(),
               netConfig.mqttHost,
               netConfig.mqttPort,
               (netConfig.mqttUser[0] != '\0' || netConfig.mqttPassword[0] != '\0') ? 1 : 0,
-              (connected && mqttSubCommands && mqttSubPull && mqttSubNodeCommand) ? 1 : 0);
+              (connected && mqttSubCommands && mqttSubPull && mqttSubNodeCommand) ? 1 : 0,
+              mqttTransportName(), tlsCapable() ? 1 : 0, tlsConfigured() ? 1 : 0,
+              timeSynchronized() ? 1 : 0);
 }
 
 void handleSetMqttConfigJson(const char* payload) {
-    StaticJsonDocument<384> doc;
+    DynamicJsonDocument doc(7168);
     if (deserializeJson(doc, payload)) {
         logPrintln("GW_CMD_ACK cmd=SET_MQTT_CONFIG status=error message=invalid_json");
         return;
     }
-    const char* host = doc["host"] | "";
+    const char* host = doc["host"].as<const char*>();
     const uint16_t port = doc["port"] | 0;
+    const char* username = doc.containsKey("username")
+        ? doc["username"].as<const char*>()
+        : "";
+    const char* password = doc.containsKey("password")
+        ? doc["password"].as<const char*>()
+        : "";
+    if (host == nullptr || username == nullptr || password == nullptr) {
+        logPrintln("GW_CMD_ACK cmd=SET_MQTT_CONFIG status=rejected message=invalid_string_field");
+        return;
+    }
     if (strlen(host) == 0 || port == 0) {
         logPrintln("GW_CMD_ACK cmd=SET_MQTT_CONFIG status=rejected message=host_port_required");
         return;
     }
+    if (strlen(host) > MQTT_HOST_MAX_BYTES) {
+        logPrintf("GW_CMD_ACK cmd=SET_MQTT_CONFIG status=rejected message=field_too_long field=host maxBytes=%u\n",
+                  static_cast<unsigned>(MQTT_HOST_MAX_BYTES));
+        return;
+    }
+    if (strlen(username) > MQTT_USER_MAX_BYTES) {
+        logPrintf("GW_CMD_ACK cmd=SET_MQTT_CONFIG status=rejected message=field_too_long field=username maxBytes=%u\n",
+                  static_cast<unsigned>(MQTT_USER_MAX_BYTES));
+        return;
+    }
+    if (strlen(password) > MQTT_PASSWORD_MAX_BYTES) {
+        logPrintf("GW_CMD_ACK cmd=SET_MQTT_CONFIG status=rejected message=field_too_long field=password maxBytes=%u\n",
+                  static_cast<unsigned>(MQTT_PASSWORD_MAX_BYTES));
+        return;
+    }
 
-    copyBounded(netConfig.mqttHost, sizeof(netConfig.mqttHost), host);
-    netConfig.mqttPort = port;
-    copyBounded(netConfig.mqttUser, sizeof(netConfig.mqttUser), doc["username"] | "");
-    copyBounded(netConfig.mqttPassword, sizeof(netConfig.mqttPassword), doc["password"] | "");
-    netConfig.mqttEnabled = true;
-    if (!saveNetConfig()) {
+#if defined(PGL_GW_MQTT_TLS)
+    if (!netConfig.tlsReady &&
+        (!doc.containsKey("tlsCaPem") || !doc.containsKey("ntpHost"))) {
+        logPrintln("GW_CMD_ACK cmd=SET_MQTT_CONFIG status=rejected message=tls_fields_required_after_transport_change");
+        return;
+    }
+    const char* tlsCaPem = doc.containsKey("tlsCaPem")
+        ? doc["tlsCaPem"].as<const char*>()
+        : netConfig.tlsCaPem;
+    const char* ntpHost = doc.containsKey("ntpHost")
+        ? doc["ntpHost"].as<const char*>()
+        : netConfig.ntpHost;
+    if (ntpHost != nullptr && strlen(ntpHost) > NTP_HOST_MAX_BYTES) {
+        logPrintf("GW_CMD_ACK cmd=SET_MQTT_CONFIG status=rejected message=field_too_long field=ntpHost maxBytes=%u\n",
+                  static_cast<unsigned>(NTP_HOST_MAX_BYTES));
+        return;
+    }
+    if (!isValidTlsCaPem(tlsCaPem)) {
+        logPrintln("GW_CMD_ACK cmd=SET_MQTT_CONFIG status=rejected message=tlsCaPem_invalid_or_missing");
+        return;
+    }
+    if (!isValidNtpHost(ntpHost)) {
+        logPrintln("GW_CMD_ACK cmd=SET_MQTT_CONFIG status=rejected message=ntpHost_invalid_or_missing");
+        return;
+    }
+#endif
+
+    stagedNetConfig = netConfig;
+    copyBounded(stagedNetConfig.mqttHost, sizeof(stagedNetConfig.mqttHost), host);
+    stagedNetConfig.mqttPort = port;
+    copyBounded(stagedNetConfig.mqttUser, sizeof(stagedNetConfig.mqttUser), username);
+    copyBounded(stagedNetConfig.mqttPassword, sizeof(stagedNetConfig.mqttPassword), password);
+#if defined(PGL_GW_MQTT_TLS)
+    if (doc.containsKey("tlsCaPem")) {
+        copyBounded(stagedNetConfig.tlsCaPem, sizeof(stagedNetConfig.tlsCaPem), tlsCaPem);
+    }
+    if (doc.containsKey("ntpHost")) {
+        copyBounded(stagedNetConfig.ntpHost, sizeof(stagedNetConfig.ntpHost), ntpHost);
+    }
+    stagedNetConfig.tlsReady = true;
+#else
+    stagedNetConfig.tlsReady = false;
+#endif
+    stagedNetConfig.mqttEnabled = true;
+    if (!saveNetConfig(stagedNetConfig)) {
         logPrintln("GW_CMD_ACK cmd=SET_MQTT_CONFIG status=error message=nvs_save_failed");
         return;
     }
+    netConfig = stagedNetConfig;
+#if defined(PGL_GW_MQTT_TLS)
+    tlsTimeSyncStarted = false;
+#endif
 
     mqtt.disconnect();
     beginMqtt();
     lastMqttAttemptMs = millis() - MQTT_RETRY_MS;
-    logPrintln("GW_CMD_ACK cmd=SET_MQTT_CONFIG status=ok message=saved_connecting=1");
+    logPrintf("GW_CMD_ACK cmd=SET_MQTT_CONFIG status=ok message=saved_connecting=1 mqttTransport=%s tlsConfigured=%u\n",
+              mqttTransportName(), tlsConfigured() ? 1 : 0);
 }
 
 void handleSetMeshLoraJson(const char* payload) {
@@ -1706,8 +2297,8 @@ void handleSetMeshLoraJson(const char* payload) {
     const double cr = doc["cr"].as<double>();
     const double sync = doc["syncWord"].as<double>();
     const double tx = doc["txPowerDbm"].as<double>();
-    if (!(freq >= 900.0 && freq <= 930.0)) {
-        logPrintln("GW_CMD_ACK cmd=SET_MESH_LORA_JSON status=error message=freqMHz-out-of-range-900-930");
+    if (!(freq >= 920.0 && freq <= 923.0)) {
+        logPrintln("GW_CMD_ACK cmd=SET_MESH_LORA_JSON status=error message=freqMHz-out-of-range-920-923");
         return;
     }
     if (!isSupportedMeshBandwidth(static_cast<float>(bw))) {
@@ -1756,11 +2347,88 @@ void emitGatewayAddressJson() {
               gatewayId, pgl::config::GATEWAY_ID_MIN, pgl::config::GATEWAY_ID_MAX);
 }
 
+const char* mqttTransportName() {
+#if defined(PGL_GW_MQTT_TLS)
+    return "tls";
+#else
+    return "non_tls";
+#endif
+}
+
+bool tlsCapable() {
+#if defined(PGL_GW_MQTT_TLS)
+    return true;
+#else
+    return false;
+#endif
+}
+
+#if defined(PGL_GW_MQTT_TLS)
+constexpr std::time_t MIN_TRUSTED_EPOCH = 1577836800;  // 2020-01-01 UTC
+
+bool isValidTlsCaPem(const char* pem) {
+    if (pem == nullptr) return false;
+    const size_t length = strlen(pem);
+    if (length < 256 || length > TLS_CA_PEM_MAX_BYTES) return false;
+    constexpr const char* beginMarker = "-----BEGIN CERTIFICATE-----";
+    constexpr const char* endMarker = "-----END CERTIFICATE-----";
+    if (strncmp(pem, beginMarker, strlen(beginMarker)) != 0) return false;
+    const char* end = strstr(pem, endMarker);
+    if (end == nullptr) return false;
+    const char* tail = end + strlen(endMarker);
+    while (*tail == '\r' || *tail == '\n' || *tail == ' ' || *tail == '\t') ++tail;
+    return *tail == '\0';
+}
+
+bool isValidNtpHost(const char* host) {
+    if (host == nullptr) return false;
+    const size_t length = strlen(host);
+    if (length == 0 || length > NTP_HOST_MAX_BYTES) return false;
+    for (size_t i = 0; i < length; ++i) {
+        const char c = host[i];
+        if (c == ' ' || c == '\t' || c == '\r' || c == '\n') return false;
+    }
+    return true;
+}
+#endif
+
+bool tlsConfigured() {
+#if defined(PGL_GW_MQTT_TLS)
+    return netConfig.tlsReady &&
+           isValidTlsCaPem(netConfig.tlsCaPem) &&
+           isValidNtpHost(netConfig.ntpHost);
+#else
+    return false;
+#endif
+}
+
+bool timeSynchronized() {
+#if defined(PGL_GW_MQTT_TLS)
+    return std::time(nullptr) >= MIN_TRUSTED_EPOCH;
+#else
+    return false;
+#endif
+}
+
+#if defined(PGL_GW_MQTT_TLS)
+void ensureTlsTimeSync() {
+    if (WiFi.status() != WL_CONNECTED || !tlsConfigured()) return;
+    if (!tlsTimeSyncStarted) {
+        configTime(0, 0, netConfig.ntpHost);
+        tlsTimeSyncStarted = true;
+        logPrintf("GW_TLS_TIME_SYNC_START ntpHost=%s\n", netConfig.ntpHost);
+    }
+}
+#endif
+
 void emitGatewayStatusJson() {
     const bool wifiConnected = WiFi.status() == WL_CONNECTED;
-    logPrintf("GW_STATUS_JSON {\"gatewayId\":\"0x%04X\",\"firmwareVersion\":\"%s\",\"protocolVersion\":\"%s\",\"meshReady\":%u,\"wifi\":%u,\"mqtt\":%u}\n",
+    logPrintf("GW_STATUS_JSON {\"gatewayId\":\"0x%04X\",\"firmwareVersion\":\"%s\",\"protocolVersion\":\"%s\",\"boardProfile\":\"%s\",\"meshReady\":%s,\"wifi\":%s,\"mqtt\":%s,\"mqttTransport\":\"%s\",\"tlsCapable\":%s,\"tlsConfigured\":%s,\"timeSynchronized\":%s}\n",
               gatewayId, pgl::firmware::GATEWAY_FIRMWARE_VERSION, pgl::firmware::PROTOCOL_VERSION,
-              meshReady ? 1 : 0, wifiConnected ? 1 : 0, mqtt.connected() ? 1 : 0);
+              pgl::gateway::board::BOARD_PROFILE, meshReady ? "true" : "false",
+              wifiConnected ? "true" : "false", mqtt.connected() ? "true" : "false",
+              mqttTransportName(), tlsCapable() ? "true" : "false",
+              tlsConfigured() ? "true" : "false", timeSynchronized() ? "true" : "false");
 }
 
 void handleSetGatewayAddressJson(const char* payload) {
@@ -1830,10 +2498,18 @@ void handleSerialLine(const char* line) {
 // UART0 (Serial0), not the native USB-CDC (Serial); other boards may expose
 // only one. Trying both means the command lands regardless of which the
 // board actually routes to the COM port.
-void pollSerialStream(Stream& stream, char* buf, size_t& len) {
+constexpr size_t SERIAL_LINE_CAPACITY = 6144;
+
+void pollSerialStream(Stream& stream, char* buf, size_t& len, bool& overflowed) {
     while (stream.available() > 0) {
         const char c = static_cast<char>(stream.read());
         if (c == '\n' || c == '\r') {
+            if (overflowed) {
+                logPrintln("GW_CMD_ACK cmd=SERIAL status=error message=line_too_long");
+                overflowed = false;
+                len = 0;
+                continue;
+            }
             if (len > 0) {
                 buf[len] = '\0';
                 handleSerialLine(buf);
@@ -1841,23 +2517,27 @@ void pollSerialStream(Stream& stream, char* buf, size_t& len) {
             }
             continue;
         }
-        if (len + 1 < 600) {
+        if (len + 1 < SERIAL_LINE_CAPACITY) {
             buf[len++] = c;
+        } else {
+            overflowed = true;
         }
     }
 }
 
-char usbSerialLineBuf[600];
+char usbSerialLineBuf[SERIAL_LINE_CAPACITY];
 size_t usbSerialLineLen = 0;
+bool usbSerialLineOverflowed = false;
 #if defined(ARDUINO_ARCH_ESP32)
-char uart0SerialLineBuf[600];
+char uart0SerialLineBuf[SERIAL_LINE_CAPACITY];
 size_t uart0SerialLineLen = 0;
+bool uart0SerialLineOverflowed = false;
 #endif
 
 void pollSerialCommands() {
-    pollSerialStream(Serial, usbSerialLineBuf, usbSerialLineLen);
+    pollSerialStream(Serial, usbSerialLineBuf, usbSerialLineLen, usbSerialLineOverflowed);
 #if defined(ARDUINO_ARCH_ESP32)
-    pollSerialStream(Serial0, uart0SerialLineBuf, uart0SerialLineLen);
+    pollSerialStream(Serial0, uart0SerialLineBuf, uart0SerialLineLen, uart0SerialLineOverflowed);
 #endif
 }
 

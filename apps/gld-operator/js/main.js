@@ -12,7 +12,7 @@ import {
 } from "./bridge-client.js";
 import { requireUnlock } from "./security.js";
 import {
-  sendCommand, applyAndAlert, setSensorPowerAndWait, setManualAlarmAndWait, togglePolling, stopPolling, renderSensorCheck, toggleAlarmMute, updateAlarmState, updateTelemetryCollectionProgress
+  sendCommand, applyAndAlert, setSensorPowerAndWait, setAlarmModeAndWait, setManualAlarmAndWait, togglePolling, stopPolling, renderSensorCheck, toggleAlarmMute, updateAlarmState, updateTelemetryCollectionProgress
 } from "./serial-protocol.js";
 import { drawChart, renderLegend, exportCsv } from "./chart.js";
 import { applyNullingConfig, requestFullNulling, requestManualNullingRetry, requestFailedNullingRetry, updateNullingMeta, renderNullingChannels, toggleNullingLogPause, applyNullingLogPauseVisibility, copyNullingLog, exportNullingLog, resetNullingMcpIndicator } from "./nulling.js";
@@ -214,6 +214,18 @@ function setupEvents() {
       }
     });
   }
+  $("alarmModeApplyBtn")?.addEventListener("click", async () => {
+    if (!await requireUnlock()) return;
+    const button = $("alarmModeApplyBtn");
+    const mode = $("alarmModeSelect")?.value === "manual" ? "manual" : "auto";
+    try {
+      await withBusy(button, "Menunggu…", async () => {
+        await setAlarmModeAndWait(mode);
+      });
+    } catch (error) {
+      showBanner(`Mode alarm ${mode.toUpperCase()} belum diterapkan: ${error.message}`, "warn");
+    }
+  });
   for (const [id, enabled] of [["manualAlarmOnBtn", true], ["manualAlarmOffBtn", false]]) {
     $(id)?.addEventListener("click", async () => {
       if (!await requireUnlock()) return;

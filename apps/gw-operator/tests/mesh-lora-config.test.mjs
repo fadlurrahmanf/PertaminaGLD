@@ -9,6 +9,12 @@ test("accepts the deployed Gateway MESH profile", () => {
   }), {
     freqMHz: 921, bwKHz: 125, sf: 9, cr: 5, syncWord: 52, txPowerDbm: 17, reboot: true
   });
+  assert.equal(validateMeshLoraConfig({
+    freqMHz: 920, bwKHz: 125, sf: 9, cr: 5, syncWord: 52, txPowerDbm: 17
+  }).freqMHz, 920);
+  assert.equal(validateMeshLoraConfig({
+    freqMHz: 923, bwKHz: 125, sf: 9, cr: 5, syncWord: 52, txPowerDbm: 17
+  }).freqMHz, 923);
 });
 
 test("rejects unsupported bandwidth and fractional integer fields", () => {
@@ -23,7 +29,7 @@ test("rejects unsupported bandwidth and fractional integer fields", () => {
 test("rejects every out-of-range field", () => {
   const base = { freqMHz: 921, bwKHz: 125, sf: 9, cr: 5, syncWord: 52, txPowerDbm: 17 };
   for (const invalid of [
-    { freqMHz: 899 }, { freqMHz: 931 }, { sf: 4 }, { sf: 13 },
+    { freqMHz: 919.999 }, { freqMHz: 923.001 }, { sf: 4 }, { sf: 13 },
     { cr: 4 }, { cr: 9 }, { syncWord: -1 }, { syncWord: 256 },
     { txPowerDbm: -10 }, { txPowerDbm: 23 }
   ]) {

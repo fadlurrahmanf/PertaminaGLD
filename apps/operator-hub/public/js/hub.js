@@ -21,6 +21,7 @@ let uploadFlashDone = false;
 let uploadReadbackVerified = false;
 let uploadSuccessShown = false;
 let testDeviceRunning = false;
+let alarmActionBusy = false;
 const simulationMode = new URLSearchParams(location.search).get("simulate");
 const $ = (id) => document.getElementById(id);
 const notice = $("notice");
@@ -220,18 +221,37 @@ function requestConfirmation({ title, message, actionLabel = "Lanjutkan", phrase
 function requestFirmwareUploadOptions({ device, port, initialFirmware = false }) {
   const spec = devices[device];
   const dialog = document.createElement("dialog");
+  const packageOptions = overview.firmwarePackageOptions?.[device] || {};
+  const packageCatalog = packageOptions.packages || {};
+  const requiresBoard = device === "ch" || device === "gw";
   const modelPicker = device === "gld" ? `
     <label>PAKET FIRMWARE GLD
-      <select id="firmwareUploadModel"><option value="model_1">Model 1 - Board 1</option><option value="model_2">Model 2 - Board 2</option><option value="model_3">Model 3 - Board 2 v2</option><option value="gld_v2">GLD2 - Board GLD V2</option><option disabled>Model 4 - artefak belum tersedia</option></select>
+      <select id="firmwareUploadModel"><option value="">Pilih package GLD</option>${(packageOptions.models || []).map((option) => {
+        const item = packageCatalog[option.environment];
+        const detail = item?.available ? `v${item.firmwareVersion}` : "package tidak tersedia";
+        return `<option value="${option.value}"${item?.available ? "" : " disabled"}>${option.label} — ${detail}</option>`;
+      }).join("")}<option disabled>Model 4 - artefak belum tersedia</option></select>
       <small>Pilih package sesuai board yang akan di-flash.</small>
+    </label>` : "";
+  const boardPicker = requiresBoard ? `
+    <label>BENTUK BOARD
+      <select id="firmwareUploadBoard"><option value="">Pilih bentuk board</option>${(packageOptions.boards || []).map((option) => `<option value="${option.value}">${option.label}</option>`).join("")}</select>
+      <small>Rectangle = board kecil. Circle = board besar.</small>
+    </label>` : "";
+  const transportPicker = device === "gw" ? `
+    <label>TRANSPORT MQTT
+      <select id="firmwareUploadTransport"><option value="">Pilih transport MQTT</option>${(packageOptions.transports || []).map((option) => `<option value="${option.value}">${option.label}</option>`).join("")}</select>
+      <small>TLS dan non-TLS adalah environment firmware terpisah.</small>
     </label>` : "";
   dialog.className = "firmware-upload-dialog";
   dialog.innerHTML = `<form method="dialog">
     <p class="card-kicker">UPLOAD FIRMWARE</p>
     <h2>Upload Firmware ${spec.label}</h2>
-    <p id="firmwareUploadPackageLabel" class="firmware-upload-package">Package: ${spec.label} / ${device === "gld" ? "Model 1" : "default"}</p>
-    <label>FIRMWARE ENVIRONMENT<select id="firmwareUploadEnvironment"><option>${spec.label}</option></select></label>
+    <p id="firmwareUploadPackageLabel" class="firmware-upload-package">Package: ${spec.label} / pilihan belum lengkap</p>
     ${modelPicker}
+    ${boardPicker}
+    ${transportPicker}
+    <label>FIRMWARE ENVIRONMENT<select id="firmwareUploadEnvironment" disabled><option>Ditentukan dari pilihan package</option></select></label>
     <label>TARGET COM<select id="firmwareUploadPort"><option>${port}</option></select></label>
     <label class="firmware-reset"><input type="checkbox" id="firmwareUploadReset"${initialFirmware ? " checked disabled" : ""}> Reset NVS?</label>
     <p class="firmware-upload-help">${initialFirmware ? "Firmware awal selalu mereset NVS. Identitas default akan dibaca ulang setelah board reboot." : "Unchecked: retain all NVS parameters. Checked: erase NVS, then boot with all defaults embedded in this firmware."}</p>
@@ -242,20 +262,80 @@ function requestFirmwareUploadOptions({ device, port, initialFirmware = false })
   return new Promise((resolve) => {
     const reset = dialog.querySelector("#firmwareUploadReset");
     const model = dialog.querySelector("#firmwareUploadModel");
+    const board = dialog.querySelector("#firmwareUploadBoard");
+    const transport = dialog.querySelector("#firmwareUploadTransport");
+    const environment = dialog.querySelector("#firmwareUploadEnvironment");
     const packageLabel = dialog.querySelector("#firmwareUploadPackageLabel");
     const error = dialog.querySelector("#firmwareUploadError");
     const finish = (result) => { dialog.close(); dialog.remove(); resolve(result); };
+    const updatePackageSelection = () => {
+      const boardValue = board?.value || "";
+      const transportValue = transport?.value || "";
+      const modelValue = model?.value || "";
+      const selectedEnvironment = device === "gld"
+        ? packageOptions.environments?.[modelValue]
+        : device === "ch"
+          ? packageOptions.environments?.[boardValue]
+          : packageOptions.environments?.[boardValue]?.[transportValue];
+      const selectionLabel = device === "gld"
+        ? model?.selectedOptions?.[0]?.textContent?.replace(/ — v[^—]+$/, "") || ""
+        : `${board?.selectedOptions?.[0]?.textContent || ""}${transportValue ? ` / ${transport?.selectedOptions?.[0]?.textContent || ""}` : ""}`;
+      environment.replaceChildren(new Option(selectedEnvironment || "Lengkapi pilihan package", selectedEnvironment || ""));
+      if (!selectedEnvironment) {
+        packageLabel.textContent = `Package: ${spec.label} / pilihan belum lengkap`;
+        error.hidden = true;
+        return "";
+      }
+      const selectedPackage = packageCatalog[selectedEnvironment];
+      if (selectedPackage?.available !== true) {
+        packageLabel.textContent = `Package: ${spec.label} / ${selectionLabel} / ${selectedEnvironment} / TIDAK TERSEDIA`;
+        error.textContent = `Package ${selectedEnvironment} tidak tersedia (${selectedPackage?.error || "manifest tidak ditemukan"}).`;
+        error.hidden = false;
+        return "";
+      }
+      packageLabel.textContent = `Package: ${spec.label} / ${selectionLabel} / ${selectedEnvironment} / firmware ${selectedPackage.firmwareVersion}`;
+      error.hidden = true;
+      return selectedEnvironment;
+    };
     dialog.querySelector("#firmwareUploadCancel").onclick = () => finish(null);
-    model?.addEventListener("change", () => {
-      const labels = { model_1: "Model 1", model_2: "Model 2", model_3: "Model 3", gld_v2: "GLD2 - Board GLD V2" };
-      packageLabel.textContent = `Package: ${spec.label} / ${labels[model.value] || "Model 1"}`;
-    });
+    model?.addEventListener("change", updatePackageSelection);
+    board?.addEventListener("change", updatePackageSelection);
+    transport?.addEventListener("change", updatePackageSelection);
     dialog.querySelector("#firmwareUploadAccept").onclick = (event) => {
       event.preventDefault();
+      if (device === "gld" && !model?.value) {
+        error.textContent = "Pilih package GLD yang sesuai dengan board.";
+        error.hidden = false;
+        model?.focus();
+        return;
+      }
+      if (requiresBoard && !board?.value) {
+        error.textContent = "Pilih bentuk board Rectangle (kecil) atau Circle (besar).";
+        error.hidden = false;
+        board?.focus();
+        return;
+      }
+      if (device === "gw" && !transport?.value) {
+        error.textContent = "Pilih transport MQTT non-TLS atau TLS.";
+        error.hidden = false;
+        transport?.focus();
+        return;
+      }
+      if (!updatePackageSelection()) {
+        if (error.hidden) {
+          error.textContent = "Environment firmware untuk pilihan ini tidak tersedia.";
+          error.hidden = false;
+        }
+        return;
+      }
       const resetNvs = initialFirmware || reset.checked;
-      finish({ model: model?.value || "model_1", resetNvs, resetNvsConfirmation: resetNvs ? "RESET NVS" : "" });
+      const result = { model: model?.value || "", resetNvs, resetNvsConfirmation: resetNvs ? "RESET NVS" : "" };
+      if (requiresBoard) result.boardFormFactor = board.value;
+      if (device === "gw") result.mqttTransport = transport.value;
+      finish(result);
     };
     dialog.oncancel = (event) => { event.preventDefault(); finish(null); };
+    updatePackageSelection();
     dialog.showModal();
   });
 }
@@ -310,11 +390,17 @@ function isReady(value) {
 
 function valueInfo(info) {
   if (!info) return [];
-  if (active === "gld") return [
+  if (active === "gld") {
+    const alarmMode = info.alarmControl?.available === true && ["auto", "manual"].includes(info.alarmControl?.mode)
+      ? info.alarmControl.mode.toUpperCase()
+      : "Tidak tersedia";
+    return [
     ["Device ID", info.deviceId], ["Target CH", info.targetChId], ["Firmware", info.firmwareVersion],
     ["STAR", info.starLora?.freqMHz ? `${info.starLora.freqMHz} MHz` : "-"],
-    ["Radio", isReady(info.radioReady) ? "Ready" : info.radioReady === false || info.radioReady === 0 ? "Tidak siap" : "Menunggu"]
-  ];
+    ["Radio", isReady(info.radioReady) ? "Ready" : info.radioReady === false || info.radioReady === 0 ? "Tidak siap" : "Menunggu"],
+    ["Mode alarm fisik", alarmMode]
+    ];
+  }
   if (active === "ch") return [
     ["CH ID", info.chId], ["Root Gateway", info.rootGatewayId], ["Firmware", info.firmwareVersion],
     ["STAR", info.starLora?.freqMHz ? `${info.starLora.freqMHz} MHz` : "-"],
@@ -323,9 +409,72 @@ function valueInfo(info) {
   return [
     ["Gateway ID", info.gatewayId], ["Firmware", info.firmwareVersion],
     ["Radio Mesh", isReady(info.meshReady) ? "Ready" : "Tidak siap"],
+    ["MQTT transport", info.mqttTransport === "tls" ? "TLS" : info.mqttTransport === "non_tls" ? "non-TLS" : "Legacy / tidak dilaporkan"],
     ["Wi-Fi", isReady(info.wifi) ? "Connected" : "Belum tersambung"],
     ["MQTT", isReady(info.mqtt) ? "Connected" : "Belum tersambung"]
   ];
+}
+
+function updateMqttTlsFields() {
+  const tlsSelected = $("mqttTransportSelect").value === "tls";
+  $("mqttNtpHostCard").hidden = !tlsSelected;
+  $("mqttTlsCaCard").hidden = !tlsSelected;
+  $("mqttTlsHelp").hidden = !tlsSelected;
+  $("mqttPortInput").placeholder = tlsSelected ? "8883" : "1884";
+}
+
+function validGldAlarmControl(info) {
+  const alarm = info?.alarmControl;
+  if (!alarm || alarm.available !== true || !["auto", "manual"].includes(alarm.mode)) return null;
+  if (!["modePersisted", "sessionOnly", "resetsToAutoOnBoot", "manualCommanded", "inferenceAlarm", "physicalCommanded"].every((field) => typeof alarm[field] === "boolean")) return null;
+  if (alarm.modePersisted !== false || alarm.sessionOnly !== true || alarm.resetsToAutoOnBoot !== true) return null;
+  if (alarm.outputDrive !== "steady_24v" || alarm.externalDevicePattern !== "self_pulsed_1s_on_1s_off") return null;
+  return alarm;
+}
+
+function renderAlarmControls(info) {
+  const card = $("gldAlarmControlCard");
+  const select = $("alarmModeSelect");
+  const apply = $("applyAlarmModeBtn");
+  const on = $("manualAlarmOnBtn");
+  const off = $("manualAlarmOffBtn");
+  const badge = $("alarmControlModeBadge");
+  const output = $("alarmPhysicalState");
+  const help = $("alarmControlHelp");
+  const isGld = active === "gld";
+  card.hidden = !isGld;
+  if (!isGld) {
+    select.disabled = apply.disabled = on.disabled = off.disabled = true;
+    return;
+  }
+
+  const alarm = validGldAlarmControl(info);
+  const available = Boolean(alarm) && !alarmActionBusy;
+  if (!alarm) {
+    select.value = "auto";
+    select.disabled = apply.disabled = on.disabled = off.disabled = true;
+    badge.textContent = "Kontrol terkunci";
+    badge.dataset.mode = "unavailable";
+    output.textContent = "Output fisik: status firmware tidak lengkap";
+    output.classList.remove("commanded");
+    help.textContent = "Firmware yang terhubung belum melaporkan kontrak kontrol alarm lengkap. Hub tidak akan mengirim perintah alarm.";
+    help.classList.add("bad");
+    return;
+  }
+
+  select.value = alarm.mode;
+  select.disabled = !available;
+  apply.disabled = !available;
+  on.disabled = !available || alarm.mode !== "manual" || alarm.manualCommanded;
+  off.disabled = !available || alarm.mode !== "manual" || !alarm.manualCommanded;
+  badge.textContent = alarm.mode === "manual" ? "MANUAL • sesi ini" : "AUTO • default boot";
+  badge.dataset.mode = alarm.mode;
+  output.textContent = `Output fisik: ${alarm.physicalCommanded ? "ON — steady 24 V diperintahkan" : "OFF"} • Alarm inferensi: ${alarm.inferenceAlarm ? "AKTIF" : "tidak aktif"}`;
+  output.classList.toggle("commanded", alarm.physicalCommanded);
+  help.textContent = alarm.mode === "manual"
+    ? "MANUAL aktif untuk pengujian. ON/OFF bersifat volatile; telemetri dan radio tetap memakai hasil alarm inferensi sebenarnya."
+    : "AUTO adalah default produk: hasil alarm inferensi valid mengendalikan output fisik. Perangkat eksternal membentuk pola 1 detik ON / 1 detik OFF secara internal.";
+  help.classList.remove("bad");
 }
 
 function setStepState(identified) {
@@ -416,6 +565,14 @@ function render() {
   $("rootGatewayCard").hidden = !isClusterHead;
   $("saveRootGatewayBtn").hidden = !isClusterHead;
   $("gatewayNetworkCard").hidden = active !== "gw";
+  if (active === "gw") {
+    const reportedTransport = info?.mqttTransport;
+    if (reportedTransport === "tls" || reportedTransport === "non_tls") {
+      $("mqttTransportSelect").value = reportedTransport;
+    }
+    updateMqttTlsFields();
+  }
+  renderAlarmControls(info);
   $("testDeviceBtn").disabled = !identified || testDeviceRunning;
   $("testDeviceBtn").textContent = testDeviceRunning ? "Memeriksa…" : "Test Device";
   $("testDeviceCard").classList.toggle("testing", testDeviceRunning);
@@ -426,10 +583,11 @@ function render() {
   if (identified && !lastTestReport) {
     $("testDeviceSummary").textContent = "Siap diperiksa";
   }
-  const pack = overview.packages?.[active];
-  $("packageVersion").textContent = pack?.firmwareVersion
-    ? `Firmware ${pack.firmwareVersion} / ${pack.environment} terdeteksi`
-    : "Versi firmware tidak terbaca";
+  $("packageVersion").textContent = identified && info?.firmwareVersion
+    ? `Firmware aktif ${info.firmwareVersion} — dibaca dari perangkat ${state.port || "terhubung"}`
+    : identified
+      ? "Perangkat aktif tidak melaporkan firmwareVersion."
+      : "Versi firmware aktif belum dibaca; versi package ditampilkan setelah environment dipilih saat upload.";
   const testPassed = setStepState(identified);
   $("readyDeviceCopy").textContent = testPassed
     ? "Test Device lulus. Perangkat siap digunakan."
@@ -470,6 +628,68 @@ async function action(path, body, success) {
   } catch (error) {
     show(error.message, "bad");
   }
+}
+
+async function runAlarmAction(path, body, success) {
+  if (alarmActionBusy) return;
+  alarmActionBusy = true;
+  renderAlarmControls(overview.devices?.gld?.info);
+  try {
+    show("Memproses kontrol alarm — menunggu ACK dan GLD_STATUS_JSON baru...");
+    const result = await api(path, body);
+    if (result?.readback) overview.devices.gld = result.readback;
+    render();
+    show(success, "ok");
+    await refresh(true);
+  } catch (error) {
+    show(error.message, "bad");
+  } finally {
+    alarmActionBusy = false;
+    renderAlarmControls(overview.devices?.gld?.info);
+  }
+}
+
+async function applyAlarmMode() {
+  const alarm = validGldAlarmControl(overview.devices?.gld?.info);
+  if (active !== "gld" || !alarm) return show("Kontrol alarm terkunci karena status firmware belum lengkap.", "bad");
+  const mode = $("alarmModeSelect").value;
+  if (mode === "manual" && alarm.mode !== "manual") {
+    const approved = await requestConfirmation({
+      title: "Aktifkan MANUAL test mode?",
+      message: "MANUAL hanya untuk pengujian dan memisahkan output fisik dari alarm inferensi. Mode ini dan perintah ON/OFF hanya berlaku selama sesi berjalan; reboot selalu mengembalikan AUTO. Telemetri/radio tetap melaporkan inferensi sebenarnya.",
+      actionLabel: "Aktifkan MANUAL",
+      phrase: "MANUAL",
+    });
+    if (!approved) {
+      $("alarmModeSelect").value = alarm.mode;
+      return;
+    }
+  }
+  await runAlarmAction(
+    "/api/simple/config/alarm-mode",
+    { device: "gld", mode },
+    `Mode alarm ${mode.toUpperCase()} diterapkan untuk sesi ini dan terverifikasi dari status baru. Reboot kembali ke AUTO.`,
+  );
+}
+
+async function setManualAlarm(enabled) {
+  const alarm = validGldAlarmControl(overview.devices?.gld?.info);
+  if (active !== "gld" || !alarm || alarm.mode !== "manual" || alarm.sessionOnly !== true) {
+    return show("Pilih dan verifikasi mode MANUAL untuk sesi ini sebelum menguji output alarm.", "bad");
+  }
+  if (enabled) {
+    const approved = await requestConfirmation({
+      title: "Nyalakan test alarm fisik?",
+      message: "GLD akan memberi output steady 24 V. Perangkat alarm eksternal akan menjalankan pola 1 detik ON / 1 detik OFF secara internal.",
+      actionLabel: "Test Alarm ON",
+    });
+    if (!approved) return;
+  }
+  await runAlarmAction(
+    "/api/simple/config/manual-alarm",
+    { device: "gld", enabled },
+    `Output test alarm ${enabled ? "ON" : "OFF"} telah di-ACK dan diverifikasi dari status baru.`,
+  );
 }
 
 function buildTabs() {
@@ -644,9 +864,26 @@ async function init() {
   $("saveIdBtn").onclick = () => action("/api/simple/config/id", { device: active, value: $("idInput").value }, "ID tersimpan dan terverifikasi.");
   $("saveFreqBtn").onclick = () => action("/api/simple/config/star-frequency", { device: active, freqMHz: $("freqInput").value }, "STAR Frequency tersimpan dan terverifikasi.");
   $("saveTargetChBtn").onclick = () => action("/api/simple/config/target-ch", { device: "gld", value: $("targetChInput").value }, "Target CH tersimpan dan terverifikasi.");
+  $("applyAlarmModeBtn").onclick = applyAlarmMode;
+  $("manualAlarmOnBtn").onclick = () => setManualAlarm(true);
+  $("manualAlarmOffBtn").onclick = () => setManualAlarm(false);
   $("saveRootGatewayBtn").onclick = () => action("/api/simple/config/root-gateway", { device: "ch", value: $("rootGatewayInput").value }, "Root Gateway tersimpan dan terverifikasi.");
   $("saveWifiBtn").onclick = () => action("/api/simple/config/wifi", { device: "gw", ssid: $("wifiSsidInput").value, password: $("wifiPasswordInput").value }, "Wi-Fi tersimpan dan terverifikasi.");
-  $("saveMqttBtn").onclick = () => action("/api/simple/config/mqtt", { device: "gw", host: $("mqttHostInput").value, port: $("mqttPortInput").value, username: $("mqttUsernameInput").value, password: $("mqttPasswordInput").value }, "MQTT tersimpan dan terverifikasi.");
+  $("mqttTransportSelect").onchange = updateMqttTlsFields;
+  $("saveMqttBtn").onclick = () => action(
+    "/api/simple/config/mqtt",
+    {
+      device: "gw",
+      host: $("mqttHostInput").value,
+      port: $("mqttPortInput").value,
+      username: $("mqttUsernameInput").value,
+      password: $("mqttPasswordInput").value,
+      mqttTransport: $("mqttTransportSelect").value,
+      tlsCaPem: $("mqttTransportSelect").value === "tls" ? $("mqttTlsCaInput").value : "",
+      ntpHost: $("mqttTransportSelect").value === "tls" ? $("mqttNtpHostInput").value : "",
+    },
+    "MQTT tersimpan dan terverifikasi.",
+  );
   $("expertBtn").onclick = () => location.assign(`http://${location.hostname}:${active === "gld" ? 5174 : active === "ch" ? 5273 : 5373}/`);
   await refresh();
   await loadPorts();

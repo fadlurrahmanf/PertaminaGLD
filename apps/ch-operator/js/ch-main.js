@@ -56,13 +56,13 @@ function loraPayload(prefix) {
 
 function applyStarLora() {
   const p = loraPayload("star");
-  if (!(p.freqMHz >= 900 && p.freqMHz <= 930)) return showBanner("STAR freq must be 900–930 MHz.", "error");
+  if (!(p.freqMHz >= 920 && p.freqMHz <= 923)) return showBanner("STAR freq must be 920–923 MHz.", "error");
   applyAndAlert(`SET_STAR_LORA_JSON ${JSON.stringify(p)}`, "SET_STAR_LORA_JSON", "STAR LoRa");
 }
 
 function applyMeshLora() {
   const p = loraPayload("mesh");
-  if (!(p.freqMHz >= 900 && p.freqMHz <= 930)) return showBanner("MESH freq must be 900–930 MHz.", "error");
+  if (!(p.freqMHz >= 920 && p.freqMHz <= 923)) return showBanner("MESH freq must be 920–923 MHz.", "error");
   applyAndAlert(`SET_MESH_LORA_JSON ${JSON.stringify(p)}`, "SET_MESH_LORA_JSON", "MESH LoRa");
 }
 

@@ -220,6 +220,12 @@ constexpr uint8_t SENSOR_COUNT = 8;
 constexpr const char* SENSOR_NAMES[SENSOR_COUNT] = {
     "MQ8", "MQ135", "MQ3", "MQ5", "MQ4", "MQ7", "MQ6", "MQ2",
 };
+// Legacy GLD has no documented H1..H8 connector naming.  The GLD2-only
+// isolated-MCP diagnostic is compiled into the shared main, so retain a
+// harmless placeholder table for that unreachable legacy branch.
+constexpr const char* SENSOR_HEADERS[SENSOR_COUNT] = {
+    "n/a", "n/a", "n/a", "n/a", "n/a", "n/a", "n/a", "n/a",
+};
 
 constexpr uint8_t TCA9548A_ADDR = 0x71;
 constexpr uint8_t MCP4725_ADDR = 0x60;

@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 2,
+  "packageType": "pertamina-gld-prebuilt-firmware",
+  "deviceId": "ANY",
+  "boardProfile": "Gateway Rectangle (kecil) ESP32-S3 R8N16 / MQTT TLS",
+  "environment": "gw_small_tls",
+  "firmwareVersion": "0.2.0",
+  "protocolVersion": "0.2.0",
+  "configSchemaVersion": "0.1.0",
+  "chip": "esp32s3",
+  "baud": 921600,
+  "createdAtUtc": "20260825T152131Z",
+  "source": {
+    "gitCommit": "569a0cd8cece4e04a0101a80a579d31bccf68331",
+    "gitTreeState": "dirty",
+    "gitTreeStateScope": "firmware/",
+    "firmwareTreeSnapshotSha256": "7a9a15cf5917c5ae8a8dac259105c69c844b163d13f92576b78401c406cfbeff",
+    "platformioCoreVersion": "PlatformIO post-build hook",
+    "platformioIniSha256": "ac628ad20cdbc1b84b301f809065201a37e886e34cc31640f72770bdda76a3d6",
+    "buildCommand": "pio run -e gw_small_tls",
+    "packagedAtUtc": "20260825T152131Z"
+  },
+  "flashSetSha256": "3666829bd21a2ab6e341234a4448a7ce7c881a7d9e0fdb45f0883d2e17b35b5e",
+  "flashFiles": [
+    {
+      "path": "bootloader.bin",
+      "offset": "0x00000000",
+      "size": 15104,
+      "sha256": "2a71d69b471e20c2bac7fb469f3c6a807b3ebee780e348e5889db0da849ca363"
+    },
+    {
+      "path": "partitions.bin",
+      "offset": "0x00008000",
+      "size": 3072,
+      "sha256": "bd0f7954aca2ef7d925ee21aaa1f3dc8822d1d6ce5cbbd26a135e5886bfff6ce"
+    },
+    {
+      "path": "boot_app0.bin",
+      "offset": "0x0000E000",
+      "size": 8192,
+      "sha256": "f94c5d786a7a8fab06ac5d10e33bf37711a6697636dc037559ea19cc410a17f0"
+    },
+    {
+      "path": "firmware.bin",
+      "offset": "0x00010000",
+      "size": 971568,
+      "sha256": "368313378c18fbcfd3534704b568daa802b35705fc5f14fd9113434a2acaaec5"
+    }
+  ],
+  "boardShape": "rectangle",
+  "mqttTransport": "tls"
+}

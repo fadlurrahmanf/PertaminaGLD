@@ -68,3 +68,24 @@ to system Python. This keeps Gateway serial/MQTT dependencies available.
 
 Each app is still fully usable standalone via its own `run-*-operator.bat` if
 you only need one of them.
+
+## CH and Gateway board packages
+
+Simple Hub requires an explicit hardware choice before every new CH or Gateway
+upload:
+
+- **Rectangle (kecil)**: `ch_small`, `gw_small`, or `gw_small_tls`
+- **Circle (besar)**: `ch_large`, `gw_large`, or `gw_large_tls`
+
+Gateway also requires an explicit **MQTT non-TLS** or **MQTT over TLS** choice.
+The browser submits only the board and transport choices; `bridge.py` derives
+the package environment through a strict allow-list and verifies that the
+returned manifest declares that exact environment before flashing. Missing or
+partial selections are rejected; the backend never guesses a legacy `ch`/`gw`
+board profile.
+
+TLS configuration is fail-closed. A connected Gateway must explicitly report
+`mqttTransport="tls"` and `tlsCapable=true`; the operator must then provide a
+valid public Root CA PEM and NTP host. The Hub sends these as `tlsCaPem` and
+`ntpHost`, never enables insecure TLS, and does not include the CA or MQTT
+credentials in its activity log or response payload.

@@ -849,8 +849,19 @@ button.is-busy::before {
   min-width: 0;
 }
 
+.sensor-telemetry-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 .sensor-telemetry-title h2 {
   margin: 0;
+}
+
+.sensor-board-profile {
+  white-space: nowrap;
 }
 
 .environment-readout {
@@ -956,6 +967,7 @@ button.is-busy::before {
 
 .sensor-power-all-controls {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 5px;
 }
@@ -963,6 +975,21 @@ button.is-busy::before {
 .sensor-power-all-controls button {
   min-height: 25px;
   padding: 3px 7px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.alarm-mode-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.alarm-mode-control select {
+  min-height: 25px;
+  padding: 2px 24px 2px 7px;
   font-family: var(--font-mono);
   font-size: 10px;
 }

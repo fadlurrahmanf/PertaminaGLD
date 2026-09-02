@@ -22,7 +22,29 @@ HUB_DIR = Path(__file__).resolve().parent
 APPS_DIR = HUB_DIR.parent
 LIB_DIR = APPS_DIR / "lib"
 FIRMWARE_PACKAGES_DIR = HUB_DIR / "firmware-packages"
-REQUIRED_ENVIRONMENTS = ("gld", "gldFieldtest", "ch", "chFieldtest", "gw")
+REQUIRED_ENVIRONMENTS = (
+    # Exact environments exposed by the Simple Hub selection catalog. Legacy
+    # aliases may remain on disk, but they must never make readyForFlash true
+    # when a selectable package is missing or corrupt.
+    "gld_model_1",
+    "gld_model_2",
+    "gld_model_3",
+    "gld_v2",
+    "ch_small",
+    "ch_large",
+    "gw_small",
+    "gw_large",
+    "gw_small_tls",
+    "gw_large_tls",
+)
+PACKAGE_METADATA_BY_ENVIRONMENT = {
+    "ch_small": {"boardShape": "rectangle"},
+    "ch_large": {"boardShape": "circle"},
+    "gw_small": {"boardShape": "rectangle", "mqttTransport": "non_tls"},
+    "gw_large": {"boardShape": "circle", "mqttTransport": "non_tls"},
+    "gw_small_tls": {"boardShape": "rectangle", "mqttTransport": "tls"},
+    "gw_large_tls": {"boardShape": "circle", "mqttTransport": "tls"},
+}
 
 
 def find_esptool_entry() -> Path | None:
@@ -107,9 +129,19 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _verify_manifest(manifest_path: Path) -> None:
+def _verify_manifest(manifest_path: Path, expected_environment: str | None = None) -> None:
     """Raise ValueError/OSError/... if this package's manifest or files don't check out."""
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if expected_environment is not None and manifest.get("environment") != expected_environment:
+        raise ValueError(
+            f"manifest environment {manifest.get('environment')!r} does not match {expected_environment!r}"
+        )
+    if expected_environment is not None:
+        for field, expected_value in PACKAGE_METADATA_BY_ENVIRONMENT.get(expected_environment, {}).items():
+            if manifest.get(field) != expected_value:
+                raise ValueError(
+                    f"manifest {field} {manifest.get(field)!r} does not match {expected_value!r}"
+                )
     flash_files = manifest.get("flashFiles")
     if not isinstance(flash_files, list) or not flash_files:
         raise ValueError("manifest has no flashFiles entries")
@@ -132,20 +164,17 @@ def _firmware_packages_check() -> dict[str, str]:
 
     broken: dict[str, str] = {}
     for env in REQUIRED_ENVIRONMENTS:
-        env_dir = FIRMWARE_PACKAGES_DIR / env
-        manifests = sorted(env_dir.rglob("manifest.json")) if env_dir.is_dir() else []
-        if not manifests:
+        # Upload and package-catalog paths always consume the exact `latest`
+        # package. An older archived manifest must never make readiness green
+        # when that selected package is missing or corrupt.
+        manifest_path = FIRMWARE_PACKAGES_DIR / env / "latest" / "manifest.json"
+        if not manifest_path.is_file():
             broken[env] = "no package found"
             continue
-        last_error = "unknown error"
-        for manifest_path in manifests:
-            try:
-                _verify_manifest(manifest_path)
-                break
-            except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:
-                last_error = str(exc) or type(exc).__name__
-        else:
-            broken[env] = last_error
+        try:
+            _verify_manifest(manifest_path, env)
+        except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:
+            broken[env] = str(exc) or type(exc).__name__
 
     if not broken:
         return _check(

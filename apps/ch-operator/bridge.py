@@ -442,7 +442,7 @@ def validate_firmware_package(
         "firmwareVersion", "protocolVersion", "configSchemaVersion", "chip", "baud",
         "createdAtUtc", "source", "flashSetSha256", "flashFiles",
     }
-    allowed_top = required_top
+    allowed_top = required_top | {"boardShape"}
     missing = sorted(required_top - set(manifest))
     unknown = sorted(set(manifest) - allowed_top)
     if missing:
@@ -457,6 +457,13 @@ def validate_firmware_package(
     manifest_env = str(manifest["environment"]).strip()
     if not SAFE_PACKAGE_FILE_RE.fullmatch(manifest_env) or manifest_env != env:
         raise RuntimeError(f"manifest environment {manifest_env!r} does not match selected env {env!r}")
+    expected_board_shape = {
+        "ch_large": "circle", "ch_small": "rectangle",
+    }.get(manifest_env)
+    if expected_board_shape is not None and manifest.get("boardShape") != expected_board_shape:
+        raise RuntimeError(
+            f"manifest boardShape {manifest.get('boardShape')!r} does not match {expected_board_shape!r}"
+        )
     package_device_id = str(manifest["deviceId"]).strip().upper()
     if package_device_id != "ANY" and (not re.fullmatch(r"[0-9A-F]{4}", package_device_id) or package_device_id != target_id):
         raise RuntimeError(f"manifest deviceId {package_device_id!r} does not match target ID {target_id!r}")
@@ -481,27 +488,59 @@ def validate_firmware_package(
     source = manifest["source"]
     required_source = {
         "gitCommit", "gitTreeState", "platformioCoreVersion", "platformioIniSha256",
-        "buildCommand", "buildStartedAtUtc", "buildCompletedAtUtc",
+        "buildCommand",
     }
-    if not isinstance(source, dict) or set(source) != required_source:
+    allowed_source = required_source | {
+        "firmwareTreeSnapshotSha256", "firmwareSourceTreeSha256",
+        "gitTreeStateScope",
+        "packagedAtUtc", "buildStartedAtUtc", "buildCompletedAtUtc",
+    }
+    if not isinstance(source, dict) or not required_source.issubset(source) or not set(source).issubset(allowed_source):
         raise RuntimeError("manifest source identity is incomplete or has unsupported fields")
     if not re.fullmatch(r"[0-9a-f]{40}", str(source["gitCommit"])):
         raise RuntimeError("manifest source.gitCommit must be a full lowercase Git SHA")
-    automated_package = source["gitTreeState"] in {"build-output", "operator-hub-auto"}
-    if source["gitTreeState"] != "clean" and not automated_package:
-        raise RuntimeError("manifest source tree must be clean or an Operator Hub auto-package")
-    if not automated_package and not SEMVER_RE.fullmatch(str(source["platformioCoreVersion"])):
+    tree_state = str(source["gitTreeState"])
+    automated_package = tree_state in {"build-output", "operator-hub-auto"}
+    post_build_package = source["platformioCoreVersion"] == "PlatformIO post-build hook"
+    if tree_state not in {"clean", "dirty", "build-output", "operator-hub-auto"}:
+        raise RuntimeError("manifest source.gitTreeState is invalid")
+    tree_state_scope = source.get("gitTreeStateScope")
+    if tree_state_scope is not None and tree_state_scope != "firmware/":
+        raise RuntimeError("manifest source.gitTreeStateScope is invalid")
+    snapshot_hash = source.get("firmwareTreeSnapshotSha256")
+    legacy_source_hash = source.get("firmwareSourceTreeSha256")
+    if snapshot_hash is not None and not SHA256_RE.fullmatch(str(snapshot_hash)):
+        raise RuntimeError("manifest firmware tree-snapshot SHA-256 is invalid")
+    if legacy_source_hash is not None and not SHA256_RE.fullmatch(str(legacy_source_hash)):
+        raise RuntimeError("manifest legacy firmware source-tree SHA-256 is invalid")
+    if snapshot_hash is not None and legacy_source_hash is not None:
+        raise RuntimeError("manifest must use exactly one firmware tree identity field")
+    if tree_state == "dirty" and snapshot_hash is None and legacy_source_hash is None:
+        raise RuntimeError("dirty source packages require a firmware tree identity SHA-256")
+    if not automated_package and not post_build_package and not SEMVER_RE.fullmatch(str(source["platformioCoreVersion"])):
         raise RuntimeError("manifest PlatformIO Core version is invalid")
     if not SHA256_RE.fullmatch(str(source["platformioIniSha256"])):
         raise RuntimeError("manifest platformio.ini SHA-256 is invalid")
-    expected_build = f"pio run -e {manifest_env}" if automated_package else f"pio run -e {manifest_env} -t clean && pio run -e {manifest_env}"
+    expected_build = f"pio run -e {manifest_env}" if automated_package or post_build_package else f"pio run -e {manifest_env} -t clean && pio run -e {manifest_env}"
     if source["buildCommand"] != expected_build:
         raise RuntimeError("manifest buildCommand does not describe the required clean build")
-    for field in ("buildStartedAtUtc", "buildCompletedAtUtc"):
-        if not re.fullmatch(r"\d{8}T\d{6}Z", str(source[field])):
-            raise RuntimeError(f"manifest source.{field} is invalid")
-    if str(source["buildCompletedAtUtc"]) < str(source["buildStartedAtUtc"]):
-        raise RuntimeError("manifest build completion precedes build start")
+    has_packaged_at = "packagedAtUtc" in source
+    has_legacy_build_times = (
+        "buildStartedAtUtc" in source or "buildCompletedAtUtc" in source
+    )
+    if has_packaged_at == has_legacy_build_times:
+        raise RuntimeError("manifest source must use packagedAtUtc or the legacy build timestamp pair")
+    if has_packaged_at:
+        if not re.fullmatch(r"\d{8}T\d{6}Z", str(source["packagedAtUtc"])):
+            raise RuntimeError("manifest source.packagedAtUtc is invalid")
+    else:
+        if "buildStartedAtUtc" not in source or "buildCompletedAtUtc" not in source:
+            raise RuntimeError("manifest legacy build timestamps are incomplete")
+        for field in ("buildStartedAtUtc", "buildCompletedAtUtc"):
+            if not re.fullmatch(r"\d{8}T\d{6}Z", str(source[field])):
+                raise RuntimeError(f"manifest source.{field} is invalid")
+        if str(source["buildCompletedAtUtc"]) < str(source["buildStartedAtUtc"]):
+            raise RuntimeError("manifest build completion precedes build start")
 
     flash_files = manifest["flashFiles"]
     if not isinstance(flash_files, list) or not 1 <= len(flash_files) <= 16:

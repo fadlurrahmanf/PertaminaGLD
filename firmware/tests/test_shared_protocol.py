@@ -1012,6 +1012,25 @@ def test_gld_unified_runtime_scaffolds_present():
     assert 'emitCommandAck("RUN_BOOT_CHECK", "ok", "running boot diagnostics", false)' in unified_src
     assert "runBootHardwareDiagnostics(power.externalPower)" in unified_src
     assert "RUN_BOOT_CHECK_DONE" in unified_src
+    assert "void enableNonBatteryRuntimeSensorPower" in unified_src
+    assert "bool recoverGld2RootI2cForPcf" in unified_src
+    assert "Wire.end();" in unified_src
+    assert "OUTPUT_OPEN_DRAIN" in unified_src
+    assert "clearPulses < 9" in unified_src
+    assert "GLD2_ROOT_I2C_RECOVERY source=%s sda=%d/%d scl=%d/%d pulses=%u tcaDisable=%u" in unified_src
+    assert 'recoverGld2RootI2cForPcf("boot_i2c_probe")' in unified_src
+    assert "rootI2cNotIdle=1 skipProbe=1" in unified_src
+    assert "rootDevicesNoAck=1 skipFullScan=1" in unified_src
+    assert "rootI2cReadyForMcpControl" in unified_src
+    assert "BOOT_PROBE_MCP_CONTROL=skip reason=root_i2c_unavailable" in unified_src
+    assert 'recoverGld2RootI2cForPcf("current_state_i2c_probe")' in unified_src
+    assert "GLD2_CURRENT_I2C rootDevicesNoAck=1 skipRest=1" in unified_src
+    assert 'strcmp(reason, "tca_boot_fail") == 0' in unified_src
+    assert "BOOT_RECOVERY_DISABLED reason=%s action=keep_running" in unified_src
+    assert "pcfRootAck=0 skipDriver=1" in unified_src
+    assert "pcfReady = pcf8574.begin(Wire);" in unified_src
+    assert "liveOutputs == pgl::gld::board::PCF8574_ALL_LOAD_SWITCHES_ON" in unified_src
+    assert "GLD2_RUNTIME_SENSOR_POWER source=%s outputs=0x%02X write=%u read=%u enabled=%u attempts=%u" in unified_src
     assert 'caps["runBootCheck"] = true' in unified_src
     assert "runAdsMcpSweepFromSerialCommand" in unified_src
     assert 'emitCommandAck("RUN_ADS_MCP_SWEEP", "ok", "running ADS/MCP sweep", false)' in unified_src
@@ -1071,8 +1090,11 @@ def test_gld_unified_runtime_scaffolds_present():
     assert "BOOT_PROBE_ADS=start" in unified_src
     assert '"reason=%s DRDY=%d ST=0x%02X"' in unified_src
     assert "reason=%s drdy=%d pd=%d pu=%d misoPD=%d misoPU=%d cs=%d sync=%d status=0x%02X" in unified_src
-    assert "BOOT_PROBE_I2C=done tcaOk=%u mcpOkCount=%u/%u" in unified_src
+    assert "BOOT_PROBE_I2C=done fullScan=%u allAddresses=%s allCount=%u tcaOk=%u pcfOk=%u mcpOkCount=%u/%u" in unified_src
     assert "mcpMask=0x%02X" in unified_src
+    assert "void probeSelectedMcp4725" in unified_src
+    assert "probeSelectedMcp4725(addresses, sizeof(addresses), count)" in unified_src
+    assert "scanSelectedI2cBus" not in unified_src
     assert "BOOT_PROBE_MCP_CONTROL=done tested=%u dacReady=%u writeOkCount=%u/%u" in unified_src
     assert "writeMask=0x%02X" in unified_src
     assert "BootDiagnosticsResult runBootHardwareDiagnostics" in unified_src
@@ -1288,11 +1310,19 @@ def test_gld_protocol_reference_matches_active_firmware():
     assert "confidence >= 40" not in protocol_ref
     assert "confidence ≥ 40" not in protocol_ref
 
+    # The shared runtime retains the active-low legacy-output branch, while
+    # GLD2 uses the audited GPIO40/Q4 active-HIGH path with EN_BOOST sequencing.
     assert "ACTIVE_LOW_OUTPUT_ON = LOW" in unified_src
     assert "ACTIVE_LOW_OUTPUT_OFF = HIGH" in unified_src
-    assert "PIN_ALARM_LAMP, alarm ? ACTIVE_LOW_OUTPUT_ON : ACTIVE_LOW_OUTPUT_OFF" in unified_src
-    assert "PIN_BUZZER,     alarm ? ACTIVE_LOW_OUTPUT_ON : ACTIVE_LOW_OUTPUT_OFF" in unified_src
-    assert "PIN_STATUS_LED, alarm ? ACTIVE_LOW_OUTPUT_ON : ACTIVE_LOW_OUTPUT_OFF" in unified_src
+    assert "#if PGL_GLD_BOARD_PROFILE_GLD2" in unified_src
+    alarm_driver_start = unified_src.rindex("void drivePhysicalAlarmOutputs(bool enabled) {")
+    alarm_driver = unified_src[
+        alarm_driver_start:
+        unified_src.index("void driveAlarmOutputs(bool inferenceAlarm) {", alarm_driver_start)
+    ]
+    assert alarm_driver.index("PIN_ALARM_ENABLE_BOOST, HIGH") < alarm_driver.index("PIN_ALARM_LAMP, HIGH")
+    assert alarm_driver.index("PIN_ALARM_LAMP, LOW") < alarm_driver.index("PIN_ALARM_ENABLE_BOOST, LOW")
+    assert "enabled ? ACTIVE_LOW_OUTPUT_ON : ACTIVE_LOW_OUTPUT_OFF" in alarm_driver
     assert "Alarm lamp, buzzer, and status LED are active-low" in final_design
 
 
@@ -1497,9 +1527,9 @@ def test_version_constants_format():
     for version in versions:
         assert re.fullmatch(r"\d+\.\d+\.\d+", version), version
 
-    assert 'GLD_FIRMWARE_VERSION = "0.8.18"' in header
-    assert 'CH_FIRMWARE_VERSION = "0.7.3"' in header
-    assert 'GATEWAY_FIRMWARE_VERSION = "0.1.4"' in header
+    assert 'GLD_FIRMWARE_VERSION = "0.8.19"' in header
+    assert 'CH_FIRMWARE_VERSION = "0.8.0"' in header
+    assert 'GATEWAY_FIRMWARE_VERSION = "0.2.0"' in header
     assert 'PROTOCOL_VERSION = "0.2.0"' in header
     assert 'CONFIG_SCHEMA_VERSION = "0.1.0"' in header
 

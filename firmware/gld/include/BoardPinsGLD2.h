@@ -2,9 +2,8 @@
 
 #include <cstdint>
 
-// Standalone pin map for docs/wiring/gld-project-ver2-2026-07-01/source-GLD2.zip.
-// This header is intentionally not included by the active firmware.  It is a
-// separate source-of-truth for a later dedicated GLD2 build profile.
+// Pin map verified against docs/wiring/gld-project-ver2-2026-07-01/source-GLD2.zip.
+// The active gld_v2 profile includes this map through BoardPins.h.
 namespace pgl::gld::board::gld2 {
 
 constexpr int PIN_SPI_SCK = 12;

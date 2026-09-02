@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>GLD Operator</title>
-    <link rel="stylesheet" href="./style.css?v=20260819-sht40-1">
+    <link rel="stylesheet" href="./style.css?v=20260825-alarm-auto-manual-1">
   </head>
   <body>
     <div class="shell">
@@ -56,7 +56,10 @@
             <div class="module-head module-head--wrap">
               <div class="sensor-telemetry-heading">
                 <div class="sensor-telemetry-title">
-                  <h2>Sensor Telemetry</h2>
+                  <div class="sensor-telemetry-title-row">
+                    <h2>Sensor Telemetry</h2>
+                    <span id="detectedBoardProfile" class="tag sensor-board-profile" aria-live="polite">Board: menunggu</span>
+                  </div>
                   <div id="environmentReadout" class="environment-readout" aria-live="polite">
                     <span class="environment-readout__label">SHT40 · 0x44</span>
                     <span id="environmentTemperature">Suhu —</span>
@@ -75,12 +78,20 @@
                   <div class="sensor-power-all-controls" aria-label="Sensor module power controls">
                     <button id="sensorPowerAllOnBtn" type="button" disabled>ON All</button>
                     <button id="sensorPowerAllOffBtn" type="button" disabled>OFF All</button>
+                    <label class="alarm-mode-control" for="alarmModeSelect">
+                      <span>Alarm</span>
+                      <select id="alarmModeSelect" aria-label="Physical alarm control mode" disabled>
+                        <option value="auto">AUTO</option>
+                        <option value="manual">MANUAL TEST</option>
+                      </select>
+                    </label>
+                    <button id="alarmModeApplyBtn" type="button" disabled>Apply Mode</button>
                     <button id="manualAlarmOnBtn" type="button" class="primary" disabled>Alarm ON</button>
                     <button id="manualAlarmOffBtn" type="button" disabled>Alarm OFF</button>
-                    <span id="sensorPowerAvailability" class="tag">menunggu status</span>
-                    <span id="manualAlarmAvailability" class="tag">alarm menunggu status</span>
+                    <span id="controlAvailability" class="tag">Menunggu status board &amp; alarm</span>
                   </div>
                   <small id="sensorPowerStatus" class="sensor-power-status">Hubungkan GLD2 untuk membaca status power modul sensor.</small>
+                  <small id="alarmControlStatus" class="sensor-power-status" aria-live="polite">Menunggu status alarm dari firmware.</small>
                 </div>
                 <div class="telemetry-result" aria-live="polite">
                   <div class="telemetry-result-item">
@@ -707,6 +718,6 @@
       </div>
     </div>
 
-  <script type="module" src="./js/main.js?v=20260824-telemetry-eight-channels-1"></script>
+  <script type="module" src="./js/main.js?v=20260825-alarm-auto-manual-1"></script>
   </body>
 </html>

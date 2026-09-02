@@ -17,6 +17,7 @@
 #include "BoardPins.h"
 #include "FirmwareVersion.h"
 #include "GldAds1256Reader.h"
+#include "GldAlarmControl.h"
 #include "GldCommandParser.h"
 #include "GldDacMux.h"
 #include "GldDatasetValidator.h"
@@ -288,11 +289,13 @@ uint32_t lastMqttAttemptMs = 0;
 uint32_t lastStatusMs    = 0;
 uint32_t nextNullingRetryMs = 0;
 bool     lastAlarm       = false;
-// Temporary GLD2 commissioning policy: physical ALARM is commanded only by
-// SET_MANUAL_ALARM_JSON, never by inference. This state is intentionally
-// volatile so a reboot always starts with the alarm output OFF.
-constexpr bool MANUAL_ALARM_ONLY = PGL_GLD_BOARD_PROFILE_GLD2;
+// Product default is AUTO. Both the MANUAL test mode and its ON/OFF command
+// are session-only, so every reboot restores AUTO with the manual command OFF.
+// Inference alarm state continues to update in either mode.
+pgl::gld::GldAlarmControlMode alarmControlMode =
+    pgl::gld::GldAlarmControlMode::Auto;
 bool manualAlarmCommanded = false;
+bool physicalAlarmCommanded = false;
 uint8_t  nullingProfileId = 0;
 uint8_t  nullingAttemptCount = 0;
 pgl::gld::GldNullingConfig nullingConfig{};
@@ -770,6 +773,9 @@ void resetRuntimeConfigDefaults() {
     copyBounded(runtimeConfig.topicRoot, sizeof(runtimeConfig.topicRoot), DEFAULT_TOPIC_ROOT);
     clearRuntimeAesKey();
     runtimeConfig.lastDownlinkCommandId = 0;
+    // Alarm commissioning state is deliberately independent of NVS.
+    alarmControlMode = pgl::gld::GldAlarmControlMode::Auto;
+    manualAlarmCommanded = false;
     resetRuntimeLoraDefaults();
     buildRuntimeTopics();
 }
@@ -845,7 +851,7 @@ void loadRuntimeConfig() {
         logPrintf("GLD_LORA_CONFIG_LOAD=DEFAULT reason=%s\n", loraReason);
     }
     buildRuntimeTopics();
-    logPrintf("GLD_APP_CONFIG_LOAD=%s deviceId=%s nodeId=0x%04X chId=0x%04X ssid=%s mqttHost=%s mqttPort=%u topicRoot=%s aesKey=%u aesKeySource=%s keyId=%u lastCmdId=%u lora=%.3f/%.2f/SF%u/CR%u sync=0x%02X power=%d preamble=%u\n",
+    logPrintf("GLD_APP_CONFIG_LOAD=%s deviceId=%s nodeId=0x%04X chId=0x%04X ssid=%s mqttHost=%s mqttPort=%u topicRoot=%s aesKey=%u aesKeySource=%s keyId=%u lastCmdId=%u lora=%.3f/%.2f/SF%u/CR%u sync=0x%02X power=%d preamble=%u alarmMode=%s alarmModeSessionOnly=1\n",
               runtimeConfigValid() ? "OK" : "DEFAULT_UNCONFIGURED",
               runtimeConfig.deviceId,
               runtimeConfig.nodeId,
@@ -864,7 +870,8 @@ void loadRuntimeConfig() {
               runtimeConfig.loraCr,
               runtimeConfig.loraSyncWord,
               runtimeConfig.loraTxPowerDbm,
-              runtimeConfig.loraPreamble);
+              runtimeConfig.loraPreamble,
+              pgl::gld::gldAlarmControlModeName(alarmControlMode));
 }
 
 bool saveRuntimeConfig() {
@@ -1278,7 +1285,8 @@ void addCapabilities(JsonObject caps) {
     caps["nullingConfig"] = "SET_NULLING_CONFIG_JSON thresholdV,minFinalV";
     caps["sessionMcp"] = "SET_SESSION_MCP_JSON channel,code (volatile inference-only)";
     caps["sensorModulePower"] = "SET_SENSOR_POWER_JSON channel,enabled or all,enabled (GLD2 PCF8574/TPS22919 only; volatile)";
-    caps["manualAlarm"] = "SET_MANUAL_ALARM_JSON enabled (GLD2 only; inference output disabled)";
+    caps["alarmControlMode"] = "SET_ALARM_MODE_JSON mode=auto|manual (all GLD boards; volatile; boot default auto)";
+    caps["manualAlarm"] = "SET_MANUAL_ALARM_JSON enabled (all GLD boards in manual mode; volatile physical-output test)";
     caps["modelNullingBinding"] = "BIND_MODEL_TO_ACTIVE_NULLING_PROFILE";
     caps["qcTracking"] = "SET_QC_RESULT_JSON channel,pass,timestamp / GET_QC_STATUS";
     caps["nullingSingleChannel"] = "RUN_NULLING_SINGLE_JSON channel";
@@ -1404,8 +1412,14 @@ void addTelemetry(JsonObject telemetry) {
     telemetry["gasClass"] = lastResult.gasClass;
     telemetry["gasName"] = pgl::gld::gldGasClassName(lastResult.gasClass);
     telemetry["confidence"] = lastResult.confidence;
-    telemetry["alarm"] = MANUAL_ALARM_ONLY ? manualAlarmCommanded : lastAlarm;
+    // `alarm` remains the inference/product alarm; a manual hardware test
+    // must never be misreported as a detected gas alarm.
+    telemetry["alarm"] = lastAlarm;
     telemetry["inferenceAlarm"] = lastAlarm;
+    telemetry["alarmControlMode"] =
+        pgl::gld::gldAlarmControlModeName(alarmControlMode);
+    telemetry["manualAlarmCommanded"] = manualAlarmCommanded;
+    telemetry["physicalAlarmCommanded"] = physicalAlarmCommanded;
 
     JsonArray voltage = telemetry.createNestedArray("sensorVoltage");
     JsonArray gain = telemetry.createNestedArray("sensorGain");
@@ -1752,8 +1766,29 @@ void emitStatusJson() {
     }
     addSensorPowerJson(doc.as<JsonObject>());
     JsonObject alarmControl = doc.createNestedObject("alarmControl");
-    alarmControl["manualOnly"] = MANUAL_ALARM_ONLY;
+    // AUTO/MANUAL is a common Operator Hub contract.  The physical drive is
+    // board-specific: GLD1 uses its active-low lamp/buzzer/LED outputs while
+    // GLD2 uses EN_BOOST followed by its ALARM output.
+    alarmControl["available"] = true;
+    alarmControl["mode"] = pgl::gld::gldAlarmControlModeName(alarmControlMode);
+    alarmControl["defaultMode"] = "auto";
+    alarmControl["modePersisted"] = false;
+    alarmControl["sessionOnly"] = true;
+    alarmControl["resetsToAutoOnBoot"] = true;
+    // Compatibility for an older console: manual controls are available only
+    // while the selected mode is MANUAL.
+    alarmControl["manualOnly"] =
+        alarmControlMode == pgl::gld::GldAlarmControlMode::Manual;
     alarmControl["manualCommanded"] = manualAlarmCommanded;
+    alarmControl["inferenceAlarm"] = lastAlarm;
+    alarmControl["physicalCommanded"] = physicalAlarmCommanded;
+#if PGL_GLD_BOARD_PROFILE_GLD2
+    alarmControl["outputDrive"] = "steady_24v";
+    alarmControl["externalDevicePattern"] = "self_pulsed_1s_on_1s_off";
+#else
+    alarmControl["outputDrive"] = "active_low_lamp_buzzer_led";
+    alarmControl["externalDevicePattern"] = "board_outputs_follow_command";
+#endif
     doc["alarmLatched"] = pgl::gld::readGldAlarmLatched();
 
     if (doc.overflowed()) {
@@ -2230,7 +2265,7 @@ void onSetSessionMcpJson(const char* payload) {
     emitStatusJson();
 }
 
-void driveManualAlarmOutputs(bool enabled);
+void driveAlarmOutputs(bool inferenceAlarm);
 
 // GLD2 routes PCF8574 P0..P7 to the active-HIGH EN inputs of the eight
 // TPS22919 sensor-module load switches.  This is intentionally a volatile
@@ -2292,6 +2327,47 @@ void onSetSensorPowerJson(const char* payload) {
     emitStatusJson();
 }
 
+void onSetAlarmModeJson(const char* payload) {
+    StaticJsonDocument<96> doc;
+    if (deserializeJson(doc, payload)) {
+        emitCommandAck("SET_ALARM_MODE", "error", "invalid json", false);
+        return;
+    }
+    if (!doc.containsKey("mode") || !doc["mode"].is<const char*>()) {
+        emitCommandAck("SET_ALARM_MODE", "rejected", "mode must be auto or manual", false);
+        return;
+    }
+    const char* requested = doc["mode"].as<const char*>();
+    pgl::gld::GldAlarmControlMode nextMode;
+    if (strcmp(requested, "auto") == 0) {
+        nextMode = pgl::gld::GldAlarmControlMode::Auto;
+    } else if (strcmp(requested, "manual") == 0) {
+        nextMode = pgl::gld::GldAlarmControlMode::Manual;
+    } else {
+        emitCommandAck("SET_ALARM_MODE", "rejected", "mode must be auto or manual", false);
+        return;
+    }
+
+    // Apply this sequence even when the requested mode equals the current
+    // mode. Re-applying MANUAL must never leave a prior test output ON, and
+    // re-applying AUTO must resolve the output from current inference state.
+    alarmControlMode = nextMode;
+    manualAlarmCommanded = false;
+    driveAlarmOutputs(lastAlarm);
+
+    logPrintf("GLD_ALARM_MODE_APPLY mode=%s sessionOnly=1 persisted=0 inferenceAlarm=%u manualCommanded=%u physicalCommanded=%u\n",
+              pgl::gld::gldAlarmControlModeName(alarmControlMode),
+              lastAlarm ? 1u : 0u,
+              manualAlarmCommanded ? 1u : 0u,
+              physicalAlarmCommanded ? 1u : 0u);
+    emitCommandAck("SET_ALARM_MODE", "ok",
+                   alarmControlMode == pgl::gld::GldAlarmControlMode::Auto
+                       ? "AUTO active; manual test cleared; valid inference controls physical alarm; boot default remains AUTO"
+                       : "MANUAL TEST active for this session only; test output cleared OFF; reboot restores AUTO",
+                   false);
+    emitStatusJson();
+}
+
 void onSetManualAlarmJson(const char* payload) {
     StaticJsonDocument<64> doc;
     if (deserializeJson(doc, payload)) {
@@ -2302,20 +2378,21 @@ void onSetManualAlarmJson(const char* payload) {
         emitCommandAck("SET_MANUAL_ALARM", "rejected", "enabled boolean is required", false);
         return;
     }
-#if !PGL_GLD_BOARD_PROFILE_GLD2
-    emitCommandAck("SET_MANUAL_ALARM", "rejected", "manual alarm test requires GLD2 hardware", false);
-    return;
-#else
+    if (alarmControlMode != pgl::gld::GldAlarmControlMode::Manual) {
+        emitCommandAck("SET_MANUAL_ALARM", "rejected", "select manual alarm mode before testing output", false);
+        return;
+    }
     manualAlarmCommanded = doc["enabled"].as<bool>();
-    driveManualAlarmOutputs(manualAlarmCommanded);
-    logPrintf("GLD_ALARM_MANUAL_APPLY enabled=%u inferenceOutput=disabled\n",
-              manualAlarmCommanded ? 1u : 0u);
+    driveAlarmOutputs(lastAlarm);
+    logPrintf("GLD_ALARM_MANUAL_APPLY enabled=%u inferenceAlarm=%u inferencePhysicalOutput=suppressed physicalCommanded=%u persisted=0\n",
+              manualAlarmCommanded ? 1u : 0u,
+              lastAlarm ? 1u : 0u,
+              physicalAlarmCommanded ? 1u : 0u);
     emitCommandAck("SET_MANUAL_ALARM", "ok",
-                   manualAlarmCommanded ? "manual alarm ON; inference output disabled"
-                                        : "manual alarm OFF; inference output disabled",
+                   manualAlarmCommanded ? "manual alarm test ON; physical output commanded"
+                                        : "manual alarm test OFF",
                    false);
     emitStatusJson();
-#endif
 }
 
 // This command is deliberately separate from SET_MODE. It records an
@@ -2762,6 +2839,9 @@ void handleSerialCommand(const pgl::gld::GldSerialCommand& command) {
             break;
         case pgl::gld::GldSerialCommandType::SetSensorPowerJson:
             onSetSensorPowerJson(command.payload);
+            break;
+        case pgl::gld::GldSerialCommandType::SetAlarmModeJson:
+            onSetAlarmModeJson(command.payload);
             break;
         case pgl::gld::GldSerialCommandType::SetManualAlarmJson:
             onSetManualAlarmJson(command.payload);
@@ -3423,17 +3503,20 @@ void armBootReportRecoveryIfNeeded(const BootAdsReport& adsReport,
         return;
     }
 
-    // A missing MCP4725 must remain visible to the operator, but it is not a
-    // safe reason to repeatedly reboot a 24 V GLD2 while its sensor modules
-    // are being powered, wired, or diagnosed one by one.
-    if (strcmp(reason, "mcp_boot_fail") == 0) {
+    // Sensor-path I2C failures must remain visible to the operator, but they
+    // are not safe reasons to repeatedly reboot a 24 V GLD2 while modules are
+    // being powered, wired, or diagnosed.  In particular, a missing root TCA
+    // makes every MCP absent too; rebooting cannot restore an I2C ACK and
+    // starves the serial diagnostic/control path.
+    if (strcmp(reason, "mcp_boot_fail") == 0 ||
+        strcmp(reason, "tca_boot_fail") == 0) {
         bootRecoveryArmed = false;
         bootRecoveryRestartAllowed = false;
         bootRecoveryNonAdsFailure = true;
         bootRecoveryRestartCount = 0;
         copyBounded(bootRecoveryReason, sizeof(bootRecoveryReason), reason);
         setRecoveryReason(reason);
-        logPrintln("BOOT_RECOVERY_DISABLED reason=mcp_boot_fail action=keep_running");
+        logPrintf("BOOT_RECOVERY_DISABLED reason=%s action=keep_running\n", reason);
         return;
     }
 
@@ -3534,6 +3617,8 @@ bool tcaDisableAll() {
     return ok;
 }
 
+bool recoverGld2RootI2cForPcf(const char* source);
+
 void probeInputPullLevels(int pin, int& pulldownLevel, int& pullupLevel) {
     pinMode(static_cast<uint8_t>(pin), INPUT_PULLDOWN);
     delay(2);
@@ -3609,38 +3694,48 @@ void scanI2cBus(BootI2cReport& report) {
     if (used == 0) copyBounded(report.detectedAddresses, sizeof(report.detectedAddresses), "none");
 }
 
-void scanSelectedI2cBus(char* addresses, size_t addressesSize, uint8_t& count) {
-    count = 0;
-    size_t used = 0;
-    for (uint8_t addr = 0x03; addr <= 0x77; ++addr) {
-        if (!i2cAck(addr)) continue;
-        ++count;
-        const int written = snprintf(addresses + used, addressesSize - used,
-                                     "%s0x%02X", used == 0 ? "" : ",", addr);
-        if (written < 0 || static_cast<size_t>(written) >= addressesSize - used) {
-            copyBounded(addresses, addressesSize, "truncated");
-            return;
-        }
-        used += static_cast<size_t>(written);
-    }
-    if (used == 0) copyBounded(addresses, addressesSize, "none");
+void probeSelectedMcp4725(char* addresses, size_t addressesSize, uint8_t& count) {
+    // Each selected TCA branch is a known MCP4725-only test path.  Scanning
+    // every address on every branch can take nearly a minute when absent I2C
+    // addresses consume the configured timeout.  Probe the sole required
+    // address instead; the root-bus report remains the full 0x03..0x77 scan.
+    const bool mcpAck = i2cAck(pgl::gld::board::MCP4725_ADDR);
+    count = mcpAck ? 1 : 0;
+    copyBounded(addresses, addressesSize, mcpAck ? "0x60" : "none");
 }
 
 BootI2cReport probeBootI2c(bool scanFullBus) {
     BootI2cReport report{};
-    Wire.begin(pgl::gld::board::PIN_I2C_SDA, pgl::gld::board::PIN_I2C_SCL);
-#if defined(ARDUINO_ARCH_ESP32)
-    Wire.setTimeOut(BOOT_I2C_TIMEOUT_MS);
-#endif
+    // Do this before the full root-address scan.  On a wedged I2C bus,
+    // scanning 0x03..0x77 may block the command indefinitely; the line-level
+    // recovery instead emits an actionable failure and lets normal runtime
+    // continue.
+    if (!recoverGld2RootI2cForPcf("boot_i2c_probe")) {
+        logPrintln("GLD2_MCP_BOOT_SCAN rootI2cNotIdle=1 skipProbe=1");
+        return report;
+    }
     firmwareServiceTick();
 
     // A GLD2 boot report is an isolated electrical diagnostic. Leaving every
     // TPS22919 enabled (PCF=0xFF) permits all external modules to load or hold
     // their downstream I2C branches at once. Start from deterministic 0x00;
     // the report owns no pre-boot power state and deliberately leaves 0x00.
-    bool bootIsolationActive = false;
+    // Probe the two required root devices before the diagnostic full scan.
+    // If neither ACKs while the physical lines are idle, scanning every I2C
+    // address adds no information and can block boot on this board.
     if (pgl::gld::board::HAS_PCF8574) {
         report.pcfOk = i2cAck(pgl::gld::board::PCF8574_ADDR);
+    }
+    const bool directTcaAck = i2cAck(pgl::gld::board::TCA9548A_ADDR);
+    report.tcaOk = directTcaAck;
+    if (!report.pcfOk && !directTcaAck) {
+        copyBounded(report.detectedAddresses, sizeof(report.detectedAddresses), "root_no_ack");
+        logPrintln("GLD2_MCP_BOOT_SCAN rootDevicesNoAck=1 skipFullScan=1");
+        return report;
+    }
+
+    bool bootIsolationActive = false;
+    if (pgl::gld::board::HAS_PCF8574) {
         if (report.pcfOk && !pcfReady) {
             pcfReady = pcf8574.begin(Wire);
             logPrintf("GLD2_MCP_BOOT_SCAN pcfReinitBeforeIsolation=%u\n", pcfReady ? 1u : 0u);
@@ -3663,7 +3758,6 @@ BootI2cReport probeBootI2c(bool scanFullBus) {
     }
     const bool rootScanSawTca = report.fullBusScanPerformed &&
                                 strstr(report.detectedAddresses, "0x71") != nullptr;
-    const bool directTcaAck = i2cAck(pgl::gld::board::TCA9548A_ADDR);
     report.tcaOk = directTcaAck || rootScanSawTca;
     if (rootScanSawTca && !directTcaAck) {
         logPrintln("GLD2_MCP_BOOT_SCAN usingRootTcaAck=1 directTcaAck=0");
@@ -3699,7 +3793,7 @@ BootI2cReport probeBootI2c(bool scanFullBus) {
             char addresses[80]{};
             uint8_t count = 0;
             if (selected) {
-                scanSelectedI2cBus(addresses, sizeof(addresses), count);
+                probeSelectedMcp4725(addresses, sizeof(addresses), count);
             } else {
                 copyBounded(addresses, sizeof(addresses), "not_selected");
             }
@@ -3761,19 +3855,29 @@ BootI2cReport probeBootI2c(bool scanFullBus) {
 // DAC code. A powered-off module is intentionally reported as unavailable.
 BootI2cReport probeCurrentStateI2c(bool scanFullBus) {
     BootI2cReport report{};
-    Wire.begin(pgl::gld::board::PIN_I2C_SDA, pgl::gld::board::PIN_I2C_SCL);
-#if defined(ARDUINO_ARCH_ESP32)
-    Wire.setTimeOut(BOOT_I2C_TIMEOUT_MS);
-#endif
+    if (!recoverGld2RootI2cForPcf("current_state_i2c_probe")) {
+        logPrintln("GLD2_CURRENT_I2C rootI2cNotIdle=1 skipProbe=1");
+        return report;
+    }
     firmwareServiceTick();
+    // Bound the observation just like boot diagnostics.  With no root-device
+    // ACK there cannot be a reachable downstream MCP, so do not perform the
+    // optional broad scan or a final TCA write that can stall this command.
+    report.tcaOk = i2cAck(pgl::gld::board::TCA9548A_ADDR);
+    report.pcfOk = pgl::gld::board::HAS_PCF8574 &&
+                   i2cAck(pgl::gld::board::PCF8574_ADDR);
+    if (!report.tcaOk && !report.pcfOk) {
+        copyBounded(report.detectedAddresses, sizeof(report.detectedAddresses), "root_no_ack");
+        logPrintln("GLD2_CURRENT_I2C rootDevicesNoAck=1 skipRest=1");
+        return report;
+    }
     if (scanFullBus) {
         report.fullBusScanPerformed = true;
         scanI2cBus(report);
     }
     const bool rootScanSawTca = report.fullBusScanPerformed &&
                                 strstr(report.detectedAddresses, "0x71") != nullptr;
-    report.tcaOk = i2cAck(pgl::gld::board::TCA9548A_ADDR) || rootScanSawTca;
-    report.pcfOk = pgl::gld::board::HAS_PCF8574 && i2cAck(pgl::gld::board::PCF8574_ADDR);
+    report.tcaOk = report.tcaOk || rootScanSawTca;
 
     for (uint8_t sensor = 0; sensor < pgl::gld::board::SENSOR_COUNT; ++sensor) {
         firmwareServiceTick();
@@ -3872,7 +3976,16 @@ BootDiagnosticsResult runBootHardwareDiagnostics(bool externalPower, bool automa
               bootBoolMask(result.i2c.mcpOk));
 
     logPrintln("BOOT_PROBE_MCP_CONTROL=start");
-    result.mcpControl = testBootMcpControl(externalPower);
+    const bool rootI2cReadyForMcpControl = result.i2c.tcaOk &&
+        (!pgl::gld::board::HAS_PCF8574 || result.i2c.pcfOk);
+    if (rootI2cReadyForMcpControl) {
+        result.mcpControl = testBootMcpControl(externalPower);
+    } else {
+        // Do not let a root I2C outage turn a reported boot failure into a
+        // long blocking TCA library call.  The I2C report already carries the
+        // authoritative root failure; MCP control is explicitly not tested.
+        logPrintln("BOOT_PROBE_MCP_CONTROL=skip reason=root_i2c_unavailable");
+    }
 
     lastBootAdsDrdyLevel = result.ads.drdyLevel;
     lastBootAdsDrdyPulldownLevel = result.ads.drdyPulldownLevel;
@@ -3924,31 +4037,119 @@ uint8_t bootBoolMask(const bool values[pgl::gld::board::SENSOR_COUNT]) {
     return mask;
 }
 
+// Recreate the ESP I2C controller after boot diagnostics.  The diagnostic
+// walks the TCA branches and an unresponsive downstream module can leave the
+// controller in a timeout state even though PCF8574 and TCA9548A themselves
+// are root-bus devices.  Do not require the TCA disable write to ACK here: the
+// following PCF begin/readback is the authoritative sensor-power gate.
+bool recoverGld2RootI2cForPcf(const char* source) {
+#if PGL_GLD_BOARD_PROFILE_GLD2
+    Wire.end();
+    // Release both open-drain lines before reattaching the ESP I2C peripheral.
+    // If a timed-out peripheral/device has SDA held LOW, issue the standard
+    // bounded 9-clock bus-clear sequence followed by an I2C STOP.  This never
+    // writes a PCF/TCA register; it only returns the physical bus to idle.
+    pinMode(pgl::gld::board::PIN_I2C_SDA, INPUT_PULLUP);
+    pinMode(pgl::gld::board::PIN_I2C_SCL, INPUT_PULLUP);
+    delayMicroseconds(20);
+    const int sdaBefore = digitalRead(pgl::gld::board::PIN_I2C_SDA);
+    const int sclBefore = digitalRead(pgl::gld::board::PIN_I2C_SCL);
+    uint8_t clearPulses = 0;
+    if (sdaBefore == LOW && sclBefore == HIGH) {
+        pinMode(pgl::gld::board::PIN_I2C_SCL, OUTPUT_OPEN_DRAIN);
+        digitalWrite(pgl::gld::board::PIN_I2C_SCL, HIGH);
+        for (; clearPulses < 9 &&
+             digitalRead(pgl::gld::board::PIN_I2C_SDA) == LOW; ++clearPulses) {
+            digitalWrite(pgl::gld::board::PIN_I2C_SCL, LOW);
+            delayMicroseconds(5);
+            digitalWrite(pgl::gld::board::PIN_I2C_SCL, HIGH);
+            delayMicroseconds(5);
+        }
+    }
+    // Generate STOP only while SCL is released HIGH; if a device holds SCL
+    // LOW, release SDA too and let the subsequent timeout report that fact.
+    if (digitalRead(pgl::gld::board::PIN_I2C_SCL) == HIGH) {
+        pinMode(pgl::gld::board::PIN_I2C_SDA, OUTPUT_OPEN_DRAIN);
+        digitalWrite(pgl::gld::board::PIN_I2C_SDA, LOW);
+        delayMicroseconds(5);
+        digitalWrite(pgl::gld::board::PIN_I2C_SDA, HIGH);
+        delayMicroseconds(5);
+    }
+    pinMode(pgl::gld::board::PIN_I2C_SDA, INPUT_PULLUP);
+    pinMode(pgl::gld::board::PIN_I2C_SCL, INPUT_PULLUP);
+    delayMicroseconds(20);
+    const int sdaAfter = digitalRead(pgl::gld::board::PIN_I2C_SDA);
+    const int sclAfter = digitalRead(pgl::gld::board::PIN_I2C_SCL);
+    const bool busIdle = sdaAfter == HIGH && sclAfter == HIGH;
+    Wire.begin(pgl::gld::board::PIN_I2C_SDA, pgl::gld::board::PIN_I2C_SCL);
+#if defined(ARDUINO_ARCH_ESP32)
+    Wire.setTimeOut(BOOT_I2C_TIMEOUT_MS);
+#endif
+    const bool tcaDisableOk = busIdle && tcaDisableAll();
+    logPrintf("GLD2_ROOT_I2C_RECOVERY source=%s sda=%d/%d scl=%d/%d pulses=%u tcaDisable=%u\n",
+              source != nullptr ? source : "unknown", sdaBefore, sdaAfter,
+              sclBefore, sclAfter, static_cast<unsigned>(clearPulses),
+              tcaDisableOk ? 1u : 0u);
+    return busIdle;
+#else
+    (void)source;
+    return true;
+#endif
+}
+
 // Boot diagnostics deliberately end with every TPS22919 OFF.  In a non-battery
 // runtime, normal operation then explicitly enables every sensor rail.  This
 // is a runtime policy decision, not restoration of an unknown pre-boot state.
 void enableNonBatteryRuntimeSensorPower(const char* source) {
 #if PGL_GLD_BOARD_PROFILE_GLD2
-    if (batteryPowerMode || !pgl::gld::board::HAS_PCF8574 || !pcfReady) {
+    if (batteryPowerMode || !pgl::gld::board::HAS_PCF8574) {
         return;
     }
     // Boot DAC control ends after a TCA channel selection. Return to the root
-    // bus before updating PCF8574, otherwise the very first non-battery
-    // runtime power-on can NACK and leaves Nulling with every sensor OFF.
+    // bus before updating PCF8574.  PCF begin can have failed before the boot
+    // diagnostic selected and released the TCA branches, so it must also be
+    // retried here rather than silently preserving the all-OFF power-up mask.
     bool enabled = false;
+    bool writeOk = false;
+    bool readOk = false;
+    uint8_t liveOutputs = pcf8574.outputs();
     uint8_t attempts = 0;
     for (; attempts < 3 && !enabled; ++attempts) {
-        (void)tcaDisableAll();
-        enabled = pcf8574.writeOutputs(pgl::gld::board::PCF8574_ALL_LOAD_SWITCHES_ON);
-        if (!enabled) {
-            pcfReady = pcf8574.begin(Wire);
-            serviceDelay(20);
+        if (!recoverGld2RootI2cForPcf(source)) {
+            pcfReady = false;
+            continue;
         }
+        // Do not enter the PCF library when its root address has already
+        // failed to ACK.  Some library begin/read paths can wait long enough
+        // to trip the ESP watchdog, turning a visible I2C fault into a reboot.
+        if (!i2cAck(pgl::gld::board::PCF8574_ADDR)) {
+            pcfReady = false;
+            logPrintf("GLD2_RUNTIME_SENSOR_POWER source=%s pcfRootAck=0 skipDriver=1\n",
+                      source != nullptr ? source : "boot");
+            break;
+        }
+        // Always rebuild the PCF driver after Wire.end/begin.  Reusing its
+        // previous cache after an I2C controller timeout can report a stale
+        // zero mask or make the first post-diagnostic write fail.
+        pcfReady = pcf8574.begin(Wire);
+        serviceDelay(20);
+        if (!pcfReady) continue;
+        writeOk = pcf8574.writeOutputs(pgl::gld::board::PCF8574_ALL_LOAD_SWITCHES_ON);
+        if (!writeOk) {
+            pcfReady = false;
+            continue;
+        }
+        serviceDelay(20);
+        readOk = pcf8574.readOutputs(liveOutputs);
+        enabled = readOk &&
+                  liveOutputs == pgl::gld::board::PCF8574_ALL_LOAD_SWITCHES_ON;
+        if (!readOk) pcfReady = false;
     }
     pcfAllLoadSwitchesOn = enabled;
-    logPrintf("GLD2_RUNTIME_SENSOR_POWER source=%s outputs=0x%02X enabled=%u attempts=%u\n",
-              source != nullptr ? source : "boot",
-              pcf8574.outputs(), enabled ? 1u : 0u, static_cast<unsigned>(attempts));
+    logPrintf("GLD2_RUNTIME_SENSOR_POWER source=%s outputs=0x%02X write=%u read=%u enabled=%u attempts=%u\n",
+              source != nullptr ? source : "boot", liveOutputs,
+              writeOk ? 1u : 0u, readOk ? 1u : 0u,
+              enabled ? 1u : 0u, static_cast<unsigned>(attempts));
 #else
     (void)source;
 #endif
@@ -4944,6 +5145,9 @@ void runBootCheckFromSerialCommand() {
                       modeReady,
                       modeDetail);
     runExternalPowerBootSensorSamples(power);
+    if (!batteryPowerMode) {
+        enableNonBatteryRuntimeSensorPower("run_boot_check_after_report");
+    }
     emitStatusJson();
     logPrintln("RUN_BOOT_CHECK_DONE");
 }
@@ -5271,7 +5475,7 @@ bool nonceProvider(uint8_t nonce[pgl::protocol::GLD_AES_GCM_NONCE_SIZE], void* c
     return true;
 }
 
-void driveManualAlarmOutputs(bool enabled) {
+void drivePhysicalAlarmOutputs(bool enabled) {
 #if PGL_GLD_BOARD_PROFILE_GLD2
     // GPIO40 drives Q4's gate through R94. Q4's R41 gate pulldown means:
     // ON  = EN_BOOST HIGH, then ALARM HIGH.
@@ -5284,28 +5488,26 @@ void driveManualAlarmOutputs(bool enabled) {
         optionalDigitalWrite(pgl::gld::board::PIN_ALARM_ENABLE_BOOST, LOW);
     }
 #else
-    (void)enabled;
+    optionalDigitalWrite(pgl::gld::board::PIN_ALARM_LAMP,
+                         enabled ? ACTIVE_LOW_OUTPUT_ON : ACTIVE_LOW_OUTPUT_OFF);
+    optionalDigitalWrite(pgl::gld::board::PIN_BUZZER,
+                         enabled ? ACTIVE_LOW_OUTPUT_ON : ACTIVE_LOW_OUTPUT_OFF);
+    optionalDigitalWrite(pgl::gld::board::PIN_STATUS_LED,
+                         enabled ? ACTIVE_LOW_OUTPUT_ON : ACTIVE_LOW_OUTPUT_OFF);
 #endif
+    physicalAlarmCommanded = enabled;
 }
 
-void driveAlarmOutputs(bool alarm) {
-    if (MANUAL_ALARM_ONLY) {
-        driveManualAlarmOutputs(manualAlarmCommanded);
-        return;
-    }
+void driveAlarmOutputs(bool inferenceAlarm) {
     if (FIELDTEST_MODEL_UNVERIFIED) {
-        alarm = false;
+        inferenceAlarm = false;
     }
-    optionalDigitalWrite(pgl::gld::board::PIN_ALARM_LAMP, alarm ? ACTIVE_LOW_OUTPUT_ON : ACTIVE_LOW_OUTPUT_OFF);
-    optionalDigitalWrite(pgl::gld::board::PIN_BUZZER,     alarm ? ACTIVE_LOW_OUTPUT_ON : ACTIVE_LOW_OUTPUT_OFF);
-    optionalDigitalWrite(pgl::gld::board::PIN_STATUS_LED, alarm ? ACTIVE_LOW_OUTPUT_ON : ACTIVE_LOW_OUTPUT_OFF);
+    const bool requested = pgl::gld::gldPhysicalAlarmCommanded(
+        alarmControlMode, inferenceAlarm, manualAlarmCommanded);
+    drivePhysicalAlarmOutputs(requested);
 }
 
 bool updateAlarmOutputs(bool alarm) {
-    if (MANUAL_ALARM_ONLY) {
-        driveManualAlarmOutputs(manualAlarmCommanded);
-        return true;
-    }
     if (FIELDTEST_MODEL_UNVERIFIED) {
         driveAlarmOutputs(false);
         logPrintf("GLD_MODEL_BENCH_ALARM_SUPPRESSED requested=%u\n", alarm ? 1 : 0);
@@ -5319,8 +5521,10 @@ bool updateAlarmOutputs(bool alarm) {
     const bool persisted = pgl::gld::writeGldAlarmLatched(alarm);
     if (!persisted && !alarm) {
         // Clearing must survive the imminent TPL5010 power cut. If NVS cannot
-        // commit the clear state, keep the physical alarm fail-safe and retry
-        // on a later valid scan instead of reviving a stale latch next boot.
+        // commit the clear state, keep the logical alarm latched and retry on
+        // a later valid scan instead of reviving a stale latch next boot. AUTO
+        // keeps the physical alarm on; MANUAL continues to suppress inference
+        // output by explicit operator policy.
         logPrintln("GLD_ALARM_PERSIST=FAIL requested=clear failSafe=latched");
         driveAlarmOutputs(true);
         return false;
@@ -5331,7 +5535,11 @@ bool updateAlarmOutputs(bool alarm) {
     if (!persisted) {
         logPrintln("GLD_ALARM_PERSIST=FAIL requested=set physicalAlarm=on");
     }
-    logPrintf("GLD_ALARM_OUTPUT alarm=%u\n", alarm ? 1 : 0);
+    logPrintf("GLD_ALARM_OUTPUT inferenceAlarm=%u mode=%s manualCommanded=%u physicalCommanded=%u\n",
+              alarm ? 1u : 0u,
+              pgl::gld::gldAlarmControlModeName(alarmControlMode),
+              manualAlarmCommanded ? 1u : 0u,
+              physicalAlarmCommanded ? 1u : 0u);
     return persisted;
 }
 

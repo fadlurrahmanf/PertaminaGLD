@@ -16,7 +16,7 @@ function integerInRange(value, label, min, max) {
 
 export function validateMeshLoraConfig(raw) {
   const freqMHz = finiteNumber(raw.freqMHz, "Frequency");
-  if (freqMHz < 900 || freqMHz > 930) throw new Error("Frequency must be 900–930 MHz.");
+  if (freqMHz < 920 || freqMHz > 923) throw new Error("Frequency must be 920–923 MHz.");
 
   const bwKHz = finiteNumber(raw.bwKHz, "Bandwidth");
   if (!MESH_BANDWIDTHS_KHZ.includes(bwKHz)) {

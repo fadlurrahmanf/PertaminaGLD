@@ -93,6 +93,8 @@ let recoveryRequested = false;
 let skippedPollLogged = false;
 const serialCommandQueue = [];
 let sensorPowerApplyPending = false;
+let alarmModeApplyPending = false;
+let alarmModeSelectionDirty = false;
 let manualAlarmApplyPending = false;
 let pendingSensorPowerConfirmation = null;
 const SENSOR_POWER_CONFIRM_TIMEOUT_MS = 3000;
@@ -212,7 +214,15 @@ export function resetDeviceSnapshot() {
   setText("powerMode", "Unknown");
   setText("batteryValue", "Unknown");
   setText("loraValue", "Unknown");
+  renderDetectedBoardProfile(null, null);
   updateAlarmState(false);
+  // Do not leave GLD2-only module-power controls visible while a board is
+  // disconnected or a different board (for example GLD1) is being selected.
+  renderSensorPowerControls(null);
+  // A disconnected or newly selected device must never inherit enabled alarm
+  // controls from the preceding status snapshot.
+  renderManualAlarmControls(null);
+  renderControlAvailability(null, null);
   renderSensorCheck();
   resetQcStatus();
   syncDeviceSummary();
@@ -224,6 +234,7 @@ function updateInfo(info) {
   setText("modeValue", info.mode);
   setText("firmwareValue", info.firmwareVersion || info.firmwareName);
   setBadge(elements.protocolLabel, info.protocolVersion || "app serial", "ok");
+  renderDetectedBoardProfile(info, state.status);
   syncLoraConfigFields(info.starLora);
   syncDeviceSummary();
   if (info.appConfig) {
@@ -239,6 +250,7 @@ function updateStatus(status) {
   setText("deviceId", status.deviceId || state.info?.deviceId);
   if (status.targetChId) setText("currentChAddress", status.targetChId);
   setText("modeValue", status.mode);
+  renderDetectedBoardProfile(status, status);
 
   const telemetry = status.telemetry || {};
   setText("gasValue", telemetry.gasName || formatGas(telemetry.gasClass));
@@ -258,6 +270,7 @@ function updateStatus(status) {
   renderSensorPowerControls(status.sensorPower || status.pcf8574);
   confirmSensorPowerState(status.sensorPower || status.pcf8574);
   renderManualAlarmControls(status.alarmControl);
+  renderControlAvailability(status.sensorPower || status.pcf8574, status.alarmControl);
 
   const model = status.model || {};
   const bindingStatus = $("modelNullingBindingStatus");
@@ -979,10 +992,32 @@ function renderEnvironment(environment) {
   }
 }
 
+function renderDetectedBoardProfile(snapshot, status) {
+  const badge = $("detectedBoardProfile");
+  if (!badge) return;
+
+  const boardProfile = String(snapshot?.boardProfile || state.info?.boardProfile || "");
+  const sensorPower = status?.sensorPower || status?.pcf8574;
+  const hasPcf = sensorPower?.available === true;
+  const profileKnown = boardProfile.length > 0;
+  const isGld2 = hasPcf || /GLD2/i.test(boardProfile);
+
+  badge.textContent = !profileKnown && !hasPcf
+    ? "Board: menunggu"
+    : isGld2
+      ? "Board: GLD2 · PCF8574"
+      : "Board: GLD1";
+  badge.className = `tag sensor-board-profile ${isGld2 || profileKnown ? "tag--ok" : "tag--warn"}`;
+  badge.title = profileKnown
+    ? `Profil firmware: ${boardProfile}`
+    : isGld2
+      ? "Terdeteksi dari capability PCF8574 pada firmware."
+      : "Menunggu profil board dari firmware.";
+}
+
 function renderSensorPowerControls(sensorPower) {
-  const availability = $("sensorPowerAvailability");
   const status = $("sensorPowerStatus");
-  if (!availability || !status) return;
+  if (!status) return;
 
   const available = sensorPower?.available === true;
   const ready = sensorPower?.ready === true;
@@ -990,8 +1025,14 @@ function renderSensorPowerControls(sensorPower) {
   const channels = Array.isArray(sensorPower?.channels) ? sensorPower.channels : null;
   const enChannels = Array.isArray(sensorPower?.enChannels) ? sensorPower.enChannels : null;
   const validOutputs = Number.isInteger(outputs) && outputs >= 0 && outputs <= 0xFF;
-  availability.textContent = !available ? "tidak tersedia" : ready ? "PCF8574 siap" : "PCF8574 tidak siap";
-  availability.className = `tag ${available && ready ? "tag--ok" : "tag--warn"}`;
+  // Module-power switching is a GLD2 hardware capability (PCF8574 driving
+  // EN0–EN7), not a degraded GLD1 feature. Keep the Running flow clean on
+  // GLD1: no inactive ON/OFF controls or PCF warning. They appear only after
+  // the connected firmware positively reports this capability.
+  for (const id of ["sensorPowerAllOnBtn", "sensorPowerAllOffBtn", "sensorPowerStatus"]) {
+    const element = $(id);
+    if (element) element.hidden = !available;
+  }
   $("sensorPowerAllOnBtn").disabled = sensorPowerApplyPending || !available || !ready;
   $("sensorPowerAllOffBtn").disabled = sensorPowerApplyPending || !available || !ready;
   status.textContent = !available
@@ -1002,20 +1043,99 @@ function renderSensorPowerControls(sensorPower) {
 
 }
 
+function renderControlAvailability(sensorPower, alarmControl) {
+  const indicator = $("controlAvailability");
+  if (!indicator) return;
+
+  const sensorPowerAvailable = sensorPower?.available === true;
+  const sensorPowerReady = sensorPower?.ready === true;
+  const alarm = alarmControlContract(alarmControl);
+  const profile = String(state.info?.boardProfile || "");
+  const board = sensorPowerAvailable || /GLD2/i.test(profile)
+    ? "GLD2"
+    : profile ? "GLD1" : "Board";
+  const parts = [board];
+  if (sensorPowerAvailable) {
+    parts.push(sensorPowerReady ? "Daya: PCF siap" : "Daya: PCF tidak siap");
+  }
+  parts.push(!alarm.available
+    ? "Alarm: menunggu"
+    : alarm.legacyManualOnly
+      ? "Alarm: LEGACY MANUAL"
+      : `Alarm: ${alarm.mode === "manual" ? "MANUAL TEST" : "AUTO"}`);
+  indicator.textContent = parts.join(" · ");
+  indicator.className = `tag ${alarm.available && (!sensorPowerAvailable || sensorPowerReady) ? "tag--ok" : "tag--warn"}`;
+}
+
+function alarmControlContract(alarmControl) {
+  const hasExplicitMode = alarmControl?.mode === "auto" || alarmControl?.mode === "manual";
+  // GLD2 firmware before the AUTO/MANUAL contract reported only
+  // {manualOnly:true, manualCommanded:<bool>}. Keep its already-implemented
+  // SET_MANUAL_ALARM_JSON path usable, but never infer support for the newer
+  // SET_ALARM_MODE_JSON command from manualOnly alone.
+  const legacyManualOnly = !hasExplicitMode && alarmControl?.manualOnly === true;
+  const available = alarmControl?.available === true ||
+    (legacyManualOnly && alarmControl?.available !== false);
+  const mode = hasExplicitMode
+    ? alarmControl.mode
+    : legacyManualOnly ? "manual" : "auto";
+  const manualOutputAllowed = available && (legacyManualOnly || mode === "manual");
+  return { hasExplicitMode, legacyManualOnly, available, mode, manualOutputAllowed };
+}
+
 function renderManualAlarmControls(alarmControl) {
   const on = $("manualAlarmOnBtn");
   const off = $("manualAlarmOffBtn");
-  const availability = $("manualAlarmAvailability");
-  if (!on || !off || !availability) return;
+  const modeSelect = $("alarmModeSelect");
+  const modeApply = $("alarmModeApplyBtn");
+  const status = $("alarmControlStatus");
+  if (!on || !off || !modeSelect || !modeApply) return;
 
-  const available = alarmControl?.manualOnly === true;
+  const contract = alarmControlContract(alarmControl);
+  const { hasExplicitMode, legacyManualOnly, available, mode, manualOutputAllowed } = contract;
   const commanded = alarmControl?.manualCommanded === true;
-  on.disabled = manualAlarmApplyPending || !available;
-  off.disabled = manualAlarmApplyPending || !available;
-  availability.textContent = !available
-    ? "alarm manual tidak tersedia"
-    : commanded ? "ALARM MANUAL ON" : "alarm manual siap";
-  availability.className = `tag ${available ? (commanded ? "tag--warn" : "tag--ok") : "tag--warn"}`;
+  const inferenceAlarm = alarmControl?.inferenceAlarm === true;
+  const outputDescription = alarmControl?.outputDrive === "active_low_lamp_buzzer_led"
+    ? "lampu/buzzer/LED GLD1"
+    : "24 V steady GLD2";
+  const physicalCommanded = legacyManualOnly
+    ? commanded
+    : alarmControl?.physicalCommanded === true;
+  if (modeSelect.dataset.alarmModeChangeWired !== "1") {
+    modeSelect.addEventListener("change", () => {
+      alarmModeSelectionDirty = true;
+    });
+    modeSelect.dataset.alarmModeChangeWired = "1";
+  }
+  // A 500 ms status poll must not undo the operator's new selection before
+  // Apply Mode is clicked. Clear the dirty flag only after firmware reports
+  // that exact selection back as authoritative status.
+  if (legacyManualOnly) {
+    // A dirty selection can belong to a different/newer device. The legacy
+    // device has no mode command, so force the read-only display to MANUAL.
+    alarmModeSelectionDirty = false;
+  } else if (alarmModeSelectionDirty && modeSelect.value === mode) {
+    alarmModeSelectionDirty = false;
+  }
+  if (!alarmModeApplyPending && !alarmModeSelectionDirty) modeSelect.value = mode;
+  modeSelect.disabled = alarmModeApplyPending || !available || !hasExplicitMode;
+  modeApply.disabled = alarmModeApplyPending || !available || !hasExplicitMode;
+  on.disabled = manualAlarmApplyPending || alarmModeApplyPending || !manualOutputAllowed;
+  off.disabled = manualAlarmApplyPending || alarmModeApplyPending || !manualOutputAllowed;
+  const modeUpgradeTitle = legacyManualOnly
+    ? "Firmware lama: upgrade firmware untuk memilih AUTO/MANUAL. Kontrol manual ON/OFF tetap tersedia."
+    : "";
+  modeSelect.title = modeUpgradeTitle;
+  modeApply.title = modeUpgradeTitle;
+  if (status) {
+    status.textContent = !available
+      ? "Firmware belum melaporkan kontrol mode alarm."
+      : legacyManualOnly
+        ? `Firmware lama terdeteksi: mode terkunci MANUAL dan tombol ON/OFF lama tetap dapat dipakai. Upgrade firmware untuk kontrol AUTO/MANUAL; perintah mode baru tidak akan dikirim. Test output=${commanded ? "ON" : "OFF"}.`
+      : mode === "auto"
+      ? `AUTO (default setiap boot): inferensi valid mengendalikan output fisik. Inferensi=${inferenceAlarm ? "ALARM" : "clear"}; ${outputDescription}=${physicalCommanded ? "ON" : "OFF"}.`
+        : `MANUAL TEST sementara: hanya aktif selama sesi ini dan reboot mengembalikan AUTO. Inferensi tetap dilaporkan (${inferenceAlarm ? "ALARM" : "clear"}) tetapi tidak mengendalikan output fisik. ${outputDescription} test=${commanded ? "ON" : "OFF"}.`;
+  }
 }
 
 function sensorPowerChannelState(channel) {
@@ -1106,6 +1226,10 @@ export async function setSensorPowerAndWait(channel, enabled) {
 }
 
 export async function setManualAlarmAndWait(enabled) {
+  const contract = alarmControlContract(state.status?.alarmControl);
+  if (!contract.manualOutputAllowed) {
+    throw new Error("kontrol output manual tidak tersedia pada status firmware saat ini");
+  }
   manualAlarmApplyPending = true;
   renderManualAlarmControls(state.status?.alarmControl);
   try {
@@ -1117,6 +1241,28 @@ export async function setManualAlarmAndWait(enabled) {
     sendCommand("GET_STATUS");
   } finally {
     manualAlarmApplyPending = false;
+    renderManualAlarmControls(state.status?.alarmControl);
+  }
+}
+
+export async function setAlarmModeAndWait(mode) {
+  const contract = alarmControlContract(state.status?.alarmControl);
+  if (!contract.hasExplicitMode) {
+    throw new Error("firmware lama tidak mendukung pemilihan mode; upgrade firmware terlebih dahulu");
+  }
+  if (!contract.available) throw new Error("kontrol mode alarm tidak tersedia pada status firmware saat ini");
+  const normalized = mode === "manual" ? "manual" : "auto";
+  alarmModeApplyPending = true;
+  renderManualAlarmControls(state.status?.alarmControl);
+  try {
+    const ack = await sendCommandAndWaitAck(
+      `SET_ALARM_MODE_JSON {"mode":"${normalized}"}`,
+      "SET_ALARM_MODE"
+    );
+    if (ack.status !== "ok") throw new Error(ack.message || ack.status || "perintah ditolak");
+    sendCommand("GET_STATUS");
+  } finally {
+    alarmModeApplyPending = false;
     renderManualAlarmControls(state.status?.alarmControl);
   }
 }

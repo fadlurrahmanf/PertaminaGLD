@@ -5,9 +5,10 @@
 namespace pgl::gld {
 
 constexpr uint8_t NULLING_PROFILE_VALID_MAGIC = 0xA5;
-// Version 8 requires stable, non-saturated ADS samples while Nulling.  Earlier
-// profiles may have been selected from an AGC transition and must be renewed.
-constexpr uint8_t NULLING_PROFILE_ALGORITHM_VERSION = 8;
+// Version 16 rechecks each exponential crossing and resumes exponential
+// search after a rejected bracket. Earlier profiles must be renewed because
+// they used a long linear Confirm extension after transient crossings.
+constexpr uint8_t NULLING_PROFILE_ALGORITHM_VERSION = 16;
 constexpr uint16_t NULLING_PROFILE_MAX_DAC_CODE = 4095;
 
 struct GldNullingProfile {
@@ -36,12 +37,15 @@ inline bool isNullingProfileValid(const GldNullingProfile& p) {
 
 constexpr uint8_t NULLING_CONFIG_VALID_MAGIC = 0x5A;
 
-constexpr float NULLING_CONFIG_DEFAULT_THRESHOLD_V = 0.0001f;
+// This is a small lower floor only. The effective threshold for a channel is
+// derived at runtime from its own baseline and baseline-noise measurement.
+constexpr float NULLING_CONFIG_DEFAULT_THRESHOLD_V = 0.00001f;
 constexpr float NULLING_CONFIG_DEFAULT_MIN_FINAL_V  = 0.0f;
 
-// Full nulling requires both V >= -thresholdV (zero-margin) and a directional
-// rise of thresholdV above the measured baseline. minFinalV remains the
-// absolute final-voltage floor and may be negative when explicitly permitted.
+// Full nulling requires both V >= -effectiveThresholdV (zero-margin) and a
+// directional rise of effectiveThresholdV above the measured baseline.
+// thresholdV is retained as the tunable minimum noise floor for compatibility
+// with existing Operator Hub commands and stored settings.
 struct GldNullingConfig {
     uint8_t validMagic = NULLING_CONFIG_VALID_MAGIC;
     float   thresholdV = NULLING_CONFIG_DEFAULT_THRESHOLD_V;

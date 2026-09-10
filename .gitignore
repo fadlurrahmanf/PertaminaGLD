@@ -10,6 +10,7 @@ firmware/config/*.env
 **/settings.local.js
 **/credentials.local.json
 **/startup.local.json
+apps/runtime/local-mqtt/
 
 # Local AI agent/session state
 .codex/

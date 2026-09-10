@@ -14,6 +14,7 @@ from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import mm
+from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
@@ -421,6 +422,35 @@ class CoverFlowable(Flowable):
         _, subtitle_h = subtitle.wrap(width * 0.78, 35 * mm)
         subtitle.drawOn(c, 0, y - subtitle_h)
         y -= subtitle_h + 12
+        cover_image = self.data.get("cover_image")
+        if cover_image:
+            image_path = ROOT / str(cover_image)
+            image = ImageReader(str(image_path))
+            image_w, image_h = image.getSize()
+            photo_h = 145 * mm
+            photo_w = photo_h * image_w / image_h
+            photo_x = (width - photo_w) / 2
+            c.drawImage(image, photo_x, y - photo_h, photo_w, photo_h, preserveAspectRatio=True, mask="auto")
+            y -= photo_h + 8
+            facts = self.data["facts"]
+            fact_data = [[paragraph(label, "tiny") for label, _ in facts], [Paragraph(f"<b>{safe(value)}</b>", STYLES["body"]) for _, value in facts]]
+            fact_table = Table(fact_data, colWidths=[width / len(facts)] * len(facts), hAlign="LEFT")
+            fact_table.setStyle(TableStyle([
+                ("LINEABOVE", (0, 0), (-1, 0), 0.7, RULE_DARK),
+                ("LINEBELOW", (0, -1), (-1, -1), 0.7, RULE_DARK),
+                ("LINEBEFORE", (1, 0), (-1, -1), 0.3, RULE),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 4),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+                ("TOPPADDING", (0, 0), (-1, -1), 3),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 3),
+            ]))
+            _, facts_h = fact_table.wrap(width, 28 * mm)
+            fact_table.drawOn(c, 0, y - facts_h)
+            footer = Paragraph(safe(self.data["issuer"]), STYLES["cover_meta"])
+            footer.wrap(width, 18 * mm)
+            footer.drawOn(c, 0, 4 * mm)
+            return
         diagram = BlockDiagramFlowable(self.data["cover_nodes"], self.data["cover_links"], 47 * mm)
         diagram.width = width
         diagram.canv = c
@@ -541,8 +571,13 @@ class CoverFlowable(Flowable):
             ]))
             _, interface_h = interface_table.wrap(width, 42 * mm)
             interface_table.drawOn(c, 0, y - interface_h)
-        baseline = clean_text(self.data["firmware"]).replace(" | ", " / ")
-        footer_text = f"{safe(self.data['issuer'])} &nbsp;&nbsp;|&nbsp;&nbsp; {safe(self.data['status'])} &nbsp;&nbsp;|&nbsp;&nbsp; {safe(baseline)}"
+        footer_parts = [safe(self.data["issuer"])]
+        if clean_text(self.data.get("status", "")):
+            footer_parts.append(safe(self.data["status"]))
+        baseline = clean_text(self.data.get("firmware", "")).replace(" | ", " / ")
+        if baseline:
+            footer_parts.append(safe(baseline))
+        footer_text = " &nbsp;&nbsp;|&nbsp;&nbsp; ".join(footer_parts)
         footer = Paragraph(footer_text, STYLES["cover_meta"])
         _, footer_h = footer.wrap(width, 18 * mm)
         footer.drawOn(c, 0, 4 * mm)
@@ -677,6 +712,10 @@ SKIP_CHAPTER_PATTERNS = (
     "system evidence and claim-boundary matrix",
     "gerbang penerimaan end-to-end",
     "end-to-end acceptance gates",
+    "referensi dan riwayat revisi",
+    "references and revision history",
+    "pemantauan baterai",
+    "battery monitoring",
 )
 
 
@@ -790,11 +829,13 @@ def identity_flowables(data: dict[str, Any], lang: str) -> list[Flowable]:
     title = "Identifikasi produk" if lang == "ID" else "Product identification"
     rows = [
         (("Produk" if lang == "ID" else "Product"), data["product"]),
-        (("Status produk" if lang == "ID" else "Product status"), data["status"]),
         (("Revisi dokumen" if lang == "ID" else "Document revision"), data["revision"]),
-        (("Baseline teknis" if lang == "ID" else "Technical baseline"), data["firmware"]),
         (("Penerbit" if lang == "ID" else "Issuer"), data["issuer"]),
     ]
+    if clean_text(data.get("status", "")):
+        rows.insert(1, (("Status produk" if lang == "ID" else "Product status"), data["status"]))
+    if clean_text(data.get("firmware", "")):
+        rows.insert(-1, (("Baseline teknis" if lang == "ID" else "Technical baseline"), data["firmware"]))
     result: list[Flowable] = [heading(f"1 {title}", 0, "section-01"), key_value_table(rows, 43), Spacer(1, 6)]
     terms_title = "Singkatan" if lang == "ID" else "Abbreviations"
     result.append(heading(f"1.1 {terms_title}", 1, "section-01-01"))

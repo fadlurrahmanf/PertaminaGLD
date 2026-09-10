@@ -1,0 +1,7397 @@
+{
+  "archive": "docs\\wiring\\gld-project-ver2-2026-07-01\\source-GLD2.zip",
+  "sha256": "aeb3d54180c596c5ee7fbc9adbb51e434651a238b19a31429d8cf5c82ec985f1",
+  "sheets": [
+    "Sheet_1"
+  ],
+  "components": {
+    "D13": {
+      "value": "SS54_C22452",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1080",
+        "-665"
+      ],
+      "pins": {
+        "1": {
+          "name": "A",
+          "xy": "1060~-665",
+          "net": "D13_1",
+          "schematic_labels": []
+        },
+        "2": {
+          "name": "K",
+          "xy": "1100~-665",
+          "net": "+24V",
+          "schematic_labels": [
+            "+24V"
+          ]
+        }
+      }
+    },
+    "C8": {
+      "value": "22nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "900",
+        "-495"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "900~-480",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "900~-510",
+          "net": "C8_2",
+          "schematic_labels": []
+        }
+      }
+    },
+    "R6": {
+      "value": "82kΩ",
+      "sheet": "Sheet_1",
+      "xy": [
+        "920",
+        "-575"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "940~-575",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "900~-575",
+          "net": "R6_1",
+          "schematic_labels": []
+        }
+      }
+    },
+    "C7": {
+      "value": "47nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "775",
+        "-570"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "775~-555",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "775~-585",
+          "net": "C7_2",
+          "schematic_labels": []
+        }
+      }
+    },
+    "R3": {
+      "value": "187kΩ",
+      "sheet": "Sheet_1",
+      "xy": [
+        "955",
+        "-615"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "955~-635",
+          "net": "D13_1",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "1",
+          "xy": "955~-595",
+          "net": "R3_1",
+          "schematic_labels": []
+        }
+      }
+    },
+    "D12": {
+      "value": "SK36_C266330",
+      "sheet": "Sheet_1",
+      "xy": [
+        "860",
+        "-665"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "840~-665",
+          "net": "D12_2",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "1",
+          "xy": "880~-665",
+          "net": "D13_1",
+          "schematic_labels": []
+        }
+      }
+    },
+    "L5": {
+      "value": "10uH",
+      "sheet": "Sheet_1",
+      "xy": [
+        "770",
+        "-625"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "790~-625",
+          "net": "D12_2",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "1",
+          "xy": "750~-625",
+          "net": "VBAT",
+          "schematic_labels": [
+            "VBAT"
+          ]
+        }
+      }
+    },
+    "U1": {
+      "value": "TPS61175PWP",
+      "sheet": "Sheet_1",
+      "xy": [
+        "850",
+        "-590"
+      ],
+      "pins": {
+        "1": {
+          "name": "SW",
+          "xy": "805~-625",
+          "net": "D12_2",
+          "schematic_labels": []
+        },
+        "2": {
+          "name": "SW",
+          "xy": "805~-615",
+          "net": "D12_2",
+          "schematic_labels": []
+        },
+        "3": {
+          "name": "VIN",
+          "xy": "805~-605",
+          "net": "VBAT",
+          "schematic_labels": [
+            "VBAT"
+          ]
+        },
+        "4": {
+          "name": "EN",
+          "xy": "805~-595",
+          "net": "U1_4",
+          "schematic_labels": []
+        },
+        "5": {
+          "name": "SS",
+          "xy": "805~-585",
+          "net": "C7_2",
+          "schematic_labels": []
+        },
+        "6": {
+          "name": "SYNC",
+          "xy": "805~-575",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "7": {
+          "name": "AGND",
+          "xy": "805~-565",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "8": {
+          "name": "COMP",
+          "xy": "895~-555",
+          "net": "U1_8",
+          "schematic_labels": []
+        },
+        "9": {
+          "name": "FB",
+          "xy": "895~-565",
+          "net": "R3_1",
+          "schematic_labels": []
+        },
+        "10": {
+          "name": "FREQ",
+          "xy": "895~-575",
+          "net": "R6_1",
+          "schematic_labels": []
+        },
+        "11": {
+          "name": "NC",
+          "xy": "895~-585",
+          "net": "",
+          "schematic_labels": []
+        },
+        "12": {
+          "name": "PGND",
+          "xy": "895~-595",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "13": {
+          "name": "PGND",
+          "xy": "895~-605",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "14": {
+          "name": "PGND",
+          "xy": "895~-615",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "15": {
+          "name": "EPAD",
+          "xy": "895~-625",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "D11": {
+      "value": "LESD5D5.0CT1G_C5199850",
+      "sheet": "Sheet_1",
+      "xy": [
+        "115",
+        "-265"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "115~-245",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "115~-285",
+          "net": "VBUS",
+          "schematic_labels": [
+            "VBUS"
+          ]
+        }
+      }
+    },
+    "D10": {
+      "value": "BAT54C",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1365",
+        "-115"
+      ],
+      "pins": {
+        "1": {
+          "name": "A1",
+          "xy": "1335~-125",
+          "net": "5VEXT",
+          "schematic_labels": [
+            "5VEXT"
+          ]
+        },
+        "3": {
+          "name": "K",
+          "xy": "1395~-115",
+          "net": "D10_3",
+          "schematic_labels": []
+        },
+        "2": {
+          "name": "A2",
+          "xy": "1335~-105",
+          "net": "VBUS",
+          "schematic_labels": [
+            "VBUS"
+          ]
+        }
+      }
+    },
+    "Q2": {
+      "value": "AO4407_C5155210",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1070",
+        "-105"
+      ],
+      "pins": {
+        "1": {
+          "name": "S",
+          "xy": "1040~-120",
+          "net": "Q2_1",
+          "schematic_labels": []
+        },
+        "2": {
+          "name": "S",
+          "xy": "1040~-110",
+          "net": "Q2_1",
+          "schematic_labels": []
+        },
+        "3": {
+          "name": "S",
+          "xy": "1040~-100",
+          "net": "Q2_1",
+          "schematic_labels": []
+        },
+        "4": {
+          "name": "G",
+          "xy": "1040~-90",
+          "net": "Q2_4",
+          "schematic_labels": []
+        },
+        "5": {
+          "name": "D",
+          "xy": "1095~-90",
+          "net": "VBAT_IN",
+          "schematic_labels": [
+            "VBAT_IN"
+          ]
+        },
+        "6": {
+          "name": "D",
+          "xy": "1095~-100",
+          "net": "VBAT_IN",
+          "schematic_labels": [
+            "VBAT_IN"
+          ]
+        },
+        "7": {
+          "name": "D",
+          "xy": "1095~-110",
+          "net": "VBAT_IN",
+          "schematic_labels": [
+            "VBAT_IN"
+          ]
+        },
+        "8": {
+          "name": "D",
+          "xy": "1095~-120",
+          "net": "VBAT_IN",
+          "schematic_labels": [
+            "VBAT_IN"
+          ]
+        }
+      }
+    },
+    "F2": {
+      "value": "MINISMDC260F/16",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1000",
+        "-120"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "1020~-120",
+          "net": "Q2_1",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "1",
+          "xy": "980~-120",
+          "net": "F2_1",
+          "schematic_labels": []
+        }
+      }
+    },
+    "C4": {
+      "value": "10uF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "785",
+        "-245"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "785~-225",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "785~-265",
+          "net": "+24V",
+          "schematic_labels": [
+            "+24V"
+          ]
+        }
+      }
+    },
+    "L4": {
+      "value": "100Ω",
+      "sheet": "Sheet_1",
+      "xy": [
+        "755",
+        "-270"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "775~-270",
+          "net": "+24V",
+          "schematic_labels": [
+            "+24V"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "735~-270",
+          "net": "L4_1",
+          "schematic_labels": []
+        }
+      }
+    },
+    "C3": {
+      "value": "100nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "810",
+        "-245"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "810~-265",
+          "net": "+24V",
+          "schematic_labels": [
+            "+24V"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "810~-225",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "C2": {
+      "value": "100nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "725",
+        "-245"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "725~-265",
+          "net": "L4_1",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "1",
+          "xy": "725~-225",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "C1": {
+      "value": "1uF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "700",
+        "-250"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "700~-235",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "700~-265",
+          "net": "L4_1",
+          "schematic_labels": []
+        }
+      }
+    },
+    "L1": {
+      "value": "300Ω",
+      "sheet": "Sheet_1",
+      "xy": [
+        "645",
+        "-250"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "605~-260",
+          "net": "L1_1",
+          "schematic_labels": []
+        },
+        "2": {
+          "name": "2",
+          "xy": "605~-240",
+          "net": "24V-",
+          "schematic_labels": [
+            "24V-"
+          ]
+        },
+        "3": {
+          "name": "3",
+          "xy": "685~-240",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "4": {
+          "name": "4",
+          "xy": "685~-260",
+          "net": "L4_1",
+          "schematic_labels": []
+        }
+      }
+    },
+    "U45": {
+      "value": "E22-900MM22S",
+      "sheet": "Sheet_1",
+      "xy": [
+        "690",
+        "-385"
+      ],
+      "pins": {
+        "1": {
+          "name": "VCC",
+          "xy": "645~-430",
+          "net": "VCC",
+          "schematic_labels": [
+            "VCC"
+          ]
+        },
+        "2": {
+          "name": "GND",
+          "xy": "645~-420",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "3": {
+          "name": "NRST",
+          "xy": "645~-410",
+          "net": "LORA_RST",
+          "schematic_labels": [
+            "LORA_RST"
+          ]
+        },
+        "4": {
+          "name": "NC",
+          "xy": "645~-400",
+          "net": "",
+          "schematic_labels": []
+        },
+        "5": {
+          "name": "NC",
+          "xy": "645~-390",
+          "net": "",
+          "schematic_labels": []
+        },
+        "6": {
+          "name": "ANT",
+          "xy": "645~-380",
+          "net": "ANT",
+          "schematic_labels": [
+            "ANT"
+          ]
+        },
+        "7": {
+          "name": "GND",
+          "xy": "645~-370",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "8": {
+          "name": "NC",
+          "xy": "645~-360",
+          "net": "",
+          "schematic_labels": []
+        },
+        "9": {
+          "name": "TXEN",
+          "xy": "645~-350",
+          "net": "TXEN",
+          "schematic_labels": [
+            "TXEN"
+          ]
+        },
+        "10": {
+          "name": "RXEN",
+          "xy": "645~-340",
+          "net": "RXEN",
+          "schematic_labels": [
+            "RXEN"
+          ]
+        },
+        "11": {
+          "name": "BUSY",
+          "xy": "735~-340",
+          "net": "LORA_BUSY",
+          "schematic_labels": [
+            "LORA_BUSY"
+          ]
+        },
+        "12": {
+          "name": "MISO",
+          "xy": "735~-350",
+          "net": "SPI_MISO",
+          "schematic_labels": [
+            "SPI_MISO"
+          ]
+        },
+        "13": {
+          "name": "MOSI",
+          "xy": "735~-360",
+          "net": "SPI_MOSI",
+          "schematic_labels": [
+            "SPI_MOSI"
+          ]
+        },
+        "14": {
+          "name": "NSS",
+          "xy": "735~-370",
+          "net": "LORA_SS",
+          "schematic_labels": [
+            "LORA_SS"
+          ]
+        },
+        "15": {
+          "name": "SCK",
+          "xy": "735~-380",
+          "net": "SPI_SCK",
+          "schematic_labels": [
+            "SPI_SCK"
+          ]
+        },
+        "16": {
+          "name": "GND",
+          "xy": "735~-390",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "17": {
+          "name": "NC",
+          "xy": "735~-400",
+          "net": "",
+          "schematic_labels": []
+        },
+        "18": {
+          "name": "DIO3",
+          "xy": "735~-410",
+          "net": "U45_18",
+          "schematic_labels": []
+        },
+        "19": {
+          "name": "DIO2",
+          "xy": "735~-420",
+          "net": "U45_19",
+          "schematic_labels": []
+        },
+        "20": {
+          "name": "DIO1",
+          "xy": "735~-430",
+          "net": "DIO1",
+          "schematic_labels": [
+            "DIO1"
+          ]
+        }
+      }
+    },
+    "C87": {
+      "value": "100nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "955",
+        "-355"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "955~-375",
+          "net": "VCC",
+          "schematic_labels": [
+            "VCC"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "955~-335",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "D6": {
+      "value": "SM712",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1035",
+        "-375"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "1055~-405",
+          "net": "B",
+          "schematic_labels": [
+            "B"
+          ]
+        },
+        "3": {
+          "name": "3",
+          "xy": "1035~-335",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "1015~-405",
+          "net": "A",
+          "schematic_labels": [
+            "A"
+          ]
+        }
+      }
+    },
+    "U47": {
+      "value": "THVD1410DR",
+      "sheet": "Sheet_1",
+      "xy": [
+        "960",
+        "-420"
+      ],
+      "pins": {
+        "1": {
+          "name": "R",
+          "xy": "925~-435",
+          "net": "RX2",
+          "schematic_labels": [
+            "RX2"
+          ]
+        },
+        "2": {
+          "name": "RE#",
+          "xy": "925~-425",
+          "net": "DIR",
+          "schematic_labels": [
+            "DIR"
+          ]
+        },
+        "3": {
+          "name": "DE",
+          "xy": "925~-415",
+          "net": "DIR",
+          "schematic_labels": [
+            "DIR"
+          ]
+        },
+        "4": {
+          "name": "D",
+          "xy": "925~-405",
+          "net": "TX2",
+          "schematic_labels": [
+            "TX2"
+          ]
+        },
+        "5": {
+          "name": "GND",
+          "xy": "995~-405",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "6": {
+          "name": "A",
+          "xy": "995~-415",
+          "net": "A",
+          "schematic_labels": [
+            "A"
+          ]
+        },
+        "7": {
+          "name": "B",
+          "xy": "995~-425",
+          "net": "B",
+          "schematic_labels": [
+            "B"
+          ]
+        },
+        "8": {
+          "name": "VCC",
+          "xy": "995~-435",
+          "net": "VCC",
+          "schematic_labels": [
+            "VCC"
+          ]
+        }
+      }
+    },
+    "LED1": {
+      "value": "19-217/BHC-ZL1M2RY/3T",
+      "sheet": "Sheet_1",
+      "xy": [
+        "435",
+        "-463"
+      ],
+      "pins": {
+        "1": {
+          "name": "A",
+          "xy": "455~-455",
+          "net": "VCC",
+          "schematic_labels": [
+            "VCC"
+          ]
+        },
+        "2": {
+          "name": "C",
+          "xy": "415~-455",
+          "net": "LED1_2",
+          "schematic_labels": []
+        }
+      }
+    },
+    "U48": {
+      "value": "CH340C",
+      "sheet": "Sheet_1",
+      "xy": [
+        "315",
+        "-305"
+      ],
+      "pins": {
+        "16": {
+          "name": "VCC",
+          "xy": "365~-340",
+          "net": "VCC",
+          "schematic_labels": [
+            "VCC"
+          ]
+        },
+        "15": {
+          "name": "R232",
+          "xy": "365~-330",
+          "net": "U48_15",
+          "schematic_labels": []
+        },
+        "14": {
+          "name": "RTS#",
+          "xy": "365~-320",
+          "net": "RTS",
+          "schematic_labels": [
+            "RTS"
+          ]
+        },
+        "13": {
+          "name": "DTR#",
+          "xy": "365~-310",
+          "net": "DTR",
+          "schematic_labels": [
+            "DTR"
+          ]
+        },
+        "12": {
+          "name": "DCD#",
+          "xy": "365~-300",
+          "net": "U48_12",
+          "schematic_labels": []
+        },
+        "11": {
+          "name": "RI#",
+          "xy": "365~-290",
+          "net": "U48_11",
+          "schematic_labels": []
+        },
+        "10": {
+          "name": "DSR#",
+          "xy": "365~-280",
+          "net": "U48_10",
+          "schematic_labels": []
+        },
+        "9": {
+          "name": "CTS#",
+          "xy": "365~-270",
+          "net": "U48_9",
+          "schematic_labels": []
+        },
+        "8": {
+          "name": "NC.",
+          "xy": "265~-270",
+          "net": "",
+          "schematic_labels": []
+        },
+        "7": {
+          "name": "NC.",
+          "xy": "265~-280",
+          "net": "",
+          "schematic_labels": []
+        },
+        "6": {
+          "name": "D-",
+          "xy": "265~-290",
+          "net": "D-",
+          "schematic_labels": [
+            "D-"
+          ]
+        },
+        "5": {
+          "name": "D+",
+          "xy": "265~-300",
+          "net": "D+",
+          "schematic_labels": [
+            "D+"
+          ]
+        },
+        "4": {
+          "name": "V3",
+          "xy": "265~-310",
+          "net": "VCC",
+          "schematic_labels": [
+            "VCC"
+          ]
+        },
+        "3": {
+          "name": "RXD",
+          "xy": "265~-320",
+          "net": "U48_3",
+          "schematic_labels": []
+        },
+        "2": {
+          "name": "TXD",
+          "xy": "265~-330",
+          "net": "RXD",
+          "schematic_labels": [
+            "RXD"
+          ]
+        },
+        "1": {
+          "name": "GND",
+          "xy": "265~-340",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "R96": {
+      "value": "470Ω",
+      "sheet": "Sheet_1",
+      "xy": [
+        "210",
+        "-320"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "230~-320",
+          "net": "U48_3",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "1",
+          "xy": "190~-320",
+          "net": "TXD",
+          "schematic_labels": [
+            "TXD"
+          ]
+        }
+      }
+    },
+    "Q1": {
+      "value": "UMH3NTN",
+      "sheet": "Sheet_1",
+      "xy": [
+        "240",
+        "-230"
+      ],
+      "pins": {
+        "1": {
+          "name": "E1",
+          "xy": "190~-240",
+          "net": "RTS",
+          "schematic_labels": [
+            "RTS"
+          ]
+        },
+        "2": {
+          "name": "B1",
+          "xy": "190~-230",
+          "net": "DTR",
+          "schematic_labels": [
+            "DTR"
+          ]
+        },
+        "3": {
+          "name": "C2",
+          "xy": "190~-220",
+          "net": "IO0",
+          "schematic_labels": [
+            "IO0"
+          ]
+        },
+        "4": {
+          "name": "E2",
+          "xy": "290~-220",
+          "net": "DTR",
+          "schematic_labels": [
+            "DTR"
+          ]
+        },
+        "5": {
+          "name": "B2",
+          "xy": "290~-230",
+          "net": "RTS",
+          "schematic_labels": [
+            "RTS"
+          ]
+        },
+        "6": {
+          "name": "C1",
+          "xy": "290~-240",
+          "net": "RST",
+          "schematic_labels": [
+            "RST"
+          ]
+        }
+      }
+    },
+    "USB1": {
+      "value": "U-D-M5DD-W-1",
+      "sheet": "Sheet_1",
+      "xy": [
+        "60",
+        "-295"
+      ],
+      "pins": {
+        "1": {
+          "name": "VBUS",
+          "xy": "95~-315",
+          "net": "VBUS",
+          "schematic_labels": [
+            "VBUS"
+          ]
+        },
+        "2": {
+          "name": "D-",
+          "xy": "95~-305",
+          "net": "D-",
+          "schematic_labels": [
+            "D-"
+          ]
+        },
+        "3": {
+          "name": "D+",
+          "xy": "95~-295",
+          "net": "D+",
+          "schematic_labels": [
+            "D+"
+          ]
+        },
+        "4": {
+          "name": "ID",
+          "xy": "95~-285",
+          "net": "",
+          "schematic_labels": []
+        },
+        "5": {
+          "name": "GND",
+          "xy": "95~-275",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "6": {
+          "name": "EP",
+          "xy": "35~-245",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "7": {
+          "name": "EP",
+          "xy": "35~-345",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "G$1": {
+      "value": "UFL",
+      "sheet": "Sheet_1",
+      "xy": [
+        "830",
+        "-390"
+      ],
+      "pins": {
+        "GND1": {
+          "name": "GND",
+          "xy": "830~-370",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "GND2": {
+          "name": "GND",
+          "xy": "830~-370",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "SIG": {
+          "name": "SIG",
+          "xy": "880~-420",
+          "net": "ANT",
+          "schematic_labels": [
+            "ANT"
+          ]
+        }
+      }
+    },
+    "U49": {
+      "value": "ESP32-S3-WROOM-1U-N16R8",
+      "sheet": "Sheet_1",
+      "xy": [
+        "235",
+        "-535"
+      ],
+      "pins": {
+        "41": {
+          "name": "GND",
+          "xy": "330~-625",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "14": {
+          "name": "IO20",
+          "xy": "140~-485",
+          "net": "RX2",
+          "schematic_labels": [
+            "RX2"
+          ]
+        },
+        "13": {
+          "name": "IO19",
+          "xy": "140~-495",
+          "net": "DIR",
+          "schematic_labels": [
+            "DIR"
+          ]
+        },
+        "12": {
+          "name": "IO8",
+          "xy": "140~-505",
+          "net": "SDA",
+          "schematic_labels": [
+            "SDA"
+          ]
+        },
+        "11": {
+          "name": "IO18",
+          "xy": "140~-515",
+          "net": "ST_P",
+          "schematic_labels": [
+            "ST_P"
+          ]
+        },
+        "10": {
+          "name": "IO17",
+          "xy": "140~-525",
+          "net": "DONE",
+          "schematic_labels": [
+            "DONE"
+          ]
+        },
+        "9": {
+          "name": "IO16",
+          "xy": "140~-535",
+          "net": "CLR",
+          "schematic_labels": [
+            "CLR"
+          ]
+        },
+        "8": {
+          "name": "IO15",
+          "xy": "140~-545",
+          "net": "EN_BOOST",
+          "schematic_labels": [
+            "EN_BOOST"
+          ]
+        },
+        "7": {
+          "name": "IO7",
+          "xy": "140~-555",
+          "net": "U49_7",
+          "schematic_labels": []
+        },
+        "6": {
+          "name": "IO6",
+          "xy": "140~-565",
+          "net": "LED",
+          "schematic_labels": [
+            "LED"
+          ]
+        },
+        "5": {
+          "name": "IO5",
+          "xy": "140~-575",
+          "net": "CFG",
+          "schematic_labels": [
+            "CFG"
+          ]
+        },
+        "4": {
+          "name": "IO4",
+          "xy": "140~-585",
+          "net": "BATMON",
+          "schematic_labels": [
+            "BATMON"
+          ]
+        },
+        "3": {
+          "name": "EN",
+          "xy": "140~-595",
+          "net": "RST",
+          "schematic_labels": [
+            "RST"
+          ]
+        },
+        "2": {
+          "name": "3V3",
+          "xy": "140~-605",
+          "net": "VCC",
+          "schematic_labels": [
+            "VCC"
+          ]
+        },
+        "1": {
+          "name": "GND",
+          "xy": "140~-615",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "26": {
+          "name": "IO45",
+          "xy": "290~-435",
+          "net": "PDOWN",
+          "schematic_labels": [
+            "PDOWN"
+          ]
+        },
+        "25": {
+          "name": "IO48",
+          "xy": "280~-435",
+          "net": "ADC_RST",
+          "schematic_labels": [
+            "ADC_RST"
+          ]
+        },
+        "24": {
+          "name": "IO47",
+          "xy": "270~-435",
+          "net": "PG24",
+          "schematic_labels": [
+            "PG24"
+          ]
+        },
+        "23": {
+          "name": "IO21",
+          "xy": "260~-435",
+          "net": "TX2",
+          "schematic_labels": [
+            "TX2"
+          ]
+        },
+        "22": {
+          "name": "IO14",
+          "xy": "250~-435",
+          "net": "LORA_SS",
+          "schematic_labels": [
+            "LORA_SS"
+          ]
+        },
+        "21": {
+          "name": "IO13",
+          "xy": "240~-435",
+          "net": "SPI_MISO",
+          "schematic_labels": [
+            "SPI_MISO"
+          ]
+        },
+        "20": {
+          "name": "IO12",
+          "xy": "230~-435",
+          "net": "SPI_SCK",
+          "schematic_labels": [
+            "SPI_SCK"
+          ]
+        },
+        "19": {
+          "name": "IO11",
+          "xy": "220~-435",
+          "net": "SPI_MOSI",
+          "schematic_labels": [
+            "SPI_MOSI"
+          ]
+        },
+        "18": {
+          "name": "IO10",
+          "xy": "210~-435",
+          "net": "LORA_BUSY",
+          "schematic_labels": [
+            "LORA_BUSY"
+          ]
+        },
+        "17": {
+          "name": "IO9",
+          "xy": "200~-435",
+          "net": "SCL",
+          "schematic_labels": [
+            "SCL"
+          ]
+        },
+        "16": {
+          "name": "IO46",
+          "xy": "190~-435",
+          "net": "",
+          "schematic_labels": []
+        },
+        "15": {
+          "name": "IO3",
+          "xy": "180~-435",
+          "net": "",
+          "schematic_labels": []
+        },
+        "27": {
+          "name": "IO0",
+          "xy": "330~-485",
+          "net": "IO0",
+          "schematic_labels": [
+            "IO0"
+          ]
+        },
+        "28": {
+          "name": "IO35",
+          "xy": "330~-495",
+          "net": "",
+          "schematic_labels": []
+        },
+        "29": {
+          "name": "IO36",
+          "xy": "330~-505",
+          "net": "",
+          "schematic_labels": []
+        },
+        "30": {
+          "name": "IO37",
+          "xy": "330~-515",
+          "net": "",
+          "schematic_labels": []
+        },
+        "31": {
+          "name": "IO38",
+          "xy": "330~-525",
+          "net": "SPI_CS",
+          "schematic_labels": [
+            "SPI_CS"
+          ]
+        },
+        "32": {
+          "name": "IO39",
+          "xy": "330~-535",
+          "net": "DRDY",
+          "schematic_labels": [
+            "DRDY"
+          ]
+        },
+        "33": {
+          "name": "IO40",
+          "xy": "330~-545",
+          "net": "ALARM",
+          "schematic_labels": [
+            "ALARM"
+          ]
+        },
+        "34": {
+          "name": "IO41",
+          "xy": "330~-555",
+          "net": "RXEN",
+          "schematic_labels": [
+            "RXEN"
+          ]
+        },
+        "35": {
+          "name": "IO42",
+          "xy": "330~-565",
+          "net": "TXEN",
+          "schematic_labels": [
+            "TXEN"
+          ]
+        },
+        "36": {
+          "name": "RXD0",
+          "xy": "330~-575",
+          "net": "RXD",
+          "schematic_labels": [
+            "RXD"
+          ]
+        },
+        "37": {
+          "name": "TXD0",
+          "xy": "330~-585",
+          "net": "TXD",
+          "schematic_labels": [
+            "TXD"
+          ]
+        },
+        "38": {
+          "name": "IO2",
+          "xy": "330~-595",
+          "net": "LORA_RST",
+          "schematic_labels": [
+            "LORA_RST"
+          ]
+        },
+        "39": {
+          "name": "IO1",
+          "xy": "330~-605",
+          "net": "DIO1",
+          "schematic_labels": [
+            "DIO1"
+          ]
+        },
+        "40": {
+          "name": "GND",
+          "xy": "330~-615",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "D4": {
+      "value": "LESD5D5.0CT1G_C5199850",
+      "sheet": "Sheet_1",
+      "xy": [
+        "135",
+        "-265"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "135~-245",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "135~-285",
+          "net": "D-",
+          "schematic_labels": [
+            "D-"
+          ]
+        }
+      }
+    },
+    "D5": {
+      "value": "LESD5D5.0CT1G_C5199850",
+      "sheet": "Sheet_1",
+      "xy": [
+        "155",
+        "-265"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "155~-245",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "155~-285",
+          "net": "D+",
+          "schematic_labels": [
+            "D+"
+          ]
+        }
+      }
+    },
+    "CN3": {
+      "value": "XH-2A-black",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1100",
+        "-420"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "1080~-425",
+          "net": "B",
+          "schematic_labels": [
+            "B"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "1080~-415",
+          "net": "A",
+          "schematic_labels": [
+            "A"
+          ]
+        }
+      }
+    },
+    "F1": {
+      "value": "MINISMDC260F/16",
+      "sheet": "Sheet_1",
+      "xy": [
+        "550",
+        "-270"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "570~-270",
+          "net": "L1_1",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "1",
+          "xy": "530~-270",
+          "net": "24V+",
+          "schematic_labels": [
+            "24V+"
+          ]
+        }
+      }
+    },
+    "D1": {
+      "value": "SMBJ33A",
+      "sheet": "Sheet_1",
+      "xy": [
+        "585",
+        "-245"
+      ],
+      "pins": {
+        "2": {
+          "name": "A",
+          "xy": "585~-225",
+          "net": "24V-",
+          "schematic_labels": [
+            "24V-"
+          ]
+        },
+        "1": {
+          "name": "K",
+          "xy": "585~-265",
+          "net": "L1_1",
+          "schematic_labels": []
+        }
+      }
+    },
+    "Q3": {
+      "value": "SI7465DP-T1-GE3",
+      "sheet": "Sheet_1",
+      "xy": [
+        "885",
+        "-255"
+      ],
+      "pins": {
+        "1": {
+          "name": "S",
+          "xy": "865~-270",
+          "net": "+24V",
+          "schematic_labels": [
+            "+24V"
+          ]
+        },
+        "2": {
+          "name": "S",
+          "xy": "865~-260",
+          "net": "+24V",
+          "schematic_labels": [
+            "+24V"
+          ]
+        },
+        "3": {
+          "name": "S",
+          "xy": "865~-250",
+          "net": "+24V",
+          "schematic_labels": [
+            "+24V"
+          ]
+        },
+        "4": {
+          "name": "G",
+          "xy": "865~-240",
+          "net": "Q3_4",
+          "schematic_labels": []
+        },
+        "5": {
+          "name": "D",
+          "xy": "905~-240",
+          "net": "Q3_5",
+          "schematic_labels": []
+        },
+        "6": {
+          "name": "D",
+          "xy": "905~-250",
+          "net": "Q3_5",
+          "schematic_labels": []
+        },
+        "7": {
+          "name": "D",
+          "xy": "905~-260",
+          "net": "Q3_5",
+          "schematic_labels": []
+        },
+        "8": {
+          "name": "D",
+          "xy": "905~-270",
+          "net": "Q3_5",
+          "schematic_labels": []
+        }
+      }
+    },
+    "D2": {
+      "value": "LBZT52C12T1G",
+      "sheet": "Sheet_1",
+      "xy": [
+        "835",
+        "-250"
+      ],
+      "pins": {
+        "2": {
+          "name": "A",
+          "xy": "835~-230",
+          "net": "Q3_4",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "K",
+          "xy": "835~-270",
+          "net": "+24V",
+          "schematic_labels": [
+            "+24V"
+          ]
+        }
+      }
+    },
+    "U36": {
+      "value": "LMR51450SDRRR",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1060",
+        "-245"
+      ],
+      "pins": {
+        "1": {
+          "name": "SW",
+          "xy": "1105~-260",
+          "net": "U36_1",
+          "schematic_labels": []
+        },
+        "2": {
+          "name": "SW",
+          "xy": "1105~-250",
+          "net": "U36_1",
+          "schematic_labels": []
+        },
+        "3": {
+          "name": "SW",
+          "xy": "1105~-240",
+          "net": "U36_1",
+          "schematic_labels": []
+        },
+        "4": {
+          "name": "BOOT",
+          "xy": "1105~-270",
+          "net": "U36_4",
+          "schematic_labels": []
+        },
+        "5": {
+          "name": "PG",
+          "xy": "1015~-230",
+          "net": "PG24",
+          "schematic_labels": [
+            "PG24"
+          ]
+        },
+        "6": {
+          "name": "RT",
+          "xy": "1015~-220",
+          "net": "",
+          "schematic_labels": []
+        },
+        "7": {
+          "name": "FB",
+          "xy": "1105~-230",
+          "net": "U36_7",
+          "schematic_labels": []
+        },
+        "8": {
+          "name": "AGND",
+          "xy": "1105~-220",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "9": {
+          "name": "EN",
+          "xy": "1015~-240",
+          "net": "Q3_5",
+          "schematic_labels": []
+        },
+        "10": {
+          "name": "VIN",
+          "xy": "1015~-250",
+          "net": "Q3_5",
+          "schematic_labels": []
+        },
+        "11": {
+          "name": "VIN",
+          "xy": "1015~-260",
+          "net": "Q3_5",
+          "schematic_labels": []
+        },
+        "12": {
+          "name": "VIN",
+          "xy": "1015~-270",
+          "net": "Q3_5",
+          "schematic_labels": []
+        },
+        "13": {
+          "name": "EP",
+          "xy": "1060~-200",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "C59": {
+      "value": "10uF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "930",
+        "-250"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "930~-230",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "930~-270",
+          "net": "Q3_5",
+          "schematic_labels": []
+        }
+      }
+    },
+    "C60": {
+      "value": "10uF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "955",
+        "-250"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "955~-230",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "955~-270",
+          "net": "Q3_5",
+          "schematic_labels": []
+        }
+      }
+    },
+    "C61": {
+      "value": "100nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "980",
+        "-250"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "980~-230",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "980~-270",
+          "net": "Q3_5",
+          "schematic_labels": []
+        }
+      }
+    },
+    "U40": {
+      "value": "4.7uH",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1185",
+        "-250"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "1145~-250",
+          "net": "U36_1",
+          "schematic_labels": []
+        },
+        "2": {
+          "name": "2",
+          "xy": "1225~-250",
+          "net": "5VBUCK",
+          "schematic_labels": [
+            "5VBUCK"
+          ]
+        }
+      }
+    },
+    "C69": {
+      "value": "100nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1125",
+        "-270"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "1145~-270",
+          "net": "U36_1",
+          "schematic_labels": []
+        },
+        "2": {
+          "name": "2",
+          "xy": "1105~-270",
+          "net": "U36_4",
+          "schematic_labels": []
+        }
+      }
+    },
+    "R86": {
+      "value": "19.1kΩ",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1185",
+        "-210"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "1205~-210",
+          "net": "U36_7",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "1",
+          "xy": "1165~-210",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "R87": {
+      "value": "1kΩ",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1265",
+        "-230"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "1265~-250",
+          "net": "5VBUCK",
+          "schematic_labels": [
+            "5VBUCK"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "1265~-210",
+          "net": "R87_1",
+          "schematic_labels": []
+        }
+      }
+    },
+    "C70": {
+      "value": "33pF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1245",
+        "-210"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "1260~-210",
+          "net": "R87_1",
+          "schematic_labels": []
+        },
+        "2": {
+          "name": "2",
+          "xy": "1230~-210",
+          "net": "U36_7",
+          "schematic_labels": []
+        }
+      }
+    },
+    "C72": {
+      "value": "33uF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1295",
+        "-230"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "1295~-250",
+          "net": "5VBUCK",
+          "schematic_labels": [
+            "5VBUCK"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "1295~-210",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "C73": {
+      "value": "33uF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1315",
+        "-230"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "1315~-250",
+          "net": "5VBUCK",
+          "schematic_labels": [
+            "5VBUCK"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "1315~-210",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "D7": {
+      "value": "SS54_C22452",
+      "sheet": "Sheet_1",
+      "xy": [
+        "995",
+        "-90"
+      ],
+      "pins": {
+        "1": {
+          "name": "A",
+          "xy": "975~-90",
+          "net": "5VEXT",
+          "schematic_labels": [
+            "5VEXT"
+          ]
+        },
+        "2": {
+          "name": "K",
+          "xy": "1015~-90",
+          "net": "+5V",
+          "schematic_labels": [
+            "+5V"
+          ]
+        }
+      }
+    },
+    "J1": {
+      "value": "VIN",
+      "sheet": "Sheet_1",
+      "xy": [
+        "915",
+        "-85"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "885~-100",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "945~-100",
+          "net": "F2_1",
+          "schematic_labels": []
+        },
+        "3": {
+          "name": "3",
+          "xy": "885~-90",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "4": {
+          "name": "4",
+          "xy": "945~-90",
+          "net": "5VEXT",
+          "schematic_labels": [
+            "5VEXT"
+          ]
+        },
+        "5": {
+          "name": "5",
+          "xy": "885~-80",
+          "net": "24V-",
+          "schematic_labels": [
+            "24V-"
+          ]
+        },
+        "6": {
+          "name": "6",
+          "xy": "945~-80",
+          "net": "24V+",
+          "schematic_labels": [
+            "24V+"
+          ]
+        }
+      }
+    },
+    "U41": {
+      "value": "TPS61088RHLR",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1285",
+        "-460"
+      ],
+      "pins": {
+        "1": {
+          "name": "VCC",
+          "xy": "1265~-555",
+          "net": "U41_1",
+          "schematic_labels": []
+        },
+        "2": {
+          "name": "EN",
+          "xy": "1225~-495",
+          "net": "ENA",
+          "schematic_labels": [
+            "ENA"
+          ]
+        },
+        "3": {
+          "name": "FSW",
+          "xy": "1225~-485",
+          "net": "U41_3",
+          "schematic_labels": []
+        },
+        "4": {
+          "name": "SW",
+          "xy": "1225~-475",
+          "net": "U41_4",
+          "schematic_labels": []
+        },
+        "5": {
+          "name": "SW",
+          "xy": "1225~-465",
+          "net": "U41_4",
+          "schematic_labels": []
+        },
+        "6": {
+          "name": "SW",
+          "xy": "1225~-455",
+          "net": "U41_4",
+          "schematic_labels": []
+        },
+        "7": {
+          "name": "SW",
+          "xy": "1225~-445",
+          "net": "U41_4",
+          "schematic_labels": []
+        },
+        "8": {
+          "name": "BOOT",
+          "xy": "1225~-435",
+          "net": "U41_8",
+          "schematic_labels": []
+        },
+        "9": {
+          "name": "VIN",
+          "xy": "1225~-425",
+          "net": "VBAT",
+          "schematic_labels": [
+            "VBAT"
+          ]
+        },
+        "10": {
+          "name": "SS",
+          "xy": "1265~-365",
+          "net": "U41_10",
+          "schematic_labels": []
+        },
+        "11": {
+          "name": "NC",
+          "xy": "1305~-365",
+          "net": "",
+          "schematic_labels": []
+        },
+        "12": {
+          "name": "NC",
+          "xy": "1345~-425",
+          "net": "",
+          "schematic_labels": []
+        },
+        "13": {
+          "name": "MODE",
+          "xy": "1345~-435",
+          "net": "",
+          "schematic_labels": []
+        },
+        "14": {
+          "name": "VOUT",
+          "xy": "1345~-445",
+          "net": "5VBOOST",
+          "schematic_labels": [
+            "5VBOOST"
+          ]
+        },
+        "15": {
+          "name": "VOUT",
+          "xy": "1345~-455",
+          "net": "5VBOOST",
+          "schematic_labels": [
+            "5VBOOST"
+          ]
+        },
+        "16": {
+          "name": "VOUT",
+          "xy": "1345~-465",
+          "net": "5VBOOST",
+          "schematic_labels": [
+            "5VBOOST"
+          ]
+        },
+        "17": {
+          "name": "FB",
+          "xy": "1345~-475",
+          "net": "U41_17",
+          "schematic_labels": []
+        },
+        "18": {
+          "name": "COMP",
+          "xy": "1345~-485",
+          "net": "U41_18",
+          "schematic_labels": []
+        },
+        "19": {
+          "name": "ILIM",
+          "xy": "1345~-495",
+          "net": "U41_19",
+          "schematic_labels": []
+        },
+        "20": {
+          "name": "AGND",
+          "xy": "1305~-555",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "21": {
+          "name": "PGND",
+          "xy": "1295~-555",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "L2": {
+      "value": "2.2uH",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1160",
+        "-465"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "1180~-465",
+          "net": "U41_4",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "1",
+          "xy": "1140~-465",
+          "net": "VBAT",
+          "schematic_labels": [
+            "VBAT"
+          ]
+        }
+      }
+    },
+    "R89": {
+      "value": "56kΩ",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1435",
+        "-455"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "1455~-455",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "1415~-455",
+          "net": "U41_17",
+          "schematic_labels": []
+        }
+      }
+    },
+    "R90": {
+      "value": "189k",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1385",
+        "-455"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "1365~-455",
+          "net": "5VBOOST",
+          "schematic_labels": [
+            "5VBOOST"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "1405~-455",
+          "net": "U41_17",
+          "schematic_labels": []
+        }
+      }
+    },
+    "U43": {
+      "value": "TPS62162DSG",
+      "sheet": "Sheet_1",
+      "xy": [
+        "650",
+        "-90"
+      ],
+      "pins": {
+        "1": {
+          "name": "PGND",
+          "xy": "700~-50",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "VIN",
+          "xy": "600~-130",
+          "net": "+5V",
+          "schematic_labels": [
+            "+5V"
+          ]
+        },
+        "3": {
+          "name": "EN",
+          "xy": "600~-110",
+          "net": "+5V",
+          "schematic_labels": [
+            "+5V"
+          ]
+        },
+        "4": {
+          "name": "AGND",
+          "xy": "700~-60",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "5": {
+          "name": "FB",
+          "xy": "700~-90",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "6": {
+          "name": "VOS",
+          "xy": "700~-110",
+          "net": "VCC",
+          "schematic_labels": [
+            "VCC"
+          ]
+        },
+        "7": {
+          "name": "SW",
+          "xy": "700~-130",
+          "net": "U43_7",
+          "schematic_labels": []
+        },
+        "8": {
+          "name": "PG",
+          "xy": "600~-90",
+          "net": "U43_8",
+          "schematic_labels": []
+        },
+        "9": {
+          "name": "EP",
+          "xy": "700~-70",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "L3": {
+      "value": "2.2uH",
+      "sheet": "Sheet_1",
+      "xy": [
+        "730",
+        "-130"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "750~-130",
+          "net": "VCC",
+          "schematic_labels": [
+            "VCC"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "710~-130",
+          "net": "U43_7",
+          "schematic_labels": []
+        }
+      }
+    },
+    "R92": {
+      "value": "33kΩ",
+      "sheet": "Sheet_1",
+      "xy": [
+        "60",
+        "-55"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "60~-75",
+          "net": "R92_2",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "1",
+          "xy": "60~-35",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "U46": {
+      "value": "TPL5010",
+      "sheet": "Sheet_1",
+      "xy": [
+        "145",
+        "-150"
+      ],
+      "pins": {
+        "1": {
+          "name": "VDD",
+          "xy": "75~-160",
+          "net": "3V3AON",
+          "schematic_labels": [
+            "3V3AON"
+          ]
+        },
+        "2": {
+          "name": "GND",
+          "xy": "75~-150",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "3": {
+          "name": "DELAY/M_RST",
+          "xy": "75~-140",
+          "net": "U46_3",
+          "schematic_labels": []
+        },
+        "4": {
+          "name": "DONE",
+          "xy": "215~-140",
+          "net": "DONE",
+          "schematic_labels": [
+            "DONE"
+          ]
+        },
+        "5": {
+          "name": "WAKE",
+          "xy": "215~-150",
+          "net": "WAKE",
+          "schematic_labels": [
+            "WAKE"
+          ]
+        },
+        "6": {
+          "name": "RSTn",
+          "xy": "215~-160",
+          "net": "RST",
+          "schematic_labels": [
+            "RST"
+          ]
+        }
+      }
+    },
+    "U51": {
+      "value": "SN74AUP1G74DCUR",
+      "sheet": "Sheet_1",
+      "xy": [
+        "390",
+        "-125"
+      ],
+      "pins": {
+        "1": {
+          "name": "CLK",
+          "xy": "340~-140",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "D",
+          "xy": "340~-130",
+          "net": "U51_2",
+          "schematic_labels": []
+        },
+        "3": {
+          "name": "#Q",
+          "xy": "340~-120",
+          "net": "",
+          "schematic_labels": []
+        },
+        "4": {
+          "name": "GND",
+          "xy": "340~-110",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "5": {
+          "name": "Q",
+          "xy": "440~-110",
+          "net": "ENA",
+          "schematic_labels": [
+            "ENA"
+          ]
+        },
+        "6": {
+          "name": "#CLR",
+          "xy": "440~-120",
+          "net": "CLR",
+          "schematic_labels": [
+            "CLR"
+          ]
+        },
+        "7": {
+          "name": "#PRE",
+          "xy": "440~-130",
+          "net": "PRE",
+          "schematic_labels": [
+            "PRE"
+          ]
+        },
+        "8": {
+          "name": "VCC",
+          "xy": "440~-140",
+          "net": "3V3AON",
+          "schematic_labels": [
+            "3V3AON"
+          ]
+        }
+      }
+    },
+    "U42": {
+      "value": "TPS7A0233DBVR",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1525",
+        "-160"
+      ],
+      "pins": {
+        "5": {
+          "name": "OUT",
+          "xy": "1555~-170",
+          "net": "3V3AON",
+          "schematic_labels": [
+            "3V3AON"
+          ]
+        },
+        "4": {
+          "name": "NC",
+          "xy": "1555~-150",
+          "net": "",
+          "schematic_labels": []
+        },
+        "3": {
+          "name": "EN",
+          "xy": "1485~-150",
+          "net": "U42_3",
+          "schematic_labels": []
+        },
+        "2": {
+          "name": "GND",
+          "xy": "1485~-160",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "1": {
+          "name": "IN",
+          "xy": "1485~-170",
+          "net": "D10_3",
+          "schematic_labels": []
+        }
+      }
+    },
+    "D3": {
+      "value": "BAT54C",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1365",
+        "-170"
+      ],
+      "pins": {
+        "1": {
+          "name": "A1",
+          "xy": "1335~-180",
+          "net": "VBAT_IN",
+          "schematic_labels": [
+            "VBAT_IN"
+          ]
+        },
+        "3": {
+          "name": "K",
+          "xy": "1395~-170",
+          "net": "D10_3",
+          "schematic_labels": []
+        },
+        "2": {
+          "name": "A2",
+          "xy": "1335~-160",
+          "net": "5VBUCK",
+          "schematic_labels": [
+            "5VBUCK"
+          ]
+        }
+      }
+    },
+    "SW1": {
+      "value": "SKQYAAE010",
+      "sheet": "Sheet_1",
+      "xy": [
+        "395",
+        "-390"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "365~-385",
+          "net": "CFG",
+          "schematic_labels": [
+            "CFG"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "425~-385",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "U50": {
+      "value": "casingAlGasLeak",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1130",
+        "-50"
+      ],
+      "pins": {}
+    },
+    "C58": {
+      "value": "100nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "185",
+        "-700"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "185~-720",
+          "net": "VCC",
+          "schematic_labels": [
+            "VCC"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "185~-680",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "R75": {
+      "value": "10kΩ",
+      "sheet": "Sheet_1",
+      "xy": [
+        "135",
+        "-780"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "155~-780",
+          "net": "PDOWN",
+          "schematic_labels": [
+            "PDOWN"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "115~-780",
+          "net": "VCC",
+          "schematic_labels": [
+            "VCC"
+          ]
+        }
+      }
+    },
+    "R73": {
+      "value": "10kΩ",
+      "sheet": "Sheet_1",
+      "xy": [
+        "135",
+        "-790"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "155~-790",
+          "net": "ADC_RST",
+          "schematic_labels": [
+            "ADC_RST"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "115~-790",
+          "net": "VCC",
+          "schematic_labels": [
+            "VCC"
+          ]
+        }
+      }
+    },
+    "R8": {
+      "value": "22Ω",
+      "sheet": "Sheet_1",
+      "xy": [
+        "170",
+        "-830"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "190~-830",
+          "net": "R8_2",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "1",
+          "xy": "150~-830",
+          "net": "SPI_MISO",
+          "schematic_labels": [
+            "SPI_MISO"
+          ]
+        }
+      }
+    },
+    "R9": {
+      "value": "22Ω",
+      "sheet": "Sheet_1",
+      "xy": [
+        "170",
+        "-840"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "190~-840",
+          "net": "R9_2",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "1",
+          "xy": "150~-840",
+          "net": "SPI_MOSI",
+          "schematic_labels": [
+            "SPI_MOSI"
+          ]
+        }
+      }
+    },
+    "R10": {
+      "value": "22Ω",
+      "sheet": "Sheet_1",
+      "xy": [
+        "170",
+        "-850"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "190~-850",
+          "net": "R10_2",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "1",
+          "xy": "150~-850",
+          "net": "SPI_SCK",
+          "schematic_labels": [
+            "SPI_SCK"
+          ]
+        }
+      }
+    },
+    "C11": {
+      "value": "10uF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "380",
+        "-735"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "380~-720",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "380~-750",
+          "net": "+5VA",
+          "schematic_labels": [
+            "+5VA"
+          ]
+        }
+      }
+    },
+    "C12": {
+      "value": "100nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "145",
+        "-700"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "145~-720",
+          "net": "+5VA",
+          "schematic_labels": [
+            "+5VA"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "145~-680",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "C57": {
+      "value": "20pF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "65",
+        "-700"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "50~-700",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "80~-700",
+          "net": "C57_2",
+          "schematic_labels": []
+        }
+      }
+    },
+    "C45": {
+      "value": "20pF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "75",
+        "-835"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "60~-835",
+          "net": "C45_1",
+          "schematic_labels": []
+        },
+        "2": {
+          "name": "2",
+          "xy": "90~-835",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "C50": {
+      "value": "100nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "510",
+        "-760"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "530~-760",
+          "net": "AI7",
+          "schematic_labels": [
+            "AI7"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "490~-760",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "C49": {
+      "value": "100nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "510",
+        "-780"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "530~-780",
+          "net": "AI6",
+          "schematic_labels": [
+            "AI6"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "490~-780",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "C48": {
+      "value": "100nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "510",
+        "-800"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "530~-800",
+          "net": "AI5",
+          "schematic_labels": [
+            "AI5"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "490~-800",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "C47": {
+      "value": "100nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "510",
+        "-820"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "530~-820",
+          "net": "AI4",
+          "schematic_labels": [
+            "AI4"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "490~-820",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "C44": {
+      "value": "100nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "510",
+        "-840"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "530~-840",
+          "net": "AI3",
+          "schematic_labels": [
+            "AI3"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "490~-840",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "C43": {
+      "value": "100nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "510",
+        "-860"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "530~-860",
+          "net": "AI2",
+          "schematic_labels": [
+            "AI2"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "490~-860",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "C42": {
+      "value": "100nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "510",
+        "-880"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "530~-880",
+          "net": "AI1",
+          "schematic_labels": [
+            "AI1"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "490~-880",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "C41": {
+      "value": "100nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "510",
+        "-900"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "530~-900",
+          "net": "AI0",
+          "schematic_labels": [
+            "AI0"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "490~-900",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "R72": {
+      "value": "49.9Ω",
+      "sheet": "Sheet_1",
+      "xy": [
+        "395",
+        "-830"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "415~-830",
+          "net": "AIN7",
+          "schematic_labels": [
+            "AIN7"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "375~-830",
+          "net": "AI7",
+          "schematic_labels": [
+            "AI7"
+          ]
+        }
+      }
+    },
+    "R71": {
+      "value": "49.9Ω",
+      "sheet": "Sheet_1",
+      "xy": [
+        "395",
+        "-840"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "415~-840",
+          "net": "AIN6",
+          "schematic_labels": [
+            "AIN6"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "375~-840",
+          "net": "AI6",
+          "schematic_labels": [
+            "AI6"
+          ]
+        }
+      }
+    },
+    "R70": {
+      "value": "49.9Ω",
+      "sheet": "Sheet_1",
+      "xy": [
+        "395",
+        "-850"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "415~-850",
+          "net": "AIN5",
+          "schematic_labels": [
+            "AIN5"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "375~-850",
+          "net": "AI5",
+          "schematic_labels": [
+            "AI5"
+          ]
+        }
+      }
+    },
+    "R69": {
+      "value": "49.9Ω",
+      "sheet": "Sheet_1",
+      "xy": [
+        "395",
+        "-860"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "415~-860",
+          "net": "AIN4",
+          "schematic_labels": [
+            "AIN4"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "375~-860",
+          "net": "AI4",
+          "schematic_labels": [
+            "AI4"
+          ]
+        }
+      }
+    },
+    "R68": {
+      "value": "49.9Ω",
+      "sheet": "Sheet_1",
+      "xy": [
+        "395",
+        "-870"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "415~-870",
+          "net": "AIN3",
+          "schematic_labels": [
+            "AIN3"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "375~-870",
+          "net": "AI3",
+          "schematic_labels": [
+            "AI3"
+          ]
+        }
+      }
+    },
+    "R67": {
+      "value": "49.9Ω",
+      "sheet": "Sheet_1",
+      "xy": [
+        "395",
+        "-880"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "415~-880",
+          "net": "AIN2",
+          "schematic_labels": [
+            "AIN2"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "375~-880",
+          "net": "AI2",
+          "schematic_labels": [
+            "AI2"
+          ]
+        }
+      }
+    },
+    "R66": {
+      "value": "49.9Ω",
+      "sheet": "Sheet_1",
+      "xy": [
+        "395",
+        "-890"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "415~-890",
+          "net": "AIN1",
+          "schematic_labels": [
+            "AIN1"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "375~-890",
+          "net": "AI1",
+          "schematic_labels": [
+            "AI1"
+          ]
+        }
+      }
+    },
+    "R65": {
+      "value": "49.9Ω",
+      "sheet": "Sheet_1",
+      "xy": [
+        "395",
+        "-900"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "415~-900",
+          "net": "AIN0",
+          "schematic_labels": [
+            "AIN0"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "375~-900",
+          "net": "AI0",
+          "schematic_labels": [
+            "AI0"
+          ]
+        }
+      }
+    },
+    "U35": {
+      "value": "ADS1256IDBR",
+      "sheet": "Sheet_1",
+      "xy": [
+        "260",
+        "-810"
+      ],
+      "pins": {
+        "1": {
+          "name": "AVDD",
+          "xy": "190~-730",
+          "net": "+5VA",
+          "schematic_labels": [
+            "+5VA"
+          ]
+        },
+        "2": {
+          "name": "AGND",
+          "xy": "330~-730",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "3": {
+          "name": "VREFN",
+          "xy": "330~-780",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "4": {
+          "name": "VREFP",
+          "xy": "330~-800",
+          "net": "VREF",
+          "schematic_labels": [
+            "VREF"
+          ]
+        },
+        "5": {
+          "name": "AINCOM",
+          "xy": "330~-820",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "6": {
+          "name": "AIN0",
+          "xy": "330~-900",
+          "net": "AI0",
+          "schematic_labels": [
+            "AI0"
+          ]
+        },
+        "7": {
+          "name": "AIN1",
+          "xy": "330~-890",
+          "net": "AI1",
+          "schematic_labels": [
+            "AI1"
+          ]
+        },
+        "8": {
+          "name": "AIN2",
+          "xy": "330~-880",
+          "net": "AI2",
+          "schematic_labels": [
+            "AI2"
+          ]
+        },
+        "9": {
+          "name": "AIN3",
+          "xy": "330~-870",
+          "net": "AI3",
+          "schematic_labels": [
+            "AI3"
+          ]
+        },
+        "10": {
+          "name": "AIN4",
+          "xy": "330~-860",
+          "net": "AI4",
+          "schematic_labels": [
+            "AI4"
+          ]
+        },
+        "11": {
+          "name": "AIN5",
+          "xy": "330~-850",
+          "net": "AI5",
+          "schematic_labels": [
+            "AI5"
+          ]
+        },
+        "12": {
+          "name": "AIN6",
+          "xy": "330~-840",
+          "net": "AI6",
+          "schematic_labels": [
+            "AI6"
+          ]
+        },
+        "13": {
+          "name": "AIN7",
+          "xy": "330~-830",
+          "net": "AI7",
+          "schematic_labels": [
+            "AI7"
+          ]
+        },
+        "14": {
+          "name": "SYNCPDWN",
+          "xy": "190~-780",
+          "net": "PDOWN",
+          "schematic_labels": [
+            "PDOWN"
+          ]
+        },
+        "15": {
+          "name": "RESET",
+          "xy": "190~-790",
+          "net": "ADC_RST",
+          "schematic_labels": [
+            "ADC_RST"
+          ]
+        },
+        "16": {
+          "name": "DVDD",
+          "xy": "190~-720",
+          "net": "VCC",
+          "schematic_labels": [
+            "VCC"
+          ]
+        },
+        "17": {
+          "name": "DGND",
+          "xy": "330~-720",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "18": {
+          "name": "XTAL2",
+          "xy": "190~-750",
+          "net": "C57_2",
+          "schematic_labels": []
+        },
+        "19": {
+          "name": "XTAL1CLKIN",
+          "xy": "190~-760",
+          "net": "C45_1",
+          "schematic_labels": []
+        },
+        "20": {
+          "name": "CS",
+          "xy": "190~-820",
+          "net": "SPI_CS",
+          "schematic_labels": [
+            "SPI_CS"
+          ]
+        },
+        "21": {
+          "name": "DRDY",
+          "xy": "190~-810",
+          "net": "DRDY",
+          "schematic_labels": [
+            "DRDY"
+          ]
+        },
+        "22": {
+          "name": "DOUT",
+          "xy": "190~-830",
+          "net": "R8_2",
+          "schematic_labels": []
+        },
+        "23": {
+          "name": "DIN",
+          "xy": "190~-840",
+          "net": "R9_2",
+          "schematic_labels": []
+        },
+        "24": {
+          "name": "SCLK",
+          "xy": "190~-850",
+          "net": "R10_2",
+          "schematic_labels": []
+        },
+        "25": {
+          "name": "D0CLKOUT",
+          "xy": "190~-900",
+          "net": "",
+          "schematic_labels": []
+        },
+        "26": {
+          "name": "D1",
+          "xy": "190~-890",
+          "net": "",
+          "schematic_labels": []
+        },
+        "27": {
+          "name": "D2",
+          "xy": "190~-880",
+          "net": "",
+          "schematic_labels": []
+        },
+        "28": {
+          "name": "D3",
+          "xy": "190~-870",
+          "net": "",
+          "schematic_labels": []
+        }
+      }
+    },
+    "U39": {
+      "value": "8MHz",
+      "sheet": "Sheet_1",
+      "xy": [
+        "70",
+        "-760"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "80~-730",
+          "net": "C57_2",
+          "schematic_labels": []
+        },
+        "3": {
+          "name": "3",
+          "xy": "60~-790",
+          "net": "C45_1",
+          "schematic_labels": []
+        },
+        "4": {
+          "name": "GND",
+          "xy": "60~-730",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "GND",
+          "xy": "80~-790",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "R74": {
+      "value": "22Ω",
+      "sheet": "Sheet_1",
+      "xy": [
+        "990",
+        "-770"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "1010~-770",
+          "net": "VREF",
+          "schematic_labels": [
+            "VREF"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "970~-770",
+          "net": "R74_1",
+          "schematic_labels": []
+        }
+      }
+    },
+    "U2": {
+      "value": "OPA320AIDBVR",
+      "sheet": "Sheet_1",
+      "xy": [
+        "920",
+        "-770"
+      ],
+      "pins": {
+        "1": {
+          "name": "OUT",
+          "xy": "960~-770",
+          "net": "R74_1",
+          "schematic_labels": []
+        },
+        "2": {
+          "name": "V-",
+          "xy": "920~-730",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "3": {
+          "name": "IN+",
+          "xy": "880~-760",
+          "net": "U2_3",
+          "schematic_labels": []
+        },
+        "4": {
+          "name": "IN-",
+          "xy": "880~-780",
+          "net": "R74_1",
+          "schematic_labels": []
+        },
+        "5": {
+          "name": "V+",
+          "xy": "920~-810",
+          "net": "+5VA",
+          "schematic_labels": [
+            "+5VA"
+          ]
+        }
+      }
+    },
+    "C53": {
+      "value": "10uF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "765",
+        "-740"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "765~-725",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "765~-755",
+          "net": "C53_2",
+          "schematic_labels": []
+        }
+      }
+    },
+    "R76": {
+      "value": "1kΩ",
+      "sheet": "Sheet_1",
+      "xy": [
+        "795",
+        "-760"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "815~-760",
+          "net": "U2_3",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "1",
+          "xy": "775~-760",
+          "net": "C53_2",
+          "schematic_labels": []
+        }
+      }
+    },
+    "C46": {
+      "value": "100nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1025",
+        "-810"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "1025~-830",
+          "net": "+5VA",
+          "schematic_labels": [
+            "+5VA"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "1025~-790",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "C51": {
+      "value": "100nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1060",
+        "-745"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "1060~-765",
+          "net": "VREF",
+          "schematic_labels": [
+            "VREF"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "1060~-725",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "C56": {
+      "value": "22uF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1020",
+        "-740"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "1020~-755",
+          "net": "VREF",
+          "schematic_labels": [
+            "VREF"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "1020~-725",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "C55": {
+      "value": "100nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "865",
+        "-740"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "865~-760",
+          "net": "U2_3",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "1",
+          "xy": "865~-720",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "C54": {
+      "value": "100nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "825",
+        "-740"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "825~-760",
+          "net": "U2_3",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "1",
+          "xy": "825~-720",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "C52": {
+      "value": "100nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "605",
+        "-740"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "605~-760",
+          "net": "+5VA",
+          "schematic_labels": [
+            "+5VA"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "605~-720",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "U38": {
+      "value": "ADR03AKSZ-REEL7",
+      "sheet": "Sheet_1",
+      "xy": [
+        "685",
+        "-750"
+      ],
+      "pins": {
+        "1": {
+          "name": "TEMP",
+          "xy": "635~-740",
+          "net": "",
+          "schematic_labels": []
+        },
+        "2": {
+          "name": "GND",
+          "xy": "635~-750",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "3": {
+          "name": "VIN",
+          "xy": "635~-760",
+          "net": "+5VA",
+          "schematic_labels": [
+            "+5VA"
+          ]
+        },
+        "4": {
+          "name": "VOUT",
+          "xy": "735~-760",
+          "net": "C53_2",
+          "schematic_labels": []
+        },
+        "5": {
+          "name": "TRIM",
+          "xy": "735~-740",
+          "net": "",
+          "schematic_labels": []
+        }
+      }
+    },
+    "C66": {
+      "value": "100nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "625",
+        "-865"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "625~-885",
+          "net": "RSTA",
+          "schematic_labels": [
+            "RSTA"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "625~-845",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "C65": {
+      "value": "100nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "840",
+        "-890"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "840~-910",
+          "net": "+5V",
+          "schematic_labels": [
+            "+5V"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "840~-870",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "R77": {
+      "value": "10kΩ",
+      "sheet": "Sheet_1",
+      "xy": [
+        "625",
+        "-915"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "625~-935",
+          "net": "+5V",
+          "schematic_labels": [
+            "+5V"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "625~-895",
+          "net": "RSTA",
+          "schematic_labels": [
+            "RSTA"
+          ]
+        }
+      }
+    },
+    "U33": {
+      "value": "TCA9548APWR",
+      "sheet": "Sheet_1",
+      "xy": [
+        "745",
+        "-855"
+      ],
+      "pins": {
+        "1": {
+          "name": "A0",
+          "xy": "695~-910",
+          "net": "+5V",
+          "schematic_labels": [
+            "+5V"
+          ]
+        },
+        "2": {
+          "name": "A1",
+          "xy": "695~-900",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "3": {
+          "name": "RESET#",
+          "xy": "695~-890",
+          "net": "RSTA",
+          "schematic_labels": [
+            "RSTA"
+          ]
+        },
+        "4": {
+          "name": "SD0",
+          "xy": "695~-880",
+          "net": "SDA0",
+          "schematic_labels": [
+            "SDA0"
+          ]
+        },
+        "5": {
+          "name": "SC0",
+          "xy": "695~-870",
+          "net": "SCL0",
+          "schematic_labels": [
+            "SCL0"
+          ]
+        },
+        "6": {
+          "name": "SD1",
+          "xy": "695~-860",
+          "net": "SDA1",
+          "schematic_labels": [
+            "SDA1"
+          ]
+        },
+        "7": {
+          "name": "SC1",
+          "xy": "695~-850",
+          "net": "SCL1",
+          "schematic_labels": [
+            "SCL1"
+          ]
+        },
+        "8": {
+          "name": "SD2",
+          "xy": "695~-840",
+          "net": "SDA2",
+          "schematic_labels": [
+            "SDA2"
+          ]
+        },
+        "9": {
+          "name": "SC2",
+          "xy": "695~-830",
+          "net": "SCL2",
+          "schematic_labels": [
+            "SCL2"
+          ]
+        },
+        "10": {
+          "name": "SD3",
+          "xy": "695~-820",
+          "net": "SDA3",
+          "schematic_labels": [
+            "SDA3"
+          ]
+        },
+        "11": {
+          "name": "SC3",
+          "xy": "695~-810",
+          "net": "SCL3",
+          "schematic_labels": [
+            "SCL3"
+          ]
+        },
+        "12": {
+          "name": "GND",
+          "xy": "695~-800",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "13": {
+          "name": "SD4",
+          "xy": "795~-800",
+          "net": "SDA4",
+          "schematic_labels": [
+            "SDA4"
+          ]
+        },
+        "14": {
+          "name": "SC4",
+          "xy": "795~-810",
+          "net": "SCL4",
+          "schematic_labels": [
+            "SCL4"
+          ]
+        },
+        "15": {
+          "name": "SD5",
+          "xy": "795~-820",
+          "net": "SDA5",
+          "schematic_labels": [
+            "SDA5"
+          ]
+        },
+        "16": {
+          "name": "SC5",
+          "xy": "795~-830",
+          "net": "SCL5",
+          "schematic_labels": [
+            "SCL5"
+          ]
+        },
+        "17": {
+          "name": "SD6",
+          "xy": "795~-840",
+          "net": "SDA6",
+          "schematic_labels": [
+            "SDA6"
+          ]
+        },
+        "18": {
+          "name": "SC6",
+          "xy": "795~-850",
+          "net": "SCL6",
+          "schematic_labels": [
+            "SCL6"
+          ]
+        },
+        "19": {
+          "name": "SD7",
+          "xy": "795~-860",
+          "net": "SDA7",
+          "schematic_labels": [
+            "SDA7"
+          ]
+        },
+        "20": {
+          "name": "SC7",
+          "xy": "795~-870",
+          "net": "SCL7",
+          "schematic_labels": [
+            "SCL7"
+          ]
+        },
+        "21": {
+          "name": "A2",
+          "xy": "795~-880",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "22": {
+          "name": "SCL",
+          "xy": "795~-890",
+          "net": "SCL",
+          "schematic_labels": [
+            "SCL"
+          ]
+        },
+        "23": {
+          "name": "SDA",
+          "xy": "795~-900",
+          "net": "SDA",
+          "schematic_labels": [
+            "SDA"
+          ]
+        },
+        "24": {
+          "name": "VCC",
+          "xy": "795~-910",
+          "net": "+5V",
+          "schematic_labels": [
+            "+5V"
+          ]
+        }
+      }
+    },
+    "R11": {
+      "value": "49.9Ω",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1335",
+        "-670"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "1355~-670",
+          "net": "VMID",
+          "schematic_labels": [
+            "VMID"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "1315~-670",
+          "net": "R11_1",
+          "schematic_labels": []
+        }
+      }
+    },
+    "U3": {
+      "value": "OPA320AIDBVR",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1275",
+        "-670"
+      ],
+      "pins": {
+        "1": {
+          "name": "OUT",
+          "xy": "1315~-670",
+          "net": "R11_1",
+          "schematic_labels": []
+        },
+        "2": {
+          "name": "V-",
+          "xy": "1275~-630",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "3": {
+          "name": "IN+",
+          "xy": "1235~-660",
+          "net": "U3_3",
+          "schematic_labels": []
+        },
+        "4": {
+          "name": "IN-",
+          "xy": "1235~-680",
+          "net": "R11_1",
+          "schematic_labels": []
+        },
+        "5": {
+          "name": "V+",
+          "xy": "1275~-710",
+          "net": "+5VA",
+          "schematic_labels": [
+            "+5VA"
+          ]
+        }
+      }
+    },
+    "C13": {
+      "value": "100nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1215",
+        "-640"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "1215~-660",
+          "net": "U3_3",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "1",
+          "xy": "1215~-620",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "C14": {
+      "value": "100nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1555",
+        "-275"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "1555~-295",
+          "net": "VCC",
+          "schematic_labels": [
+            "VCC"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "1555~-255",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "U44": {
+      "value": "SHT40-AD1B-R2",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1485",
+        "-305"
+      ],
+      "pins": {
+        "1": {
+          "name": "SDA",
+          "xy": "1450~-305",
+          "net": "SDA",
+          "schematic_labels": [
+            "SDA"
+          ]
+        },
+        "2": {
+          "name": "SCL",
+          "xy": "1450~-295",
+          "net": "SCL",
+          "schematic_labels": [
+            "SCL"
+          ]
+        },
+        "3": {
+          "name": "VDD",
+          "xy": "1520~-295",
+          "net": "VCC",
+          "schematic_labels": [
+            "VCC"
+          ]
+        },
+        "4": {
+          "name": "VSS",
+          "xy": "1520~-305",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "5": {
+          "name": "EP",
+          "xy": "1520~-315",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "U12": {
+      "value": "PCF8574T/TR",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1180",
+        "-885"
+      ],
+      "pins": {
+        "1": {
+          "name": "A0",
+          "xy": "1140~-920",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "A1",
+          "xy": "1140~-910",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "3": {
+          "name": "A2",
+          "xy": "1140~-900",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "4": {
+          "name": "P0",
+          "xy": "1140~-890",
+          "net": "EN0",
+          "schematic_labels": [
+            "EN0"
+          ]
+        },
+        "5": {
+          "name": "P1",
+          "xy": "1140~-880",
+          "net": "EN1",
+          "schematic_labels": [
+            "EN1"
+          ]
+        },
+        "6": {
+          "name": "P2",
+          "xy": "1140~-870",
+          "net": "EN2",
+          "schematic_labels": [
+            "EN2"
+          ]
+        },
+        "7": {
+          "name": "P3",
+          "xy": "1140~-860",
+          "net": "EN3",
+          "schematic_labels": [
+            "EN3"
+          ]
+        },
+        "8": {
+          "name": "VSS",
+          "xy": "1140~-850",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "9": {
+          "name": "P4",
+          "xy": "1220~-850",
+          "net": "EN4",
+          "schematic_labels": [
+            "EN4"
+          ]
+        },
+        "10": {
+          "name": "P5",
+          "xy": "1220~-860",
+          "net": "EN5",
+          "schematic_labels": [
+            "EN5"
+          ]
+        },
+        "11": {
+          "name": "P6",
+          "xy": "1220~-870",
+          "net": "EN6",
+          "schematic_labels": [
+            "EN6"
+          ]
+        },
+        "12": {
+          "name": "P7",
+          "xy": "1220~-880",
+          "net": "EN7",
+          "schematic_labels": [
+            "EN7"
+          ]
+        },
+        "13": {
+          "name": "INT#",
+          "xy": "1220~-890",
+          "net": "",
+          "schematic_labels": []
+        },
+        "14": {
+          "name": "SCL",
+          "xy": "1220~-900",
+          "net": "SCL",
+          "schematic_labels": [
+            "SCL"
+          ]
+        },
+        "15": {
+          "name": "SDA",
+          "xy": "1220~-910",
+          "net": "SDA",
+          "schematic_labels": [
+            "SDA"
+          ]
+        },
+        "16": {
+          "name": "VDD",
+          "xy": "1220~-920",
+          "net": "VCC",
+          "schematic_labels": [
+            "VCC"
+          ]
+        }
+      }
+    },
+    "C15": {
+      "value": "100nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1275",
+        "-900"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "1275~-920",
+          "net": "VCC",
+          "schematic_labels": [
+            "VCC"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "1275~-880",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "U14": {
+      "value": "TPS22964CYZPR",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1475",
+        "-1070"
+      ],
+      "pins": {
+        "A1": {
+          "name": "VOUT",
+          "xy": "1535~-1080",
+          "net": "VBAT",
+          "schematic_labels": [
+            "VBAT"
+          ]
+        },
+        "A2": {
+          "name": "VIN",
+          "xy": "1425~-1080",
+          "net": "VBAT_IN",
+          "schematic_labels": [
+            "VBAT_IN"
+          ]
+        },
+        "B1": {
+          "name": "VOUT",
+          "xy": "1535~-1070",
+          "net": "VBAT",
+          "schematic_labels": [
+            "VBAT"
+          ]
+        },
+        "B2": {
+          "name": "VIN",
+          "xy": "1425~-1070",
+          "net": "VBAT_IN",
+          "schematic_labels": [
+            "VBAT_IN"
+          ]
+        },
+        "C1": {
+          "name": "GND",
+          "xy": "1535~-1060",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "C2": {
+          "name": "ON",
+          "xy": "1425~-1060",
+          "net": "ENA",
+          "schematic_labels": [
+            "ENA"
+          ]
+        }
+      }
+    },
+    "U13": {
+      "value": "TPS2116DRLR",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1485",
+        "-895"
+      ],
+      "pins": {
+        "1": {
+          "name": "GND",
+          "xy": "1440~-910",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "VOUT",
+          "xy": "1440~-900",
+          "net": "+5V",
+          "schematic_labels": [
+            "+5V"
+          ]
+        },
+        "3": {
+          "name": "VIN1",
+          "xy": "1440~-890",
+          "net": "5VBUCK",
+          "schematic_labels": [
+            "5VBUCK"
+          ]
+        },
+        "4": {
+          "name": "PR1",
+          "xy": "1440~-880",
+          "net": "U13_4",
+          "schematic_labels": []
+        },
+        "5": {
+          "name": "MODE",
+          "xy": "1530~-880",
+          "net": "5VBUCK",
+          "schematic_labels": [
+            "5VBUCK"
+          ]
+        },
+        "6": {
+          "name": "VIN2",
+          "xy": "1530~-890",
+          "net": "5VBOOST",
+          "schematic_labels": [
+            "5VBOOST"
+          ]
+        },
+        "7": {
+          "name": "VOUT",
+          "xy": "1530~-900",
+          "net": "+5V",
+          "schematic_labels": [
+            "+5V"
+          ]
+        },
+        "8": {
+          "name": "ST",
+          "xy": "1530~-910",
+          "net": "ST_P",
+          "schematic_labels": [
+            "ST_P"
+          ]
+        }
+      }
+    },
+    "R13": {
+      "value": "16kΩ",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1465",
+        "-845"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "1445~-845",
+          "net": "U13_4",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "1",
+          "xy": "1485~-845",
+          "net": "5VBUCK",
+          "schematic_labels": [
+            "5VBUCK"
+          ]
+        }
+      }
+    },
+    "R14": {
+      "value": "4.99kΩ",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1420",
+        "-845"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "1440~-845",
+          "net": "U13_4",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "1",
+          "xy": "1400~-845",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "U15": {
+      "value": "SN74LVC1G06DCKR",
+      "sheet": "Sheet_1",
+      "xy": [
+        "390",
+        "-60"
+      ],
+      "pins": {
+        "1": {
+          "name": "NC",
+          "xy": "350~-70",
+          "net": "",
+          "schematic_labels": []
+        },
+        "2": {
+          "name": "A",
+          "xy": "350~-60",
+          "net": "WAKE",
+          "schematic_labels": [
+            "WAKE"
+          ]
+        },
+        "3": {
+          "name": "GND",
+          "xy": "350~-50",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "4": {
+          "name": "Y",
+          "xy": "430~-50",
+          "net": "PRE",
+          "schematic_labels": [
+            "PRE"
+          ]
+        },
+        "5": {
+          "name": "VCC",
+          "xy": "430~-70",
+          "net": "3V3AON",
+          "schematic_labels": [
+            "3V3AON"
+          ]
+        }
+      }
+    },
+    "U16": {
+      "value": "TPS3839K33DBZR",
+      "sheet": "Sheet_1",
+      "xy": [
+        "385",
+        "-200"
+      ],
+      "pins": {
+        "1": {
+          "name": "GND",
+          "xy": "435~-195",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "RESET#",
+          "xy": "435~-205",
+          "net": "PRE",
+          "schematic_labels": [
+            "PRE"
+          ]
+        },
+        "3": {
+          "name": "VDD",
+          "xy": "335~-200",
+          "net": "3V3AON",
+          "schematic_labels": [
+            "3V3AON"
+          ]
+        }
+      }
+    },
+    "R16": {
+      "value": "10kΩ",
+      "sheet": "Sheet_1",
+      "xy": [
+        "90",
+        "-425"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "90~-445",
+          "net": "VCC",
+          "schematic_labels": [
+            "VCC"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "90~-405",
+          "net": "SCL",
+          "schematic_labels": [
+            "SCL"
+          ]
+        }
+      }
+    },
+    "R17": {
+      "value": "10kΩ",
+      "sheet": "Sheet_1",
+      "xy": [
+        "125",
+        "-425"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "125~-445",
+          "net": "VCC",
+          "schematic_labels": [
+            "VCC"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "125~-405",
+          "net": "SDA",
+          "schematic_labels": [
+            "SDA"
+          ]
+        }
+      }
+    },
+    "R18": {
+      "value": "10kΩ",
+      "sheet": "Sheet_1",
+      "xy": [
+        "365",
+        "-405"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "365~-425",
+          "net": "VCC",
+          "schematic_labels": [
+            "VCC"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "365~-385",
+          "net": "CFG",
+          "schematic_labels": [
+            "CFG"
+          ]
+        }
+      }
+    },
+    "R19": {
+      "value": "10kΩ",
+      "sheet": "Sheet_1",
+      "xy": [
+        "400",
+        "-585"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "400~-605",
+          "net": "VCC",
+          "schematic_labels": [
+            "VCC"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "400~-565",
+          "net": "IO0",
+          "schematic_labels": [
+            "IO0"
+          ]
+        }
+      }
+    },
+    "R20": {
+      "value": "10kΩ",
+      "sheet": "Sheet_1",
+      "xy": [
+        "440",
+        "-585"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "440~-605",
+          "net": "VCC",
+          "schematic_labels": [
+            "VCC"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "440~-565",
+          "net": "RST",
+          "schematic_labels": [
+            "RST"
+          ]
+        }
+      }
+    },
+    "C20": {
+      "value": "100nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "65",
+        "-580"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "65~-600",
+          "net": "VCC",
+          "schematic_labels": [
+            "VCC"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "65~-560",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "C21": {
+      "value": "100nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "400",
+        "-540"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "400~-560",
+          "net": "IO0",
+          "schematic_labels": [
+            "IO0"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "400~-520",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "C22": {
+      "value": "100nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "440",
+        "-540"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "440~-560",
+          "net": "RST",
+          "schematic_labels": [
+            "RST"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "440~-520",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "C23": {
+      "value": "100nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "525",
+        "-535"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "525~-555",
+          "net": "BATMON",
+          "schematic_labels": [
+            "BATMON"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "525~-515",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "C6": {
+      "value": "100nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "585",
+        "-605"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "585~-625",
+          "net": "VBAT",
+          "schematic_labels": [
+            "VBAT"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "585~-585",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "C24": {
+      "value": "100nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "470",
+        "-320"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "470~-340",
+          "net": "VCC",
+          "schematic_labels": [
+            "VCC"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "470~-300",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "C25": {
+      "value": "100nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "560",
+        "-410"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "560~-430",
+          "net": "VCC",
+          "schematic_labels": [
+            "VCC"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "560~-390",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "C26": {
+      "value": "100nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "20",
+        "-140"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "20~-160",
+          "net": "3V3AON",
+          "schematic_labels": [
+            "3V3AON"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "20~-120",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "C27": {
+      "value": "100nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "470",
+        "-50"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "470~-70",
+          "net": "3V3AON",
+          "schematic_labels": [
+            "3V3AON"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "470~-30",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "C28": {
+      "value": "100nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "500",
+        "-120"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "500~-140",
+          "net": "3V3AON",
+          "schematic_labels": [
+            "3V3AON"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "500~-100",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "C19": {
+      "value": "100nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "300",
+        "-180"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "300~-200",
+          "net": "3V3AON",
+          "schematic_labels": [
+            "3V3AON"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "300~-160",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "C29": {
+      "value": "100nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1405",
+        "-645"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "1405~-665",
+          "net": "VMID",
+          "schematic_labels": [
+            "VMID"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "1405~-625",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "C30": {
+      "value": "100nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1335",
+        "-720"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "1335~-740",
+          "net": "+5VA",
+          "schematic_labels": [
+            "+5VA"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "1335~-700",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "C31": {
+      "value": "100nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1200",
+        "-435"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "1180~-435",
+          "net": "U41_4",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "1",
+          "xy": "1220~-435",
+          "net": "U41_8",
+          "schematic_labels": []
+        }
+      }
+    },
+    "R2": {
+      "value": "10kΩ",
+      "sheet": "Sheet_1",
+      "xy": [
+        "955",
+        "-545"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "955~-565",
+          "net": "R3_1",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "1",
+          "xy": "955~-525",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "C32": {
+      "value": "10uF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "30",
+        "-580"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "30~-565",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "30~-595",
+          "net": "VCC",
+          "schematic_labels": [
+            "VCC"
+          ]
+        }
+      }
+    },
+    "C33": {
+      "value": "10uF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "525",
+        "-410"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "525~-395",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "525~-425",
+          "net": "VCC",
+          "schematic_labels": [
+            "VCC"
+          ]
+        }
+      }
+    },
+    "C34": {
+      "value": "10uF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "430",
+        "-320"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "430~-305",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "430~-335",
+          "net": "VCC",
+          "schematic_labels": [
+            "VCC"
+          ]
+        }
+      }
+    },
+    "R21": {
+      "value": "10kΩ",
+      "sheet": "Sheet_1",
+      "xy": [
+        "225",
+        "-80"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "225~-100",
+          "net": "3V3AON",
+          "schematic_labels": [
+            "3V3AON"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "225~-60",
+          "net": "CLR",
+          "schematic_labels": [
+            "CLR"
+          ]
+        }
+      }
+    },
+    "R15": {
+      "value": "10kΩ",
+      "sheet": "Sheet_1",
+      "xy": [
+        "445",
+        "-225"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "445~-245",
+          "net": "3V3AON",
+          "schematic_labels": [
+            "3V3AON"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "445~-205",
+          "net": "PRE",
+          "schematic_labels": [
+            "PRE"
+          ]
+        }
+      }
+    },
+    "R22": {
+      "value": "10kΩ",
+      "sheet": "Sheet_1",
+      "xy": [
+        "320",
+        "-130"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "300~-130",
+          "net": "3V3AON",
+          "schematic_labels": [
+            "3V3AON"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "340~-130",
+          "net": "U51_2",
+          "schematic_labels": []
+        }
+      }
+    },
+    "C35": {
+      "value": "10uF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "550",
+        "-110"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "550~-95",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "550~-125",
+          "net": "+5V",
+          "schematic_labels": [
+            "+5V"
+          ]
+        }
+      }
+    },
+    "R23": {
+      "value": "100kΩ",
+      "sheet": "Sheet_1",
+      "xy": [
+        "585",
+        "-70"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "585~-90",
+          "net": "U43_8",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "1",
+          "xy": "585~-50",
+          "net": "VCC",
+          "schematic_labels": [
+            "VCC"
+          ]
+        }
+      }
+    },
+    "R24": {
+      "value": "100kΩ",
+      "sheet": "Sheet_1",
+      "xy": [
+        "485",
+        "-535"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "485~-555",
+          "net": "BATMON",
+          "schematic_labels": [
+            "BATMON"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "485~-515",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "R25": {
+      "value": "100kΩ",
+      "sheet": "Sheet_1",
+      "xy": [
+        "965",
+        "-195"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "945~-195",
+          "net": "VCC",
+          "schematic_labels": [
+            "VCC"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "985~-195",
+          "net": "PG24",
+          "schematic_labels": [
+            "PG24"
+          ]
+        }
+      }
+    },
+    "C36": {
+      "value": "10uF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1130",
+        "-405"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "1130~-390",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "1130~-420",
+          "net": "VBAT",
+          "schematic_labels": [
+            "VBAT"
+          ]
+        }
+      }
+    },
+    "C37": {
+      "value": "10uF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1160",
+        "-405"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "1160~-390",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "1160~-420",
+          "net": "VBAT",
+          "schematic_labels": [
+            "VBAT"
+          ]
+        }
+      }
+    },
+    "C10": {
+      "value": "10uF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1040",
+        "-645"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "1040~-625",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "1040~-665",
+          "net": "D13_1",
+          "schematic_labels": []
+        }
+      }
+    },
+    "C9": {
+      "value": "22uF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1000",
+        "-645"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "1000~-665",
+          "net": "D13_1",
+          "schematic_labels": []
+        },
+        "2": {
+          "name": "2",
+          "xy": "1000~-625",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "R26": {
+      "value": "100kΩ",
+      "sheet": "Sheet_1",
+      "xy": [
+        "865",
+        "-210"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "865~-230",
+          "net": "Q3_4",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "1",
+          "xy": "865~-190",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "R1": {
+      "value": "100kΩ",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1040",
+        "-70"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "1040~-90",
+          "net": "Q2_4",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "1",
+          "xy": "1040~-50",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "R27": {
+      "value": "100kΩ",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1225",
+        "-230"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "1225~-250",
+          "net": "5VBUCK",
+          "schematic_labels": [
+            "5VBUCK"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "1225~-210",
+          "net": "U36_7",
+          "schematic_labels": []
+        }
+      }
+    },
+    "R4": {
+      "value": "100kΩ",
+      "sheet": "Sheet_1",
+      "xy": [
+        "750",
+        "-575"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "750~-595",
+          "net": "U1_4",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "1",
+          "xy": "750~-555",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "R28": {
+      "value": "10kΩ",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1180",
+        "-685"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "1180~-705",
+          "net": "+5VA",
+          "schematic_labels": [
+            "+5VA"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "1180~-665",
+          "net": "U3_3",
+          "schematic_labels": []
+        }
+      }
+    },
+    "R29": {
+      "value": "10kΩ",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1180",
+        "-640"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "1180~-660",
+          "net": "U3_3",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "1",
+          "xy": "1180~-620",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "R7": {
+      "value": "10kΩ",
+      "sheet": "Sheet_1",
+      "xy": [
+        "900",
+        "-535"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "900~-555",
+          "net": "U1_8",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "1",
+          "xy": "900~-515",
+          "net": "C8_2",
+          "schematic_labels": []
+        }
+      }
+    },
+    "R30": {
+      "value": "100kΩ",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1365",
+        "-520"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "1345~-520",
+          "net": "U41_19",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "1",
+          "xy": "1385~-520",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "R5": {
+      "value": "1kΩ",
+      "sheet": "Sheet_1",
+      "xy": [
+        "720",
+        "-595"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "740~-595",
+          "net": "U1_4",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "1",
+          "xy": "700~-595",
+          "net": "EN_BOOST",
+          "schematic_labels": [
+            "EN_BOOST"
+          ]
+        }
+      }
+    },
+    "R31": {
+      "value": "1kΩ",
+      "sheet": "Sheet_1",
+      "xy": [
+        "395",
+        "-455"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "415~-455",
+          "net": "LED1_2",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "1",
+          "xy": "375~-455",
+          "net": "LED",
+          "schematic_labels": [
+            "LED"
+          ]
+        }
+      }
+    },
+    "R32": {
+      "value": "200kΩ",
+      "sheet": "Sheet_1",
+      "xy": [
+        "485",
+        "-585"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "485~-605",
+          "net": "VBAT_IN",
+          "schematic_labels": [
+            "VBAT_IN"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "485~-565",
+          "net": "BATMON",
+          "schematic_labels": [
+            "BATMON"
+          ]
+        }
+      }
+    },
+    "C16": {
+      "value": "10uF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1350",
+        "-880"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "1350~-865",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "1350~-895",
+          "net": "+5V",
+          "schematic_labels": [
+            "+5V"
+          ]
+        }
+      }
+    },
+    "C17": {
+      "value": "10uF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1385",
+        "-870"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "1385~-855",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "1385~-885",
+          "net": "5VBUCK",
+          "schematic_labels": [
+            "5VBUCK"
+          ]
+        }
+      }
+    },
+    "C18": {
+      "value": "10uF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1595",
+        "-870"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "1595~-855",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "1595~-885",
+          "net": "5VBOOST",
+          "schematic_labels": [
+            "5VBOOST"
+          ]
+        }
+      }
+    },
+    "C38": {
+      "value": "10uF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1370",
+        "-645"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "1370~-630",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "1370~-660",
+          "net": "VMID",
+          "schematic_labels": [
+            "VMID"
+          ]
+        }
+      }
+    },
+    "R12": {
+      "value": "100kΩ",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1575",
+        "-930"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "1575~-950",
+          "net": "VCC",
+          "schematic_labels": [
+            "VCC"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "1575~-910",
+          "net": "ST_P",
+          "schematic_labels": [
+            "ST_P"
+          ]
+        }
+      }
+    },
+    "C39": {
+      "value": "22uF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "765",
+        "-110"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "765~-90",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "765~-130",
+          "net": "VCC",
+          "schematic_labels": [
+            "VCC"
+          ]
+        }
+      }
+    },
+    "C40": {
+      "value": "22uF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "800",
+        "-110"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "800~-90",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "800~-130",
+          "net": "VCC",
+          "schematic_labels": [
+            "VCC"
+          ]
+        }
+      }
+    },
+    "C62": {
+      "value": "22uF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1425",
+        "-150"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "1425~-130",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "1425~-170",
+          "net": "D10_3",
+          "schematic_labels": []
+        }
+      }
+    },
+    "C63": {
+      "value": "22uF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1575",
+        "-150"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "1575~-130",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "1575~-170",
+          "net": "3V3AON",
+          "schematic_labels": [
+            "3V3AON"
+          ]
+        }
+      }
+    },
+    "R33": {
+      "value": "0Ω",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1455",
+        "-150"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "1455~-170",
+          "net": "D10_3",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "1",
+          "xy": "1455~-130",
+          "net": "U42_3",
+          "schematic_labels": []
+        }
+      }
+    },
+    "C64": {
+      "value": "22uF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1365",
+        "-425"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "1365~-405",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "1365~-445",
+          "net": "5VBOOST",
+          "schematic_labels": [
+            "5VBOOST"
+          ]
+        }
+      }
+    },
+    "C67": {
+      "value": "22uF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1395",
+        "-425"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "1395~-405",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "1395~-445",
+          "net": "5VBOOST",
+          "schematic_labels": [
+            "5VBOOST"
+          ]
+        }
+      }
+    },
+    "C68": {
+      "value": "22uF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1425",
+        "-425"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "1425~-405",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "1425~-445",
+          "net": "5VBOOST",
+          "schematic_labels": [
+            "5VBOOST"
+          ]
+        }
+      }
+    },
+    "C71": {
+      "value": "1uF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1455",
+        "-425"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "1455~-405",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "1455~-445",
+          "net": "5VBOOST",
+          "schematic_labels": [
+            "5VBOOST"
+          ]
+        }
+      }
+    },
+    "C5": {
+      "value": "22uF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "615",
+        "-605"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "615~-585",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "615~-625",
+          "net": "VBAT",
+          "schematic_labels": [
+            "VBAT"
+          ]
+        }
+      }
+    },
+    "C74": {
+      "value": "2.2uF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1210",
+        "-545"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "1210~-565",
+          "net": "U41_1",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "1",
+          "xy": "1210~-525",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "R34": {
+      "value": "255kΩ",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1200",
+        "-485"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "1220~-485",
+          "net": "U41_3",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "1",
+          "xy": "1180~-485",
+          "net": "U41_4",
+          "schematic_labels": []
+        }
+      }
+    },
+    "C75": {
+      "value": "47nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1265",
+        "-350"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "1265~-335",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "1265~-365",
+          "net": "U41_10",
+          "schematic_labels": []
+        }
+      }
+    },
+    "R35": {
+      "value": "43kΩ",
+      "sheet": "Sheet_1",
+      "xy": [
+        "95",
+        "-55"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "95~-75",
+          "net": "R35_2",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "1",
+          "xy": "95~-35",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "R36": {
+      "value": "56kΩ",
+      "sheet": "Sheet_1",
+      "xy": [
+        "130",
+        "-55"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "130~-75",
+          "net": "R36_2",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "1",
+          "xy": "130~-35",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "R37": {
+      "value": "0Ω",
+      "sheet": "Sheet_1",
+      "xy": [
+        "60",
+        "-95"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "60~-115",
+          "net": "U46_3",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "1",
+          "xy": "60~-75",
+          "net": "R92_2",
+          "schematic_labels": []
+        }
+      }
+    },
+    "R38": {
+      "value": "0Ω",
+      "sheet": "Sheet_1",
+      "xy": [
+        "95",
+        "-95"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "95~-115",
+          "net": "U46_3",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "1",
+          "xy": "95~-75",
+          "net": "R35_2",
+          "schematic_labels": []
+        }
+      }
+    },
+    "R39": {
+      "value": "0Ω",
+      "sheet": "Sheet_1",
+      "xy": [
+        "130",
+        "-95"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "130~-115",
+          "net": "U46_3",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "1",
+          "xy": "130~-75",
+          "net": "R36_2",
+          "schematic_labels": []
+        }
+      }
+    },
+    "R40": {
+      "value": "100kΩ",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1425",
+        "-485"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "1405~-485",
+          "net": "U41_18",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "1",
+          "xy": "1445~-485",
+          "net": "R40_1",
+          "schematic_labels": []
+        }
+      }
+    },
+    "C76": {
+      "value": "47nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1460",
+        "-485"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "1475~-485",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "1445~-485",
+          "net": "R40_1",
+          "schematic_labels": []
+        }
+      }
+    },
+    "C77": {
+      "value": "4.7nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1430",
+        "-500"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "1415~-500",
+          "net": "U41_18",
+          "schematic_labels": []
+        },
+        "2": {
+          "name": "2",
+          "xy": "1445~-500",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "J2": {
+      "value": "ALARM",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1560",
+        "-735"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "1545~-740",
+          "net": "+24V",
+          "schematic_labels": [
+            "+24V"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "1545~-730",
+          "net": "J2_2",
+          "schematic_labels": []
+        }
+      }
+    },
+    "Q4": {
+      "value": "AO3400A",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1525",
+        "-705"
+      ],
+      "pins": {
+        "3": {
+          "name": "D",
+          "xy": "1535~-725",
+          "net": "J2_2",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "G",
+          "xy": "1505~-705",
+          "net": "Q4_1",
+          "schematic_labels": []
+        },
+        "2": {
+          "name": "S",
+          "xy": "1535~-685",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "R41": {
+      "value": "100kΩ",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1505",
+        "-675"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "1505~-695",
+          "net": "Q4_1",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "1",
+          "xy": "1505~-655",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "R94": {
+      "value": "100Ω",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1485",
+        "-705"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "1505~-705",
+          "net": "Q4_1",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "1",
+          "xy": "1465~-705",
+          "net": "ALARM",
+          "schematic_labels": [
+            "ALARM"
+          ]
+        }
+      }
+    },
+    "D8": {
+      "value": "SS14",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1505",
+        "-750"
+      ],
+      "pins": {
+        "2": {
+          "name": "A",
+          "xy": "1505~-730",
+          "net": "J2_2",
+          "schematic_labels": []
+        },
+        "1": {
+          "name": "K",
+          "xy": "1505~-770",
+          "net": "+24V",
+          "schematic_labels": [
+            "+24V"
+          ]
+        }
+      }
+    },
+    "C85": {
+      "value": "10uF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1470",
+        "-755"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "1470~-740",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "1470~-770",
+          "net": "+24V",
+          "schematic_labels": [
+            "+24V"
+          ]
+        }
+      }
+    },
+    "C84": {
+      "value": "100nF",
+      "sheet": "Sheet_1",
+      "xy": [
+        "1435",
+        "-750"
+      ],
+      "pins": {
+        "2": {
+          "name": "2",
+          "xy": "1435~-770",
+          "net": "+24V",
+          "schematic_labels": [
+            "+24V"
+          ]
+        },
+        "1": {
+          "name": "1",
+          "xy": "1435~-730",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        }
+      }
+    },
+    "H2": {
+      "value": "X1321WVS-2X04J-C40D53",
+      "sheet": "Sheet_1",
+      "xy": [
+        "85",
+        "-1075"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "105~-1090",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "8": {
+          "name": "8",
+          "xy": "65~-1060",
+          "net": "VMID",
+          "schematic_labels": [
+            "VMID"
+          ]
+        },
+        "3": {
+          "name": "3",
+          "xy": "105~-1080",
+          "net": "AIN0",
+          "schematic_labels": [
+            "AIN0"
+          ]
+        },
+        "6": {
+          "name": "6",
+          "xy": "65~-1070",
+          "net": "SDA7",
+          "schematic_labels": [
+            "SDA7"
+          ]
+        },
+        "5": {
+          "name": "5",
+          "xy": "105~-1070",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "4": {
+          "name": "4",
+          "xy": "65~-1080",
+          "net": "SCL7",
+          "schematic_labels": [
+            "SCL7"
+          ]
+        },
+        "7": {
+          "name": "7",
+          "xy": "105~-1060",
+          "net": "EN0",
+          "schematic_labels": [
+            "EN0"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "65~-1090",
+          "net": "+5V",
+          "schematic_labels": [
+            "+5V"
+          ]
+        }
+      }
+    },
+    "H1": {
+      "value": "X1321WVS-2X04J-C40D53",
+      "sheet": "Sheet_1",
+      "xy": [
+        "210",
+        "-1075"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "230~-1090",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "8": {
+          "name": "8",
+          "xy": "190~-1060",
+          "net": "VMID",
+          "schematic_labels": [
+            "VMID"
+          ]
+        },
+        "3": {
+          "name": "3",
+          "xy": "230~-1080",
+          "net": "AIN1",
+          "schematic_labels": [
+            "AIN1"
+          ]
+        },
+        "6": {
+          "name": "6",
+          "xy": "190~-1070",
+          "net": "SDA6",
+          "schematic_labels": [
+            "SDA6"
+          ]
+        },
+        "5": {
+          "name": "5",
+          "xy": "230~-1070",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "4": {
+          "name": "4",
+          "xy": "190~-1080",
+          "net": "SCL6",
+          "schematic_labels": [
+            "SCL6"
+          ]
+        },
+        "7": {
+          "name": "7",
+          "xy": "230~-1060",
+          "net": "EN6",
+          "schematic_labels": [
+            "EN6"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "190~-1090",
+          "net": "+5V",
+          "schematic_labels": [
+            "+5V"
+          ]
+        }
+      }
+    },
+    "H3": {
+      "value": "X1321WVS-2X04J-C40D53",
+      "sheet": "Sheet_1",
+      "xy": [
+        "330",
+        "-1075"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "350~-1090",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "8": {
+          "name": "8",
+          "xy": "310~-1060",
+          "net": "VMID",
+          "schematic_labels": [
+            "VMID"
+          ]
+        },
+        "3": {
+          "name": "3",
+          "xy": "350~-1080",
+          "net": "AIN2",
+          "schematic_labels": [
+            "AIN2"
+          ]
+        },
+        "6": {
+          "name": "6",
+          "xy": "310~-1070",
+          "net": "SDA5",
+          "schematic_labels": [
+            "SDA5"
+          ]
+        },
+        "5": {
+          "name": "5",
+          "xy": "350~-1070",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "4": {
+          "name": "4",
+          "xy": "310~-1080",
+          "net": "SCL5",
+          "schematic_labels": [
+            "SCL5"
+          ]
+        },
+        "7": {
+          "name": "7",
+          "xy": "350~-1060",
+          "net": "EN7",
+          "schematic_labels": [
+            "EN7"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "310~-1090",
+          "net": "+5V",
+          "schematic_labels": [
+            "+5V"
+          ]
+        }
+      }
+    },
+    "H4": {
+      "value": "X1321WVS-2X04J-C40D53",
+      "sheet": "Sheet_1",
+      "xy": [
+        "450",
+        "-1075"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "470~-1090",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "8": {
+          "name": "8",
+          "xy": "430~-1060",
+          "net": "VMID",
+          "schematic_labels": [
+            "VMID"
+          ]
+        },
+        "3": {
+          "name": "3",
+          "xy": "470~-1080",
+          "net": "AIN3",
+          "schematic_labels": [
+            "AIN3"
+          ]
+        },
+        "6": {
+          "name": "6",
+          "xy": "430~-1070",
+          "net": "SDA4",
+          "schematic_labels": [
+            "SDA4"
+          ]
+        },
+        "5": {
+          "name": "5",
+          "xy": "470~-1070",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "4": {
+          "name": "4",
+          "xy": "430~-1080",
+          "net": "SCL4",
+          "schematic_labels": [
+            "SCL4"
+          ]
+        },
+        "7": {
+          "name": "7",
+          "xy": "470~-1060",
+          "net": "EN3",
+          "schematic_labels": [
+            "EN3"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "430~-1090",
+          "net": "+5V",
+          "schematic_labels": [
+            "+5V"
+          ]
+        }
+      }
+    },
+    "H5": {
+      "value": "X1321WVS-2X04J-C40D53",
+      "sheet": "Sheet_1",
+      "xy": [
+        "570",
+        "-1075"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "590~-1090",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "8": {
+          "name": "8",
+          "xy": "550~-1060",
+          "net": "VMID",
+          "schematic_labels": [
+            "VMID"
+          ]
+        },
+        "3": {
+          "name": "3",
+          "xy": "590~-1080",
+          "net": "AIN4",
+          "schematic_labels": [
+            "AIN4"
+          ]
+        },
+        "6": {
+          "name": "6",
+          "xy": "550~-1070",
+          "net": "SDA3",
+          "schematic_labels": [
+            "SDA3"
+          ]
+        },
+        "5": {
+          "name": "5",
+          "xy": "590~-1070",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "4": {
+          "name": "4",
+          "xy": "550~-1080",
+          "net": "SCL3",
+          "schematic_labels": [
+            "SCL3"
+          ]
+        },
+        "7": {
+          "name": "7",
+          "xy": "590~-1060",
+          "net": "EN4",
+          "schematic_labels": [
+            "EN4"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "550~-1090",
+          "net": "+5V",
+          "schematic_labels": [
+            "+5V"
+          ]
+        }
+      }
+    },
+    "H6": {
+      "value": "X1321WVS-2X04J-C40D53",
+      "sheet": "Sheet_1",
+      "xy": [
+        "690",
+        "-1075"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "710~-1090",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "8": {
+          "name": "8",
+          "xy": "670~-1060",
+          "net": "VMID",
+          "schematic_labels": [
+            "VMID"
+          ]
+        },
+        "3": {
+          "name": "3",
+          "xy": "710~-1080",
+          "net": "AIN5",
+          "schematic_labels": [
+            "AIN5"
+          ]
+        },
+        "6": {
+          "name": "6",
+          "xy": "670~-1070",
+          "net": "SDA2",
+          "schematic_labels": [
+            "SDA2"
+          ]
+        },
+        "5": {
+          "name": "5",
+          "xy": "710~-1070",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "4": {
+          "name": "4",
+          "xy": "670~-1080",
+          "net": "SCL2",
+          "schematic_labels": [
+            "SCL2"
+          ]
+        },
+        "7": {
+          "name": "7",
+          "xy": "710~-1060",
+          "net": "EN5",
+          "schematic_labels": [
+            "EN5"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "670~-1090",
+          "net": "+5V",
+          "schematic_labels": [
+            "+5V"
+          ]
+        }
+      }
+    },
+    "H7": {
+      "value": "X1321WVS-2X04J-C40D53",
+      "sheet": "Sheet_1",
+      "xy": [
+        "810",
+        "-1075"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "830~-1090",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "8": {
+          "name": "8",
+          "xy": "790~-1060",
+          "net": "VMID",
+          "schematic_labels": [
+            "VMID"
+          ]
+        },
+        "3": {
+          "name": "3",
+          "xy": "830~-1080",
+          "net": "AIN6",
+          "schematic_labels": [
+            "AIN6"
+          ]
+        },
+        "6": {
+          "name": "6",
+          "xy": "790~-1070",
+          "net": "SDA1",
+          "schematic_labels": [
+            "SDA1"
+          ]
+        },
+        "5": {
+          "name": "5",
+          "xy": "830~-1070",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "4": {
+          "name": "4",
+          "xy": "790~-1080",
+          "net": "SCL1",
+          "schematic_labels": [
+            "SCL1"
+          ]
+        },
+        "7": {
+          "name": "7",
+          "xy": "830~-1060",
+          "net": "EN2",
+          "schematic_labels": [
+            "EN2"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "790~-1090",
+          "net": "+5V",
+          "schematic_labels": [
+            "+5V"
+          ]
+        }
+      }
+    },
+    "H8": {
+      "value": "X1321WVS-2X04J-C40D53",
+      "sheet": "Sheet_1",
+      "xy": [
+        "925",
+        "-1075"
+      ],
+      "pins": {
+        "1": {
+          "name": "1",
+          "xy": "945~-1090",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "8": {
+          "name": "8",
+          "xy": "905~-1060",
+          "net": "VMID",
+          "schematic_labels": [
+            "VMID"
+          ]
+        },
+        "3": {
+          "name": "3",
+          "xy": "945~-1080",
+          "net": "AIN7",
+          "schematic_labels": [
+            "AIN7"
+          ]
+        },
+        "6": {
+          "name": "6",
+          "xy": "905~-1070",
+          "net": "SDA0",
+          "schematic_labels": [
+            "SDA0"
+          ]
+        },
+        "5": {
+          "name": "5",
+          "xy": "945~-1070",
+          "net": "GND",
+          "schematic_labels": [
+            "GND"
+          ]
+        },
+        "4": {
+          "name": "4",
+          "xy": "905~-1080",
+          "net": "SCL0",
+          "schematic_labels": [
+            "SCL0"
+          ]
+        },
+        "7": {
+          "name": "7",
+          "xy": "945~-1060",
+          "net": "EN1",
+          "schematic_labels": [
+            "EN1"
+          ]
+        },
+        "2": {
+          "name": "2",
+          "xy": "905~-1090",
+          "net": "+5V",
+          "schematic_labels": [
+            "+5V"
+          ]
+        }
+      }
+    }
+  },
+  "named_net_mismatches": []
+}

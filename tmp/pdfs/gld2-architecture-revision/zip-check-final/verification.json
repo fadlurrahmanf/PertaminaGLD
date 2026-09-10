@@ -1,0 +1,13 @@
+{
+  "source_sha256": "aeb3d54180c596c5ee7fbc9adbb51e434651a238b19a31429d8cf5c82ec985f1",
+  "schematic_sheets": [
+    "Sheet_1"
+  ],
+  "component_count": 204,
+  "component_pin_rows": 717,
+  "named_net_mismatches": 0,
+  "svg_pages": 10,
+  "pdf_pages": 10,
+  "visual_review": "All 10 revised PDF pages rendered and inspected after restructuring the power, Always On, I2C, ESP32 hub, and alarm diagrams; no clipped text or table remnants.",
+  "scope": "Schematic and PCB net evidence only; no hardware operations."
+}

@@ -24,7 +24,7 @@ const commandFunction = fs.readFileSync(path.join(scriptDir, "functions", "perta
 const generatorVersion = "2.1.0";
 
 const nodeRedUrl = args.get("node-red-url") || "http://127.0.0.1:1880";
-const nodeRedUserDir = args.get("node-red-user-dir") || "C:\\Users\\asus\\.node-red";
+const nodeRedUserDir = args.get("node-red-user-dir") || path.join(process.env.USERPROFILE || process.env.HOME || ".", ".node-red");
 const gatewayStatusUrl = args.get("gateway-status-url") || "http://192.168.4.1/api/status";
 const gatewayBaseUrl = args.get("gateway-base-url") || "http://192.168.4.1";
 const mqttHost = args.get("mqtt-host") || "127.0.0.1";
@@ -33,12 +33,13 @@ const mqttUser = args.get("mqtt-user") || process.env.MQTT_USER || "";
 const mqttPassword = args.get("mqtt-password") || process.env.MQTT_PASS || "";
 const generateOnly = args.has("generate-only");
 const checkOnly = args.has("check");
+const writeFlow = !args.has("no-write-flow");
 const enableGatewayPoll = args.has("enable-gateway-poll");
 const nodeRedToken = args.get("node-red-token") || process.env.NODE_RED_ADMIN_TOKEN || "";
 const mqttTls = args.has("mqtt-tls");
 const mqttTlsInsecure = args.has("mqtt-tls-insecure");
 const mqttCaPath = String(args.get("mqtt-ca") || "");
-const replayStatePath = String(args.get("replay-state-path") || path.join(nodeRedUserDir, "pertamina-gld-replay-state.json"));
+const replayStatePath = String(args.get("replay-state-path") || process.env.PGL_REPLAY_STATE_PATH || ".node-red/pertamina-gld-replay-state.json");
 const fieldTestLogDir = String(args.get("field-test-log-dir") || path.join(scriptDir, "field-test-logs"));
 const fieldTestSnapshotIntervalSec = String(args.get("field-test-snapshot-interval-sec") || "30");
 const gldTargetChMapJson = canonicalizeGldTargetChMap(args.get("gld-target-ch-map-json") || process.env.PGL_GLD_TARGET_CH_MAP_JSON || "");
@@ -3084,7 +3085,9 @@ if (checkOnly) {
   console.log(JSON.stringify({ generated: false, drift: false, flowPath, nodes: nodes.length }));
   process.exit(0);
 }
-fs.writeFileSync(flowPath, renderedFlow);
+if (writeFlow) {
+  fs.writeFileSync(flowPath, renderedFlow);
+}
 
 if (generateOnly) {
   console.log(JSON.stringify({ generated: true, flowPath, nodes: nodes.length }));

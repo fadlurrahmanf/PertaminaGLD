@@ -96,8 +96,8 @@ def gas_document() -> dict[str, Any]:
     d = common_meta(
         slug="GasleakDetector",
         product="GasleakDetector",
-        status=T("Prototipe Engineering", "Engineering Prototype"),
-        firmware="Firmware 0.8.19 | Protocol 0.2.0",
+        status=T("", ""),
+        firmware="",
         subtitle=T(
             "Perangkat sensing delapan channel dengan pemrosesan lokal, alarm 24 V, LoRa STAR, dan RS-485.",
             "Eight-channel sensing device with local processing, 24 V alarm output, LoRa STAR, and RS-485.",
@@ -112,7 +112,7 @@ def gas_document() -> dict[str, Any]:
         cover_links=[T("analog", "analog"), T("SPI", "SPI"), T("data", "data"), T("event", "event")],
         facts=[
             (T("CHANNEL SENSOR", "SENSOR CHANNELS"), T("8 channel", "8 channels")),
-            (T("CATU UTAMA", "MAIN SUPPLY"), T("24 VDC nominal", "24 VDC nominal")),
+            (T("CATU DAYA", "POWER SUPPLY"), T("24 VDC / 4.2 VDC", "24 VDC / 4.2 VDC")),
             (T("RF", "RF"), T("920-923 MHz", "920-923 MHz")),
             (T("ALARM", "ALARM"), T("AUTO, keluaran 24 V", "AUTO, 24 V output")),
         ],
@@ -126,6 +126,7 @@ def gas_document() -> dict[str, Any]:
             ("TLS", T("Transport Layer Security", "Transport Layer Security")),
         ],
     )
+    d["cover_image"] = "tmp/technical-datasheet-assets/gasleakdetector-cover.jpg"
 
     d["chapters"] = [
         page(
@@ -305,15 +306,14 @@ def gas_document() -> dict[str, Any]:
         ),
         page(
             T("Keluaran klasifikasi yang dikonfigurasi", "Configured classification outputs"),
-            T("Model inferensi menyediakan empat label klasifikasi dan satu nilai confidence.",
-              "The inference model provides four classification labels and a confidence value."),
+            T("Model inferensi menyediakan tiga label klasifikasi dan satu nilai confidence.",
+              "The inference model provides three classification labels and a confidence value."),
             "implemented",
             [
                 cards([
                     (T("Class 0", "Class 0"), "Clean Air"),
                     (T("Class 1", "Class 1"), "LPG"),
                     (T("Class 2", "Class 2"), "H2"),
-                    (T("Class 3", "Class 3"), "CO2"),
                 ]),
                 table([T("Output", "Output"), T("Arti", "Meaning")], [
                     [T("Class label", "Class label"), T("Hasil klasifikasi model yang dikonfigurasi", "Configured model classification result")],
@@ -408,20 +408,21 @@ def gas_document() -> dict[str, Any]:
         ),
         page(
             T("Arsitektur catu daya", "Power architecture"),
-            T("Produk menerima 24 VDC sebagai catu utama dan memiliki jalur operasi baterai terpisah.",
-              "The product accepts 24 VDC as its main supply and includes a separate battery operating path."),
+            T("Produk tersedia dalam varian catu 24 VDC atau varian operasi baterai 4.2 VDC.",
+              "The product is available in a 24 VDC supply variant or a 4.2 VDC battery-operating variant."),
             "confirmed",
             [
                 layers([
-                    (T("Masukan utama", "Main input"), T("24 VDC nominal", "24 VDC nominal")),
-                    (T("Pemilihan sumber", "Source selection"), T("Baterai diprioritaskan bila terdeteksi; selain itu 24 V/5 V sesuai status hardware", "Battery is selected when detected; otherwise 24 V/5 V follows hardware status")),
+                    (T("Varian 24 VDC", "24 VDC variant"), T("Catu nominal 24 VDC", "Nominal 24 VDC supply")),
+                    (T("Varian baterai", "Battery variant"), T("Catu nominal 4.2 VDC", "Nominal 4.2 VDC supply")),
                     (T("Rail internal", "Internal rails"), T("Konversi untuk MCU, analog, radio, dan sensor", "Conversion for MCU, analog, radio, and sensors")),
                     (T("Output alarm", "Alarm output"), T("24 V steady saat aktif", "Steady 24 V when active")),
                 ], T("Gambar 8. Domain daya utama produk.", "Figure 8. Primary product power domains.")),
                 table(
                     [T("Parameter elektrik", "Electrical parameter"), T("Nilai", "Value")],
                     [
-                        [T("Rating nominal produk", "Nominal product input"), "24 VDC"],
+                        [T("Varian catu utama", "Main-supply variant"), "24 VDC nominal"],
+                        [T("Varian baterai", "Battery variant"), "4.2 VDC nominal"],
                         [T("Arus terukur", "Measured current"), T("Hingga 300 mA steady pada delapan sensor aktif", "Up to 300 mA steady with eight sensors active")],
                     ],
                     [0.36, 0.64],
@@ -446,25 +447,16 @@ def gas_document() -> dict[str, Any]:
             T("Pengukuran steady-state pada jalur input 24 V perangkat.", "Steady-state measurement on the device 24 V input path."),
         ),
         page(
-            T("Konfigurasi baterai", "Battery configuration"),
-            T("Mode baterai menggunakan tujuh sel 18650 yang disusun paralel.",
-              "Battery mode uses seven 18650 cells connected in parallel."),
+            T("Varian catu baterai", "Battery-supply variant"),
+            T("Varian operasi baterai menggunakan catu nominal 4.2 VDC. Konfigurasi pack ditentukan sesuai varian unit.",
+              "The battery-operating variant uses a nominal 4.2 VDC supply. Pack configuration is determined per unit variant."),
             "confirmed",
             [
-                diagram([
-                    (T("7 x sel", "7 x cells"), T("LiitoKala", "LiitoKala")),
-                    (T("Topologi", "Topology"), T("Paralel", "Parallel")),
-                    (T("Battery rail", "Battery rail"), T("Tegangan satu sel", "Single-cell voltage")),
-                    (T("Power logic", "Power logic"), T("Mode baterai", "Battery mode")),
-                ], [T("gabung", "combine"), T("tegangan", "voltage"), T("supply", "supply")],
-                   T("Gambar 10. Topologi baterai GasleakDetector.", "Figure 10. GasleakDetector battery topology.")),
                 kv([
-                    (T("Jenis sel", "Cell type"), T("LiitoKala Lii-King4000 18650, label 4000 mAh per sel", "LiitoKala Lii-King4000 18650, 4000 mAh label per cell")),
-                    (T("Jumlah", "Quantity"), "7"),
-                    (T("Susunan", "Arrangement"), T("Paralel", "Parallel")),
+                    (T("Catu nominal", "Nominal supply"), "4.2 VDC"),
+                    (T("Penerapan", "Applicability"), T("Hanya varian operasi baterai", "Battery-operating variant only")),
+                    (T("Konfigurasi pack", "Pack configuration"), T("Bergantung varian unit", "Depends on unit variant")),
                 ]),
-                note(T("Angka 4000 mAh adalah nilai label sel, bukan hasil capacity test pada pack produk.",
-                       "The 4000 mAh figure is a cell-label value, not a product-pack capacity-test result."), "caution"),
             ],
             T("Konfigurasi baterai fisik dan identifikasi label sel.", "Physical battery configuration and cell-label identification."),
         ),
@@ -498,7 +490,7 @@ def gas_document() -> dict[str, Any]:
                     [T("Bandwidth", "Bandwidth"), "125 kHz", T("Harus sama pada GasleakDetector dan CH STAR", "Must match GasleakDetector and CH STAR")],
                     [T("Spreading factor", "Spreading factor"), "SF7", T("Default domain STAR", "STAR-domain default")],
                     [T("Coding rate", "Coding rate"), "4/5", T("Nilai konfigurasi firmware CR=5", "Firmware configuration value CR=5")],
-                    [T("TX power", "TX power"), "17 dBm", T("Setting firmware, bukan output terukur", "Firmware setting, not measured output")],
+                    [T("TX power", "TX power"), "0-22 dBm; default 17 dBm", T("Kemampuan konfigurasi; bukan output/EIRP terukur", "Configuration capability; not measured output/EIRP")],
                     [T("Preamble", "Preamble"), "8", T("Default firmware", "Firmware default")],
                     [T("Antena", "Antenna"), "3 dBi", T("Konfigurasi produk", "Product configuration")],
                 ], [0.25, 0.25, 0.50]),
@@ -620,8 +612,8 @@ def ch_document() -> dict[str, Any]:
     d = common_meta(
         slug="CH",
         product="CH",
-        status=T("Prototipe Engineering", "Engineering Prototype"),
-        firmware="Firmware 0.8.0 | Protocol 0.2.0",
+        status=T("", ""),
+        firmware="",
         subtitle=T(
             "Node dual-radio untuk agregasi LoRa STAR, routing dinamis, dan penerusan multi-hop LoRa MESH.",
             "Dual-radio node for LoRa STAR aggregation, dynamic routing, and multi-hop LoRa MESH forwarding.",
@@ -1054,8 +1046,8 @@ def gateway_document() -> dict[str, Any]:
     d = common_meta(
         slug="Gateway",
         product="Gateway",
-        status=T("Prototipe Engineering", "Engineering Prototype"),
-        firmware="Firmware 0.2.0 | Protocol 0.2.0",
+        status=T("", ""),
+        firmware="",
         subtitle=T(
             "Bridge LoRa MESH ke jaringan IP melalui Wi-Fi STA dan MQTT, dengan firmware TLS dan non-TLS terpisah.",
             "LoRa MESH to IP-network bridge over Wi-Fi STA and MQTT, with separate TLS and non-TLS firmware.",
@@ -1101,7 +1093,7 @@ def gateway_document() -> dict[str, Any]:
                 bullets([
                     T("Menerima frame dari CH melalui Radio B/MESH.", "Receives frames from CH through Radio B/MESH."),
                     T("Mempublikasikan uplink, status, dan topologi secara fungsional ke MQTT.", "Functionally publishes uplink, status, and topology over MQTT."),
-                    T("Menerima command dari MQTT dan meneruskannya sebagai downlink MESH.", "Receives commands from MQTT and forwards them as MESH downlink."),
+                    T("Menerima perintah downlink yang didukung untuk target Gateway dan meneruskannya sebagai downlink MESH.", "Receives supported downlink commands for a Gateway target and forwards them as MESH downlink."),
                     T("Menyediakan target firmware TLS dan non-TLS secara terpisah.", "Provides separate TLS and non-TLS firmware targets."),
                 ]),
             ],
@@ -1123,7 +1115,8 @@ def gateway_document() -> dict[str, Any]:
                    T("Gambar 1. Batas radio-to-IP pada Gateway.", "Figure 1. Gateway radio-to-IP boundary.")),
                 kv([
                     (T("Uplink", "Uplink"), T("MESH frame diterima, diproses, lalu diterbitkan melalui MQTT.", "MESH frame is received, processed, then published over MQTT.")),
-                    (T("Downlink", "Downlink"), T("Command MQTT diterjemahkan ke jalur MESH menuju CH.", "MQTT command is translated into the MESH path toward CH.")),
+                    (T("Downlink", "Downlink"), T("Perintah MQTT yang didukung untuk target Gateway diterjemahkan ke jalur MESH menuju CH.", "Supported MQTT commands for a Gateway target are translated into the MESH path toward CH.")),
+                    (T("Identitas Gateway", "Gateway identity"), T("Default 0x0001; dapat dikonfigurasi pada rentang 0x0001-0x000F dan disimpan pada NVS.", "Default 0x0001; configurable over 0x0001-0x000F and stored in NVS.")),
                     (T("Trust boundary", "Trust boundary"), T("TLS, bila dipilih, berhenti pada broker; bukan TLS sepanjang LoRa.", "TLS, when selected, terminates at the broker; it does not span LoRa.")),
                 ]),
             ],
@@ -1323,8 +1316,8 @@ def gateway_document() -> dict[str, Any]:
         ),
         page(
             T("Jalur perintah downlink", "Command downlink path"),
-            T("Gateway menerima command dari broker, memvalidasi target fungsional, lalu meneruskannya melalui MESH.",
-              "Gateway receives commands from the broker, validates the functional target, then forwards them over MESH."),
+            T("Gateway menerima perintah downlink yang didukung untuk target Gateway, memvalidasi targetnya, lalu meneruskannya melalui MESH.",
+              "The Gateway receives supported downlink commands for a Gateway target, validates the target, then forwards them over MESH."),
             "implemented",
             [
                 sequence([T("Server", "Server"), T("Broker", "Broker"), T("Gateway", "Gateway"), T("CH route", "CH route"), T("GasleakDetector", "GasleakDetector")], [
@@ -1392,8 +1385,8 @@ def gateway_document() -> dict[str, Any]:
         ),
         page(
             T("Status dan diagnostik", "Status and diagnostics"),
-            T("Readback membedakan identitas firmware, board, transport, radio, Wi-Fi, MQTT, TLS, dan status antrean.",
-              "Readback separates firmware identity, board, transport, radio, Wi-Fi, MQTT, TLS, and queue state."),
+            T("Readback membedakan identitas firmware, board, transport, radio, Wi-Fi, MQTT, dan TLS.",
+              "Readback separates firmware identity, board, transport, radio, Wi-Fi, MQTT, and TLS."),
             "implemented",
             [
                 table([T("Kelompok", "Group"), T("Contoh readback engineering", "Engineering readback examples")], [
@@ -1401,10 +1394,10 @@ def gateway_document() -> dict[str, Any]:
                     [T("Hardware", "Hardware"), T("Varian board dan peran radio aktif", "Board variant and active-radio role")],
                     [T("RF", "RF"), T("Carrier, BW, SF, CR, TX setting, preamble", "Carrier, BW, SF, CR, TX setting, preamble")],
                     [T("Network", "Network"), T("Wi-Fi connection state dan address information", "Wi-Fi connection state and address information")],
-                    ["MQTT", T("Transport mode, broker state, reconnect, dan queue depth", "Transport mode, broker state, reconnect, and queue depth")],
+                    ["MQTT", T("Mode transport, status broker, dan reconnect", "Transport mode, broker state, and reconnect")],
                     ["TLS", T("Kapabilitas TLS serta kesiapan CA/waktu pada target TLS", "TLS capability and CA/time readiness on TLS targets")],
                 ], [0.27, 0.73]),
-                note(T("Status dan readback perangkat menampilkan hasil koneksi MQTT/TLS serta kedalaman antrean aktif.", "Device status and readback expose the MQTT/TLS connection result and active queue depth."), "success"),
+                note(T("Status dan readback perangkat menampilkan hasil koneksi MQTT/TLS yang relevan untuk komisioning.", "Device status and readback expose MQTT/TLS connection results relevant to commissioning."), "success"),
             ],
             T("Kontrak status/readback Gateway dan verifikasi perangkat melalui Operator Hub.", "Gateway status/readback contract and device verification through Operator Hub."),
         ),
@@ -1434,8 +1427,8 @@ def server_document() -> dict[str, Any]:
     d = common_meta(
         slug="Server",
         product="Server",
-        status=T("Prototipe Engineering", "Engineering Prototype"),
-        firmware="Server Application | Protocol 0.2.0",
+        status=T("", ""),
+        firmware="",
         subtitle=T(
             "Aplikasi Node-RED untuk masuknya data MQTT, validasi integritas, routing alarm, topologi, dataset, dan perintah.",
             "Node-RED application for MQTT ingestion, integrity validation, alarm routing, topology, datasets, and commands.",
@@ -1650,8 +1643,8 @@ def server_document() -> dict[str, Any]:
         ),
         page(
             T("Koneksi Server ke broker dengan TLS", "Server-to-broker TLS connection"),
-            T("Flow yang dihasilkan mendukung koneksi Node-RED ke broker menggunakan credential dan TLS terverifikasi CA.",
-              "The generated flow supports a Node-RED-to-broker connection using credentials and CA-verified TLS."),
+            T("Generator flow mendukung profil koneksi Node-RED ke broker menggunakan credential dan TLS terverifikasi CA. Profil deployment yang dipilih menentukan apakah TLS diaktifkan.",
+              "The flow generator supports a Node-RED-to-broker profile using credentials and CA-verified TLS. The selected deployment profile determines whether TLS is enabled."),
             "implemented",
             [
                 layers([
@@ -1668,8 +1661,8 @@ def server_document() -> dict[str, Any]:
         ),
         page(
             T("Persistensi dataset: MySQL dan CSV", "Dataset persistence: MySQL and CSV"),
-            T("Perekam dataset engineering memvalidasi rekaman, menulis ke MySQL ketika dikonfigurasi, dan membuat salinan CSV untuk setiap rekaman yang diterima.",
-              "The engineering dataset recorder validates records, writes to MySQL when configured, and creates a CSV copy for every accepted record."),
+            T("Perekam dataset engineering memvalidasi rekaman dan menggunakan jalur penyimpanan yang dikonfigurasi. MySQL hanya digunakan apabila driver dan koneksi tersedia; CSV adalah keluaran perekam dataset, bukan pengganti otomatis untuk MySQL.",
+              "The engineering dataset recorder validates records and uses the configured storage path. MySQL is used only when its driver and connection are available; CSV is a dataset-recorder output, not an automatic replacement for MySQL."),
             "implemented",
             [
                 diagram([
@@ -1682,7 +1675,7 @@ def server_document() -> dict[str, Any]:
                    T("Gambar 8. Jalur dataset engineering.", "Figure 8. Engineering dataset path.")),
                 table([T("Penyimpanan", "Storage"), T("Status", "Status"), T("Batas", "Boundary")], [
                     ["MySQL", T("Didukung bila driver dan koneksi tersedia", "Supported when the driver and connection are available"), T("Hanya record dataset", "Dataset records only")],
-                    ["CSV", T("Salinan paralel; tetap tersedia saat MySQL tidak tersedia", "Parallel copy; remains available when MySQL is unavailable"), T("Dataset engineering", "Engineering dataset")],
+                    ["CSV", T("Keluaran perekam dataset setelah jalur perekaman yang berlaku berhasil", "Dataset-recorder output after the applicable recording path succeeds"), T("Dataset engineering", "Engineering dataset")],
                 ], [0.20, 0.42, 0.38]),
                 note(T("MySQL tidak digeneralisasi sebagai penyimpanan seluruh telemetri, alarm, topologi, atau event operasional.",
                        "MySQL is not generalized as storage for all telemetry, alarms, topology, or operational events."), "caution"),
@@ -1706,21 +1699,19 @@ def server_document() -> dict[str, Any]:
             T("Model penerapan VM dan kebutuhan runtime Server.", "VM deployment model and Server runtime requirements."),
         ),
         page(
-            T("Antarmuka web dan engineering UI", "Web and engineering UI"),
-            T("Server menyediakan tampilan topologi engineering berbasis Node-RED dan mendukung aplikasi web pada infrastruktur customer.",
-              "The Server provides a Node-RED-based engineering topology view and supports a web application on customer infrastructure."),
+            T("Tampilan topologi engineering Node-RED", "Node-RED engineering topology view"),
+            T("Server menyediakan tampilan topologi engineering berbasis Node-RED untuk melihat informasi jaringan yang diproses oleh flow.",
+              "The Server provides a Node-RED-based engineering topology view for inspecting network information processed by the flow."),
             "confirmed",
             [
                 table([T("Lapisan UI", "UI layer"), T("Implementasi", "Implementation"), T("Cakupan", "Scope")], [
                     [T("Tampilan engineering Node-RED", "Node-RED engineering view"), T("Bagian dari runtime Server", "Part of the Server runtime"), T("Topologi, parent, discovery, rute, status engineering", "Topology, parent, discovery, route, engineering status")],
-                    [T("Aplikasi web customer", "Customer web application"), T("Host pada infrastruktur customer", "Hosted on customer infrastructure"), T("Aplikasi antarmuka berbasis web", "Web-based interface application")],
                 ], [0.29, 0.35, 0.36]),
                 bullets([
-                    T("Autentikasi, peran, dukungan browser, dan integrasi jaringan ditetapkan saat deployment.", "Authentication, roles, browser support, and network integration are established during deployment."),
                     T("Tampilan topologi menampilkan parent, discovery, rute, dan status engineering.", "The topology view displays parent, discovery, route, and engineering status."),
                 ]),
             ],
-            T("Tampilan topologi Node-RED dan model penerapan aplikasi web customer.", "Node-RED topology view and customer web-application deployment model."),
+            T("Tampilan topologi Node-RED yang dibentuk oleh flow Server.", "Node-RED topology view formed by the Server flow."),
         ),
         page(
             T("Tanggung jawab penerapan dan operasi", "Deployment and operational responsibilities"),
@@ -1766,8 +1757,8 @@ def system_document() -> dict[str, Any]:
     d = common_meta(
         slug="Whole-System",
         product="Whole System",
-        status=T("Sistem Prototipe Engineering", "Engineering Prototype System"),
-        firmware="GasleakDetector 0.8.19 | CH 0.8.0 | Gateway 0.2.0 | Protocol 0.2.0",
+        status=T("", ""),
+        firmware="",
         subtitle=T(
             "Arsitektur end-to-end GasleakDetector - CH - CH opsional - Gateway - broker - Server.",
             "End-to-end GasleakDetector - CH - optional CH - Gateway - broker - Server architecture.",
@@ -2065,7 +2056,7 @@ def system_document() -> dict[str, Any]:
             "confirmed",
             [
                 table([T("Subsistem", "Subsystem"), T("Konfigurasi", "Configuration"), T("Perilaku monitoring", "Monitoring behavior")], [
-                    ["GasleakDetector", T("24 VDC nominal; 7 x 18650 paralel untuk mode baterai", "24 VDC nominal; 7 x parallel 18650 for battery mode"), T("Monitoring tegangan diagnostik", "Diagnostic voltage monitoring")],
+                    ["GasleakDetector", T("Varian catu 24 VDC atau operasi baterai 4.2 VDC", "24 VDC supply or 4.2 VDC battery-operating variant"), T("Monitoring tegangan diagnostik", "Diagnostic voltage monitoring")],
                     ["CH", T("1-3 x 18650 paralel; 2 x panel 6 W paralel", "1-3 x parallel 18650; 2 x parallel 6 W panels"), T("VBAT read-only", "VBAT read-only")],
                 ], [0.22, 0.50, 0.28]),
                 note(T("Firmware CH melaporkan VBAT secara read-only tanpa pemutusan aktif saat tegangan rendah. GasleakDetector juga memantau tegangan tanpa active undervoltage cutoff.",

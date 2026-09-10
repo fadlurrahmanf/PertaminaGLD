@@ -104,42 +104,25 @@ def _gld_sections() -> list[dict[str, Any]]:
                     [0.34, 0.66],
                 ),
                 _table(
-                    [_b("Alamat", "Address"), _b("Nama", "Name"), _b("Isi", "Content")],
+                    [_b("Alamat protokol", "Protocol address"), _b("Register", "Register"), _b("Nilai yang dibaca", "Read value")],
                     [
-                        ["0", _b("Status", "Status"), _b("Bit status perangkat; lihat tabel status.", "Device status bits; see the status table.")],
-                        ["1", _b("Kelas gas", "Gas class"), _b("Pengenal kelas hasil inferensi.", "Inference-result class identifier.")],
-                        ["2", _b("Kepercayaan", "Confidence"), _b("Nilai kepercayaan dalam persen.", "Confidence value in percent.")],
-                        ["3", _b("Tegangan baterai", "Battery voltage"), _b("Pembacaan baterai dalam milivolt.", "Battery reading in millivolts.")],
-                        ["4", _b("Sumber input 24 V", "24 V input source"), _b("Menunjukkan bahwa sumber input yang terpilih adalah 24 V.", "Indicates that the selected input source is 24 V.")],
-                        ["5", _b("Daya eksternal", "External power"), _b("Penanda daya eksternal aktif.", "External-power-active flag.")],
-                        ["6", _b("Pencacah transmisi", "Transmission counter"), _b("16 bit rendah pencacah transmisi LoRa.", "Low 16 bits of the LoRa transmission counter.")],
-                        ["7", _b("ID node", "Node ID"), _b("Pengenal node perangkat.", "Device node identifier.")],
+                        ["0 (0x0000)", _b("Status perangkat", "Device status"), _b("Word status 16-bit; definisi bit tersedia di bawah.", "16-bit status word; bit definitions are provided below.")],
+                        ["1 (0x0001)", _b("Hasil klasifikasi", "Classification result"), _b("Kode hasil klasifikasi produk dalam uint16.", "Product classification-result code in uint16.")],
+                        ["2 (0x0002)", "Confidence", _b("0-100; satuan persen.", "0-100; percent unit.")],
+                        ["3 (0x0003)", _b("Tegangan baterai", "Battery voltage"), _b("mV; 0xFFFF berarti nilai tidak tersedia/tidak valid.", "mV; 0xFFFF means unavailable/invalid.")],
+                        ["4 (0x0004)", _b("Sumber ST_P", "ST_P source"), _b("1 = 24 V; 0 = baterai.", "1 = 24 V; 0 = battery.")],
+                        ["5 (0x0005)", _b("Daya eksternal", "External power"), _b("1 = terdeteksi; 0 = tidak terdeteksi.", "1 = asserted; 0 = not asserted.")],
+                        ["6 (0x0006)", _b("Pencacah transmisi LoRa", "LoRa transmission counter"), _b("16 bit bawah dari pencacah transmisi.", "Low 16 bits of the transmission counter.")],
+                        ["7 (0x0007)", _b("ID node", "Node ID"), _b("Identitas node dalam uint16.", "Node identity in uint16.")],
                     ],
-                    [0.11, 0.25, 0.64],
+                    [0.19, 0.28, 0.53],
                 ),
-            ],
-        ),
-        _section(
-            _b("Definisi status perangkat", "Device status definition"),
-            _b(
-                "Register status menggunakan bit independen agar sistem eksternal dapat membedakan kesiapan perangkat, validitas inferensi, sumber daya, dan alarm.",
-                "The status register uses independent bits so that an external system can distinguish device readiness, inference validity, power sources, and alarm state.",
-            ),
-            [
-                _table(
-                    [_b("Bit", "Bit"), _b("Status ketika 1", "Meaning when set")],
-                    [
-                        ["0", _b("Akuisisi ADC siap", "ADC acquisition ready")],
-                        ["1", _b("DAC siap", "DAC ready")],
-                        ["2", _b("Radio siap", "Radio ready")],
-                        ["3", _b("Model inferensi siap", "Inference model ready")],
-                        ["4", _b("Hasil inferensi valid", "Inference result valid")],
-                        ["5", _b("Kondisi alarm aktif", "Alarm condition active")],
-                        ["6", _b("Sumber input terpilih adalah 24 V", "Selected input source is 24 V")],
-                        ["7", _b("Daya eksternal aktif", "External power active")],
-                    ],
-                    [0.13, 0.87],
-                )
+                _note(
+                    _b(
+                        "Alamat di tabel adalah address yang dikirim pada field start-address Modbus, mulai dari 0. Perangkat lunak master yang menampilkan nomor register 1-based harus dipetakan ke address protokol ini; gunakan FC03 atau FC04 dan jangan menulis register.",
+                        "The table addresses are the values sent in the Modbus start-address field, beginning at 0. Master software that displays one-based register numbers must be mapped to these protocol addresses; use FC03 or FC04 and do not write registers.",
+                    )
+                ),
             ],
         ),
         _section(
@@ -164,6 +147,86 @@ def _gld_sections() -> list[dict[str, Any]]:
                     _b(
                         "Mode MANUAL tidak disimpan sebagai mode operasi permanen. Setelah perangkat dimulai ulang, mode awal adalah AUTO. Kegagalan menyimpan status clear mempertahankan alarm ON secara fail-safe. Ketika keluaran 24 V aktif, pola bunyi dan kedip satu detik ON/satu detik OFF dibentuk oleh perangkat alarm yang diberi catu.",
                         "MANUAL mode is not stored as a permanent operating mode. After a device restart, the initial mode is AUTO. Failure to persist the clear state retains the alarm ON as a fail-safe. When the 24 V output is active, the one-second ON/one-second OFF audible and visual pattern is generated by the powered alarm device.",
+                    )
+                ),
+            ],
+        ),
+        _section(
+            _b("Word status Modbus", "Modbus status word"),
+            _b(
+                "Register 0 memadatkan kesiapan subsistem, validitas inferensi, alarm, dan sumber daya ke dalam satu word status 16-bit.",
+                "Register 0 condenses subsystem readiness, inference validity, alarm state, and power source into one 16-bit status word.",
+            ),
+            [
+                _table(
+                    [_b("Bit register 0", "Register 0 bit"), _b("Makna bila bernilai 1", "Meaning when set")],
+                    [
+                        ["0", "ADS1256 ready"],
+                        ["1", "DAC ready"],
+                        ["2", "LoRa ready"],
+                        ["3", "ML runtime ready"],
+                        ["4", _b("Hasil inferensi valid", "Inference result valid")],
+                        ["5", _b("Alarm aktif", "Alarm active")],
+                        ["6", _b("Sumber ST_P = 24 V", "ST_P source = 24 V")],
+                        ["7", _b("Daya eksternal terdeteksi", "External power detected")],
+                    ],
+                    [0.28, 0.72],
+                ),
+                _table(
+                    [_b("Perilaku protocol", "Protocol behavior"), _b("Ketentuan", "Condition")],
+                    [
+                        [_b("Format nilai", "Value format"), _b("Seluruh register bernilai unsigned 16-bit; byte paling signifikan dikirim lebih dahulu.", "All register values are unsigned 16-bit; the most significant byte is sent first.")],
+                        [_b("Jumlah pembacaan", "Read quantity"), _b("1-8 register berurutan dari address awal yang valid.", "1-8 consecutive registers from a valid start address.")],
+                        [_b("Fungsi tulis", "Write functions"), _b("Tidak didukung; respons exception Modbus 01 (illegal function).", "Not supported; Modbus exception response 01 (illegal function).")],
+                        [_b("Address tidak valid", "Invalid address"), _b("Respons exception Modbus 02 (illegal data address).", "Modbus exception response 02 (illegal data address).")],
+                        [_b("Jumlah tidak valid", "Invalid quantity"), _b("Respons exception Modbus 03 (illegal data value).", "Modbus exception response 03 (illegal data value).")],
+                    ],
+                    [0.30, 0.70],
+                ),
+            ],
+        ),
+        _section(
+            _b("Panduan pembacaan Modbus", "Modbus reading guide"),
+            _b(
+                "Gunakan langkah berikut untuk menghubungkan PLC, HMI, SCADA, atau aplikasi master ke GasleakDetector tanpa menulis konfigurasi perangkat.",
+                "Use the following steps to connect a PLC, HMI, SCADA, or master application to GasleakDetector without writing device configuration.",
+            ),
+            [
+                _table(
+                    [_b("Langkah", "Step"), _b("Instruksi", "Instruction")],
+                    [
+                        ["1", _b("Atur port RS-485 master ke 9600 bit/s, 8N1, tanpa parity; gunakan Unit ID 1.", "Set the master RS-485 port to 9600 bit/s, 8N1, no parity; use Unit ID 1.")],
+                        ["2", _b("Pilih FC03 atau FC04, lalu kirim start-address 0-7 dan quantity 1-8 yang seluruhnya berada pada rentang tersebut.", "Select FC03 or FC04, then send a start address 0-7 and quantity 1-8 that stays entirely within that range.")],
+                        ["3", _b("Baca setiap word sebagai unsigned 16-bit big-endian. Untuk register 3, satuannya mV; untuk register 2, satuannya persen.", "Read each word as unsigned 16-bit big-endian. Register 3 is in mV; register 2 is in percent.")],
+                        ["4", _b("Periksa CRC RTU dan respons exception sebelum memakai nilai pada aplikasi pengendali.", "Check the RTU CRC and any exception response before using values in the supervisory application.")],
+                    ],
+                    [0.11, 0.89],
+                ),
+                _table(
+                    [_b("Contoh", "Example"), _b("Frame RTU lengkap", "Complete RTU frame"), _b("Keterangan", "Description")],
+                    [
+                        [
+                            _b("Baca confidence", "Read confidence"),
+                            "01 04 00 02 00 01 90 0A",
+                            _b("Request FC04 untuk satu word pada address 2.", "FC04 request for one word at address 2."),
+                        ],
+                        [
+                            _b("Respons confidence", "Confidence response"),
+                            "01 04 02 00 52 38 CD",
+                            _b("Contoh ilustratif: 0x0052 = 82%, bukan hasil pembacaan unit tertentu.", "Illustrative example: 0x0052 = 82%, not a reading from a specific unit."),
+                        ],
+                        [
+                            _b("Baca seluruh map", "Read complete map"),
+                            "01 04 00 00 00 08 F1 CC",
+                            _b("Request FC04 untuk address 0 sampai 7; respons membawa 16 byte data register.", "FC04 request for addresses 0 through 7; the response carries 16 data bytes."),
+                        ],
+                    ],
+                    [0.20, 0.34, 0.46],
+                ),
+                _note(
+                    _b(
+                        "CRC mengikuti urutan Modbus RTU: low byte lalu high byte. Respons sukses pembacaan seluruh map dimulai `01 04 10`, diikuti 16 byte data dan CRC.",
+                        "CRC uses Modbus RTU order: low byte then high byte. A successful full-map read begins `01 04 10`, followed by 16 data bytes and CRC.",
                     )
                 ),
             ],
@@ -494,16 +557,16 @@ def _server_sections() -> list[dict[str, Any]]:
         _section(
             _b("Penyimpanan dan ketahanan layanan", "Storage and service resilience"),
             _b(
-                "Penyimpanan utama menggunakan MySQL. Setiap rekaman yang diterima juga ditulis sebagai salinan CSV paralel, yang tetap tersedia ketika MySQL tidak tersedia.",
-                "Primary storage uses MySQL. Every accepted record is also written as a parallel CSV copy, which remains available when MySQL is unavailable.",
+                "Perekam dataset engineering menggunakan jalur penyimpanan yang dikonfigurasi. MySQL digunakan hanya apabila driver dan koneksi tersedia; CSV adalah keluaran perekam dataset, bukan jalur fallback otomatis untuk MySQL.",
+                "The engineering dataset recorder uses the configured storage path. MySQL is used only when its driver and connection are available; CSV is a dataset-recorder output, not an automatic MySQL fallback path.",
             ),
             [
                 _table(
                     [_b("Komponen", "Component"), _b("Peran", "Role"), _b("Perilaku", "Behavior")],
                     [
-                        ["MySQL Server", _b("Penyimpanan utama", "Primary storage"), _b("Menegakkan keunikan pengenal rekaman sebelum data diterima sebagai rekaman baru.", "Enforces unique record identifiers before data is accepted as a new record.")],
-                        ["CSV", _b("Salinan paralel", "Parallel copy"), _b("Ditulis untuk setiap rekaman yang diterima dan tetap menjadi jalur penyimpanan saat MySQL tidak tersedia.", "Written for every accepted record and remains a storage path when MySQL is unavailable.")],
-                        [_b("Aplikasi web", "Web application"), _b("Antarmuka engineering", "Engineering interface"), _b("Menampilkan data perangkat, alarm, dan topologi dari layanan Server.", "Displays device data, alarms, and topology from Server services.")],
+                        ["MySQL Server", _b("Penyimpanan dataset bila dikonfigurasi", "Dataset storage when configured"), _b("Menegakkan keunikan pengenal rekaman pada jalur MySQL yang aktif.", "Enforces unique record identifiers on the active MySQL path.")],
+                        ["CSV", _b("Keluaran perekam dataset", "Dataset-recorder output"), _b("Dihasilkan setelah jalur perekaman yang berlaku berhasil; tidak diperlakukan sebagai pengganti otomatis MySQL.", "Generated after the applicable recording path succeeds; not treated as an automatic MySQL replacement.")],
+                        [_b("Tampilan topologi", "Topology view"), _b("Tampilan engineering Node-RED", "Node-RED engineering view"), _b("Menampilkan informasi topologi, parent, discovery, rute, dan status engineering yang diproses flow.", "Shows topology, parent, discovery, route, and engineering-status information processed by the flow.")],
                     ],
                     [0.24, 0.27, 0.49],
                 )
@@ -540,7 +603,7 @@ def _server_sections() -> list[dict[str, Any]]:
                         ],
                         [
                             _b("Penyimpanan", "Storage"),
-                            _b("Memvalidasi rekaman, menulis MySQL, dan membuat salinan CSV paralel.", "Validates records, writes MySQL, and creates the parallel CSV copy."),
+                            _b("Memvalidasi rekaman dan menggunakan jalur penyimpanan dataset yang dikonfigurasi.", "Validates records and uses the configured dataset-storage path."),
                             _b("Customer mengelola layanan database, akses, backup, dan retensi.", "The customer manages the database service, access, backup, and retention."),
                         ],
                         [
@@ -549,9 +612,9 @@ def _server_sections() -> list[dict[str, Any]]:
                             _b("Customer menyediakan lokasi penyimpanan persisten saat deployment.", "The customer provides persistent storage at deployment."),
                         ],
                         [
-                            _b("Akses web", "Web access"),
-                            _b("Menyediakan antarmuka engineering untuk data, alarm, dan topologi.", "Provides the engineering interface for data, alarms, and topology."),
-                            _b("Customer membatasi jaringan, akun layanan, dan paparan antarmuka.", "The customer restricts network access, service accounts, and interface exposure."),
+                            _b("Tampilan topologi", "Topology view"),
+                            _b("Menyediakan tampilan engineering Node-RED untuk topologi dan status yang diproses flow.", "Provides a Node-RED engineering view for topology and status processed by the flow."),
+                            _b("Customer membatasi jaringan dan paparan runtime sesuai kebijakan infrastruktur.", "The customer restricts network access and runtime exposure under infrastructure policy."),
                         ],
                     ],
                     [0.18, 0.40, 0.42],
@@ -578,7 +641,7 @@ def _system_sections() -> list[dict[str, Any]]:
                         ["Gateway - MQTT broker", "Wi-Fi STA / MQTT", _b("MQTT over TLS pada profil TLS; verifikasi sertifikat dan sinkronisasi waktu wajib.", "MQTT over TLS on the TLS profile; certificate verification and time synchronization are mandatory.")],
                         ["Server - MQTT broker", "MQTT", _b("Sesi TLS Server-ke-broker terpisah menggunakan autentikasi deployment customer.", "A separate Server-to-broker TLS session uses customer-deployment authentication.")],
                         ["Server - Database", "MySQL", _b("Penyimpanan dataset engineering dengan pemeriksaan idempotensi.", "Engineering-dataset storage with idempotency checks.")],
-                        ["GasleakDetector - controller", "RS-485 / Modbus RTU", "Unit 1; 9600 bit/s; 8N1; FC03/FC04; 8 read-only registers"],
+                        ["GasleakDetector - controller", "RS-485 / Modbus RTU", _b("Unit 1; 9600 bit/s; 8N1; FC03/FC04; address 0-7; 8 register 16-bit hanya-baca. Lihat datasheet GasleakDetector untuk map dan contoh frame.", "Unit 1; 9600 bit/s; 8N1; FC03/FC04; addresses 0-7; eight read-only 16-bit registers. See the GasleakDetector datasheet for the map and frame examples.")],
                     ],
                     [0.27, 0.23, 0.50],
                 ),
@@ -601,7 +664,7 @@ def _system_sections() -> list[dict[str, Any]]:
                     [_b("Subsistem", "Subsystem"), _b("Sumber daya", "Resource"), _b("Batas", "Limit")],
                     [
                         ["GasleakDetector", _b("Channel sensor", "Sensor channels"), "8"],
-                        ["GasleakDetector", _b("Register Modbus", "Modbus registers"), "8 read-only registers"],
+                        ["GasleakDetector", _b("Register Modbus", "Modbus registers"), _b("8 register 16-bit hanya-baca, address 0-7", "Eight read-only 16-bit registers, addresses 0-7")],
                         ["CH", _b("Kandidat parent", "Parent candidates"), "8"],
                         ["CH", _b("Cache node", "Node cache"), "32 entries"],
                         ["CH", _b("Antrean alarm / transmisi", "Alarm / transmission queue"), "8 / 8 entries"],
@@ -627,7 +690,7 @@ def _system_sections() -> list[dict[str, Any]]:
                         [_b("Parent CH tidak lagi layak", "CH parent no longer eligible"), _b("CH menjalankan discovery dan memilih kandidat parent yang memenuhi aturan saat itu.", "The CH performs discovery and selects a parent candidate that satisfies the current rules."), _b("Parent pengganti tidak ditetapkan secara statis.", "The replacement parent is not statically assigned.")],
                         [_b("Wi-Fi atau broker tidak tersedia", "Wi-Fi or broker unavailable"), _b("Gateway mencoba mempublikasikan kembali dan menggunakan antrean lokal bila item dapat diterima.", "The Gateway retries publication and uses the local queue when an item can be admitted."), _b("Antrean bersifat volatil, maksimum delapan item.", "The queue is volatile and holds at most eight items.")],
                         [_b("Prasyarat TLS tidak lengkap", "TLS prerequisite incomplete"), _b("Gateway memblokir koneksi MQTT.", "The Gateway blocks the MQTT connection."), _b("Tidak ada fallback ke transport TLS tanpa verifikasi.", "There is no fallback to a TLS transport without verification.")],
-                        [_b("Penyimpanan MySQL tidak tersedia", "MySQL storage unavailable"), _b("Perekam dataset tetap menulis salinan CSV.", "The dataset recorder continues writing the CSV copy."), _b("Status MySQL perlu dimonitor dan direkonsiliasi oleh operator server.", "MySQL status must be monitored and reconciled by the server operator.")],
+                        [_b("Penyimpanan MySQL tidak tersedia", "MySQL storage unavailable"), _b("Jalur perekaman dataset yang aktif gagal dan harus dipulihkan sesuai konfigurasi deployment.", "The active dataset-recording path fails and must be restored according to the deployment configuration."), _b("CSV tidak diperlakukan sebagai pengganti otomatis MySQL; status perlu dimonitor dan direkonsiliasi oleh operator Server.", "CSV is not treated as an automatic MySQL replacement; status must be monitored and reconciled by the Server operator.")],
                         [_b("Rekaman dataset tidak valid", "Invalid dataset record"), _b("Server menolak rekaman sebelum penyimpanan.", "The Server rejects the record before storage."), _b("Rekaman harus memenuhi semua aturan penerimaan.", "The record must satisfy every admission rule.")],
                         [_b("Tegangan baterai rendah", "Low battery voltage"), _b("GasleakDetector dan CH melaporkan hasil pemantauan.", "The GasleakDetector and CH report the monitoring result."), _b("Firmware tidak melakukan pemutusan atau low-power otomatis berdasarkan ambang ini.", "Firmware does not automatically disconnect power or enter low-power mode based on this threshold.")],
                     ],
@@ -647,7 +710,7 @@ def _system_sections() -> list[dict[str, Any]]:
                     [
                         [_b("Hop radio field", "Field radio hop"), _b("Identitas node, urutan pesan, panjang, dan CRC diperiksa pada protokol radio aplikasi.", "Node identity, message sequence, length, and CRC are checked by the radio application protocol."), _b("Identitas perangkat dan konfigurasi radio dikelola saat provisioning.", "Device identities and radio configuration are managed during provisioning.")],
                         [_b("Aplikasi Server", "Server application"), _b("Server melakukan autentikasi AES-GCM dan penolakan replay; status persisten wajib pada deployment.", "The Server performs AES-GCM authentication and replay rejection; persistent state is required in deployment."), _b("Material keamanan dan penyimpanan anti-replay dikelola pada deployment Server.", "Security material and anti-replay storage are managed in the Server deployment.")],
-                        [_b("Gateway / Server - broker", "Gateway / Server - broker"), _b("Ketika profil Gateway TLS dipilih, Gateway dan Server memakai dua sesi MQTT over TLS terpisah dengan validasi sertifikat.", "When the TLS Gateway profile is selected, the Gateway and Server use two separate MQTT-over-TLS sessions with certificate validation."), _b("Customer menyediakan CA, endpoint waktu, broker, dan kebijakan autentikasi.", "The customer supplies the CA, time endpoint, broker, and authentication policy.")],
+                        [_b("Gateway / Server - broker", "Gateway / Server - broker"), _b("Pada deployment profil TLS yang dikonfigurasi, Gateway dan Server dapat memakai dua sesi MQTT over TLS terpisah dengan validasi sertifikat.", "In a configured TLS-profile deployment, the Gateway and Server can use two separate MQTT-over-TLS sessions with certificate validation."), _b("Customer menyediakan CA, endpoint waktu, broker, dan kebijakan autentikasi.", "The customer supplies the CA, time endpoint, broker, and authentication policy.")],
                         [_b("Layanan Server", "Server services"), _b("Kredensial berada pada environment runtime atau secret store; penyimpanan anti-replay persisten wajib dikonfigurasi.", "Credentials reside in the runtime environment or a secret store; persistent anti-replay storage must be configured."), _b("Customer mengelola akses jaringan, akun layanan, pencadangan, patching, dan monitoring VM.", "The customer manages network access, service accounts, backup, patching, and VM monitoring.")],
                         [_b("Penyimpanan", "Storage"), _b("Pengenal rekaman unik mencegah duplikasi dataset pada penyimpanan utama.", "A unique record identifier prevents dataset duplication in primary storage."), _b("Retensi, backup, dan rekonsiliasi ditetapkan dalam prosedur operasi customer.", "Retention, backup, and reconciliation are defined in customer operating procedures.")],
                     ],
@@ -712,9 +775,15 @@ def supplement_groups(slug: str, lang: str) -> list[dict[str, Any]]:
         raise ValueError(f"Unknown language {lang!r}; expected 'ID' or 'EN'")
 
     language_index = 0 if normalized_lang == "ID" else 1
+    sections = deepcopy(_FACTORIES[canonical_slug]())
+    if canonical_slug == "gld":
+        sections = [
+            section for section in sections
+            if section["title"][0] != "Pemantauan baterai"
+        ]
     group = {
         "title": _GROUP_TITLES[canonical_slug],
-        "subsections": deepcopy(_FACTORIES[canonical_slug]()),
+        "subsections": sections,
     }
     return [_resolve(group, language_index)]
 

@@ -1,0 +1,1 @@
+const PptxGenJS=require('pptxgenjs'); const pptx=new PptxGenJS(); pptx.layout='LAYOUT_WIDE'; let s=pptx.addSlide(); s.addTable([['A','B'],['1','2']],{x:1,y:1,w:5,h:1,colW:[2,3],fontSize:10,border:{type:'solid',color:'D1D5DB',pt:0.6},fit:'shrink',autoFit:false}); pptx.writeFile({fileName:'tabletest.pptx'});

@@ -124,9 +124,28 @@ def local_ipv4() -> str | None:
     return None
 
 
-def load_or_create_broker_config() -> dict[str, object] | None:
+def validate_local_broker_ipv4(host: str) -> str:
+    """Require an explicit IPv4 address that is currently bindable on this PC."""
+    value = host.strip()
+    try:
+        socket.inet_pton(socket.AF_INET, value)
+    except OSError as exc:
+        raise ValueError(f"invalid broker IPv4 address: {value}") from exc
+    if value.startswith("127.") or value == "0.0.0.0":
+        raise ValueError("broker IPv4 must be a specific non-loopback LAN address")
+    probe = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        probe.bind((value, 0))
+    except OSError as exc:
+        raise RuntimeError(f"broker IPv4 {value} is not configured locally: {exc}") from exc
+    finally:
+        probe.close()
+    return value
+
+
+def load_or_create_broker_config(host_override: str = "") -> dict[str, object] | None:
     """Return broker config, or None if no LAN IPv4 is available (degraded mode)."""
-    host = local_ipv4()
+    host = validate_local_broker_ipv4(host_override) if host_override else local_ipv4()
     if host is None:
         return None
 
@@ -164,6 +183,7 @@ def launch_children(host: str, broker: dict[str, object] | None) -> None:
         python_exe = _python_for(app_dir)
         extra_args = list(cfg["extra_args"])
         child_env = os.environ.copy()
+        child_env.setdefault("PYTHONUNBUFFERED", "1")
         if broker is None:
             # No LAN IPv4 available: GLD/CH serial consoles still work fine
             # without MQTT, so they still launch - just without broker args/env.
@@ -337,6 +357,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--host", default="127.0.0.1", help="loopback address to bind: 127.0.0.1, localhost, or ::1 (no LAN/0.0.0.0)")
     parser.add_argument("--port", default=5173, type=int)
+    parser.add_argument("--mqtt-broker-host", default="", help="specific local LAN IPv4 for the embedded MQTT broker")
     parser.add_argument("--no-children", action="store_true", help="don't spawn gld/ch/gw bridges (assume already running)")
     parser.add_argument("--open-browser", action="store_true", help="open the Operator Hub in the default browser after binding the server socket")
     args = parser.parse_args()
@@ -363,7 +384,7 @@ def main() -> int:
             #    try/except: a broker failure must not block GLD/CH serial,
             #    which don't need MQTT at all.
             try:
-                broker = load_or_create_broker_config()
+                broker = load_or_create_broker_config(args.mqtt_broker_host)
             except Exception as exc:
                 print(f"HUB_MQTT_BROKER_ERROR {exc}")
                 broker = None

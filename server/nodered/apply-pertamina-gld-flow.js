@@ -1,5 +1,6 @@
 const fs = require("fs");
 const http = require("http");
+const os = require("os");
 const path = require("path");
 
 const args = new Map();
@@ -24,7 +25,7 @@ const commandFunction = fs.readFileSync(path.join(scriptDir, "functions", "perta
 const generatorVersion = "2.1.0";
 
 const nodeRedUrl = args.get("node-red-url") || "http://127.0.0.1:1880";
-const nodeRedUserDir = args.get("node-red-user-dir") || "C:\\Users\\asus\\.node-red";
+const nodeRedUserDir = args.get("node-red-user-dir") || path.join(os.homedir(), ".node-red");
 const gatewayStatusUrl = args.get("gateway-status-url") || "http://192.168.4.1/api/status";
 const gatewayBaseUrl = args.get("gateway-base-url") || "http://192.168.4.1";
 const mqttHost = args.get("mqtt-host") || "127.0.0.1";
@@ -131,12 +132,15 @@ function id(name) {
 
 const tab = id("tab");
 const broker = id("mqtt_broker");
+const topologyBootstrapFile = String(args.get("topology-bootstrap-file") ||
+  path.join(nodeRedUserDir, "pertamina-gld-topology-bootstrap.json"));
 
 const flowEnv = [
   { name: "GATEWAY_STATUS_URL", value: gatewayStatusUrl, type: "str" },
   { name: "GATEWAY_BASE_URL", value: gatewayBaseUrl, type: "str" },
   { name: "PGL_REPLAY_STATE_PATH", value: replayStatePath, type: "str" },
-  { name: "PGL_FIELD_TEST_LOG_DIR", value: fieldTestLogDir, type: "str" }
+  { name: "PGL_FIELD_TEST_LOG_DIR", value: fieldTestLogDir, type: "str" },
+  { name: "PGL_TOPOLOGY_BOOTSTRAP_FILE", value: topologyBootstrapFile, type: "str" }
 ];
 
 function addOptionalFlowEnv(name, value) {
@@ -170,7 +174,9 @@ function isGatewayId(value) {
   return id >= 0x0001 && id <= 0x000F;
 }
 
-const topology = flow.get("pglTopology") || {
+let topology;
+try { topology = flow.get("pglTopology", "pglTopologyFile"); } catch (_) {}
+topology = topology || flow.get("pglTopology") || {
   gateways: {},
   parents: {},
   discovery: {},
@@ -194,6 +200,9 @@ const directGatewayMinSnrDb = Number(env.get("PGL_GATEWAY_DIRECT_PARENT_MIN_SNR_
 const topologyParentTtlMs = Number(env.get("PGL_TOPOLOGY_PARENT_TTL_MS") || "900000");
 const topologyDiscoveryTtlMs = Number(env.get("PGL_TOPOLOGY_DISCOVERY_TTL_MS") || "420000");
 const topologyGatewayLinkTtlMs = Number(env.get("PGL_TOPOLOGY_GATEWAY_LINK_TTL_MS") || "420000");
+const topologyRequestFreshnessMs = Number(env.get("PGL_TOPOLOGY_REQUEST_FRESHNESS_MS") || "420000");
+const gatewayRequestFreshnessMs = Number(env.get("PGL_GATEWAY_REQUEST_FRESHNESS_MS") || "150000");
+const topologyClockSkewMs = Number(env.get("PGL_TOPOLOGY_CLOCK_SKEW_MS") || "60000");
 
 function hasNumber(value) {
   return value !== undefined && value !== null && value !== "" && Number.isFinite(Number(value));
@@ -202,6 +211,11 @@ function hasNumber(value) {
 function ageMsOf(entry, nowMs = Date.now()) {
   const t = Date.parse(entry && entry.receivedAt);
   return Number.isFinite(t) ? Math.max(0, nowMs - t) : Number.POSITIVE_INFINITY;
+}
+
+function isFreshEntry(entry, ttlMs, nowMs = Date.now()) {
+  const t = Date.parse(entry && entry.receivedAt);
+  return Number.isFinite(t) && t <= nowMs + topologyClockSkewMs && nowMs - t <= ttlMs;
 }
 
 function pruneMapByTtl(map, ttlMs, nowMs = Date.now()) {
@@ -242,7 +256,8 @@ for (const clusterIdHex of Object.keys(topology.routes)) {
     delete topology.routeGateways[clusterIdHex];
   }
 }
-flow.set("pglTopology", topology);
+try { flow.set("pglTopology", topology, "pglTopologyFile"); }
+catch (_) { flow.set("pglTopology", topology); }
 const gldDiscoveryRaw = flow.get("pglGldDiscovery") || {};
 
 function ageSecFromIso(value, nowMs = Date.now()) {
@@ -271,11 +286,6 @@ for (const [clusterIdHex, entry] of Object.entries(topology.parents || {})) {
     : [];
   const routeGatewayIdHex = (topology.routeGateways || {})[clusterIdHex];
   const live = (topology.discovery || {})[clusterIdHex] || null;
-  const liveIsGatewayRequest = live &&
-    live.report === "ch-config-request" &&
-    (live.parentIdHex === "0x0000" || !live.parentIdHex);
-  const liveRssi = live && hasNumber(live.rssi) ? Number(live.rssi) : undefined;
-  const liveSnr = live && hasNumber(live.snr) ? Number(live.snr) : undefined;
   const liveBattery = live && hasNumber(live.batteryMv) && Number(live.batteryMv) !== 0xFFFF
     ? Number(live.batteryMv)
     : undefined;
@@ -297,24 +307,52 @@ for (const [clusterIdHex, entry] of Object.entries(topology.parents || {})) {
   const routeIsInstalled = route.length > 0 &&
     isGatewayId(routeGatewayIdHex) &&
     (isGatewayId(parentIdHex) || installedIds.has(parentIdHex));
+  const routeHopsFresh = routeIsInstalled && route.every((hopIdHex, index) => {
+    const hopEntry = (topology.parents || {})[hopIdHex];
+    const expectedParentIdHex = index === 0 ? routeGatewayIdHex : route[index - 1];
+    return hopEntry && hopEntry.parentIdHex === expectedParentIdHex &&
+      isFreshEntry(hopEntry, topologyRequestFreshnessMs);
+  });
+  const gatewayRequestFresh = routeIsInstalled &&
+    isFreshEntry((topology.gateways || {})[routeGatewayIdHex], gatewayRequestFreshnessMs);
+  const requestReady = routeIsInstalled && routeHopsFresh && gatewayRequestFresh;
   const depth = routeIsInstalled ? route.length : null;
   const layer = depth;
   const layerLabel = hasNumber(layer) ? "Layer " + layer : "Discovery";
-  const rssiSource = parentIdHex && parentIdHex !== "0x0000" ? parentIdHex : (entry.viaHopHex || routeGatewayIdHex);
+  const parentLinkMetricSupported = entry.parentLinkMetricSupported === true;
+  const parentLinkMetricValid = entry.parentLinkMetricValid === true &&
+    hasNumber(entry.parentRxRssiDbm) && hasNumber(entry.parentRxSnrDb);
+  const parentRssi = parentLinkMetricValid ? Number(entry.parentRxRssiDbm) : undefined;
+  const parentSnr = parentLinkMetricValid ? Number(entry.parentRxSnrDb) : undefined;
+  const parentLinkAgeSec = parentLinkMetricValid
+    ? (ageSecFromIso(entry.parentLinkMeasuredAt) ??
+      (hasNumber(entry.parentLinkAgeSec) ? Number(entry.parentLinkAgeSec) + lastSeenAgeSec : undefined))
+    : undefined;
+  const rssiSource = parentLinkMetricValid ? parentIdHex : null;
   const rssiTarget = clusterIdHex;
-  const rssiLink = rssiSource + " -> " + rssiTarget;
-  const displayRssi = !liveIsGatewayRequest && liveRssi !== undefined ? liveRssi : entry.rssi;
-  const displaySnr = !liveIsGatewayRequest && liveSnr !== undefined ? liveSnr : entry.snr;
-  const linkQualityLabel = displayRssi !== undefined || displaySnr !== undefined
-    ? "RSSI to Parent: " + (displayRssi ?? "-") + " dBm, SNR " + (displaySnr ?? "-") + " dB"
-    : "RSSI to Parent: belum ada";
-  const gatewayQualityLabel = gatewayRssi !== undefined || gatewaySnr !== undefined
-    ? "RSSI to Gateway: " + (gatewayRssi ?? "-") + " dBm, SNR " + (gatewaySnr ?? "-") + " dB"
-    : "RSSI to Gateway: belum ada";
+  const rssiLink = parentLinkMetricValid ? rssiSource + " -> " + rssiTarget : null;
+  const linkQualityLabel = parentLinkMetricValid
+    ? "RSSI Parent → CH (" + parentIdHex + " → " + clusterIdHex + "): " + parentRssi + " dBm, SNR " + parentSnr + " dB" +
+      (parentLinkAgeSec !== undefined ? ", umur " + Math.round(parentLinkAgeSec) + " dtk" : "")
+    : (parentLinkMetricSupported
+      ? "RSSI Parent → CH: belum ada sampel valid"
+      : "RSSI Parent → CH: firmware CH belum mengirim metrik");
+  const ingressHopIdHex = entry.ingressHopIdHex || entry.viaHopHex || routeGatewayIdHex;
+  const gatewayIngressRssi = hasNumber(entry.gatewayIngressRssiDbm)
+    ? Number(entry.gatewayIngressRssiDbm)
+    : (hasNumber(entry.rssi) ? Number(entry.rssi) : gatewayRssi);
+  const gatewayIngressSnr = hasNumber(entry.gatewayIngressSnrDb)
+    ? Number(entry.gatewayIngressSnrDb)
+    : (hasNumber(entry.snr) ? Number(entry.snr) : gatewaySnr);
+  const gatewayQualityLabel = gatewayIngressRssi !== undefined || gatewayIngressSnr !== undefined
+    ? "Gateway RX dari " + (ingressHopIdHex || "-") + ": " + (gatewayIngressRssi ?? "-") + " dBm, SNR " + (gatewayIngressSnr ?? "-") + " dB"
+    : "Gateway RX: belum ada";
   const batteryMv = liveBattery !== undefined ? liveBattery : entry.batteryMv;
   const publicRoute = routeIsInstalled ? route : [];
   const pendingReason = routeIsInstalled
-    ? null
+    ? (!routeHopsFresh
+      ? "offline: CH route is stale; waiting fresh CH_HELLO/topology"
+      : (!gatewayRequestFresh ? "offline: Gateway heartbeat is stale" : null))
     : (parentIdHex && parentIdHex !== "0x0000"
       ? "pending: waiting installed route via " + parentIdHex
       : "pending: waiting parent topology");
@@ -331,17 +369,24 @@ for (const [clusterIdHex, entry] of Object.entries(topology.parents || {})) {
     gatewayIdHex: routeIsInstalled ? routeGatewayIdHex : entry.gatewayIdHex,
     routeGatewayIdHex: routeIsInstalled ? routeGatewayIdHex : null,
     routeText: routeIsInstalled ? routeGatewayIdHex + " -> " + route.join(" -> ") : "installed route pending",
-    requestPayload: routeIsInstalled ? { gatewayId: routeGatewayIdHex, requestId: 1, hopList: route } : null,
+    requestPayload: requestReady ? { gatewayId: routeGatewayIdHex, requestId: 1, hopList: route } : null,
+    requestReady,
     lastHop: routeIsInstalled ? route[route.length - 1] : clusterIdHex,
     report: entry.report,
-    rssi: displayRssi,
-    snr: displaySnr,
+    rssi: parentRssi,
+    snr: parentSnr,
+    parentRssi,
+    parentSnr,
+    parentLinkMetricSupported,
+    parentLinkMetricValid,
+    parentLinkAgeSec,
     rssiSource,
     rssiTarget,
     rssiLink,
     linkQualityLabel,
-    gatewayRssi,
-    gatewaySnr,
+    gatewayRssi: gatewayIngressRssi,
+    gatewaySnr: gatewayIngressSnr,
+    gatewayIngressHopIdHex: ingressHopIdHex,
     gatewayQualityLabel,
     gatewayLinkUpdatedAt: gatewayLink ? gatewayLink.receivedAt : undefined,
     gatewayLinkAgeSec,
@@ -361,7 +406,7 @@ for (const [clusterIdHex, entry] of Object.entries(topology.parents || {})) {
       : "battery: belum ada",
     pendingReason,
     updatedAt: lastLiveAt || entry.receivedAt || topology.updatedAt,
-    status: routeIsInstalled ? "installed" : "pending"
+    status: routeIsInstalled ? (routeHopsFresh ? (gatewayRequestFresh ? "installed" : "gateway-offline") : "offline") : "pending"
   });
   visibleIds.add(clusterIdHex);
   if (routeIsInstalled && parentIdHex && parentIdHex !== "0x0000" && parentIdHex !== clusterIdHex) {
@@ -370,8 +415,11 @@ for (const [clusterIdHex, entry] of Object.entries(topology.parents || {})) {
       to: clusterIdHex,
       label: parentIdHex + " -> " + clusterIdHex,
       role: "main",
-      rssi: displayRssi,
-      snr: displaySnr,
+      rssi: parentRssi,
+      snr: parentSnr,
+      metricDirection: "parent-to-child",
+      metricMeasuredBy: clusterIdHex,
+      metricAgeSec: parentLinkAgeSec,
       linkQualityLabel
     });
   }
@@ -402,8 +450,8 @@ for (const [clusterIdHex, event] of Object.entries(topology.discovery || {})) {
   const lastHelloAgeSec = hello ? Math.round(ageMsOf(hello) / 1000) : undefined;
   const gatewayLinkAgeSec = gatewayLink ? Math.round(ageMsOf(gatewayLink) / 1000) : undefined;
   const gatewayQualityLabel = gatewayRssi !== undefined || gatewaySnr !== undefined
-    ? "RSSI to Gateway: " + (gatewayRssi ?? "-") + " dBm, SNR " + (gatewaySnr ?? "-") + " dB"
-    : "RSSI to Gateway: belum ada";
+    ? "Gateway RX langsung dari " + clusterIdHex + ": " + (gatewayRssi ?? "-") + " dBm, SNR " + (gatewaySnr ?? "-") + " dB"
+    : "Gateway RX: belum ada";
   const batteryMv = hasNumber(event.batteryMv) && Number(event.batteryMv) !== 0xFFFF
     ? Number(event.batteryMv)
     : undefined;
@@ -437,9 +485,9 @@ for (const [clusterIdHex, event] of Object.entries(topology.discovery || {})) {
     rssiSource: directGatewayCandidate ? candidateGatewayIdHex : null,
     rssiTarget: clusterIdHex,
     rssiLink: directGatewayCandidate ? candidateGatewayIdHex + " -> " + clusterIdHex : null,
-    linkQualityLabel: directGatewayCandidate
-      ? "RSSI to Parent: " + (gatewayRssi ?? "-") + " dBm, SNR " + (gatewaySnr ?? "-") + " dB"
-      : "RSSI to Parent: belum ada",
+    linkQualityLabel: "RSSI Parent → CH: belum tersedia saat discovery",
+    parentLinkMetricSupported: false,
+    parentLinkMetricValid: false,
     gatewayRssi,
     gatewaySnr,
     gatewayQualityLabel,
@@ -533,6 +581,25 @@ for (const node of nodes) {
 const gldRequestTimeoutMs = Number(env.get("PGL_GLD_REQUEST_TIMEOUT_MS") || "20000");
 const gldDiscovery = {};
 const nowMsGld = Date.now();
+function gldAvailabilityFromResponse(entry) {
+  switch (Number(entry && entry.responseStatus)) {
+    case 2:
+      return Number(entry && entry.recordCount) === 0
+        ? { state: "unavailable", reason: "DATA_NOT_AVAIL" }
+        : null;
+    case 3: return { state: "stale", reason: "DATA_STALE" };
+    default: return null;
+  }
+}
+function gldAvailabilityLabel(state) {
+  switch (state) {
+    case "available": return "Tersedia / data terkonfirmasi";
+    case "unavailable": return "Tidak tersedia saat request";
+    case "stale": return "Data CH stale";
+    case "unconfirmed": return "Tidak dapat dikonfirmasi";
+    default: return "Belum diketahui";
+  }
+}
 for (const [chIdHex, entry] of Object.entries(gldDiscoveryRaw)) {
   const requestedAtMs = Date.parse(entry.requestedAt || "");
   const requestedAgeSec = Number.isFinite(requestedAtMs) ? Math.round((nowMsGld - requestedAtMs) / 1000) : undefined;
@@ -542,7 +609,37 @@ for (const [chIdHex, entry] of Object.entries(gldDiscoveryRaw)) {
   const devices = Object.values(entry.devices || {})
     .map((device) => {
       const lastSeenAtMs = Date.parse(device.lastSeenAt || "");
+      const storedAvailabilityAtMs = Date.parse(device.availabilityUpdatedAt || "");
+      const latestDeviceEvidenceMs = Math.max(
+        Number.isFinite(lastSeenAtMs) ? lastSeenAtMs : 0,
+        Number.isFinite(storedAvailabilityAtMs) ? storedAvailabilityAtMs : 0
+      );
+      let availability = device.availability || "available";
+      let availabilityReason = device.availabilityReason || "LAST_VALID_DATA";
+      let availabilityUpdatedAt = device.availabilityUpdatedAt || device.lastSeenAt || null;
+      let availabilityRequestId = device.availabilityRequestId;
+      const responseAvailability = gldAvailabilityFromResponse(entry);
+      const respondedAtMs = Date.parse(entry.respondedAt || "");
+      if (statusDisplay === "received" && responseAvailability && Number.isFinite(respondedAtMs) && respondedAtMs >= latestDeviceEvidenceMs) {
+        availability = responseAvailability.state;
+        availabilityReason = responseAvailability.reason;
+        availabilityUpdatedAt = entry.respondedAt;
+        availabilityRequestId = entry.requestId;
+      }
+      if (statusDisplay === "timeout" && Number.isFinite(requestedAtMs) && requestedAtMs >= latestDeviceEvidenceMs) {
+        availability = "unconfirmed";
+        availabilityReason = "REQUEST_TIMEOUT";
+        availabilityUpdatedAt = entry.requestedAt;
+        availabilityRequestId = entry.requestId;
+      }
       return Object.assign({}, device, {
+        availability,
+        availabilityLabel: gldAvailabilityLabel(availability),
+        availabilityReason,
+        availabilityUpdatedAt,
+        availabilityRequestId,
+        currentAlarmActive: availability === "available" && Boolean(device.alarm),
+        lastKnownAlarm: Boolean(device.alarm),
         lastSeenAgeSec: Number.isFinite(lastSeenAtMs) ? Math.round((nowMsGld - lastSeenAtMs) / 1000) : undefined
       });
     })
@@ -590,7 +687,7 @@ for (const { chIdHex, device } of latestGldAttachment.values()) {
       parent: chIdHex,
       layer,
       layerLabel: layer === null ? "GLD" : "Layer " + layer + " / GLD",
-      status: device.alarm ? "alarm" : "online",
+      status: device.currentAlarmActive ? "alarm" : (device.availability === "available" ? "online" : device.availability),
       nodeIdHex: device.nodeIdHex,
       chIdHex,
       gasClass: device.gasClass,
@@ -598,6 +695,13 @@ for (const { chIdHex, device } of latestGldAttachment.values()) {
       confidence: device.confidence,
       batteryMv: device.batteryMv,
       alarm: Boolean(device.alarm),
+      currentAlarmActive: Boolean(device.currentAlarmActive),
+      lastKnownAlarm: Boolean(device.lastKnownAlarm),
+      availability: device.availability,
+      availabilityLabel: device.availabilityLabel,
+      availabilityReason: device.availabilityReason,
+      availabilityUpdatedAt: device.availabilityUpdatedAt,
+      availabilityRequestId: device.availabilityRequestId,
       externalPower: Boolean(device.externalPower),
       seq: device.seq,
       decryptOk: device.decryptOk,
@@ -663,7 +767,8 @@ const topology = {
   discoveryUpdatedAt: null,
   resetAt
 };
-flow.set("pglTopology", topology);
+try { flow.set("pglTopology", topology, "pglTopologyFile"); }
+catch (_) { flow.set("pglTopology", topology); }
 flow.set("pglGldDiscovery", {});
 flow.set("pglGldRequestIndex", {});
 
@@ -709,7 +814,9 @@ if (!clusterIdHex) {
   return msg;
 }
 
-const topology = flow.get("pglTopology") || {};
+let topology;
+try { topology = flow.get("pglTopology", "pglTopologyFile"); } catch (_) {}
+topology = topology || flow.get("pglTopology") || {};
 topology.parents = topology.parents || {};
 topology.discovery = topology.discovery || {};
 topology.gatewayLinks = topology.gatewayLinks || {};
@@ -731,7 +838,8 @@ for (const [key, route] of Object.entries(topology.routes)) {
 }
 topology.updatedAt = new Date().toISOString();
 topology.discoveryUpdatedAt = topology.updatedAt;
-flow.set("pglTopology", topology);
+try { flow.set("pglTopology", topology, "pglTopologyFile"); }
+catch (_) { flow.set("pglTopology", topology); }
 
 msg.headers = { "content-type": "application/json; charset=utf-8" };
 msg.payload = { ok: true, deleted: clusterIdHex, kind: "pgl-topology-delete", updatedAt: topology.updatedAt };
@@ -751,26 +859,11 @@ if (!clusterIdHex) {
   return [null, msg];
 }
 
-const topology = flow.get("pglTopology") || {};
+let topology;
+try { topology = flow.get("pglTopology", "pglTopologyFile"); } catch (_) {}
+topology = topology || flow.get("pglTopology") || {};
 let route = topology.routes && Array.isArray(topology.routes[clusterIdHex]) ? topology.routes[clusterIdHex] : [];
 let gatewayIdHex = topology.routeGateways && topology.routeGateways[clusterIdHex];
-if (route.length === 0) {
-  const directGatewayMinRssiDbm = Number(env.get("PGL_GATEWAY_DIRECT_PARENT_MIN_RSSI_DBM") || "-95");
-  const directGatewayMinSnrDb = Number(env.get("PGL_GATEWAY_DIRECT_PARENT_MIN_SNR_DB") || "5");
-  const rawGatewayLinks = (topology.gatewayLinks || {})[clusterIdHex] || {};
-  const gatewayLinks = rawGatewayLinks.gatewayIdHex ? [rawGatewayLinks] : Object.values(rawGatewayLinks);
-  gatewayLinks.sort((a, b) => Number(b.rssi ?? -999) - Number(a.rssi ?? -999));
-  const gatewayLink = gatewayLinks[0];
-  const isDirectCandidate = gatewayLink &&
-    Number.isFinite(Number(gatewayLink.rssi)) &&
-    Number.isFinite(Number(gatewayLink.snr)) &&
-    Number(gatewayLink.rssi) >= directGatewayMinRssiDbm &&
-    Number(gatewayLink.snr) >= directGatewayMinSnrDb;
-  if (isDirectCandidate) {
-    route = [clusterIdHex];
-    gatewayIdHex = gatewayLink.gatewayIdHex;
-  }
-}
 const gatewayId = gatewayIdHex && parseInt(String(gatewayIdHex).replace(/^0x/i, ""), 16);
 if (route.length === 0 || !Number.isInteger(gatewayId) || gatewayId < 0x0001 || gatewayId > 0x000F) {
   msg.statusCode = 409;
@@ -778,9 +871,66 @@ if (route.length === 0 || !Number.isInteger(gatewayId) || gatewayId < 0x0001 || 
   return [null, msg];
 }
 
+const requestNowMs = Date.now();
+const routeFreshnessRaw = Number(env.get("PGL_TOPOLOGY_REQUEST_FRESHNESS_MS") || "420000");
+const routeFreshnessMs = Number.isFinite(routeFreshnessRaw) && routeFreshnessRaw > 0
+  ? routeFreshnessRaw
+  : 420000;
+const topologyClockSkewRaw = Number(env.get("PGL_TOPOLOGY_CLOCK_SKEW_MS") || "60000");
+const topologyClockSkewMs = Number.isFinite(topologyClockSkewRaw) && topologyClockSkewRaw >= 0
+  ? topologyClockSkewRaw
+  : 60000;
+let staleHop = null;
+let staleHopAgeMs = null;
+for (let index = 0; index < route.length; index++) {
+  const hopIdHex = route[index];
+  const hopEntry = topology.parents && topology.parents[hopIdHex];
+  const expectedParentIdHex = index === 0 ? gatewayIdHex : route[index - 1];
+  const receivedAtMs = Date.parse(hopEntry && hopEntry.receivedAt || "");
+  const ageMs = Number.isFinite(receivedAtMs) && receivedAtMs <= requestNowMs + topologyClockSkewMs
+    ? Math.max(0, requestNowMs - receivedAtMs)
+    : null;
+  if (!hopEntry || hopEntry.parentIdHex !== expectedParentIdHex || ageMs === null || ageMs > routeFreshnessMs) {
+    staleHop = hopIdHex;
+    staleHopAgeMs = ageMs;
+    break;
+  }
+}
+if (staleHop) {
+  msg.statusCode = 409;
+  msg.payload = {
+    ok: false,
+    reason: "route-stale",
+    ch: clusterIdHex,
+    gatewayId: gatewayIdHex,
+    staleHop,
+    lastSeenAgeSec: staleHopAgeMs === null ? null : Math.round(staleHopAgeMs / 1000)
+  };
+  return [null, msg];
+}
+const gatewayFreshnessRaw = Number(env.get("PGL_GATEWAY_REQUEST_FRESHNESS_MS") || "150000");
+const gatewayFreshnessMs = Number.isFinite(gatewayFreshnessRaw) && gatewayFreshnessRaw > 0
+  ? gatewayFreshnessRaw
+  : 150000;
+const gatewayEntry = topology.gateways && topology.gateways[gatewayIdHex];
+const gatewayReceivedAtMs = Date.parse(gatewayEntry && gatewayEntry.receivedAt || "");
+const gatewayLastSeenAgeMs = Number.isFinite(gatewayReceivedAtMs) && gatewayReceivedAtMs <= requestNowMs + topologyClockSkewMs
+  ? Math.max(0, requestNowMs - gatewayReceivedAtMs)
+  : null;
+if (gatewayLastSeenAgeMs === null || gatewayLastSeenAgeMs > gatewayFreshnessMs) {
+  msg.statusCode = 503;
+  msg.payload = {
+    ok: false,
+    reason: "gateway-offline-or-stale",
+    ch: clusterIdHex,
+    gatewayId: gatewayIdHex,
+    lastSeenAgeSec: gatewayLastSeenAgeMs === null ? null : Math.round(gatewayLastSeenAgeMs / 1000)
+  };
+  return [null, msg];
+}
+
 const requestCorrelationTtlMs = Number(env.get("PGL_GLD_REQUEST_CORRELATION_TTL_MS") || "120000");
 const requestIndex = flow.get("pglGldRequestIndex") || {};
-const requestNowMs = Date.now();
 for (const [key, entry] of Object.entries(requestIndex)) {
   const requestedAtMs = Date.parse(entry && entry.requestedAt || "");
   if (Number.isFinite(requestedAtMs) && requestNowMs - requestedAtMs > requestCorrelationTtlMs) delete requestIndex[key];
@@ -859,7 +1009,9 @@ function newestGatewayLink(links) {
 
 const now = new Date();
 const nowMs = now.getTime();
-const topology = flow.get("pglTopology") || {};
+let topology;
+try { topology = flow.get("pglTopology", "pglTopologyFile"); } catch (_) {}
+topology = topology || flow.get("pglTopology") || {};
 const gldDiscovery = flow.get("pglGldDiscovery") || {};
 const parents = topology.parents || {};
 const discovery = topology.discovery || {};
@@ -1154,6 +1306,37 @@ msg.payload = \`<!doctype html>
       --node-accent: #ef4444;
       --node-bg: #2a1414;
     }
+    .node.gld.unavailable {
+      --node-border: #f59e0b;
+      --node-accent: #f59e0b;
+      --node-bg: #292114;
+    }
+    .node.gld.unconfirmed {
+      --node-border: #fb923c;
+      --node-accent: #fb923c;
+      --node-bg: #2a1d16;
+    }
+    .node.gld.stale {
+      --node-border: #eab308;
+      --node-accent: #eab308;
+      --node-bg: #282413;
+    }
+    .gld-state {
+      margin: 7px 0;
+      padding: 5px 7px;
+      border: 1px solid rgba(148,163,184,.35);
+      border-radius: 5px;
+      color: #d1d5db;
+      background: rgba(148,163,184,.1);
+      font-size: 10px;
+      font-weight: 700;
+      line-height: 1.35;
+      letter-spacing: .02em;
+    }
+    .gld-state.alarm { color: #fecaca; border-color: rgba(239,68,68,.55); background: rgba(239,68,68,.15); }
+    .gld-state.unavailable { color: #fde68a; border-color: rgba(245,158,11,.55); background: rgba(245,158,11,.14); }
+    .gld-state.unconfirmed { color: #fed7aa; border-color: rgba(251,146,60,.55); background: rgba(251,146,60,.14); }
+    .gld-state.stale { color: #fef08a; border-color: rgba(234,179,8,.55); background: rgba(234,179,8,.14); }
     .node.pending {
       outline: 1px solid rgba(245,158,11,.85);
       outline-offset: 1px;
@@ -1463,6 +1646,17 @@ msg.payload = \`<!doctype html>
     }
     .gld-table td { color: var(--muted); }
     .gld-table tr:last-child td { border-bottom: 0; }
+    .gld-availability {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 999px;
+      border: 1px solid rgba(148,163,184,.3);
+      white-space: nowrap;
+    }
+    .gld-availability.available { color: #86efac; border-color: rgba(34,197,94,.4); background: rgba(34,197,94,.12); }
+    .gld-availability.unavailable { color: #fde68a; border-color: rgba(245,158,11,.45); background: rgba(245,158,11,.12); }
+    .gld-availability.unconfirmed { color: #fed7aa; border-color: rgba(251,146,60,.45); background: rgba(251,146,60,.12); }
+    .gld-availability.stale { color: #fef08a; border-color: rgba(234,179,8,.45); background: rgba(234,179,8,.12); }
     .gld-table .payload-hex {
       font-family: "Consolas", "Menlo", monospace;
       font-size: 11px;
@@ -1926,19 +2120,23 @@ msg.payload = \`<!doctype html>
       }
       gldDeviceDetailsEl.innerHTML =
         '<div class="gld-table-wrap"><table class="gld-table"><thead><tr>' +
-        '<th>CH</th><th>GLD</th><th>Gas</th><th>Confidence</th><th>Battery</th><th>Alarm</th><th>Last Seen</th><th>Decoded Payload</th>' +
+        '<th>CH</th><th>GLD</th><th>Status Sekarang</th><th>Gas Terakhir</th><th>Confidence</th><th>Battery</th><th>Alarm</th><th>Data Terakhir</th><th>Decoded Payload</th>' +
         '</tr></thead><tbody>' +
         rows.map((device) => {
           const decodedSummary = device.decryptOk === false
             ? "gagal decode"
             : (device.gasName || "-") + " | conf " + (device.confidence ?? "-") + "%";
+          const alarmDisplay = device.currentAlarmActive
+            ? '<span class="alarm-yes">AKTIF</span>'
+            : (device.lastKnownAlarm ? '<span class="alarm-yes">terakhir: YA</span>' : "terakhir: tidak");
           return '<tr>' +
             '<td>' + escapeHtml(device.ch) + '</td>' +
             '<td>' + escapeHtml(device.nodeIdHex) + '</td>' +
+            '<td><span class="gld-availability ' + escapeHtml(device.availability || "unknown") + '" title="' + escapeHtml(device.availabilityReason || "-") + '">' + escapeHtml(device.availabilityLabel || "Belum diketahui") + '</span></td>' +
             '<td>' + escapeHtml(device.gasName || "-") + '</td>' +
             '<td>' + escapeHtml(device.confidence ?? "-") + '%</td>' +
             '<td>' + escapeHtml(device.batteryMv !== undefined && device.batteryMv !== null ? device.batteryMv + " mV" : "-") + '</td>' +
-            '<td>' + (device.alarm ? '<span class="alarm-yes">YA</span>' : "tidak") + '</td>' +
+            '<td>' + alarmDisplay + '</td>' +
             '<td>' + escapeHtml(ageLabel(device.lastSeenAgeSec)) + '</td>' +
             '<td><span class="payload-hex" title="' + escapeHtml(decodedSummary + " | " + (device.plaintextHex || "-")) + '">' + escapeHtml(decodedSummary) + '</span></td>' +
             '</tr>';
@@ -2005,11 +2203,8 @@ msg.payload = \`<!doctype html>
             ? "root"
             : (node.type === "gld"
               ? "terdiscover di " + (node.chIdHex || node.parent || "-")
-              : (node.linkQualityLabel || ("RSSI to Parent: " + (node.rssi ?? "-") + " dBm, SNR " + (node.snr ?? "-") + " dB")));
+              : (node.linkQualityLabel || "RSSI Parent → CH: belum tersedia"));
 
-          const gatewayMetric = node.type === "gateway"
-            ? ""
-            : (node.gatewayQualityLabel || "RSSI to Gateway: belum ada");
           const ageMetric = node.type === "gateway"
             ? ""
             : ("last activity: " + (node.lastSeenAgeSec !== undefined ? ageLabel(node.lastSeenAgeSec) : "belum ada") +
@@ -2018,14 +2213,16 @@ msg.payload = \`<!doctype html>
           div.innerHTML = node.type === "gld"
             ? '<div class="title">' + escapeHtml(node.label || "-") + '</div>' +
               '<div class="layer">' + escapeHtml(node.layerLabel || "GLD") + '</div>' +
+              '<div class="gld-state ' + escapeHtml(node.status || "") + '">' + escapeHtml(node.currentAlarmActive ? "ALARM AKTIF" : (node.availabilityLabel || "STATUS BELUM DIKETAHUI")) + '</div>' +
               '<div class="row">CH: ' + escapeHtml(node.chIdHex || node.parent || "-") + '</div>' +
-              '<div class="row">gas: ' + escapeHtml(node.gasName || "-") + ' (class ' + escapeHtml(node.gasClass ?? "-") + ')</div>' +
-              '<div class="row">confidence: ' + escapeHtml(node.confidence ?? "-") + '%</div>' +
+              '<div class="row">gas terakhir: ' + escapeHtml(node.gasName || "-") + ' (class ' + escapeHtml(node.gasClass ?? "-") + ')</div>' +
+              '<div class="row">confidence terakhir: ' + escapeHtml(node.confidence ?? "-") + '%</div>' +
               '<div class="row">battery: ' + escapeHtml(node.batteryMv !== undefined && node.batteryMv !== null ? node.batteryMv + " mV" : "-") + '</div>' +
               '<div class="row">power: ' + (node.externalPower ? "external" : "battery") + '</div>' +
-              '<div class="row">alarm: ' + (node.alarm ? "YA" : "tidak") + '</div>' +
+              '<div class="row">alarm: ' + (node.currentAlarmActive ? "AKTIF" : (node.lastKnownAlarm ? "terakhir YA (bukan alarm aktif)" : "terakhir tidak")) + '</div>' +
+              '<div class="row">verifikasi: ' + escapeHtml(node.availabilityReason || "-") + '</div>' +
               '<div class="row">seq: ' + escapeHtml(node.seq ?? "-") + ' | decode: ' + (node.decryptOk === false ? "gagal" : "OK") + '</div>' +
-              '<div class="row">last seen: ' + escapeHtml(ageLabel(node.lastSeenAgeSec)) + '</div>'
+              '<div class="row">data terakhir: ' + escapeHtml(ageLabel(node.lastSeenAgeSec)) + '</div>'
             :
             '<div class="title">' + escapeHtml(node.label || "-") + '</div>' +
             '<div class="layer">' + escapeHtml(node.layerLabel || ("Layer " + (node.layer ?? "?"))) + '</div>' +
@@ -2034,7 +2231,6 @@ msg.payload = \`<!doctype html>
             '<div class="row">route depth: ' + escapeHtml(node.depth ?? "-") + '</div>' +
             '<div class="row">' + escapeHtml(node.batteryLabel || "battery: belum ada") + '</div>' +
             '<div class="row" title="' + escapeHtml(metric) + '">' + escapeHtml(metric) + '</div>' +
-            '<div class="row" title="' + escapeHtml(gatewayMetric) + '">' + escapeHtml(gatewayMetric) + '</div>' +
             '<div class="row" title="' + escapeHtml(ageMetric) + '">' + escapeHtml(ageMetric) + '</div>' +
             '<div class="row">status: ' + escapeHtml(node.status || "-") + '</div>' +
             '<div class="route">' + escapeHtml(node.routeText || "") + '</div>' +
@@ -2218,6 +2414,20 @@ const nodes = [
     y: 330,
     wires: [[id("decode")]]
   }),
+  nodeBase("mqtt in", "mqtt_gateway_status_in", {
+    name: "MQTT Gateway status in",
+    topic: "gld/gateway/status",
+    qos: "0",
+    datatype: "auto-detect",
+    broker,
+    nl: false,
+    rap: true,
+    rh: 0,
+    inputs: 0,
+    x: 180,
+    y: 360,
+    wires: [[id("decode")]]
+  }),
   nodeBase("mqtt in", "mqtt_raw", {
     name: "MQTT Gateway raw",
     topic: "gld/gateway/raw",
@@ -2254,11 +2464,15 @@ const nodes = [
     noerr: 0,
     initialize: "",
     finalize: "",
-    libs: [{ var: "fs", module: "fs" }, { var: "path", module: "path" }],
+    libs: [
+      { var: "crypto", module: "crypto" },
+      { var: "fs", module: "fs" },
+      { var: "path", module: "path" }
+    ],
     x: 700,
     y: 140,
     wires: [
-      [id("mqtt_status"), id("debug_status"), id("field_test_log")],
+      [id("debug_status"), id("field_test_log")],
       [id("mqtt_events"), id("debug_events"), id("compact_topology_debug"), id("field_test_log")],
       [id("mqtt_decoded"), id("compact_decoded_debug"), id("http_decode_ok"), id("field_test_log")],
       [id("mqtt_error"), id("debug_error"), id("http_decode_error"), id("field_test_log")]
@@ -2583,9 +2797,17 @@ const isConfigRequest = p.report === "ch-config-request" && (p.parentIdHex === "
 const linkText = isConfigRequest
   ? "CH " + (p.ch || p.clusterIdHex || "-") + " request heard by " + (p.gatewayIdHex || "GW")
   : "CH " + (p.ch || p.clusterIdHex || "-") + " parent " + (p.parent || p.parentIdHex || "-");
-const rssiSource = isConfigRequest ? (p.gatewayIdHex || "GW") : (p.parentIdHex || p.parent || p.viaHopHex || p.gatewayIdHex || "-");
+const parentRssiAvailable = !isConfigRequest && p.parentLinkMetricValid === true &&
+  p.parentRxRssiDbm !== undefined && p.parentRxSnrDb !== undefined;
+const ingressHop = p.ingressHopIdHex || p.viaHopHex || p.gatewayIdHex || "-";
 const rssiTarget = p.clusterIdHex || p.ch || "-";
-const rssiLabel = isConfigRequest ? "RSSI to Gateway" : "RSSI";
+const rssiSnr = isConfigRequest
+  ? ((p.gatewayIngressRssiDbm ?? p.rssi) !== undefined || (p.gatewayIngressSnrDb ?? p.snr) !== undefined
+    ? "Gateway RX dari " + ingressHop + ": " + (p.gatewayIngressRssiDbm ?? p.rssi ?? "-") + " dBm, SNR " + (p.gatewayIngressSnrDb ?? p.snr ?? "-") + " dB"
+    : undefined)
+  : (parentRssiAvailable
+    ? "Parent → CH " + (p.parentIdHex || p.parent || "-") + " → " + rssiTarget + ": " + p.parentRxRssiDbm + " dBm, SNR " + p.parentRxSnrDb + " dB"
+    : "Parent → CH: metrik belum tersedia");
 const receivedAtMs = Date.parse(p.receivedAt || "");
 const ageSec = Number.isFinite(receivedAtMs) ? Math.max(0, Math.round((Date.now() - receivedAtMs) / 1000)) : undefined;
 const ttlSec = p.discoveryOnly || isConfigRequest
@@ -2615,7 +2837,7 @@ msg.payload = {
   ttlSec,
   ch: p.clusterIdHex,
   parent: isConfigRequest ? undefined : p.parentIdHex,
-  rssiSnr: (p.rssi !== undefined || p.snr !== undefined) ? rssiLabel + " " + rssiSource + " -> " + rssiTarget + ": " + (p.rssi ?? "-") + " dBm, SNR " + (p.snr ?? "-") + " dB" : undefined,
+  rssiSnr,
   hopList,
   lastHop,
   updatedAt: p.receivedAt
@@ -2872,7 +3094,9 @@ if (hopList.some((hop) => !isChId(hop))) {
 }
 
 const targetChIdHex = hopList[hopList.length - 1];
-const topology = flow.get('pglTopology') || {};
+let topology;
+try { topology = flow.get('pglTopology', 'pglTopologyFile'); } catch (_) {}
+topology = topology || flow.get('pglTopology') || {};
 const gatewayIdHex = idHex(p.gatewayId || p.gateway_id || ((topology.routeGateways || {})[targetChIdHex]));
 const gatewayId = gatewayIdHex && parseInt(gatewayIdHex.slice(2), 16);
 if (!Number.isInteger(gatewayId) || gatewayId < 0x0001 || gatewayId > 0x000F) {
@@ -2972,7 +3196,7 @@ return msg;`,
     noerr: 0,
     initialize: "",
     finalize: "",
-    libs: [],
+    libs: [{ var: "crypto", module: "crypto" }],
     x: 520,
     y: 780,
     wires: [[id("mqtt_out_node_command"), id("debug_mqtt_command")]]

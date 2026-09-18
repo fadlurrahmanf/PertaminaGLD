@@ -18,21 +18,45 @@ constexpr uint16_t GATEWAY_ID = 0x0001;
 
 // Jeda retry koneksi WiFi Gateway dalam ms. Dipakai saat koneksi site putus agar
 // firmware tidak reconnect terlalu agresif.
-constexpr uint32_t WIFI_RETRY_MS = 5000;
+#ifndef PGL_GW_WIFI_RETRY_MS
+#define PGL_GW_WIFI_RETRY_MS 5000
+#endif
+constexpr uint32_t WIFI_RETRY_MS = PGL_GW_WIFI_RETRY_MS;
 
 // Jeda retry koneksi MQTT Gateway dalam ms. Dipakai saat broker site belum siap
 // atau koneksi MQTT terputus.
-constexpr uint32_t MQTT_RETRY_MS = 3000;
+#ifndef PGL_GW_MQTT_RETRY_MS
+#define PGL_GW_MQTT_RETRY_MS 3000
+#endif
+constexpr uint32_t MQTT_RETRY_MS = PGL_GW_MQTT_RETRY_MS;
 
 // Interval publish status Gateway dalam ms. Status berisi gatewayId, WiFi/MQTT,
 // meshReady, dan IP.
-constexpr uint32_t STATUS_INTERVAL_MS = 10000;
+#ifndef PGL_GW_STATUS_INTERVAL_MS
+#define PGL_GW_STATUS_INTERVAL_MS 10000
+#endif
+constexpr uint32_t STATUS_INTERVAL_MS = PGL_GW_STATUS_INTERVAL_MS;
 
 // Queue RAM bounded untuk frame MESH yang sudah diterima tetapi belum berhasil
 // dipublish ke MQTT. Dipakai agar uplink/topology tidak langsung hilang saat
 // broker atau WiFi site putus singkat.
-constexpr uint8_t MQTT_UPLINK_QUEUE_CAPACITY = 8;
+#ifndef PGL_GW_MQTT_UPLINK_QUEUE_CAPACITY
+#define PGL_GW_MQTT_UPLINK_QUEUE_CAPACITY 8
+#endif
+constexpr uint8_t MQTT_UPLINK_QUEUE_CAPACITY = PGL_GW_MQTT_UPLINK_QUEUE_CAPACITY;
 constexpr size_t MQTT_UPLINK_QUEUE_ITEM_BYTES = 1024;
+
+// Recovery untuk pemasangan lapangan jangka panjang. 0 berarti nonaktif.
+// Reset stack WiFi dicoba lebih dulu; restart ESP adalah pilihan terakhir
+// setelah WiFi/MQTT offline terus-menerus.
+#ifndef PGL_GW_WIFI_STACK_RESET_AFTER_MS
+#define PGL_GW_WIFI_STACK_RESET_AFTER_MS 0
+#endif
+#ifndef PGL_GW_OFFLINE_RESTART_AFTER_MS
+#define PGL_GW_OFFLINE_RESTART_AFTER_MS 0
+#endif
+constexpr uint32_t WIFI_STACK_RESET_AFTER_MS = PGL_GW_WIFI_STACK_RESET_AFTER_MS;
+constexpr uint32_t OFFLINE_RESTART_AFTER_MS = PGL_GW_OFFLINE_RESTART_AFTER_MS;
 
 // CH_CONFIG_RESPONSE reliability. Default values preserve the normal Gateway
 // behavior; field-test environments override these macros for range testing.

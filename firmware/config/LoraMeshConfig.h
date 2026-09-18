@@ -30,7 +30,10 @@ constexpr uint8_t SYNC_WORD = 0x34;
 
 // Daya transmit MESH dalam dBm. Dipakai CH dan Gateway untuk backbone.
 // Sesuaikan dengan regulasi, link budget, dan konsumsi daya CH.
-constexpr int8_t TX_POWER_DBM = 17;
+#ifndef PGL_LORA_MESH_TX_POWER_DBM
+#define PGL_LORA_MESH_TX_POWER_DBM 17
+#endif
+constexpr int8_t TX_POWER_DBM = PGL_LORA_MESH_TX_POWER_DBM;
 
 // Preamble LoRa MESH. Harus kompatibel di semua node backbone.
 constexpr uint16_t PREAMBLE = 8;

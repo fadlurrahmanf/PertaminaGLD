@@ -32,6 +32,10 @@ namespace pgl::config::ch {
 #define PGL_CH_BATT_CRITICAL_MV 3100
 #endif
 
+#ifndef PGL_CH_BATT_VALID_MIN_MV
+#define PGL_CH_BATT_VALID_MIN_MV 1000
+#endif
+
 #ifndef PGL_CH_FIELD_HELLO_INTERVAL_MS
 #define PGL_CH_FIELD_HELLO_INTERVAL_MS 300000
 #endif
@@ -98,9 +102,12 @@ constexpr uint32_t CACHE_REPORT_INTERVAL_MS = 10000;
 // START: batt harus stabil di atas ini (8x berturut) sebelum join.
 // RUN_MIN: masuk LOW_POWER jika batt turun di bawah ini saat JOINED.
 // CRITICAL: TX diblokir total di LOW_POWER jika batt di bawah ini.
+// VALID_MIN: pembacaan di bawah ini dianggap sensor belum terhubung/invalid,
+// bukan baterai Li-ion realistis; dilaporkan sebagai unknown (0xFFFF).
 constexpr uint16_t BATT_START_MV = PGL_CH_BATT_START_MV;
 constexpr uint16_t BATT_RUN_MIN_MV = PGL_CH_BATT_RUN_MIN_MV;
 constexpr uint16_t BATT_CRITICAL_MV = PGL_CH_BATT_CRITICAL_MV;
+constexpr uint16_t BATT_VALID_MIN_MV = PGL_CH_BATT_VALID_MIN_MV;
 
 // Timeout tunggu alarm ACK dari parent (ms).
 constexpr uint32_t ALARM_ACK_TMO_MS = 1500;
@@ -229,12 +236,18 @@ constexpr bool FORCE_BENCH_CHAIN = PGL_CH_FORCE_BENCH_CHAIN != 0;
 // lebih lemah dari floor ini. Ini berbeda dari direct-priority di atas:
 // -95 dBm memprioritaskan Gateway, sedangkan -100 dBm adalah batas minimal
 // supaya Gateway masih boleh dipakai sebagai parent sama sekali.
-constexpr int16_t GATEWAY_PARENT_MIN_RSSI_DBM = -100;
+#ifndef PGL_CH_GATEWAY_PARENT_MIN_RSSI_DBM
+#define PGL_CH_GATEWAY_PARENT_MIN_RSSI_DBM -100
+#endif
+constexpr int16_t GATEWAY_PARENT_MIN_RSSI_DBM = PGL_CH_GATEWAY_PARENT_MIN_RSSI_DBM;
 
 // Gateway boleh disimpan sebagai alternate parent hanya jika link yang diterima
 // CH masih di atas floor ini. Di bawah -100 dBm, Gateway dianggap terlalu lemah
 // untuk jalur failover cadangan walaupun boleh tetap muncul sebagai discovery.
-constexpr int16_t GATEWAY_ALT_PARENT_MIN_RSSI_DBM = -100;
+#ifndef PGL_CH_GATEWAY_ALT_PARENT_MIN_RSSI_DBM
+#define PGL_CH_GATEWAY_ALT_PARENT_MIN_RSSI_DBM -100
+#endif
+constexpr int16_t GATEWAY_ALT_PARENT_MIN_RSSI_DBM = PGL_CH_GATEWAY_ALT_PARENT_MIN_RSSI_DBM;
 
 // Parent/alt baru baru disimpan ke NVS setelah kombinasi yang sama terlihat
 // stabil sebanyak jumlah scan ini.

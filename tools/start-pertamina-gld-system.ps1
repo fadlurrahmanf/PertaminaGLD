@@ -1,7 +1,17 @@
 param(
     [string]$NodeRedUrl = "http://127.0.0.1:1880",
     [string]$NodeRedUserDir = "$env:USERPROFILE\.node-red",
-    [int]$StartupTimeoutSec = 60,
+    [string]$NodeRedCommandPath = "",
+    [int]$StartupTimeoutSec = 120,
+    [int]$NodeRedStartupWaitSec = 15,
+    [int]$NetworkStartupWaitSec = 120,
+    [int]$DashboardStartupWaitSec = 180,
+    [string]$RequiredNetworkName = "Bn",
+    [string]$RequiredServerIPv4 = "192.168.8.19",
+    [switch]$DashboardOnly,
+    [switch]$ForceDeployFlow,
+    [switch]$ConnectGatewayOperatorMonitor,
+    [switch]$WaitForTopology,
     [switch]$NoBrowser
 )
 
@@ -10,8 +20,15 @@ $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $NodeRedDir = Join-Path $RepoRoot "server\nodered"
 $OperatorHubDir = Join-Path $RepoRoot "apps\operator-hub"
+$RuntimeDir = Join-Path $RepoRoot "apps\runtime\operator-hub"
+$LogDir = Join-Path $RuntimeDir "logs"
 $CredentialsPath = Join-Path $RepoRoot "apps\runtime\operator-hub\credentials.local.json"
+$StartupStatePath = Join-Path $RuntimeDir "startup-flow-state.json"
 $NodeRedEnvPath = Join-Path $NodeRedDir ".env"
+$NodeRedTopologyBootstrapPath = Join-Path $NodeRedUserDir "pertamina-gld-topology-bootstrap.json"
+$NodeRedTopologyContextPath = Join-Path $NodeRedUserDir "pgl-context\pgl_tab\flow.json"
+$BrokerExePath = Join-Path $RepoRoot "apps\gld-operator\python-embed\python.exe"
+$BrokerFirewallRuleName = "Pertamina GLD MQTT Broker 1884 (Bn Private)"
 
 function Write-Step([string]$Message) {
     Write-Host "[Pertamina GLD] $Message"
@@ -25,6 +42,156 @@ function Test-Listening([int]$Port) {
     }
 }
 
+function Test-ListeningAt([string]$Address, [int]$Port) {
+    try {
+        return [bool](Get-NetTCPConnection -State Listen -LocalPort $Port -ErrorAction SilentlyContinue | Where-Object {
+            $_.LocalAddress -eq $Address
+        })
+    } catch {
+        return $false
+    }
+}
+
+function Restore-NodeRedTopologyContext {
+    if (Test-Listening 1880) {
+        return
+    }
+    if (-not (Test-Path -LiteralPath $NodeRedTopologyBootstrapPath)) {
+        return
+    }
+    try {
+        $bootstrap = Get-Content -Raw -LiteralPath $NodeRedTopologyBootstrapPath | ConvertFrom-Json
+        if (-not $bootstrap.pglTopology) {
+            throw "bootstrap does not contain pglTopology"
+        }
+        $contextExists = Test-Path -LiteralPath $NodeRedTopologyContextPath
+        $bootstrapTime = (Get-Item -LiteralPath $NodeRedTopologyBootstrapPath).LastWriteTimeUtc
+        $contextTime = if ($contextExists) { (Get-Item -LiteralPath $NodeRedTopologyContextPath).LastWriteTimeUtc } else { [DateTime]::MinValue }
+        if (-not $contextExists -or $bootstrapTime -gt $contextTime) {
+            $contextDir = Split-Path -Parent $NodeRedTopologyContextPath
+            New-Item -ItemType Directory -Path $contextDir -Force | Out-Null
+            Copy-Item -LiteralPath $NodeRedTopologyBootstrapPath -Destination $NodeRedTopologyContextPath -Force
+            Write-Step "Restored persisted CH topology context before Node-RED startup"
+        }
+    } catch {
+        Write-Warning "Skipped invalid CH topology bootstrap: $($_.Exception.Message)"
+    }
+}
+
+function Test-IsAdministrator() {
+    try {
+        $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+        $principal = New-Object Security.Principal.WindowsPrincipal($identity)
+        return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+    } catch {
+        return $false
+    }
+}
+
+function Test-RequiredServerNetwork() {
+    try {
+        $profiles = @(Get-NetConnectionProfile -ErrorAction Stop | Where-Object {
+            $_.Name -eq $RequiredNetworkName -and $_.IPv4Connectivity -ne "Disconnected"
+        })
+        foreach ($profile in $profiles) {
+            $addresses = @(Get-NetIPAddress -InterfaceIndex $profile.InterfaceIndex -AddressFamily IPv4 -ErrorAction Stop)
+            if ($addresses.IPAddress -contains $RequiredServerIPv4) {
+                if ($profile.NetworkCategory -eq "Private") {
+                    return $true
+                }
+                if (Test-IsAdministrator) {
+                    Set-NetConnectionProfile -InterfaceIndex $profile.InterfaceIndex -NetworkCategory Private
+                    Write-Step "Changed network $RequiredNetworkName to Private for broker firewall policy"
+                }
+                return $false
+            }
+        }
+    } catch {
+    }
+    return $false
+}
+
+function Wait-RequiredServerNetwork() {
+    $deadline = (Get-Date).AddSeconds($NetworkStartupWaitSec)
+    while ((Get-Date) -lt $deadline) {
+        if (Test-RequiredServerNetwork) {
+            Write-Step "Network $RequiredNetworkName ready at $RequiredServerIPv4"
+            return
+        }
+        Start-Sleep -Seconds 2
+    }
+    throw "Required network $RequiredNetworkName with local IPv4 $RequiredServerIPv4 was not ready within $NetworkStartupWaitSec seconds. Broker startup was stopped to prevent binding to the wrong interface."
+}
+
+function Get-BrokerProgramFirewallRules() {
+    if (-not (Test-Path $BrokerExePath)) {
+        return @()
+    }
+    $rules = @()
+    try {
+        $filters = @(Get-NetFirewallApplicationFilter -Program $BrokerExePath -ErrorAction Stop)
+        foreach ($filter in $filters) {
+            foreach ($rule in @(Get-NetFirewallRule -AssociatedNetFirewallApplicationFilter $filter -ErrorAction Stop)) {
+                $rules += $rule
+            }
+        }
+    } catch {
+        return @()
+    }
+    return $rules
+}
+
+function Ensure-BrokerFirewall([string]$Phase) {
+    if (-not (Test-Path $BrokerExePath)) {
+        Write-Warning "Embedded broker executable was not found at $BrokerExePath"
+        return
+    }
+
+    $programRules = @(Get-BrokerProgramFirewallRules)
+    $conflictingBlocks = @($programRules | Where-Object {
+        $_.Enabled -eq "True" -and $_.Direction -eq "Inbound" -and $_.Action -eq "Block"
+    })
+    $dedicatedRules = @(Get-NetFirewallRule -DisplayName $BrokerFirewallRuleName -ErrorAction SilentlyContinue)
+
+    if (-not (Test-IsAdministrator)) {
+        if ($conflictingBlocks.Count -gt 0 -or $dedicatedRules.Count -eq 0) {
+            Write-Warning "Broker firewall repair is required during $Phase, but this launcher is not elevated. Run the scheduled startup task or launch once as Administrator."
+        }
+        return
+    }
+
+    foreach ($rule in $programRules) {
+        if ($rule.DisplayName -eq "Python" -and $rule.Enabled -eq "True") {
+            Set-NetFirewallRule -Name $rule.Name -Enabled False | Out-Null
+            Write-Step "Disabled broad autogenerated Python firewall rule $($rule.Name)"
+        }
+    }
+
+    if ($dedicatedRules.Count -eq 0) {
+        $dedicatedRule = New-NetFirewallRule `
+            -DisplayName $BrokerFirewallRuleName `
+            -Direction Inbound `
+            -Action Allow `
+            -Enabled True `
+            -Profile Private `
+            -Program $BrokerExePath `
+            -Protocol TCP `
+            -LocalPort 1884 `
+            -LocalAddress $RequiredServerIPv4 `
+            -RemoteAddress LocalSubnet
+    } else {
+        $dedicatedRule = $dedicatedRules[0]
+        Set-NetFirewallRule -Name $dedicatedRule.Name -Enabled True -Profile Private -Direction Inbound -Action Allow | Out-Null
+        $dedicatedRule | Get-NetFirewallApplicationFilter | Set-NetFirewallApplicationFilter -Program $BrokerExePath | Out-Null
+        $dedicatedRule | Get-NetFirewallPortFilter | Set-NetFirewallPortFilter -Protocol TCP -LocalPort 1884 -RemotePort Any | Out-Null
+        $dedicatedRule | Get-NetFirewallAddressFilter | Set-NetFirewallAddressFilter -LocalAddress $RequiredServerIPv4 -RemoteAddress LocalSubnet | Out-Null
+        if ($dedicatedRules.Count -gt 1) {
+            $dedicatedRules | Select-Object -Skip 1 | Set-NetFirewallRule -Enabled False | Out-Null
+        }
+    }
+    Write-Step "Broker firewall verified for $RequiredServerIPv4`:1884 during $Phase"
+}
+
 function Wait-Port([int]$Port, [string]$Name, [int]$TimeoutSec) {
     $deadline = (Get-Date).AddSeconds($TimeoutSec)
     while ((Get-Date) -lt $deadline) {
@@ -36,6 +203,37 @@ function Wait-Port([int]$Port, [string]$Name, [int]$TimeoutSec) {
     }
     Write-Warning "$Name did not start listening on port $Port within $TimeoutSec seconds"
     return $false
+}
+
+function Start-LoggedCmd([string]$Command, [string]$WorkingDirectory, [string]$LogName) {
+    New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
+    $logPath = Join-Path $LogDir $LogName
+    $quotedCommand = $Command.Replace('"', '""')
+    $quotedLogPath = $logPath.Replace('"', '""')
+    Start-Process -FilePath "cmd.exe" `
+        -ArgumentList "/c", "`"$quotedCommand`" > `"$quotedLogPath`" 2>&1" `
+        -WorkingDirectory $WorkingDirectory `
+        -WindowStyle Hidden | Out-Null
+    Write-Step "Logging $LogName at $logPath"
+}
+
+function Start-LoggedProcess([string]$FilePath, [string[]]$Arguments, [string]$WorkingDirectory, [string]$LogName) {
+    New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
+    $logPath = Join-Path $LogDir $LogName
+    $errPath = Join-Path $LogDir ($LogName + ".err")
+    $startArgs = @{
+        FilePath = $FilePath
+        WorkingDirectory = $WorkingDirectory
+        WindowStyle = "Hidden"
+        RedirectStandardOutput = $logPath
+        RedirectStandardError = $errPath
+    }
+    if ($Arguments.Count -gt 0) {
+        $startArgs.ArgumentList = $Arguments
+    }
+    Start-Process @startArgs | Out-Null
+    Write-Step "Logging $LogName at $logPath"
+    Write-Step "Logging $LogName stderr at $errPath"
 }
 
 function Load-DotEnv([string]$Path) {
@@ -61,14 +259,54 @@ function Load-DotEnv([string]$Path) {
     Write-Step "Loaded server\nodered\.env into this startup session"
 }
 
+function Get-FlowStartupState($Broker) {
+    $envState = @{}
+    foreach ($key in @("GLD_KEY_ID", "GLD_AES128_KEY_HEX", "PGL_GLD_TARGET_CH_MAP_JSON", "PGL_COMMAND_AUTH_TOKEN")) {
+        $value = [Environment]::GetEnvironmentVariable($key, "Process")
+        if ($null -eq $value) {
+            $value = ""
+        }
+        $envState[$key] = [string]$value
+    }
+    return @{
+        mqttHost = [string]$Broker.host
+        mqttPort = [int]$Broker.port
+        mqttUser = [string]$Broker.username
+        mqttPassword = [string]$Broker.password
+        mqttTopicRoot = [string]$Broker.topicRoot
+        env = $envState
+    }
+}
+
+function Test-FlowDeployNeeded($Broker) {
+    if ($ForceDeployFlow) {
+        Write-Step "Node-RED flow deploy forced"
+        return $true
+    }
+    Write-Step "Node-RED flow deploy skipped for launch-only startup"
+    return $false
+}
+
+function Save-FlowStartupState($Broker) {
+    New-Item -ItemType Directory -Force -Path $RuntimeDir | Out-Null
+    $stateJson = Get-FlowStartupState $Broker | ConvertTo-Json -Depth 6 -Compress
+    @{
+        savedAt = (Get-Date).ToUniversalTime().ToString("o")
+        stateJson = $stateJson
+    } | ConvertTo-Json -Depth 6 | Set-Content -Encoding UTF8 $StartupStatePath
+}
+
 function Start-OperatorHub() {
     if (Test-Listening 5173) {
         Write-Step "Operator Hub already running"
         return
     }
-    $bat = Join-Path $OperatorHubDir "run-operator-hub.bat"
+    $pyExe = Join-Path $RepoRoot "apps\gld-operator\python-embed\python.exe"
+    if (-not (Test-Path $pyExe)) {
+        $pyExe = "python"
+    }
     Write-Step "Starting Operator Hub"
-    Start-Process -FilePath $bat -WorkingDirectory $OperatorHubDir -WindowStyle Hidden
+    Start-LoggedProcess $pyExe @("-u", "bridge.py", "--host", "127.0.0.1", "--port", "5173", "--mqtt-broker-host", $RequiredServerIPv4) $OperatorHubDir "operator-hub.log"
     Wait-Port 5173 "Operator Hub" $StartupTimeoutSec | Out-Null
 }
 
@@ -78,8 +316,21 @@ function Start-NodeRed() {
         return
     }
     Write-Step "Starting Node-RED"
-    Start-Process -FilePath "cmd.exe" -ArgumentList "/c", "node-red" -WorkingDirectory $NodeRedDir -WindowStyle Hidden
-    Wait-Port 1880 "Node-RED" $StartupTimeoutSec | Out-Null
+    $nodeRedCmd = $NodeRedCommandPath
+    if ($nodeRedCmd -and -not (Test-Path $nodeRedCmd)) {
+        throw "Configured Node-RED command was not found at $nodeRedCmd"
+    }
+    if (-not $nodeRedCmd) {
+        $nodeRedCmd = Join-Path $env:APPDATA "npm\node-red.cmd"
+    }
+    if (Test-Path $nodeRedCmd) {
+        Start-LoggedProcess $nodeRedCmd @("--userDir", $NodeRedUserDir) $NodeRedDir "node-red.log"
+    } else {
+        Start-LoggedCmd "node-red --userDir `"$NodeRedUserDir`"" $NodeRedDir "node-red.log"
+    }
+    if (-not (Wait-Port 1880 "Node-RED" $NodeRedStartupWaitSec)) {
+        Write-Step "Node-RED launched in background; it may need more time before the UI opens"
+    }
 }
 
 function Wait-BrokerCredentials() {
@@ -87,7 +338,13 @@ function Wait-BrokerCredentials() {
     while ((Get-Date) -lt $deadline) {
         if ((Test-Path $CredentialsPath) -and (Test-Listening 1884)) {
             $broker = Get-Content -Raw $CredentialsPath | ConvertFrom-Json
-            if ($broker.host -and $broker.port -and $broker.username -and $broker.password) {
+            if ([string]$broker.host -ne $RequiredServerIPv4) {
+                throw "MQTT broker credentials report $($broker.host), expected $RequiredServerIPv4. Stop the stale Operator Hub process and rerun the launcher."
+            }
+            if (-not (Test-ListeningAt $RequiredServerIPv4 1884)) {
+                throw "MQTT port 1884 is listening on the wrong interface; expected $RequiredServerIPv4`:1884."
+            }
+            if ($broker.port -eq 1884 -and $broker.username -and $broker.password) {
                 Write-Step "MQTT broker ready at $($broker.host):$($broker.port)"
                 return $broker
             }
@@ -127,6 +384,7 @@ function Apply-NodeRedFlow($Broker) {
     if ($LASTEXITCODE -ne 0) {
         throw "Node-RED flow apply failed with exit code $LASTEXITCODE"
     }
+    Save-FlowStartupState $Broker
 }
 
 function Connect-GatewayOperatorMonitor($Broker) {
@@ -156,7 +414,7 @@ function Connect-GatewayOperatorMonitor($Broker) {
 }
 
 function Wait-Topology() {
-    $deadline = (Get-Date).AddSeconds(45)
+    $deadline = (Get-Date).AddSeconds(90)
     while ((Get-Date) -lt $deadline) {
         try {
             $topology = Invoke-RestMethod -Uri "$NodeRedUrl/pertamina-gld/topology" -TimeoutSec 5
@@ -172,18 +430,56 @@ function Wait-Topology() {
     return $false
 }
 
+function Open-SystemDashboards() {
+    $dashboardUrl = "$NodeRedUrl/pertamina-gld/topology/view"
+    $deadline = (Get-Date).AddSeconds($DashboardStartupWaitSec)
+    while ((Get-Date) -lt $deadline) {
+        try {
+            $response = Invoke-WebRequest -Uri $dashboardUrl -UseBasicParsing -TimeoutSec 5
+            if ($response.StatusCode -eq 200) {
+                Start-Process "http://127.0.0.1:5173/"
+                Start-Process $dashboardUrl
+                Write-Step "Operator Hub and topology dashboard opened"
+                return
+            }
+        } catch {
+        }
+        Start-Sleep -Seconds 2
+    }
+    throw "Dashboard was not ready at $dashboardUrl within $DashboardStartupWaitSec seconds."
+}
+
+if ($DashboardOnly) {
+    Write-Step "Waiting to open dashboards"
+    Wait-RequiredServerNetwork
+    Open-SystemDashboards
+    Write-Step "Done"
+    exit 0
+}
+
 Write-Step "Starting system from $RepoRoot"
+Wait-RequiredServerNetwork
+Ensure-BrokerFirewall "pre-start"
 Start-OperatorHub
 $broker = Wait-BrokerCredentials
+Ensure-BrokerFirewall "post-start"
 Load-DotEnv $NodeRedEnvPath
+Restore-NodeRedTopologyContext
 Start-NodeRed
-Apply-NodeRedFlow $broker
-Connect-GatewayOperatorMonitor $broker
-Wait-Topology | Out-Null
+if (Test-FlowDeployNeeded $broker) {
+    Apply-NodeRedFlow $broker
+}
+if ($ConnectGatewayOperatorMonitor) {
+    Connect-GatewayOperatorMonitor $broker
+} else {
+    Write-Step "Gateway Operator MQTT monitor connect skipped for fast startup"
+}
+if ($WaitForTopology) {
+    Wait-Topology | Out-Null
+}
 
 if (-not $NoBrowser) {
-    Start-Process "http://127.0.0.1:5173/"
-    Start-Process "$NodeRedUrl/pertamina-gld/topology/view"
+    Open-SystemDashboards
 }
 
 Write-Step "Done"

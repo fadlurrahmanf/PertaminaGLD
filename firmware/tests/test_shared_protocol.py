@@ -23,6 +23,7 @@ CH_CONFIG_FLAG_ROUTE_TO_ROOT = 0x01
 CH_CONFIG_CAP_HELLO_ACK_V1 = 0x02
 CH_CONFIG_CAP_ALARM_ACK_NODE_ID_V1 = 0x04
 CH_HELLO_FLAG_ACK_REQUEST_V1 = 0x01
+CH_HELLO_FLAG_PARENT_LINK_V1 = 0x02
 
 TYPE_GLD_NORMAL_BATTERY = 0x10
 TYPE_GLD_NORMAL_EXTERNAL = 0x90
@@ -945,6 +946,12 @@ def test_gld_unified_runtime_scaffolds_present():
     assert "gld_nulling_runtime_esp32s3" not in platformio
     assert "[env:ch]" in platformio
     assert "[env:chFieldtest]" in platformio
+    assert "[env:gldRealField]" in platformio
+    assert "[env:chRealField]" in platformio
+    assert "[env:gwRealField]" in platformio
+    assert "[env:gldRealTest]" in platformio
+    assert "[env:chRealTest]" in platformio
+    assert "[env:gwRealTest]" in platformio
     assert "[env:ch1]" not in platformio
     assert "[env:gw]" in platformio
     assert "ch_star_mesh_runtime_esp32s3" not in platformio
@@ -1851,6 +1858,10 @@ def test_ch_parent_health_timing_invariants():
 
     def constant(name):
         match = re.search(rf"constexpr uint32_t\s+{name}\s*=\s*(\d+)", config)
+        if not match:
+            match = re.search(rf"constexpr uint32_t\s+{name}\s*=\s*PGL_CH_{name}", config)
+            if match:
+                return macro(f"PGL_CH_{name}")
         assert match, name
         return int(match.group(1))
 
@@ -1909,6 +1920,17 @@ def test_ch_hello_ack_rolling_upgrade_matrix_and_direct_origin_rule():
     assert not parent_sends_ack(True, 0x0064, 0x0065, direct)  # wrong intended parent
     assert not parent_sends_ack(True, 0x0064, 0x006F, direct[:11])
 
+    extended = bytearray(18)
+    extended[0:2] = (0x0064).to_bytes(2, "big")
+    extended[2:4] = (0x006F).to_bytes(2, "big")
+    extended[11] = CH_HELLO_FLAG_ACK_REQUEST_V1 | CH_HELLO_FLAG_PARENT_LINK_V1
+    extended[12] = 0x03
+    extended[13:15] = (-81).to_bytes(2, "big", signed=True)
+    extended[15] = 9
+    extended[16:18] = (3).to_bytes(2, "big")
+    assert parent_sends_ack(True, 0x0064, 0x006F, extended)
+    assert int.from_bytes(extended[13:15], "big", signed=True) == -81
+
     ch_runtime = pathlib.Path("firmware/ch/src/ChStarMeshRuntimeMain.cpp").read_text(encoding="utf-8")
     gw_runtime = pathlib.Path("firmware/gateway/src/GatewayMqttMeshMain.cpp").read_text(encoding="utf-8")
     assert "readU16Be(&decoded.payload[0]) == decoded.srcId" in ch_runtime
@@ -1916,6 +1938,12 @@ def test_ch_hello_ack_rolling_upgrade_matrix_and_direct_origin_rule():
     for source in (ch_runtime, gw_runtime):
         assert "CH_HELLO_FLAG_ACK_REQUEST_V1" in source
         assert "CH_HELLO_ACK_V1_PAYLOAD_SIZE" in source
+    assert "CH_HELLO_FLAG_PARENT_LINK_V1 = 0x02" in protocol
+    assert "CH_HELLO_PARENT_LINK_V1_PAYLOAD_SIZE = 18" in protocol
+    assert "CH_PARENT_LINK_FLAG_SOURCE_CONFIG_RESPONSE" in ch_runtime
+    assert "CH_PARENT_LINK_FLAG_SOURCE_HELLO_ACK" in ch_runtime
+    assert "parentRxRssiDbm" in gw_runtime
+    assert "gatewayIngressRssiDbm" in gw_runtime
 
 
 def test_ch_mesh_ack_transaction_is_single_and_alarm_preempts_hello():

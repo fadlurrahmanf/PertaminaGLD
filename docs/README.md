@@ -2,6 +2,12 @@
 
 Dokumen di folder ini dibaca dengan urutan berikut.
 
+## 0. System Architecture
+
+Mulai dari sini untuk gambaran end-to-end GLD, CH, Gateway, dan Server.
+
+1. `docs/system-architecture.md`
+
 ## 1. Session Context
 
 Gunakan hanya untuk memahami keputusan diskusi, bukan sebagai kontrak implementasi utama.

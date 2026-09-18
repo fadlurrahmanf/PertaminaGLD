@@ -22,7 +22,16 @@ HUB_DIR = Path(__file__).resolve().parent
 APPS_DIR = HUB_DIR.parent
 LIB_DIR = APPS_DIR / "lib"
 FIRMWARE_PACKAGES_DIR = HUB_DIR / "firmware-packages"
-REQUIRED_ENVIRONMENTS = ("gld", "gldFieldtest", "ch", "chFieldtest", "gw")
+REQUIRED_ENVIRONMENTS = (
+    "gld",
+    "gldFieldtest",
+    "gldRealTest",
+    "ch",
+    "chFieldtest",
+    "chRealTest",
+    "gw",
+    "gwRealTest",
+)
 
 
 def find_esptool_entry() -> Path | None:

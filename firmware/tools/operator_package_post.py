@@ -30,10 +30,16 @@ PROFILE_BY_ENV = {
     "gldFieldtest": "WROOM-1U-N16R8 field-test",
     "gldFieldtestSensorlessAlarm": "WROOM-1U-N16R8 sensorless alarm field-test",
     "gldFieldtestSensorlessClear": "WROOM-1U-N16R8 sensorless clear field-test",
+    "gldRealField": "WROOM-1U-N16R8 real field",
+    "gldRealTest": "WROOM-1U-N16R8 real test",
     "ch": "CH3 ESP32-S3 R8N16",
     "chFieldtest": "CH3 ESP32-S3 R8N16 field-test",
+    "chRealField": "CH3 ESP32-S3 R8N16 real field",
+    "chRealTest": "CH3 ESP32-S3 R8N16 real test",
     "gw": "Gateway ESP32-S3 R8N16",
     "gw_hello_ack_fieldtest": "Gateway ESP32-S3 R8N16 field-test",
+    "gwRealField": "Gateway ESP32-S3 R8N16 real field",
+    "gwRealTest": "Gateway ESP32-S3 R8N16 real test",
 }
 
 

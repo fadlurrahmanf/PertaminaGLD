@@ -159,6 +159,8 @@ constexpr uint32_t MQTT_RETRY_MS = pgl::config::gw::MQTT_RETRY_MS;
 constexpr uint32_t STATUS_INTERVAL_MS = pgl::config::gw::STATUS_INTERVAL_MS;
 constexpr uint8_t MQTT_UPLINK_QUEUE_CAPACITY = pgl::config::gw::MQTT_UPLINK_QUEUE_CAPACITY;
 constexpr size_t MQTT_UPLINK_QUEUE_ITEM_BYTES = pgl::config::gw::MQTT_UPLINK_QUEUE_ITEM_BYTES;
+constexpr uint32_t WIFI_STACK_RESET_AFTER_MS = pgl::config::gw::WIFI_STACK_RESET_AFTER_MS;
+constexpr uint32_t OFFLINE_RESTART_AFTER_MS = pgl::config::gw::OFFLINE_RESTART_AFTER_MS;
 constexpr uint8_t CONFIG_RESPONSE_REPEAT_COUNT = pgl::config::gw::CONFIG_RESPONSE_REPEAT_COUNT;
 constexpr uint16_t CONFIG_RESPONSE_INITIAL_DELAY_MS =
     pgl::config::gw::CONFIG_RESPONSE_INITIAL_DELAY_MS;
@@ -174,6 +176,7 @@ constexpr uint16_t PULL_REQUEST_REPEAT_GAP_MS = pgl::config::gw::PULL_REQUEST_RE
 
 void logPrintln(const char* text);
 void logPrintf(const char* fmt, ...);
+bool mqttHostConfigured();
 
 void loadMeshConfig() {
     RuntimeMeshConfig fallback{MESH_FREQ_MHZ, MESH_BW_KHZ, MESH_SF, MESH_CR,
@@ -245,6 +248,8 @@ uint16_t requestId = 1;
 uint32_t lastWifiAttemptMs = 0;
 uint32_t lastMqttAttemptMs = 0;
 uint32_t lastStatusMs = 0;
+uint32_t offlineSinceMs = 0;
+uint32_t lastWifiStackResetMs = 0;
 bool meshReady = false;
 bool mqttSubCommands = false;
 bool mqttSubPull = false;
@@ -655,6 +660,86 @@ void ensureWifi() {
     logPrintf("GW_WIFI_RETRY ssid=%s\n", netConfig.wifiSsid);
 }
 
+void appendHelloParentLinkMetric(JsonObject target, const pgl::protocol::FrameView& decoded) {
+    const bool extensionAdvertised = decoded.payload != nullptr &&
+        decoded.payloadLen >= pgl::protocol::CH_HELLO_V1_PAYLOAD_SIZE &&
+        (decoded.payload[11] & pgl::protocol::CH_HELLO_FLAG_PARENT_LINK_V1) != 0;
+    target["parentLinkMetricSupported"] = extensionAdvertised;
+    target["parentLinkMetricValid"] = false;
+    if (!extensionAdvertised) return;
+    if (decoded.payloadLen < pgl::protocol::CH_HELLO_PARENT_LINK_V1_PAYLOAD_SIZE) {
+        logPrintf("GW_CH_HELLO_PARENT_LINK_INVALID src=0x%04X reason=truncated len=%u\n",
+                  decoded.srcId, decoded.payloadLen);
+        return;
+    }
+
+    const uint8_t metricFlags = decoded.payload[12];
+    const bool valid = (metricFlags & pgl::protocol::CH_PARENT_LINK_FLAG_VALID) != 0;
+    target["parentLinkMetricValid"] = valid;
+    target["parentLinkMetricFlags"] = metricFlags;
+    if (!valid) return;
+
+    const int16_t parentRxRssiDbm = static_cast<int16_t>(readU16Be(&decoded.payload[13]));
+    const int8_t parentRxSnrDb = static_cast<int8_t>(decoded.payload[15]);
+    const uint16_t parentLinkAgeSec = readU16Be(&decoded.payload[16]);
+    if (parentRxRssiDbm == static_cast<int16_t>(-32768) ||
+        parentRxSnrDb == static_cast<int8_t>(-128) || parentLinkAgeSec == 0xFFFF) {
+        target["parentLinkMetricValid"] = false;
+        return;
+    }
+    target["parentRxRssiDbm"] = parentRxRssiDbm;
+    target["parentRxSnrDb"] = parentRxSnrDb;
+    target["parentLinkAgeSec"] = parentLinkAgeSec;
+    target["parentLinkMetricSource"] =
+        (metricFlags & pgl::protocol::CH_PARENT_LINK_FLAG_SOURCE_HELLO_ACK) != 0
+            ? "hello-ack"
+            : ((metricFlags & pgl::protocol::CH_PARENT_LINK_FLAG_SOURCE_CONFIG_RESPONSE) != 0
+                ? "config-response"
+                : "radio-rx");
+}
+
+void recoverOfflineIfNeeded() {
+    const bool wifiConnected = WiFi.status() == WL_CONNECTED;
+    if (wifiConnected) {
+        offlineSinceMs = 0;
+        lastWifiStackResetMs = 0;
+        return;
+    }
+
+    const uint32_t now = millis();
+    if (offlineSinceMs == 0) {
+        offlineSinceMs = now == 0 ? 1 : now;
+        return;
+    }
+
+    const uint32_t offlineMs = now - offlineSinceMs;
+    if (WIFI_STACK_RESET_AFTER_MS > 0 &&
+        offlineMs >= WIFI_STACK_RESET_AFTER_MS &&
+        (lastWifiStackResetMs == 0 ||
+         now - lastWifiStackResetMs >= WIFI_STACK_RESET_AFTER_MS)) {
+        lastWifiStackResetMs = now;
+        logPrintf("GW_WIFI_STACK_RESET offlineMs=%lu ssid=%s\n",
+                  static_cast<unsigned long>(offlineMs),
+                  netConfig.wifiSsid);
+        mqtt.disconnect();
+        WiFi.disconnect(true, false);
+        delay(250);
+        WiFi.mode(WIFI_STA);
+        WiFi.setSleep(false);
+        WiFi.begin(netConfig.wifiSsid, netConfig.wifiPassword);
+        lastWifiAttemptMs = now;
+    }
+
+    if (OFFLINE_RESTART_AFTER_MS > 0 && offlineMs >= OFFLINE_RESTART_AFTER_MS) {
+        logPrintf("GW_OFFLINE_RESTART offlineMs=%lu wifi=%u mqtt=%u\n",
+                  static_cast<unsigned long>(offlineMs),
+                  wifiConnected ? 1 : 0,
+                  mqtt.connected() ? 1 : 0);
+        delay(100);
+        ESP.restart();
+    }
+}
+
 void mqttCallback(char* topic, uint8_t* payload, unsigned int length);
 bool publishStatus(const char* state);
 
@@ -863,6 +948,9 @@ bool publishStatus(const char* state) {
     doc["mqttQueueDropped"] = mqttQueueDropped;
     doc["mqttQueuePublished"] = mqttQueuePublished;
     doc["mqttQueueCapacity"] = MQTT_UPLINK_QUEUE_CAPACITY;
+    doc["offlineMs"] = offlineSinceMs == 0 ? 0 : millis() - offlineSinceMs;
+    doc["wifiStackResetAfterMs"] = WIFI_STACK_RESET_AFTER_MS;
+    doc["offlineRestartAfterMs"] = OFFLINE_RESTART_AFTER_MS;
     doc["ip"] = wifiConnected ? WiFi.localIP().toString() : "";
 
     char json[1024];
@@ -1179,10 +1267,14 @@ bool publishTopologyReport(const pgl::protocol::FrameView& decoded, float rssi, 
     doc["payloadLen"] = decoded.payloadLen;
     doc["rssi"] = rssi;
     doc["snr"] = snr;
+    doc["gatewayIngressRssiDbm"] = rssi;
+    doc["gatewayIngressSnrDb"] = snr;
+    doc["ingressHopId"] = decoded.srcId;
     writeHexId(doc, "gatewayIdHex", gatewayId);
     writeHexId(doc, "rootIdHex", gatewayId);
     writeHexId(doc, "srcIdHex", decoded.srcId);
     writeHexId(doc, "dstIdHex", decoded.dstId);
+    writeHexId(doc, "ingressHopIdHex", decoded.srcId);
 
     uint16_t chId = decoded.srcId;
     uint16_t parentId = 0;
@@ -1199,6 +1291,7 @@ bool publishTopologyReport(const pgl::protocol::FrameView& decoded, float rssi, 
         parentId = readU16Be(&decoded.payload[2]);
         const uint16_t parentAltId = decoded.payloadLen >= 11 ? readU16Be(&decoded.payload[9]) : 0;
         doc["chId"] = chId;
+        doc["originChId"] = chId;
         doc["parentId"] = parentId;
         doc["parentAltId"] = parentAltId;
         doc["edgeFrom"] = chId;
@@ -1207,10 +1300,12 @@ bool publishTopologyReport(const pgl::protocol::FrameView& decoded, float rssi, 
         doc["uptimeSec16"] = readU16Be(&decoded.payload[6]);
         doc["parentIsRoot"] = parentId == gatewayId;
         writeHexId(doc, "chIdHex", chId);
+        writeHexId(doc, "originChIdHex", chId);
         writeHexId(doc, "parentIdHex", parentId);
         writeHexId(doc, "parentAltIdHex", parentAltId);
         writeHexId(doc, "edgeFromHex", chId);
         writeHexId(doc, "edgeToHex", parentId);
+        appendHelloParentLinkMetric(doc.as<JsonObject>(), decoded);
     } else if (msgType == pgl::protocol::MSG_CH_CONFIG_RESPONSE) {
         if (decoded.payloadLen < 8 || decoded.payload == nullptr) {
             logPrintf("GW_TOPOLOGY_SKIP report=ch-config-response src=0x%04X reason=short-payload len=%u\n",
@@ -1307,9 +1402,14 @@ PublishDisposition publishMeshFrame(const uint8_t* frame, size_t frameLen, float
             topology["meshDepth"] = decoded.payloadLen >= 9 ? decoded.payload[8] : 0xFF;
             topology["parentIsRoot"] = readU16Be(&decoded.payload[2]) == gatewayId;
             topology["viaHop"] = decoded.srcId;
+            topology["ingressHopId"] = decoded.srcId;
+            topology["originChId"] = readU16Be(&decoded.payload[0]);
             topology["gatewayId"] = gatewayId;
             topology["rssi"] = rssi;
             topology["snr"] = snr;
+            topology["gatewayIngressRssiDbm"] = rssi;
+            topology["gatewayIngressSnrDb"] = snr;
+            appendHelloParentLinkMetric(topology, decoded);
         }
         publishTopologyReport(decoded, rssi, snr);
     }
@@ -1874,6 +1974,7 @@ void loop() {
     pollSerialCommands();
     ensureWifi();
     ensureMqtt();
+    recoverOfflineIfNeeded();
     mqtt.loop();
     publishStatusPeriodic();
     drainMqttQueue();

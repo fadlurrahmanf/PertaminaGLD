@@ -36,10 +36,22 @@ constexpr uint8_t CH_CONFIG_CAP_NODE_COMMAND_ROUTE_V1 = 0x08;
 
 // CH_HELLO payload[11]. The byte is absent in the legacy 11-byte payload.
 constexpr uint8_t CH_HELLO_FLAG_ACK_REQUEST_V1 = 0x01;
+constexpr uint8_t CH_HELLO_FLAG_PARENT_LINK_V1 = 0x02;
 constexpr size_t CH_HELLO_LEGACY_PAYLOAD_SIZE = 11;
 constexpr size_t CH_HELLO_V1_PAYLOAD_SIZE = 12;
+// CH_HELLO parent-link extension (payload bytes 12..17):
+//   [12]    metric flags (valid/source)
+//   [13:14] parent -> CH RSSI measured by the child, signed int16 BE
+//   [15]    parent -> CH SNR measured by the child, signed int8
+//   [16:17] metric age in seconds, uint16 BE (0xFFFF = unavailable)
+constexpr size_t CH_HELLO_PARENT_LINK_V1_PAYLOAD_SIZE = 18;
+constexpr uint8_t CH_PARENT_LINK_FLAG_VALID = 0x01;
+constexpr uint8_t CH_PARENT_LINK_FLAG_SOURCE_CONFIG_RESPONSE = 0x02;
+constexpr uint8_t CH_PARENT_LINK_FLAG_SOURCE_HELLO_ACK = 0x04;
 constexpr size_t CH_HELLO_ACK_V1_PAYLOAD_SIZE = 4;
 constexpr size_t MESH_ALARM_ACK_V1_PAYLOAD_SIZE = 2;
+static_assert(CH_HELLO_PARENT_LINK_V1_PAYLOAD_SIZE <= MESH_MAX_PAYLOAD,
+              "CH_HELLO parent-link extension exceeds mesh payload");
 
 // SERVER_NODE_COMMAND keeps the legacy 7-byte command header for direct
 // Gateway-to-CH delivery.  The routed v1 envelope carries a source route in

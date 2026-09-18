@@ -73,6 +73,7 @@ constexpr uint32_t NODE_STALE_AFTER_MS      = pgl::config::ch::NODE_STALE_AFTER_
 constexpr uint16_t BATT_START_MV           = pgl::config::ch::BATT_START_MV;
 constexpr uint16_t BATT_RUN_MIN_MV         = pgl::config::ch::BATT_RUN_MIN_MV;
 constexpr uint16_t BATT_CRITICAL_MV        = pgl::config::ch::BATT_CRITICAL_MV;
+constexpr uint16_t BATT_VALID_MIN_MV       = pgl::config::ch::BATT_VALID_MIN_MV;
 constexpr uint32_t ALARM_ACK_TMO_MS        = pgl::config::ch::ALARM_ACK_TMO_MS;
 constexpr uint8_t  ALARM_RETRY_MAX         = pgl::config::ch::ALARM_RETRY_MAX;
 constexpr uint8_t  PARENT_FAIL_TH          = pgl::config::ch::PARENT_FAIL_TH;
@@ -240,6 +241,7 @@ static uint32_t lastCfgReqMs   = 0;
 static uint32_t lastParentSeenMs = 0;
 static int16_t  lastParentRssiDbm = -32768;
 static int8_t   lastParentSnrDb = -128;
+static uint8_t  lastParentMetricSource = 0;
 static uint32_t lastRouteVerifyMs = 0;
 static uint32_t nextRouteVerifyDueMs = 0;
 static uint32_t routeVerifyStartedMs = 0;
@@ -635,6 +637,7 @@ void updateRuntimeParent(uint16_t newId, uint8_t newRouteFlags = 0) {
         lastParentSeenMs = 0;
         lastParentRssiDbm = -32768;
         lastParentSnrDb = -128;
+        lastParentMetricSource = 0;
         bootHelloPending = newId != 0;
         nextHelloDueMs = millis();
         handleMeshAckParentChange(oldId, newId);
@@ -856,6 +859,7 @@ void upsertParentCandidate(uint16_t id, uint16_t advertisedParent, uint8_t depth
         lastParentSeenMs = slot->seenAtMs;
         lastParentRssiDbm = rssiDbm;
         lastParentSnrDb = snrDb;
+        lastParentMetricSource = pgl::protocol::CH_PARENT_LINK_FLAG_SOURCE_CONFIG_RESPONSE;
     }
     logPrintf("CH_PARENT_CANDIDATE id=0x%04X parent=0x%04X depth=%u caps=0x%02X rssi=%d snr=%d reverse=%u reverseRssi=%d reverseSnr=%d battMv=%u\n",
               id,
@@ -953,8 +957,9 @@ bool selectDiscoveredParents(const char* reason) {
             parentAlt = 0;
             meshDepth = 0xFF;
             lastParentSeenMs = 0;
-            lastParentRssiDbm = 0;
-            lastParentSnrDb = 0;
+            lastParentRssiDbm = -32768;
+            lastParentSnrDb = -128;
+            lastParentMetricSource = 0;
             routeVerifyActive = false;
             setState(ChState::PARENT_FAILOVER, "weak-bidirectional-gateway");
         }
@@ -1021,6 +1026,7 @@ bool selectDiscoveredParents(const char* reason) {
     lastParentSeenMs = millis();
     lastParentRssiDbm = best->rssiDbm;
     lastParentSnrDb = best->snrDb;
+    lastParentMetricSource = pgl::protocol::CH_PARENT_LINK_FLAG_SOURCE_CONFIG_RESPONSE;
     nextHelloDueMs = millis();
     if (nvsStable) {
         saveParents();
@@ -1057,7 +1063,8 @@ uint16_t readBatteryMv() {
     for (uint8_t i = 0; i < 16; i++) {
         sum += static_cast<uint32_t>(analogReadMilliVolts(pgl::ch::board::PIN_BATMON));
     }
-    return static_cast<uint16_t>((sum / 16) * 3UL + 200UL);
+    const uint16_t measuredMv = static_cast<uint16_t>((sum / 16) * 3UL + 200UL);
+    return measuredMv < BATT_VALID_MIN_MV ? static_cast<uint16_t>(0xFFFF) : measuredMv;
 }
 
 bool txAllowed() {
@@ -1670,7 +1677,7 @@ bool sendHello() {
     const uint32_t uptimeSec = millis() / 1000UL;
     const uint8_t seq = helloSeq++;
     const bool ackRequested = (parentRouteFlags & pgl::protocol::CH_CONFIG_CAP_HELLO_ACK_V1) != 0;
-    uint8_t payload[pgl::protocol::CH_HELLO_V1_PAYLOAD_SIZE]{};
+    uint8_t payload[pgl::protocol::CH_HELLO_PARENT_LINK_V1_PAYLOAD_SIZE]{};
     payload[0] = static_cast<uint8_t>(CH_ID >> 8);
     payload[1] = static_cast<uint8_t>(CH_ID);
     payload[2] = static_cast<uint8_t>(parentId >> 8);
@@ -1682,10 +1689,25 @@ bool sendHello() {
     payload[8] = meshDepth;
     payload[9] = static_cast<uint8_t>(parentAlt >> 8);
     payload[10] = static_cast<uint8_t>(parentAlt);
-    payload[11] = ackRequested ? pgl::protocol::CH_HELLO_FLAG_ACK_REQUEST_V1 : 0;
-    const uint8_t payloadLen = ackRequested
-        ? static_cast<uint8_t>(pgl::protocol::CH_HELLO_V1_PAYLOAD_SIZE)
-        : static_cast<uint8_t>(pgl::protocol::CH_HELLO_LEGACY_PAYLOAD_SIZE);
+    const bool parentLinkValid = lastParentSeenMs != 0 &&
+        lastParentRssiDbm != -32768 && lastParentSnrDb != -128 &&
+        lastParentMetricSource != 0;
+    payload[11] = (ackRequested ? pgl::protocol::CH_HELLO_FLAG_ACK_REQUEST_V1 : 0) |
+        pgl::protocol::CH_HELLO_FLAG_PARENT_LINK_V1;
+    payload[12] = parentLinkValid
+        ? static_cast<uint8_t>(pgl::protocol::CH_PARENT_LINK_FLAG_VALID | lastParentMetricSource)
+        : 0;
+    const int16_t encodedParentRssi = parentLinkValid ? lastParentRssiDbm : static_cast<int16_t>(-32768);
+    payload[13] = static_cast<uint8_t>(static_cast<uint16_t>(encodedParentRssi) >> 8);
+    payload[14] = static_cast<uint8_t>(static_cast<uint16_t>(encodedParentRssi));
+    payload[15] = static_cast<uint8_t>(parentLinkValid ? lastParentSnrDb : static_cast<int8_t>(-128));
+    const uint32_t parentLinkAgeSec32 = parentLinkValid ? (millis() - lastParentSeenMs) / 1000UL : 0xFFFFUL;
+    const uint16_t parentLinkAgeSec = parentLinkAgeSec32 >= 0xFFFFUL
+        ? static_cast<uint16_t>(0xFFFE)
+        : static_cast<uint16_t>(parentLinkAgeSec32);
+    payload[16] = static_cast<uint8_t>(parentLinkAgeSec >> 8);
+    payload[17] = static_cast<uint8_t>(parentLinkAgeSec);
+    const uint8_t payloadLen = static_cast<uint8_t>(sizeof(payload));
     uint8_t frame[pgl::ch::CH_TX_FRAME_MAX]{};
     const pgl::protocol::FrameEncodeResult enc = pgl::protocol::encodeAppFrame(
         pgl::protocol::MSG_CH_HELLO, CH_ID, parentId, seq,
@@ -1697,9 +1719,11 @@ bool sendHello() {
         startMeshAckTransaction(MeshAckKind::Hello, parentId, 0, 0,
                                 static_cast<uint16_t>(uptimeSec), frame, enc.size);
     }
-    logPrintf("CH_HELLO_TX parentId=0x%04X parentAlt=0x%04X seq=%u battMv=%u uptimeSec=%lu depth=%u caps=0x%02X ackWait=%u txOk=%u\n",
+    logPrintf("CH_HELLO_TX parentId=0x%04X parentAlt=0x%04X seq=%u battMv=%u uptimeSec=%lu depth=%u caps=0x%02X ackWait=%u parentLinkValid=%u parentRssi=%d parentSnr=%d parentMetricAgeSec=%u parentMetricSource=0x%02X txOk=%u\n",
               parentId, parentAlt, seq, batteryMv, static_cast<unsigned long>(uptimeSec), meshDepth,
-              parentRouteFlags, ackRequested && txOk ? 1 : 0, txOk ? 1 : 0);
+              parentRouteFlags, ackRequested && txOk ? 1 : 0, parentLinkValid ? 1 : 0,
+              lastParentRssiDbm, lastParentSnrDb, parentLinkAgeSec, lastParentMetricSource,
+              txOk ? 1 : 0);
     return txOk;
 }
 
@@ -1934,6 +1958,7 @@ void handleMeshPacketReceived() {
             lastParentSeenMs = millis();
             lastParentRssiDbm = rxRssiDbm;
             lastParentSnrDb = rxSnrDb;
+            lastParentMetricSource = pgl::protocol::CH_PARENT_LINK_FLAG_SOURCE_HELLO_ACK;
             logPrintf("CH_HELLO_ACK_RECV parent=0x%04X seq=%u rssi=%d snr=%d retry=%u\n",
                       decoded.srcId, decoded.seq, rxRssiDbm, rxSnrDb, meshAck.retryCount);
             helloAckFailureCount = 0;
@@ -2222,8 +2247,8 @@ void handleWaitBatt() {
         serviceDelay(100);
         return;
     }
-    logPrintf("CH_BATT_MV=%u stableCount=%u threshold=%u\n",
-              batteryMv, battStableCount, BATT_START_MV);
+    logPrintf("CH_BATT_MV=%u stableCount=%u threshold=%u validMin=%u\n",
+              batteryMv, battStableCount, BATT_START_MV, BATT_VALID_MIN_MV);
     if (batteryMv >= BATT_START_MV) {
         battStableCount++;
         if (battStableCount >= 8) {

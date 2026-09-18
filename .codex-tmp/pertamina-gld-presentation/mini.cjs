@@ -1,0 +1,1 @@
+const pptxgen=require('pptxgenjs'); const pptx=new pptxgen(); pptx.layout='LAYOUT_WIDE'; let s=pptx.addSlide(); s.addText('Hello',{x:1,y:1,w:5,h:1,fontSize:24}); pptx.writeFile({fileName:'mini.pptx'});

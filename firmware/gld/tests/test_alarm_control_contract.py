@@ -72,6 +72,26 @@ def main() -> None:
     ):
         require(runtime, marker, runtime_path)
 
+    board_pins = read("firmware/gld/include/BoardPins.h")
+    require(board_pins, "#define PGL_GLD_PIN_ALARM_LAMP 41", "firmware/gld/include/BoardPins.h")
+    require(board_pins, "#define PGL_GLD_PIN_BUZZER -1", "firmware/gld/include/BoardPins.h")
+    require(runtime, 'alarmControl["outputDrive"] = "active_low_gpio41_uln2003_pullup"', runtime_path)
+    require(runtime, 'alarmControl["externalDevicePattern"] = "steady_high_while_alarm"', runtime_path)
+    require(runtime, 'alarmControl["requiresExternalPullup"] = true', runtime_path)
+    require(runtime, "alarmActive ? LOW : HIGH", runtime_path)
+    require(runtime, "GLD1_ALARM_OUTPUT gpio41Command=%s j2LampExpected=%s reason=inference_invalid", runtime_path)
+    setup = runtime.split("void setup() {", 1)[1].split("void loop()", 1)[0]
+    if setup.index("beginGld1AlarmOutput();") > setup.index("Serial.begin(115200);"):
+        raise AssertionError("GLD1 normal output must be established before serial startup")
+
+    nulling_source = read("firmware/gld/src/GldNullingService.cpp")
+    require(nulling_source, "PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2",
+            "firmware/gld/src/GldNullingService.cpp")
+    require(nulling_source, "constexpr uint32_t SETTLE_MS               = 5;",
+            "firmware/gld/src/GldNullingService.cpp")
+    require(nulling_source, "constexpr uint32_t SETTLE_MS               = 150;",
+            "firmware/gld/src/GldNullingService.cpp")
+
     for marker in (
         'prefs.getUChar("alarmMode"',
         'prefs.putUChar("alarmMode"',

@@ -1,22 +1,22 @@
-# GLD2 - Diagram blok dari schematic
+# GLD2 - schematic block diagram
 
-Buka `index.html` untuk melihat 9 diagram dengan pilihan halaman dan zoom, atau `../../pdf/GLD2-Block-Diagram.pdf` untuk versi PDF vector.
-SVG dapat diedit dengan Inkscape/Illustrator atau editor teks. Tata letak dan isi sumber ada di `build_diagram.py`.
+Open `index.html` to view the nine diagrams with page selection and zoom, or open `../../pdf/GLD2-Block-Diagram.pdf` for the vector PDF.
+The SVG files can be edited with Inkscape, Illustrator, or a text editor. The layout and source content are in `build_diagram.py`.
 
-## Sumber dan cakupan
+## Source and scope
 
-- Satu lembar motherboard (Sheet_1), seluruh 204 komponen/simbol, dan net pad PCB dari ZIP yang diberikan pengguna.
-- Gambar referensi modul sensor dibaca terpisah; designator komponen pada gambar modul tidak identik dengan motherboard.
-- `source-net-evidence.json` menyimpan nama pin simbol, net pad PCB, koordinat pin schematic, dan label net hasil penelusuran wire. Nol perbedaan ditemukan pada pin yang mempunyai label net. Ini bukan electrical rules check penuh atau validasi routing PCB.
-- `component-pins.csv` memuat setiap pin komponen termasuk komponen pasif. Baris casing tidak memiliki pin elektrik.
-- Identitas sensor per channel tidak diasumsikan dari firmware. Nama MQ2 hanya contoh yang tertulis pada gambar modul.
-- +5VA motherboard tidak mempunyai sumber yang terlihat; +5VA lokal modul sensor mempunyai filter L1 dari +5V. Keduanya tidak digabung tanpa bukti.
-- Pin modul referensi berbeda dari header motherboard. Tabel halaman 06 menunjukkan padanan fungsi, bukan instruksi memasang kabel tanpa pemeriksaan orientasi.
-- Tidak ada perubahan firmware, build, upload, COM, atau pengukuran hardware.
+- One motherboard sheet (Sheet_1), all 204 component/symbol records, and PCB pad nets from the user-provided ZIP.
+- The sensor-module reference image was read separately; its component designators do not match the motherboard.
+- `source-net-evidence.json` stores symbol pin names, PCB pad nets, schematic pin coordinates, and traced net labels. No differences were found for pins with a net label. This is not a complete electrical-rules check or PCB-routing validation.
+- `component-pins.csv` lists every component pin, including passive components. Case-only rows have no electrical pins.
+- Sensor identity per channel is not inferred from firmware. MQ2 is only an example written on the module image.
+- The motherboard +5VA source is not visible; local sensor-module +5VA has an L1 filter from +5V. They are not combined without evidence.
+- Reference-module pins differ from the motherboard header. Page 06 presents functional mapping, not a wiring instruction without orientation verification.
+- No firmware, build, upload, COM, or hardware measurements were changed.
 
-## Regenerasi
+## Regeneration
 
-Jalankan dengan Python yang mempunyai reportlab: `python output/diagrams/gld2/build_diagram.py` dari root repository. Font menggunakan Arial Windows.
-Generator mengeluarkan PDF, 9 SVG, HTML, CSV, dan README. Input utamanya adalah `source-net-evidence.json` hasil ekstraksi sumber.
+Run with Python and reportlab from the repository root: `python output/diagrams/gld2/build_diagram.py`. The font is Windows Arial.
+The generator outputs the PDF, nine SVG files, HTML, CSV, and README. Its primary input is the extracted `source-net-evidence.json`.
 
 SHA-256 arsip sumber: `aeb3d54180c596c5ee7fbc9adbb51e434651a238b19a31429d8cf5c82ec985f1`

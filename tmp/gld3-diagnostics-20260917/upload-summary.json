@@ -1,0 +1,131 @@
+{
+  "port": "COM7",
+  "firmwareVersion": "0.8.31",
+  "firmwareSha256": "1ab23af968b3e70d4894c945d97223a34a65e065d2d26cca480cfd33ab05208f",
+  "nvsBeforeSha256": "8334130951c93003722cefb019c570cc70a091ce121f133a9bf099f758b12fbc",
+  "operations": [
+    {
+      "name": "verify-chip-identity",
+      "baud": 115200,
+      "exitCode": 0,
+      "writeHashVerified": false,
+      "verifyDigestCount": 0
+    },
+    {
+      "name": "write-boot",
+      "baud": 115200,
+      "exitCode": 0,
+      "writeHashVerified": true,
+      "verifyDigestCount": 0
+    },
+    {
+      "name": "write-block-00-attempt-1",
+      "baud": 230400,
+      "exitCode": 2,
+      "writeHashVerified": false,
+      "verifyDigestCount": 0
+    },
+    {
+      "name": "write-block-00-attempt-2",
+      "baud": 115200,
+      "exitCode": 0,
+      "writeHashVerified": true,
+      "verifyDigestCount": 0
+    },
+    {
+      "name": "write-block-01-attempt-1",
+      "baud": 230400,
+      "exitCode": 0,
+      "writeHashVerified": true,
+      "verifyDigestCount": 0
+    },
+    {
+      "name": "write-block-02-attempt-1",
+      "baud": 230400,
+      "exitCode": 0,
+      "writeHashVerified": true,
+      "verifyDigestCount": 0
+    },
+    {
+      "name": "write-block-03-attempt-1",
+      "baud": 230400,
+      "exitCode": 2,
+      "writeHashVerified": false,
+      "verifyDigestCount": 0
+    },
+    {
+      "name": "write-block-03-attempt-2",
+      "baud": 115200,
+      "exitCode": 0,
+      "writeHashVerified": true,
+      "verifyDigestCount": 0
+    },
+    {
+      "name": "write-block-04-attempt-1",
+      "baud": 230400,
+      "exitCode": 0,
+      "writeHashVerified": true,
+      "verifyDigestCount": 0
+    },
+    {
+      "name": "write-block-05-attempt-1",
+      "baud": 230400,
+      "exitCode": 2,
+      "writeHashVerified": false,
+      "verifyDigestCount": 0
+    },
+    {
+      "name": "write-block-05-attempt-2",
+      "baud": 115200,
+      "exitCode": 0,
+      "writeHashVerified": true,
+      "verifyDigestCount": 0
+    },
+    {
+      "name": "write-block-06-attempt-1",
+      "baud": 230400,
+      "exitCode": 0,
+      "writeHashVerified": true,
+      "verifyDigestCount": 0
+    },
+    {
+      "name": "write-block-07-attempt-1",
+      "baud": 230400,
+      "exitCode": 2,
+      "writeHashVerified": false,
+      "verifyDigestCount": 0
+    },
+    {
+      "name": "write-block-07-attempt-2",
+      "baud": 115200,
+      "exitCode": 0,
+      "writeHashVerified": true,
+      "verifyDigestCount": 0
+    },
+    {
+      "name": "verify-all-four",
+      "baud": 115200,
+      "exitCode": 0,
+      "writeHashVerified": false,
+      "verifyDigestCount": 4
+    },
+    {
+      "name": "read-nvs-after",
+      "baud": 115200,
+      "exitCode": 0,
+      "writeHashVerified": false,
+      "verifyDigestCount": 0
+    },
+    {
+      "name": "final-chip-reset",
+      "baud": 115200,
+      "exitCode": 0,
+      "writeHashVerified": false,
+      "verifyDigestCount": 0
+    }
+  ],
+  "flashVerified": true,
+  "nvsAfterSha256": "8334130951c93003722cefb019c570cc70a091ce121f133a9bf099f758b12fbc",
+  "nvsUnchanged": true,
+  "resetCommandSucceeded": true
+}

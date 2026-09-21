@@ -254,7 +254,8 @@ function requestFirmwareUploadOptions({ device, port, initialFirmware = false })
     <label>FIRMWARE ENVIRONMENT<select id="firmwareUploadEnvironment" disabled><option>Ditentukan dari pilihan package</option></select></label>
     <label>TARGET COM<select id="firmwareUploadPort"><option>${port}</option></select></label>
     <label class="firmware-reset"><input type="checkbox" id="firmwareUploadReset"${initialFirmware ? " checked disabled" : ""}> Reset NVS?</label>
-    <p class="firmware-upload-help">${initialFirmware ? "Firmware awal selalu mereset NVS. Identitas default akan dibaca ulang setelah board reboot." : "Unchecked: retain all NVS parameters. Checked: erase NVS, then boot with all defaults embedded in this firmware."}</p>
+    <p id="firmwareUploadResetHelp" class="firmware-upload-help">${initialFirmware ? "Firmware awal selalu mereset NVS. Identitas default akan dibaca ulang setelah board reboot." : "Unchecked: retain all NVS parameters. Checked: erase NVS, then boot with all defaults embedded in this firmware."}</p>
+    <p id="firmwareUploadResetWarning" class="firmware-upload-help" role="alert" hidden>WAJIB Reset NVS untuk GLD1 v0.8.38 berbasis 69a493c: format profil dari firmware lebih baru tidak kompatibel saat downgrade. Centang Reset NVS secara eksplisit sebelum Upload. Semua konfigurasi, hasil nulling, dan binding akan dihapus. Setelah upload, lakukan setup ulang, nulling 8/8, lalu bind model kembali.</p>
     <p id="firmwareUploadError" class="confirm-dialog-error" hidden></p>
     <div class="confirm-dialog-actions"><button id="firmwareUploadCancel" class="secondary" value="cancel">Batal</button><button id="firmwareUploadAccept" class="primary" value="default">Upload</button></div>
   </form>`;
@@ -267,6 +268,10 @@ function requestFirmwareUploadOptions({ device, port, initialFirmware = false })
     const environment = dialog.querySelector("#firmwareUploadEnvironment");
     const packageLabel = dialog.querySelector("#firmwareUploadPackageLabel");
     const error = dialog.querySelector("#firmwareUploadError");
+    const resetHelp = dialog.querySelector("#firmwareUploadResetHelp");
+    const resetWarning = dialog.querySelector("#firmwareUploadResetWarning");
+    let previousEnvironment = "";
+    let resetRequired = false;
     const finish = (result) => { dialog.close(); dialog.remove(); resolve(result); };
     const updatePackageSelection = () => {
       const boardValue = board?.value || "";
@@ -277,6 +282,19 @@ function requestFirmwareUploadOptions({ device, port, initialFirmware = false })
         : device === "ch"
           ? packageOptions.environments?.[boardValue]
           : packageOptions.environments?.[boardValue]?.[transportValue];
+      const selectedPackage = packageCatalog[selectedEnvironment];
+      const selectedRequiresReset = device === "gld" && selectedPackage?.available === true &&
+        selectedPackage.requiresNvsResetBeforeBoot === true;
+      if ((selectedEnvironment || "") !== previousEnvironment) {
+        // A consent from another package must not silently authorize this downgrade.
+        if (resetRequired || selectedRequiresReset) reset.checked = false;
+        reset.disabled = initialFirmware && !selectedRequiresReset;
+        if (initialFirmware && !selectedRequiresReset) reset.checked = true;
+        previousEnvironment = selectedEnvironment || "";
+      }
+      resetRequired = selectedRequiresReset;
+      resetWarning.hidden = !resetRequired;
+      resetHelp.hidden = resetRequired;
       const selectionLabel = device === "gld"
         ? model?.selectedOptions?.[0]?.textContent?.replace(/ — v[^—]+$/, "") || ""
         : `${board?.selectedOptions?.[0]?.textContent || ""}${transportValue ? ` / ${transport?.selectedOptions?.[0]?.textContent || ""}` : ""}`;
@@ -286,7 +304,6 @@ function requestFirmwareUploadOptions({ device, port, initialFirmware = false })
         error.hidden = true;
         return "";
       }
-      const selectedPackage = packageCatalog[selectedEnvironment];
       if (selectedPackage?.available !== true) {
         packageLabel.textContent = `Package: ${spec.label} / ${selectionLabel} / ${selectedEnvironment} / TIDAK TERSEDIA`;
         error.textContent = `Package ${selectedEnvironment} tidak tersedia (${selectedPackage?.error || "manifest tidak ditemukan"}).`;
@@ -326,6 +343,12 @@ function requestFirmwareUploadOptions({ device, port, initialFirmware = false })
           error.textContent = "Environment firmware untuk pilihan ini tidak tersedia.";
           error.hidden = false;
         }
+        return;
+      }
+      if (resetRequired && reset.checked !== true) {
+        error.textContent = "Upload ditahan: paket downgrade ini wajib Reset NVS sebelum boot. Baca peringatan lalu centang Reset NVS secara eksplisit.";
+        error.hidden = false;
+        reset.focus();
         return;
       }
       const resetNvs = initialFirmware || reset.checked;
@@ -428,7 +451,16 @@ function validGldAlarmControl(info) {
   if (!alarm || alarm.available !== true || !["auto", "manual"].includes(alarm.mode)) return null;
   if (!["modePersisted", "sessionOnly", "resetsToAutoOnBoot", "manualCommanded", "inferenceAlarm", "physicalCommanded"].every((field) => typeof alarm[field] === "boolean")) return null;
   if (alarm.modePersisted !== false || alarm.sessionOnly !== true || alarm.resetsToAutoOnBoot !== true) return null;
-  if (alarm.outputDrive !== "steady_24v" || alarm.externalDevicePattern !== "self_pulsed_1s_on_1s_off") return null;
+  const steady24v = alarm.outputDrive === "steady_24v" &&
+    alarm.externalDevicePattern === "self_pulsed_1s_on_1s_off";
+  const gld1SingleTrigger = alarm.outputDrive === "active_high_gpio41_steady" &&
+    alarm.externalDevicePattern === "steady_high_while_alarm" && alarm.singleTrigger === true;
+  const gld1Pullup = alarm.outputDrive === "active_low_gpio41_uln2003_pullup" &&
+    alarm.externalDevicePattern === "steady_high_while_alarm" && alarm.singleTrigger === true &&
+    alarm.requiresExternalPullup === true &&
+    alarm.gpio41CommandLevel === (alarm.physicalCommanded ? "LOW" : "HIGH") &&
+    alarm.j2LampExpectedLevel === (alarm.physicalCommanded ? "HIGH" : "LOW");
+  if (!steady24v && !gld1SingleTrigger && !gld1Pullup) return null;
   return alarm;
 }
 
@@ -469,11 +501,23 @@ function renderAlarmControls(info) {
   off.disabled = !available || alarm.mode !== "manual" || !alarm.manualCommanded;
   badge.textContent = alarm.mode === "manual" ? "MANUAL • sesi ini" : "AUTO • default boot";
   badge.dataset.mode = alarm.mode;
-  output.textContent = `Output fisik: ${alarm.physicalCommanded ? "ON — steady 24 V diperintahkan" : "OFF"} • Alarm inferensi: ${alarm.inferenceAlarm ? "AKTIF" : "tidak aktif"}`;
+  const gld1SingleTrigger = alarm.outputDrive === "active_high_gpio41_steady";
+  const gld1Pullup = alarm.outputDrive === "active_low_gpio41_uln2003_pullup";
+  const outputOnText = gld1SingleTrigger
+    ? "ON — GPIO41 HIGH selama alarm"
+    : "ON — steady 24 V diperintahkan";
+  output.textContent = gld1Pullup
+    ? `Perintah ${alarm.physicalCommanded ? "ON" : "OFF"}: GPIO41 ${alarm.gpio41CommandLevel} → ekspektasi J2 LAMP ${alarm.j2LampExpectedLevel} • Alarm inferensi: ${alarm.inferenceAlarm ? "AKTIF" : "tidak aktif"}`
+    : `Output fisik: ${alarm.physicalCommanded ? outputOnText : "OFF"} • Alarm inferensi: ${alarm.inferenceAlarm ? "AKTIF" : "tidak aktif"}`;
   output.classList.toggle("commanded", alarm.physicalCommanded);
   help.textContent = alarm.mode === "manual"
     ? "MANUAL aktif untuk pengujian. ON/OFF bersifat volatile; telemetri dan radio tetap memakai hasil alarm inferensi sebenarnya."
-    : "AUTO adalah default produk: hasil alarm inferensi valid mengendalikan output fisik. Perangkat eksternal membentuk pola 1 detik ON / 1 detik OFF secara internal.";
+    : gld1SingleTrigger
+      ? "AUTO adalah default produk: hasil alarm inferensi valid membuat GPIO41 HIGH selama alarm aktif."
+      : "AUTO adalah default produk: hasil alarm inferensi valid mengendalikan output fisik. Perangkat eksternal membentuk pola 1 detik ON / 1 detik OFF secara internal.";
+  if (gld1Pullup) {
+    help.textContent = `${alarm.mode === "manual" ? "MANUAL untuk pengujian sesi ini; inferensi tetap dilaporkan." : "AUTO: alarm mengikuti inferensi valid."} GLD1: GPIO41 LOW saat alarm, J2 LAMP diharapkan HIGH melalui resistor pull-up eksternal yang wajib dipasang. Ini status perintah/ekspektasi, bukan pengukuran tegangan; pastikan tegangan pull-up sesuai input perangkat.`;
+  }
   help.classList.remove("bad");
 }
 
@@ -678,9 +722,14 @@ async function setManualAlarm(enabled) {
     return show("Pilih dan verifikasi mode MANUAL untuk sesi ini sebelum menguji output alarm.", "bad");
   }
   if (enabled) {
+    const testMessage = alarm.outputDrive === "active_low_gpio41_uln2003_pullup"
+      ? "GLD1 akan memerintahkan GPIO41 LOW: J2 LAMP diharapkan HIGH melalui resistor pull-up eksternal. Pastikan resistor terpasang dan tegangan pull-up sesuai input perangkat; status bukan pengukuran tegangan. GPIO40 tidak digunakan."
+      : alarm.outputDrive === "active_high_gpio41_steady"
+        ? "GLD1 akan membuat GPIO41 HIGH selama test alarm aktif. GPIO40 tidak digunakan."
+        : "GLD akan memberi output steady 24 V. Perangkat alarm eksternal akan menjalankan pola 1 detik ON / 1 detik OFF secara internal.";
     const approved = await requestConfirmation({
       title: "Nyalakan test alarm fisik?",
-      message: "GLD akan memberi output steady 24 V. Perangkat alarm eksternal akan menjalankan pola 1 detik ON / 1 detik OFF secara internal.",
+      message: testMessage,
       actionLabel: "Test Alarm ON",
     });
     if (!approved) return;

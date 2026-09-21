@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 2,
+  "packageType": "pertamina-gld-prebuilt-firmware",
+  "deviceId": "ANY",
+  "boardProfile": "GLD3 WROOM-1U-N16R8 / GPIO7 fan",
+  "environment": "gld_v3",
+  "firmwareVersion": "0.8.31",
+  "protocolVersion": "0.2.0",
+  "configSchemaVersion": "0.1.0",
+  "chip": "esp32s3",
+  "baud": 921600,
+  "createdAtUtc": "20260917T074020Z",
+  "source": {
+    "gitCommit": "dfba98f237b6b1f83c139f49e0e8a1c2e683e5af",
+    "gitTreeState": "dirty",
+    "gitTreeStateScope": "firmware/",
+    "firmwareTreeSnapshotSha256": "2aa45780cd6881ce465eac65718b9d781a9152cd97997220c098ebc97c1f9a0a",
+    "platformioCoreVersion": "PlatformIO post-build hook",
+    "platformioIniSha256": "4ae38ccc38b65944fef5e14bb6ca6a1b31f6734c9bea9a9330cb3a85ab712798",
+    "buildCommand": "pio run -e gld_v3",
+    "packagedAtUtc": "20260917T074020Z"
+  },
+  "flashSetSha256": "7441de625b9fbfa0481d04bf7f81e4d8073681db72edc2dbf709d8ff8e4b28d2",
+  "flashFiles": [
+    {
+      "path": "bootloader.bin",
+      "offset": "0x00000000",
+      "size": 15104,
+      "sha256": "2a71d69b471e20c2bac7fb469f3c6a807b3ebee780e348e5889db0da849ca363"
+    },
+    {
+      "path": "partitions.bin",
+      "offset": "0x00008000",
+      "size": 3072,
+      "sha256": "bd0f7954aca2ef7d925ee21aaa1f3dc8822d1d6ce5cbbd26a135e5886bfff6ce"
+    },
+    {
+      "path": "boot_app0.bin",
+      "offset": "0x0000E000",
+      "size": 8192,
+      "sha256": "f94c5d786a7a8fab06ac5d10e33bf37711a6697636dc037559ea19cc410a17f0"
+    },
+    {
+      "path": "firmware.bin",
+      "offset": "0x00010000",
+      "size": 1047648,
+      "sha256": "c30fede0822b4b116883a96df70535452c57406ab5ccfaee2ac26f916970cbdb"
+    }
+  ]
+}

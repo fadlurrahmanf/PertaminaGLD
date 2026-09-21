@@ -1074,8 +1074,17 @@ function alarmControlContract(alarmControl) {
   // SET_MANUAL_ALARM_JSON path usable, but never infer support for the newer
   // SET_ALARM_MODE_JSON command from manualOnly alone.
   const legacyManualOnly = !hasExplicitMode && alarmControl?.manualOnly === true;
-  const available = alarmControl?.available === true ||
-    (legacyManualOnly && alarmControl?.available !== false);
+  const isGld1Pullup = alarmControl?.outputDrive === "active_low_gpio41_uln2003_pullup";
+  const pullupContractValid = !isGld1Pullup || (hasExplicitMode &&
+    alarmControl.modePersisted === false && alarmControl.sessionOnly === true &&
+    alarmControl.resetsToAutoOnBoot === true &&
+    ["manualCommanded", "inferenceAlarm", "physicalCommanded"].every((field) => typeof alarmControl[field] === "boolean") &&
+    alarmControl.externalDevicePattern === "steady_high_while_alarm" &&
+    alarmControl.singleTrigger === true && alarmControl.requiresExternalPullup === true &&
+    alarmControl.gpio41CommandLevel === (alarmControl.physicalCommanded ? "LOW" : "HIGH") &&
+    alarmControl.j2LampExpectedLevel === (alarmControl.physicalCommanded ? "HIGH" : "LOW"));
+  const available = pullupContractValid && (alarmControl?.available === true ||
+    (legacyManualOnly && alarmControl?.available !== false));
   const mode = hasExplicitMode
     ? alarmControl.mode
     : legacyManualOnly ? "manual" : "auto";
@@ -1095,9 +1104,14 @@ function renderManualAlarmControls(alarmControl) {
   const { hasExplicitMode, legacyManualOnly, available, mode, manualOutputAllowed } = contract;
   const commanded = alarmControl?.manualCommanded === true;
   const inferenceAlarm = alarmControl?.inferenceAlarm === true;
-  const outputDescription = alarmControl?.outputDrive === "active_low_lamp_buzzer_led"
-    ? "lampu/buzzer/LED GLD1"
-    : "24 V steady GLD2";
+  const isGld1Pullup = alarmControl?.outputDrive === "active_low_gpio41_uln2003_pullup";
+  const outputDescription = isGld1Pullup
+    ? `GLD1: perintah GPIO41 ${alarmControl.gpio41CommandLevel}, ekspektasi J2 LAMP ${alarmControl.j2LampExpectedLevel} (pull-up eksternal wajib; bukan tegangan terukur)`
+    : alarmControl?.outputDrive === "active_high_gpio41_steady"
+      ? "GPIO41 GLD1 HIGH selama alarm"
+      : alarmControl?.outputDrive === "active_low_lamp_buzzer_led"
+        ? "lampu/buzzer/LED legacy"
+        : "24 V steady GLD2";
   const physicalCommanded = legacyManualOnly
     ? commanded
     : alarmControl?.physicalCommanded === true;

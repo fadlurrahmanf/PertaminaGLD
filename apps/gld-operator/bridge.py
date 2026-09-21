@@ -1060,8 +1060,19 @@ def shared_esptool_command(args: list[str]) -> list[str]:
     return [sys.executable, str(runner), *args]
 
 
-def erase_verified_nvs(manifest: dict[str, Any], verified_files: list[tuple[dict[str, Any], bytes]], port: str) -> None:
-    """Erase only the verified NVS partition declared by this package."""
+def requires_gld1_nvs_reset_before_boot(manifest: dict[str, Any]) -> bool:
+    """Only the approved unversioned-profile GLD1 rollback needs this guard."""
+    source = manifest.get("source")
+    return (
+        manifest.get("environment") in {"gld", "gld_model_1"}
+        and manifest.get("firmwareVersion") == "0.8.38"
+        and isinstance(source, dict)
+        and source.get("gitCommit") == "69a493c32d2500134a21e029820cd4addea1794a"
+    )
+
+
+def verified_nvs_region(verified_files: list[tuple[dict[str, Any], bytes]]) -> tuple[int, int]:
+    """Resolve NVS from already hash-verified partition bytes, never UI input."""
     for item, content in verified_files:
         if item.get("path") != "partitions.bin":
             continue
@@ -1077,21 +1088,41 @@ def erase_verified_nvs(manifest: dict[str, Any], verified_files: list[tuple[dict
             size = int.from_bytes(content[index + 8:index + 12], "little")
             if offset % 0x1000 or size == 0 or size % 0x1000:
                 raise RuntimeError("verified NVS partition has an unsafe alignment")
-            cmd = shared_esptool_command([
-                "--chip", str(manifest["chip"]), "--port", port, "--baud", str(manifest["baud"]),
-                "erase_region", f"0x{offset:X}", f"0x{size:X}",
-            ])
-            events.emit("upload_line", {"line": f"Resetting verified NVS region 0x{offset:X} (+0x{size:X})"})
-            proc = subprocess.Popen(cmd, cwd=str(FIRMWARE_DIR), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                    text=True, encoding="utf-8", errors="replace")
-            assert proc.stdout is not None
-            for line in proc.stdout:
-                events.emit("upload_line", {"line": line.rstrip("\r\n")})
-            code = proc.wait()
-            if code != 0:
-                raise RuntimeError(f"esptool NVS reset failed with exit code {code}")
-            return
+            return offset, size
     raise RuntimeError("verified package does not declare an NVS partition")
+
+
+def erase_verified_nvs(manifest: dict[str, Any], verified_files: list[tuple[dict[str, Any], bytes]], port: str,
+                       *, hold_in_bootloader: bool = False) -> None:
+    """Erase only verified NVS; guarded rollback stays in ROM until flashing."""
+    offset, size = verified_nvs_region(verified_files)
+    args = ["--chip", str(manifest["chip"]), "--port", port, "--baud", str(manifest["baud"])]
+    if hold_in_bootloader:
+        args.extend(["--after", "no_reset"])
+    args.extend(["erase_region", f"0x{offset:X}", f"0x{size:X}"])
+    cmd = shared_esptool_command(args)
+    events.emit("upload_line", {"line": f"Resetting verified NVS region 0x{offset:X} (+0x{size:X})"})
+    if hold_in_bootloader:
+        # Bounded pre-erase. If it fails, the downgrade has NOT been written.
+        try:
+            completed = subprocess.run(cmd, cwd=str(FIRMWARE_DIR), stdout=subprocess.PIPE,
+                                       stderr=subprocess.STDOUT, text=True, encoding="utf-8",
+                                       errors="replace", timeout=45, check=False)
+        except subprocess.TimeoutExpired as exc:
+            raise RuntimeError("NVS pre-erase timed out; rollback was not flashed") from exc
+        for line in (completed.stdout or "").splitlines():
+            events.emit("upload_line", {"line": line})
+        if completed.returncode != 0:
+            raise RuntimeError(f"esptool NVS reset failed with exit code {completed.returncode}; rollback was not flashed")
+        return
+    proc = subprocess.Popen(cmd, cwd=str(FIRMWARE_DIR), stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                            text=True, encoding="utf-8", errors="replace")
+    assert proc.stdout is not None
+    for line in proc.stdout:
+        events.emit("upload_line", {"line": line.rstrip("\r\n")})
+    code = proc.wait()
+    if code != 0:
+        raise RuntimeError(f"esptool NVS reset failed with exit code {code}")
 
 
 def _firmware_upload_reserved(payload: dict[str, Any], slot: int = 1) -> dict[str, Any]:
@@ -1108,6 +1139,14 @@ def _firmware_upload_reserved(payload: dict[str, Any], slot: int = 1) -> dict[st
     manifest, verified_files = validate_firmware_package(
         payload.get("manifest"), payload.get("packageFiles"), env, target_id
     )
+    preerase_nvs = requires_gld1_nvs_reset_before_boot(manifest)
+    if preerase_nvs:
+        if payload.get("resetNvs") is not True or payload.get("resetNvsConfirmation") != "RESET NVS":
+            raise RuntimeError("GLD1 v0.8.38 rollback requires explicit Reset NVS confirmation; configuration, nulling and model binding will be erased")
+        # The exact approved baseline uses default_16MB.csv. Reject an altered
+        # partition layout before any serial access or destructive operation.
+        if verified_nvs_region(verified_files) != (0x9000, 0x5000):
+            raise RuntimeError("GLD1 rollback NVS partition does not match the approved baseline")
     holder = slot_holding_port(port)
     upload_bridge = get_serial_bridge(holder if holder is not None else slot)
     upload_bridge.disconnect()
@@ -1122,12 +1161,24 @@ def _firmware_upload_reserved(payload: dict[str, Any], slot: int = 1) -> dict[st
         events.emit("upload_line", {"line": f"Waiting for {port} to stabilize after serial disconnect..."})
         wait_for_reenumerated_port(port)
 
+    if preerase_nvs:
+        events.emit("upload_line", {"line": "GLD1 rollback: erase confirmed NVS before flashing; keep board in bootloader until upload succeeds"})
+        try:
+            erase_verified_nvs(manifest, verified_files, port, hold_in_bootloader=True)
+        except Exception as exc:
+            events.emit("upload_error", {"message": str(exc)})
+            raise
+
     with tempfile.TemporaryDirectory(prefix="gld-verified-flash-") as temp_name:
         temp_dir = Path(temp_name)
         esptool_args = [
             "--chip", str(manifest["chip"]), "--port", port,
-            "--baud", str(manifest["baud"]), "write_flash",
+            "--baud", str(manifest["baud"]),
         ]
+        if preerase_nvs:
+            # Pre-erase left the chip in ROM: do not boot the app in between.
+            esptool_args.extend(["--before", "no_reset"])
+        esptool_args.append("write_flash")
         for item, content in verified_files:
             target = temp_dir / item["path"]
             target.write_bytes(content)
@@ -1220,7 +1271,7 @@ def _firmware_upload_reserved(payload: dict[str, Any], slot: int = 1) -> dict[st
         raise RuntimeError(message)
     events.emit("upload_done", {"code": code})
 
-    if reset_nvs:
+    if reset_nvs and not preerase_nvs:
         erase_verified_nvs(manifest, verified_files, port)
 
     return {
@@ -1333,6 +1384,7 @@ class Handler(SimpleHTTPRequestHandler):
                         "datasetOutput": True,
                         "networkInfo": os.name == "nt",
                         "firmwareUpload": True,
+                        "firmwareGld1DowngradeGuard": True,
                     },
                     "mqttBroker": {
                         "running": broker_running,

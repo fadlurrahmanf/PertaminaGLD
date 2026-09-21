@@ -2,9 +2,11 @@
   "slot": "model_1",
   "label": "Model 1",
   "state": "available",
-  "source": "C:/Users/MSI/Downloads/MODEL UNTUK BOARD/MODEL UNTUK BOARD/Board 1",
-  "profileId": "cnn-dualbranch-board-1-v1",
+  "source": "C:/Users/MSI/Downloads/BOARD GLD 1.zip",
+  "sourceArchiveSha256": "c25536cd250e71cf7afd661a3bd47721a77d2a7c9fc6de2dc810121450943c16",
+  "modelSha256": "6de1521a995163fcdb1aab31dbb2cad234af6c18c36bdaa1761fd5cc339d4f37",
+  "profileId": "cnn-dualbranch-board-1-2class-v2",
   "environment": "gld_model_1",
-  "classes": ["CO2", "Clean_Air", "H2", "LPG"],
-  "note": "Package gld_model_1 sudah berhasil dibangun dan siap dipilih untuk upload."
+  "classes": ["Clean_Air", "LPG"],
+  "note": "Model 1 Board 1 v2, dua kelas. Source rilis aktif: D:/Github/PertaminaGLD-GLD1-69a493c. Ikuti Reset NVS, konfigurasi, nulling dan Bind Model saat upload melalui Operator Hub."
 }

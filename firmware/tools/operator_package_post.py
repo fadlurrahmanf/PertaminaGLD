@@ -94,10 +94,19 @@ def _version_constants(project_dir: pathlib.Path) -> dict[str, str]:
         if not match:
             raise RuntimeError(f"Cannot read {name} from FirmwareVersion.h")
         result[name] = match.group(1)
+    gld1_version_path = project_dir / "gld" / "include" / "Gld1FirmwareVersion.h"
+    if gld1_version_path.exists():
+        gld1_text = gld1_version_path.read_text(encoding="utf-8")
+        match = re.search(r'GLD1_FIRMWARE_VERSION\s*=\s*"([^"]+)"', gld1_text)
+        if not match:
+            raise RuntimeError("Cannot read GLD1_FIRMWARE_VERSION from Gld1FirmwareVersion.h")
+        result["GLD1_FIRMWARE_VERSION"] = match.group(1)
     return result
 
 
 def _firmware_version(environment: str, versions: dict[str, str]) -> str:
+    if environment in {"gld", "gld_model_1", "gld_model_2", "gld_model_3"}:
+        return versions.get("GLD1_FIRMWARE_VERSION", versions["GLD_FIRMWARE_VERSION"])
     kind = _device_kind(environment)
     if kind == "ch":
         return versions["CH_FIRMWARE_VERSION"]

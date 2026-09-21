@@ -10,6 +10,95 @@ YYYY-MM-DD HH:mm:ss Asia/Jakarta
 
 ---
 
+## GLD1 v0.8.36 — J2 LAMP dengan external pull-up — 2026-09-16
+
+GPIO41 dibalik untuk ULN2003: normal/OFF = HIGH (J2 ditarik LOW), alarm =
+LOW (J2 dilepas agar HIGH melalui pull-up eksternal). GPIO40 tetap tidak
+dipakai. Output normal ditetapkan sebelum serial startup; firmware tidak
+menjamin J2 LOW selama reset/sebelum setup. Nilai/tegangan pull-up harus
+sesuai spesifikasi input alarm; kompatibilitas input 5 V belum terverifikasi.
+
+Inference AUTO tidak dipaksa ke alarm/clean air; MANUAL tetap session-only.
+Status membedakan perintah GPIO41 dan level J2 yang diharapkan, bukan hasil
+pengukuran. Settle GLD1 tetap 5 ms dan inisialisasi I2C sebelum probe TCA/MCP
+tetap dipertahankan. Versi GLD1 terisolasi dari header versi shared.
+Paket yang ditargetkan: `gld` dan `gld_model_1`; bukan GLD2/GLD3/Model 2/3.
+
+---
+
+## GLD1 v0.8.35 (GLD2/GLD3 tetap v0.8.30) - 2026-09-16 Asia/Jakarta
+
+**WITHDRAWN / tidak digunakan:** Klaim di entri ini bahwa GLD1 tidak memiliki
+TCA/MCP adalah keliru. Source telah dikembalikan ke baseline GitHub v0.8.30;
+GLD1 tetap memakai TCA9548A, MCP4725, dan profil nulling asli.
+
+**Summary:** Diagnostik boot GLD1 tidak lagi menjalankan pemeriksaan
+TCA9548A/MCP4725/nulling milik GLD2. Inference GLD1 Model 1/2 yang
+`production approved` tidak lagi ditahan oleh profile nulling GLD2 yang tidak
+ada pada board ini. GLD2 dan GLD3 tidak berubah.
+
+---
+
+## GLD1 v0.8.34 (GLD2/GLD3 tetap v0.8.30) - 2026-09-16 Asia/Jakarta
+
+**Summary:** Nulling GLD1 sekarang memakai settle **10 ms** setelah write DAC.
+GLD2 tetap memakai settle 150 ms secara eksplisit pada profile board-nya.
+Window stabilitas ADC tetap aktif untuk mencegah keputusan dari pembacaan
+transien.
+
+---
+
+## GLD1 v0.8.33 (GLD2/GLD3 tetap v0.8.30) - 2026-09-16 Asia/Jakarta
+
+**Summary:** GPIO41/LAMP GLD1 sekarang LOW saat normal dan HIGH terus selama
+alarm inference valid aktif. Pola 500 ms sebelumnya dihapus; GPIO40 tetap tidak
+digunakan.
+
+---
+
+## GLD1 v0.8.32 (GLD2/GLD3 tetap v0.8.30) - 2026-09-16 Asia/Jakarta
+
+**Summary:** Output alarm GLD1 hanya mengikuti hasil inference yang valid saat
+ini. Alarm latch dari NVS tidak lagi memulihkan GPIO41 setelah boot; warm-up,
+fault sensor, atau inference tidak tersedia juga memaksa output GLD1 OFF.
+
+### Verification
+
+- Source-contract alarm GLD1, Operator Hub, dan build paket `gld` diverifikasi.
+- Tidak ada upload, COM, reset, atau uji beban alarm fisik.
+
+---
+
+## GLD1 v0.8.31 (GLD2/GLD3 tetap v0.8.30) - 2026-09-16 Asia/Jakarta
+
+**Summary:** GLD1 now drives one external lamp/buzzer device from a single
+active-HIGH GPIO41 trigger. GPIO40 is unused. While an AUTO or MANUAL alarm is
+commanded, firmware produces a non-blocking 500 ms ON / 500 ms OFF pattern;
+boot and alarm clear force GPIO41 LOW immediately.
+
+### Verification
+
+- Source-contract and GLD alarm-control tests passed.
+- Operator Hub suite passed 53/53 and both Expert/Simple interfaces recognize
+  the GLD1 single-trigger contract fail-closed.
+- Compile-only build passed for `gld` only. The release version and regenerated
+  deliverable are scoped to the `gld` (GLD1) target; GLD2/GLD3 are unchanged.
+- No firmware upload, COM-port access, reset, or live alarm-load test was
+  performed.
+
+### Changed Areas
+
+- `firmware/gld/include/BoardPins.h`
+- `firmware/gld/include/GldAlarmPattern.h`
+- `firmware/gld/include/Gld1FirmwareVersion.h`
+- `firmware/gld/src/GldUnifiedMain.cpp`
+- `apps/gld-operator/`
+- `apps/operator-hub/`
+- `docs/design/gld/final_design.md`
+- `docs/design/gld/design.current-firmware.draft.md`
+
+---
+
 ## GLD v0.8.19 / CH v0.8.0 / Gateway v0.2.0 - 2026-08-25 Asia/Jakarta
 
 **Summary:** Product firmware now has explicit, audited board profiles for the

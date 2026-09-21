@@ -9,11 +9,31 @@ import { requireUnlock } from "./security.js";
 import { restoreGldConfigAfterReset } from "./dataset.js";
 
 const GLD_MODEL_SLOTS = {
-  model_1: { label: "Model 1", available: true, environment: "gld_model_1", detail: "Model Board 1: CO2, Clean_Air, H2, LPG." },
+  model_1: { label: "Model 1", available: true, environment: "gld_model_1", detail: "Board 1 v2, 2 kelas." },
   model_2: { label: "Model 2", available: true, environment: "gld_model_2", detail: "Model Board 2: CO2, Clean_Air, H2, LPG." },
   model_3: { label: "Model 3", available: true, environment: "gld_model_3", detail: "Board 2 cadangan v2: Clean_Air, H2, LPG." },
   model_4: { label: "Model 4", available: false, detail: "Artefak dan package Model 4 belum tersedia." }
 };
+
+let builtinPackageRequestId = 0;
+
+function requiresGld1DowngradeReset(manifest) {
+  return ["gld", "gld_model_1"].includes(manifest?.environment) &&
+    manifest?.firmwareVersion === "0.8.38" &&
+    manifest?.source?.gitCommit === "69a493c32d2500134a21e029820cd4addea1794a";
+}
+
+function updateFirmwareResetGuard() {
+  const required = requiresGld1DowngradeReset(state.manifest);
+  const warning = $("firmwareResetNvsWarning");
+  const help = $("firmwareResetNvsHelp");
+  if (warning) warning.hidden = !required;
+  if (help) help.hidden = required;
+  const ready = Boolean(state.manifest && /^COM\d+$/i.test($("firmwareUploadPort")?.value));
+  const consented = !required || $("firmwareResetNvs")?.checked === true;
+  $("firmwareUploadConfirmBtn").disabled = !ready || !consented;
+  return ready && consented;
+}
 
 export async function loadManifestFile(fileList) {
   const files = Array.from(fileList || []);
@@ -154,15 +174,14 @@ function updateModelSelection() {
   const environment = $("firmwareUploadEnv")?.value;
   const selector = $("firmwareUploadModel");
   const status = $("firmwareUploadModelStatus");
-  const model = selectedModelSlot();
-  const applies = environment === "gld";
-  if (selector) selector.disabled = !applies;
+  const isGld1 = environment === "gld";
+  if (selector) selector.disabled = !isGld1;
   if (status) {
-    status.textContent = applies
-      ? `${model.label}: ${model.detail}`
-      : "Pilihan model hanya berlaku untuk environment GLD production.";
+    status.textContent = isGld1
+      ? `GLD1 · ${selectedModelSlot().label} — ${selectedModelSlot().detail} Paket firmware: ${selectedModelSlot().environment}.`
+      : "Pilihan model tidak diterapkan untuk package release ini.";
   }
-  return applies ? model : null;
+  return isGld1 ? selectedModelSlot() : null;
 }
 
 async function refreshFirmwareUploadPorts() {
@@ -196,13 +215,19 @@ export async function uploadFirmware() {
   updateModelSelection();
   await loadBuiltinPackage($("firmwareUploadEnv").value);
   setUploadProgress(0, "Menunggu upload dimulai…");
-  const ready = Boolean(state.manifest && /^COM\d+$/i.test(portSelect.value));
-  $("firmwareUploadConfirmBtn").disabled = !ready;
-  setUploadDialogStatus(ready ? "Ready to upload." : "Choose a valid package and COM port first.");
+  const ready = updateFirmwareResetGuard();
+  setUploadDialogStatus(ready ? "Ready to upload." : requiresGld1DowngradeReset(state.manifest)
+    ? "Paket ini wajib Reset NVS. Baca peringatan dan centang Reset NVS untuk melanjutkan."
+    : "Choose a valid package and COM port first.");
   setUploadDialog(true);
 }
 
 async function loadBuiltinPackage(environment) {
+  const requestId = ++builtinPackageRequestId;
+  if (requiresGld1DowngradeReset(state.manifest)) $("firmwareResetNvs").checked = false;
+  state.manifest = null;
+  state.manifestPackageFiles = new Map();
+  updateFirmwareResetGuard();
   const model = updateModelSelection();
   if (model && !model.available) {
     state.manifest = null;
@@ -213,15 +238,21 @@ async function loadBuiltinPackage(environment) {
   try {
     const packageEnvironment = model?.environment || environment;
     const result = await bridgeFetch(`/api/firmware/package?env=${encodeURIComponent(packageEnvironment)}`);
+    if (requestId !== builtinPackageRequestId) return;
     state.manifest = result.manifest;
     state.manifestPackageFiles = new Map(Object.entries(result.packageFiles || {}));
-    const modelText = model ? ` · ${model.label}` : "";
-    $("firmwareUploadPackage").textContent = `Package: ${state.manifest.environment} v${state.manifest.firmwareVersion}${modelText}`;
+    if (requiresGld1DowngradeReset(state.manifest)) $("firmwareResetNvs").checked = false;
+    const selectionText = model
+      ? `GLD1 · ${model.label} — ${model.detail} · package ${state.manifest.environment}`
+      : `Environment ${state.manifest.environment}`;
+    $("firmwareUploadPackage").textContent = `Firmware terpilih: ${selectionText} · v${state.manifest.firmwareVersion}`;
   } catch (error) {
+    if (requestId !== builtinPackageRequestId) return;
     state.manifest = null;
     state.manifestPackageFiles = new Map();
     $("firmwareUploadPackage").textContent = `Package belum tersedia: ${error.message}`;
   }
+  updateFirmwareResetGuard();
 }
 
 async function performFirmwareUpload() {
@@ -244,23 +275,32 @@ async function performFirmwareUpload() {
     switchTab("expert");
     return;
   }
+  const manifest = state.manifest;
+  const resetRequired = requiresGld1DowngradeReset(manifest);
+  const resetNvs = $("firmwareResetNvs").checked === true;
+  if (resetRequired && !resetNvs) {
+    updateFirmwareResetGuard();
+    setUploadDialogStatus("Upload ditahan: paket downgrade ini wajib Reset NVS. Centang secara eksplisit setelah membaca peringatan.", "warn");
+    $("firmwareResetNvs").focus();
+    return;
+  }
   elements.portSelect.value = port;
   updateSelectedPortDetail();
   $("firmwareUploadConfirmBtn").disabled = true;
   $("firmwareUploadCancelBtn").disabled = true;
   $("firmwareResetNvs").disabled = true;
+  ["firmwareUploadEnv", "firmwareUploadModel", "firmwareUploadPort"].forEach((id) => { $(id).disabled = true; });
   setUploadDialogStatus(`Disconnecting serial, then uploading to ${port}…`, "loading");
   try {
     setUploadProgress(0, "Menyiapkan upload…");
     await disconnectSerial();
-    const packageFiles = await readPackageFiles(state.manifest);
+    const packageFiles = await readPackageFiles(manifest);
     const result = await bridgeFetch("/api/firmware/upload", {
       method: "POST",
-      // The bridge independently stops an unresponsive esptool after 120 s.
-      // Leave a small delivery margin so the browser never waits forever if
-      // the bridge itself stalls before it can return that error.
-      timeoutMs: 135_000,
-      body: JSON.stringify({ env, port, targetDeviceId, resetNvs: $("firmwareResetNvs").checked, manifest: state.manifest, packageFiles, slot: state.activeSlot })
+      // Guarded downgrade: allow 45 s for pre-erase, 120 s for flashing,
+      // plus a bounded preflight/delivery margin. Other packages keep 135 s.
+      timeoutMs: resetRequired ? 195_000 : 135_000,
+      body: JSON.stringify({ env, port, targetDeviceId, resetNvs, ...(resetNvs ? { resetNvsConfirmation: "RESET NVS" } : {}), manifest, packageFiles, slot: state.activeSlot })
     });
     setUploadProgress(100, "Upload firmware selesai.");
     setUploadDialogStatus(result.nvsReset
@@ -278,7 +318,10 @@ async function performFirmwareUpload() {
         : `Upload berhasil dan connected to ${port}, tapi AES key belum ter-restore otomatis - buka Dataset Settings dan Apply GLD Settings manual.`,
         restoreAck?.status === "ok" ? "success" : "warn");
     }
-    if (state.connected) setUploadDialog(false);
+    if (resetRequired && result.nvsReset) {
+      setUploadDialogStatus(`${$("firmwareUploadStatus").textContent} Belum siap inferensi: lakukan setup ulang konfigurasi, nulling 8/8, lalu bind model kembali.`, "warn");
+    }
+    if (state.connected && !resetRequired) setUploadDialog(false);
   } catch (error) {
     appendLog(`UPLOAD_ERROR ${error.message}`, "in");
     showBanner(`Firmware upload failed: ${error.message}`, "error");
@@ -286,6 +329,9 @@ async function performFirmwareUpload() {
   } finally {
     $("firmwareUploadCancelBtn").disabled = false;
     $("firmwareResetNvs").disabled = false;
+    $("firmwareUploadEnv").disabled = false;
+    $("firmwareUploadPort").disabled = false;
+    updateModelSelection();
     $("firmwareUploadCancelBtn").textContent = "Close";
   }
 }
@@ -298,15 +344,16 @@ export function initFirmwareUploadDialog() {
   $("firmwareUploadEnv")?.addEventListener("change", async (event) => {
     updateModelSelection();
     await loadBuiltinPackage(event.target.value);
-    $("firmwareUploadConfirmBtn").disabled = !state.manifest || !/^COM\d+$/i.test($("firmwareUploadPort").value);
+    updateFirmwareResetGuard();
   });
   $("firmwareUploadModel")?.addEventListener("change", async () => {
     await loadBuiltinPackage($("firmwareUploadEnv").value);
-    $("firmwareUploadConfirmBtn").disabled = !state.manifest || !/^COM\d+$/i.test($("firmwareUploadPort").value);
+    updateFirmwareResetGuard();
   });
   $("firmwareUploadPort")?.addEventListener("change", () => {
-    $("firmwareUploadConfirmBtn").disabled = !state.manifest || !/^COM\d+$/i.test($("firmwareUploadPort").value);
+    updateFirmwareResetGuard();
   });
+  $("firmwareResetNvs")?.addEventListener("change", updateFirmwareResetGuard);
 }
 
 export async function injectDeviceId() {

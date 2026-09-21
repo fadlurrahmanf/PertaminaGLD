@@ -98,6 +98,11 @@ GATEWAY_MQTT_TRANSPORTS = (
     {"value": "tls", "label": "MQTT over TLS"},
 )
 GLD_FIRMWARE_MODELS = (
+    {
+        "value": "gld",
+        "label": "GasleakDetector - GLD1 (GPIO41 Lamp & Buzzer)",
+        "environment": "gld",
+    },
     {"value": "model_1", "label": "Model 1 - Board 1", "environment": "gld_model_1"},
     {"value": "model_2", "label": "Model 2 - Board 2", "environment": "gld_model_2"},
     {"value": "model_3", "label": "Model 3 - Board 2 v2", "environment": "gld_model_3"},
@@ -473,6 +478,16 @@ def mqtt_configuration_from_payload(
     return config, requested
 
 
+def requires_gld1_nvs_reset_before_boot(manifest: dict[str, object]) -> bool:
+    source = manifest.get("source")
+    return (
+        manifest.get("environment") in {"gld", "gld_model_1"}
+        and manifest.get("firmwareVersion") == "0.8.38"
+        and isinstance(source, dict)
+        and source.get("gitCommit") == "69a493c32d2500134a21e029820cd4addea1794a"
+    )
+
+
 def package_manifest_summary(environment: str) -> dict[str, object]:
     """Read one exact selectable package manifest without breaking overview.
 
@@ -510,6 +525,7 @@ def package_manifest_summary(environment: str) -> dict[str, object]:
             "available": True,
             "firmwareVersion": version,
             "protocolVersion": manifest.get("protocolVersion"),
+            "requiresNvsResetBeforeBoot": requires_gld1_nvs_reset_before_boot(manifest),
         }
     )
     return summary
@@ -685,10 +701,32 @@ def require_gld_alarm_control(state: dict[str, object]) -> dict[str, object]:
         raise RuntimeError("GLD alarm-mode contract must be volatile and session-only")
     if alarm.get("resetsToAutoOnBoot") is not True:
         raise RuntimeError("GLD alarm-mode contract does not guarantee AUTO after reboot")
-    if alarm.get("outputDrive") != "steady_24v":
+    output_drive = alarm.get("outputDrive")
+    external_pattern = alarm.get("externalDevicePattern")
+    if output_drive == "steady_24v":
+        if external_pattern != "self_pulsed_1s_on_1s_off":
+            raise RuntimeError("GLD external alarm pattern contract is missing or incompatible")
+    elif output_drive == "active_high_gpio41_steady":
+        if (
+            external_pattern != "steady_high_while_alarm"
+            or alarm.get("singleTrigger") is not True
+        ):
+            raise RuntimeError("GLD1 steady GPIO41 alarm contract is missing or incompatible")
+    elif output_drive == "active_low_gpio41_uln2003_pullup":
+        if (
+            external_pattern != "steady_high_while_alarm"
+            or alarm.get("singleTrigger") is not True
+            or alarm.get("requiresExternalPullup") is not True
+        ):
+            raise RuntimeError("GLD1 J2 external pull-up alarm contract is missing or incompatible")
+        commanded = alarm["physicalCommanded"]
+        if (
+            alarm.get("gpio41CommandLevel") != ("LOW" if commanded else "HIGH")
+            or alarm.get("j2LampExpectedLevel") != ("HIGH" if commanded else "LOW")
+        ):
+            raise RuntimeError("GLD1 J2 pull-up commanded/expected levels are inconsistent")
+    else:
         raise RuntimeError("GLD alarm output-drive contract is missing or incompatible")
-    if alarm.get("externalDevicePattern") != "self_pulsed_1s_on_1s_off":
-        raise RuntimeError("GLD external alarm pattern contract is missing or incompatible")
     return alarm
 
 
@@ -1413,6 +1451,8 @@ class Handler(SimpleHTTPRequestHandler):
             raise RuntimeError(
                 f"selected package {env} is unavailable: {local_package.get('error') or 'unknown package error'}"
             )
+        if local_package.get("requiresNvsResetBeforeBoot") and not reset_nvs:
+            raise ValueError("GLD1 v0.8.38 rollback wajib Reset NVS; konfigurasi, nulling dan binding model akan dihapus")
         host = self.server.server_address[0] or "127.0.0.1"
         state = simple_device_state(host, device, query=not initial_firmware)
         if not state.get("connected"):
@@ -1424,6 +1464,8 @@ class Handler(SimpleHTTPRequestHandler):
         package = child_request(host, device, "GET", f"/api/firmware/package?env={env}")
         manifest = validate_selected_package(package, env)
         request: dict[str, object] = {"env": env, "port": port, "manifest": package.get("manifest"), "packageFiles": package.get("packageFiles"), "resetNvs": reset_nvs, "slot": 1}
+        if reset_nvs:
+            request["resetNvsConfirmation"] = "RESET NVS"
         info = state.get("info") if isinstance(state.get("info"), dict) else {}
         current_identifier = info.get("deviceId" if device == "gld" else "chId" if device == "ch" else "gatewayId")
         expected_identifier = expected_identity_after_upload(device, current_identifier, reset_nvs)

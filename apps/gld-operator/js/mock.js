@@ -126,8 +126,12 @@ function createMockStatus() {
           manualCommanded,
           inferenceAlarm: alarm,
           physicalCommanded,
-          outputDrive: "steady_24v",
-          externalDevicePattern: "self_pulsed_1s_on_1s_off"
+          outputDrive: "active_low_gpio41_uln2003_pullup",
+          externalDevicePattern: "steady_high_while_alarm",
+          singleTrigger: true,
+          requiresExternalPullup: true,
+          gpio41CommandLevel: physicalCommanded ? "LOW" : "HIGH",
+          j2LampExpectedLevel: physicalCommanded ? "HIGH" : "LOW"
         },
     uptimeMs: Math.floor(performance.now()),
     power: { mode: "24v", externalPower: true, batteryMv: 3560, batteryValid: true },

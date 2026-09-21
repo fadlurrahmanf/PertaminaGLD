@@ -138,13 +138,13 @@ When `PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8=1`, LoRa pin mapping changes:
 |---|---|
 | LoRa CS/RST/BUSY/DIO1 | GPIO7/GPIO2/GPIO15/GPIO1 |
 | LoRa RXEN/TXEN | GPIO5/GPIO6 |
-| Alarm lamp | disabled, `-1` |
-| Buzzer | disabled, `-1` |
+| Single alarm trigger | GPIO41 active-LOW for alarm; ULN2003 releases J2.2 to an external pull-up |
+| Former buzzer trigger | GPIO40 unused, `-1` in firmware |
 | Board profile log | `WROOM-1U-N16R8` |
 
-This is an important difference from the baseline document: on the WROOM bench
-profile, GPIO1 and GPIO2 are consumed by LoRa, so alarm lamp and buzzer are
-disabled by the board profile.
+This is an important difference from the baseline document: on the WROOM GLD1
+profile, GPIO1 and GPIO2 are consumed by LoRa. The external alarm device uses
+one GPIO41 trigger; GPIO40 and J2.3 are not driven by firmware.
 
 ### 5.3 Sensor Order
 
@@ -291,12 +291,17 @@ Alarm rule:
 alarm = gasClass != clearGas && confidence >= 30
 ```
 
-When alarm state changes, firmware updates alarm lamp, buzzer, and status LED
-through optional pins. These outputs are active-low: ON writes LOW, OFF writes
-HIGH. On the WROOM profile, alarm lamp and buzzer are disabled by pin value
-`-1`, so only valid optional pins are driven.
+On the WROOM GLD1 profile, one external alarm device provides both lamp and
+buzzer from a single trigger. GPIO41 HIGH during normal operation makes ULN2003
+sink J2 LAMP LOW. GPIO41 LOW continuously while the alarm command is active
+releases J2 LAMP to an external pull-up. The pull-up voltage and resistance must
+match the alarm input; 5 V compatibility is not yet verified. Firmware starts
+driving the normal level at the beginning of setup, but J2 may be HIGH during
+reset or before setup. Reported J2 levels are expected, not voltage measurements.
+GPIO40/J2.3 is unused by firmware.
 
-Alarm lamp, buzzer, and status LED are active-low.
+The board status LED remains a separate local indicator and is not part of the
+external alarm trigger.
 
 ## 10. LoRa STAR Runtime
 

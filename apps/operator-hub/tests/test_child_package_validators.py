@@ -107,8 +107,8 @@ class ChildPackageValidatorTests(unittest.TestCase):
                 self.assertNotIn("mqttTransport", validated)
 
     def test_gld_accepts_dirty_source_identity_hash(self) -> None:
-        manifest, files = package_for(GLD_BRIDGE, "gld_v2", {})
-        validated, _ = GLD_BRIDGE.validate_firmware_package(manifest, files, "gld_v2", "1001")
+        manifest, files = package_for(GLD_BRIDGE, "gld", {})
+        validated, _ = GLD_BRIDGE.validate_firmware_package(manifest, files, "gld", "1001")
         self.assertEqual(validated["source"]["gitTreeState"], "dirty")
 
     def test_legacy_source_hash_and_build_timestamps_remain_accepted(self) -> None:

@@ -1310,8 +1310,10 @@ def test_gld_protocol_reference_matches_active_firmware():
     assert "confidence >= 40" not in protocol_ref
     assert "confidence ≥ 40" not in protocol_ref
 
-    # The shared runtime retains the active-low legacy-output branch, while
-    # GLD2 uses the audited GPIO40/Q4 active-HIGH path with EN_BOOST sequencing.
+    # GLD1 holds GPIO41 LOW to release J2 LAMP HIGH via external pull-up. GLD2 uses
+    # the audited GPIO40/Q4 active-HIGH path with EN_BOOST
+    # sequencing; only the unsupported fallback profile retains active-low
+    # legacy outputs.
     assert "ACTIVE_LOW_OUTPUT_ON = LOW" in unified_src
     assert "ACTIVE_LOW_OUTPUT_OFF = HIGH" in unified_src
     assert "#if PGL_GLD_BOARD_PROFILE_GLD2" in unified_src
@@ -1322,8 +1324,13 @@ def test_gld_protocol_reference_matches_active_firmware():
     ]
     assert alarm_driver.index("PIN_ALARM_ENABLE_BOOST, HIGH") < alarm_driver.index("PIN_ALARM_LAMP, HIGH")
     assert alarm_driver.index("PIN_ALARM_LAMP, LOW") < alarm_driver.index("PIN_ALARM_ENABLE_BOOST, LOW")
+    assert "setGld1AlarmOutput(enabled)" in alarm_driver
+    assert "serviceAlarmOutputPattern()" not in unified_src
     assert "enabled ? ACTIVE_LOW_OUTPUT_ON : ACTIVE_LOW_OUTPUT_OFF" in alarm_driver
-    assert "Alarm lamp, buzzer, and status LED are active-low" in final_design
+    assert "GPIO41 HIGH" in final_design
+    assert "GPIO41 LOW continuously" in final_design
+    assert "external pull-up" in final_design
+    assert "alarmActive ? LOW : HIGH" in unified_src
 
 
 def test_current_design_docs_mirror_live_source_contracts():

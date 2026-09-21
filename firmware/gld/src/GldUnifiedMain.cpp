@@ -16,6 +16,9 @@
 
 #include "BoardPins.h"
 #include "FirmwareVersion.h"
+#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
+#include "Gld1FirmwareVersion.h"
+#endif
 #include "GldAds1256Reader.h"
 #include "GldAlarmControl.h"
 #include "GldCommandParser.h"
@@ -46,6 +49,12 @@
 #include "NeuralNetwork.h"
 
 namespace {
+
+#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
+constexpr const char* GLD_RUNTIME_FIRMWARE_VERSION = pgl::firmware::GLD1_FIRMWARE_VERSION;
+#else
+constexpr const char* GLD_RUNTIME_FIRMWARE_VERSION = pgl::firmware::GLD_FIRMWARE_VERSION;
+#endif
 
 static_assert(static_cast<uint8_t>(pgl::gld::GldAds1256Status::Ok) ==
                   pgl::gld::GLD_DATASET_STATUS_OK,
@@ -1497,7 +1506,7 @@ void emitInfoJson() {
     doc["nodeId"] = runtimeConfig.nodeId;
     doc["targetChId"] = chIdHex;
     doc["firmwareName"] = pgl::firmware::GLD_FIRMWARE_NAME;
-    doc["firmwareVersion"] = pgl::firmware::GLD_FIRMWARE_VERSION;
+    doc["firmwareVersion"] = GLD_RUNTIME_FIRMWARE_VERSION;
     doc["protocolVersion"] = pgl::firmware::PROTOCOL_VERSION;
     doc["boardProfile"] = BOARD_PROFILE;
     doc["mode"] = pgl::gld::gldModeName(currentMode);
@@ -1766,8 +1775,9 @@ void emitStatusJson() {
     }
     addSensorPowerJson(doc.as<JsonObject>());
     JsonObject alarmControl = doc.createNestedObject("alarmControl");
-    // AUTO/MANUAL is a common Operator Hub contract.  The physical drive is
-    // board-specific: GLD1 uses its active-low lamp/buzzer/LED outputs while
+    // AUTO/MANUAL is a common Operator Hub contract. The physical drive is
+    // board-specific: GLD1 uses inverted GPIO41 through ULN2003 plus an
+    // external pull-up for the active-HIGH J2 LAMP trigger, while
     // GLD2 uses EN_BOOST followed by its ALARM output.
     alarmControl["available"] = true;
     alarmControl["mode"] = pgl::gld::gldAlarmControlModeName(alarmControlMode);
@@ -1785,6 +1795,14 @@ void emitStatusJson() {
 #if PGL_GLD_BOARD_PROFILE_GLD2
     alarmControl["outputDrive"] = "steady_24v";
     alarmControl["externalDevicePattern"] = "self_pulsed_1s_on_1s_off";
+#elif PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8
+    alarmControl["outputDrive"] = "active_low_gpio41_uln2003_pullup";
+    alarmControl["externalDevicePattern"] = "steady_high_while_alarm";
+    alarmControl["singleTrigger"] = true;
+    alarmControl["requiresExternalPullup"] = true;
+    // Command/expected levels only: there is no J2 voltage readback.
+    alarmControl["gpio41CommandLevel"] = physicalAlarmCommanded ? "LOW" : "HIGH";
+    alarmControl["j2LampExpectedLevel"] = physicalAlarmCommanded ? "HIGH" : "LOW";
 #else
     alarmControl["outputDrive"] = "active_low_lamp_buzzer_led";
     alarmControl["externalDevicePattern"] = "board_outputs_follow_command";
@@ -3355,6 +3373,26 @@ void optionalDigitalWrite(int pin, uint8_t value) {
     }
 }
 
+void setGld1AlarmOutput(bool alarmActive) {
+#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
+    // ULN2003 sinks J2 LAMP when GPIO41 is HIGH. Release it for alarm;
+    // the external pull-up, not this GPIO, supplies the J2 HIGH voltage.
+    optionalDigitalWrite(pgl::gld::board::PIN_ALARM_LAMP, alarmActive ? LOW : HIGH);
+#else
+    (void)alarmActive;
+#endif
+}
+
+void beginGld1AlarmOutput() {
+#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
+    // Preload the OFF level before enabling the output driver. This cannot
+    // suppress a pull-up HIGH during reset, before firmware executes.
+    setGld1AlarmOutput(false);
+    optionalPinMode(pgl::gld::board::PIN_ALARM_LAMP, OUTPUT);
+    setGld1AlarmOutput(false);
+#endif
+}
+
 void setupPins() {
     pinMode(pgl::gld::board::PIN_LORA_CS,    OUTPUT); digitalWrite(pgl::gld::board::PIN_LORA_CS,    HIGH);
     pinMode(pgl::gld::board::PIN_LORA_RST,   OUTPUT); digitalWrite(pgl::gld::board::PIN_LORA_RST,   HIGH);
@@ -3367,6 +3405,9 @@ void setupPins() {
     optionalDigitalWrite(pgl::gld::board::PIN_ALARM_ENABLE_BOOST, LOW);
     optionalPinMode(pgl::gld::board::PIN_ALARM_LAMP, OUTPUT);
     optionalDigitalWrite(pgl::gld::board::PIN_ALARM_LAMP, LOW);
+#elif PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8
+    // GPIO41 HIGH holds J2 LAMP LOW through the ULN2003 while normal.
+    beginGld1AlarmOutput();
 #else
     optionalPinMode(pgl::gld::board::PIN_ALARM_LAMP, OUTPUT);
     optionalPinMode(pgl::gld::board::PIN_ALARM_ENABLE_BOOST, OUTPUT);
@@ -3706,6 +3747,20 @@ void probeSelectedMcp4725(char* addresses, size_t addressesSize, uint8_t& count)
 
 BootI2cReport probeBootI2c(bool scanFullBus) {
     BootI2cReport report{};
+#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
+    // GLD1 has no PCF driver to start Wire during setup. The later DAC
+    // initialization is too late for this boot snapshot: start the bus here
+    // before any TCA/MCP transaction, without bypassing their real ACKs.
+    const bool busReady = Wire.begin(pgl::gld::board::PIN_I2C_SDA,
+                                     pgl::gld::board::PIN_I2C_SCL);
+#if defined(ARDUINO_ARCH_ESP32)
+    Wire.setTimeOut(BOOT_I2C_TIMEOUT_MS);
+#endif
+    logPrintf("GLD1_BOOT_I2C_BEGIN ready=%u sda=%d scl=%d\n",
+              busReady ? 1u : 0u, pgl::gld::board::PIN_I2C_SDA,
+              pgl::gld::board::PIN_I2C_SCL);
+    if (!busReady) return report;
+#endif
     // Do this before the full root-address scan.  On a wedged I2C bus,
     // scanning 0x03..0x77 may block the command indefinitely; the line-level
     // recovery instead emits an actionable failure and lets normal runtime
@@ -5487,6 +5542,13 @@ void drivePhysicalAlarmOutputs(bool enabled) {
         optionalDigitalWrite(pgl::gld::board::PIN_ALARM_LAMP, LOW);
         optionalDigitalWrite(pgl::gld::board::PIN_ALARM_ENABLE_BOOST, LOW);
     }
+#elif PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8
+    // One external device owns both lamp and buzzer. Release J2 LAMP for
+    // the full alarm (GPIO41 LOW), otherwise sink it (GPIO41 HIGH).
+    // An external pull-up is required; GPIO40 is intentionally unused.
+    setGld1AlarmOutput(enabled);
+    optionalDigitalWrite(pgl::gld::board::PIN_STATUS_LED,
+                         enabled ? ACTIVE_LOW_OUTPUT_ON : ACTIVE_LOW_OUTPUT_OFF);
 #else
     optionalDigitalWrite(pgl::gld::board::PIN_ALARM_LAMP,
                          enabled ? ACTIVE_LOW_OUTPUT_ON : ACTIVE_LOW_OUTPUT_OFF);
@@ -5513,6 +5575,18 @@ bool updateAlarmOutputs(bool alarm) {
         logPrintf("GLD_MODEL_BENCH_ALARM_SUPPRESSED requested=%u\n", alarm ? 1 : 0);
         return true;
     }
+#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
+    // GLD1 output follows only the current logical inference/manual command.
+    // It is deliberately not persisted or replayed at the next boot.
+    lastAlarm = alarm;
+    driveAlarmOutputs(alarm);
+    logPrintf("GLD1_ALARM_OUTPUT gpio41Command=%s j2LampExpected=%s pullupRequired=1 mode=%s physicalCommanded=%u\n",
+              physicalAlarmCommanded ? "LOW" : "HIGH",
+              physicalAlarmCommanded ? "HIGH" : "LOW",
+              pgl::gld::gldAlarmControlModeName(alarmControlMode),
+              physicalAlarmCommanded ? 1u : 0u);
+    return true;
+#else
     if (alarm == lastAlarm) {
         driveAlarmOutputs(alarm);
         return true;
@@ -5541,6 +5615,7 @@ bool updateAlarmOutputs(bool alarm) {
               manualAlarmCommanded ? 1u : 0u,
               physicalAlarmCommanded ? 1u : 0u);
     return persisted;
+#endif
 }
 
 uint8_t modelClassToGasClass(int predicted) {
@@ -5702,8 +5777,16 @@ bool runScan(bool requireCompleteBatch = false) {
     if (lastInferenceValid) {
         (void)updateAlarmOutputs(alarm);
     } else {
+#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
+        lastAlarm = false;
+        driveAlarmOutputs(false);
+        logPrintf("GLD1_ALARM_OUTPUT gpio41Command=%s j2LampExpected=%s reason=inference_invalid\n",
+                  physicalAlarmCommanded ? "LOW" : "HIGH",
+                  physicalAlarmCommanded ? "HIGH" : "LOW");
+#else
         logPrintf("GLD_ALARM_OUTPUT held=%u reason=sensor_or_inference_fault\n",
                   lastAlarm ? 1 : 0);
+#endif
     }
     return allValid;
 }
@@ -6413,6 +6496,10 @@ void runDatasetStateMachine() {
 // ---------------------------------------------------------------------------
 
 void setup() {
+#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
+    // Establish normal J2 LAMP LOW before serial startup and its 1 s wait.
+    beginGld1AlarmOutput();
+#endif
     Serial.begin(115200);
 #if defined(ARDUINO_ARCH_ESP32)
     Serial0.begin(115200);
@@ -6446,10 +6533,17 @@ void setup() {
                                   pgl::gld::board::PIN_RS485_RX,
                                   pgl::gld::board::PIN_RS485_TX);
 #endif
+#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
+    // GLD1 holds GPIO41 HIGH (J2 LAMP LOW) until a fresh valid inference.
+    (void)pgl::gld::writeGldAlarmLatched(false);
+    lastAlarm = false;
+    driveAlarmOutputs(false);
+#else
     const bool persistedAlarmLatched = pgl::gld::readGldAlarmLatched();
     if (persistedAlarmLatched || batteryPendingAlarm.active) {
         (void)updateAlarmOutputs(true);
     }
+#endif
     beginServiceHoldButton();
     movingAvg.reset();
 
@@ -6458,13 +6552,13 @@ void setup() {
     logPrintln("");
     logPrintln("Pertamina GLD unified firmware");
     logPrintf("Firmware name: %s\n", pgl::firmware::GLD_FIRMWARE_NAME);
-    logPrintf("Firmware version: %s\n", pgl::firmware::GLD_FIRMWARE_VERSION);
+    logPrintf("Firmware version: %s\n", GLD_RUNTIME_FIRMWARE_VERSION);
     logPrintf("Protocol version: %s\n", pgl::firmware::PROTOCOL_VERSION);
     logPrintf("Build date/time: %s %s Asia/Jakarta\n", __DATE__, __TIME__);
     logPrintf("GLD_MODE=%s\n", pgl::gld::gldModeName(currentMode));
     logPrintln("GLD_DEBUG=ON command=DEBUG_OFF|DEBUG_ON");
     logPrintf("[BOOT] GLD mulai boot. firmware=%s mode=%s profile=%s\n",
-              pgl::firmware::GLD_FIRMWARE_VERSION,
+              GLD_RUNTIME_FIRMWARE_VERSION,
               pgl::gld::gldModeName(currentMode),
               BOARD_PROFILE);
 

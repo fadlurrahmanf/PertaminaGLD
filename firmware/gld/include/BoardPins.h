@@ -91,7 +91,8 @@ constexpr const uint8_t* SENSOR_TO_ADS_CH = gld2::SENSOR_TO_ADS_CH;
 #define PGL_GLD_PIN_ALARM_LAMP 41
 #endif
 #ifndef PGL_GLD_PIN_BUZZER
-#define PGL_GLD_PIN_BUZZER 40
+// GLD1 uses one external alarm device on GPIO41/J2. GPIO40 is unused.
+#define PGL_GLD_PIN_BUZZER -1
 #endif
 #ifndef PGL_GLD_PIN_STATUS_LED
 #define PGL_GLD_PIN_STATUS_LED 39

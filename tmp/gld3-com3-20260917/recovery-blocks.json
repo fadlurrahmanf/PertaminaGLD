@@ -1,0 +1,58 @@
+[
+  {
+    "index": 0,
+    "offset": "0x10000",
+    "size": 131072,
+    "sha256": "94fe1a203fb825c2b2dd829a25d1b3027b2f8b485a5be2d108b867ffc4b40d56",
+    "exitCode": 0
+  },
+  {
+    "index": 1,
+    "offset": "0x30000",
+    "size": 131072,
+    "sha256": "736bcf1331d19213dc93093dec22bf42f2166e9482b7deb9d0aa1b955edb2024",
+    "exitCode": 0
+  },
+  {
+    "index": 2,
+    "offset": "0x50000",
+    "size": 131072,
+    "sha256": "60c6102490e82e919a96042c23a2b5237bbf5d47799494fd752e58774633db9f",
+    "exitCode": 0
+  },
+  {
+    "index": 3,
+    "offset": "0x70000",
+    "size": 131072,
+    "sha256": "83c0e693bde1296d5ef2d28f78ba808b89510c311699c9786a7ab086c32215da",
+    "exitCode": 0
+  },
+  {
+    "index": 4,
+    "offset": "0x90000",
+    "size": 131072,
+    "sha256": "2e76d7734677d7c51e2cd4af55d1cc9a558907644a6cd3948f5738f2fc5570e5",
+    "exitCode": 0
+  },
+  {
+    "index": 5,
+    "offset": "0xb0000",
+    "size": 131072,
+    "sha256": "ff2572cfaf7b9c96f8003b7e5960c5adc9842a465360a1ee62145f6a19895136",
+    "exitCode": 0
+  },
+  {
+    "index": 6,
+    "offset": "0xd0000",
+    "size": 131072,
+    "sha256": "6e6872e52aa215053c339788b0d587595c554292f935c054886704efdffb24c0",
+    "exitCode": 0
+  },
+  {
+    "index": 7,
+    "offset": "0xf0000",
+    "size": 127248,
+    "sha256": "547100b8080cc4330118504f22a8c8cc6f9bdfc60e972841e9ad0fa73ddea4ab",
+    "exitCode": 2
+  }
+]

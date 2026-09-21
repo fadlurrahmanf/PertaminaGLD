@@ -91,16 +91,21 @@ class FirmwareEnvironmentSelectionTests(unittest.TestCase):
         catalog = bridge.firmware_package_options()
         self.assertEqual([item["label"] for item in catalog["ch"]["boards"]], ["Rectangle (kecil)", "Circle (besar)"])
         self.assertEqual(catalog["gw"]["environments"]["large"]["tls"], "gw_large_tls")
+        self.assertEqual(catalog["gld"]["environments"]["gld"], "gld")
         self.assertEqual(catalog["gld"]["environments"]["gld_v2"], "gld_v2")
         expected = {
-            "gld": {"gld_model_1", "gld_model_2", "gld_model_3", "gld_v2"},
+            "gld": {"gld", "gld_model_1", "gld_model_2", "gld_model_3", "gld_v2"},
             "ch": {"ch_small", "ch_large"},
             "gw": {"gw_small", "gw_large", "gw_small_tls", "gw_large_tls"},
         }
         for device, environments in expected.items():
             with self.subTest(device=device):
                 self.assertEqual(set(catalog[device]["packages"]), environments)
-                self.assertNotIn(device, catalog[device]["packages"])
+                # GLD1's canonical production environment is intentionally
+                # named `gld`; CH/Gateway must never use their generic device
+                # names as selectable package environments.
+                if device != "gld":
+                    self.assertNotIn(device, catalog[device]["packages"])
                 for environment in environments:
                     package = catalog[device]["packages"][environment]
                     manifest_path = HUB_DIR / "firmware-packages" / environment / "latest" / "manifest.json"
@@ -164,6 +169,7 @@ class FirmwareEnvironmentSelectionTests(unittest.TestCase):
 
     def test_preflight_requires_every_selectable_board_package(self) -> None:
         expected = {
+            "gld",
             "gld_model_1",
             "gld_model_2",
             "gld_model_3",
@@ -177,7 +183,7 @@ class FirmwareEnvironmentSelectionTests(unittest.TestCase):
         }
         self.assertEqual(set(preflight.REQUIRED_ENVIRONMENTS), expected)
         self.assertTrue(
-            {"gld", "gldFieldtest", "ch", "chFieldtest", "gw"}.isdisjoint(
+            {"gldFieldtest", "ch", "chFieldtest", "gw"}.isdisjoint(
                 preflight.REQUIRED_ENVIRONMENTS
             )
         )

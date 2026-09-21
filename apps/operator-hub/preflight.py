@@ -26,6 +26,7 @@ REQUIRED_ENVIRONMENTS = (
     # Exact environments exposed by the Simple Hub selection catalog. Legacy
     # aliases may remain on disk, but they must never make readyForFlash true
     # when a selectable package is missing or corrupt.
+    "gld",
     "gld_model_1",
     "gld_model_2",
     "gld_model_3",

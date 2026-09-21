@@ -1,0 +1,242 @@
+[
+  {
+    "method": "direct_adc_single_rail_target_row_only",
+    "channel": 0,
+    "result": {
+      "ch": "0",
+      "sensor": "MQ8",
+      "ads": "0",
+      "mux": "7",
+      "v0": "0.001793762",
+      "v4000": "2.677214384",
+      "delta": "2.675420523",
+      "st0": "Ok",
+      "st4000": "Ok",
+      "ok": "1"
+    },
+    "detail": {
+      "ch": "0",
+      "code0": "0",
+      "code4000": "4000",
+      "write0": "1",
+      "write4000": "1",
+      "raw0": "8486",
+      "raw4000": "5335877",
+      "gain0": "4",
+      "gain4000": "1",
+      "restoreCode": "0",
+      "restoreOk": "1"
+    },
+    "restoreZeroAck": "ok"
+  },
+  {
+    "method": "direct_adc_single_rail_target_row_only",
+    "channel": 1,
+    "result": {
+      "ch": "1",
+      "sensor": "MQ135",
+      "ads": "1",
+      "mux": "6",
+      "v0": "0.001388074",
+      "v4000": "2.394232035",
+      "delta": "2.392843962",
+      "st0": "Ok",
+      "st4000": "Ok",
+      "ok": "1"
+    },
+    "detail": {
+      "ch": "1",
+      "code0": "0",
+      "code4000": "4000",
+      "write0": "1",
+      "write4000": "1",
+      "raw0": "13030",
+      "raw4000": "6118832",
+      "gain0": "8",
+      "gain4000": "1",
+      "restoreCode": "0",
+      "restoreOk": "1"
+    },
+    "restoreZeroAck": "ok"
+  },
+  {
+    "method": "direct_adc_single_rail_target_row_only",
+    "channel": 2,
+    "result": {
+      "ch": "2",
+      "sensor": "MQ3",
+      "ads": "2",
+      "mux": "5",
+      "v0": "0.001910987",
+      "v4000": "1.541393042",
+      "delta": "1.539481997",
+      "st0": "Ok",
+      "st4000": "Ok",
+      "ok": "1"
+    },
+    "detail": {
+      "ch": "2",
+      "code0": "0",
+      "code4000": "4000",
+      "write0": "1",
+      "write4000": "1",
+      "raw0": "76004",
+      "raw4000": "7727157",
+      "gain0": "32",
+      "gain4000": "1",
+      "restoreCode": "0",
+      "restoreOk": "1"
+    },
+    "restoreZeroAck": "ok"
+  },
+  {
+    "method": "direct_adc_single_rail_target_row_only",
+    "channel": 3,
+    "result": {
+      "ch": "3",
+      "sensor": "MQ5",
+      "ads": "3",
+      "mux": "4",
+      "v0": "0.001625284",
+      "v4000": "2.464304447",
+      "delta": "2.462679148",
+      "st0": "Ok",
+      "st4000": "Ok",
+      "ok": "1"
+    },
+    "detail": {
+      "ch": "3",
+      "code0": "0",
+      "code4000": "4000",
+      "write0": "1",
+      "write4000": "1",
+      "raw0": "15198",
+      "raw4000": "6236535",
+      "gain0": "8",
+      "gain4000": "1",
+      "restoreCode": "0",
+      "restoreOk": "1"
+    },
+    "restoreZeroAck": "ok"
+  },
+  {
+    "method": "direct_adc_single_rail_target_row_only",
+    "channel": 4,
+    "result": {
+      "ch": "4",
+      "sensor": "MQ4",
+      "ads": "4",
+      "mux": "3",
+      "v0": "0.002758631",
+      "v4000": "2.558356762",
+      "delta": "2.555598021",
+      "st0": "Ok",
+      "st4000": "Ok",
+      "ok": "1"
+    },
+    "detail": {
+      "ch": "4",
+      "code0": "0",
+      "code4000": "4000",
+      "write0": "1",
+      "write4000": "1",
+      "raw0": "25901",
+      "raw4000": "6394519",
+      "gain0": "8",
+      "gain4000": "1",
+      "restoreCode": "0",
+      "restoreOk": "1"
+    },
+    "restoreZeroAck": "ok"
+  },
+  {
+    "method": "direct_adc_single_rail_target_row_only",
+    "channel": 5,
+    "result": {
+      "ch": "5",
+      "sensor": "MQ7",
+      "ads": "5",
+      "mux": "2",
+      "v0": "0.002405421",
+      "v4000": "2.239059210",
+      "delta": "2.236653805",
+      "st0": "Ok",
+      "st4000": "Ok",
+      "ok": "1"
+    },
+    "detail": {
+      "ch": "5",
+      "code0": "0",
+      "code4000": "4000",
+      "write0": "1",
+      "write4000": "1",
+      "raw0": "22689",
+      "raw4000": "5857570",
+      "gain0": "8",
+      "gain4000": "1",
+      "restoreCode": "0",
+      "restoreOk": "1"
+    },
+    "restoreZeroAck": "ok"
+  },
+  {
+    "method": "direct_adc_single_rail_target_row_only",
+    "channel": 6,
+    "result": {
+      "ch": "6",
+      "sensor": "MQ6",
+      "ads": "6",
+      "mux": "1",
+      "v0": "0.001983480",
+      "v4000": "2.884609938",
+      "delta": "2.882626534",
+      "st0": "Ok",
+      "st4000": "Ok",
+      "ok": "1"
+    },
+    "detail": {
+      "ch": "6",
+      "code0": "0",
+      "code4000": "4000",
+      "write0": "1",
+      "write4000": "1",
+      "raw0": "18704",
+      "raw4000": "6942538",
+      "gain0": "8",
+      "gain4000": "1",
+      "restoreCode": "0",
+      "restoreOk": "1"
+    },
+    "restoreZeroAck": "ok"
+  },
+  {
+    "method": "direct_adc_single_rail_target_row_only",
+    "channel": 7,
+    "result": {
+      "ch": "7",
+      "sensor": "MQ2",
+      "ads": "7",
+      "mux": "0",
+      "v0": "0.179559618",
+      "v4000": "3.033124447",
+      "delta": "2.853564739",
+      "st0": "Ok",
+      "st4000": "Ok",
+      "ok": "1"
+    },
+    "detail": {
+      "ch": "7",
+      "code0": "0",
+      "code4000": "4000",
+      "write0": "1",
+      "write4000": "1",
+      "raw0": "1688205",
+      "raw4000": "7192004",
+      "gain0": "8",
+      "gain4000": "1",
+      "restoreCode": "0",
+      "restoreOk": "1"
+    },
+    "restoreZeroAck": "ok"
+  }
+]

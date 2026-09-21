@@ -1,0 +1,162 @@
+[
+  {
+    "channel": 0,
+    "sensor": "MQ8",
+    "v0": 0.951177299,
+    "v4000": 1.464363456,
+    "delta": 0.513186157,
+    "adcStatus": [
+      0,
+      0
+    ],
+    "singleRailMaskOk": true,
+    "writeLowAck": "ok",
+    "writeHighAck": "ok",
+    "restoreZeroAck": "ok",
+    "sampleMs": [
+      280371,
+      283219
+    ],
+    "finite": true
+  },
+  {
+    "channel": 1,
+    "sensor": "MQ135",
+    "v0": 0.274927914,
+    "v4000": 1.335177183,
+    "delta": 1.060249269,
+    "adcStatus": [
+      0,
+      0
+    ],
+    "singleRailMaskOk": true,
+    "writeLowAck": "ok",
+    "writeHighAck": "ok",
+    "restoreZeroAck": "ok",
+    "sampleMs": [
+      288933,
+      291805
+    ],
+    "finite": true
+  },
+  {
+    "channel": 2,
+    "sensor": "MQ3",
+    "v0": 0.019704174,
+    "v4000": 0.582775712,
+    "delta": 0.563071538,
+    "adcStatus": [
+      0,
+      0
+    ],
+    "singleRailMaskOk": true,
+    "writeLowAck": "ok",
+    "writeHighAck": "ok",
+    "restoreZeroAck": "ok",
+    "sampleMs": [
+      297484,
+      300374
+    ],
+    "finite": true
+  },
+  {
+    "channel": 3,
+    "sensor": "MQ5",
+    "v0": 0.100440443,
+    "v4000": 0.628195882,
+    "delta": 0.527755439,
+    "adcStatus": [
+      0,
+      0
+    ],
+    "singleRailMaskOk": true,
+    "writeLowAck": "ok",
+    "writeHighAck": "ok",
+    "restoreZeroAck": "ok",
+    "sampleMs": [
+      305528,
+      308395
+    ],
+    "finite": true
+  },
+  {
+    "channel": 4,
+    "sensor": "MQ4",
+    "v0": 0.130886361,
+    "v4000": 0.943906188,
+    "delta": 0.813019827,
+    "adcStatus": [
+      0,
+      0
+    ],
+    "singleRailMaskOk": true,
+    "writeLowAck": "ok",
+    "writeHighAck": "ok",
+    "restoreZeroAck": "ok",
+    "sampleMs": [
+      314537,
+      317436
+    ],
+    "finite": true
+  },
+  {
+    "channel": 5,
+    "sensor": "MQ7",
+    "v0": 0.145755768,
+    "v4000": 0.807947934,
+    "delta": 0.662192166,
+    "adcStatus": [
+      0,
+      0
+    ],
+    "singleRailMaskOk": true,
+    "writeLowAck": "ok",
+    "writeHighAck": "ok",
+    "restoreZeroAck": "ok",
+    "sampleMs": [
+      322656,
+      326020
+    ],
+    "finite": true
+  },
+  {
+    "channel": 6,
+    "sensor": "MQ6",
+    "v0": 0.255460769,
+    "v4000": 1.424119592,
+    "delta": 1.1686588230000001,
+    "adcStatus": [
+      0,
+      0
+    ],
+    "singleRailMaskOk": true,
+    "writeLowAck": "ok",
+    "writeHighAck": "ok",
+    "restoreZeroAck": "ok",
+    "sampleMs": [
+      331741,
+      334626
+    ],
+    "finite": true
+  },
+  {
+    "channel": 7,
+    "sensor": "MQ2",
+    "v0": 0.127947152,
+    "v4000": 1.078027725,
+    "delta": 0.9500805730000002,
+    "adcStatus": [
+      0,
+      0
+    ],
+    "singleRailMaskOk": true,
+    "writeLowAck": "ok",
+    "writeHighAck": "ok",
+    "restoreZeroAck": "ok",
+    "sampleMs": [
+      339803,
+      343173
+    ],
+    "finite": true
+  }
+]

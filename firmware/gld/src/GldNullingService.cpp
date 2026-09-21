@@ -36,7 +36,13 @@ constexpr uint8_t  FINAL_CHECK_MAX_BUMPS = 20;
 // change.  A single early sample can therefore bracket a transient rather
 // than the real zero crossing.  Keep the existing four-stage algorithm, but
 // make every decision from a small time-separated stability window.
+// GLD1's local DAC path is allowed a short settle interval. GLD2 retains its
+// longer 150 ms requirement because its powered, muxed MCP branches differ.
+#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
+constexpr uint32_t SETTLE_MS               = 5;
+#else
 constexpr uint32_t SETTLE_MS               = 150;
+#endif
 constexpr uint32_t STABILITY_SAMPLE_GAP_MS = 50;
 constexpr uint8_t  STABILITY_WINDOW_COUNT  = 3;
 constexpr uint32_t STABILITY_MAX_OBSERVE_MS = 3000;

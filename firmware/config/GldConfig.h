@@ -39,7 +39,9 @@
 
 // Interval transmit LoRa STAR untuk payload running/inference dalam ms.
 // Makin kecil berarti data lebih sering dikirim, tetapi airtime dan baterai naik.
+#ifndef GLD_TX_INTERVAL_MS
 #define GLD_TX_INTERVAL_MS      10000
+#endif
 
 // Timeout koneksi WiFi GLD dalam ms untuk jalur dataset/nulling MQTT.
 // Jika lewat dari nilai ini, firmware menganggap koneksi WiFi gagal.

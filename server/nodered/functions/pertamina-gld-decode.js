@@ -13,6 +13,9 @@ const MSG_SENSOR_DATA = 0x10;
 const MSG_SERVER_PULL_REQUEST = 0x30;
 const MSG_CLUSTER_DATA_RESPONSE = 0x31;
 const MSG_CH_HELLO = 0x33;
+const CH_HELLO_FLAG_PARENT_LINK_V1 = 0x02;
+const CH_HELLO_PARENT_LINK_V1_PAYLOAD_SIZE = 18;
+const CH_PARENT_LINK_FLAG_VALID = 0x01;
 const MSG_MESH_CONTROL_MIN = 0x30;
 const MSG_MESH_CONTROL_MAX = 0x3F;
 const MSG_TYPE_MASK = 0x3F;
@@ -64,6 +67,15 @@ function hexToBuffer(input) {
 
 function be16(buf, offset) {
     return (buf[offset] << 8) | buf[offset + 1];
+}
+
+function i16be(buf, offset) {
+    const value = be16(buf, offset);
+    return value & 0x8000 ? value - 0x10000 : value;
+}
+
+function i8(value) {
+    return value & 0x80 ? value - 0x100 : value;
 }
 
 function crc16CcittFalse(buf) {
@@ -221,8 +233,47 @@ function pruneTopology(topology, nowMs = Date.now()) {
     return topology;
 }
 
+function readTopologyContext() {
+    try {
+        const persisted = flow.get("pglTopology", "pglTopologyFile");
+        if (persisted) return persisted;
+    } catch (_) {
+        // The named store becomes available after Node-RED reloads settings.js.
+    }
+    return flow.get("pglTopology");
+}
+
+function writeTopologyBootstrapFile(topology) {
+    const filePath = String(env.get("PGL_TOPOLOGY_BOOTSTRAP_FILE") || "").trim();
+    const fsModule = global.get("fs") || (typeof fs !== "undefined" ? fs : null);
+    const pathModule = global.get("path") || (typeof path !== "undefined" ? path : null);
+    if (!filePath || !fsModule || !pathModule) return;
+    const temporary = filePath + "." + Date.now() + ".tmp";
+    try {
+        fsModule.mkdirSync(pathModule.dirname(filePath), { recursive: true });
+        fsModule.writeFileSync(temporary, JSON.stringify({ pglTopology: topology }, null, 2), {
+            encoding: "utf8",
+            mode: 0o600
+        });
+        fsModule.renameSync(temporary, filePath);
+    } catch (err) {
+        try { if (fsModule.existsSync(temporary)) fsModule.unlinkSync(temporary); } catch (_) {}
+        node.warn("topology bootstrap persistence failed: " + err.message);
+    }
+}
+
+function writeTopologyContext(topology) {
+    try {
+        flow.set("pglTopology", topology, "pglTopologyFile");
+    } catch (_) {
+        // Preserve live operation during the one-time pre-restart migration.
+        flow.set("pglTopology", topology);
+    }
+    writeTopologyBootstrapFile(topology);
+}
+
 function getTopologyState() {
-    const topology = flow.get("pglTopology") || {
+    const topology = readTopologyContext() || {
         gateways: {},
         parents: {},
         discovery: {},
@@ -332,6 +383,14 @@ function updateTopology(topologyEvent) {
     topology.hellos = topology.hellos || {};
     delete topology.resetAt;
     topology.updatedAt = new Date().toISOString();
+    if (topologyEvent.parentLinkMetricValid && Number.isFinite(Number(topologyEvent.parentLinkAgeSec))) {
+        const receivedAtMs = Date.parse(topologyEvent.receivedAt);
+        if (Number.isFinite(receivedAtMs)) {
+            topologyEvent.parentLinkMeasuredAt = new Date(
+                receivedAtMs - Number(topologyEvent.parentLinkAgeSec) * 1000
+            ).toISOString();
+        }
+    }
     topology.parents[topologyEvent.clusterIdHex] = topologyEvent;
     if (String(topologyEvent.report || "").toLowerCase() === "ch-hello") {
         topology.hellos[topologyEvent.clusterIdHex] = topologyEvent;
@@ -340,7 +399,7 @@ function updateTopology(topologyEvent) {
 
     rebuildRoutes(topology);
     const route = topology.routes[topologyEvent.clusterIdHex] || [];
-    flow.set("pglTopology", topology);
+    writeTopologyContext(topology);
     return { topology, route };
 }
 
@@ -372,7 +431,7 @@ function rememberDiscovery(topologyEvent) {
         topology.discoveryUpdatedAt = new Date().toISOString();
     }
     pruneTopology(topology);
-    flow.set("pglTopology", topology);
+    writeTopologyContext(topology);
     const route = topology.routes[topologyEvent.clusterIdHex] || [];
     return { topology, route };
 }
@@ -515,13 +574,20 @@ function rememberGldDevice(outer, event) {
     const knownParentChIdHex = Object.entries(discovery).find(([, entry]) =>
         entry && entry.devices && entry.devices[event && event.nodeIdHex]);
     const learnedParentChIdHex = knownParentChIdHex ? knownParentChIdHex[0] : undefined;
-    const chIdHex = (outer && outer.responseTargetChIdHex) ||
+    const isResponse = Boolean(outer && outer.response);
+    const responseOwnerChIdHex = isResponse
+        ? (outer.responseTargetChIdHex || resolveGldResponseOwner(outer))
+        : undefined;
+    // A pull response is only authoritative when its request ID resolves to
+    // the CH that was actually requested. Never attach an unknown, expired,
+    // late, or route-mismatched response to the transport CH as a fallback.
+    if (isResponse && !responseOwnerChIdHex) return;
+    const chIdHex = responseOwnerChIdHex ||
         // Unsolicited alarm frames can arrive through a neighboring CH. Keep
         // the learned parent from the last valid pull instead of re-parenting.
         learnedParentChIdHex ||
         transportChIdHex ||
-        configuredTargetChIdHex ||
-        (outer && resolveGldResponseOwner(outer));
+        configuredTargetChIdHex;
     if (!chIdHex || !event || event.ok !== true) return;
     // Do not let replayed/older alarm frames move a device to another CH.
     if (event.replayStatus === "new-record-lower-sequence-or-restart" ||
@@ -977,6 +1043,26 @@ function parseAppFrame(buf, meta = {}) {
         if (payload.length < 8) {
             throw new Error("CH_HELLO payload too short");
         }
+        const parentLinkAdvertised = payload.length >= 12 &&
+            (payload[11] & CH_HELLO_FLAG_PARENT_LINK_V1) !== 0;
+        const parentLinkComplete = parentLinkAdvertised &&
+            payload.length >= CH_HELLO_PARENT_LINK_V1_PAYLOAD_SIZE;
+        const parentLinkFlags = parentLinkComplete ? payload[12] : 0;
+        const parentRxRssiDbm = parentLinkComplete ? i16be(payload, 13) : undefined;
+        const parentRxSnrDb = parentLinkComplete ? i8(payload[15]) : undefined;
+        const parentLinkAgeSec = parentLinkComplete ? be16(payload, 16) : undefined;
+        const parentLinkMetricValid = Boolean(
+            parentLinkComplete &&
+            (parentLinkFlags & CH_PARENT_LINK_FLAG_VALID) !== 0 &&
+            parentRxRssiDbm !== -32768 && parentRxSnrDb !== -128 &&
+            parentLinkAgeSec !== 0xFFFF
+        );
+        const gatewayIngressRssiDbm = msg.payload && typeof msg.payload === "object"
+            ? (msg.payload.gatewayIngressRssiDbm ?? msg.payload.rssi)
+            : undefined;
+        const gatewayIngressSnrDb = msg.payload && typeof msg.payload === "object"
+            ? (msg.payload.gatewayIngressSnrDb ?? msg.payload.snr)
+            : undefined;
         outer.topology = {
             clusterId: be16(payload, 0),
             clusterIdHex: idHex(be16(payload, 0)),
@@ -989,10 +1075,20 @@ function parseAppFrame(buf, meta = {}) {
             meshDepth: payload.length >= 9 ? payload[8] : null,
             viaHop: outer.srcId,
             viaHopHex: outer.srcIdHex,
+            ingressHopId: outer.srcId,
+            ingressHopIdHex: outer.srcIdHex,
             gatewayId: wrapperGatewayId || (isGatewayId(outer.dstId) ? outer.dstId : 0),
             gatewayIdHex: idHex(wrapperGatewayId || (isGatewayId(outer.dstId) ? outer.dstId : 0)),
-            rssi: msg.payload && typeof msg.payload === "object" ? msg.payload.rssi : undefined,
-            snr: msg.payload && typeof msg.payload === "object" ? msg.payload.snr : undefined
+            rssi: gatewayIngressRssiDbm,
+            snr: gatewayIngressSnrDb,
+            gatewayIngressRssiDbm,
+            gatewayIngressSnrDb,
+            parentLinkMetricSupported: parentLinkAdvertised,
+            parentLinkMetricValid,
+            parentLinkMetricFlags: parentLinkComplete ? parentLinkFlags : undefined,
+            parentRxRssiDbm: parentLinkMetricValid ? parentRxRssiDbm : undefined,
+            parentRxSnrDb: parentLinkMetricValid ? parentRxSnrDb : undefined,
+            parentLinkAgeSec: parentLinkMetricValid ? parentLinkAgeSec : undefined
         };
         return { outer, records, topology: true };
     } else if (msgType >= MSG_MESH_CONTROL_MIN && msgType <= MSG_MESH_CONTROL_MAX) {
@@ -1020,12 +1116,6 @@ function normalizeInput(input) {
         }
     }
     if (input && typeof input === "object") {
-        if (input.kind === "gateway-status") {
-            return { kind: "gatewayStatus", status: input };
-        }
-        if (input.gateway_id !== undefined && Array.isArray(input.events)) {
-            return { kind: "gatewayStatus", status: input };
-        }
         if (input.kind === "ch-topology" || input.kind === "gateway-topology" || input.topology) {
             return { kind: "topologyObject", topology: input.topology || input };
         }
@@ -1036,6 +1126,9 @@ function normalizeInput(input) {
                 buffer: hexToBuffer(hex),
                 meta: input
             };
+        }
+        if (input.kind === "gateway-status" || input.gateway_id !== undefined || input.gatewayId !== undefined) {
+            return { kind: "gatewayStatus", status: input };
         }
     }
     throw new Error("unsupported input payload");
@@ -1048,7 +1141,7 @@ function emitGatewayStatus(status) {
     }
     const topology = getTopologyState();
     registerGateway(topology, gatewayId, new Date().toISOString(), "gateway-status");
-    flow.set("pglTopology", topology);
+    writeTopologyContext(topology);
     const statusMsg = {
         req: msg.req,
         res: msg.res,
@@ -1146,6 +1239,16 @@ try {
         if (parentAltId !== 0 && !isGatewayId(parentAltId) && !isChId(parentAltId)) {
             throw new Error(`topology alternate parent ID ${idHex(parentAltId)} has invalid role ${nodeRole(parentAltId)}`);
         }
+        const ingressHopId = parseIdValue(t.ingressHopId ?? t.ingress_hop_id ?? t.viaHop ?? t.via_hop ?? t.srcId ?? t.src_id, 0);
+        const gatewayIngressRssiDbm = t.gatewayIngressRssiDbm ?? t.gatewayRxRssi ?? t.rssi;
+        const gatewayIngressSnrDb = t.gatewayIngressSnrDb ?? t.gatewayRxSnr ?? t.snr;
+        const parentLinkMetricSupported = Boolean(t.parentLinkMetricSupported ?? t.parent_link_metric_supported);
+        const parentRxRssiDbm = t.parentRxRssiDbm ?? t.parent_rx_rssi_dbm;
+        const parentRxSnrDb = t.parentRxSnrDb ?? t.parent_rx_snr_db;
+        const parentLinkAgeSec = t.parentLinkAgeSec ?? t.parentMetricAgeSec ?? t.parent_link_age_sec;
+        const parentLinkMetricValid = Boolean(t.parentLinkMetricValid ?? t.parent_link_metric_valid) &&
+            Number.isFinite(Number(parentRxRssiDbm)) && Number.isFinite(Number(parentRxSnrDb)) &&
+            Number.isFinite(Number(parentLinkAgeSec));
         const event = {
             ok: true,
             kind: "ch-topology",
@@ -1167,10 +1270,21 @@ try {
             batteryMv: Number(t.batteryMv || t.battery_mv || 0xFFFF),
             uptimeSec: Number(t.uptimeSec || t.uptimeSec16 || t.uptime_sec || 0),
             meshDepth: t.meshDepth !== undefined ? Number(t.meshDepth) : (t.depth !== undefined ? Number(t.depth) : null),
-            viaHop: Number(t.viaHop || t.via_hop || 0),
-            viaHopHex: idHex(t.viaHop || t.via_hop || 0),
-            rssi: t.rssi,
-            snr: t.snr
+            viaHop: ingressHopId,
+            viaHopHex: idHex(ingressHopId),
+            ingressHopId,
+            ingressHopIdHex: idHex(ingressHopId),
+            rssi: gatewayIngressRssiDbm,
+            snr: gatewayIngressSnrDb,
+            gatewayIngressRssiDbm,
+            gatewayIngressSnrDb,
+            parentLinkMetricSupported,
+            parentLinkMetricValid,
+            parentLinkMetricFlags: t.parentLinkMetricFlags ?? t.parent_link_metric_flags,
+            parentLinkMetricSource: t.parentLinkMetricSource ?? t.parent_metric_source,
+            parentRxRssiDbm: parentLinkMetricValid ? Number(parentRxRssiDbm) : undefined,
+            parentRxSnrDb: parentLinkMetricValid ? Number(parentRxSnrDb) : undefined,
+            parentLinkAgeSec: parentLinkMetricValid ? Number(parentLinkAgeSec) : undefined
         };
         if (event.report === "ch-config-request" && event.parentIdHex === "0x0000") {
             const topology = getTopologyState();
@@ -1278,7 +1392,7 @@ try {
         parsed.outer.gatewayIdHex = idHex(responseGatewayId);
         const topology = getTopologyState();
         registerGateway(topology, parsed.outer.gatewayId, new Date().toISOString(), "cluster-data-response");
-        flow.set("pglTopology", topology);
+        writeTopologyContext(topology);
         rememberGldResponse(parsed.outer);
     }
 

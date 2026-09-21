@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 2,
+  "packageType": "pertamina-gld-prebuilt-firmware",
+  "deviceId": "ANY",
+  "boardProfile": "CH3 ESP32-S3 R8N16 real test",
+  "environment": "chRealTest",
+  "firmwareVersion": "0.8.18",
+  "protocolVersion": "0.2.0",
+  "configSchemaVersion": "0.1.0",
+  "chip": "esp32s3",
+  "baud": 460800,
+  "createdAtUtc": "20260909T063520Z",
+  "source": {
+    "gitCommit": "1bd5c89c4a08b34d19f6dc0225164739dbde1115",
+    "gitTreeState": "operator-hub-auto",
+    "platformioCoreVersion": "PlatformIO post-build hook",
+    "platformioIniSha256": "e2fb12779f869adb122d156ae6c65f67778e28ecf8ecfaf8169efcc6127e30d5",
+    "buildCommand": "pio run -e chRealTest",
+    "buildStartedAtUtc": "20260909T063520Z",
+    "buildCompletedAtUtc": "20260909T063520Z"
+  },
+  "flashSetSha256": "3c2d76c446f9121d4554360c5e8402f7aae09df50cd535cf8947e33a5b2ed6bc",
+  "flashFiles": [
+    {
+      "path": "bootloader.bin",
+      "offset": "0x00000000",
+      "size": 15104,
+      "sha256": "2a71d69b471e20c2bac7fb469f3c6a807b3ebee780e348e5889db0da849ca363"
+    },
+    {
+      "path": "partitions.bin",
+      "offset": "0x00008000",
+      "size": 3072,
+      "sha256": "bd0f7954aca2ef7d925ee21aaa1f3dc8822d1d6ce5cbbd26a135e5886bfff6ce"
+    },
+    {
+      "path": "boot_app0.bin",
+      "offset": "0x0000E000",
+      "size": 8192,
+      "sha256": "f94c5d786a7a8fab06ac5d10e33bf37711a6697636dc037559ea19cc410a17f0"
+    },
+    {
+      "path": "firmware.bin",
+      "offset": "0x00010000",
+      "size": 408672,
+      "sha256": "80f4b3b5f51bacc565a4677e36d1eadc733aec4f10db2889fcb2bfabef6e01fe"
+    }
+  ]
+}

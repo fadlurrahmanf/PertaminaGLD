@@ -40,11 +40,11 @@ function buildRecord(nodeId, seq, nonceSeed) {
   ]);
 }
 
-function buildResponseFrame({ requestId, transportSrc, gatewayId, dstId, record }) {
+function buildResponseFrame({ requestId, transportSrc, gatewayId, dstId, record, status = 0 }) {
   const frameDstId = dstId ?? gatewayId;
   const responsePayload = Buffer.concat([
-    Buffer.from([(requestId >> 8) & 0xFF, requestId & 0xFF, 0, 0x10, 0x00, 1]),
-    record
+    Buffer.from([(requestId >> 8) & 0xFF, requestId & 0xFF, status & 0xFF, 0x10, 0x00, record ? 1 : 0]),
+    ...(record ? [record] : [])
   ]);
   const body = Buffer.concat([
     Buffer.from([
@@ -143,6 +143,48 @@ try {
   assert(flowStore.pglGldDiscovery["0x0068"].devices["0xF020"]);
   assert.equal(flowStore.pglGldDiscovery["0x0068"].status, "received");
   assert.equal(flowStore.pglGldDiscovery["0x0069"].devices["0xF020"], undefined);
+
+  const unavailableRequestId = 12820;
+  const retainedAlarm = {
+    nodeIdHex: "0x1002",
+    alarm: true,
+    gasName: "LPG",
+    confidence: 99,
+    lastSeenAt: new Date(Date.now() - 60000).toISOString()
+  };
+  const unavailableStore = {
+    pglGldRequestIndex: {
+      [unavailableRequestId]: {
+        requestId: unavailableRequestId,
+        targetChIdHex: "0x0012",
+        gatewayIdHex: "0x0001",
+        hopList: ["0x0010", "0x0011", "0x0012"],
+        requestedAt
+      }
+    },
+    pglGldDiscovery: {
+      "0x0012": {
+        status: "sent",
+        requestId: unavailableRequestId,
+        gatewayIdHex: "0x0001",
+        hopList: ["0x0010", "0x0011", "0x0012"],
+        requestedAt,
+        devices: { "0x1002": retainedAlarm }
+      }
+    }
+  };
+  runDecoder(buildResponseFrame({
+    requestId: unavailableRequestId,
+    transportSrc: 0x0011,
+    gatewayId: 0x0001,
+    dstId: 0x0010,
+    status: 2
+  }), unavailableStore, path.join(tempDir, "data-not-avail.json"), 0x0001);
+  assert.equal(unavailableStore.pglGldDiscovery["0x0012"].status, "received");
+  assert.equal(unavailableStore.pglGldDiscovery["0x0012"].responseStatus, 2);
+  assert.equal(unavailableStore.pglGldDiscovery["0x0012"].recordCount, 0);
+  assert.equal(unavailableStore.pglGldDiscovery["0x0012"].devices["0x1002"].alarm, true,
+    "DATA_NOT_AVAIL must retain the last alarm as history");
 
   const directStore = {
     pglGldRequestIndex: {
@@ -312,8 +354,10 @@ try {
     PGL_GLD_TARGET_CH_MAP_JSON: JSON.stringify({ "0x1002": "0x0012" })
   });
   assert.equal(unsolicitedAlarm[2][0].payload.nodeIdHex, "0x1002");
-  assert(alarmTargetStore.pglGldDiscovery["0x0012"].devices["0x1002"]);
-  assert.equal(alarmTargetStore.pglGldDiscovery["0x0011"], undefined);
+  // A live transport/mesh source is authoritative. The static target map is
+  // only a compatibility fallback when no CH source can be inferred.
+  assert(alarmTargetStore.pglGldDiscovery["0x0011"].devices["0x1002"]);
+  assert.equal(alarmTargetStore.pglGldDiscovery["0x0012"], undefined);
 
   const unquotedAlarmTargetStore = { pglGldRequestIndex: {}, pglGldDiscovery: {} };
   const unsolicitedAlarmUnquotedMap = runDecoder(buildAppFrame({
@@ -326,8 +370,8 @@ try {
     PGL_GLD_TARGET_CH_MAP_JSON: "{0x1001:0x0012,0x1002:0x0012}"
   });
   assert.equal(unsolicitedAlarmUnquotedMap[2][0].payload.nodeIdHex, "0x1002");
-  assert(unquotedAlarmTargetStore.pglGldDiscovery["0x0012"].devices["0x1002"]);
-  assert.equal(unquotedAlarmTargetStore.pglGldDiscovery["0x0011"], undefined);
+  assert(unquotedAlarmTargetStore.pglGldDiscovery["0x0011"].devices["0x1002"]);
+  assert.equal(unquotedAlarmTargetStore.pglGldDiscovery["0x0012"], undefined);
 
   console.log("PASS routed GLD response request correlation");
 } finally {

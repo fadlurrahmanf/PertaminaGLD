@@ -4,22 +4,22 @@
   "deviceId": "ANY",
   "boardProfile": "WROOM-1U-N16R8 sensorless alarm field-test",
   "environment": "gldFieldtestSensorlessAlarm",
-  "firmwareVersion": "0.8.14",
+  "firmwareVersion": "0.8.18",
   "protocolVersion": "0.2.0",
   "configSchemaVersion": "0.1.0",
   "chip": "esp32s3",
   "baud": 460800,
-  "createdAtUtc": "20260729T073247Z",
+  "createdAtUtc": "20260804T085434Z",
   "source": {
-    "gitCommit": "f34ca7fc8e7423b25ff103425a8428199597c418",
+    "gitCommit": "1bd5c89c4a08b34d19f6dc0225164739dbde1115",
     "gitTreeState": "operator-hub-auto",
     "platformioCoreVersion": "PlatformIO post-build hook",
-    "platformioIniSha256": "84334c9764581d13fbaf24b7559cba303b19245960a82ba4bf22b5d6f553e4c5",
+    "platformioIniSha256": "309019b11de96c8e5a18135b0c8354ae43b23e6aa3b6a8ade9faffebfbf3293a",
     "buildCommand": "pio run -e gldFieldtestSensorlessAlarm",
-    "buildStartedAtUtc": "20260729T073247Z",
-    "buildCompletedAtUtc": "20260729T073247Z"
+    "buildStartedAtUtc": "20260804T085434Z",
+    "buildCompletedAtUtc": "20260804T085434Z"
   },
-  "flashSetSha256": "5dca2812cc8a62b878f0fa522775f67039d8092d364a985b46203e63a0681afb",
+  "flashSetSha256": "4db6e9d3c65dc221b245983566b3a064d8f312ce634d5d294fb623c82ba908f3",
   "flashFiles": [
     {
       "path": "bootloader.bin",
@@ -42,8 +42,8 @@
     {
       "path": "firmware.bin",
       "offset": "0x00010000",
-      "size": 1009152,
-      "sha256": "9043681b226d67a8169036940e9fb40664ea27e86fd44ed67548324f8e906d06"
+      "size": 1014192,
+      "sha256": "8f7d4baa56990e1adb9c56fd69d2e9b3f12d1cd09414e4302bf292bea584de0c"
     }
   ]
 }

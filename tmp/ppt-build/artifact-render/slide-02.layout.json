@@ -1,0 +1,1183 @@
+{
+  "schema": "openai.presentation.layout/v4",
+  "unit": "px",
+  "slide": {
+    "aid": "sl/d5bsdl",
+    "id": "d5bsdl",
+    "slide": 2,
+    "layoutId": "6a1a93d3-ea1d-429f-9522-c5e67327db04",
+    "layoutName": "Title Slide",
+    "layoutType": "title",
+    "masterLayoutId": "ea845d38-f203-4a15-8d29-592c4f07080e",
+    "masterLayoutName": "Master",
+    "backgroundColor": "#FFFFFF",
+    "frame": {
+      "left": 0,
+      "top": 0,
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "theme": {
+    "colorSchemeName": "ChatGPT",
+    "colors": {
+      "accent1": "#156082",
+      "accent2": "#E97132",
+      "accent3": "#196B24",
+      "accent4": "#0F9ED5",
+      "accent5": "#A02B93",
+      "accent6": "#4EA72E",
+      "bg1": "#FFFFFF",
+      "bg2": "#000000",
+      "tx1": "#1F1F1F",
+      "tx2": "#FFFFFF",
+      "dk1": "#000000",
+      "lt1": "#FFFFFF",
+      "dk2": "#0E2841",
+      "lt2": "#E8E8E8",
+      "hlink": "#467886",
+      "folHlink": "#96607D"
+    },
+    "typefaces": [
+      "Arial"
+    ]
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "6a1a93d3-ea1d-429f-9522-c5e67327db04",
+      "name": "Title Slide",
+      "type": "title",
+      "parentLayoutId": "ea845d38-f203-4a15-8d29-592c4f07080e",
+      "elements": []
+    },
+    {
+      "scope": "master",
+      "id": "ea845d38-f203-4a15-8d29-592c4f07080e",
+      "name": "Master",
+      "type": "master",
+      "elements": []
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/etsned8j",
+      "id": "1",
+      "name": "section-2",
+      "bbox": [
+        52,
+        30,
+        480,
+        18
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.0"
+      },
+      "geometry": "rect",
+      "text": "OUTLINE",
+      "textPreview": "OUTLINE",
+      "resolvedFontSize": 14,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 14,
+        "typeface": "Arial",
+        "color": "#667085",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "OUTLINE"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "OUTLINE",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 14,
+            "typeface": "Arial",
+            "color": "#667085",
+            "bold": true,
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "OUTLINE",
+              "anchor": 1,
+              "fontSize": 14,
+              "typeface": "Arial",
+              "color": "#667085",
+              "bold": true,
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 2,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/1w3m987a",
+      "id": "2",
+      "name": "title-2",
+      "bbox": [
+        52,
+        58,
+        1176,
+        60
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.1"
+      },
+      "geometry": "rect",
+      "text": "Outline pembahasan",
+      "textPreview": "Outline pembahasan",
+      "resolvedFontSize": 48,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 48,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Outline pembahasan"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Outline pembahasan",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 48,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Outline pembahasan",
+              "anchor": 1,
+              "fontSize": 48,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 3,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/0va5g3qp",
+      "id": "3",
+      "name": "footer-rule-2",
+      "bbox": [
+        52,
+        668,
+        1176,
+        1
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.2"
+      },
+      "geometry": "line",
+      "lineColor": "#B8BCC4",
+      "lineWidth": 1
+    },
+    {
+      "order": 4,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/nyl4bipg",
+      "id": "4",
+      "name": "footer-left-2",
+      "bbox": [
+        52,
+        680,
+        360,
+        20
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.3"
+      },
+      "geometry": "rect",
+      "text": "INTERNAL • 18 AGUSTUS 2026",
+      "textPreview": "INTERNAL • 18 AGUSTUS 2026",
+      "resolvedFontSize": 14,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 14,
+        "typeface": "Arial",
+        "color": "#667085",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "INTERNAL • 18 AGUSTUS 2026"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "INTERNAL • 18 AGUSTUS 2026",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 14,
+            "typeface": "Arial",
+            "color": "#667085",
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "INTERNAL • 18 AGUSTUS 2026",
+              "anchor": 1,
+              "fontSize": 14,
+              "typeface": "Arial",
+              "color": "#667085",
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 5,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/mxcnid8v",
+      "id": "5",
+      "name": "footer-number-2",
+      "bbox": [
+        1178,
+        680,
+        50,
+        20
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.4"
+      },
+      "geometry": "rect",
+      "text": "02",
+      "textPreview": "02",
+      "resolvedFontSize": 14,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 14,
+        "typeface": "Arial",
+        "color": "#667085",
+        "alignment": "right",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "02"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "02",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 14,
+            "typeface": "Arial",
+            "color": "#667085",
+            "alignment": "right",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "02",
+              "anchor": 1,
+              "fontSize": 14,
+              "typeface": "Arial",
+              "color": "#667085",
+              "alignment": "right",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 6,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/903mds76",
+      "id": "6",
+      "name": "outline-intro",
+      "bbox": [
+        52,
+        132,
+        950,
+        32
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.5"
+      },
+      "geometry": "rect",
+      "text": "Lima bagian berikut membentuk alur keputusan—bukan inventaris teknis.",
+      "textPreview": "Lima bagian berikut membentuk alur keputusan—bukan inventaris teknis.",
+      "resolvedFontSize": 22,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 22,
+        "typeface": "Arial",
+        "color": "#667085",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Lima bagian berikut membentuk alur keputusan—bukan inventaris teknis."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Lima bagian berikut membentuk alur keputusan—bukan inventaris teknis.",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 22,
+            "typeface": "Arial",
+            "color": "#667085",
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Lima bagian berikut membentuk alur keputusan—bukan inventaris teknis.",
+              "anchor": 1,
+              "fontSize": 22,
+              "typeface": "Arial",
+              "color": "#667085",
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 7,
+      "kind": "table",
+      "scope": "slide",
+      "aid": "tb/xoje5cv6",
+      "id": "7",
+      "bbox": [
+        52,
+        196,
+        1176,
+        405
+      ],
+      "text": "01 | Keputusan meeting dan koreksi jadwal\n02 | Arsitektur sistem dan status readiness\n03 | GLD, CH, Gateway, jaringan, dan server\n04 | Hazardous-area, mounting, dan kebutuhan site\n05 | Roadmap, ownership, dan keputusan yang diminta",
+      "textPreview": "01 | Keputusan meeting dan koreksi jadwal | 02 | Arsitektur sistem dan status readiness | 03 | GLD, CH, Gateway, jaringan, dan server | 0...",
+      "rows": 5,
+      "cols": 2,
+      "cells": [
+        {
+          "index": 1,
+          "row": 1,
+          "column": 1,
+          "bbox": [
+            52,
+            196,
+            110,
+            81
+          ],
+          "text": "01",
+          "textPreview": "01",
+          "fillColor": "#EAF5FB",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "01",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "01"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "row": 1,
+          "column": 2,
+          "bbox": [
+            162,
+            196,
+            1066,
+            81
+          ],
+          "text": "Keputusan meeting dan koreksi jadwal",
+          "textPreview": "Keputusan meeting dan koreksi jadwal",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Keputusan meeting dan koreksi jadwal",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Keputusan meeting dan koreksi jadwal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 3,
+          "row": 2,
+          "column": 1,
+          "bbox": [
+            52,
+            277,
+            110,
+            81
+          ],
+          "text": "02",
+          "textPreview": "02",
+          "fillColor": "#EAF5FB",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "02",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "02"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 4,
+          "row": 2,
+          "column": 2,
+          "bbox": [
+            162,
+            277,
+            1066,
+            81
+          ],
+          "text": "Arsitektur sistem dan status readiness",
+          "textPreview": "Arsitektur sistem dan status readiness",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Arsitektur sistem dan status readiness",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Arsitektur sistem dan status readiness"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 5,
+          "row": 3,
+          "column": 1,
+          "bbox": [
+            52,
+            358,
+            110,
+            81
+          ],
+          "text": "03",
+          "textPreview": "03",
+          "fillColor": "#EAF5FB",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "03",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "03"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 6,
+          "row": 3,
+          "column": 2,
+          "bbox": [
+            162,
+            358,
+            1066,
+            81
+          ],
+          "text": "GLD, CH, Gateway, jaringan, dan server",
+          "textPreview": "GLD, CH, Gateway, jaringan, dan server",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "GLD, CH, Gateway, jaringan, dan server",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "GLD, CH, Gateway, jaringan, dan server"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 7,
+          "row": 4,
+          "column": 1,
+          "bbox": [
+            52,
+            439,
+            110,
+            81
+          ],
+          "text": "04",
+          "textPreview": "04",
+          "fillColor": "#EAF5FB",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "04",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "04"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 8,
+          "row": 4,
+          "column": 2,
+          "bbox": [
+            162,
+            439,
+            1066,
+            81
+          ],
+          "text": "Hazardous-area, mounting, dan kebutuhan site",
+          "textPreview": "Hazardous-area, mounting, dan kebutuhan site",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Hazardous-area, mounting, dan kebutuhan site",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Hazardous-area, mounting, dan kebutuhan site"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 9,
+          "row": 5,
+          "column": 1,
+          "bbox": [
+            52,
+            520,
+            110,
+            81
+          ],
+          "text": "05",
+          "textPreview": "05",
+          "fillColor": "#EAF5FB",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "05",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "05"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 10,
+          "row": 5,
+          "column": 2,
+          "bbox": [
+            162,
+            520,
+            1066,
+            81
+          ],
+          "text": "Roadmap, ownership, dan keputusan yang diminta",
+          "textPreview": "Roadmap, ownership, dan keputusan yang diminta",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Roadmap, ownership, dan keputusan yang diminta",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Roadmap, ownership, dan keputusan yang diminta"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "composeRuns": [
+    {
+      "index": 1,
+      "frame": {
+        "left": 0,
+        "top": 0,
+        "width": 1280,
+        "height": 720
+      },
+      "baseUnit": 1,
+      "root": {
+        "path": "0",
+        "kind": "layers",
+        "name": "agenda-table-evidence",
+        "requestedSize": {
+          "width": {
+            "mode": "fill",
+            "value": 1
+          },
+          "height": {
+            "mode": "fill",
+            "value": 1
+          }
+        },
+        "intrinsicSize": {
+          "width": 1228,
+          "height": 700
+        },
+        "frame": {
+          "left": 0,
+          "top": 0,
+          "width": 1280,
+          "height": 720
+        },
+        "children": [
+          {
+            "path": "0.0",
+            "kind": "text",
+            "name": "section-2",
+            "position": {
+              "left": 52,
+              "top": 30
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 480
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 18
+              }
+            },
+            "intrinsicSize": {
+              "width": 480,
+              "height": 18
+            },
+            "frame": {
+              "left": 52,
+              "top": 30,
+              "width": 480,
+              "height": 18
+            },
+            "snappedFrame": {
+              "left": 52,
+              "top": 30,
+              "width": 480,
+              "height": 18
+            },
+            "children": [],
+            "text": "OUTLINE",
+            "transform": "none",
+            "element": {
+              "aid": "sh/etsned8j",
+              "id": "1",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.1",
+            "kind": "text",
+            "name": "title-2",
+            "position": {
+              "left": 52,
+              "top": 58
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 1176
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 60
+              }
+            },
+            "intrinsicSize": {
+              "width": 1176,
+              "height": 60
+            },
+            "frame": {
+              "left": 52,
+              "top": 58,
+              "width": 1176,
+              "height": 60
+            },
+            "snappedFrame": {
+              "left": 52,
+              "top": 58,
+              "width": 1176,
+              "height": 60
+            },
+            "children": [],
+            "text": "Outline pembahasan",
+            "transform": "none",
+            "element": {
+              "aid": "sh/1w3m987a",
+              "id": "2",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.2",
+            "kind": "shape",
+            "name": "footer-rule-2",
+            "position": {
+              "left": 52,
+              "top": 668
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 1176
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 1
+              }
+            },
+            "intrinsicSize": {
+              "width": 1176,
+              "height": 1
+            },
+            "frame": {
+              "left": 52,
+              "top": 668,
+              "width": 1176,
+              "height": 1
+            },
+            "snappedFrame": {
+              "left": 52,
+              "top": 668,
+              "width": 1176,
+              "height": 1
+            },
+            "children": [],
+            "geometry": "line",
+            "element": {
+              "aid": "sh/0va5g3qp",
+              "id": "3",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.3",
+            "kind": "text",
+            "name": "footer-left-2",
+            "position": {
+              "left": 52,
+              "top": 680
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 360
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 20
+              }
+            },
+            "intrinsicSize": {
+              "width": 360,
+              "height": 20
+            },
+            "frame": {
+              "left": 52,
+              "top": 680,
+              "width": 360,
+              "height": 20
+            },
+            "snappedFrame": {
+              "left": 52,
+              "top": 680,
+              "width": 360,
+              "height": 20
+            },
+            "children": [],
+            "text": "INTERNAL • 18 AGUSTUS 2026",
+            "transform": "none",
+            "element": {
+              "aid": "sh/nyl4bipg",
+              "id": "4",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.4",
+            "kind": "text",
+            "name": "footer-number-2",
+            "position": {
+              "left": 1178,
+              "top": 680
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 50
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 20
+              }
+            },
+            "intrinsicSize": {
+              "width": 50,
+              "height": 20
+            },
+            "frame": {
+              "left": 1178,
+              "top": 680,
+              "width": 50,
+              "height": 20
+            },
+            "snappedFrame": {
+              "left": 1178,
+              "top": 680,
+              "width": 50,
+              "height": 20
+            },
+            "children": [],
+            "text": "02",
+            "transform": "none",
+            "element": {
+              "aid": "sh/mxcnid8v",
+              "id": "5",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.5",
+            "kind": "text",
+            "name": "outline-intro",
+            "position": {
+              "left": 52,
+              "top": 132
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 950
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 32
+              }
+            },
+            "intrinsicSize": {
+              "width": 950,
+              "height": 32
+            },
+            "frame": {
+              "left": 52,
+              "top": 132,
+              "width": 950,
+              "height": 32
+            },
+            "snappedFrame": {
+              "left": 52,
+              "top": 132,
+              "width": 950,
+              "height": 32
+            },
+            "children": [],
+            "text": "Lima bagian berikut membentuk alur keputusan—bukan inventaris teknis.",
+            "transform": "none",
+            "element": {
+              "aid": "sh/903mds76",
+              "id": "6",
+              "kind": "shape"
+            }
+          }
+        ],
+        "padding": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        },
+        "alignItems": "stretch",
+        "justifyItems": "stretch",
+        "contentFrame": {
+          "left": 0,
+          "top": 0,
+          "width": 1280,
+          "height": 720
+        },
+        "items": [
+          {
+            "path": "0.0",
+            "frame": {
+              "left": 52,
+              "top": 30,
+              "width": 480,
+              "height": 18
+            }
+          },
+          {
+            "path": "0.1",
+            "frame": {
+              "left": 52,
+              "top": 58,
+              "width": 1176,
+              "height": 60
+            }
+          },
+          {
+            "path": "0.2",
+            "frame": {
+              "left": 52,
+              "top": 668,
+              "width": 1176,
+              "height": 1
+            }
+          },
+          {
+            "path": "0.3",
+            "frame": {
+              "left": 52,
+              "top": 680,
+              "width": 360,
+              "height": 20
+            }
+          },
+          {
+            "path": "0.4",
+            "frame": {
+              "left": 1178,
+              "top": 680,
+              "width": 50,
+              "height": 20
+            }
+          },
+          {
+            "path": "0.5",
+            "frame": {
+              "left": 52,
+              "top": 132,
+              "width": 950,
+              "height": 32
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

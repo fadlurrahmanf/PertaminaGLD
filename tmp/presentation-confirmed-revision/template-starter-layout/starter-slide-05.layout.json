@@ -1,0 +1,979 @@
+{
+  "schema": "openai.presentation.layout/v4",
+  "unit": "px",
+  "slide": {
+    "aid": "sl/rpwjtu",
+    "id": "rpwjtu",
+    "slide": 5,
+    "layoutId": "/ppt/slideLayouts/slideLayout1.xml",
+    "layoutName": "Title Slide",
+    "layoutType": "title",
+    "masterLayoutId": "/ppt/slideMasters/slideMaster1.xml",
+    "masterLayoutName": "Master",
+    "backgroundColor": "#FFFFFF",
+    "frame": {
+      "left": 0,
+      "top": 0,
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "theme": {
+    "colorSchemeName": "ChatGPT",
+    "colors": {
+      "accent1": "#156082",
+      "accent2": "#E97132",
+      "accent3": "#196B24",
+      "accent4": "#0F9ED5",
+      "accent5": "#A02B93",
+      "accent6": "#4EA72E",
+      "dk1": "#000000",
+      "lt1": "#FFFFFF",
+      "dk2": "#0E2841",
+      "lt2": "#E8E8E8",
+      "hlink": "#467886",
+      "folHlink": "#96607D"
+    },
+    "fontScheme": {
+      "name": "Office",
+      "majorFont": {
+        "latinTypeface": "Calibri Light",
+        "eastAsianTypeface": "Calibri Light",
+        "complexScriptTypeface": "Calibri Light"
+      },
+      "minorFont": {
+        "latinTypeface": "Calibri",
+        "eastAsianTypeface": "Calibri",
+        "complexScriptTypeface": "Calibri"
+      }
+    },
+    "typefaces": [
+      "Arial",
+      "Calibri",
+      "Calibri Light"
+    ]
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "/ppt/slideLayouts/slideLayout1.xml",
+      "name": "Title Slide",
+      "type": "title",
+      "parentLayoutId": "/ppt/slideMasters/slideMaster1.xml",
+      "elements": []
+    },
+    {
+      "scope": "master",
+      "id": "/ppt/slideMasters/slideMaster1.xml",
+      "name": "Master",
+      "type": "master",
+      "elements": []
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/je1gvy10",
+      "id": "8",
+      "name": "section-5",
+      "bbox": [
+        52,
+        30,
+        480,
+        18
+      ],
+      "geometry": "rect",
+      "text": "READINESS",
+      "textPreview": "READINESS",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 24,
+        "typeface": "Calibri",
+        "color": "tx1",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "READINESS"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "READINESS",
+          "resolvedTextStyle": {
+            "fontSize": 14,
+            "typeface": "Arial",
+            "color": "#667085",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "READINESS",
+              "fontSize": 14,
+              "typeface": "Arial",
+              "color": "#667085",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 2,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/9ozypojy",
+      "id": "2",
+      "name": "title-5",
+      "bbox": [
+        52,
+        58,
+        1176,
+        60
+      ],
+      "geometry": "rect",
+      "text": "Source tersedia; bukti live masih terbatas",
+      "textPreview": "Source tersedia; bukti live masih terbatas",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 24,
+        "typeface": "Calibri",
+        "color": "tx1",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Source tersedia; bukti live masih terbatas"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Source tersedia; bukti live masih terbatas",
+          "resolvedTextStyle": {
+            "fontSize": 48,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Source tersedia; bukti live masih terbatas",
+              "fontSize": 48,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 3,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/8nqhwj2d",
+      "id": "3",
+      "name": "footer-rule-5",
+      "bbox": [
+        52,
+        668,
+        1176,
+        1
+      ],
+      "geometry": "line",
+      "lineColor": "#B8BCC4",
+      "lineWidth": 1
+    },
+    {
+      "order": 4,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/zixgje1w",
+      "id": "4",
+      "name": "footer-left-5",
+      "bbox": [
+        52,
+        680,
+        360,
+        20
+      ],
+      "geometry": "rect",
+      "text": "INTERNAL • 18 AGUSTUS 2026",
+      "textPreview": "INTERNAL • 18 AGUSTUS 2026",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 24,
+        "typeface": "Calibri",
+        "color": "tx1",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "INTERNAL • 18 AGUSTUS 2026"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "INTERNAL • 18 AGUSTUS 2026",
+          "resolvedTextStyle": {
+            "fontSize": 14,
+            "typeface": "Arial",
+            "color": "#667085",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "INTERNAL • 18 AGUSTUS 2026",
+              "fontSize": 14,
+              "typeface": "Arial",
+              "color": "#667085",
+              "alignment": "left"
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 5,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/yhofq9kb",
+      "id": "5",
+      "name": "footer-number-5",
+      "bbox": [
+        1178,
+        680,
+        50,
+        20
+      ],
+      "geometry": "rect",
+      "text": "05",
+      "textPreview": "05",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 24,
+        "typeface": "Calibri",
+        "color": "tx1",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "05"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "05",
+          "resolvedTextStyle": {
+            "fontSize": 14,
+            "typeface": "Arial",
+            "color": "#667085",
+            "alignment": "right"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "05",
+              "fontSize": 14,
+              "typeface": "Arial",
+              "color": "#667085",
+              "alignment": "right"
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 6,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/lkfylojm",
+      "id": "6",
+      "name": "readiness-sub",
+      "bbox": [
+        52,
+        132,
+        1176,
+        36
+      ],
+      "geometry": "rect",
+      "text": "Status dibedakan agar rapat tidak mengubah source evidence menjadi klaim lapangan.",
+      "textPreview": "Status dibedakan agar rapat tidak mengubah source evidence menjadi klaim lapangan.",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 24,
+        "typeface": "Calibri",
+        "color": "tx1",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Status dibedakan agar rapat tidak mengubah source evidence menjadi klaim lapangan."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Status dibedakan agar rapat tidak mengubah source evidence menjadi klaim lapangan.",
+          "resolvedTextStyle": {
+            "fontSize": 22,
+            "typeface": "Arial",
+            "color": "#667085",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Status dibedakan agar rapat tidak mengubah source evidence menjadi klaim lapangan.",
+              "fontSize": 22,
+              "typeface": "Arial",
+              "color": "#667085",
+              "alignment": "left"
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 7,
+      "kind": "table",
+      "scope": "slide",
+      "aid": "tb/v2pg3q10",
+      "id": "9",
+      "bbox": [
+        52,
+        196,
+        1176,
+        410
+      ],
+      "text": "Area | Terbukti dari desain/source | Masih harus dibuktikan\nGLD | Power tree, 8 socket MQ, firmware/radio path | MPN sensor, cold-start, thermal, F1 24 V, sensing accuracy\nCH | Dual radio, charger/power path, cadence source | Cell/panel, autonomy, enclosure, RF site test\nGateway | Wi-Fi STA, radio–MQTT bridge, queue/status | Unit MAC, onboarding IT, TLS, antenna/PSU field\nServer | Node-RED/dataset components dan generator | Flow sync, production package, backup/restore, live revision\nSite / Ex | Arah meeting dan daftar hold point | Area classification, certificate, permit, installation acceptance",
+      "textPreview": "Area | Terbukti dari desain/source | Masih harus dibuktikan | GLD | Power tree, 8 socket MQ, firmware/radio path | MPN sensor, cold-start...",
+      "rows": 6,
+      "cols": 3,
+      "cells": [
+        {
+          "index": 1,
+          "row": 1,
+          "column": 1,
+          "bbox": [
+            52,
+            196,
+            170,
+            68.33
+          ],
+          "text": "Area",
+          "textPreview": "Area",
+          "fillColor": "#EDEDED",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Area",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Area",
+                  "fontSize": 18,
+                  "typeface": "Arial",
+                  "color": "#111827",
+                  "bold": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "row": 1,
+          "column": 2,
+          "bbox": [
+            222,
+            196,
+            470,
+            68.33
+          ],
+          "text": "Terbukti dari desain/source",
+          "textPreview": "Terbukti dari desain/source",
+          "fillColor": "#EDEDED",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Terbukti dari desain/source",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Terbukti dari desain/source",
+                  "fontSize": 18,
+                  "typeface": "Arial",
+                  "color": "#111827",
+                  "bold": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 3,
+          "row": 1,
+          "column": 3,
+          "bbox": [
+            692,
+            196,
+            536,
+            68.33
+          ],
+          "text": "Masih harus dibuktikan",
+          "textPreview": "Masih harus dibuktikan",
+          "fillColor": "#EDEDED",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Masih harus dibuktikan",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Masih harus dibuktikan",
+                  "fontSize": 18,
+                  "typeface": "Arial",
+                  "color": "#111827",
+                  "bold": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 4,
+          "row": 2,
+          "column": 1,
+          "bbox": [
+            52,
+            264.33,
+            170,
+            68.33
+          ],
+          "text": "GLD",
+          "textPreview": "GLD",
+          "fillColor": "#EAF5FB",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "GLD",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "GLD",
+                  "fontSize": 19,
+                  "typeface": "Arial",
+                  "color": "#111827",
+                  "bold": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 5,
+          "row": 2,
+          "column": 2,
+          "bbox": [
+            222,
+            264.33,
+            470,
+            68.33
+          ],
+          "text": "Power tree, 8 socket MQ, firmware/radio path",
+          "textPreview": "Power tree, 8 socket MQ, firmware/radio path",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Power tree, 8 socket MQ, firmware/radio path",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Power tree, 8 socket MQ, firmware/radio path",
+                  "fontSize": 18,
+                  "typeface": "Arial",
+                  "color": "#111827"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 6,
+          "row": 2,
+          "column": 3,
+          "bbox": [
+            692,
+            264.33,
+            536,
+            68.33
+          ],
+          "text": "MPN sensor, cold-start, thermal, F1 24 V, sensing accuracy",
+          "textPreview": "MPN sensor, cold-start, thermal, F1 24 V, sensing accuracy",
+          "fillColor": "#FFF9E8",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "MPN sensor, cold-start, thermal, F1 24 V, sensing accuracy",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "MPN sensor, cold-start, thermal, F1 24 V, sensing accuracy",
+                  "fontSize": 18,
+                  "typeface": "Arial",
+                  "color": "#111827"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 7,
+          "row": 3,
+          "column": 1,
+          "bbox": [
+            52,
+            332.67,
+            170,
+            68.33
+          ],
+          "text": "CH",
+          "textPreview": "CH",
+          "fillColor": "#EAF5FB",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "CH",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "CH",
+                  "fontSize": 19,
+                  "typeface": "Arial",
+                  "color": "#111827",
+                  "bold": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 8,
+          "row": 3,
+          "column": 2,
+          "bbox": [
+            222,
+            332.67,
+            470,
+            68.33
+          ],
+          "text": "Dual radio, charger/power path, cadence source",
+          "textPreview": "Dual radio, charger/power path, cadence source",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Dual radio, charger/power path, cadence source",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Dual radio, charger/power path, cadence source",
+                  "fontSize": 18,
+                  "typeface": "Arial",
+                  "color": "#111827"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 9,
+          "row": 3,
+          "column": 3,
+          "bbox": [
+            692,
+            332.67,
+            536,
+            68.33
+          ],
+          "text": "Cell/panel, autonomy, enclosure, RF site test",
+          "textPreview": "Cell/panel, autonomy, enclosure, RF site test",
+          "fillColor": "#FFF9E8",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Cell/panel, autonomy, enclosure, RF site test",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Cell/panel, autonomy, enclosure, RF site test",
+                  "fontSize": 18,
+                  "typeface": "Arial",
+                  "color": "#111827"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 10,
+          "row": 4,
+          "column": 1,
+          "bbox": [
+            52,
+            401,
+            170,
+            68.33
+          ],
+          "text": "Gateway",
+          "textPreview": "Gateway",
+          "fillColor": "#EAF5FB",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Gateway",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Gateway",
+                  "fontSize": 19,
+                  "typeface": "Arial",
+                  "color": "#111827",
+                  "bold": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 11,
+          "row": 4,
+          "column": 2,
+          "bbox": [
+            222,
+            401,
+            470,
+            68.33
+          ],
+          "text": "Wi-Fi STA, radio–MQTT bridge, queue/status",
+          "textPreview": "Wi-Fi STA, radio–MQTT bridge, queue/status",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Wi-Fi STA, radio–MQTT bridge, queue/status",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Wi-Fi STA, radio–MQTT bridge, queue/status",
+                  "fontSize": 18,
+                  "typeface": "Arial",
+                  "color": "#111827"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 12,
+          "row": 4,
+          "column": 3,
+          "bbox": [
+            692,
+            401,
+            536,
+            68.33
+          ],
+          "text": "Unit MAC, onboarding IT, TLS, antenna/PSU field",
+          "textPreview": "Unit MAC, onboarding IT, TLS, antenna/PSU field",
+          "fillColor": "#FFF9E8",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Unit MAC, onboarding IT, TLS, antenna/PSU field",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Unit MAC, onboarding IT, TLS, antenna/PSU field",
+                  "fontSize": 18,
+                  "typeface": "Arial",
+                  "color": "#111827"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 13,
+          "row": 5,
+          "column": 1,
+          "bbox": [
+            52,
+            469.33,
+            170,
+            68.33
+          ],
+          "text": "Server",
+          "textPreview": "Server",
+          "fillColor": "#EAF5FB",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Server",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Server",
+                  "fontSize": 19,
+                  "typeface": "Arial",
+                  "color": "#111827",
+                  "bold": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 14,
+          "row": 5,
+          "column": 2,
+          "bbox": [
+            222,
+            469.33,
+            470,
+            68.33
+          ],
+          "text": "Node-RED/dataset components dan generator",
+          "textPreview": "Node-RED/dataset components dan generator",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Node-RED/dataset components dan generator",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Node-RED/dataset components dan generator",
+                  "fontSize": 18,
+                  "typeface": "Arial",
+                  "color": "#111827"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 15,
+          "row": 5,
+          "column": 3,
+          "bbox": [
+            692,
+            469.33,
+            536,
+            68.33
+          ],
+          "text": "Flow sync, production package, backup/restore, live revision",
+          "textPreview": "Flow sync, production package, backup/restore, live revision",
+          "fillColor": "#FFF9E8",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Flow sync, production package, backup/restore, live revision",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Flow sync, production package, backup/restore, live revision",
+                  "fontSize": 18,
+                  "typeface": "Arial",
+                  "color": "#111827"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 16,
+          "row": 6,
+          "column": 1,
+          "bbox": [
+            52,
+            537.67,
+            170,
+            68.33
+          ],
+          "text": "Site / Ex",
+          "textPreview": "Site / Ex",
+          "fillColor": "#EAF5FB",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Site / Ex",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Site / Ex",
+                  "fontSize": 19,
+                  "typeface": "Arial",
+                  "color": "#111827",
+                  "bold": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 17,
+          "row": 6,
+          "column": 2,
+          "bbox": [
+            222,
+            537.67,
+            470,
+            68.33
+          ],
+          "text": "Arah meeting dan daftar hold point",
+          "textPreview": "Arah meeting dan daftar hold point",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Arah meeting dan daftar hold point",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Arah meeting dan daftar hold point",
+                  "fontSize": 18,
+                  "typeface": "Arial",
+                  "color": "#111827"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 18,
+          "row": 6,
+          "column": 3,
+          "bbox": [
+            692,
+            537.67,
+            536,
+            68.33
+          ],
+          "text": "Area classification, certificate, permit, installation acceptance",
+          "textPreview": "Area classification, certificate, permit, installation acceptance",
+          "fillColor": "#FFF9E8",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Area classification, certificate, permit, installation acceptance",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Area classification, certificate, permit, installation acceptance",
+                  "fontSize": 18,
+                  "typeface": "Arial",
+                  "color": "#111827"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "composeRuns": []
+}

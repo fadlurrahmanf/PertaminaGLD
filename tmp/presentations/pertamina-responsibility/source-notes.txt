@@ -1,0 +1,11 @@
+Communication job: by the end, Pertamina and LGU can assign PICs and close the power, mounting, networking, server, and commissioning prerequisites before field installation.
+
+Primary source:
+- User revised GLD, CH, Gateway, Server, and responsibility points on 13 August 2026.
+- output/pdf/PertaminaGLD-Pembagian-Tugas-LGU-Pertamina.pdf
+
+Technical evidence boundaries:
+- 24 VDC with at least 2 A is a supplied requirement, not live proof of site capacity.
+- Same network means permitted IP routing to the broker, not necessarily the same SSID/subnet.
+- 90 bytes per 10 seconds is presented as a target/estimate. Actual MQTT payload must be measured because JSON, topic, transport, and security add overhead.
+- No live deployment, broker, server, or hardware verification was performed for this presentation.

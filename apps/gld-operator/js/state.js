@@ -127,6 +127,8 @@ export const state = {
   dataset: initialDatasetSession(),
   datasetWizard: ["pending", "pending", "pending", "pending", "pending", "pending"],
   nullingLogs: [],
+  nullingLogPaused: false,
+  nullingLogPausedCount: 0,
   nullingExpandedChannels: new Set(),
   bootDiagnostics: {
     reportSeen: false,
@@ -148,6 +150,9 @@ export const state = {
     tplAutoInject: false
   },
   history: [],
+  // Running-chart display selection only. Telemetry collection, CSV export,
+  // Dataset capture, and ML input remain complete and unaffected.
+  hiddenSensorChartChannels: new Set(),
   info: null,
   status: null,
   alarmActive: false,
@@ -206,6 +211,9 @@ export const elements = {
   datasetNullingFirst: $("datasetNullingFirst"),
   datasetRowsBody: $("datasetRowsBody"),
   nullingLog: $("nullingLog"),
+  pauseNullingLogBtn: $("pauseNullingLogBtn"),
+  copyNullingLogBtn: $("copyNullingLogBtn"),
+  downloadNullingLogBtn: $("downloadNullingLogBtn"),
   nullingSummary: $("nullingSummary"),
   nullingMeta: $("nullingMeta"),
   nullingChannels: $("nullingChannels"),

@@ -3,7 +3,7 @@
 // CNN real-time inference module (TAHAP 5) — kept out of main.cpp.
 //
 // Wraps the proven dual-branch TFLite Micro CNN (see
-// firmware/gld/model/NeuralNetwork.cpp, model_data.h, ModelMetadata.h)
+// firmware/gld/models/<slot>/NeuralNetwork.cpp, model_data.h, ModelMetadata.h)
 // behind the CNN_Init()/CNN_Predict() flow used by GldCnnRuntimeMain.cpp:
 // load model + allocate tensor arena once (TAHAP 6/7/8), then per scan
 // normalize -> quantize -> Invoke() -> dequantize/argmax (TAHAP 9-14).

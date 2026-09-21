@@ -74,7 +74,7 @@ Tidak berubah dari revisi sebelumnya:
 - Bukan compiler firmware custom.
 - Fleet tetap "1 active slot dengan detail penuh + ringkasan slot lain",
   bukan N dashboard paralel (lihat riwayat keputusan di git history /
-  `apps/gld-operator-backup/design.md` §26 untuk rasionalnya, masih berlaku).
+  `archive/apps/gld-operator-backup/design.md` §26 untuk rasionalnya, masih berlaku).
 
 ## 4. Layout shape — kenapa tanpa sidebar kiri
 
@@ -364,7 +364,7 @@ nyata (COM10/COM9, bukan hanya Mock GLD) sebelum dianggap selesai:
 ## 11. Backend contract (tidak berubah — ringkasan)
 
 Detail lengkap REST/SSE/protokol serial ada di riwayat git dan di
-`apps/gld-operator-backup/design.md` §5, §8-§17 (revisi sebelum rebuild ini,
+`archive/apps/gld-operator-backup/design.md` §5, §8-§17 (revisi sebelum rebuild ini,
 isinya masih akurat karena `bridge.py` tidak berubah). Ringkasan yang relevan
 untuk frontend:
 
@@ -447,5 +447,5 @@ Revisi ini dianggap selesai ketika:
 - Poll interval bisa diubah dan benar-benar mengubah rate `GET_STATUS`.
 - Visual berbeda jelas dari dua revisi sebelumnya (palet, tipografi, dan
   bentuk layout, bukan cuma warna).
-- `apps/gld-operator-backup/` tetap ada dan tidak disentuh, sebagai jalur
+- `archive/apps/gld-operator-backup/` tetap ada dan tidak disentuh, sebagai jalur
   rollback.

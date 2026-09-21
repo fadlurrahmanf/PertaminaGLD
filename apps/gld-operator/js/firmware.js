@@ -8,6 +8,13 @@ import { applyAndAlert, sendCommand } from "./serial-protocol.js";
 import { requireUnlock } from "./security.js";
 import { restoreGldConfigAfterReset } from "./dataset.js";
 
+const GLD_MODEL_SLOTS = {
+  model_1: { label: "Model 1", available: true, environment: "gld_model_1", detail: "Model Board 1: CO2, Clean_Air, H2, LPG." },
+  model_2: { label: "Model 2", available: true, environment: "gld_model_2", detail: "Model Board 2: CO2, Clean_Air, H2, LPG." },
+  model_3: { label: "Model 3", available: true, environment: "gld_model_3", detail: "Board 2 cadangan v2: Clean_Air, H2, LPG." },
+  model_4: { label: "Model 4", available: false, detail: "Artefak dan package Model 4 belum tersedia." }
+};
+
 export async function loadManifestFile(fileList) {
   const files = Array.from(fileList || []);
   if (!files.length) return;
@@ -111,13 +118,84 @@ function setUploadDialogStatus(message, state = "") {
   status.setAttribute("aria-busy", String(state === "loading"));
 }
 
+function setUploadProgress(percent, label = "") {
+  const wrap = $("firmwareUploadProgress");
+  const bar = $("firmwareUploadProgressBar");
+  const value = $("firmwareUploadProgressValue");
+  const text = $("firmwareUploadProgressLabel");
+  if (!wrap || !bar || !value || !text) return;
+  const normalized = Math.max(0, Math.min(100, Number(percent) || 0));
+  wrap.hidden = false;
+  bar.value = normalized;
+  value.textContent = `${normalized}%`;
+  if (label) text.textContent = label;
+}
+
+export function handleFirmwareUploadProgress(payload) {
+  const percent = Number(payload?.packagePercent);
+  if (!Number.isFinite(percent)) return;
+  // A 100% "Writing at" line only means the last byte reached the transport.
+  // Keep the UI at 99% until esptool exits after its hash verification; this
+  // prevents a dead serial link from looking like a completed firmware flash.
+  const writingComplete = percent >= 100;
+  setUploadProgress(
+    writingComplete ? 99 : percent,
+    writingComplete
+      ? "Menunggu verifikasi flash…"
+      : `Memprogram ${payload.filePath || "firmware"}…`,
+  );
+}
+
+function selectedModelSlot() {
+  return GLD_MODEL_SLOTS[$("firmwareUploadModel")?.value] || GLD_MODEL_SLOTS.model_1;
+}
+
+function updateModelSelection() {
+  const environment = $("firmwareUploadEnv")?.value;
+  const selector = $("firmwareUploadModel");
+  const status = $("firmwareUploadModelStatus");
+  const model = selectedModelSlot();
+  const applies = environment === "gld";
+  if (selector) selector.disabled = !applies;
+  if (status) {
+    status.textContent = applies
+      ? `${model.label}: ${model.detail}`
+      : "Pilihan model hanya berlaku untuk environment GLD production.";
+  }
+  return applies ? model : null;
+}
+
+async function refreshFirmwareUploadPorts() {
+  const portSelect = $("firmwareUploadPort");
+  if (!portSelect) return "";
+  const previouslySelected = String(portSelect.value || elements.portSelect.value || getField("manualPortInput") || "");
+  try {
+    const result = await bridgeFetch("/api/ports");
+    const ports = Array.isArray(result.ports) ? result.ports : [];
+    portSelect.replaceChildren(...ports.map((port) => {
+      const path = String(port.path || "").toUpperCase();
+      const detail = port.description ? ` — ${port.description}` : "";
+      return new Option(`${path}${detail}`, path, false, path === previouslySelected.toUpperCase());
+    }));
+    if (!ports.length) portSelect.append(new Option("No serial ports detected", ""));
+    return portSelect.value;
+  } catch (error) {
+    // Fall back to the Port Setup list when the bridge scan itself is unavailable.
+    portSelect.replaceChildren(...Array.from(elements.portSelect.options).map((option) =>
+      new Option(option.text, option.value, false, option.value === previouslySelected)
+    ));
+    return portSelect.value;
+  }
+}
+
 export async function uploadFirmware() {
   switchTab("expert");
   if (state.bridgeAvailable) await refreshPorts(true);
   const portSelect = $("firmwareUploadPort");
-  const selectedPort = elements.portSelect.value;
-  portSelect.replaceChildren(...Array.from(elements.portSelect.options).map((option) => new Option(option.text, option.value, false, option.value === selectedPort)));
+  await refreshFirmwareUploadPorts();
+  updateModelSelection();
   await loadBuiltinPackage($("firmwareUploadEnv").value);
+  setUploadProgress(0, "Menunggu upload dimulai…");
   const ready = Boolean(state.manifest && /^COM\d+$/i.test(portSelect.value));
   $("firmwareUploadConfirmBtn").disabled = !ready;
   setUploadDialogStatus(ready ? "Ready to upload." : "Choose a valid package and COM port first.");
@@ -125,11 +203,20 @@ export async function uploadFirmware() {
 }
 
 async function loadBuiltinPackage(environment) {
+  const model = updateModelSelection();
+  if (model && !model.available) {
+    state.manifest = null;
+    state.manifestPackageFiles = new Map();
+    $("firmwareUploadPackage").textContent = `${model.label} belum memiliki package firmware yang dapat diverifikasi.`;
+    return;
+  }
   try {
-    const result = await bridgeFetch(`/api/firmware/package?env=${encodeURIComponent(environment)}`);
+    const packageEnvironment = model?.environment || environment;
+    const result = await bridgeFetch(`/api/firmware/package?env=${encodeURIComponent(packageEnvironment)}`);
     state.manifest = result.manifest;
     state.manifestPackageFiles = new Map(Object.entries(result.packageFiles || {}));
-    $("firmwareUploadPackage").textContent = `Package: ${state.manifest.environment} v${state.manifest.firmwareVersion}`;
+    const modelText = model ? ` · ${model.label}` : "";
+    $("firmwareUploadPackage").textContent = `Package: ${state.manifest.environment} v${state.manifest.firmwareVersion}${modelText}`;
   } catch (error) {
     state.manifest = null;
     state.manifestPackageFiles = new Map();
@@ -164,12 +251,18 @@ async function performFirmwareUpload() {
   $("firmwareResetNvs").disabled = true;
   setUploadDialogStatus(`Disconnecting serial, then uploading to ${port}…`, "loading");
   try {
+    setUploadProgress(0, "Menyiapkan upload…");
     await disconnectSerial();
     const packageFiles = await readPackageFiles(state.manifest);
     const result = await bridgeFetch("/api/firmware/upload", {
       method: "POST",
+      // The bridge independently stops an unresponsive esptool after 120 s.
+      // Leave a small delivery margin so the browser never waits forever if
+      // the bridge itself stalls before it can return that error.
+      timeoutMs: 135_000,
       body: JSON.stringify({ env, port, targetDeviceId, resetNvs: $("firmwareResetNvs").checked, manifest: state.manifest, packageFiles, slot: state.activeSlot })
     });
+    setUploadProgress(100, "Upload firmware selesai.");
     setUploadDialogStatus(result.nvsReset
       ? `NVS direset. Connecting to ${port} dengan default firmware…`
       : `Upload berhasil. Parameter NVS dipertahankan. Connecting to ${port}…`, "success");
@@ -198,11 +291,20 @@ async function performFirmwareUpload() {
 }
 
 export function initFirmwareUploadDialog() {
+  window.addEventListener("gld-upload-progress", (event) => handleFirmwareUploadProgress(event.detail));
   $("firmwareUploadCancelBtn")?.addEventListener("click", () => setUploadDialog(false));
   document.querySelectorAll("[data-upload-dialog-close]").forEach((node) => node.addEventListener("click", () => setUploadDialog(false)));
   $("firmwareUploadConfirmBtn")?.addEventListener("click", performFirmwareUpload);
   $("firmwareUploadEnv")?.addEventListener("change", async (event) => {
+    updateModelSelection();
     await loadBuiltinPackage(event.target.value);
+    $("firmwareUploadConfirmBtn").disabled = !state.manifest || !/^COM\d+$/i.test($("firmwareUploadPort").value);
+  });
+  $("firmwareUploadModel")?.addEventListener("change", async () => {
+    await loadBuiltinPackage($("firmwareUploadEnv").value);
+    $("firmwareUploadConfirmBtn").disabled = !state.manifest || !/^COM\d+$/i.test($("firmwareUploadPort").value);
+  });
+  $("firmwareUploadPort")?.addEventListener("change", () => {
     $("firmwareUploadConfirmBtn").disabled = !state.manifest || !/^COM\d+$/i.test($("firmwareUploadPort").value);
   });
 }

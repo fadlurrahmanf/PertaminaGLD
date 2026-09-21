@@ -1,0 +1,1984 @@
+{
+  "schema": "openai.presentation.layout/v4",
+  "unit": "px",
+  "slide": {
+    "aid": "sl/n72858",
+    "id": "n72858",
+    "slide": 7,
+    "layoutId": "be4b8f75-84ef-4272-944b-e7d31fdb41b2",
+    "layoutName": "Title Slide",
+    "layoutType": "title",
+    "masterLayoutId": "b3585e2a-1f6b-42c9-9c69-ca2590313385",
+    "masterLayoutName": "Master",
+    "frame": {
+      "left": 0,
+      "top": 0,
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "theme": {
+    "colorSchemeName": "ChatGPT",
+    "colors": {
+      "accent1": "#156082",
+      "accent2": "#E97132",
+      "accent3": "#196B24",
+      "accent4": "#0F9ED5",
+      "accent5": "#A02B93",
+      "accent6": "#4EA72E",
+      "bg1": "#FFFFFF",
+      "bg2": "#000000",
+      "tx1": "#1F1F1F",
+      "tx2": "#FFFFFF",
+      "dk1": "#000000",
+      "lt1": "#FFFFFF",
+      "dk2": "#0E2841",
+      "lt2": "#E8E8E8",
+      "hlink": "#467886",
+      "folHlink": "#96607D"
+    },
+    "typefaces": [
+      "Arial"
+    ]
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "be4b8f75-84ef-4272-944b-e7d31fdb41b2",
+      "name": "Title Slide",
+      "type": "title",
+      "parentLayoutId": "b3585e2a-1f6b-42c9-9c69-ca2590313385",
+      "elements": []
+    },
+    {
+      "scope": "master",
+      "id": "b3585e2a-1f6b-42c9-9c69-ca2590313385",
+      "name": "Master",
+      "type": "master",
+      "elements": []
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/qp8v61kz",
+      "id": "1",
+      "name": "slide-title",
+      "bbox": [
+        42,
+        32,
+        1160,
+        70
+      ],
+      "geometry": "rect",
+      "text": "Pembagian tugas LGU–Pertamina · Bagian 2",
+      "textPreview": "Pembagian tugas LGU–Pertamina · Bagian 2",
+      "resolvedFontSize": 39,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 39,
+        "typeface": "Arial",
+        "color": "#111827",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Pembagian tugas LGU–Pertamina · Bagian 2"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Pembagian tugas LGU–Pertamina · Bagian 2",
+          "resolvedTextStyle": {
+            "fontSize": 39,
+            "typeface": "Arial",
+            "color": "#111827",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Pembagian tugas LGU–Pertamina · Bagian 2",
+              "fontSize": 39,
+              "typeface": "Arial",
+              "color": "#111827",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 2,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/dszu1gja",
+      "id": "2",
+      "name": "page",
+      "bbox": [
+        1185,
+        665,
+        50,
+        22
+      ],
+      "geometry": "rect",
+      "text": "07",
+      "textPreview": "07",
+      "resolvedFontSize": 10.33,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 13,
+        "typeface": "Arial",
+        "color": "#5F6670",
+        "alignment": "right",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.79,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "07"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "07",
+          "resolvedTextStyle": {
+            "fontSize": 13,
+            "typeface": "Arial",
+            "color": "#5F6670",
+            "alignment": "right"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "07",
+              "fontSize": 13,
+              "typeface": "Arial",
+              "color": "#5F6670",
+              "alignment": "right"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 3,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/crqd8b25",
+      "id": "3",
+      "name": "text",
+      "bbox": [
+        42,
+        104,
+        1120,
+        32
+      ],
+      "geometry": "rect",
+      "text": "Setiap baris perlu memiliki PIC, target tanggal, dan bukti penyelesaian.",
+      "textPreview": "Setiap baris perlu memiliki PIC, target tanggal, dan bukti penyelesaian.",
+      "resolvedFontSize": 18.67,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 20,
+        "typeface": "Arial",
+        "color": "#5F6670",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.93,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Setiap baris perlu memiliki PIC, target tanggal, dan bukti penyelesaian."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Setiap baris perlu memiliki PIC, target tanggal, dan bukti penyelesaian.",
+          "resolvedTextStyle": {
+            "fontSize": 20,
+            "typeface": "Arial",
+            "color": "#5F6670",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Setiap baris perlu memiliki PIC, target tanggal, dan bukti penyelesaian.",
+              "fontSize": 20,
+              "typeface": "Arial",
+              "color": "#5F6670",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 4,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/zehc3q1g",
+      "id": "4",
+      "name": "head-lgu",
+      "bbox": [
+        42,
+        148,
+        565,
+        44
+      ],
+      "geometry": "rect",
+      "fillColor": "#246BFD",
+      "lineColor": "#246BFD",
+      "lineWidth": 1
+    },
+    {
+      "order": 5,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/yd8valkv",
+      "id": "5",
+      "name": "head-ptm",
+      "bbox": [
+        607,
+        148,
+        573,
+        44
+      ],
+      "geometry": "rect",
+      "fillColor": "#268A5E",
+      "lineColor": "#268A5E",
+      "lineWidth": 1
+    },
+    {
+      "order": 6,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/lgju50jm",
+      "id": "6",
+      "name": "text",
+      "bbox": [
+        62,
+        159,
+        200,
+        25
+      ],
+      "geometry": "rect",
+      "text": "LGU",
+      "textPreview": "LGU",
+      "resolvedFontSize": 12.83,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 18,
+        "typeface": "Arial",
+        "color": "#FFFFFF",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.71,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "LGU"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "LGU",
+          "resolvedTextStyle": {
+            "fontSize": 18,
+            "typeface": "Arial",
+            "color": "#FFFFFF",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "LGU",
+              "fontSize": 18,
+              "typeface": "Arial",
+              "color": "#FFFFFF",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 7,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/0fadcv21",
+      "id": "7",
+      "name": "text",
+      "bbox": [
+        627,
+        159,
+        220,
+        25
+      ],
+      "geometry": "rect",
+      "text": "PERTAMINA",
+      "textPreview": "PERTAMINA",
+      "resolvedFontSize": 12.83,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 18,
+        "typeface": "Arial",
+        "color": "#FFFFFF",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.71,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "PERTAMINA"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "PERTAMINA",
+          "resolvedTextStyle": {
+            "fontSize": 18,
+            "typeface": "Arial",
+            "color": "#FFFFFF",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "PERTAMINA",
+              "fontSize": 18,
+              "typeface": "Arial",
+              "color": "#FFFFFF",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 8,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/fixcrm1c",
+      "id": "8",
+      "name": "lgu-0",
+      "bbox": [
+        42,
+        192,
+        565,
+        65
+      ],
+      "geometry": "rect",
+      "fillColor": "#FFFFFF",
+      "lineColor": "#C4C9D0",
+      "lineWidth": 1
+    },
+    {
+      "order": 9,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/uxobyhkr",
+      "id": "9",
+      "name": "ptm-0",
+      "bbox": [
+        607,
+        192,
+        573,
+        65
+      ],
+      "geometry": "rect",
+      "fillColor": "#FFFFFF",
+      "lineColor": "#C4C9D0",
+      "lineWidth": 1
+    },
+    {
+      "order": 10,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/0fqlkv2t",
+      "id": "10",
+      "name": "lgu-text-0",
+      "bbox": [
+        62,
+        200,
+        525,
+        50
+      ],
+      "geometry": "rect",
+      "text": "08 · Batas CH\nSesuaikan antenna, enclosure dan kabel dengan aturan site.",
+      "textPreview": "08 · Batas CH | Sesuaikan antenna, enclosure dan kabel dengan aturan site.",
+      "resolvedFontSize": 16,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 16,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "08 · Batas CH"
+          },
+          {
+            "index": 2,
+            "text": "Sesuaikan antenna, enclosure dan kabel dengan aturan site."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "08 · Batas CH",
+          "resolvedTextStyle": {
+            "fontSize": 16,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "08 · Batas CH",
+              "fontSize": 16,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 2,
+          "text": "Sesuaikan antenna, enclosure dan kabel dengan aturan site.",
+          "resolvedTextStyle": {
+            "fontSize": 16,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Sesuaikan antenna, enclosure dan kabel dengan aturan site.",
+              "fontSize": 16,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 11,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/1gz2t03e",
+      "id": "11",
+      "name": "ptm-text-0",
+      "bbox": [
+        627,
+        200,
+        533,
+        50
+      ],
+      "geometry": "rect",
+      "text": "08 · Batas CH\nBerikan batas tinggi, area bahaya, rute, grounding dan kabel.",
+      "textPreview": "08 · Batas CH | Berikan batas tinggi, area bahaya, rute, grounding dan kabel.",
+      "resolvedFontSize": 16,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 16,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "08 · Batas CH"
+          },
+          {
+            "index": 2,
+            "text": "Berikan batas tinggi, area bahaya, rute, grounding dan kabel."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "08 · Batas CH",
+          "resolvedTextStyle": {
+            "fontSize": 16,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "08 · Batas CH",
+              "fontSize": 16,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 2,
+          "text": "Berikan batas tinggi, area bahaya, rute, grounding dan kabel.",
+          "resolvedTextStyle": {
+            "fontSize": 16,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Berikan batas tinggi, area bahaya, rute, grounding dan kabel.",
+              "fontSize": 16,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 12,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/etoji5k3",
+      "id": "12",
+      "name": "lgu-1",
+      "bbox": [
+        42,
+        257,
+        565,
+        65
+      ],
+      "geometry": "rect",
+      "fillColor": "#F1F3F5",
+      "lineColor": "#C4C9D0",
+      "lineWidth": 1
+    },
+    {
+      "order": 13,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/zexkral8",
+      "id": "13",
+      "name": "ptm-1",
+      "bbox": [
+        607,
+        257,
+        573,
+        65
+      ],
+      "geometry": "rect",
+      "fillColor": "#F1F3F5",
+      "lineColor": "#C4C9D0",
+      "lineWidth": 1
+    },
+    {
+      "order": 14,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/ojqlof25",
+      "id": "14",
+      "name": "lgu-text-1",
+      "bbox": [
+        62,
+        265,
+        525,
+        50
+      ],
+      "geometry": "rect",
+      "text": "09 · Battery CH\nSerahkan spesifikasi, enclosure, proteksi dan SDS.",
+      "textPreview": "09 · Battery CH | Serahkan spesifikasi, enclosure, proteksi dan SDS.",
+      "resolvedFontSize": 16,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 16,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "09 · Battery CH"
+          },
+          {
+            "index": 2,
+            "text": "Serahkan spesifikasi, enclosure, proteksi dan SDS."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "09 · Battery CH",
+          "resolvedTextStyle": {
+            "fontSize": 16,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "09 · Battery CH",
+              "fontSize": 16,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 2,
+          "text": "Serahkan spesifikasi, enclosure, proteksi dan SDS.",
+          "resolvedTextStyle": {
+            "fontSize": 16,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Serahkan spesifikasi, enclosure, proteksi dan SDS.",
+              "fontSize": 16,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 15,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/9kz2xk3q",
+      "id": "15",
+      "name": "ptm-text-1",
+      "bbox": [
+        627,
+        265,
+        533,
+        50
+      ],
+      "geometry": "rect",
+      "text": "09 · Battery CH\nJelaskan dan setujui ketentuan battery di area Pertamina.",
+      "textPreview": "09 · Battery CH | Jelaskan dan setujui ketentuan battery di area Pertamina.",
+      "resolvedFontSize": 16,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 16,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "09 · Battery CH"
+          },
+          {
+            "index": 2,
+            "text": "Jelaskan dan setujui ketentuan battery di area Pertamina."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "09 · Battery CH",
+          "resolvedTextStyle": {
+            "fontSize": 16,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "09 · Battery CH",
+              "fontSize": 16,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 2,
+          "text": "Jelaskan dan setujui ketentuan battery di area Pertamina.",
+          "resolvedTextStyle": {
+            "fontSize": 16,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Jelaskan dan setujui ketentuan battery di area Pertamina.",
+              "fontSize": 16,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 16,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/mh83m5kz",
+      "id": "16",
+      "name": "lgu-2",
+      "bbox": [
+        42,
+        322,
+        565,
+        65
+      ],
+      "geometry": "rect",
+      "fillColor": "#FFFFFF",
+      "lineColor": "#C4C9D0",
+      "lineWidth": 1
+    },
+    {
+      "order": 17,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/nihkvalk",
+      "id": "17",
+      "name": "ptm-2",
+      "bbox": [
+        607,
+        322,
+        573,
+        65
+      ],
+      "geometry": "rect",
+      "fillColor": "#FFFFFF",
+      "lineColor": "#C4C9D0",
+      "lineWidth": 1
+    },
+    {
+      "order": 18,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/4nm1cb2l",
+      "id": "18",
+      "name": "lgu-text-2",
+      "bbox": [
+        62,
+        330,
+        525,
+        50
+      ],
+      "geometry": "rect",
+      "text": "10 · Gateway fisik\nSediakan GW, adaptor 5 V, antenna dan detail kabel.",
+      "textPreview": "10 · Gateway fisik | Sediakan GW, adaptor 5 V, antenna dan detail kabel.",
+      "resolvedFontSize": 16,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 16,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "10 · Gateway fisik"
+          },
+          {
+            "index": 2,
+            "text": "Sediakan GW, adaptor 5 V, antenna dan detail kabel."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "10 · Gateway fisik",
+          "resolvedTextStyle": {
+            "fontSize": 16,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "10 · Gateway fisik",
+              "fontSize": 16,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 2,
+          "text": "Sediakan GW, adaptor 5 V, antenna dan detail kabel.",
+          "resolvedTextStyle": {
+            "fontSize": 16,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Sediakan GW, adaptor 5 V, antenna dan detail kabel.",
+              "fontSize": 16,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 19,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/pof2lg36",
+      "id": "19",
+      "name": "ptm-text-2",
+      "bbox": [
+        627,
+        330,
+        533,
+        50
+      ],
+      "geometry": "rect",
+      "text": "10 · Gateway fisik\nSediakan daya indoor, rooftop, rute coax dan proteksi petir.",
+      "textPreview": "10 · Gateway fisik | Sediakan daya indoor, rooftop, rute coax dan proteksi petir.",
+      "resolvedFontSize": 16,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 16,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "10 · Gateway fisik"
+          },
+          {
+            "index": 2,
+            "text": "Sediakan daya indoor, rooftop, rute coax dan proteksi petir."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "10 · Gateway fisik",
+          "resolvedTextStyle": {
+            "fontSize": 16,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "10 · Gateway fisik",
+              "fontSize": 16,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 2,
+          "text": "Sediakan daya indoor, rooftop, rute coax dan proteksi petir.",
+          "resolvedTextStyle": {
+            "fontSize": 16,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Sediakan daya indoor, rooftop, rute coax dan proteksi petir.",
+              "fontSize": 16,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 20,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/58nqt8ry",
+      "id": "20",
+      "name": "lgu-3",
+      "bbox": [
+        42,
+        387,
+        565,
+        65
+      ],
+      "geometry": "rect",
+      "fillColor": "#F1F3F5",
+      "lineColor": "#C4C9D0",
+      "lineWidth": 1
+    },
+    {
+      "order": 21,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/k7e90nad",
+      "id": "21",
+      "name": "ptm-3",
+      "bbox": [
+        607,
+        387,
+        573,
+        65
+      ],
+      "geometry": "rect",
+      "fillColor": "#F1F3F5",
+      "lineColor": "#C4C9D0",
+      "lineWidth": 1
+    },
+    {
+      "order": 22,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/j658ri9s",
+      "id": "22",
+      "name": "lgu-text-3",
+      "bbox": [
+        62,
+        395,
+        525,
+        50
+      ],
+      "geometry": "rect",
+      "text": "11 · Registrasi jaringan\nBerikan MAC/device list dan sesuaikan konfigurasi.",
+      "textPreview": "11 · Registrasi jaringan | Berikan MAC/device list dan sesuaikan konfigurasi.",
+      "resolvedFontSize": 16,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 16,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "11 · Registrasi jaringan"
+          },
+          {
+            "index": 2,
+            "text": "Berikan MAC/device list dan sesuaikan konfigurasi."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "11 · Registrasi jaringan",
+          "resolvedTextStyle": {
+            "fontSize": 16,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "11 · Registrasi jaringan",
+              "fontSize": 16,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 2,
+          "text": "Berikan MAC/device list dan sesuaikan konfigurasi.",
+          "resolvedTextStyle": {
+            "fontSize": 16,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Berikan MAC/device list dan sesuaikan konfigurasi.",
+              "fontSize": 16,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 23,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/i5cryds7",
+      "id": "23",
+      "name": "ptm-text-3",
+      "bbox": [
+        627,
+        395,
+        533,
+        50
+      ],
+      "geometry": "rect",
+      "text": "11 · Registrasi jaringan\nBerikan registrasi, SSID/security, IP, firewall dan broker.",
+      "textPreview": "11 · Registrasi jaringan | Berikan registrasi, SSID/security, IP, firewall dan broker.",
+      "resolvedFontSize": 16,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 16,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "11 · Registrasi jaringan"
+          },
+          {
+            "index": 2,
+            "text": "Berikan registrasi, SSID/security, IP, firewall dan broker."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "11 · Registrasi jaringan",
+          "resolvedTextStyle": {
+            "fontSize": 16,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "11 · Registrasi jaringan",
+              "fontSize": 16,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 2,
+          "text": "Berikan registrasi, SSID/security, IP, firewall dan broker.",
+          "resolvedTextStyle": {
+            "fontSize": 16,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Berikan registrasi, SSID/security, IP, firewall dan broker.",
+              "fontSize": 16,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 24,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/twnaxsru",
+      "id": "24",
+      "name": "lgu-4",
+      "bbox": [
+        42,
+        452,
+        565,
+        65
+      ],
+      "geometry": "rect",
+      "fillColor": "#FFFFFF",
+      "lineColor": "#C4C9D0",
+      "lineWidth": 1
+    },
+    {
+      "order": 25,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/sbe94nq9",
+      "id": "25",
+      "name": "ptm-4",
+      "bbox": [
+        607,
+        452,
+        573,
+        65
+      ],
+      "geometry": "rect",
+      "fillColor": "#FFFFFF",
+      "lineColor": "#C4C9D0",
+      "lineWidth": 1
+    },
+    {
+      "order": 26,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/7a58vi94",
+      "id": "26",
+      "name": "lgu-text-4",
+      "bbox": [
+        62,
+        460,
+        525,
+        50
+      ],
+      "geometry": "rect",
+      "text": "12 · MQTT & payload\nBerikan spec dan uji 90 byte/10 detik + capture.",
+      "textPreview": "12 · MQTT & payload | Berikan spec dan uji 90 byte/10 detik + capture.",
+      "resolvedFontSize": 16,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 16,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "12 · MQTT & payload"
+          },
+          {
+            "index": 2,
+            "text": "Berikan spec dan uji 90 byte/10 detik + capture."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "12 · MQTT & payload",
+          "resolvedTextStyle": {
+            "fontSize": 16,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "12 · MQTT & payload",
+              "fontSize": 16,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 2,
+          "text": "Berikan spec dan uji 90 byte/10 detik + capture.",
+          "resolvedTextStyle": {
+            "fontSize": 16,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Berikan spec dan uji 90 byte/10 detik + capture.",
+              "fontSize": 16,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 27,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/69wr2d8j",
+      "id": "27",
+      "name": "ptm-text-4",
+      "bbox": [
+        627,
+        460,
+        533,
+        50
+      ],
+      "geometry": "rect",
+      "text": "12 · MQTT & payload\nSediakan broker/ACL dan setujui limit payload/rate.",
+      "textPreview": "12 · MQTT & payload | Sediakan broker/ACL dan setujui limit payload/rate.",
+      "resolvedFontSize": 16,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 16,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "12 · MQTT & payload"
+          },
+          {
+            "index": 2,
+            "text": "Sediakan broker/ACL dan setujui limit payload/rate."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "12 · MQTT & payload",
+          "resolvedTextStyle": {
+            "fontSize": 16,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "12 · MQTT & payload",
+              "fontSize": 16,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 2,
+          "text": "Sediakan broker/ACL dan setujui limit payload/rate.",
+          "resolvedTextStyle": {
+            "fontSize": 16,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Sediakan broker/ACL dan setujui limit payload/rate.",
+              "fontSize": 16,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 28,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/h07a1sr6",
+      "id": "28",
+      "name": "lgu-5",
+      "bbox": [
+        42,
+        517,
+        565,
+        65
+      ],
+      "geometry": "rect",
+      "fillColor": "#F1F3F5",
+      "lineColor": "#C4C9D0",
+      "lineWidth": 1
+    },
+    {
+      "order": 29,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/gzy987ql",
+      "id": "29",
+      "name": "ptm-5",
+      "bbox": [
+        607,
+        517,
+        573,
+        65
+      ],
+      "geometry": "rect",
+      "fillColor": "#F1F3F5",
+      "lineColor": "#C4C9D0",
+      "lineWidth": 1
+    },
+    {
+      "order": 30,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/el8n2p83",
+      "id": "30",
+      "name": "lgu-text-5",
+      "bbox": [
+        62,
+        525,
+        525,
+        50
+      ],
+      "geometry": "rect",
+      "text": "13 · Server/dashboard\nSediakan dashboard, installer, minimum spec dan training.",
+      "textPreview": "13 · Server/dashboard | Sediakan dashboard, installer, minimum spec dan training.",
+      "resolvedFontSize": 16,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 16,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "13 · Server/dashboard"
+          },
+          {
+            "index": 2,
+            "text": "Sediakan dashboard, installer, minimum spec dan training."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "13 · Server/dashboard",
+          "resolvedTextStyle": {
+            "fontSize": 16,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "13 · Server/dashboard",
+              "fontSize": 16,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 2,
+          "text": "Sediakan dashboard, installer, minimum spec dan training.",
+          "resolvedTextStyle": {
+            "fontSize": 16,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Sediakan dashboard, installer, minimum spec dan training.",
+              "fontSize": 16,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 31,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/z6hovupo",
+      "id": "31",
+      "name": "ptm-text-5",
+      "bbox": [
+        627,
+        525,
+        533,
+        50
+      ],
+      "geometry": "rect",
+      "text": "13 · Server/dashboard\nSediakan host/OS/DB aktual, akses, network dan backup policy.",
+      "textPreview": "13 · Server/dashboard | Sediakan host/OS/DB aktual, akses, network dan backup policy.",
+      "resolvedFontSize": 16,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 16,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "13 · Server/dashboard"
+          },
+          {
+            "index": 2,
+            "text": "Sediakan host/OS/DB aktual, akses, network dan backup policy."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "13 · Server/dashboard",
+          "resolvedTextStyle": {
+            "fontSize": 16,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "13 · Server/dashboard",
+              "fontSize": 16,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 2,
+          "text": "Sediakan host/OS/DB aktual, akses, network dan backup policy.",
+          "resolvedTextStyle": {
+            "fontSize": 16,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Sediakan host/OS/DB aktual, akses, network dan backup policy.",
+              "fontSize": 16,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 32,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/07a54zq9",
+      "id": "32",
+      "name": "lgu-6",
+      "bbox": [
+        42,
+        582,
+        565,
+        65
+      ],
+      "geometry": "rect",
+      "fillColor": "#FFFFFF",
+      "lineColor": "#C4C9D0",
+      "lineWidth": 1
+    },
+    {
+      "order": 33,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/18j6x47e",
+      "id": "33",
+      "name": "ptm-6",
+      "bbox": [
+        607,
+        582,
+        573,
+        65
+      ],
+      "geometry": "rect",
+      "fillColor": "#FFFFFF",
+      "lineColor": "#C4C9D0",
+      "lineWidth": 1
+    },
+    {
+      "order": 34,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/m9s7q98z",
+      "id": "34",
+      "name": "lgu-text-6",
+      "bbox": [
+        62,
+        590,
+        525,
+        50
+      ],
+      "geometry": "rect",
+      "text": "14 · Commissioning\nSiapkan FAT/SAT, evidence, troubleshooting dan handover.",
+      "textPreview": "14 · Commissioning | Siapkan FAT/SAT, evidence, troubleshooting dan handover.",
+      "resolvedFontSize": 16,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 16,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "14 · Commissioning"
+          },
+          {
+            "index": 2,
+            "text": "Siapkan FAT/SAT, evidence, troubleshooting dan handover."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "14 · Commissioning",
+          "resolvedTextStyle": {
+            "fontSize": 16,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "14 · Commissioning",
+              "fontSize": 16,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 2,
+          "text": "Siapkan FAT/SAT, evidence, troubleshooting dan handover.",
+          "resolvedTextStyle": {
+            "fontSize": 16,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Siapkan FAT/SAT, evidence, troubleshooting dan handover.",
+              "fontSize": 16,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 35,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/na1ozepk",
+      "id": "35",
+      "name": "ptm-text-6",
+      "bbox": [
+        627,
+        590,
+        533,
+        50
+      ],
+      "geometry": "rect",
+      "text": "14 · Commissioning\nJadwalkan SAT, hadirkan PIC, tutup temuan dan sign-off.",
+      "textPreview": "14 · Commissioning | Jadwalkan SAT, hadirkan PIC, tutup temuan dan sign-off.",
+      "resolvedFontSize": 16,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 16,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "14 · Commissioning"
+          },
+          {
+            "index": 2,
+            "text": "Jadwalkan SAT, hadirkan PIC, tutup temuan dan sign-off."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "14 · Commissioning",
+          "resolvedTextStyle": {
+            "fontSize": 16,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "14 · Commissioning",
+              "fontSize": 16,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 2,
+          "text": "Jadwalkan SAT, hadirkan PIC, tutup temuan dan sign-off.",
+          "resolvedTextStyle": {
+            "fontSize": 16,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Jadwalkan SAT, hadirkan PIC, tutup temuan dan sign-off.",
+              "fontSize": 16,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    }
+  ],
+  "composeRuns": []
+}

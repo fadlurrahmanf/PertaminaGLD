@@ -5,7 +5,8 @@ const GAS_CLASS = {
     3: "propane",
     4: "butane",
     5: "reserve",
-    6: "anomaly"
+    6: "anomaly",
+    7: "H2"
 };
 
 const MSG_SENSOR_DATA = 0x10;
@@ -566,11 +567,31 @@ function rememberGldResponse(outer) {
 function rememberGldDevice(outer, event) {
     const targetOverrides = envGldTargetOverrides();
     const configuredTargetChIdHex = event && targetOverrides[event.nodeIdHex];
-    const chIdHex = (outer && outer.responseTargetChIdHex) ||
-        configuredTargetChIdHex ||
-        (outer && resolveGldResponseOwner(outer));
-    if (!chIdHex || !event || event.ok !== true) return;
+    // Prefer the actual routed/transport CH. A static GLD->CH map is only a
+    // compatibility fallback; GLDs may move between CHs at runtime.
+    const transportChIdHex = outer && isChId(outer.srcId) ? outer.srcIdHex : undefined;
     const discovery = getGldDiscoveryState();
+    const knownParentChIdHex = Object.entries(discovery).find(([, entry]) =>
+        entry && entry.devices && entry.devices[event && event.nodeIdHex]);
+    const learnedParentChIdHex = knownParentChIdHex ? knownParentChIdHex[0] : undefined;
+    const isResponse = Boolean(outer && outer.response);
+    const responseOwnerChIdHex = isResponse
+        ? (outer.responseTargetChIdHex || resolveGldResponseOwner(outer))
+        : undefined;
+    // A pull response is only authoritative when its request ID resolves to
+    // the CH that was actually requested. Never attach an unknown, expired,
+    // late, or route-mismatched response to the transport CH as a fallback.
+    if (isResponse && !responseOwnerChIdHex) return;
+    const chIdHex = responseOwnerChIdHex ||
+        // Unsolicited alarm frames can arrive through a neighboring CH. Keep
+        // the learned parent from the last valid pull instead of re-parenting.
+        learnedParentChIdHex ||
+        transportChIdHex ||
+        configuredTargetChIdHex;
+    if (!chIdHex || !event || event.ok !== true) return;
+    // Do not let replayed/older alarm frames move a device to another CH.
+    if (event.replayStatus === "new-record-lower-sequence-or-restart" ||
+        event.replayStatus === "replay") return;
     const entry = discovery[chIdHex] || { status: "unsolicited", hopList: [], devices: {} };
     entry.devices = entry.devices || {};
     entry.devices[event.nodeIdHex] = {
@@ -589,6 +610,12 @@ function rememberGldDevice(outer, event) {
         gatewayIdHex: outer && outer.gatewayIdHex,
         lastSeenAt: event.receivedAt
     };
+    // A GLD has one current parent. Remove stale copies left under a
+    // previous CH so the topology cannot jump to an older/wrong attachment.
+    for (const [otherChIdHex, otherEntry] of Object.entries(discovery)) {
+        if (otherChIdHex === chIdHex || !otherEntry || !otherEntry.devices) continue;
+        delete otherEntry.devices[event.nodeIdHex];
+    }
     discovery[chIdHex] = entry;
     flow.set("pglGldDiscovery", discovery);
 }
@@ -636,7 +663,7 @@ function decryptGldPayload(record) {
     const batteryMv = be16(plaintext, 2);
     const gasName = GAS_CLASS[gasClass] || "invalid";
     const confidenceValid = confidence <= 100;
-    const gasClassValid = gasClass <= 6;
+    const gasClassValid = gasClass <= 7;
 
     return {
         decryptOk: true,

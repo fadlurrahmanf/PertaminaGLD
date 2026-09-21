@@ -1,0 +1,224 @@
+{"kind":"slide","id":"sl/1qw43l","slide":1,"title":"PERTAMINA × LGU","textShapes":5}
+{"kind":"textbox","id":"sh/onq1sbml","slide":1,"name":"text","text":"PERTAMINA × LGU","textPreview":"PERTAMINA × LGU","textChars":15,"textLines":1,"bbox":[42,42,420,36]}
+{"kind":"textbox","id":"sh/nmh0z6l0","slide":1,"name":"text","text":"Kebutuhan Lapangan dan\nPembagian Tugas Integrasi","textPreview":"Kebutuhan Lapangan dan | Pembagian Tugas Integrasi","textChars":48,"textLines":2,"bbox":[42,165,1040,175]}
+{"kind":"textbox","id":"sh/2lojq14f","slide":1,"name":"text","text":"GLD · CH · Gateway · Server","textPreview":"GLD · CH · Gateway · Server","textChars":27,"textLines":1,"bbox":[42,380,800,52]}
+{"kind":"textbox","id":"sh/10fixw3a","slide":1,"name":"text","text":"Dokumen koordinasi sebelum pemasangan lapangan","textPreview":"Dokumen koordinasi sebelum pemasangan lapangan","textChars":46,"textLines":1,"bbox":[42,492,700,45]}
+{"kind":"shape","id":"sh/0z61ormp","slide":1,"name":"accent","bbox":[990,492,200,8]}
+{"kind":"textbox","id":"sh/fyx0vm54","slide":1,"name":"text","text":"13 Agustus 2026","textPreview":"13 Agustus 2026","textChars":15,"textLines":1,"bbox":[42,610,300,30]}
+{"kind":"notes","id":"nt/1qw43l","slide":1,"text":"[Sources]\nPoin revisi pengguna, 13 Agustus 2026.\nPDF sumber: output/pdf/PertaminaGLD-Pembagian-Tugas-LGU-Pertamina.pdf"}
+{"kind":"slide","id":"sl/6mwbvy","slide":2,"title":"GLD: suplai 24 VDC kontinu harus diverifikasi di lokasi","textShapes":12}
+{"kind":"textbox","id":"sh/pw7eh832","slide":2,"name":"slide-title","text":"GLD: suplai 24 VDC kontinu harus diverifikasi di lokasi","textPreview":"GLD: suplai 24 VDC kontinu harus diverifikasi di lokasi","textChars":55,"textLines":1,"bbox":[42,32,1160,70]}
+{"kind":"textbox","id":"sh/2tgvmd4r","slide":2,"name":"page","text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[1185,665,50,22]}
+{"kind":"textbox","id":"sh/3upwfilc","slide":2,"name":"text","text":"Kebutuhan LGU","textPreview":"Kebutuhan LGU","textChars":13,"textLines":1,"bbox":[42,128,420,35]}
+{"kind":"shape","id":"sh/czidsnmt","slide":2,"name":"bullet-0","bbox":[42,188,9,9]}
+{"kind":"textbox","id":"sh/d0rels3e","slide":2,"name":"bullet-text-0","text":"Suplai 24 VDC dengan kapasitas minimal 2 A yang tersedia secara kontinu.","textPreview":"Suplai 24 VDC dengan kapasitas minimal 2 A yang tersedia secara kontinu.","textChars":72,"textLines":1,"bbox":[67,180,523,95]}
+{"kind":"shape","id":"sh/qxgvqd4n","slide":2,"name":"bullet-1","bbox":[42,286,9,9]}
+{"kind":"textbox","id":"sh/ry9wjil8","slide":2,"name":"bullet-text-1","text":"Pemasangan direncanakan dekat sensor existing agar memanfaatkan sumber daya tersedia.","textPreview":"Pemasangan direncanakan dekat sensor existing agar memanfaatkan sumber daya tersedia.","textChars":85,"textLines":1,"bbox":[67,278,523,95]}
+{"kind":"shape","id":"sh/s3edgjmp","slide":2,"name":"bullet-2","bbox":[42,384,9,9]}
+{"kind":"textbox","id":"sh/t4ne9onu","slide":2,"name":"bullet-text-2","text":"Battery GLD belum siap untuk operasi kontinu; optimasi power management masih dikembangkan.","textPreview":"Battery GLD belum siap untuk operasi kontinu; optimasi power management masih dikembangkan.","textChars":91,"textLines":1,"bbox":[67,376,523,95]}
+{"kind":"shape","id":"sh/xwb2hoz2","slide":2,"name":"pertamina-power","bbox":[630,130,550,325]}
+{"kind":"textbox","id":"sh/wv218jih","slide":2,"name":"text","text":"Konfirmasi Pertamina","textPreview":"Konfirmasi Pertamina","textChars":20,"textLines":1,"bbox":[654,154,500,35]}
+{"kind":"shape","id":"sh/butkfehw","slide":2,"name":"bullet-0","bbox":[654,218,9,9]}
+{"kind":"textbox","id":"sh/atkj6t0r","slide":2,"name":"bullet-text-0","text":"Pastikan kapasitas sisa sumber existing cukup untuk sensor existing dan GLD.","textPreview":"Pastikan kapasitas sisa sumber existing cukup untuk sensor existing dan GLD.","textChars":76,"textLines":1,"bbox":[679,210,475,74]}
+{"kind":"shape","id":"sh/l0b2l8ze","slide":2,"name":"bullet-1","bbox":[654,295,9,9]}
+{"kind":"textbox","id":"sh/kz2lc3it","slide":2,"name":"bullet-text-1","text":"Berikan titik terminal, polaritas, proteksi, grounding, konektor dan standar kabel.","textPreview":"Berikan titik terminal, polaritas, proteksi, grounding, konektor dan standar kabel.","textChars":83,"textLines":1,"bbox":[679,287,475,74]}
+{"kind":"shape","id":"sh/jytkjyh8","slide":2,"name":"bullet-2","bbox":[654,372,9,9]}
+{"kind":"textbox","id":"sh/yxkjat0n","slide":2,"name":"bullet-text-2","text":"Lakukan verifikasi tegangan/arus dan setujui titik pengambilan daya.","textPreview":"Lakukan verifikasi tegangan/arus dan setujui titik pengambilan daya.","textChars":68,"textLines":1,"bbox":[679,364,475,74]}
+{"kind":"shape","id":"sh/tov2p8za","slide":2,"name":"boundary","bbox":[42,510,1138,92]}
+{"kind":"textbox","id":"sh/83mlg3ip","slide":2,"name":"text","text":"Batas penerapan","textPreview":"Batas penerapan","textChars":15,"textLines":1,"bbox":[62,528,260,32]}
+{"kind":"textbox","id":"sh/sjed8bud","slide":2,"name":"text","text":"Tahap lapangan saat ini menggunakan 24 VDC. Opsi baterai tidak diposisikan sebagai sumber kontinu sampai optimasi selesai dan hasil pengembangan divalidasi.","textPreview":"Tahap lapangan saat ini menggunakan 24 VDC. Opsi baterai tidak diposisikan sebagai sumber kontinu sampai optimasi selesai dan hasil penge...","textChars":156,"textLines":1,"bbox":[300,524,850,50]}
+{"kind":"notes","id":"nt/6mwbvy","slide":2,"text":"[Sources]\nPoin revisi pengguna - sisi GLD.\nStatic repo evidence does not prove 2 A site capacity or field readiness."}
+{"kind":"slide","id":"sl/ao3x6n","slide":3,"title":"CH: desain LGU mengikuti struktur existing, instalasi fisik oleh Pertamina","textShapes":24}
+{"kind":"textbox","id":"sh/7mpsjuhw","slide":3,"name":"slide-title","text":"CH: desain LGU mengikuti struktur existing, instalasi fisik oleh Pertamina","textPreview":"CH: desain LGU mengikuti struktur existing, instalasi fisik oleh Pertamina","textChars":74,"textLines":1,"bbox":[42,32,1160,70]}
+{"kind":"textbox","id":"sh/snytcfih","slide":3,"name":"page","text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[1185,665,50,22]}
+{"kind":"textbox","id":"sh/to7alkz2","slide":3,"name":"text","text":"Mounting CH dan panel surya disesuaikan dengan tiang atau handrail existing di area Pertamina.","textPreview":"Mounting CH dan panel surya disesuaikan dengan tiang atau handrail existing di area Pertamina.","textChars":94,"textLines":1,"bbox":[42,112,1120,40]}
+{"kind":"shape","id":"sh/up0bep0n","slide":3,"name":"row-0","bbox":[42,170,1138,58]}
+{"kind":"shape","id":"sh/fq9snuh8","slide":3,"name":"num-0","bbox":[42,170,65,58]}
+{"kind":"textbox","id":"sh/gritgzit","slide":3,"name":"text","text":"01","textPreview":"01","textChars":2,"textLines":1,"bbox":[57,187,36,25]}
+{"kind":"textbox","id":"sh/hsrup4ze","slide":3,"name":"text","text":"Desain mounting","textPreview":"Desain mounting","textChars":15,"textLines":1,"bbox":[128,185,250,28]}
+{"kind":"textbox","id":"sh/2t0bi90z","slide":3,"name":"text","text":"LGU membuat mounting berdasarkan foto, ukuran dan kondisi struktur existing.","textPreview":"LGU membuat mounting berdasarkan foto, ukuran dan kondisi struktur existing.","textChars":76,"textLines":1,"bbox":[395,182,760,36]}
+{"kind":"shape","id":"sh/3u9creh4","slide":3,"name":"row-1","bbox":[42,232,1138,58]}
+{"kind":"shape","id":"sh/rmh8j214","slide":3,"name":"num-1","bbox":[42,232,65,58]}
+{"kind":"textbox","id":"sh/ql8rqxkj","slide":3,"name":"text","text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[57,249,36,25]}
+{"kind":"textbox","id":"sh/dozqlcju","slide":3,"name":"text","text":"Panel surya","textPreview":"Panel surya","textChars":11,"textLines":1,"bbox":[128,247,250,28]}
+{"kind":"textbox","id":"sh/snq9s72p","slide":3,"name":"text","text":"LGU memilih panel tersertifikasi; Pertamina menentukan sertifikasi yang diterima.","textPreview":"LGU memilih panel tersertifikasi; Pertamina menentukan sertifikasi yang diterima.","textChars":81,"textLines":1,"bbox":[395,244,760,36]}
+{"kind":"shape","id":"sh/3ix8f2ls","slide":3,"name":"row-2","bbox":[42,294,1138,58]}
+{"kind":"shape","id":"sh/ihormxk7","slide":3,"name":"num-2","bbox":[42,294,65,58]}
+{"kind":"textbox","id":"sh/5kzqhsjy","slide":3,"name":"text","text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[57,311,36,25]}
+{"kind":"textbox","id":"sh/4jq9on2d","slide":3,"name":"text","text":"Instalasi lapangan","textPreview":"Instalasi lapangan","textChars":18,"textLines":1,"bbox":[128,309,250,28]}
+{"kind":"textbox","id":"sh/ne1srm1c","slide":3,"name":"text","text":"Tim Pertamina melaksanakan instalasi dengan personel dan tools yang sesuai.","textPreview":"Tim Pertamina melaksanakan instalasi dengan personel dan tools yang sesuai.","textChars":75,"textLines":1,"bbox":[395,306,760,36]}
+{"kind":"shape","id":"sh/2dsryhkr","slide":3,"name":"row-3","bbox":[42,356,1138,58]}
+{"kind":"shape","id":"sh/ilw36p8b","slide":3,"name":"num-3","bbox":[42,356,65,58]}
+{"kind":"textbox","id":"sh/jmpkfupg","slide":3,"name":"text","text":"04","textPreview":"04","textChars":2,"textLines":1,"bbox":[57,373,36,25]}
+{"kind":"textbox","id":"sh/knyl8fq1","slide":3,"name":"text","text":"Mur, baut, kunci","textPreview":"Mur, baut, kunci","textChars":16,"textLines":1,"bbox":[128,371,250,28]}
+{"kind":"textbox","id":"sh/5o72hk7m","slide":3,"name":"text","text":"Pertamina memberikan standar fastener dan ukuran kunci pas yang digunakan.","textPreview":"Pertamina memberikan standar fastener dan ukuran kunci pas yang digunakan.","textChars":74,"textLines":1,"bbox":[395,368,760,36]}
+{"kind":"shape","id":"sh/6pg3ap87","slide":3,"name":"row-4","bbox":[42,418,1138,58]}
+{"kind":"shape","id":"sh/7qp4jups","slide":3,"name":"num-4","bbox":[42,418,65,58]}
+{"kind":"textbox","id":"sh/srylczqd","slide":3,"name":"text","text":"05","textPreview":"05","textChars":2,"textLines":1,"bbox":[57,435,36,25]}
+{"kind":"textbox","id":"sh/tc7ml47y","slide":3,"name":"text","text":"Batas pemasangan","textPreview":"Batas pemasangan","textChars":16,"textLines":1,"bbox":[128,433,250,28]}
+{"kind":"textbox","id":"sh/mtc3y583","slide":3,"name":"text","text":"Pertamina memberi batas tinggi antenna, area berbahaya dan jalur yang diizinkan.","textPreview":"Pertamina memberi batas tinggi antenna, area berbahaya dan jalur yang diizinkan.","textChars":80,"textLines":1,"bbox":[395,430,760,36]}
+{"kind":"shape","id":"sh/nulk7a98","slide":3,"name":"row-5","bbox":[42,480,1138,58]}
+{"kind":"shape","id":"sh/p8b6d8r6","slide":3,"name":"num-5","bbox":[42,480,65,58]}
+{"kind":"textbox","id":"sh/472543al","slide":3,"name":"text","text":"06","textPreview":"06","textChars":2,"textLines":1,"bbox":[57,497,36,25]}
+{"kind":"textbox","id":"sh/36toby90","slide":3,"name":"text","text":"Kabel panel–CH","textPreview":"Kabel panel–CH","textChars":14,"textLines":1,"bbox":[128,495,250,28]}
+{"kind":"textbox","id":"sh/2l0n2tsf","slide":3,"name":"text","text":"Pertamina memberi jenis kabel, konektor, proteksi dan standar instalasi.","textPreview":"Pertamina memberi jenis kabel, konektor, proteksi dan standar instalasi.","textChars":72,"textLines":1,"bbox":[395,492,760,36]}
+{"kind":"shape","id":"sh/dcb6h8r2","slide":3,"name":"row-6","bbox":[42,542,1138,58]}
+{"kind":"shape","id":"sh/cb2583ah","slide":3,"name":"num-6","bbox":[42,542,65,58]}
+{"kind":"textbox","id":"sh/ratofi9w","slide":3,"name":"text","text":"07","textPreview":"07","textChars":2,"textLines":1,"bbox":[57,559,36,25]}
+{"kind":"textbox","id":"sh/q9kn6dsb","slide":3,"name":"text","text":"Ketentuan battery","textPreview":"Ketentuan battery","textChars":17,"textLines":1,"bbox":[128,557,250,28]}
+{"kind":"textbox","id":"sh/tgr65ory","slide":3,"name":"text","text":"Pertamina menetapkan jenis, enclosure, sertifikasi, inspeksi dan pembatasan lokasi.","textPreview":"Pertamina menetapkan jenis, enclosure, sertifikasi, inspeksi dan pembatasan lokasi.","textChars":83,"textLines":1,"bbox":[395,554,760,36]}
+{"kind":"notes","id":"nt/ao3x6n","slide":3,"text":"[Sources]\nPoin revisi pengguna - sisi CH."}
+{"kind":"slide","id":"sl/w3kg8q","slide":4,"title":"Gateway: Pertamina perlu membuka jalur IP dan menjelaskan security jaringan","textShapes":18}
+{"kind":"textbox","id":"sh/ju9w76p8","slide":4,"name":"slide-title","text":"Gateway: Pertamina perlu membuka jalur IP dan menjelaskan security jaringan","textPreview":"Gateway: Pertamina perlu membuka jalur IP dan menjelaskan security jaringan","textChars":75,"textLines":1,"bbox":[42,32,1160,70]}
+{"kind":"textbox","id":"sh/4vidgb6t","slide":4,"name":"page","text":"04","textPreview":"04","textChars":2,"textLines":1,"bbox":[1185,665,50,22]}
+{"kind":"shape","id":"sh/5wre9g7e","slide":4,"name":"left-panel","bbox":[42,135,560,360]}
+{"kind":"shape","id":"sh/6xkfiloz","slide":4,"name":"right-panel","bbox":[630,135,608,360]}
+{"kind":"textbox","id":"sh/rytwbqpk","slide":4,"name":"text","text":"RENCANA LGU","textPreview":"RENCANA LGU","textChars":11,"textLines":1,"bbox":[64,159,510,38]}
+{"kind":"textbox","id":"sh/sz2xkv65","slide":4,"name":"text","text":"INFORMASI PERTAMINA","textPreview":"INFORMASI PERTAMINA","textChars":19,"textLines":1,"bbox":[652,159,558,60]}
+{"kind":"shape","id":"sh/tkbed07q","slide":4,"name":"bullet-0","bbox":[64,231,9,9]}
+{"kind":"textbox","id":"sh/elkfm5ov","slide":4,"name":"bullet-text-0","text":"Gateway menggunakan adaptor 5 VDC dan ditempatkan di dalam ruangan.","textPreview":"Gateway menggunakan adaptor 5 VDC dan ditempatkan di dalam ruangan.","textChars":67,"textLines":1,"bbox":[89,223,485,59]}
+{"kind":"shape","id":"sh/fmtwfqpg","slide":4,"name":"bullet-1","bbox":[64,293,9,9]}
+{"kind":"textbox","id":"sh/ryds72hk","slide":4,"name":"bullet-text-1","text":"Antenna ditempatkan di rooftop dengan kebutuhan jalur kabel dan proteksi.","textPreview":"Antenna ditempatkan di rooftop dengan kebutuhan jalur kabel dan proteksi.","textChars":73,"textLines":1,"bbox":[89,285,485,59]}
+{"kind":"shape","id":"sh/qx4reh0z","slide":4,"name":"bullet-2","bbox":[64,355,9,9]}
+{"kind":"textbox","id":"sh/d0va9czq","slide":4,"name":"bullet-text-2","text":"Konfigurasi Wi-Fi dasar saat ini memakai SSID dan password.","textPreview":"Konfigurasi Wi-Fi dasar saat ini memakai SSID dan password.","textChars":59,"textLines":1,"bbox":[89,347,485,59]}
+{"kind":"shape","id":"sh/szmtg7i5","slide":4,"name":"bullet-3","bbox":[64,417,9,9]}
+{"kind":"textbox","id":"sh/3uts32ho","slide":4,"name":"bullet-text-3","text":"Gateway terhubung ke broker MQTT melalui IP atau hostname server.","textPreview":"Gateway terhubung ke broker MQTT melalui IP atau hostname server.","textChars":65,"textLines":1,"bbox":[89,409,485,59]}
+{"kind":"shape","id":"sh/itkrax03","slide":4,"name":"bullet-0","bbox":[652,231,9,9]}
+{"kind":"textbox","id":"sh/5wva5czu","slide":4,"name":"bullet-text-0","text":"Prosedur registrasi MAC, SSID/security, DHCP/static IP, VLAN, DNS, NTP dan firewall.","textPreview":"Prosedur registrasi MAC, SSID/security, DHCP/static IP, VLAN, DNS, NTP dan firewall.","textChars":84,"textLines":1,"bbox":[677,223,520,59]}
+{"kind":"shape","id":"sh/4v29c7i9","slide":4,"name":"bullet-1","bbox":[652,293,9,9]}
+{"kind":"textbox","id":"sh/nqxsfmhs","slide":4,"name":"bullet-text-1","text":"Alamat/port broker, credential, TLS/mTLS, certificate dan topic ACL.","textPreview":"Alamat/port broker, credential, TLS/mTLS, certificate dan topic ACL.","textChars":68,"textLines":1,"bbox":[677,285,520,59]}
+{"kind":"shape","id":"sh/2pobm1g7","slide":4,"name":"bullet-2","bbox":[652,355,9,9]}
+{"kind":"textbox","id":"sh/yl8vel0f","slide":4,"name":"bullet-text-2","text":"Titik daya indoor, akses rooftop, batas antenna, rute coax, grounding dan proteksi petir.","textPreview":"Titik daya indoor, akses rooftop, batas antenna, rute coax, grounding dan proteksi petir.","textChars":89,"textLines":1,"bbox":[677,347,520,59]}
+{"kind":"shape","id":"sh/zmhw7q10","slide":4,"name":"bullet-3","bbox":[652,417,9,9]}
+{"kind":"textbox","id":"sh/knadgvil","slide":4,"name":"bullet-text-3","text":"Jalur IP/routing ke broker - tidak harus satu SSID atau subnet.","textPreview":"Jalur IP/routing ke broker - tidak harus satu SSID atau subnet.","textChars":63,"textLines":1,"bbox":[677,409,520,59]}
+{"kind":"shape","id":"sh/loje90j6","slide":4,"name":"metric-0","bbox":[42,535,260,94]}
+{"kind":"textbox","id":"sh/mpsvi50r","slide":4,"name":"text","text":"< 1 KB","textPreview":"< 1 KB","textChars":6,"textLines":1,"bbox":[60,550,224,34]}
+{"kind":"textbox","id":"sh/7a1wba1c","slide":4,"name":"text","text":"Target data per pesan","textPreview":"Target data per pesan","textChars":21,"textLines":1,"bbox":[60,591,224,25]}
+{"kind":"shape","id":"sh/8badkfih","slide":4,"name":"metric-1","bbox":[322,535,300,94]}
+{"kind":"textbox","id":"sh/9cjedkj2","slide":4,"name":"text","text":"90 byte / 10 detik","textPreview":"90 byte / 10 detik","textChars":18,"textLines":1,"bbox":[340,550,264,34]}
+{"kind":"textbox","id":"sh/2tov61k7","slide":4,"name":"text","text":"Estimasi periode tercepat","textPreview":"Estimasi periode tercepat","textChars":25,"textLines":1,"bbox":[340,591,264,25]}
+{"kind":"shape","id":"sh/nuxcz61s","slide":4,"name":"metric-2","bbox":[642,535,538,94]}
+{"kind":"textbox","id":"sh/58nylo3a","slide":4,"name":"text","text":"Validasi MQTT","textPreview":"Validasi MQTT","textChars":13,"textLines":1,"bbox":[660,550,502,34]}
+{"kind":"textbox","id":"sh/47excj2p","slide":4,"name":"text","text":"Ukur paket aktual karena JSON, topic, TCP/IP dan security menambah overhead","textPreview":"Ukur paket aktual karena JSON, topic, TCP/IP dan security menambah overhead","textChars":75,"textLines":1,"bbox":[660,591,502,25]}
+{"kind":"notes","id":"nt/w3kg8q","slide":4,"text":"[Sources]\nPoin revisi pengguna - sisi Gateway.\nfirmware/gateway/src/GatewayMqttMeshMain.cpp\nfirmware/config/GwConfig.h"}
+{"kind":"slide","id":"sl/uhixo1","slide":5,"title":"Server: LGU menyediakan dashboard; Pertamina menetapkan lingkungan target","textShapes":13}
+{"kind":"textbox","id":"sh/i5k32lcr","slide":5,"name":"slide-title","text":"Server: LGU menyediakan dashboard; Pertamina menetapkan lingkungan target","textPreview":"Server: LGU menyediakan dashboard; Pertamina menetapkan lingkungan target","textChars":73,"textLines":1,"bbox":[42,32,1160,70]}
+{"kind":"textbox","id":"sh/58bmxgb2","slide":5,"name":"page","text":"05","textPreview":"05","textChars":2,"textLines":1,"bbox":[1185,665,50,22]}
+{"kind":"shape","id":"sh/472l4bux","slide":5,"name":"left-panel","bbox":[42,145,560,410]}
+{"kind":"shape","id":"sh/rat4zqt8","slide":5,"name":"right-panel","bbox":[630,145,608,410]}
+{"kind":"textbox","id":"sh/69kn6lcn","slide":5,"name":"text","text":"DISEDIAKAN LGU","textPreview":"DISEDIAKAN LGU","textChars":14,"textLines":1,"bbox":[64,169,510,38]}
+{"kind":"textbox","id":"sh/twvm10be","slide":5,"name":"text","text":"DIBUTUHKAN DARI PERTAMINA","textPreview":"DIBUTUHKAN DARI PERTAMINA","textChars":25,"textLines":1,"bbox":[652,169,558,60]}
+{"kind":"shape","id":"sh/sbm58vut","slide":5,"name":"bullet-0","bbox":[64,241,9,9]}
+{"kind":"textbox","id":"sh/7e94nmd4","slide":5,"name":"bullet-text-0","text":"Web dashboard, paket installer dan panduan konfigurasi.","textPreview":"Web dashboard, paket installer dan panduan konfigurasi.","textChars":55,"textLines":1,"bbox":[89,233,485,73]}
+{"kind":"shape","id":"sh/md03u1cj","slide":5,"name":"bullet-1","bbox":[64,317,9,9]}
+{"kind":"textbox","id":"sh/8beh47ml","slide":5,"name":"bullet-text-1","text":"Kebutuhan minimum CPU/RAM/storage, OS/runtime dan database yang didukung.","textPreview":"Kebutuhan minimum CPU/RAM/storage, OS/runtime dan database yang didukung.","textChars":73,"textLines":1,"bbox":[89,309,485,73]}
+{"kind":"shape","id":"sh/tcnydcn6","slide":5,"name":"bullet-2","bbox":[64,393,9,9]}
+{"kind":"textbox","id":"sh/69cz2x4f","slide":5,"name":"bullet-text-2","text":"Dependency, port, service, schema database dan prosedur startup/backup.","textPreview":"Dependency, port, service, schema database dan prosedur startup/backup.","textChars":71,"textLines":1,"bbox":[89,385,485,73]}
+{"kind":"shape","id":"sh/7algb250","slide":5,"name":"bullet-3","bbox":[64,469,9,9]}
+{"kind":"textbox","id":"sh/gzeh8rmh","slide":5,"name":"bullet-text-3","text":"Dukungan instalasi, commissioning, dokumentasi dan training.","textPreview":"Dukungan instalasi, commissioning, dokumentasi dan training.","textChars":60,"textLines":1,"bbox":[89,461,485,73]}
+{"kind":"shape","id":"sh/h0ny1wn2","slide":5,"name":"bullet-0","bbox":[652,241,9,9]}
+{"kind":"textbox","id":"sh/udwz6h4r","slide":5,"name":"bullet-text-0","text":"Spesifikasi aktual server/VM: CPU, RAM, storage dan availability.","textPreview":"Spesifikasi aktual server/VM: CPU, RAM, storage dan availability.","textChars":65,"textLines":1,"bbox":[677,233,520,73]}
+{"kind":"shape","id":"sh/vy5gzm5c","slide":5,"name":"bullet-1","bbox":[652,317,9,9]}
+{"kind":"textbox","id":"sh/w3ahwnmd","slide":5,"name":"bullet-text-1","text":"OS/versi, akses admin, container policy, antivirus dan patching.","textPreview":"OS/versi, akses admin, container policy, antivirus dan patching.","textChars":64,"textLines":1,"bbox":[677,309,520,73]}
+{"kind":"shape","id":"sh/x43y5sny","slide":5,"name":"bullet-2","bbox":[652,393,9,9]}
+{"kind":"textbox","id":"sh/dob6dkba","slide":5,"name":"bullet-text-2","text":"Database, retention, backup/restore dan ownership DBA.","textPreview":"Database, retention, backup/restore dan ownership DBA.","textChars":54,"textLines":1,"bbox":[677,385,520,73]}
+{"kind":"shape","id":"sh/sn25kfu5","slide":5,"name":"bullet-3","bbox":[652,469,9,9]}
+{"kind":"textbox","id":"sh/rmtobatk","slide":5,"name":"bullet-text-3","text":"IP/FQDN, broker MQTT, port/firewall, account, certificate dan PIC operasi.","textPreview":"IP/FQDN, broker MQTT, port/firewall, account, certificate dan PIC operasi.","textChars":74,"textLines":1,"bbox":[677,461,520,73]}
+{"kind":"shape","id":"sh/ql0nipcz","slide":5,"name":"server-output","bbox":[42,590,1138,62]}
+{"kind":"textbox","id":"sh/1sb6h4bm","slide":5,"name":"text","text":"Output: server readiness sheet + jadwal instalasi + PIC + kriteria acceptance","textPreview":"Output: server readiness sheet + jadwal instalasi + PIC + kriteria acceptance","textChars":77,"textLines":1,"bbox":[62,606,1095,34]}
+{"kind":"notes","id":"nt/uhixo1","slide":5,"text":"[Sources]\nPoin revisi pengguna - sisi Server.\nLGU requirements versus Pertamina actual environment must be reconciled before installation."}
+{"kind":"slide","id":"sl/hvxlq8","slide":6,"title":"Pembagian tugas LGU–Pertamina · Bagian 1","textShapes":19}
+{"kind":"textbox","id":"sh/vq9cn2dg","slide":6,"name":"slide-title","text":"Pembagian tugas LGU–Pertamina · Bagian 1","textPreview":"Pembagian tugas LGU–Pertamina · Bagian 1","textChars":40,"textLines":1,"bbox":[42,32,1160,70]}
+{"kind":"textbox","id":"sh/writw7e1","slide":6,"name":"page","text":"06","textPreview":"06","textChars":2,"textLines":1,"bbox":[1185,665,50,22]}
+{"kind":"textbox","id":"sh/xsrupcvm","slide":6,"name":"text","text":"Setiap baris perlu memiliki PIC, target tanggal, dan bukti penyelesaian.","textPreview":"Setiap baris perlu memiliki PIC, target tanggal, dan bukti penyelesaian.","textChars":72,"textLines":1,"bbox":[42,104,1120,32]}
+{"kind":"shape","id":"sh/itkbyhw7","slide":6,"name":"head-lgu","bbox":[42,148,565,44]}
+{"kind":"shape","id":"sh/jutcr2ds","slide":6,"name":"head-ptm","bbox":[607,148,573,44]}
+{"kind":"textbox","id":"sh/kf2t07ed","slide":6,"name":"text","text":"LGU","textPreview":"LGU","textChars":3,"textLines":1,"bbox":[62,159,200,25]}
+{"kind":"textbox","id":"sh/5gbutcvy","slide":6,"name":"text","text":"PERTAMINA","textPreview":"PERTAMINA","textChars":9,"textLines":1,"bbox":[627,159,220,25]}
+{"kind":"shape","id":"sh/6hkb2hw3","slide":6,"name":"lgu-0","bbox":[42,192,565,65]}
+{"kind":"shape","id":"sh/7itcvmdo","slide":6,"name":"ptm-0","bbox":[607,192,573,65]}
+{"kind":"textbox","id":"sh/ryp8rmp4","slide":6,"name":"lgu-text-0","text":"01 · Power GLD\nTetapkan kebutuhan 24 VDC minimal 2 A kontinu dan detail koneksi.","textPreview":"01 · Power GLD | Tetapkan kebutuhan 24 VDC minimal 2 A kontinu dan detail koneksi.","textChars":80,"textLines":2,"bbox":[62,200,525,50]}
+{"kind":"textbox","id":"sh/qxg7yhoj","slide":6,"name":"ptm-text-0","text":"01 · Power GLD\nSediakan titik daya dan buktikan kapasitas melalui pengukuran.","textPreview":"01 · Power GLD | Sediakan titik daya dan buktikan kapasitas melalui pengukuran.","textChars":77,"textLines":2,"bbox":[627,200,533,50]}
+{"kind":"shape","id":"sh/dkrqtw7a","slide":6,"name":"lgu-1","bbox":[42,257,565,65]}
+{"kind":"shape","id":"sh/szip0r6p","slide":6,"name":"ptm-1","bbox":[607,257,573,65]}
+{"kind":"textbox","id":"sh/3up8nmps","slide":6,"name":"lgu-text-1","text":"02 · Lokasi GLD\nUsulkan lokasi dekat sensor existing dan metode pemasangan.","textPreview":"02 · Lokasi GLD | Usulkan lokasi dekat sensor existing dan metode pemasangan.","textChars":75,"textLines":2,"bbox":[62,265,525,50]}
+{"kind":"textbox","id":"sh/itg7uhon","slide":6,"name":"ptm-text-1","text":"02 · Lokasi GLD\nBerikan akses, izin, titik pemasangan dan aturan proteksi.","textPreview":"02 · Lokasi GLD | Berikan akses, izin, titik pemasangan dan aturan proteksi.","textChars":74,"textLines":2,"bbox":[627,265,533,50]}
+{"kind":"shape","id":"sh/5w7qpc7y","slide":6,"name":"lgu-2","bbox":[42,322,565,65]}
+{"kind":"shape","id":"sh/4vypw76d","slide":6,"name":"ptm-2","bbox":[607,322,573,65]}
+{"kind":"textbox","id":"sh/nqt8z6pc","slide":6,"name":"lgu-text-2","text":"03 · Battery GLD\nLanjutkan optimasi power management; belum untuk kontinu.","textPreview":"03 · Battery GLD | Lanjutkan optimasi power management; belum untuk kontinu.","textChars":74,"textLines":2,"bbox":[62,330,525,50]}
+{"kind":"textbox","id":"sh/2p0r61or","slide":6,"name":"ptm-text-2","text":"03 · Battery GLD\nBerikan ketentuan site untuk fase pengembangan berikutnya.","textPreview":"03 · Battery GLD | Berikan ketentuan site untuk fase pengembangan berikutnya.","textChars":75,"textLines":2,"bbox":[627,330,533,50]}
+{"kind":"shape","id":"sh/yl4by58z","slide":6,"name":"lgu-3","bbox":[42,387,565,65]}
+{"kind":"shape","id":"sh/zmdsra9k","slide":6,"name":"ptm-3","bbox":[607,387,573,65]}
+{"kind":"textbox","id":"sh/knmt0fq5","slide":6,"name":"lgu-text-3","text":"04 · Mounting CH\nDesain dan fabrikasi mounting sesuai struktur existing.","textPreview":"04 · Mounting CH | Desain dan fabrikasi mounting sesuai struktur existing.","textChars":72,"textLines":2,"bbox":[62,395,525,50]}
+{"kind":"textbox","id":"sh/lovatkrq","slide":6,"name":"ptm-text-3","text":"04 · Mounting CH\nBerikan foto, dimensi, batas beban dan persetujuan desain.","textPreview":"04 · Mounting CH | Berikan foto, dimensi, batas beban dan persetujuan desain.","textChars":75,"textLines":2,"bbox":[627,395,533,50]}
+{"kind":"shape","id":"sh/mpob2p8v","slide":6,"name":"lgu-4","bbox":[42,452,565,65]}
+{"kind":"shape","id":"sh/7axcvu9g","slide":6,"name":"ptm-4","bbox":[607,452,573,65]}
+{"kind":"textbox","id":"sh/8b6t4fq1","slide":6,"name":"lgu-text-4","text":"05 · Solar panel\nPilih panel tersertifikasi dan serahkan dokumen.","textPreview":"05 · Solar panel | Pilih panel tersertifikasi dan serahkan dokumen.","textChars":65,"textLines":2,"bbox":[62,460,525,50]}
+{"kind":"textbox","id":"sh/9cfuxkrm","slide":6,"name":"ptm-text-4","text":"05 · Solar panel\nTetapkan sertifikasi yang diterima dan setujui panel.","textPreview":"05 · Solar panel | Tetapkan sertifikasi yang diterima dan setujui panel.","textChars":70,"textLines":2,"bbox":[627,460,533,50]}
+{"kind":"shape","id":"sh/2tkbql8r","slide":6,"name":"lgu-5","bbox":[42,517,565,65]}
+{"kind":"shape","id":"sh/netsjq9c","slide":6,"name":"ptm-5","bbox":[607,517,573,65]}
+{"kind":"textbox","id":"sh/58jepobu","slide":6,"name":"lgu-text-5","text":"06 · Instalasi CH\nBerikan drawing, wiring dan metode instalasi.","textPreview":"06 · Instalasi CH | Berikan drawing, wiring dan metode instalasi.","textChars":63,"textLines":2,"bbox":[62,525,525,50]}
+{"kind":"textbox","id":"sh/47qdwja9","slide":6,"name":"ptm-text-5","text":"06 · Instalasi CH\nLaksanakan instalasi dengan personel, tools dan prosedur K3.","textPreview":"06 · Instalasi CH | Laksanakan instalasi dengan personel, tools dan prosedur K3.","textChars":78,"textLines":2,"bbox":[627,525,533,50]}
+{"kind":"shape","id":"sh/j6hwneto","slide":6,"name":"lgu-6","bbox":[42,582,565,65]}
+{"kind":"shape","id":"sh/i58vuts3","slide":6,"name":"ptm-6","bbox":[607,582,573,65]}
+{"kind":"textbox","id":"sh/dcjet8bq","slide":6,"name":"lgu-text-6","text":"07 · Fastener\nSesuaikan mounting dengan standar mur/baut/kunci.","textPreview":"07 · Fastener | Sesuaikan mounting dengan standar mur/baut/kunci.","textChars":63,"textLines":2,"bbox":[62,590,525,50]}
+{"kind":"textbox","id":"sh/sbad03al","slide":6,"name":"ptm-text-6","text":"07 · Fastener\nBerikan ukuran dan standar fastener yang digunakan.","textPreview":"07 · Fastener | Berikan ukuran dan standar fastener yang digunakan.","textChars":65,"textLines":2,"bbox":[627,590,533,50]}
+{"kind":"notes","id":"nt/hvxlq8","slide":6,"text":"[Sources]\nPembagian tugas hasil konsolidasi poin pengguna."}
+{"kind":"slide","id":"sl/n72858","slide":7,"title":"Pembagian tugas LGU–Pertamina · Bagian 2","textShapes":19}
+{"kind":"textbox","id":"sh/qp8v61kz","slide":7,"name":"slide-title","text":"Pembagian tugas LGU–Pertamina · Bagian 2","textPreview":"Pembagian tugas LGU–Pertamina · Bagian 2","textChars":40,"textLines":1,"bbox":[42,32,1160,70]}
+{"kind":"textbox","id":"sh/dszu1gja","slide":7,"name":"page","text":"07","textPreview":"07","textChars":2,"textLines":1,"bbox":[1185,665,50,22]}
+{"kind":"textbox","id":"sh/crqd8b25","slide":7,"name":"text","text":"Setiap baris perlu memiliki PIC, target tanggal, dan bukti penyelesaian.","textPreview":"Setiap baris perlu memiliki PIC, target tanggal, dan bukti penyelesaian.","textChars":72,"textLines":1,"bbox":[42,104,1120,32]}
+{"kind":"shape","id":"sh/zehc3q1g","slide":7,"name":"head-lgu","bbox":[42,148,565,44]}
+{"kind":"shape","id":"sh/yd8valkv","slide":7,"name":"head-ptm","bbox":[607,148,573,44]}
+{"kind":"textbox","id":"sh/lgju50jm","slide":7,"name":"text","text":"LGU","textPreview":"LGU","textChars":3,"textLines":1,"bbox":[62,159,200,25]}
+{"kind":"textbox","id":"sh/0fadcv21","slide":7,"name":"text","text":"PERTAMINA","textPreview":"PERTAMINA","textChars":9,"textLines":1,"bbox":[627,159,220,25]}
+{"kind":"shape","id":"sh/fixcrm1c","slide":7,"name":"lgu-0","bbox":[42,192,565,65]}
+{"kind":"shape","id":"sh/uxobyhkr","slide":7,"name":"ptm-0","bbox":[607,192,573,65]}
+{"kind":"textbox","id":"sh/0fqlkv2t","slide":7,"name":"lgu-text-0","text":"08 · Batas CH\nSesuaikan antenna, enclosure dan kabel dengan aturan site.","textPreview":"08 · Batas CH | Sesuaikan antenna, enclosure dan kabel dengan aturan site.","textChars":72,"textLines":2,"bbox":[62,200,525,50]}
+{"kind":"textbox","id":"sh/1gz2t03e","slide":7,"name":"ptm-text-0","text":"08 · Batas CH\nBerikan batas tinggi, area bahaya, rute, grounding dan kabel.","textPreview":"08 · Batas CH | Berikan batas tinggi, area bahaya, rute, grounding dan kabel.","textChars":75,"textLines":2,"bbox":[627,200,533,50]}
+{"kind":"shape","id":"sh/etoji5k3","slide":7,"name":"lgu-1","bbox":[42,257,565,65]}
+{"kind":"shape","id":"sh/zexkral8","slide":7,"name":"ptm-1","bbox":[607,257,573,65]}
+{"kind":"textbox","id":"sh/ojqlof25","slide":7,"name":"lgu-text-1","text":"09 · Battery CH\nSerahkan spesifikasi, enclosure, proteksi dan SDS.","textPreview":"09 · Battery CH | Serahkan spesifikasi, enclosure, proteksi dan SDS.","textChars":66,"textLines":2,"bbox":[62,265,525,50]}
+{"kind":"textbox","id":"sh/9kz2xk3q","slide":7,"name":"ptm-text-1","text":"09 · Battery CH\nJelaskan dan setujui ketentuan battery di area Pertamina.","textPreview":"09 · Battery CH | Jelaskan dan setujui ketentuan battery di area Pertamina.","textChars":73,"textLines":2,"bbox":[627,265,533,50]}
+{"kind":"shape","id":"sh/mh83m5kz","slide":7,"name":"lgu-2","bbox":[42,322,565,65]}
+{"kind":"shape","id":"sh/nihkvalk","slide":7,"name":"ptm-2","bbox":[607,322,573,65]}
+{"kind":"textbox","id":"sh/4nm1cb2l","slide":7,"name":"lgu-text-2","text":"10 · Gateway fisik\nSediakan GW, adaptor 5 V, antenna dan detail kabel.","textPreview":"10 · Gateway fisik | Sediakan GW, adaptor 5 V, antenna dan detail kabel.","textChars":70,"textLines":2,"bbox":[62,330,525,50]}
+{"kind":"textbox","id":"sh/pof2lg36","slide":7,"name":"ptm-text-2","text":"10 · Gateway fisik\nSediakan daya indoor, rooftop, rute coax dan proteksi petir.","textPreview":"10 · Gateway fisik | Sediakan daya indoor, rooftop, rute coax dan proteksi petir.","textChars":79,"textLines":2,"bbox":[627,330,533,50]}
+{"kind":"shape","id":"sh/58nqt8ry","slide":7,"name":"lgu-3","bbox":[42,387,565,65]}
+{"kind":"shape","id":"sh/k7e90nad","slide":7,"name":"ptm-3","bbox":[607,387,573,65]}
+{"kind":"textbox","id":"sh/j658ri9s","slide":7,"name":"lgu-text-3","text":"11 · Registrasi jaringan\nBerikan MAC/device list dan sesuaikan konfigurasi.","textPreview":"11 · Registrasi jaringan | Berikan MAC/device list dan sesuaikan konfigurasi.","textChars":75,"textLines":2,"bbox":[62,395,525,50]}
+{"kind":"textbox","id":"sh/i5cryds7","slide":7,"name":"ptm-text-3","text":"11 · Registrasi jaringan\nBerikan registrasi, SSID/security, IP, firewall dan broker.","textPreview":"11 · Registrasi jaringan | Berikan registrasi, SSID/security, IP, firewall dan broker.","textChars":84,"textLines":2,"bbox":[627,395,533,50]}
+{"kind":"shape","id":"sh/twnaxsru","slide":7,"name":"lgu-4","bbox":[42,452,565,65]}
+{"kind":"shape","id":"sh/sbe94nq9","slide":7,"name":"ptm-4","bbox":[607,452,573,65]}
+{"kind":"textbox","id":"sh/7a58vi94","slide":7,"name":"lgu-text-4","text":"12 · MQTT & payload\nBerikan spec dan uji 90 byte/10 detik + capture.","textPreview":"12 · MQTT & payload | Berikan spec dan uji 90 byte/10 detik + capture.","textChars":68,"textLines":2,"bbox":[62,460,525,50]}
+{"kind":"textbox","id":"sh/69wr2d8j","slide":7,"name":"ptm-text-4","text":"12 · MQTT & payload\nSediakan broker/ACL dan setujui limit payload/rate.","textPreview":"12 · MQTT & payload | Sediakan broker/ACL dan setujui limit payload/rate.","textChars":71,"textLines":2,"bbox":[627,460,533,50]}
+{"kind":"shape","id":"sh/h07a1sr6","slide":7,"name":"lgu-5","bbox":[42,517,565,65]}
+{"kind":"shape","id":"sh/gzy987ql","slide":7,"name":"ptm-5","bbox":[607,517,573,65]}
+{"kind":"textbox","id":"sh/el8n2p83","slide":7,"name":"lgu-text-5","text":"13 · Server/dashboard\nSediakan dashboard, installer, minimum spec dan training.","textPreview":"13 · Server/dashboard | Sediakan dashboard, installer, minimum spec dan training.","textChars":79,"textLines":2,"bbox":[62,525,525,50]}
+{"kind":"textbox","id":"sh/z6hovupo","slide":7,"name":"ptm-text-5","text":"13 · Server/dashboard\nSediakan host/OS/DB aktual, akses, network dan backup policy.","textPreview":"13 · Server/dashboard | Sediakan host/OS/DB aktual, akses, network dan backup policy.","textChars":83,"textLines":2,"bbox":[627,525,533,50]}
+{"kind":"shape","id":"sh/07a54zq9","slide":7,"name":"lgu-6","bbox":[42,582,565,65]}
+{"kind":"shape","id":"sh/18j6x47e","slide":7,"name":"ptm-6","bbox":[607,582,573,65]}
+{"kind":"textbox","id":"sh/m9s7q98z","slide":7,"name":"lgu-text-6","text":"14 · Commissioning\nSiapkan FAT/SAT, evidence, troubleshooting dan handover.","textPreview":"14 · Commissioning | Siapkan FAT/SAT, evidence, troubleshooting dan handover.","textChars":75,"textLines":2,"bbox":[62,590,525,50]}
+{"kind":"textbox","id":"sh/na1ozepk","slide":7,"name":"ptm-text-6","text":"14 · Commissioning\nJadwalkan SAT, hadirkan PIC, tutup temuan dan sign-off.","textPreview":"14 · Commissioning | Jadwalkan SAT, hadirkan PIC, tutup temuan dan sign-off.","textChars":74,"textLines":2,"bbox":[627,590,533,50]}
+{"kind":"notes","id":"nt/n72858","slide":7,"text":"[Sources]\nPembagian tugas hasil konsolidasi poin pengguna."}
+{"kind":"slide","id":"sl/atmn30","slide":8,"title":"Informasi minimum dari Pertamina sebelum pemasangan","textShapes":11}
+{"kind":"textbox","id":"sh/98rm543e","slide":8,"name":"slide-title","text":"Informasi minimum dari Pertamina sebelum pemasangan","textPreview":"Informasi minimum dari Pertamina sebelum pemasangan","textChars":51,"textLines":1,"bbox":[42,32,1160,70]}
+{"kind":"textbox","id":"sh/m5gna9kn","slide":8,"name":"page","text":"08","textPreview":"08","textChars":2,"textLines":1,"bbox":[1185,665,50,22]}
+{"kind":"shape","id":"sh/n6p43ul8","slide":8,"name":"bullet-0","bbox":[42,138,9,9]}
+{"kind":"textbox","id":"sh/03y58z2h","slide":8,"name":"bullet-text-0","text":"Bukti kesiapan power GLD 24 VDC minimal 2 A: lokasi, polaritas, proteksi, grounding dan hasil ukur.","textPreview":"Bukti kesiapan power GLD 24 VDC minimal 2 A: lokasi, polaritas, proteksi, grounding dan hasil ukur.","textChars":99,"textLines":1,"bbox":[67,130,1113,59]}
+{"kind":"shape","id":"sh/l47m1432","slide":8,"name":"bullet-1","bbox":[42,200,9,9]}
+{"kind":"textbox","id":"sh/yhgn6pkr","slide":8,"name":"bullet-text-1","text":"Data mounting CH: foto, ukuran tiang/handrail, fastener, batas beban, area bahaya dan sertifikasi.","textPreview":"Data mounting CH: foto, ukuran tiang/handrail, fastener, batas beban, area bahaya dan sertifikasi.","textChars":98,"textLines":1,"bbox":[67,192,1113,59]}
+{"kind":"shape","id":"sh/zip4zulc","slide":8,"name":"bullet-2","bbox":[42,262,9,9]}
+{"kind":"textbox","id":"sh/kz25kj21","slide":8,"name":"bullet-text-2","text":"Standar panel surya, kabel panel–CH, battery, enclosure, grounding dan proteksi petir.","textPreview":"Standar panel surya, kabel panel–CH, battery, enclosure, grounding dan proteksi petir.","textChars":86,"textLines":1,"bbox":[67,254,1113,59]}
+{"kind":"shape","id":"sh/50b6dojm","slide":8,"name":"bullet-3","bbox":[42,324,9,9]}
+{"kind":"textbox","id":"sh/hgvut4n2","slide":8,"name":"bullet-text-3","text":"Lokasi Gateway indoor, adaptor 5 V, akses rooftop, batas antenna dan jalur coax.","textPreview":"Lokasi Gateway indoor, adaptor 5 V, akses rooftop, batas antenna dan jalur coax.","textChars":80,"textLines":1,"bbox":[67,316,1113,59]}
+{"kind":"shape","id":"sh/wvmtkzmx","slide":8,"name":"bullet-4","bbox":[42,386,9,9]}
+{"kind":"textbox","id":"sh/vudcru5c","slide":8,"name":"bullet-text-4","text":"Registrasi jaringan: MAC, SSID/security, VLAN, IP, DNS, NTP, firewall, broker, ACL dan certificate.","textPreview":"Registrasi jaringan: MAC, SSID/security, VLAN, IP, DNS, NTP, firewall, broker, ACL dan certificate.","textChars":99,"textLines":1,"bbox":[67,378,1113,59]}
+{"kind":"shape","id":"sh/ut4bi9or","slide":8,"name":"bullet-5","bbox":[42,448,9,9]}
+{"kind":"textbox","id":"sh/9svup4n6","slide":8,"name":"bullet-text-5","text":"Spesifikasi server: VM/host, CPU/RAM/storage, OS, database, akses admin, backup dan PIC.","textPreview":"Spesifikasi server: VM/host, CPU/RAM/storage, OS, database, akses admin, backup dan PIC.","textChars":88,"textLines":1,"bbox":[67,440,1113,59]}
+{"kind":"shape","id":"sh/8rmtgz6l","slide":8,"name":"bullet-6","bbox":[42,510,9,9]}
+{"kind":"textbox","id":"sh/7qdsnu50","slide":8,"name":"bullet-text-6","text":"Jadwal instalasi, daftar PIC, skenario SAT, kriteria lulus dan penandatangan acceptance.","textPreview":"Jadwal instalasi, daftar PIC, skenario SAT, kriteria lulus dan penandatangan acceptance.","textChars":88,"textLines":1,"bbox":[67,502,1113,59]}
+{"kind":"shape","id":"sh/mpkbepof","slide":8,"name":"tech-note","bbox":[42,578,1138,73]}
+{"kind":"textbox","id":"sh/tofulona","slide":8,"name":"text","text":"Catatan teknis","textPreview":"Catatan teknis","textChars":14,"textLines":1,"bbox":[62,594,190,25]}
+{"kind":"textbox","id":"sh/sn6tsjmp","slide":8,"name":"text","text":"“Satu jaringan” berarti tersedia IP routing ke broker. Nilai 90 byte adalah target data; paket MQTT aktual tetap harus diukur saat SAT.","textPreview":"“Satu jaringan” berarti tersedia IP routing ke broker. Nilai 90 byte adalah target data; paket MQTT aktual tetap harus diukur saat SAT.","textChars":135,"textLines":1,"bbox":[250,590,900,38]}
+{"kind":"notes","id":"nt/atmn30","slide":8,"text":"[Sources]\nPoin revisi pengguna dan konsolidasi readiness checklist."}

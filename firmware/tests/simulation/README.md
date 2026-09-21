@@ -21,7 +21,7 @@ JavaScript**, wherever that's possible off-target:
 | CH-to-CH multi-hop relay + H1 fix | Mirrored orchestration, **real** `encodeAppFrame`/`hasAlarmAckFlag`/`markAlarmAcked` calls | See caveat below - the orchestrating file itself is Arduino-bound |
 | Authenticated downlink signing | **Real** `computeAesCmac128` (C++/mbedtls) **and** the real JS `aesCmac` from `apply-pertamina-gld-flow.js`, cross-checked byte-for-byte | `host_protocol_sim` + `run_server_cmac.js` |
 | Server-side decrypt/decode | **Real, unmodified** `server/nodered/functions/pertamina-gld-decode.js` | `run_decode_js.js`, via Node's `vm` module with a minimal Node-RED function-node shim (`msg`/`flow`/`global`/`env`) |
-| ML classification | **Real, trained** TFLite model extracted from `firmware/gld/model/model_data.cpp` | `run_full_system_simulation.py`, reusing the approach from `validate_c1_scaler_order.py` (optional - degrades gracefully if `tflite-runtime` isn't installed) |
+| ML classification | **Real, trained** TFLite model from the active `firmware/gld/models/model_1/` slot | `run_full_system_simulation.py`, using the same active-slot normalization contract as `validate_c1_scaler_order.py` (optional - degrades gracefully if `tflite-runtime` isn't installed) |
 
 ## What is NOT run — read this before trusting any result
 

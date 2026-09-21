@@ -1,0 +1,38 @@
+SOURCE STRUCTURE
+- 16-slide, 16:9 deck with one master and one inherited title-slide layout.
+- Slides 1-16 are all retained one-to-one; no source slide is omitted.
+- Page chrome is consistent: small section label, large Arial title, thin footer rule, date/footer text, and page number.
+
+REUSABLE SLIDE TYPES
+- Cover with full-height evidence image (slide 1).
+- Five-row outline table (slide 2).
+- Meeting outcome with two metrics, one callout, and one evidence image (slide 3).
+- Four-node architecture flow (slide 4).
+- Five-row status table (slide 5).
+- Metric plus technical verification panels (slide 6).
+- Three-stage process/timeline (slide 7).
+- Evidence image plus two-column implementation summary (slide 8).
+- Two-column discussion agenda (slides 9-10).
+- Three-column service agenda (slide 11).
+- Decision-location banner plus two columns (slide 12).
+- Site-survey checklist plus reference image (slide 13).
+- Three-phase roadmap (slide 14).
+- Three-column organizational responsibility split (slide 15).
+- Six-action close (slide 16).
+
+INHERITED PLACEHOLDERS AND ELEMENTS
+- All visible text, tables, callout frames, images, connectors, and footer furniture are slide-local inherited elements.
+- Existing images and geometry are preserved. Text-bearing inherited elements are rewritten in place.
+- Footer dates are intentionally updated to 19 August 2026; page numbers are preserved.
+- Speaker notes are rewritten per slide and retain a [Sources] block.
+
+TYPOGRAPHY AND SPACING
+- Arial is preserved throughout, including original size, weight, alignment, insets, and vertical anchor.
+- Original blue/white/gray palette, red only for the confirmed input-protection finding, and amber only for implementation attention are preserved.
+- Original bounding boxes and spacing rhythm are preserved; copy is shortened to fit existing frames.
+
+INSERTION CONTRACT
+- Import template-starter.pptx with artifact-tool.
+- Rewrite only the inherited element IDs declared in template-frame-map.json.
+- Do not add slides, shapes, tables, charts, images, or overlay canvases.
+- Preserve the master-layout-slide hierarchy and export the edited copy as the final PPTX.

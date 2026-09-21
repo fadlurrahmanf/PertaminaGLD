@@ -131,7 +131,7 @@ def crc16_ccitt_false(data: bytes) -> int:
 
 
 def encode_plain(gas_class: int, confidence: int, battery_mv: int) -> bytes:
-    assert 0 <= gas_class <= 6
+    assert 0 <= gas_class <= 7
     assert 0 <= confidence <= 100
     return bytes([gas_class, confidence]) + battery_mv.to_bytes(2, "big")
 
@@ -965,6 +965,7 @@ def test_gld_unified_runtime_scaffolds_present():
     assert "APP_PING" in command_src
     assert "GET_INFO" in command_src
     assert "GET_STATUS" in command_src
+    assert "GET_TELEMETRY" in command_src
     assert "RESTART" in command_src
     assert "RUN_BOOT_CHECK" in command_src
     assert "RUN_ADS_MCP_SWEEP" in command_src
@@ -980,9 +981,11 @@ def test_gld_unified_runtime_scaffolds_present():
     assert "GldSerialCommandType::AppPing" in command_src
     assert "GldSerialCommandType::GetInfo" in command_src
     assert "GldSerialCommandType::GetStatus" in command_src
+    assert "GldSerialCommandType::GetTelemetry" in command_src
     assert "Unknown" in command_header
     assert "Restart" in command_header
     assert "RunBootCheck" in command_header
+    assert "GetTelemetry" in command_header
     assert "RunAdsMcpSweep" in command_header
     assert "SleepNow" in command_header
     assert "ServiceHoldOff" in command_header
@@ -1016,6 +1019,25 @@ def test_gld_unified_runtime_scaffolds_present():
     assert 'emitCommandAck("RUN_BOOT_CHECK", "ok", "running boot diagnostics", false)' in unified_src
     assert "runBootHardwareDiagnostics(power.externalPower)" in unified_src
     assert "RUN_BOOT_CHECK_DONE" in unified_src
+    assert "void enableNonBatteryRuntimeSensorPower" in unified_src
+    assert "bool recoverGld2RootI2cForPcf" in unified_src
+    assert "Wire.end();" in unified_src
+    assert "OUTPUT_OPEN_DRAIN" in unified_src
+    assert "clearPulses < 9" in unified_src
+    assert "GLD2_ROOT_I2C_RECOVERY source=%s sda=%d/%d scl=%d/%d pulses=%u tcaDisable=%u" in unified_src
+    assert 'recoverGld2RootI2cForPcf("boot_i2c_probe")' in unified_src
+    assert "rootI2cNotIdle=1 skipProbe=1" in unified_src
+    assert "rootDevicesNoAck=1 skipFullScan=1" in unified_src
+    assert "rootI2cReadyForMcpControl" in unified_src
+    assert "BOOT_PROBE_MCP_CONTROL=skip reason=root_i2c_unavailable" in unified_src
+    assert 'recoverGld2RootI2cForPcf("current_state_i2c_probe")' in unified_src
+    assert "GLD2_CURRENT_I2C rootDevicesNoAck=1 skipRest=1" in unified_src
+    assert 'strcmp(reason, "tca_boot_fail") == 0' in unified_src
+    assert "BOOT_RECOVERY_DISABLED reason=%s action=keep_running" in unified_src
+    assert "pcfRootAck=0 skipDriver=1" in unified_src
+    assert "pcfReady = pcf8574.begin(Wire);" in unified_src
+    assert "liveOutputs == pgl::gld::board::PCF8574_ALL_LOAD_SWITCHES_ON" in unified_src
+    assert "GLD2_RUNTIME_SENSOR_POWER source=%s outputs=0x%02X write=%u read=%u enabled=%u attempts=%u" in unified_src
     assert 'caps["runBootCheck"] = true' in unified_src
     assert "runAdsMcpSweepFromSerialCommand" in unified_src
     assert 'emitCommandAck("RUN_ADS_MCP_SWEEP", "ok", "running ADS/MCP sweep", false)' in unified_src
@@ -1075,8 +1097,11 @@ def test_gld_unified_runtime_scaffolds_present():
     assert "BOOT_PROBE_ADS=start" in unified_src
     assert '"reason=%s DRDY=%d ST=0x%02X"' in unified_src
     assert "reason=%s drdy=%d pd=%d pu=%d misoPD=%d misoPU=%d cs=%d sync=%d status=0x%02X" in unified_src
-    assert "BOOT_PROBE_I2C=done tcaOk=%u mcpOkCount=%u/%u" in unified_src
+    assert "BOOT_PROBE_I2C=done fullScan=%u allAddresses=%s allCount=%u tcaOk=%u pcfOk=%u mcpOkCount=%u/%u" in unified_src
     assert "mcpMask=0x%02X" in unified_src
+    assert "void probeSelectedMcp4725" in unified_src
+    assert "probeSelectedMcp4725(addresses, sizeof(addresses), count)" in unified_src
+    assert "scanSelectedI2cBus" not in unified_src
     assert "BOOT_PROBE_MCP_CONTROL=done tested=%u dacReady=%u writeOkCount=%u/%u" in unified_src
     assert "writeMask=0x%02X" in unified_src
     assert "BootDiagnosticsResult runBootHardwareDiagnostics" in unified_src
@@ -1216,6 +1241,7 @@ def test_gld_unified_runtime_scaffolds_present():
     assert "js/main.js?v=20260715-manifold-1" not in operator_index
     assert "js/main.js?v=20260716-fullscale-sweep-1" in operator_index
     assert 'command === "GET_STATUS" || command === "RUN_BOOT_CHECK"' in operator_app
+    assert 'command === "GET_TELEMETRY"' in operator_app
     assert "SET_LORA_CONFIG_JSON" in operator_app
     assert "export async function applyLoraConfig()" in operator_app
     assert "syncLoraConfigFields" in operator_app
@@ -1291,11 +1317,19 @@ def test_gld_protocol_reference_matches_active_firmware():
     assert "confidence >= 40" not in protocol_ref
     assert "confidence ≥ 40" not in protocol_ref
 
+    # The shared runtime retains the active-low legacy-output branch, while
+    # GLD2 uses the audited GPIO40/Q4 active-HIGH path with EN_BOOST sequencing.
     assert "ACTIVE_LOW_OUTPUT_ON = LOW" in unified_src
     assert "ACTIVE_LOW_OUTPUT_OFF = HIGH" in unified_src
-    assert "PIN_ALARM_LAMP, alarm ? ACTIVE_LOW_OUTPUT_ON : ACTIVE_LOW_OUTPUT_OFF" in unified_src
-    assert "PIN_BUZZER,     alarm ? ACTIVE_LOW_OUTPUT_ON : ACTIVE_LOW_OUTPUT_OFF" in unified_src
-    assert "PIN_STATUS_LED, alarm ? ACTIVE_LOW_OUTPUT_ON : ACTIVE_LOW_OUTPUT_OFF" in unified_src
+    assert "#if PGL_GLD_BOARD_PROFILE_GLD2" in unified_src
+    alarm_driver_start = unified_src.rindex("void drivePhysicalAlarmOutputs(bool enabled) {")
+    alarm_driver = unified_src[
+        alarm_driver_start:
+        unified_src.index("void driveAlarmOutputs(bool inferenceAlarm) {", alarm_driver_start)
+    ]
+    assert alarm_driver.index("PIN_ALARM_ENABLE_BOOST, HIGH") < alarm_driver.index("PIN_ALARM_LAMP, HIGH")
+    assert alarm_driver.index("PIN_ALARM_LAMP, LOW") < alarm_driver.index("PIN_ALARM_ENABLE_BOOST, LOW")
+    assert "enabled ? ACTIVE_LOW_OUTPUT_ON : ACTIVE_LOW_OUTPUT_OFF" in alarm_driver
     assert "Alarm lamp, buzzer, and status LED are active-low" in final_design
 
 
@@ -1500,9 +1534,9 @@ def test_version_constants_format():
     for version in versions:
         assert re.fullmatch(r"\d+\.\d+\.\d+", version), version
 
-    assert 'GLD_FIRMWARE_VERSION = "0.8.18"' in header
-    assert 'CH_FIRMWARE_VERSION = "0.7.3"' in header
-    assert 'GATEWAY_FIRMWARE_VERSION = "0.1.4"' in header
+    assert 'GLD_FIRMWARE_VERSION = "0.8.19"' in header
+    assert 'CH_FIRMWARE_VERSION = "0.8.0"' in header
+    assert 'GATEWAY_FIRMWARE_VERSION = "0.2.0"' in header
     assert 'PROTOCOL_VERSION = "0.2.0"' in header
     assert 'CONFIG_SCHEMA_VERSION = "0.1.0"' in header
 
@@ -1727,32 +1761,31 @@ def test_lora_link_selftest_scaffold_present():
     assert "LoRaHealthPayload" not in gld_tx
 
 
-def test_scaler_params_stay_in_physical_channel_order():
-    # Regression guard for audit finding C1: scaler_params.cpp feature_means/
-    # feature_stds must be indexed in physical hardware channel order
-    # (BoardPins.h SENSOR_NAMES), not in whatever order the training pipeline
-    # happened to export its columns in. Six of eight channels were silently
-    # standardized with another sensor's statistics before this was caught.
+def test_active_model_normalization_stays_in_physical_channel_order():
+    # Model slots use min-max normalization, not the removed legacy
+    # scaler_params.cpp StandardScaler arrays.  Keep the deployment contract
+    # guarded for every currently selectable production slot.
     board_pins = pathlib.Path("firmware/gld/include/BoardPins.h").read_text(encoding="utf-8")
-    scaler_src = pathlib.Path("firmware/gld/model/scaler_params.cpp").read_text(encoding="utf-8")
 
     sensor_names_match = re.search(r'SENSOR_NAMES\[SENSOR_COUNT\]\s*=\s*\{([^}]*)\}', board_pins)
     assert sensor_names_match, "could not find SENSOR_NAMES array in BoardPins.h"
     physical_order = re.findall(r'"(\w+)"', sensor_names_match.group(1))
     assert physical_order == ["MQ8", "MQ135", "MQ3", "MQ5", "MQ4", "MQ7", "MQ6", "MQ2"]
 
-    for array_name in ("feature_means", "feature_stds"):
-        block_match = re.search(array_name + r'\[8\]\s*=\s*\{(.*?)\}', scaler_src, re.S)
-        assert block_match, f"could not find {array_name} in scaler_params.cpp"
-        labels = re.findall(r'//\s*ch(\d+)\s+(\w+?)V', block_match.group(1))
-        assert len(labels) == 8, f"{array_name} must have exactly 8 labeled entries"
-        for ch_str, sensor in labels:
-            ch = int(ch_str)
-            assert sensor == physical_order[ch], (
-                f"{array_name} index {ch} is labeled {sensor}V but physical "
-                f"channel {ch} is {physical_order[ch]} per BoardPins.h "
-                f"SENSOR_NAMES - this is exactly the C1 ordering bug"
-            )
+    for slot in ("model_1", "model_2"):
+        normalize_src = pathlib.Path(
+            f"firmware/gld/models/{slot}/cnn_gas_datasheet_normalize_params.h"
+        ).read_text(encoding="utf-8")
+        names_match = re.search(r'CNN_GAS_ADC_NAMES\[CNN_GAS_N_ADC\]\s*=\s*\{([^}]*)\}', normalize_src)
+        assert names_match, f"{slot} must declare CNN_GAS_ADC_NAMES"
+        assert re.findall(r'"(\w+)"', names_match.group(1)) == physical_order, (
+            f"{slot} ADC feature order must match BoardPins.h SENSOR_NAMES"
+        )
+        for array_name in ("CNN_GAS_ADC_MIN", "CNN_GAS_ADC_MAX"):
+            block_match = re.search(array_name + r'\[CNN_GAS_N_ADC\]\s*=\s*\{(.*?)\}', normalize_src, re.S)
+            assert block_match, f"{slot} must declare {array_name}"
+            values = re.findall(r'-?[\d.]+f', block_match.group(1))
+            assert len(values) == 8, f"{slot} {array_name} must contain 8 values"
 
 
 def test_ch_mesh_relay_sends_hop_by_hop_alarm_ack_to_child():

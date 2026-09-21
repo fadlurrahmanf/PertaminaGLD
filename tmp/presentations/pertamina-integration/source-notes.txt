@@ -1,0 +1,22 @@
+Communication job: pada akhir presentasi, Pertamina dan LGU memahami arsitektur end-to-end serta dapat menetapkan PIC, keputusan teknis, bukti kesiapan, dan tanggal untuk setiap readiness gate sebelum pemasangan awal.
+
+Primary input:
+- Catatan rapat yang diberikan pengguna pada 13 Agustus 2026.
+
+Repository evidence used:
+- docs/design/gld/final_design.md
+- docs/design/ch/final_design.md
+- docs/design/gld-ch/payload-contract.draft.md
+- docs/design/gw-server/final_design.md
+- docs/design/server/final_design.md
+- firmware/gateway/src/GatewayMqttMeshMain.cpp
+- firmware/config/GwConfig.h
+- firmware/config/GldConfig.h
+- firmware/config/ServerConfig.h
+- server/nodered/README.md
+- server/nodered/flows/flows.json
+
+Evidence boundary:
+- Repo evidence is static/source evidence, not proof of current Pertamina deployment, server availability, broker access, or live hardware readiness.
+- Port 1884 is a current/bench source default, not an assumed production decision.
+- MQTT JSON payload is variable; radio frame sizes are presented separately.

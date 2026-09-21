@@ -11,10 +11,14 @@
 
 #include "AlarmQueue.h"
 #include "AppFrame.h"
-#if defined(PGL_CH_BOARD_CH3)
-#include "ChBoardPinsCh3.h"
+#if defined(PGL_CH_BOARD_CIRCLE) && defined(PGL_CH_BOARD_RECTANGLE)
+#error "Select exactly one CH board profile"
+#elif defined(PGL_CH_BOARD_CIRCLE)
+#include "ChBoardPinsCircle.h"
+#elif defined(PGL_CH_BOARD_RECTANGLE)
+#include "ChBoardPinsRectangle.h"
 #else
-#include "ChBoardPins.h"
+#error "Select PGL_CH_BOARD_CIRCLE or PGL_CH_BOARD_RECTANGLE"
 #endif
 #include "ChCommandParser.h"
 #include "ChParentPolicy.h"
@@ -510,7 +514,7 @@ bool saveRootGateway(uint16_t newId) {
 }
 
 bool isValidLoraConfig(const LoraConfigValues& cfg) {
-    return cfg.freqMHz >= 900.0f && cfg.freqMHz <= 930.0f &&
+    return cfg.freqMHz >= 920.0f && cfg.freqMHz <= 923.0f &&
            cfg.bwKHz >= 1.0f && cfg.bwKHz <= 510.0f &&
            cfg.sf >= 5 && cfg.sf <= 12 &&
            cfg.cr >= 5 && cfg.cr <= 8 &&
@@ -2497,10 +2501,10 @@ void emitInfoJson() {
                        | pgl::protocol::CH_CONFIG_CAP_HELLO_ACK_V1
                        | pgl::protocol::CH_CONFIG_CAP_ALARM_ACK_NODE_ID_V1
                        | pgl::protocol::CH_CONFIG_CAP_NODE_COMMAND_ROUTE_V1;
-    logPrintf("CH_INFO_JSON {\"chId\":\"%04X\",\"rootGatewayId\":\"%04X\","
+    logPrintf("CH_INFO_JSON {\"chId\":\"%04X\",\"rootGatewayId\":\"%04X\",\"boardProfile\":\"%s\","
               "\"firmwareName\":\"%s\",\"firmwareVersion\":\"%s\",\"protocolVersion\":\"%s\","
               "\"caps\":\"0x%02X\",",
-              CH_ID, ROOT_GATEWAY_ID,
+              CH_ID, ROOT_GATEWAY_ID, pgl::ch::board::BOARD_PROFILE,
               pgl::firmware::CH_FIRMWARE_NAME, pgl::firmware::CH_FIRMWARE_VERSION,
               pgl::firmware::PROTOCOL_VERSION, caps);
     // Mirrors CH_ACK_PROFILE (a boot-only log line) so a client that connects
@@ -2515,9 +2519,10 @@ void emitInfoJson() {
     logPrintf("\"starLora\":{\"freqMHz\":%.1f,\"bwKHz\":%.0f,\"sf\":%u,\"cr\":%u,\"syncWord\":%u,\"txPowerDbm\":%d},",
               static_cast<double>(STAR_FREQ_MHZ), static_cast<double>(STAR_BW_KHZ),
               STAR_SF, STAR_CR, STAR_SYNC_WORD, STAR_TX_POWER_DBM);
-    logPrintf("\"meshLora\":{\"freqMHz\":%.1f,\"bwKHz\":%.0f,\"sf\":%u,\"cr\":%u,\"syncWord\":%u,\"txPowerDbm\":%d}}\n",
+    logPrintf("\"meshLora\":{\"freqMHz\":%.1f,\"bwKHz\":%.0f,\"sf\":%u,\"cr\":%u,\"syncWord\":%u,\"txPowerDbm\":%d},\"radio\":{\"starReady\":%u,\"meshReady\":%u}}\n",
               static_cast<double>(MESH_FREQ_MHZ), static_cast<double>(MESH_BW_KHZ),
-              MESH_SF, MESH_CR, MESH_SYNC_WORD, MESH_TX_POWER_DBM);
+              MESH_SF, MESH_CR, MESH_SYNC_WORD, MESH_TX_POWER_DBM,
+              starReady ? 1 : 0, meshReady ? 1 : 0);
 }
 
 void emitStatusJson() {
@@ -2648,8 +2653,8 @@ bool jsonFindNumber(const char* json, const char* key, double& outValue) {
 
 bool parseLoraConfigJson(const char* json, LoraConfigValues& out, const char*& reason) {
     double freqMHz = 0, bwKHz = 0, sf = 0, cr = 0, syncWord = 0, txPowerDbm = 0;
-    if (!jsonFindNumber(json, "freqMHz", freqMHz) || !(freqMHz >= 900.0 && freqMHz <= 930.0)) {
-        reason = "freqMHz-out-of-range-900-930";
+    if (!jsonFindNumber(json, "freqMHz", freqMHz) || !(freqMHz >= 920.0 && freqMHz <= 923.0)) {
+        reason = "freqMHz-out-of-range-920-923";
         return false;
     }
     if (!jsonFindNumber(json, "bwKHz", bwKHz) || !(bwKHz >= 1.0 && bwKHz <= 510.0)) {

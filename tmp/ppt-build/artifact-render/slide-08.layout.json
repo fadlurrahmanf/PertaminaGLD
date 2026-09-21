@@ -1,0 +1,2002 @@
+{
+  "schema": "openai.presentation.layout/v4",
+  "unit": "px",
+  "slide": {
+    "aid": "sl/9jduav",
+    "id": "9jduav",
+    "slide": 8,
+    "layoutId": "6a1a93d3-ea1d-429f-9522-c5e67327db04",
+    "layoutName": "Title Slide",
+    "layoutType": "title",
+    "masterLayoutId": "ea845d38-f203-4a15-8d29-592c4f07080e",
+    "masterLayoutName": "Master",
+    "backgroundColor": "#FFFFFF",
+    "frame": {
+      "left": 0,
+      "top": 0,
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "theme": {
+    "colorSchemeName": "ChatGPT",
+    "colors": {
+      "accent1": "#156082",
+      "accent2": "#E97132",
+      "accent3": "#196B24",
+      "accent4": "#0F9ED5",
+      "accent5": "#A02B93",
+      "accent6": "#4EA72E",
+      "bg1": "#FFFFFF",
+      "bg2": "#000000",
+      "tx1": "#1F1F1F",
+      "tx2": "#FFFFFF",
+      "dk1": "#000000",
+      "lt1": "#FFFFFF",
+      "dk2": "#0E2841",
+      "lt2": "#E8E8E8",
+      "hlink": "#467886",
+      "folHlink": "#96607D"
+    },
+    "typefaces": [
+      "Arial"
+    ]
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "6a1a93d3-ea1d-429f-9522-c5e67327db04",
+      "name": "Title Slide",
+      "type": "title",
+      "parentLayoutId": "ea845d38-f203-4a15-8d29-592c4f07080e",
+      "elements": []
+    },
+    {
+      "scope": "master",
+      "id": "ea845d38-f203-4a15-8d29-592c4f07080e",
+      "name": "Master",
+      "type": "master",
+      "elements": []
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/7qp03m9g",
+      "id": "1",
+      "name": "section-8",
+      "bbox": [
+        52,
+        30,
+        480,
+        18
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.0"
+      },
+      "geometry": "rect",
+      "text": "CH READINESS",
+      "textPreview": "CH READINESS",
+      "resolvedFontSize": 14,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 14,
+        "typeface": "Arial",
+        "color": "#667085",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "CH READINESS"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "CH READINESS",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 14,
+            "typeface": "Arial",
+            "color": "#667085",
+            "bold": true,
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "CH READINESS",
+              "anchor": 1,
+              "fontSize": 14,
+              "typeface": "Arial",
+              "color": "#667085",
+              "bold": true,
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 2,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/8ry1cra1",
+      "id": "2",
+      "name": "title-8",
+      "bbox": [
+        52,
+        58,
+        1176,
+        60
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.1"
+      },
+      "geometry": "rect",
+      "text": "CH: radio siap di source; energi belum final",
+      "textPreview": "CH: radio siap di source; energi belum final",
+      "resolvedFontSize": 48,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 48,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "CH: radio siap di source; energi belum final"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "CH: radio siap di source; energi belum final",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 48,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "CH: radio siap di source; energi belum final",
+              "anchor": 1,
+              "fontSize": 48,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 3,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/9s725crm",
+      "id": "3",
+      "name": "footer-rule-8",
+      "bbox": [
+        52,
+        668,
+        1176,
+        1
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.2"
+      },
+      "geometry": "line",
+      "lineColor": "#B8BCC4",
+      "lineWidth": 1
+    },
+    {
+      "order": 4,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/utgjeh87",
+      "id": "4",
+      "name": "footer-left-8",
+      "bbox": [
+        52,
+        680,
+        360,
+        20
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.3"
+      },
+      "geometry": "rect",
+      "text": "INTERNAL • 18 AGUSTUS 2026",
+      "textPreview": "INTERNAL • 18 AGUSTUS 2026",
+      "resolvedFontSize": 14,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 14,
+        "typeface": "Arial",
+        "color": "#667085",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "INTERNAL • 18 AGUSTUS 2026"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "INTERNAL • 18 AGUSTUS 2026",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 14,
+            "typeface": "Arial",
+            "color": "#667085",
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "INTERNAL • 18 AGUSTUS 2026",
+              "anchor": 1,
+              "fontSize": 14,
+              "typeface": "Arial",
+              "color": "#667085",
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 5,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/vupk7m9c",
+      "id": "5",
+      "name": "footer-number-8",
+      "bbox": [
+        1178,
+        680,
+        50,
+        20
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.4"
+      },
+      "geometry": "rect",
+      "text": "08",
+      "textPreview": "08",
+      "resolvedFontSize": 14,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 14,
+        "typeface": "Arial",
+        "color": "#667085",
+        "alignment": "right",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "08"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "08",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 14,
+            "typeface": "Arial",
+            "color": "#667085",
+            "alignment": "right",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "08",
+              "anchor": 1,
+              "fontSize": 14,
+              "typeface": "Arial",
+              "color": "#667085",
+              "alignment": "right",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 6,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/wvy1grqx",
+      "id": "6",
+      "name": "ch-image-backing",
+      "bbox": [
+        52,
+        150,
+        430,
+        470
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.5"
+      },
+      "geometry": "rect",
+      "fillColor": "#EAF5FB",
+      "lineColor": "#B8BCC4",
+      "lineWidth": 1
+    },
+    {
+      "order": 7,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/hgr29wri",
+      "id": "7",
+      "name": "ch-image-caption",
+      "bbox": [
+        52,
+        628,
+        430,
+        26
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.6"
+      },
+      "geometry": "rect",
+      "text": "Konsep enclosure—bukan bukti IP/IK/Ex atau dimensi final.",
+      "textPreview": "Konsep enclosure—bukan bukti IP/IK/Ex atau dimensi final.",
+      "resolvedFontSize": 15,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 15,
+        "typeface": "Arial",
+        "color": "#667085",
+        "alignment": "center",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Konsep enclosure—bukan bukti IP/IK/Ex atau dimensi final."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Konsep enclosure—bukan bukti IP/IK/Ex atau dimensi final.",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 15,
+            "typeface": "Arial",
+            "color": "#667085",
+            "alignment": "center",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Konsep enclosure—bukan bukti IP/IK/Ex atau dimensi final.",
+              "anchor": 1,
+              "fontSize": 15,
+              "typeface": "Arial",
+              "color": "#667085",
+              "alignment": "center",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 8,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/axwj2xsn",
+      "id": "8",
+      "name": "ch-source-title",
+      "bbox": [
+        530,
+        154,
+        310,
+        34
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.7"
+      },
+      "geometry": "rect",
+      "text": "Yang sudah terdefinisi",
+      "textPreview": "Yang sudah terdefinisi",
+      "resolvedFontSize": 28,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 28,
+        "typeface": "Arial",
+        "color": "#111827",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Yang sudah terdefinisi"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Yang sudah terdefinisi",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 28,
+            "typeface": "Arial",
+            "color": "#111827",
+            "bold": true,
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Yang sudah terdefinisi",
+              "anchor": 1,
+              "fontSize": 28,
+              "typeface": "Arial",
+              "color": "#111827",
+              "bold": true,
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 9,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/by50v298",
+      "id": "9",
+      "name": "ch-source-body",
+      "bbox": [
+        530,
+        208,
+        320,
+        176
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.8"
+      },
+      "geometry": "rect",
+      "text": "• Dua radio: STAR 920 MHz dan MESH 921 MHz\n• Charger/power path single-cell\n• Watchdog dan cadence firmware\n• Default Hello production 300 s",
+      "textPreview": "• Dua radio: STAR 920 MHz dan MESH 921 MHz | • Charger/power path single-cell | • Watchdog dan cadence firmware | • Default Hello product...",
+      "resolvedFontSize": 22,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 22,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 6,
+        "lines": [
+          {
+            "index": 1,
+            "text": "• Dua radio: STAR 920 MHz dan"
+          },
+          {
+            "index": 2,
+            "text": "MESH 921 MHz"
+          },
+          {
+            "index": 3,
+            "text": "• Charger/power path single-cell"
+          },
+          {
+            "index": 4,
+            "text": "• Watchdog dan cadence"
+          },
+          {
+            "index": 5,
+            "text": "firmware"
+          },
+          {
+            "index": 6,
+            "text": "• Default Hello production 300 s"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "• Dua radio: STAR 920 MHz dan MESH 921 MHz\n• Charger/power path single-cell\n• Watchdog dan cadence firmware\n• Default Hello production 300 s",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 22,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "• Dua radio: STAR 920 MHz dan MESH 921 MHz\n• Charger/power path single-cell\n• Watchdog dan cadence firmware\n• Default Hello production 300 s",
+              "anchor": 1,
+              "fontSize": 22,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 10,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/f6p0v6p0",
+      "id": "10",
+      "name": "ch-gap-title",
+      "bbox": [
+        880,
+        154,
+        320,
+        34
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.9"
+      },
+      "geometry": "rect",
+      "text": "Yang belum boleh dibekukan",
+      "textPreview": "Yang belum boleh dibekukan",
+      "resolvedFontSize": 23.22,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 28,
+        "typeface": "Arial",
+        "color": "#A86500",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.83,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Yang belum boleh"
+          },
+          {
+            "index": 2,
+            "text": "dibekukan"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Yang belum boleh dibekukan",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 28,
+            "typeface": "Arial",
+            "color": "#A86500",
+            "bold": true,
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Yang belum boleh dibekukan",
+              "anchor": 1,
+              "fontSize": 28,
+              "typeface": "Arial",
+              "color": "#A86500",
+              "bold": true,
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 11,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/u5wzm18f",
+      "id": "11",
+      "name": "ch-gap-body",
+      "bbox": [
+        880,
+        208,
+        320,
+        190
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.10"
+      },
+      "geometry": "rect",
+      "text": "• Cell/pack dan panel aktual\n• Autonomy, recharge, night/bad-weather budget\n• Thermal, corrosion, enclosure qualification\n• Dua feedthrough/antenna route dan RF site proof",
+      "textPreview": "• Cell/pack dan panel aktual | • Autonomy, recharge, night/bad-weather budget | • Thermal, corrosion, enclosure qualification | • Dua fee...",
+      "resolvedFontSize": 22,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 22,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 7,
+        "lines": [
+          {
+            "index": 1,
+            "text": "• Cell/pack dan panel aktual"
+          },
+          {
+            "index": 2,
+            "text": "• Autonomy, recharge,"
+          },
+          {
+            "index": 3,
+            "text": "night/bad-weather budget"
+          },
+          {
+            "index": 4,
+            "text": "• Thermal, corrosion, enclosure"
+          },
+          {
+            "index": 5,
+            "text": "qualification"
+          },
+          {
+            "index": 6,
+            "text": "• Dua feedthrough/antenna route"
+          },
+          {
+            "index": 7,
+            "text": "dan RF site proof"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "• Cell/pack dan panel aktual\n• Autonomy, recharge, night/bad-weather budget\n• Thermal, corrosion, enclosure qualification\n• Dua feedthrough/antenna route dan RF site proof",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 22,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "• Cell/pack dan panel aktual\n• Autonomy, recharge, night/bad-weather budget\n• Thermal, corrosion, enclosure qualification\n• Dua feedthrough/antenna route dan RF site proof",
+              "anchor": 1,
+              "fontSize": 22,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 12,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/h87ixg7q",
+      "id": "12",
+      "name": "ch-note",
+      "bbox": [
+        530,
+        438,
+        670,
+        142
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.11"
+      },
+      "geometry": "rect",
+      "fillColor": "#FFF2CC",
+      "lineWidth": 0
+    },
+    {
+      "order": 13,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/g7yhobq5",
+      "id": "13",
+      "name": "ch-note-title",
+      "bbox": [
+        558,
+        464,
+        180,
+        32
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.12"
+      },
+      "geometry": "rect",
+      "text": "Catatan daya",
+      "textPreview": "Catatan daya",
+      "resolvedFontSize": 26,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 26,
+        "typeface": "Arial",
+        "color": "#A86500",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Catatan daya"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Catatan daya",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 26,
+            "typeface": "Arial",
+            "color": "#A86500",
+            "bold": true,
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Catatan daya",
+              "anchor": 1,
+              "fontSize": 26,
+              "typeface": "Arial",
+              "color": "#A86500",
+              "bold": true,
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 14,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/7i50rmpo",
+      "id": "14",
+      "name": "ch-note-body",
+      "bbox": [
+        748,
+        460,
+        420,
+        66
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.13"
+      },
+      "geometry": "rect",
+      "text": "Charger bukan MPPT. Interval 30 s + jitter adalah profil uji sementara, bukan kemampuan autonomy production.",
+      "textPreview": "Charger bukan MPPT. Interval 30 s + jitter adalah profil uji sementara, bukan kemampuan autonomy production.",
+      "resolvedFontSize": 18.33,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 21,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.87,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 3,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Charger bukan MPPT. Interval 30 s + jitter adalah"
+          },
+          {
+            "index": 2,
+            "text": "profil uji sementara, bukan kemampuan autonomy"
+          },
+          {
+            "index": 3,
+            "text": "production."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Charger bukan MPPT. Interval 30 s + jitter adalah profil uji sementara, bukan kemampuan autonomy production.",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 21,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Charger bukan MPPT. Interval 30 s + jitter adalah profil uji sementara, bukan kemampuan autonomy production.",
+              "anchor": 1,
+              "fontSize": 21,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 15,
+      "kind": "image",
+      "scope": "slide",
+      "aid": "im/xwzy10zq",
+      "id": "15",
+      "bbox": [
+        52,
+        150,
+        430,
+        470
+      ],
+      "geometry": "rect",
+      "alt": "Konsep enclosure CH atau Gateway yang disediakan pengguna",
+      "contentType": "image/png",
+      "imageFit": "contain",
+      "imageMask": {
+        "geometry": "rect"
+      },
+      "asset": {
+        "assetId": "9f538b77-4624-4345-b570-bb48a856adfb",
+        "contentType": "image/png",
+        "byteLength": 76032
+      }
+    }
+  ],
+  "composeRuns": [
+    {
+      "index": 1,
+      "frame": {
+        "left": 0,
+        "top": 0,
+        "width": 1280,
+        "height": 720
+      },
+      "baseUnit": 1,
+      "root": {
+        "path": "0",
+        "kind": "layers",
+        "name": "ch-image-split",
+        "requestedSize": {
+          "width": {
+            "mode": "fill",
+            "value": 1
+          },
+          "height": {
+            "mode": "fill",
+            "value": 1
+          }
+        },
+        "intrinsicSize": {
+          "width": 1228,
+          "height": 700
+        },
+        "frame": {
+          "left": 0,
+          "top": 0,
+          "width": 1280,
+          "height": 720
+        },
+        "children": [
+          {
+            "path": "0.0",
+            "kind": "text",
+            "name": "section-8",
+            "position": {
+              "left": 52,
+              "top": 30
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 480
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 18
+              }
+            },
+            "intrinsicSize": {
+              "width": 480,
+              "height": 18
+            },
+            "frame": {
+              "left": 52,
+              "top": 30,
+              "width": 480,
+              "height": 18
+            },
+            "snappedFrame": {
+              "left": 52,
+              "top": 30,
+              "width": 480,
+              "height": 18
+            },
+            "children": [],
+            "text": "CH READINESS",
+            "transform": "none",
+            "element": {
+              "aid": "sh/7qp03m9g",
+              "id": "1",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.1",
+            "kind": "text",
+            "name": "title-8",
+            "position": {
+              "left": 52,
+              "top": 58
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 1176
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 60
+              }
+            },
+            "intrinsicSize": {
+              "width": 1176,
+              "height": 60
+            },
+            "frame": {
+              "left": 52,
+              "top": 58,
+              "width": 1176,
+              "height": 60
+            },
+            "snappedFrame": {
+              "left": 52,
+              "top": 58,
+              "width": 1176,
+              "height": 60
+            },
+            "children": [],
+            "text": "CH: radio siap di source; energi belum final",
+            "transform": "none",
+            "element": {
+              "aid": "sh/8ry1cra1",
+              "id": "2",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.2",
+            "kind": "shape",
+            "name": "footer-rule-8",
+            "position": {
+              "left": 52,
+              "top": 668
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 1176
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 1
+              }
+            },
+            "intrinsicSize": {
+              "width": 1176,
+              "height": 1
+            },
+            "frame": {
+              "left": 52,
+              "top": 668,
+              "width": 1176,
+              "height": 1
+            },
+            "snappedFrame": {
+              "left": 52,
+              "top": 668,
+              "width": 1176,
+              "height": 1
+            },
+            "children": [],
+            "geometry": "line",
+            "element": {
+              "aid": "sh/9s725crm",
+              "id": "3",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.3",
+            "kind": "text",
+            "name": "footer-left-8",
+            "position": {
+              "left": 52,
+              "top": 680
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 360
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 20
+              }
+            },
+            "intrinsicSize": {
+              "width": 360,
+              "height": 20
+            },
+            "frame": {
+              "left": 52,
+              "top": 680,
+              "width": 360,
+              "height": 20
+            },
+            "snappedFrame": {
+              "left": 52,
+              "top": 680,
+              "width": 360,
+              "height": 20
+            },
+            "children": [],
+            "text": "INTERNAL • 18 AGUSTUS 2026",
+            "transform": "none",
+            "element": {
+              "aid": "sh/utgjeh87",
+              "id": "4",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.4",
+            "kind": "text",
+            "name": "footer-number-8",
+            "position": {
+              "left": 1178,
+              "top": 680
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 50
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 20
+              }
+            },
+            "intrinsicSize": {
+              "width": 50,
+              "height": 20
+            },
+            "frame": {
+              "left": 1178,
+              "top": 680,
+              "width": 50,
+              "height": 20
+            },
+            "snappedFrame": {
+              "left": 1178,
+              "top": 680,
+              "width": 50,
+              "height": 20
+            },
+            "children": [],
+            "text": "08",
+            "transform": "none",
+            "element": {
+              "aid": "sh/vupk7m9c",
+              "id": "5",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.5",
+            "kind": "shape",
+            "name": "ch-image-backing",
+            "position": {
+              "left": 52,
+              "top": 150
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 430
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 470
+              }
+            },
+            "intrinsicSize": {
+              "width": 430,
+              "height": 470
+            },
+            "frame": {
+              "left": 52,
+              "top": 150,
+              "width": 430,
+              "height": 470
+            },
+            "snappedFrame": {
+              "left": 52,
+              "top": 150,
+              "width": 430,
+              "height": 470
+            },
+            "children": [],
+            "geometry": "rect",
+            "element": {
+              "aid": "sh/wvy1grqx",
+              "id": "6",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.6",
+            "kind": "text",
+            "name": "ch-image-caption",
+            "position": {
+              "left": 52,
+              "top": 628
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 430
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 26
+              }
+            },
+            "intrinsicSize": {
+              "width": 430,
+              "height": 26
+            },
+            "frame": {
+              "left": 52,
+              "top": 628,
+              "width": 430,
+              "height": 26
+            },
+            "snappedFrame": {
+              "left": 52,
+              "top": 628,
+              "width": 430,
+              "height": 26
+            },
+            "children": [],
+            "text": "Konsep enclosure—bukan bukti IP/IK/Ex atau dimensi final.",
+            "transform": "none",
+            "element": {
+              "aid": "sh/hgr29wri",
+              "id": "7",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.7",
+            "kind": "text",
+            "name": "ch-source-title",
+            "position": {
+              "left": 530,
+              "top": 154
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 310
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 34
+              }
+            },
+            "intrinsicSize": {
+              "width": 310,
+              "height": 34
+            },
+            "frame": {
+              "left": 530,
+              "top": 154,
+              "width": 310,
+              "height": 34
+            },
+            "snappedFrame": {
+              "left": 530,
+              "top": 154,
+              "width": 310,
+              "height": 34
+            },
+            "children": [],
+            "text": "Yang sudah terdefinisi",
+            "transform": "none",
+            "element": {
+              "aid": "sh/axwj2xsn",
+              "id": "8",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.8",
+            "kind": "text",
+            "name": "ch-source-body",
+            "position": {
+              "left": 530,
+              "top": 208
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 320
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 176
+              }
+            },
+            "intrinsicSize": {
+              "width": 320,
+              "height": 176
+            },
+            "frame": {
+              "left": 530,
+              "top": 208,
+              "width": 320,
+              "height": 176
+            },
+            "snappedFrame": {
+              "left": 530,
+              "top": 208,
+              "width": 320,
+              "height": 176
+            },
+            "children": [],
+            "text": "• Dua radio: STAR 920 MHz dan MESH 921 MHz\n• Charger/power path single-cell\n• Watchdog dan cadence firmware\n• Default Hello production 300 s",
+            "transform": "none",
+            "element": {
+              "aid": "sh/by50v298",
+              "id": "9",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.9",
+            "kind": "text",
+            "name": "ch-gap-title",
+            "position": {
+              "left": 880,
+              "top": 154
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 320
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 34
+              }
+            },
+            "intrinsicSize": {
+              "width": 320,
+              "height": 34
+            },
+            "frame": {
+              "left": 880,
+              "top": 154,
+              "width": 320,
+              "height": 34
+            },
+            "snappedFrame": {
+              "left": 880,
+              "top": 154,
+              "width": 320,
+              "height": 34
+            },
+            "children": [],
+            "text": "Yang belum boleh dibekukan",
+            "transform": "none",
+            "element": {
+              "aid": "sh/f6p0v6p0",
+              "id": "10",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.10",
+            "kind": "text",
+            "name": "ch-gap-body",
+            "position": {
+              "left": 880,
+              "top": 208
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 320
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 190
+              }
+            },
+            "intrinsicSize": {
+              "width": 320,
+              "height": 190
+            },
+            "frame": {
+              "left": 880,
+              "top": 208,
+              "width": 320,
+              "height": 190
+            },
+            "snappedFrame": {
+              "left": 880,
+              "top": 208,
+              "width": 320,
+              "height": 190
+            },
+            "children": [],
+            "text": "• Cell/pack dan panel aktual\n• Autonomy, recharge, night/bad-weather budget\n• Thermal, corrosion, enclosure qualification\n• Dua feedthrough/antenna route dan RF site proof",
+            "transform": "none",
+            "element": {
+              "aid": "sh/u5wzm18f",
+              "id": "11",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.11",
+            "kind": "shape",
+            "name": "ch-note",
+            "position": {
+              "left": 530,
+              "top": 438
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 670
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 142
+              }
+            },
+            "intrinsicSize": {
+              "width": 670,
+              "height": 142
+            },
+            "frame": {
+              "left": 530,
+              "top": 438,
+              "width": 670,
+              "height": 142
+            },
+            "snappedFrame": {
+              "left": 530,
+              "top": 438,
+              "width": 670,
+              "height": 142
+            },
+            "children": [],
+            "geometry": "rect",
+            "element": {
+              "aid": "sh/h87ixg7q",
+              "id": "12",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.12",
+            "kind": "text",
+            "name": "ch-note-title",
+            "position": {
+              "left": 558,
+              "top": 464
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 180
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 32
+              }
+            },
+            "intrinsicSize": {
+              "width": 180,
+              "height": 32
+            },
+            "frame": {
+              "left": 558,
+              "top": 464,
+              "width": 180,
+              "height": 32
+            },
+            "snappedFrame": {
+              "left": 558,
+              "top": 464,
+              "width": 180,
+              "height": 32
+            },
+            "children": [],
+            "text": "Catatan daya",
+            "transform": "none",
+            "element": {
+              "aid": "sh/g7yhobq5",
+              "id": "13",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.13",
+            "kind": "text",
+            "name": "ch-note-body",
+            "position": {
+              "left": 748,
+              "top": 460
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 420
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 66
+              }
+            },
+            "intrinsicSize": {
+              "width": 420,
+              "height": 66
+            },
+            "frame": {
+              "left": 748,
+              "top": 460,
+              "width": 420,
+              "height": 66
+            },
+            "snappedFrame": {
+              "left": 748,
+              "top": 460,
+              "width": 420,
+              "height": 66
+            },
+            "children": [],
+            "text": "Charger bukan MPPT. Interval 30 s + jitter adalah profil uji sementara, bukan kemampuan autonomy production.",
+            "transform": "none",
+            "element": {
+              "aid": "sh/7i50rmpo",
+              "id": "14",
+              "kind": "shape"
+            }
+          }
+        ],
+        "padding": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        },
+        "alignItems": "stretch",
+        "justifyItems": "stretch",
+        "contentFrame": {
+          "left": 0,
+          "top": 0,
+          "width": 1280,
+          "height": 720
+        },
+        "items": [
+          {
+            "path": "0.0",
+            "frame": {
+              "left": 52,
+              "top": 30,
+              "width": 480,
+              "height": 18
+            }
+          },
+          {
+            "path": "0.1",
+            "frame": {
+              "left": 52,
+              "top": 58,
+              "width": 1176,
+              "height": 60
+            }
+          },
+          {
+            "path": "0.2",
+            "frame": {
+              "left": 52,
+              "top": 668,
+              "width": 1176,
+              "height": 1
+            }
+          },
+          {
+            "path": "0.3",
+            "frame": {
+              "left": 52,
+              "top": 680,
+              "width": 360,
+              "height": 20
+            }
+          },
+          {
+            "path": "0.4",
+            "frame": {
+              "left": 1178,
+              "top": 680,
+              "width": 50,
+              "height": 20
+            }
+          },
+          {
+            "path": "0.5",
+            "frame": {
+              "left": 52,
+              "top": 150,
+              "width": 430,
+              "height": 470
+            }
+          },
+          {
+            "path": "0.6",
+            "frame": {
+              "left": 52,
+              "top": 628,
+              "width": 430,
+              "height": 26
+            }
+          },
+          {
+            "path": "0.7",
+            "frame": {
+              "left": 530,
+              "top": 154,
+              "width": 310,
+              "height": 34
+            }
+          },
+          {
+            "path": "0.8",
+            "frame": {
+              "left": 530,
+              "top": 208,
+              "width": 320,
+              "height": 176
+            }
+          },
+          {
+            "path": "0.9",
+            "frame": {
+              "left": 880,
+              "top": 154,
+              "width": 320,
+              "height": 34
+            }
+          },
+          {
+            "path": "0.10",
+            "frame": {
+              "left": 880,
+              "top": 208,
+              "width": 320,
+              "height": 190
+            }
+          },
+          {
+            "path": "0.11",
+            "frame": {
+              "left": 530,
+              "top": 438,
+              "width": 670,
+              "height": 142
+            }
+          },
+          {
+            "path": "0.12",
+            "frame": {
+              "left": 558,
+              "top": 464,
+              "width": 180,
+              "height": 32
+            }
+          },
+          {
+            "path": "0.13",
+            "frame": {
+              "left": 748,
+              "top": 460,
+              "width": 420,
+              "height": 66
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

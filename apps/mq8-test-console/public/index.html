@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>MQ8 Test Console</title>
+  <link rel="stylesheet" href="./app.css"><link rel="stylesheet" href="./running.css?v=2"><link rel="stylesheet" href="./running-readable.css?v=6">
+</head>
+<body>
+  <header class="topbar"><div><span class="eyebrow">PERTAMINA GLD / LAB</span><h1>MQ8 Test Console</h1></div><span id="runnerBadge" class="badge neutral">BELUM DIMULAI</span></header>
+  <main>
+    <nav class="tabs" aria-label="Mode"><button class="tab active" type="button">Running</button></nav>
+    <p id="notice" class="notice">GLD Operator harus tetap terhubung di COM3. Pastikan hanya COM5 (Uno) yang bebas.</p>
+    <section class="layout">
+      <article class="panel control-panel">
+        <span class="eyebrow">KONTROL OPERATOR</span>
+        <h2 id="phaseName">Belum ada sesi</h2>
+        <p id="phaseDetail">Tekan Mulai untuk merekam baseline 100%.</p>
+        <div class="phase-duration"><span>Durasi sesi tampilan</span><strong id="phaseDuration">-</strong></div>
+        <div class="duty"><strong id="dutyValue">—</strong><span>Duty aktif</span></div>
+        <button id="startBtn" class="primary" type="button">Mulai baseline 100%</button>
+        <button id="nextBtn" class="success" type="button" disabled>Stabil → fase berikutnya</button>
+        <label class="mode-switch"><span><strong>Mode fase</strong><small id="modeHint">Manual: menunggu tombol Stabil.</small></span><input id="autoMode" type="checkbox" role="switch" aria-label="Mode otomatis"><i></i><b id="modeLabel">Manual</b></label>
+        <label class="direction-setting"><span><strong>Konfirmasi arah</strong><small>Status Stabil sebelum satu arah bertahan selama nilai ini.</small></span><input id="directionConfirmSeconds" type="number" min="1" max="120" step="1" value="10" inputmode="numeric" aria-label="Detik konfirmasi arah"><b>detik</b></label>
+        <section class="auto-progress" aria-label="Progress gate otomatis">
+          <div><span>Durasi fase</span><strong id="phaseGateText">0,00 / 10 menit</strong></div><progress id="phaseGateProgress" value="0" max="10"></progress>
+          <div><span>Stabil berturut-turut</span><strong id="stableGateText">0,00 / 3 menit</strong></div><progress id="stableGateProgress" value="0" max="3"></progress>
+          <small id="autoGateStatus">Gate Auto: Mengumpulkan</small>
+        </section>
+        <button id="stopBtn" class="danger" type="button" disabled>Hentikan aman</button>
+        <button id="restartBtn" class="quiet" type="button" disabled>Mulai ulang dari awal</button>
+        <p class="hint" id="autoRuleHint">Mode Auto: fase minimal 10 menit, lalu status MQ8 harus Stabil 3 menit berturut-turut. Sesi lama tidak dihapus.</p>
+      </article>
+      <article class="panel chart-panel">
+        <div class="chart-head"><div><span class="eyebrow">MQ8 LIVE / DATA VALID</span><h2>Grafik fase berjalan</h2></div><span id="sampleCount" class="mono">0 sampel</span></div>
+        <canvas id="chart" width="900" height="380" aria-label="Grafik live tegangan MQ8"></canvas>
+        <div class="chart-foot"><span id="metricRange">Rentang 60 dtk: —</span><span id="metricTrend">Tren 1 menit: —</span></div>
+        <section class="running-status" aria-label="Status Running MQ8">
+          <div class="running-tools"><div><span class="eyebrow">STATUS RUNNING</span><h3>MQ8 aktif</h3></div><div class="tool-actions"><button id="clearViewBtn" type="button">Reset</button><button id="exportCsvBtn" type="button">Export CSV</button></div></div>
+          <div class="mq8-running-table-wrap"><table class="mq8-running-table"><thead><tr><th>Sensor</th><th>Saat ini</th><th>Gain</th><th>Delta</th><th>Arah</th><th>Durasi</th><th>Peak-to-peak</th><th>Tren 1 menit</th><th>Status</th></tr></thead><tbody id="mq8RunningRow"><tr><td>MQ8</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td>-</td><td class="status collecting">Menunggu data</td></tr></tbody></table></div>
+        </section>
+        <div class="chart-range"><label for="rangeMinutes">Range grafik <strong id="rangeMinutesLabel">1 min</strong></label><input id="rangeMinutes" type="range" min="1" max="60" value="1"><span>Hanya tampilan grafik; rekaman CSV tetap lengkap.</span></div>
+      </article>
+      <article class="panel sequence-panel">
+        <span class="eyebrow">URUTAN UJI</span><h2>100% recovery setiap duty</h2>
+        <ol id="sequence"></ol>
+      </article>
+      <article class="panel output-panel">
+        <span class="eyebrow">OUTPUT SESI</span><h2>Folder sesi</h2>
+        <p id="progressPath" class="path">Belum ada file progress.</p>
+        <ul id="fileList" class="files"><li>CSV fase akan muncul setelah fase dimulai.</li></ul>
+      </article>
+      <article class="panel series-table-panel">
+        <div class="running-tools"><div><span class="eyebrow">DATA SERI YANG TAMPIL</span><h2>MQ8 pada range grafik</h2></div><span id="seriesRowCount" class="mono">0 baris</span></div>
+        <div class="series-table-wrap"><table class="series-table"><thead><tr><th>Waktu fase</th><th>MQ8 (mV)</th><th>MQ8 (V)</th><th>Gain</th></tr></thead><tbody id="seriesDataRows"><tr><td colspan="4">Menunggu data valid.</td></tr></tbody></table></div>
+      </article>
+      <article class="panel serial-log-panel">
+        <div class="running-tools"><div><span class="eyebrow">GLD / COM3 READ-ONLY</span><h2>Log Serial GLD</h2></div><div class="tool-actions"><span id="gldLogCount" class="mono">0 baris</span><button id="clearGldLogBtn" type="button">Clear tampilan</button></div></div>
+        <pre id="gldSerialLog" class="gld-serial-log">Menunggu log dari GLD Operator...</pre>
+      </article>
+    </section>
+  </main>
+  <script src="./app.js?v=24"></script>
+</body>
+</html>

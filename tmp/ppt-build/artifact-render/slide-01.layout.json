@@ -1,0 +1,1104 @@
+{
+  "schema": "openai.presentation.layout/v4",
+  "unit": "px",
+  "slide": {
+    "aid": "sl/4ct9c0",
+    "id": "4ct9c0",
+    "slide": 1,
+    "layoutId": "6a1a93d3-ea1d-429f-9522-c5e67327db04",
+    "layoutName": "Title Slide",
+    "layoutType": "title",
+    "masterLayoutId": "ea845d38-f203-4a15-8d29-592c4f07080e",
+    "masterLayoutName": "Master",
+    "backgroundColor": "#FFFFFF",
+    "frame": {
+      "left": 0,
+      "top": 0,
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "theme": {
+    "colorSchemeName": "ChatGPT",
+    "colors": {
+      "accent1": "#156082",
+      "accent2": "#E97132",
+      "accent3": "#196B24",
+      "accent4": "#0F9ED5",
+      "accent5": "#A02B93",
+      "accent6": "#4EA72E",
+      "bg1": "#FFFFFF",
+      "bg2": "#000000",
+      "tx1": "#1F1F1F",
+      "tx2": "#FFFFFF",
+      "dk1": "#000000",
+      "lt1": "#FFFFFF",
+      "dk2": "#0E2841",
+      "lt2": "#E8E8E8",
+      "hlink": "#467886",
+      "folHlink": "#96607D"
+    },
+    "typefaces": [
+      "Arial"
+    ]
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "6a1a93d3-ea1d-429f-9522-c5e67327db04",
+      "name": "Title Slide",
+      "type": "title",
+      "parentLayoutId": "ea845d38-f203-4a15-8d29-592c4f07080e",
+      "elements": []
+    },
+    {
+      "scope": "master",
+      "id": "ea845d38-f203-4a15-8d29-592c4f07080e",
+      "name": "Master",
+      "type": "master",
+      "elements": []
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/pcj2p0b2",
+      "id": "1",
+      "name": "cover-kicker",
+      "bbox": [
+        52,
+        42,
+        480,
+        22
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.0"
+      },
+      "geometry": "rect",
+      "text": "PERTAMINA • LGU | INTERNAL",
+      "textPreview": "PERTAMINA • LGU | INTERNAL",
+      "resolvedFontSize": 15,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 15,
+        "typeface": "Arial",
+        "color": "#667085",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "PERTAMINA • LGU | INTERNAL"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "PERTAMINA • LGU | INTERNAL",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 15,
+            "typeface": "Arial",
+            "color": "#667085",
+            "bold": true,
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "PERTAMINA • LGU | INTERNAL",
+              "anchor": 1,
+              "fontSize": 15,
+              "typeface": "Arial",
+              "color": "#667085",
+              "bold": true,
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 2,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/29sjelsr",
+      "id": "2",
+      "name": "cover-title",
+      "bbox": [
+        52,
+        150,
+        565,
+        190
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.1"
+      },
+      "geometry": "rect",
+      "text": "Kesiapan Sistem\ndan Rencana Tindak Lanjut",
+      "textPreview": "Kesiapan Sistem | dan Rencana Tindak Lanjut",
+      "resolvedFontSize": 52.78,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 70,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.75,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 3,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Kesiapan Sistem"
+          },
+          {
+            "index": 2,
+            "text": "dan Rencana Tindak"
+          },
+          {
+            "index": 3,
+            "text": "Lanjut"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Kesiapan Sistem\ndan Rencana Tindak Lanjut",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 70,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Kesiapan Sistem\ndan Rencana Tindak Lanjut",
+              "anchor": 1,
+              "fontSize": 70,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 3,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/3a1knqtw",
+      "id": "3",
+      "name": "cover-subtitle",
+      "bbox": [
+        52,
+        390,
+        535,
+        110
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.2"
+      },
+      "geometry": "rect",
+      "text": "Ringkasan keputusan meeting, readiness teknis, safety hold, kebutuhan site, dan rencana menuju target September 2027.",
+      "textPreview": "Ringkasan keputusan meeting, readiness teknis, safety hold, kebutuhan site, dan rencana menuju target September 2027.",
+      "resolvedFontSize": 25,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 25,
+        "typeface": "Arial",
+        "color": "#667085",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 3,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Ringkasan keputusan meeting, readiness"
+          },
+          {
+            "index": 2,
+            "text": "teknis, safety hold, kebutuhan site, dan rencana"
+          },
+          {
+            "index": 3,
+            "text": "menuju target September 2027."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Ringkasan keputusan meeting, readiness teknis, safety hold, kebutuhan site, dan rencana menuju target September 2027.",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 25,
+            "typeface": "Arial",
+            "color": "#667085",
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Ringkasan keputusan meeting, readiness teknis, safety hold, kebutuhan site, dan rencana menuju target September 2027.",
+              "anchor": 1,
+              "fontSize": 25,
+              "typeface": "Arial",
+              "color": "#667085",
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 4,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/cfa1kfat",
+      "id": "4",
+      "name": "cover-accent",
+      "bbox": [
+        52,
+        548,
+        360,
+        8
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.3"
+      },
+      "geometry": "rect",
+      "fillColor": "#3D8DFF",
+      "lineWidth": 0
+    },
+    {
+      "order": 5,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/dg32tkre",
+      "id": "5",
+      "name": "cover-date",
+      "bbox": [
+        52,
+        578,
+        300,
+        26
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.4"
+      },
+      "geometry": "rect",
+      "text": "18 AGUSTUS 2026",
+      "textPreview": "18 AGUSTUS 2026",
+      "resolvedFontSize": 17,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 17,
+        "typeface": "Arial",
+        "color": "#111827",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "18 AGUSTUS 2026"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "18 AGUSTUS 2026",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 17,
+            "typeface": "Arial",
+            "color": "#111827",
+            "bold": true,
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "18 AGUSTUS 2026",
+              "anchor": 1,
+              "fontSize": 17,
+              "typeface": "Arial",
+              "color": "#111827",
+              "bold": true,
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 6,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/qdsji5sn",
+      "id": "6",
+      "name": "cover-image-backing",
+      "bbox": [
+        658,
+        42,
+        570,
+        588
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.5"
+      },
+      "geometry": "rect",
+      "fillColor": "#EAF5FB",
+      "lineColor": "#B8BCC4",
+      "lineWidth": 1
+    },
+    {
+      "order": 7,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/be1krat8",
+      "id": "7",
+      "name": "cover-footer-rule",
+      "bbox": [
+        52,
+        668,
+        1176,
+        1
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.6"
+      },
+      "geometry": "line",
+      "lineColor": "#B8BCC4",
+      "lineWidth": 1
+    },
+    {
+      "order": 8,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/sjq18ba9",
+      "id": "8",
+      "name": "cover-footer",
+      "bbox": [
+        52,
+        680,
+        360,
+        20
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.7"
+      },
+      "geometry": "rect",
+      "text": "INTERNAL • EVIDENCE-BOUNDED",
+      "textPreview": "INTERNAL • EVIDENCE-BOUNDED",
+      "resolvedFontSize": 14,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 14,
+        "typeface": "Arial",
+        "color": "#667085",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "INTERNAL • EVIDENCE-BOUNDED"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "INTERNAL • EVIDENCE-BOUNDED",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 14,
+            "typeface": "Arial",
+            "color": "#667085",
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "INTERNAL • EVIDENCE-BOUNDED",
+              "anchor": 1,
+              "fontSize": 14,
+              "typeface": "Arial",
+              "color": "#667085",
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 9,
+      "kind": "image",
+      "scope": "slide",
+      "aid": "im/wr210ji5",
+      "id": "9",
+      "bbox": [
+        658,
+        42,
+        570,
+        588
+      ],
+      "geometry": "rect",
+      "alt": "Konsep perangkat GLD yang disediakan pengguna",
+      "contentType": "image/png",
+      "imageCrop": {
+        "left": 0.02,
+        "top": 0,
+        "right": 0.02,
+        "bottom": 0
+      },
+      "imageFit": "cover",
+      "imageMask": {
+        "geometry": "rect"
+      },
+      "asset": {
+        "assetId": "2d576ce7-5ba9-4559-9e29-c964e229e83a",
+        "contentType": "image/png",
+        "byteLength": 229496
+      }
+    }
+  ],
+  "composeRuns": [
+    {
+      "index": 1,
+      "frame": {
+        "left": 0,
+        "top": 0,
+        "width": 1280,
+        "height": 720
+      },
+      "baseUnit": 1,
+      "root": {
+        "path": "0",
+        "kind": "layers",
+        "name": "cover-image-field",
+        "requestedSize": {
+          "width": {
+            "mode": "fill",
+            "value": 1
+          },
+          "height": {
+            "mode": "fill",
+            "value": 1
+          }
+        },
+        "intrinsicSize": {
+          "width": 1228,
+          "height": 700
+        },
+        "frame": {
+          "left": 0,
+          "top": 0,
+          "width": 1280,
+          "height": 720
+        },
+        "children": [
+          {
+            "path": "0.0",
+            "kind": "text",
+            "name": "cover-kicker",
+            "position": {
+              "left": 52,
+              "top": 42
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 480
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 22
+              }
+            },
+            "intrinsicSize": {
+              "width": 480,
+              "height": 22
+            },
+            "frame": {
+              "left": 52,
+              "top": 42,
+              "width": 480,
+              "height": 22
+            },
+            "snappedFrame": {
+              "left": 52,
+              "top": 42,
+              "width": 480,
+              "height": 22
+            },
+            "children": [],
+            "text": "PERTAMINA • LGU | INTERNAL",
+            "transform": "none",
+            "element": {
+              "aid": "sh/pcj2p0b2",
+              "id": "1",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.1",
+            "kind": "text",
+            "name": "cover-title",
+            "position": {
+              "left": 52,
+              "top": 150
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 565
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 190
+              }
+            },
+            "intrinsicSize": {
+              "width": 565,
+              "height": 190
+            },
+            "frame": {
+              "left": 52,
+              "top": 150,
+              "width": 565,
+              "height": 190
+            },
+            "snappedFrame": {
+              "left": 52,
+              "top": 150,
+              "width": 565,
+              "height": 190
+            },
+            "children": [],
+            "text": "Kesiapan Sistem\ndan Rencana Tindak Lanjut",
+            "transform": "none",
+            "element": {
+              "aid": "sh/29sjelsr",
+              "id": "2",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.2",
+            "kind": "text",
+            "name": "cover-subtitle",
+            "position": {
+              "left": 52,
+              "top": 390
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 535
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 110
+              }
+            },
+            "intrinsicSize": {
+              "width": 535,
+              "height": 110
+            },
+            "frame": {
+              "left": 52,
+              "top": 390,
+              "width": 535,
+              "height": 110
+            },
+            "snappedFrame": {
+              "left": 52,
+              "top": 390,
+              "width": 535,
+              "height": 110
+            },
+            "children": [],
+            "text": "Ringkasan keputusan meeting, readiness teknis, safety hold, kebutuhan site, dan rencana menuju target September 2027.",
+            "transform": "none",
+            "element": {
+              "aid": "sh/3a1knqtw",
+              "id": "3",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.3",
+            "kind": "shape",
+            "name": "cover-accent",
+            "position": {
+              "left": 52,
+              "top": 548
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 360
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 8
+              }
+            },
+            "intrinsicSize": {
+              "width": 360,
+              "height": 8
+            },
+            "frame": {
+              "left": 52,
+              "top": 548,
+              "width": 360,
+              "height": 8
+            },
+            "snappedFrame": {
+              "left": 52,
+              "top": 548,
+              "width": 360,
+              "height": 8
+            },
+            "children": [],
+            "geometry": "rect",
+            "element": {
+              "aid": "sh/cfa1kfat",
+              "id": "4",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.4",
+            "kind": "text",
+            "name": "cover-date",
+            "position": {
+              "left": 52,
+              "top": 578
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 300
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 26
+              }
+            },
+            "intrinsicSize": {
+              "width": 300,
+              "height": 26
+            },
+            "frame": {
+              "left": 52,
+              "top": 578,
+              "width": 300,
+              "height": 26
+            },
+            "snappedFrame": {
+              "left": 52,
+              "top": 578,
+              "width": 300,
+              "height": 26
+            },
+            "children": [],
+            "text": "18 AGUSTUS 2026",
+            "transform": "none",
+            "element": {
+              "aid": "sh/dg32tkre",
+              "id": "5",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.5",
+            "kind": "shape",
+            "name": "cover-image-backing",
+            "position": {
+              "left": 658,
+              "top": 42
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 570
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 588
+              }
+            },
+            "intrinsicSize": {
+              "width": 570,
+              "height": 588
+            },
+            "frame": {
+              "left": 658,
+              "top": 42,
+              "width": 570,
+              "height": 588
+            },
+            "snappedFrame": {
+              "left": 658,
+              "top": 42,
+              "width": 570,
+              "height": 588
+            },
+            "children": [],
+            "geometry": "rect",
+            "element": {
+              "aid": "sh/qdsji5sn",
+              "id": "6",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.6",
+            "kind": "shape",
+            "name": "cover-footer-rule",
+            "position": {
+              "left": 52,
+              "top": 668
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 1176
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 1
+              }
+            },
+            "intrinsicSize": {
+              "width": 1176,
+              "height": 1
+            },
+            "frame": {
+              "left": 52,
+              "top": 668,
+              "width": 1176,
+              "height": 1
+            },
+            "snappedFrame": {
+              "left": 52,
+              "top": 668,
+              "width": 1176,
+              "height": 1
+            },
+            "children": [],
+            "geometry": "line",
+            "element": {
+              "aid": "sh/be1krat8",
+              "id": "7",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.7",
+            "kind": "text",
+            "name": "cover-footer",
+            "position": {
+              "left": 52,
+              "top": 680
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 360
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 20
+              }
+            },
+            "intrinsicSize": {
+              "width": 360,
+              "height": 20
+            },
+            "frame": {
+              "left": 52,
+              "top": 680,
+              "width": 360,
+              "height": 20
+            },
+            "snappedFrame": {
+              "left": 52,
+              "top": 680,
+              "width": 360,
+              "height": 20
+            },
+            "children": [],
+            "text": "INTERNAL • EVIDENCE-BOUNDED",
+            "transform": "none",
+            "element": {
+              "aid": "sh/sjq18ba9",
+              "id": "8",
+              "kind": "shape"
+            }
+          }
+        ],
+        "padding": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        },
+        "alignItems": "stretch",
+        "justifyItems": "stretch",
+        "contentFrame": {
+          "left": 0,
+          "top": 0,
+          "width": 1280,
+          "height": 720
+        },
+        "items": [
+          {
+            "path": "0.0",
+            "frame": {
+              "left": 52,
+              "top": 42,
+              "width": 480,
+              "height": 22
+            }
+          },
+          {
+            "path": "0.1",
+            "frame": {
+              "left": 52,
+              "top": 150,
+              "width": 565,
+              "height": 190
+            }
+          },
+          {
+            "path": "0.2",
+            "frame": {
+              "left": 52,
+              "top": 390,
+              "width": 535,
+              "height": 110
+            }
+          },
+          {
+            "path": "0.3",
+            "frame": {
+              "left": 52,
+              "top": 548,
+              "width": 360,
+              "height": 8
+            }
+          },
+          {
+            "path": "0.4",
+            "frame": {
+              "left": 52,
+              "top": 578,
+              "width": 300,
+              "height": 26
+            }
+          },
+          {
+            "path": "0.5",
+            "frame": {
+              "left": 658,
+              "top": 42,
+              "width": 570,
+              "height": 588
+            }
+          },
+          {
+            "path": "0.6",
+            "frame": {
+              "left": 52,
+              "top": 668,
+              "width": 1176,
+              "height": 1
+            }
+          },
+          {
+            "path": "0.7",
+            "frame": {
+              "left": 52,
+              "top": 680,
+              "width": 360,
+              "height": 20
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

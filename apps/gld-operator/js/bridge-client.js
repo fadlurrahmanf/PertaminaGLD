@@ -5,11 +5,13 @@
 import { elements, state, decoder } from "./state.js";
 import { setBadge, setText, appendLog, showBanner, switchTab, setSetupOpen, wait, saveUiSession } from "./ui.js";
 import { syncDeviceSummary, renderFleetPanel, updateFleetFromLine } from "./fleet.js";
-import { handleLine, clearSerialResponseWatch, sendCommand, resetDeviceSnapshot, stopPolling } from "./serial-protocol.js";
+import { handleLine, clearSerialResponseWatch, clearSerialCommandQueue, resetSerialLiveness, sendCommand, resetDeviceSnapshot, stopPolling } from "./serial-protocol.js";
 import { setDatasetState, handleDatasetMqttEvent, renderDatasetSession } from "./dataset.js";
 
 const DEFAULT_BRIDGE_ORIGIN = "http://127.0.0.1:5174";
 let bridgeToken = "";
+let serialRecoveryInFlight = false;
+let serialRecoveryListenerInstalled = false;
 
 export function bridgeUrl(path) {
   const onBridgeOrigin = location.protocol.startsWith("http")
@@ -19,17 +21,33 @@ export function bridgeUrl(path) {
 }
 
 export async function bridgeFetch(path, options = {}) {
-  const response = await fetch(bridgeUrl(path), {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(bridgeToken ? { "X-GLD-Bridge-Token": bridgeToken } : {}),
-      ...(options.headers || {})
+  const { timeoutMs = 15_000, signal: callerSignal, ...fetchOptions } = options;
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+  const abortFromCaller = () => controller.abort();
+  callerSignal?.addEventListener("abort", abortFromCaller, { once: true });
+  try {
+    const response = await fetch(bridgeUrl(path), {
+      ...fetchOptions,
+      signal: controller.signal,
+      headers: {
+        "Content-Type": "application/json",
+        ...(bridgeToken ? { "X-GLD-Bridge-Token": bridgeToken } : {}),
+        ...(fetchOptions.headers || {})
+      }
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || `${response.status} ${response.statusText}`);
+    return payload;
+  } catch (error) {
+    if (controller.signal.aborted && !callerSignal?.aborted) {
+      throw new Error(`bridge request timed out after ${Math.ceil(timeoutMs / 1000)} seconds`);
     }
-  });
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.error || `${response.status} ${response.statusText}`);
-  return payload;
+    throw error;
+  } finally {
+    window.clearTimeout(timeout);
+    callerSignal?.removeEventListener("abort", abortFromCaller);
+  }
 }
 
 export async function initBridge() {
@@ -37,6 +55,7 @@ export async function initBridge() {
     const health = await bridgeFetch("/api/health");
     if (!health.csrfToken) throw new Error("bridge did not provide a request token");
     bridgeToken = health.csrfToken;
+    installSerialRecoveryListener();
     const wasAvailable = state.bridgeAvailable;
     state.bridgeAvailable = Boolean(health.ok);
     state.bridgeFeatures = health.features || {};
@@ -76,6 +95,40 @@ export async function initBridge() {
       setBadge(elements.connectionBadge, "Web Serial unavailable", "warn");
     }
   }
+}
+
+function installSerialRecoveryListener() {
+  if (serialRecoveryListenerInstalled) return;
+  serialRecoveryListenerInstalled = true;
+  window.addEventListener("gld-serial-unresponsive", async (event) => {
+    if (serialRecoveryInFlight || event.detail?.slot !== state.activeSlot || !state.bridgeAvailable) return;
+    serialRecoveryInFlight = true;
+    appendLog("SERIAL_RECOVERY closing and reopening the active COM port", "in");
+    try {
+      await disconnectSerial();
+      await wait(600);
+      const connected = await connectBridgeSerialOnly({ resetSnapshot: true });
+      if (!connected) return;
+      resetSerialLiveness();
+      await wait(300);
+      await sendCommand("APP_PING");
+      await wait(300);
+      await sendCommand("GET_INFO");
+      await wait(300);
+      await sendCommand("GET_STATUS");
+      await wait(300);
+      // A full Nulling run restarts the ESP.  Its completion profile lives in
+      // NVS, so fetch it explicitly after reconnect rather than relying on
+      // transient NULLING_ lines that may have occurred during the reboot.
+      await sendCommand("GET_QC_STATUS");
+      appendLog("SERIAL_RECOVERY handshake sent; waiting for GLD response", "in");
+    } catch (error) {
+      appendLog(`SERIAL_RECOVERY_ERROR ${error.message}`, "in");
+      setBadge(elements.connectionBadge, "GLD reconnect failed", "error");
+    } finally {
+      serialRecoveryInFlight = false;
+    }
+  });
 }
 
 export function startBridgeHealthPoll() {
@@ -141,7 +194,10 @@ function startBridgeEvents() {
     updateFleetFromLine(slot, "");
     if (slot !== state.activeSlot) return;
     state.connected = Boolean(payload.connected);
-    if (!payload.connected) clearSerialResponseWatch();
+    if (!payload.connected) {
+      clearSerialResponseWatch();
+      clearSerialCommandQueue();
+    }
     updateConnectionUi(payload.connected ? "connected" : "bridge ready", "ok");
     if (payload.port) elements.portLabel.textContent = payload.port;
   });
@@ -149,6 +205,7 @@ function startBridgeEvents() {
     const payload = JSON.parse(event.data);
     if ((payload.slot || 1) !== state.activeSlot) return;
     clearSerialResponseWatch();
+    clearSerialCommandQueue();
     state.connected = false;
     appendLog(`SERIAL_ERROR ${payload.message}`, "in");
     setBadge(elements.connectionBadge, "serial error", "error");
@@ -162,6 +219,9 @@ function startBridgeEvents() {
   source.addEventListener("upload_line", (event) => {
     const payload = JSON.parse(event.data);
     appendLog(payload.line, "in");
+  });
+  source.addEventListener("upload_progress", (event) => {
+    window.dispatchEvent(new CustomEvent("gld-upload-progress", { detail: JSON.parse(event.data) }));
   });
   source.addEventListener("upload_done", (event) => {
     const payload = JSON.parse(event.data);
@@ -295,14 +355,13 @@ export async function connectSerial() {
     try {
       const connected = await connectBridgeSerialOnly({ resetSnapshot: true, openSetupOnMissingPort: true });
       if (!connected) return;
+      resetSerialLiveness();
       await wait(180);
       await sendCommand("APP_PING");
-      await wait(120);
+      await wait(300);
       await sendCommand("GET_INFO");
-      await wait(120);
+      await wait(300);
       await sendCommand("GET_STATUS");
-      await wait(120);
-      await sendCommand("GET_QC_STATUS");
       setSetupOpen(false);
     } catch (error) {
       appendLog(`CONNECT_ERROR ${error.message}`, "in");
@@ -322,15 +381,14 @@ export async function connectSerial() {
     await state.port.open({ baudRate: 115200, bufferSize: 4096 });
     state.writer = state.port.writable.getWriter();
     state.connected = true;
+    resetSerialLiveness();
     updateConnectionUi("connected", "ok");
     readLoop();
     await sendCommand("APP_PING");
-    await wait(120);
+    await wait(300);
     await sendCommand("GET_INFO");
-    await wait(120);
+    await wait(300);
     await sendCommand("GET_STATUS");
-    await wait(120);
-    await sendCommand("GET_QC_STATUS");
     setSetupOpen(false);
   } catch (error) {
     setBadge(elements.connectionBadge, "error", "error");

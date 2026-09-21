@@ -1,0 +1,985 @@
+{
+  "schema": "openai.presentation.layout/v4",
+  "unit": "px",
+  "slide": {
+    "aid": "sl/oojbcr",
+    "id": "oojbcr",
+    "slide": 7,
+    "layoutId": "16452bcd-0fe5-4b23-a757-5e1fc78af60a",
+    "layoutName": "Title Slide",
+    "layoutType": "title",
+    "masterLayoutId": "e0d1eaf0-323f-4a0e-8639-fc71f34a8a69",
+    "masterLayoutName": "Master",
+    "frame": {
+      "left": 0,
+      "top": 0,
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "theme": {
+    "colorSchemeName": "ChatGPT",
+    "colors": {
+      "accent1": "#156082",
+      "accent2": "#E97132",
+      "accent3": "#196B24",
+      "accent4": "#0F9ED5",
+      "accent5": "#A02B93",
+      "accent6": "#4EA72E",
+      "bg1": "#FFFFFF",
+      "bg2": "#000000",
+      "tx1": "#1F1F1F",
+      "tx2": "#FFFFFF",
+      "dk1": "#000000",
+      "lt1": "#FFFFFF",
+      "dk2": "#0E2841",
+      "lt2": "#E8E8E8",
+      "hlink": "#467886",
+      "folHlink": "#96607D"
+    },
+    "typefaces": [
+      "Arial"
+    ]
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "16452bcd-0fe5-4b23-a757-5e1fc78af60a",
+      "name": "Title Slide",
+      "type": "title",
+      "parentLayoutId": "e0d1eaf0-323f-4a0e-8639-fc71f34a8a69",
+      "elements": []
+    },
+    {
+      "scope": "master",
+      "id": "e0d1eaf0-323f-4a0e-8639-fc71f34a8a69",
+      "name": "Master",
+      "type": "master",
+      "elements": []
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/bmh0zyxg",
+      "id": "1",
+      "name": "slide-title",
+      "bbox": [
+        42,
+        34,
+        1140,
+        72
+      ],
+      "geometry": "rect",
+      "text": "Pertanyaan Data Processing: Pertamina perlu menetapkan platform server dan kebijakan data",
+      "textPreview": "Pertanyaan Data Processing: Pertamina perlu menetapkan platform server dan kebijakan data",
+      "resolvedFontSize": 26,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 39,
+        "typeface": "Arial",
+        "color": "#111111",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.67,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Pertanyaan Data Processing: Pertamina perlu menetapkan platform server dan kebijakan"
+          },
+          {
+            "index": 2,
+            "text": "data"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Pertanyaan Data Processing: Pertamina perlu menetapkan platform server dan kebijakan data",
+          "resolvedTextStyle": {
+            "fontSize": 39,
+            "typeface": "Arial",
+            "color": "#111111",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Pertanyaan Data Processing: Pertamina perlu menetapkan platform server dan kebijakan data",
+              "fontSize": 39,
+              "typeface": "Arial",
+              "color": "#111111",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 2,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/wnqhs3e1",
+      "id": "2",
+      "name": "page",
+      "bbox": [
+        1184,
+        660,
+        54,
+        24
+      ],
+      "geometry": "rect",
+      "text": "07",
+      "textPreview": "07",
+      "resolvedFontSize": 12,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 13,
+        "typeface": "Arial",
+        "color": "#5F6670",
+        "alignment": "right",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.92,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "07"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "07",
+          "resolvedTextStyle": {
+            "fontSize": 13,
+            "typeface": "Arial",
+            "color": "#5F6670",
+            "alignment": "right"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "07",
+              "fontSize": 13,
+              "typeface": "Arial",
+              "color": "#5F6670",
+              "alignment": "right"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 3,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/xozi18fm",
+      "id": "3",
+      "name": "server-column",
+      "bbox": [
+        42,
+        150,
+        545,
+        430
+      ],
+      "geometry": "rect",
+      "fillColor": "#EDEDED",
+      "lineColor": "#B8BCC4",
+      "lineWidth": 1
+    },
+    {
+      "order": 4,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/mhozmtwz",
+      "id": "4",
+      "name": "text",
+      "bbox": [
+        62,
+        172,
+        500,
+        38
+      ],
+      "geometry": "rect",
+      "text": "PLATFORM SERVER",
+      "textPreview": "PLATFORM SERVER",
+      "resolvedFontSize": 23.67,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 24,
+        "typeface": "Arial",
+        "color": "#3D8DFF",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.99,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "PLATFORM SERVER"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "PLATFORM SERVER",
+          "resolvedTextStyle": {
+            "fontSize": 24,
+            "typeface": "Arial",
+            "color": "#3D8DFF",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "PLATFORM SERVER",
+              "fontSize": 24,
+              "typeface": "Arial",
+              "color": "#3D8DFF",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 5,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/nix0vyx4",
+      "id": "5",
+      "name": "bullet-0",
+      "bbox": [
+        62,
+        239,
+        9,
+        9
+      ],
+      "geometry": "rect",
+      "fillColor": "#3D8DFF",
+      "lineColor": "#3D8DFF",
+      "lineWidth": 1
+    },
+    {
+      "order": 6,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/ojqho3ep",
+      "id": "6",
+      "name": "bullet-text-0",
+      "bbox": [
+        87,
+        230,
+        475,
+        93
+      ],
+      "geometry": "rect",
+      "text": "Server berupa VM atau bare-metal? Lokasi, availability, CPU/RAM/storage, UPS?",
+      "textPreview": "Server berupa VM atau bare-metal? Lokasi, availability, CPU/RAM/storage, UPS?",
+      "resolvedFontSize": 19,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 19,
+        "typeface": "Arial",
+        "color": "#111111",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Server berupa VM atau bare-metal? Lokasi,"
+          },
+          {
+            "index": 2,
+            "text": "availability, CPU/RAM/storage, UPS?"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Server berupa VM atau bare-metal? Lokasi, availability, CPU/RAM/storage, UPS?",
+          "resolvedTextStyle": {
+            "fontSize": 19,
+            "typeface": "Arial",
+            "color": "#111111",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Server berupa VM atau bare-metal? Lokasi, availability, CPU/RAM/storage, UPS?",
+              "fontSize": 19,
+              "typeface": "Arial",
+              "color": "#111111",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 7,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/9kzix8fa",
+      "id": "7",
+      "name": "bullet-1",
+      "bbox": [
+        62,
+        335,
+        9,
+        9
+      ],
+      "geometry": "rect",
+      "fillColor": "#3D8DFF",
+      "lineColor": "#3D8DFF",
+      "lineWidth": 1
+    },
+    {
+      "order": 8,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/etozi9wn",
+      "id": "8",
+      "name": "bullet-text-1",
+      "bbox": [
+        87,
+        326,
+        475,
+        93
+      ],
+      "geometry": "rect",
+      "text": "OS dan versi; hak admin; kebijakan Docker, Node.js/Node-RED, broker, antivirus, patching?",
+      "textPreview": "OS dan versi; hak admin; kebijakan Docker, Node.js/Node-RED, broker, antivirus, patching?",
+      "resolvedFontSize": 19,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 19,
+        "typeface": "Arial",
+        "color": "#111111",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "OS dan versi; hak admin; kebijakan Docker,"
+          },
+          {
+            "index": 2,
+            "text": "Node.js/Node-RED, broker, antivirus, patching?"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "OS dan versi; hak admin; kebijakan Docker, Node.js/Node-RED, broker, antivirus, patching?",
+          "resolvedTextStyle": {
+            "fontSize": 19,
+            "typeface": "Arial",
+            "color": "#111111",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "OS dan versi; hak admin; kebijakan Docker, Node.js/Node-RED, broker, antivirus, patching?",
+              "fontSize": 19,
+              "typeface": "Arial",
+              "color": "#111111",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 9,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/zexgrex8",
+      "id": "9",
+      "name": "bullet-2",
+      "bbox": [
+        62,
+        431,
+        9,
+        9
+      ],
+      "geometry": "rect",
+      "fillColor": "#3D8DFF",
+      "lineColor": "#3D8DFF",
+      "lineWidth": 1
+    },
+    {
+      "order": 10,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/bex0jqdo",
+      "id": "10",
+      "name": "bullet-text-2",
+      "bbox": [
+        87,
+        422,
+        475,
+        93
+      ],
+      "geometry": "rect",
+      "text": "Database standar; retention, backup/restore, archive, kapasitas dan ownership DBA?",
+      "textPreview": "Database standar; retention, backup/restore, archive, kapasitas dan ownership DBA?",
+      "resolvedFontSize": 19,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 19,
+        "typeface": "Arial",
+        "color": "#111111",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Database standar; retention, backup/restore, archive,"
+          },
+          {
+            "index": 2,
+            "text": "kapasitas dan ownership DBA?"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Database standar; retention, backup/restore, archive, kapasitas dan ownership DBA?",
+          "resolvedTextStyle": {
+            "fontSize": 19,
+            "typeface": "Arial",
+            "color": "#111111",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Database standar; retention, backup/restore, archive, kapasitas dan ownership DBA?",
+              "fontSize": 19,
+              "typeface": "Arial",
+              "color": "#111111",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 11,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/adoza5cj",
+      "id": "11",
+      "name": "data-column",
+      "bbox": [
+        625,
+        150,
+        555,
+        430
+      ],
+      "geometry": "rect",
+      "fillColor": "#D0EDFA",
+      "lineColor": "#B8BCC4",
+      "lineWidth": 1
+    },
+    {
+      "order": 12,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/xgfil0vu",
+      "id": "12",
+      "name": "text",
+      "bbox": [
+        645,
+        172,
+        510,
+        38
+      ],
+      "geometry": "rect",
+      "text": "OPERASI DATA",
+      "textPreview": "OPERASI DATA",
+      "resolvedFontSize": 23.67,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 24,
+        "typeface": "Arial",
+        "color": "#3D8DFF",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.99,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "OPERASI DATA"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "OPERASI DATA",
+          "resolvedTextStyle": {
+            "fontSize": 24,
+            "typeface": "Arial",
+            "color": "#3D8DFF",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "OPERASI DATA",
+              "fontSize": 24,
+              "typeface": "Arial",
+              "color": "#3D8DFF",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 13,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/wf6hcvu9",
+      "id": "13",
+      "name": "bullet-0",
+      "bbox": [
+        645,
+        239,
+        9,
+        9
+      ],
+      "geometry": "rect",
+      "fillColor": "#3D8DFF",
+      "lineColor": "#3D8DFF",
+      "lineWidth": 1
+    },
+    {
+      "order": 14,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/jix0nad0",
+      "id": "14",
+      "name": "bullet-text-0",
+      "bbox": [
+        670,
+        230,
+        485,
+        93
+      ],
+      "geometry": "rect",
+      "text": "NTP/timezone dan timestamp authoritative; toleransi duplikat, keterlambatan, restart?",
+      "textPreview": "NTP/timezone dan timestamp authoritative; toleransi duplikat, keterlambatan, restart?",
+      "resolvedFontSize": 19,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 19,
+        "typeface": "Arial",
+        "color": "#111111",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "NTP/timezone dan timestamp authoritative; toleransi"
+          },
+          {
+            "index": 2,
+            "text": "duplikat, keterlambatan, restart?"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "NTP/timezone dan timestamp authoritative; toleransi duplikat, keterlambatan, restart?",
+          "resolvedTextStyle": {
+            "fontSize": 19,
+            "typeface": "Arial",
+            "color": "#111111",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "NTP/timezone dan timestamp authoritative; toleransi duplikat, keterlambatan, restart?",
+              "fontSize": 19,
+              "typeface": "Arial",
+              "color": "#111111",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 15,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/yhoze5cf",
+      "id": "15",
+      "name": "bullet-1",
+      "bbox": [
+        645,
+        335,
+        9,
+        9
+      ],
+      "geometry": "rect",
+      "fillColor": "#3D8DFF",
+      "lineColor": "#3D8DFF",
+      "lineWidth": 1
+    },
+    {
+      "order": 16,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/l4zipkv6",
+      "id": "16",
+      "name": "bullet-text-1",
+      "bbox": [
+        670,
+        326,
+        485,
+        93
+      ],
+      "geometry": "rect",
+      "text": "Integrasi alarm ke SCADA/DCS/email/SMS/ticketing; severity, PIC, ACK dan SLA?",
+      "textPreview": "Integrasi alarm ke SCADA/DCS/email/SMS/ticketing; severity, PIC, ACK dan SLA?",
+      "resolvedFontSize": 19,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 19,
+        "typeface": "Arial",
+        "color": "#111111",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Integrasi alarm ke SCADA/DCS/email/SMS/ticketing;"
+          },
+          {
+            "index": 2,
+            "text": "severity, PIC, ACK dan SLA?"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Integrasi alarm ke SCADA/DCS/email/SMS/ticketing; severity, PIC, ACK dan SLA?",
+          "resolvedTextStyle": {
+            "fontSize": 19,
+            "typeface": "Arial",
+            "color": "#111111",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Integrasi alarm ke SCADA/DCS/email/SMS/ticketing; severity, PIC, ACK dan SLA?",
+              "fontSize": 19,
+              "typeface": "Arial",
+              "color": "#111111",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 17,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/kj6hgful",
+      "id": "17",
+      "name": "bullet-2",
+      "bbox": [
+        645,
+        431,
+        9,
+        9
+      ],
+      "geometry": "rect",
+      "fillColor": "#3D8DFF",
+      "lineColor": "#3D8DFF",
+      "lineWidth": 1
+    },
+    {
+      "order": 18,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/fmdgb6dw",
+      "id": "18",
+      "name": "bullet-text-2",
+      "bbox": [
+        670,
+        422,
+        485,
+        93
+      ],
+      "geometry": "rect",
+      "text": "Monitoring broker/flow/database, log retention, RTO/RPO dan maintenance window?",
+      "textPreview": "Monitoring broker/flow/database, log retention, RTO/RPO dan maintenance window?",
+      "resolvedFontSize": 19,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 19,
+        "typeface": "Arial",
+        "color": "#111111",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Monitoring broker/flow/database, log retention,"
+          },
+          {
+            "index": 2,
+            "text": "RTO/RPO dan maintenance window?"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Monitoring broker/flow/database, log retention, RTO/RPO dan maintenance window?",
+          "resolvedTextStyle": {
+            "fontSize": 19,
+            "typeface": "Arial",
+            "color": "#111111",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Monitoring broker/flow/database, log retention, RTO/RPO dan maintenance window?",
+              "fontSize": 19,
+              "typeface": "Arial",
+              "color": "#111111",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 19,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/el4z2lwb",
+      "id": "19",
+      "name": "text",
+      "bbox": [
+        42,
+        615,
+        1138,
+        36
+      ],
+      "geometry": "rect",
+      "text": "Repo membuktikan flow Node-RED/decode/decrypt/topology; bukan spesifikasi server produksi Pertamina.",
+      "textPreview": "Repo membuktikan flow Node-RED/decode/decrypt/topology; bukan spesifikasi server produksi Pertamina.",
+      "resolvedFontSize": 20,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 20,
+        "typeface": "Arial",
+        "color": "#111111",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Repo membuktikan flow Node-RED/decode/decrypt/topology; bukan spesifikasi server produksi Pertamina."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Repo membuktikan flow Node-RED/decode/decrypt/topology; bukan spesifikasi server produksi Pertamina.",
+          "resolvedTextStyle": {
+            "fontSize": 20,
+            "typeface": "Arial",
+            "color": "#111111",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Repo membuktikan flow Node-RED/decode/decrypt/topology; bukan spesifikasi server produksi Pertamina.",
+              "fontSize": 20,
+              "typeface": "Arial",
+              "color": "#111111",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    }
+  ],
+  "composeRuns": []
+}

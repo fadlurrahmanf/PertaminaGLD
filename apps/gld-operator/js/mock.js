@@ -75,23 +75,37 @@ export function emitMockInfo() {
       appPing: true,
       getInfo: true,
       getStatus: true,
+      lightweightTelemetry: "GET_TELEMETRY",
       serialAppConfig: true,
       serialDeviceId: true,
       serialChAddress: "SET_CH_ADDRESS_JSON chId",
       serialLoraConfig: "SET_LORA_CONFIG_JSON freqMHz,bwKHz,sf,cr,syncWord,txPowerDbm,preamble,tcxoVoltage,xtalVoltage",
       sessionMcp: "SET_SESSION_MCP_JSON channel,code (volatile inference-only)",
+      alarmControlMode: "SET_ALARM_MODE_JSON mode=auto|manual (volatile; boot default auto)",
+      manualAlarm: "SET_MANUAL_ALARM_JSON enabled (manual mode only)",
       liveLoraReinit: true
     }
   };
+  if (state.mockLegacyAlarmContract === true) {
+    // Developer-facing compatibility fixture for firmware that predates the
+    // explicit AUTO/MANUAL command. Its status exposes only manualOnly and
+    // manualCommanded, matching that legacy wire contract.
+    delete info.capabilities.alarmControlMode;
+    info.capabilities.manualAlarm = "SET_MANUAL_ALARM_JSON enabled (legacy manual-only)";
+  }
   handleLine(`GLD_INFO_JSON ${JSON.stringify(info)}`);
 }
 
-export function emitMockStatus() {
+function createMockStatus() {
   const t = Date.now() / 1000;
   const voltage = Array.from({ length: 8 }, (_, index) => {
     return 0.08 * Math.sin(t * (0.35 + index * 0.04) + index) + index * 0.012;
   });
   const alarm = Math.random() > 0.98;
+  const legacyAlarmContract = state.mockLegacyAlarmContract === true;
+  const alarmMode = state.mockAlarmMode === "manual" ? "manual" : "auto";
+  const manualCommanded = state.mockManualAlarmCommanded === true;
+  const physicalCommanded = legacyAlarmContract || alarmMode === "manual" ? manualCommanded : alarm;
   const lora = mockLoraConfig();
   const runtimeMcpCode = state.mockRuntimeMcpCode || Array.from({ length: 8 }, (_, index) => 132 + index * 4);
   const status = {
@@ -99,6 +113,22 @@ export function emitMockStatus() {
     nodeId: 0xF001,
     mode: state.mode === "unknown" ? "inference" : state.mode,
     alarmLatched: state.mockAlarmLatched === true,
+    alarmControl: legacyAlarmContract
+      ? { manualOnly: true, manualCommanded }
+      : {
+          available: true,
+          mode: alarmMode,
+          defaultMode: "auto",
+          modePersisted: false,
+          sessionOnly: true,
+          resetsToAutoOnBoot: true,
+          manualOnly: alarmMode === "manual",
+          manualCommanded,
+          inferenceAlarm: alarm,
+          physicalCommanded,
+          outputDrive: "steady_24v",
+          externalDevicePattern: "self_pulsed_1s_on_1s_off"
+        },
     uptimeMs: Math.floor(performance.now()),
     power: { mode: "24v", externalPower: true, batteryMv: 3560, batteryValid: true },
     bootHealth: { adsReady: true, mcpOkCount: 8, dacReady: true, mlReady: true },
@@ -114,18 +144,41 @@ export function emitMockStatus() {
     },
     telemetry: {
       valid: true,
+      sampleMs: Math.floor(performance.now()),
       gasClass: 0,
       gasName: alarm ? "methane" : "Clean_Air",
       confidence: alarm ? 87 : 99,
       alarm,
+      inferenceAlarm: alarm,
+      alarmControlMode: alarmMode,
+      manualAlarmCommanded: manualCommanded,
+      physicalAlarmCommanded: physicalCommanded,
       sensorVoltage: voltage,
       sensorGain: [64, 64, 64, 64, 64, 32, 64, 64],
       sensorStatus: [0, 0, 0, 0, 0, 0, 0, 0],
       featureOrder: ["MQ8", "MQ135", "MQ3", "MQ5", "MQ4", "MQ7", "MQ6", "MQ2"]
     }
   };
+  return status;
+}
+
+export function emitMockStatus() {
+  const status = createMockStatus();
   handleLine(`GLD_STATUS_JSON ${JSON.stringify(status)}`);
   if (state.mode === "nulling") emitMockNullingProgress();
+}
+
+export function emitMockTelemetry() {
+  const status = createMockStatus();
+  const telemetry = {
+    deviceId: status.deviceId,
+    mode: status.mode,
+    uptimeMs: status.uptimeMs,
+    alarmLatched: status.alarmLatched,
+    model: { inferenceValid: true, sensorFault: false },
+    telemetry: status.telemetry
+  };
+  handleLine(`GLD_TELEMETRY_JSON ${JSON.stringify(telemetry)}`);
 }
 
 function startMockNulling() {
@@ -183,6 +236,7 @@ function emitMockNullingProgress() {
 export function handleMockCommand(command) {
   if (command === "GET_INFO" || command === "APP_PING") emitMockInfo();
   if (command === "GET_STATUS" || command === "RUN_BOOT_CHECK") emitMockStatus();
+  if (command === "GET_TELEMETRY") emitMockTelemetry();
   if (command === "RESTART") {
     handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("RESTART", "ok", true))}`);
     state.mode = "inference";
@@ -213,6 +267,30 @@ export function handleMockCommand(command) {
     handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("SET_LORA_CONFIG", "ok", false))}`);
     emitMockInfo();
     emitMockStatus();
+  }
+  if (command.startsWith("SET_ALARM_MODE_JSON ")) {
+    const payload = safeJson(command.slice("SET_ALARM_MODE_JSON ".length));
+    if (state.mockLegacyAlarmContract === true) {
+      handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("SET_ALARM_MODE", "rejected", false))}`);
+    } else if (payload?.mode === "auto" || payload?.mode === "manual") {
+      state.mockAlarmMode = payload.mode;
+      state.mockManualAlarmCommanded = false;
+      handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("SET_ALARM_MODE", "ok", false))}`);
+      emitMockStatus();
+    } else {
+      handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("SET_ALARM_MODE", "rejected", false))}`);
+    }
+  }
+  if (command.startsWith("SET_MANUAL_ALARM_JSON ")) {
+    const payload = safeJson(command.slice("SET_MANUAL_ALARM_JSON ".length));
+    const manualOutputAvailable = state.mockLegacyAlarmContract === true || state.mockAlarmMode === "manual";
+    if (manualOutputAvailable && typeof payload?.enabled === "boolean") {
+      state.mockManualAlarmCommanded = payload.enabled;
+      handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("SET_MANUAL_ALARM", "ok", false))}`);
+      emitMockStatus();
+    } else {
+      handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("SET_MANUAL_ALARM", "rejected", false))}`);
+    }
   }
   if (command.startsWith("SET_NULLING_CONFIG_JSON ")) {
     const payload = safeJson(command.slice("SET_NULLING_CONFIG_JSON ".length));
@@ -347,6 +425,10 @@ export function toggleMock() {
     updateConnectionUi("disconnected", "");
     return;
   }
+  // Starting mock mode represents a fresh device boot: commissioning state
+  // must not survive the prior mock session.
+  state.mockAlarmMode = "auto";
+  state.mockManualAlarmCommanded = false;
   state.mock = true;
   state.connected = false;
   updateConnectionUi("mock", "ok");

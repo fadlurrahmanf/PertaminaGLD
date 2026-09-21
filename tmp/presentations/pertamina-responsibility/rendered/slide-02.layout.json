@@ -1,0 +1,1055 @@
+{
+  "schema": "openai.presentation.layout/v4",
+  "unit": "px",
+  "slide": {
+    "aid": "sl/6mwbvy",
+    "id": "6mwbvy",
+    "slide": 2,
+    "layoutId": "be4b8f75-84ef-4272-944b-e7d31fdb41b2",
+    "layoutName": "Title Slide",
+    "layoutType": "title",
+    "masterLayoutId": "b3585e2a-1f6b-42c9-9c69-ca2590313385",
+    "masterLayoutName": "Master",
+    "frame": {
+      "left": 0,
+      "top": 0,
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "theme": {
+    "colorSchemeName": "ChatGPT",
+    "colors": {
+      "accent1": "#156082",
+      "accent2": "#E97132",
+      "accent3": "#196B24",
+      "accent4": "#0F9ED5",
+      "accent5": "#A02B93",
+      "accent6": "#4EA72E",
+      "bg1": "#FFFFFF",
+      "bg2": "#000000",
+      "tx1": "#1F1F1F",
+      "tx2": "#FFFFFF",
+      "dk1": "#000000",
+      "lt1": "#FFFFFF",
+      "dk2": "#0E2841",
+      "lt2": "#E8E8E8",
+      "hlink": "#467886",
+      "folHlink": "#96607D"
+    },
+    "typefaces": [
+      "Arial"
+    ]
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "be4b8f75-84ef-4272-944b-e7d31fdb41b2",
+      "name": "Title Slide",
+      "type": "title",
+      "parentLayoutId": "b3585e2a-1f6b-42c9-9c69-ca2590313385",
+      "elements": []
+    },
+    {
+      "scope": "master",
+      "id": "b3585e2a-1f6b-42c9-9c69-ca2590313385",
+      "name": "Master",
+      "type": "master",
+      "elements": []
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/pw7eh832",
+      "id": "1",
+      "name": "slide-title",
+      "bbox": [
+        42,
+        32,
+        1160,
+        70
+      ],
+      "geometry": "rect",
+      "text": "GLD: suplai 24 VDC kontinu harus diverifikasi di lokasi",
+      "textPreview": "GLD: suplai 24 VDC kontinu harus diverifikasi di lokasi",
+      "resolvedFontSize": 39,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 39,
+        "typeface": "Arial",
+        "color": "#111827",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "GLD: suplai 24 VDC kontinu harus diverifikasi di lokasi"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "GLD: suplai 24 VDC kontinu harus diverifikasi di lokasi",
+          "resolvedTextStyle": {
+            "fontSize": 39,
+            "typeface": "Arial",
+            "color": "#111827",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "GLD: suplai 24 VDC kontinu harus diverifikasi di lokasi",
+              "fontSize": 39,
+              "typeface": "Arial",
+              "color": "#111827",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 2,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/2tgvmd4r",
+      "id": "2",
+      "name": "page",
+      "bbox": [
+        1185,
+        665,
+        50,
+        22
+      ],
+      "geometry": "rect",
+      "text": "02",
+      "textPreview": "02",
+      "resolvedFontSize": 10.33,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 13,
+        "typeface": "Arial",
+        "color": "#5F6670",
+        "alignment": "right",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.79,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "02"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "02",
+          "resolvedTextStyle": {
+            "fontSize": 13,
+            "typeface": "Arial",
+            "color": "#5F6670",
+            "alignment": "right"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "02",
+              "fontSize": 13,
+              "typeface": "Arial",
+              "color": "#5F6670",
+              "alignment": "right"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 3,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/3upwfilc",
+      "id": "3",
+      "name": "text",
+      "bbox": [
+        42,
+        128,
+        420,
+        35
+      ],
+      "geometry": "rect",
+      "text": "Kebutuhan LGU",
+      "textPreview": "Kebutuhan LGU",
+      "resolvedFontSize": 21.17,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 24,
+        "typeface": "Arial",
+        "color": "#246BFD",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.88,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Kebutuhan LGU"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Kebutuhan LGU",
+          "resolvedTextStyle": {
+            "fontSize": 24,
+            "typeface": "Arial",
+            "color": "#246BFD",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Kebutuhan LGU",
+              "fontSize": 24,
+              "typeface": "Arial",
+              "color": "#246BFD",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 4,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/czidsnmt",
+      "id": "4",
+      "name": "bullet-0",
+      "bbox": [
+        42,
+        188,
+        9,
+        9
+      ],
+      "geometry": "rect",
+      "fillColor": "#246BFD",
+      "lineColor": "#246BFD",
+      "lineWidth": 1
+    },
+    {
+      "order": 5,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/d0rels3e",
+      "id": "5",
+      "name": "bullet-text-0",
+      "bbox": [
+        67,
+        180,
+        523,
+        95
+      ],
+      "geometry": "rect",
+      "text": "Suplai 24 VDC dengan kapasitas minimal 2 A yang tersedia secara kontinu.",
+      "textPreview": "Suplai 24 VDC dengan kapasitas minimal 2 A yang tersedia secara kontinu.",
+      "resolvedFontSize": 20,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 20,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Suplai 24 VDC dengan kapasitas minimal 2 A yang"
+          },
+          {
+            "index": 2,
+            "text": "tersedia secara kontinu."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Suplai 24 VDC dengan kapasitas minimal 2 A yang tersedia secara kontinu.",
+          "resolvedTextStyle": {
+            "fontSize": 20,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Suplai 24 VDC dengan kapasitas minimal 2 A yang tersedia secara kontinu.",
+              "fontSize": 20,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 6,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/qxgvqd4n",
+      "id": "6",
+      "name": "bullet-1",
+      "bbox": [
+        42,
+        286,
+        9,
+        9
+      ],
+      "geometry": "rect",
+      "fillColor": "#246BFD",
+      "lineColor": "#246BFD",
+      "lineWidth": 1
+    },
+    {
+      "order": 7,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/ry9wjil8",
+      "id": "7",
+      "name": "bullet-text-1",
+      "bbox": [
+        67,
+        278,
+        523,
+        95
+      ],
+      "geometry": "rect",
+      "text": "Pemasangan direncanakan dekat sensor existing agar memanfaatkan sumber daya tersedia.",
+      "textPreview": "Pemasangan direncanakan dekat sensor existing agar memanfaatkan sumber daya tersedia.",
+      "resolvedFontSize": 20,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 20,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Pemasangan direncanakan dekat sensor existing agar"
+          },
+          {
+            "index": 2,
+            "text": "memanfaatkan sumber daya tersedia."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Pemasangan direncanakan dekat sensor existing agar memanfaatkan sumber daya tersedia.",
+          "resolvedTextStyle": {
+            "fontSize": 20,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Pemasangan direncanakan dekat sensor existing agar memanfaatkan sumber daya tersedia.",
+              "fontSize": 20,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 8,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/s3edgjmp",
+      "id": "8",
+      "name": "bullet-2",
+      "bbox": [
+        42,
+        384,
+        9,
+        9
+      ],
+      "geometry": "rect",
+      "fillColor": "#246BFD",
+      "lineColor": "#246BFD",
+      "lineWidth": 1
+    },
+    {
+      "order": 9,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/t4ne9onu",
+      "id": "9",
+      "name": "bullet-text-2",
+      "bbox": [
+        67,
+        376,
+        523,
+        95
+      ],
+      "geometry": "rect",
+      "text": "Battery GLD belum siap untuk operasi kontinu; optimasi power management masih dikembangkan.",
+      "textPreview": "Battery GLD belum siap untuk operasi kontinu; optimasi power management masih dikembangkan.",
+      "resolvedFontSize": 20,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 20,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Battery GLD belum siap untuk operasi kontinu; optimasi"
+          },
+          {
+            "index": 2,
+            "text": "power management masih dikembangkan."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Battery GLD belum siap untuk operasi kontinu; optimasi power management masih dikembangkan.",
+          "resolvedTextStyle": {
+            "fontSize": 20,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Battery GLD belum siap untuk operasi kontinu; optimasi power management masih dikembangkan.",
+              "fontSize": 20,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 10,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/xwb2hoz2",
+      "id": "10",
+      "name": "pertamina-power",
+      "bbox": [
+        630,
+        130,
+        550,
+        325
+      ],
+      "geometry": "rect",
+      "fillColor": "#DDEEFF",
+      "lineColor": "#C4C9D0",
+      "lineWidth": 1
+    },
+    {
+      "order": 11,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/wv218jih",
+      "id": "11",
+      "name": "text",
+      "bbox": [
+        654,
+        154,
+        500,
+        35
+      ],
+      "geometry": "rect",
+      "text": "Konfirmasi Pertamina",
+      "textPreview": "Konfirmasi Pertamina",
+      "resolvedFontSize": 21.17,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 24,
+        "typeface": "Arial",
+        "color": "#268A5E",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.88,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Konfirmasi Pertamina"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Konfirmasi Pertamina",
+          "resolvedTextStyle": {
+            "fontSize": 24,
+            "typeface": "Arial",
+            "color": "#268A5E",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Konfirmasi Pertamina",
+              "fontSize": 24,
+              "typeface": "Arial",
+              "color": "#268A5E",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 12,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/butkfehw",
+      "id": "12",
+      "name": "bullet-0",
+      "bbox": [
+        654,
+        218,
+        9,
+        9
+      ],
+      "geometry": "rect",
+      "fillColor": "#268A5E",
+      "lineColor": "#268A5E",
+      "lineWidth": 1
+    },
+    {
+      "order": 13,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/atkj6t0r",
+      "id": "13",
+      "name": "bullet-text-0",
+      "bbox": [
+        679,
+        210,
+        475,
+        74
+      ],
+      "geometry": "rect",
+      "text": "Pastikan kapasitas sisa sumber existing cukup untuk sensor existing dan GLD.",
+      "textPreview": "Pastikan kapasitas sisa sumber existing cukup untuk sensor existing dan GLD.",
+      "resolvedFontSize": 20,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 20,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Pastikan kapasitas sisa sumber existing cukup"
+          },
+          {
+            "index": 2,
+            "text": "untuk sensor existing dan GLD."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Pastikan kapasitas sisa sumber existing cukup untuk sensor existing dan GLD.",
+          "resolvedTextStyle": {
+            "fontSize": 20,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Pastikan kapasitas sisa sumber existing cukup untuk sensor existing dan GLD.",
+              "fontSize": 20,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 14,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/l0b2l8ze",
+      "id": "14",
+      "name": "bullet-1",
+      "bbox": [
+        654,
+        295,
+        9,
+        9
+      ],
+      "geometry": "rect",
+      "fillColor": "#268A5E",
+      "lineColor": "#268A5E",
+      "lineWidth": 1
+    },
+    {
+      "order": 15,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/kz2lc3it",
+      "id": "15",
+      "name": "bullet-text-1",
+      "bbox": [
+        679,
+        287,
+        475,
+        74
+      ],
+      "geometry": "rect",
+      "text": "Berikan titik terminal, polaritas, proteksi, grounding, konektor dan standar kabel.",
+      "textPreview": "Berikan titik terminal, polaritas, proteksi, grounding, konektor dan standar kabel.",
+      "resolvedFontSize": 20,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 20,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Berikan titik terminal, polaritas, proteksi, grounding,"
+          },
+          {
+            "index": 2,
+            "text": "konektor dan standar kabel."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Berikan titik terminal, polaritas, proteksi, grounding, konektor dan standar kabel.",
+          "resolvedTextStyle": {
+            "fontSize": 20,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Berikan titik terminal, polaritas, proteksi, grounding, konektor dan standar kabel.",
+              "fontSize": 20,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 16,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/jytkjyh8",
+      "id": "16",
+      "name": "bullet-2",
+      "bbox": [
+        654,
+        372,
+        9,
+        9
+      ],
+      "geometry": "rect",
+      "fillColor": "#268A5E",
+      "lineColor": "#268A5E",
+      "lineWidth": 1
+    },
+    {
+      "order": 17,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/yxkjat0n",
+      "id": "17",
+      "name": "bullet-text-2",
+      "bbox": [
+        679,
+        364,
+        475,
+        74
+      ],
+      "geometry": "rect",
+      "text": "Lakukan verifikasi tegangan/arus dan setujui titik pengambilan daya.",
+      "textPreview": "Lakukan verifikasi tegangan/arus dan setujui titik pengambilan daya.",
+      "resolvedFontSize": 20,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 20,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Lakukan verifikasi tegangan/arus dan setujui titik"
+          },
+          {
+            "index": 2,
+            "text": "pengambilan daya."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Lakukan verifikasi tegangan/arus dan setujui titik pengambilan daya.",
+          "resolvedTextStyle": {
+            "fontSize": 20,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Lakukan verifikasi tegangan/arus dan setujui titik pengambilan daya.",
+              "fontSize": 20,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 18,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/tov2p8za",
+      "id": "18",
+      "name": "boundary",
+      "bbox": [
+        42,
+        510,
+        1138,
+        92
+      ],
+      "geometry": "rect",
+      "fillColor": "#FFF4D7",
+      "lineColor": "#C4C9D0",
+      "lineWidth": 1
+    },
+    {
+      "order": 19,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/83mlg3ip",
+      "id": "19",
+      "name": "text",
+      "bbox": [
+        62,
+        528,
+        260,
+        32
+      ],
+      "geometry": "rect",
+      "text": "Batas penerapan",
+      "textPreview": "Batas penerapan",
+      "resolvedFontSize": 18.67,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 22,
+        "typeface": "Arial",
+        "color": "#246BFD",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.85,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Batas penerapan"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Batas penerapan",
+          "resolvedTextStyle": {
+            "fontSize": 22,
+            "typeface": "Arial",
+            "color": "#246BFD",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Batas penerapan",
+              "fontSize": 22,
+              "typeface": "Arial",
+              "color": "#246BFD",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 20,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/sjed8bud",
+      "id": "20",
+      "name": "text",
+      "bbox": [
+        300,
+        524,
+        850,
+        50
+      ],
+      "geometry": "rect",
+      "text": "Tahap lapangan saat ini menggunakan 24 VDC. Opsi baterai tidak diposisikan sebagai sumber kontinu sampai optimasi selesai dan hasil pengembangan divalidasi.",
+      "textPreview": "Tahap lapangan saat ini menggunakan 24 VDC. Opsi baterai tidak diposisikan sebagai sumber kontinu sampai optimasi selesai dan hasil penge...",
+      "resolvedFontSize": 16.83,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 20,
+        "typeface": "Arial",
+        "color": "#111827",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.84,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Tahap lapangan saat ini menggunakan 24 VDC. Opsi baterai tidak diposisikan sebagai sumber kontinu"
+          },
+          {
+            "index": 2,
+            "text": "sampai optimasi selesai dan hasil pengembangan divalidasi."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Tahap lapangan saat ini menggunakan 24 VDC. Opsi baterai tidak diposisikan sebagai sumber kontinu sampai optimasi selesai dan hasil pengembangan divalidasi.",
+          "resolvedTextStyle": {
+            "fontSize": 20,
+            "typeface": "Arial",
+            "color": "#111827",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Tahap lapangan saat ini menggunakan 24 VDC. Opsi baterai tidak diposisikan sebagai sumber kontinu sampai optimasi selesai dan hasil pengembangan divalidasi.",
+              "fontSize": 20,
+              "typeface": "Arial",
+              "color": "#111827",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    }
+  ],
+  "composeRuns": []
+}

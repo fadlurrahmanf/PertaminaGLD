@@ -1,0 +1,529 @@
+{"t": "2026-08-27T17:31:16", "kind": "tx", "value": "SET_MODE nulling"}
+{"t": "2026-08-27T17:31:16", "kind": "rx", "value": "GLD_SENSOR_SCAN seq=0 allValid=1 primed=1 inferenceValid=0 sensorFault=1 gasClass=6(CO2) confidence=0 alarm=0"}
+{"t": "2026-08-27T17:31:16", "kind": "rx", "value": "GLD_ALARM_OUTPUT held=0 reason=sensor_or_inference_fault"}
+{"t": "2026-08-27T17:31:16", "kind": "rx", "value": "GLD_CMD_ACK_JSON {\"deviceId\":\"1001\",\"nodeId\":4097,\"chId\":\"0010\",\"cmd\":\"SET_MODE\",\"status\":\"ok\",\"message\":\"mode switch accepted\",\"rebootExpected\":true,\"mode\":\"inference\",\"uptimeMs\":139313}"}
+{"t": "2026-08-27T17:31:16", "kind": "rx", "value": "GLD_MODE_SWITCH current=inference new=nulling"}
+{"t": "2026-08-27T17:31:16", "kind": "rx", "value": "ESP-ROM:esp32s3-20210327"}
+{"t": "2026-08-27T17:31:16", "kind": "rx", "value": "Build:Mar 27 2021"}
+{"t": "2026-08-27T17:31:16", "kind": "rx", "value": "rst:0xc (RTC_SW_CPU_RST),boot:0x19 (SPI_FAST_FLASH_BOOT)"}
+{"t": "2026-08-27T17:31:16", "kind": "rx", "value": "Saved PC:0x420b4a3a"}
+{"t": "2026-08-27T17:31:16", "kind": "rx", "value": "SPIWP:0xee"}
+{"t": "2026-08-27T17:31:16", "kind": "rx", "value": "mode:DIO, clock div:1"}
+{"t": "2026-08-27T17:31:16", "kind": "rx", "value": "load:0x3fce3808,len:0x4bc"}
+{"t": "2026-08-27T17:31:16", "kind": "rx", "value": "load:0x403c9700,len:0xbd8"}
+{"t": "2026-08-27T17:31:16", "kind": "rx", "value": "load:0x403cc700,len:0x2a0c"}
+{"t": "2026-08-27T17:31:16", "kind": "rx", "value": "entry 0x403c98d0"}
+{"t": "2026-08-27T17:31:17", "kind": "rx", "value": "[  1240][E][Preferences.cpp:50] begin(): nvs_open failed: NOT_FOUND"}
+{"t": "2026-08-27T17:31:17", "kind": "rx", "value": "GLD_APP_CONFIG_LOAD=DEFAULT reason=nvs_unavailable"}
+{"t": "2026-08-27T17:31:17", "kind": "rx", "value": "GLD_SECURITY_LOAD=UNPROVISIONED"}
+{"t": "2026-08-27T17:31:17", "kind": "rx", "value": "MODEL_NULLING_BIND_LOAD=OK profileId=1 fingerprint=FE65FC17"}
+{"t": "2026-08-27T17:31:17", "kind": "rx", "value": "GLD_CFG_BUTTON_INIT level=HIGH pressArmed=0 serviceHold=0"}
+{"t": "2026-08-27T17:31:17", "kind": "rx", "value": "Pertamina GLD unified firmware"}
+{"t": "2026-08-27T17:31:17", "kind": "rx", "value": "Firmware name: PertaminaGLD-GLD"}
+{"t": "2026-08-27T17:31:17", "kind": "rx", "value": "Firmware version: 0.8.30"}
+{"t": "2026-08-27T17:31:17", "kind": "rx", "value": "Protocol version: 0.2.0"}
+{"t": "2026-08-27T17:31:17", "kind": "rx", "value": "Build date/time: Aug 27 2026 17:27:55 Asia/Jakarta"}
+{"t": "2026-08-27T17:31:17", "kind": "rx", "value": "GLD_MODE=nulling"}
+{"t": "2026-08-27T17:31:17", "kind": "rx", "value": "GLD_DEBUG=ON command=DEBUG_OFF|DEBUG_ON"}
+{"t": "2026-08-27T17:31:17", "kind": "rx", "value": "[BOOT] GLD mulai boot. firmware=0.8.30 mode=nulling profile=GLD2 WROOM-1U-N16R8"}
+{"t": "2026-08-27T17:31:17", "kind": "rx", "value": "GLD_POWER mode=24v externalPower=1 batteryMv=65535 batterySense=not_detected ambiguous=0"}
+{"t": "2026-08-27T17:31:17", "kind": "rx", "value": "GLD2_PCF8574 ready=1 addr=0x20 outputs=0xFF allLoadSwitchesOn=1 powerPolicy=preserve read=1"}
+{"t": "2026-08-27T17:31:17", "kind": "rx", "value": "GLD2_ST_P raw=1 source=24V"}
+{"t": "2026-08-27T17:31:17", "kind": "rx", "value": "GLD2_MODBUS role=slave ready=1 unitId=1 baud=9600 format=8N1 readOnly=1"}
+{"t": "2026-08-27T17:31:18", "kind": "rx", "value": "GLD_INFO_JSON {\"deviceId\":\"1001\",\"nodeId\":4097,\"targetChId\":\"0010\",\"firmwareName\":\"PertaminaGLD-GLD\",\"firmwareVersion\":\"0.8.30\",\"protocolVersion\":\"0.2.0\",\"boardProfile\":\"GLD2 WROOM-1U-N16R8\",\"mode\":\"nulling\",\"batteryServiceHold\":false,\"baud\":115200,\"sensorCount\":8,\"modbus\":{\"available\":true,\"ready\":true,\"role\":\"slave\",\"unitId\":1,\"baud\":9600,\"format\":\"8N1\",\"readOnly\":true},\"pcf8574\":{\"available\":true,\"ready\":true,\"allLoadSwitchesOn\":true,\"address\":32,\"outputs\":255},\"sensorPower\":{\"available\":true,\"ready\":true,\"commanded\":true,\"outputMask\":255,\"channels\":[true,true,true,true,true,true,true,true],\"enChannels\":[0,6,7,3,4,5,2,1]},\"mqttTopicRoot\":\"gas-leak-detector\",\"starLora\":{\"freqMHz\":920,\"bwKHz\":125,\"sf\":7,\"cr\":5,\"syncWord\":18,\"txPowerDbm\":17,\"preamble\":8,\"tcxoVoltage\":1.600000024,\"xtalVoltage\":0,\"runtime\":true},\"radioReady\":false,\"appConfig\":{\"wifiSsid\":\"CHANGE_ME\",\"mqttHost\":\"CHANGE_ME_MQTT_HOST\",\"mqttPort\":1884,\"mqttUser\":\"\",\"topicRoot\":\"gas-leak-detector\",\"configValid\":false},\"security\":{\"aesKeyProvisioned\":false,\"aesKeyPresent\":false,\"aesKeySource\":\"none\",\"keyId\":0,\"selfTestFallbackAllowed\":false,\"lastDownlinkCommandId\":0},\"capabilities\":{\"appPing\":true,\"getInfo\":true,\"getStatus\":true,\"lightweightTelemetry\":\"GET_TELEMETRY\",\"serialAckJson\":true,\"runningTelemetry\":true,\"modeSwitchReboots\":true,\"datasetControlPath\":\"mqtt\",\"nullingConfig\":\"SET_NULLING_CONFIG_JSON thresholdV,minFinalV\",\"sessionMcp\":\"SET_SESSION_MCP_JSON channel,code (volatile inference-only)\",\"sensorModulePower\":\"SET_SENSOR_POWER_JSON channel,enabled or all,enabled (GLD2 PCF8574/TPS22919 only; volatile)\",\"alarmControlMode\":\"SET_ALARM_MODE_JSON mode=auto|manual (all GLD boards; volatile; boot default auto)\",\"manualAlarm\":\"SET_MANUAL_ALARM_JSON enabled (all GLD boards in manual mode; volatile physical-output test)\",\"modelNullingBinding\":\"BIND_MODEL_TO_ACTIVE_NULLING_PROFILE\",\"qcTracking\":\"SET_QC_RESULT_JSON channel,pass,timestamp / GET_QC_STATUS\",\"nullingSingleChannel\":\"RUN_NULLING_SINGLE_JSON channel\"}}"}
+{"t": "2026-08-27T17:31:18", "kind": "rx", "value": "GLD_STATUS_JSON {\"deviceId\":\"1001\",\"nodeId\":4097,\"targetChId\":\"0010\",\"mode\":\"nulling\",\"uptimeMs\":1547,\"debugEnabled\":true,\"power\":{\"mode\":\"24v\",\"externalPower\":true,\"batteryMv\":65535,\"batteryValid\":false,\"batteryDetected\":false,\"batterySenseStatus\":\"not_detected\",\"batteryLow\":false,\"batteryCritical\":false,\"sourceAmbiguous\":false,\"stpRaw\":1,\"stpSource\":\"24V\",\"serviceHoldActive\":false,\"serviceHoldEffective\":false},\"batterySession\":{\"state\":\"inactive\",\"startedMs\":0,\"stateStartedMs\":0,\"validSampleBatches\":0,\"requiredSampleBatches\":10,\"alarmTxAttempts\":0,\"alarmTxAttemptLimit\":3,\"alarmAckReceived\":false,\"pendingAlarm\":false,\"pendingSaveRequired\":false,\"persistenceFaultHold\":false,\"completionReason\":\"session_done\"},\"bootHealth\":{\"adsReady\":false,\"adsDrdyLevel\":-1,\"adsDrdyPulldownLevel\":-1,\"adsDrdyPullupLevel\":-1,\"adsMisoPulldownLevel\":-1,\"adsMisoPullupLevel\":-1,\"adsCsLevel\":-1,\"adsSyncLevel\":-1,\"adsStatus\":0,\"adsMux\":0,\"adsAdcon\":0,\"adsDrate\":0,\"adsReason\":\"not_checked\",\"tcaOk\":false,\"mcpOkCount\":0,\"mcpOk\":[false,false,false,false,false,false,false,false],\"mcpAddrMask\":[0,0,0,0,0,0,0,0],\"mcpControlTested\":false,\"mcpControlOkCount\":0,\"mcpControlOk\":[false,false,false,false,false,false,false,false],\"dacReady\":false,\"radioReady\":false,\"mlReady\":false,\"nullingProfileApplied\":false,\"modelProfileReady\":false},\"runtimeMcpCode\":[0,0,0,0,0,0,0,0],\"runtimeMcpReadback\":[0,0,0,0,0,0,0,0],\"runtimeMcpVerified\":[false,false,false,false,false,false,false,false],\"runtimeMcpVerifiedAtMs\":[0,0,0,0,0,0,0,0],\"model\":{\"profileId\":\"cnn-dualbranch-board-1-v1\",\"scalerProfileId\":\"cnn-dualbranch-board-1-v1\",\"productionApproved\":true,\"boundNullingProfileId\":1,\"activeNullingProfileId\":0,\"bindingValid\":true,\"bindingModelMatches\":true,\"dacVerificationReady\":false,\"profileReady\":false,\"inferenceValid\":false,\"sensorFault\":false},\"lora\":{\"beginState\":0,\"lastTxState\":0,\"lastTxOk\":false,\"txSeq\":0,\"txCounter\":0,\"aesKeyProvisioned\":false,\"aesKeyPresent\":false,\"aesKeySource\":\"none\",\"keyId\":0,\"lastDownlinkCommandId\":0,\"freqMHz\":920,\"bwKHz\":125,\"sf\":7,\"cr\":5,\"syncWord\":18,\"txPowerDbm\":17,\"preamble\":8,\"tcxoVoltage\":1.600000024,\"xtalVoltage\":0},\"dataset\":{\"state\":\"idle\",\"step\":\"idle\",\"label\":\"\",\"seq\":0,\"targetSamples\":0,\"sampleIntervalMs\":500,\"maxDurationMs\":0,\"useFanIntake\":false,\"fanAvailable\":false,\"fanOnMs\":1000,\"postFanSettleMs\":0,\"nullingProfileId\":0,\"queuePending\":0,\"queueCapacity\":16,\"queueEnqueued\":0,\"queueDropped\":0,\"publishFailCount\":0,\"retryCount\":0,\"retryFailCount\":0,\"rejectedSamples\":0,\"lastRejectReason\":\"none\",\"lastRejectChannel\":-1,\"lastRejectOkFiniteCount\":0,\"lastRejectStatus\":255,\"lastRejectGain\":0,\"lastRejectSaturated\":false},\"recovery\":{\"wifiReconnectCount\":0,\"wifiReconnectFailCount\":0,\"mqttReconnectCount\":0,\"mqttConnectFailCount\":0,\"lastMqttState\":0,\"adsRecoveryCount\":0,\"adsRecoveryFailCount\":0,\"adsReadFailStreak\":0,\"lastReason\":\"none\",\"lastRecoveryMs\":0,\"bootRecoveryArmed\":false,\"bootRecoveryDueMs\":0,\"bootRecoveryReason\":\"none\",\"bootRecoveryNonAdsFailure\":false,\"bootRecoveryRestartCount\":0},\"nulling\":{\"done\":false,\"retryArmed\":false,\"retryAvailable\":false,\"retryFailedAvailable\":false,\"retryFailedMask\":0,\"attemptCount\":0,\"nextRetryMs\":0,\"thresholdV\":9.999999747e-6,\"minFinalV\":0},\"telemetry\":{\"valid\":false,\"sampleMs\":0,\"gasClass\":6,\"gasName\":\"CO2\",\"confidence\":0,\"alarm\":false,\"inferenceAlarm\":false,\"alarmControlMode\":\"auto\",\"manualAlarmCommanded\":false,\"physicalAlarmCommanded\":false,\"sensorVoltage\":[0,0,0,0,0,0,0,0],\"sensorGain\":[0,0,0,0,0,0,0,0],\"sensorStatus\":[0,0,0,0,0,0,0,0],\"featureOrder\":[\"MQ8\",\"MQ135\",\"MQ3\",\"MQ5\",\"MQ4\",\"MQ7\",\"MQ6\",\"MQ2\"],\"dacCodeApplied\":[0,0,0,0,0,0,0,0],\"dacVerified\":[false,false,false,false,false,false,false,false],\"dacVerifiedAtMs\":[0,0,0,0,0,0,0,0]},\"environment\":{\"available\":true,\"detected\":false,\"valid\":false,\"sensor\":\"SHT40\",\"address\":\"0x44\",\"sampleMs\":0,\"sampleAgeMs\":4294967295,\"tca9548a\":{\"address\":\"0x71\",\"detected\":false,\"sampleMs\":0,\"sampleAgeMs\":4294967295}},\"modbus\":{\"available\":true,\"ready\":true},\"pcf8574\":{\"available\":true,\"ready\":true,\"allLoadSwitchesOn\":true,\"address\":32,\"outputs\":255},\"sensorPower\":{\"available\":true,\"ready\":true,\"commanded\":true,\"outputMask\":255,\"channels\":[true,true,true,true,true,true,true,true],\"enChannels\":[0,6,7,3,4,5,2,1]},\"alarmControl\":{\"available\":true,\"mode\":\"auto\",\"defaultMode\":\"auto\",\"modePersisted\":false,\"sessionOnly\":true,\"resetsToAutoOnBoot\":true,\"manualOnly\":false,\"manualCommanded\":false,\"inferenceAlarm\":false,\"physicalCommanded\":false,\"outputDrive\":\"steady_24v\",\"externalDevicePattern\":\"self_pulsed_1s_on_1s_off\"},\"alarmLatched\":false}"}
+{"t": "2026-08-27T17:31:18", "kind": "rx", "value": "BOOT_PROBE_ADS=start"}
+{"t": "2026-08-27T17:31:18", "kind": "rx", "value": "ADS_BEGIN_RESULT=PASS"}
+{"t": "2026-08-27T17:31:18", "kind": "rx", "value": "BOOT_PROBE_ADS=done adsReady=1 reason=ok drdy=0 pd=0 pu=0 misoPD=0 misoPU=1 cs=1 sync=1 status=0x36 mux=0x0F adcon=0x06 drate=0xF0"}
+{"t": "2026-08-27T17:31:18", "kind": "rx", "value": "BOOT_PROBE_I2C=start"}
+{"t": "2026-08-27T17:31:18", "kind": "rx", "value": "GLD2_ROOT_I2C_RECOVERY source=boot_i2c_probe sda=1/1 scl=1/1 pulses=0 tcaDisable=1"}
+{"t": "2026-08-27T17:31:18", "kind": "rx", "value": "GLD2_MCP_BOOT_SCAN isolateAll beforeRoot pcf=0x00 off=1"}
+{"t": "2026-08-27T17:31:19", "kind": "rx", "value": "GLD2_MCP_BOOT_SCAN channel=0 header=H2 sensor=MQ8 en=0 pcfOutputs=0x01 pcfResetOk=1 pcfWriteOk=1 tcaMux=7 lines=SCL7/SDA7 selected=1 count=1 addrs=0x60 tcaOff=1 rootTcaAck=1 sensorOff=1"}
+{"t": "2026-08-27T17:31:20", "kind": "rx", "value": "GLD2_MCP_BOOT_SCAN channel=1 header=H1 sensor=MQ135 en=6 pcfOutputs=0x40 pcfResetOk=1 pcfWriteOk=1 tcaMux=6 lines=SCL6/SDA6 selected=1 count=1 addrs=0x60 tcaOff=1 rootTcaAck=1 sensorOff=1"}
+{"t": "2026-08-27T17:31:20", "kind": "rx", "value": "GLD2_MCP_BOOT_SCAN channel=2 header=H3 sensor=MQ3 en=7 pcfOutputs=0x80 pcfResetOk=1 pcfWriteOk=1 tcaMux=5 lines=SCL5/SDA5 selected=1 count=1 addrs=0x60 tcaOff=1 rootTcaAck=1 sensorOff=1"}
+{"t": "2026-08-27T17:31:21", "kind": "rx", "value": "GLD2_MCP_BOOT_SCAN channel=3 header=H4 sensor=MQ5 en=3 pcfOutputs=0x08 pcfResetOk=1 pcfWriteOk=1 tcaMux=4 lines=SCL4/SDA4 selected=1 count=1 addrs=0x60 tcaOff=1 rootTcaAck=1 sensorOff=1"}
+{"t": "2026-08-27T17:31:21", "kind": "rx", "value": "GLD2_MCP_BOOT_SCAN channel=4 header=H5 sensor=MQ4 en=4 pcfOutputs=0x10 pcfResetOk=1 pcfWriteOk=1 tcaMux=3 lines=SCL3/SDA3 selected=1 count=1 addrs=0x60 tcaOff=1 rootTcaAck=1 sensorOff=1"}
+{"t": "2026-08-27T17:31:22", "kind": "rx", "value": "GLD2_MCP_BOOT_SCAN channel=5 header=H6 sensor=MQ7 en=5 pcfOutputs=0x20 pcfResetOk=1 pcfWriteOk=1 tcaMux=2 lines=SCL2/SDA2 selected=1 count=1 addrs=0x60 tcaOff=1 rootTcaAck=1 sensorOff=1"}
+{"t": "2026-08-27T17:31:22", "kind": "rx", "value": "GLD2_MCP_BOOT_SCAN channel=6 header=H7 sensor=MQ6 en=2 pcfOutputs=0x04 pcfResetOk=1 pcfWriteOk=1 tcaMux=1 lines=SCL1/SDA1 selected=1 count=1 addrs=0x60 tcaOff=1 rootTcaAck=1 sensorOff=1"}
+{"t": "2026-08-27T17:31:23", "kind": "rx", "value": "GLD2_MCP_BOOT_SCAN channel=7 header=H8 sensor=MQ2 en=1 pcfOutputs=0x02 pcfResetOk=1 pcfWriteOk=1 tcaMux=0 lines=SCL0/SDA0 selected=1 count=1 addrs=0x60 tcaOff=1 rootTcaAck=1 sensorOff=1"}
+{"t": "2026-08-27T17:31:23", "kind": "rx", "value": "GLD2_MCP_BOOT_SCAN completePcf=0x00 finalOff=1"}
+{"t": "2026-08-27T17:31:23", "kind": "rx", "value": "BOOT_PROBE_I2C=done fullScan=1 allAddresses=0x20,0x44,0x71 allCount=3 tcaOk=1 pcfOk=1 mcpOkCount=8/8 mcpMask=0xFF"}
+{"t": "2026-08-27T17:31:23", "kind": "rx", "value": "BOOT_PROBE_MCP_CONTROL=start"}
+{"t": "2026-08-27T17:31:28", "kind": "rx", "value": "BOOT_PROBE_MCP_CONTROL=done tested=1 dacReady=1 writeOkCount=8/8 writeMask=0xFF"}
+{"t": "2026-08-27T17:31:28", "kind": "rx", "value": "GLD2_ROOT_I2C_RECOVERY source=boot_service_runtime sda=1/1 scl=1/1 pulses=0 tcaDisable=1"}
+{"t": "2026-08-27T17:31:28", "kind": "rx", "value": "GLD2_RUNTIME_SENSOR_POWER source=boot_service_runtime outputs=0xFF write=1 read=1 enabled=1 attempts=1"}
+{"t": "2026-08-27T17:31:28", "kind": "rx", "value": "DAC_MUX_BEGIN_RESULT=PASS"}
+{"t": "2026-08-27T17:31:28", "kind": "rx", "value": "WIFI_OFF mode=nulling reason=nulling_mode"}
+{"t": "2026-08-27T17:31:28", "kind": "rx", "value": "GLD2_ROOT_I2C_RECOVERY source=boot_nulling sda=1/1 scl=1/1 pulses=0 tcaDisable=1"}
+{"t": "2026-08-27T17:31:28", "kind": "rx", "value": "GLD2_RUNTIME_SENSOR_POWER source=boot_nulling outputs=0xFF write=1 read=1 enabled=1 attempts=1"}
+{"t": "2026-08-27T17:31:28", "kind": "rx", "value": "NULLING_SENSOR_POWER_READY=PASS source=boot_nulling outputs=0xFF read=1"}
+{"t": "2026-08-27T17:31:28", "kind": "rx", "value": "NULLING_MCP_PREFLIGHT source=boot_nulling ch=0 sensor=MQ8 mux=7 address=0x60 code=0 ack=1"}
+{"t": "2026-08-27T17:31:28", "kind": "rx", "value": "NULLING_MCP_PREFLIGHT source=boot_nulling ch=1 sensor=MQ135 mux=6 address=0x60 code=0 ack=1"}
+{"t": "2026-08-27T17:31:29", "kind": "rx", "value": "NULLING_MCP_PREFLIGHT source=boot_nulling ch=2 sensor=MQ3 mux=5 address=0x60 code=0 ack=1"}
+{"t": "2026-08-27T17:31:29", "kind": "rx", "value": "NULLING_MCP_PREFLIGHT source=boot_nulling ch=3 sensor=MQ5 mux=4 address=0x60 code=0 ack=1"}
+{"t": "2026-08-27T17:31:29", "kind": "rx", "value": "NULLING_MCP_PREFLIGHT source=boot_nulling ch=4 sensor=MQ4 mux=3 address=0x60 code=0 ack=1"}
+{"t": "2026-08-27T17:31:29", "kind": "rx", "value": "NULLING_MCP_PREFLIGHT source=boot_nulling ch=5 sensor=MQ7 mux=2 address=0x60 code=0 ack=1"}
+{"t": "2026-08-27T17:31:29", "kind": "rx", "value": "NULLING_MCP_PREFLIGHT source=boot_nulling ch=6 sensor=MQ6 mux=1 address=0x60 code=0 ack=1"}
+{"t": "2026-08-27T17:31:29", "kind": "rx", "value": "NULLING_MCP_PREFLIGHT source=boot_nulling ch=7 sensor=MQ2 mux=0 address=0x60 code=0 ack=1"}
+{"t": "2026-08-27T17:31:29", "kind": "rx", "value": "NULLING_MCP_PREFLIGHT_DONE=PASS source=boot_nulling restore=0xFF read=1"}
+{"t": "2026-08-27T17:31:29", "kind": "rx", "value": "NULLING_RUN=start"}
+{"t": "2026-08-27T17:31:29", "kind": "rx", "value": "NULLING_MCP_ISOLATION=ARMED policy=one_active_rail_after_warmup"}
+{"t": "2026-08-27T17:31:29", "kind": "rx", "value": "NULLING_SERVICE_START channels=8 channelMask=0xFF avgCount=8 confirmCount=10 settleMs=150 stabilityWindows=3 stabilityGapMs=50 stability=adaptive_per_channel thresholdV=0.000010 minFinalV=0.000000"}
+{"t": "2026-08-27T17:31:29", "kind": "rx", "value": "NULLING_SENSOR_POWER_MODE=all_on_warmup_dac_policy=caller_managed warmupMs=30000"}
+{"t": "2026-08-27T17:31:29", "kind": "rx", "value": "NULLING_WARMUP_START totalSec=30"}
+{"t": "2026-08-27T17:31:29", "kind": "rx", "value": "NULLING_WARMUP remainingSec=30"}
+{"t": "2026-08-27T17:31:30", "kind": "rx", "value": "NULLING_WARMUP remainingSec=29"}
+{"t": "2026-08-27T17:31:31", "kind": "rx", "value": "NULLING_WARMUP remainingSec=28"}
+{"t": "2026-08-27T17:31:32", "kind": "rx", "value": "NULLING_WARMUP remainingSec=27"}
+{"t": "2026-08-27T17:31:33", "kind": "rx", "value": "NULLING_WARMUP remainingSec=26"}
+{"t": "2026-08-27T17:31:34", "kind": "rx", "value": "NULLING_WARMUP remainingSec=25"}
+{"t": "2026-08-27T17:31:35", "kind": "rx", "value": "NULLING_WARMUP remainingSec=24"}
+{"t": "2026-08-27T17:31:36", "kind": "rx", "value": "NULLING_WARMUP remainingSec=23"}
+{"t": "2026-08-27T17:31:37", "kind": "rx", "value": "NULLING_WARMUP remainingSec=22"}
+{"t": "2026-08-27T17:31:38", "kind": "rx", "value": "NULLING_WARMUP remainingSec=21"}
+{"t": "2026-08-27T17:31:39", "kind": "rx", "value": "NULLING_WARMUP remainingSec=20"}
+{"t": "2026-08-27T17:31:40", "kind": "rx", "value": "NULLING_WARMUP remainingSec=19"}
+{"t": "2026-08-27T17:31:41", "kind": "rx", "value": "NULLING_WARMUP remainingSec=18"}
+{"t": "2026-08-27T17:31:42", "kind": "rx", "value": "NULLING_WARMUP remainingSec=17"}
+{"t": "2026-08-27T17:31:43", "kind": "rx", "value": "NULLING_WARMUP remainingSec=16"}
+{"t": "2026-08-27T17:31:44", "kind": "rx", "value": "NULLING_WARMUP remainingSec=15"}
+{"t": "2026-08-27T17:31:45", "kind": "rx", "value": "NULLING_WARMUP remainingSec=14"}
+{"t": "2026-08-27T17:31:46", "kind": "rx", "value": "NULLING_WARMUP remainingSec=13"}
+{"t": "2026-08-27T17:31:47", "kind": "rx", "value": "NULLING_WARMUP remainingSec=12"}
+{"t": "2026-08-27T17:31:48", "kind": "rx", "value": "NULLING_WARMUP remainingSec=11"}
+{"t": "2026-08-27T17:31:49", "kind": "rx", "value": "NULLING_WARMUP remainingSec=10"}
+{"t": "2026-08-27T17:31:50", "kind": "rx", "value": "NULLING_WARMUP remainingSec=9"}
+{"t": "2026-08-27T17:31:51", "kind": "rx", "value": "NULLING_WARMUP remainingSec=8"}
+{"t": "2026-08-27T17:31:52", "kind": "rx", "value": "NULLING_WARMUP remainingSec=7"}
+{"t": "2026-08-27T17:31:53", "kind": "rx", "value": "NULLING_WARMUP remainingSec=6"}
+{"t": "2026-08-27T17:31:54", "kind": "rx", "value": "NULLING_WARMUP remainingSec=5"}
+{"t": "2026-08-27T17:31:55", "kind": "rx", "value": "NULLING_WARMUP remainingSec=4"}
+{"t": "2026-08-27T17:31:56", "kind": "rx", "value": "NULLING_WARMUP remainingSec=3"}
+{"t": "2026-08-27T17:31:57", "kind": "rx", "value": "NULLING_WARMUP remainingSec=2"}
+{"t": "2026-08-27T17:31:58", "kind": "rx", "value": "NULLING_WARMUP remainingSec=1"}
+{"t": "2026-08-27T17:31:59", "kind": "rx", "value": "NULLING_WARMUP_DONE"}
+{"t": "2026-08-27T17:31:59", "kind": "rx", "value": "NULLING_CH_START ch=0 sensor=MQ8"}
+{"t": "2026-08-27T17:31:59", "kind": "rx", "value": "NULLING_MCP_WRITE ch=0 sensor=MQ8 mux=7 address=0x60 code=0 ack=1 source=zero"}
+{"t": "2026-08-27T17:31:59", "kind": "rx", "value": "NULLING_BASELINE_START ch=0 sensor=MQ8 codeMin=0 codeMax=10 avgCount=8"}
+{"t": "2026-08-27T17:32:00", "kind": "rx", "value": "NULLING_STABILITY stage=baseline ch=0 sensor=MQ8 code=0 stable=1 spread=0.000026778 observeMs=814"}
+{"t": "2026-08-27T17:32:00", "kind": "rx", "value": "NULLING_BASELINE_STEP ch=0 sensor=MQ8 code=0 voltage=0.001257857 valid=1 write=1"}
+{"t": "2026-08-27T17:32:01", "kind": "rx", "value": "NULLING_STABILITY stage=baseline ch=0 sensor=MQ8 code=1 stable=1 spread=0.000032812 observeMs=798"}
+{"t": "2026-08-27T17:32:01", "kind": "rx", "value": "NULLING_BASELINE_STEP ch=0 sensor=MQ8 code=1 voltage=0.001260252 valid=1 write=1"}
+{"t": "2026-08-27T17:32:02", "kind": "rx", "value": "NULLING_STABILITY stage=baseline ch=0 sensor=MQ8 code=2 stable=1 spread=0.000077828 observeMs=813"}
+{"t": "2026-08-27T17:32:02", "kind": "rx", "value": "NULLING_BASELINE_STEP ch=0 sensor=MQ8 code=2 voltage=0.001154211 valid=1 write=1"}
+{"t": "2026-08-27T17:32:03", "kind": "rx", "value": "NULLING_STABILITY stage=baseline ch=0 sensor=MQ8 code=3 stable=1 spread=0.000010930 observeMs=813"}
+{"t": "2026-08-27T17:32:03", "kind": "rx", "value": "NULLING_BASELINE_STEP ch=0 sensor=MQ8 code=3 voltage=0.001258692 valid=1 write=1"}
+{"t": "2026-08-27T17:32:04", "kind": "rx", "value": "NULLING_STABILITY stage=baseline ch=0 sensor=MQ8 code=4 stable=1 spread=0.000110905 observeMs=805"}
+{"t": "2026-08-27T17:32:04", "kind": "rx", "value": "NULLING_BASELINE_STEP ch=0 sensor=MQ8 code=4 voltage=0.001221260 valid=1 write=1"}
+{"t": "2026-08-27T17:32:05", "kind": "rx", "value": "NULLING_STABILITY stage=baseline ch=0 sensor=MQ8 code=5 stable=1 spread=0.000092623 observeMs=813"}
+{"t": "2026-08-27T17:32:05", "kind": "rx", "value": "NULLING_BASELINE_STEP ch=0 sensor=MQ8 code=5 voltage=0.001215573 valid=1 write=1"}
+{"t": "2026-08-27T17:32:06", "kind": "rx", "value": "NULLING_STABILITY stage=baseline ch=0 sensor=MQ8 code=6 stable=1 spread=0.000179423 observeMs=804"}
+{"t": "2026-08-27T17:32:06", "kind": "rx", "value": "NULLING_BASELINE_STEP ch=0 sensor=MQ8 code=6 voltage=0.001274975 valid=1 write=1"}
+{"t": "2026-08-27T17:32:07", "kind": "rx", "value": "NULLING_STABILITY stage=baseline ch=0 sensor=MQ8 code=7 stable=1 spread=0.000069015 observeMs=801"}
+{"t": "2026-08-27T17:32:07", "kind": "rx", "value": "NULLING_BASELINE_STEP ch=0 sensor=MQ8 code=7 voltage=0.001276335 valid=1 write=1"}
+{"t": "2026-08-27T17:32:08", "kind": "rx", "value": "NULLING_STABILITY stage=baseline ch=0 sensor=MQ8 code=8 stable=1 spread=0.000076359 observeMs=813"}
+{"t": "2026-08-27T17:32:08", "kind": "rx", "value": "NULLING_BASELINE_STEP ch=0 sensor=MQ8 code=8 voltage=0.001269186 valid=1 write=1"}
+{"t": "2026-08-27T17:32:09", "kind": "rx", "value": "NULLING_STABILITY stage=baseline ch=0 sensor=MQ8 code=9 stable=1 spread=0.000088039 observeMs=801"}
+{"t": "2026-08-27T17:32:09", "kind": "rx", "value": "NULLING_BASELINE_STEP ch=0 sensor=MQ8 code=9 voltage=0.001209047 valid=1 write=1"}
+{"t": "2026-08-27T17:32:10", "kind": "rx", "value": "NULLING_STABILITY stage=baseline ch=0 sensor=MQ8 code=10 stable=1 spread=0.000070386 observeMs=813"}
+{"t": "2026-08-27T17:32:10", "kind": "rx", "value": "NULLING_BASELINE_STEP ch=0 sensor=MQ8 code=10 voltage=0.001225092 valid=1 write=1"}
+{"t": "2026-08-27T17:32:10", "kind": "rx", "value": "NULLING_BASELINE_DONE ch=0 sensor=MQ8 baseline=0.001238 validSamples=11 medianSpread=0.000076359 madSpread=0.000016263 stabilityTolerance=0.000125149"}
+{"t": "2026-08-27T17:32:10", "kind": "rx", "value": "NULLING_THRESHOLD_DERIVED ch=0 sensor=MQ8 effective=0.000619204 baselineTerm=0.000619204 noiseTerm=0.000375447 floor=0.000010000 ratio=0.500 noiseMultiplier=3.000"}
+{"t": "2026-08-27T17:32:10", "kind": "rx", "value": "NULLING_STAGE_TRANSITION ch=0 sensor=MQ8 from=baseline to=exponential pauseMs=0"}
+{"t": "2026-08-27T17:32:10", "kind": "rx", "value": "NULLING_EXP_START ch=0 sensor=MQ8 baseline=0.001238 threshold=0.000619 minFinalV=0.000000 minBracketDac=100"}
+{"t": "2026-08-27T17:32:12", "kind": "rx", "value": "NULLING_STABILITY stage=exp ch=0 sensor=MQ8 code=1 stable=1 spread=0.000063438 observeMs=1646"}
+{"t": "2026-08-27T17:32:12", "kind": "rx", "value": "NULLING_EXP_STEP ch=0 sensor=MQ8 code=1 voltage=0.001261 delta=0.000022 valid=1 zeroMargin=1 outBaseline=0"}
+{"t": "2026-08-27T17:32:13", "kind": "rx", "value": "NULLING_STABILITY stage=exp ch=0 sensor=MQ8 code=3 stable=1 spread=0.000067819 observeMs=812"}
+{"t": "2026-08-27T17:32:13", "kind": "rx", "value": "NULLING_EXP_STEP ch=0 sensor=MQ8 code=3 voltage=0.001264 delta=0.000025 valid=1 zeroMargin=1 outBaseline=0"}
+{"t": "2026-08-27T17:32:13", "kind": "rx", "value": "NULLING_STABILITY stage=exp ch=0 sensor=MQ8 code=7 stable=1 spread=0.000017647 observeMs=803"}
+{"t": "2026-08-27T17:32:13", "kind": "rx", "value": "NULLING_EXP_STEP ch=0 sensor=MQ8 code=7 voltage=0.001209 delta=-0.000030 valid=1 zeroMargin=1 outBaseline=0"}
+{"t": "2026-08-27T17:32:14", "kind": "rx", "value": "NULLING_STABILITY stage=exp ch=0 sensor=MQ8 code=15 stable=1 spread=0.000079926 observeMs=812"}
+{"t": "2026-08-27T17:32:14", "kind": "rx", "value": "NULLING_EXP_STEP ch=0 sensor=MQ8 code=15 voltage=0.001236 delta=-0.000002 valid=1 zeroMargin=1 outBaseline=0"}
+{"t": "2026-08-27T17:32:15", "kind": "rx", "value": "NULLING_STABILITY stage=exp ch=0 sensor=MQ8 code=31 stable=1 spread=0.000011953 observeMs=808"}
+{"t": "2026-08-27T17:32:15", "kind": "rx", "value": "NULLING_EXP_STEP ch=0 sensor=MQ8 code=31 voltage=0.001243 delta=0.000004 valid=1 zeroMargin=1 outBaseline=0"}
+{"t": "2026-08-27T17:32:16", "kind": "rx", "value": "NULLING_STABILITY stage=exp ch=0 sensor=MQ8 code=63 stable=1 spread=0.000018940 observeMs=805"}
+{"t": "2026-08-27T17:32:16", "kind": "rx", "value": "NULLING_EXP_STEP ch=0 sensor=MQ8 code=63 voltage=0.001262 delta=0.000023 valid=1 zeroMargin=1 outBaseline=0"}
+{"t": "2026-08-27T17:32:17", "kind": "rx", "value": "NULLING_STABILITY stage=exp ch=0 sensor=MQ8 code=127 stable=1 spread=0.000102370 observeMs=813"}
+{"t": "2026-08-27T17:32:17", "kind": "rx", "value": "NULLING_EXP_STEP ch=0 sensor=MQ8 code=127 voltage=0.001235 delta=-0.000004 valid=1 zeroMargin=1 outBaseline=0"}
+{"t": "2026-08-27T17:32:18", "kind": "rx", "value": "NULLING_STABILITY stage=exp ch=0 sensor=MQ8 code=191 stable=1 spread=0.000102472 observeMs=811"}
+{"t": "2026-08-27T17:32:18", "kind": "rx", "value": "NULLING_EXP_STEP ch=0 sensor=MQ8 code=191 voltage=0.001312 delta=0.000073 valid=1 zeroMargin=1 outBaseline=0"}
+{"t": "2026-08-27T17:32:20", "kind": "rx", "value": "NULLING_STABILITY stage=exp ch=0 sensor=MQ8 code=255 stable=1 spread=0.000055131 observeMs=1662"}
+{"t": "2026-08-27T17:32:20", "kind": "rx", "value": "NULLING_EXP_STEP ch=0 sensor=MQ8 code=255 voltage=0.001234 delta=-0.000005 valid=1 zeroMargin=1 outBaseline=0"}
+{"t": "2026-08-27T17:32:21", "kind": "rx", "value": "NULLING_STABILITY stage=exp ch=0 sensor=MQ8 code=319 stable=1 spread=0.000088787 observeMs=812"}
+{"t": "2026-08-27T17:32:21", "kind": "rx", "value": "NULLING_EXP_STEP ch=0 sensor=MQ8 code=319 voltage=0.001292 delta=0.000053 valid=1 zeroMargin=1 outBaseline=0"}
+{"t": "2026-08-27T17:32:22", "kind": "rx", "value": "NULLING_STABILITY stage=exp ch=0 sensor=MQ8 code=383 stable=1 spread=0.000066464 observeMs=806"}
+{"t": "2026-08-27T17:32:22", "kind": "rx", "value": "NULLING_EXP_STEP ch=0 sensor=MQ8 code=383 voltage=0.001230 delta=-0.000009 valid=1 zeroMargin=1 outBaseline=0"}
+{"t": "2026-08-27T17:32:23", "kind": "rx", "value": "NULLING_STABILITY stage=exp ch=0 sensor=MQ8 code=447 stable=1 spread=0.000046250 observeMs=803"}
+{"t": "2026-08-27T17:32:23", "kind": "rx", "value": "NULLING_EXP_STEP ch=0 sensor=MQ8 code=447 voltage=0.001252 delta=0.000014 valid=1 zeroMargin=1 outBaseline=0"}
+{"t": "2026-08-27T17:32:27", "kind": "rx", "value": "NULLING_STABILITY stage=exp ch=0 sensor=MQ8 code=511 stable=0 spread=0.000393748 observeMs=3375"}
+{"t": "2026-08-27T17:32:27", "kind": "rx", "value": "NULLING_EXP_STEP ch=0 sensor=MQ8 code=511 voltage=0.034364 delta=0.033126 valid=1 zeroMargin=1 outBaseline=1"}
+{"t": "2026-08-27T17:32:27", "kind": "rx", "value": "NULLING_EXP_RANGE ch=0 sensor=MQ8 low=447 high=511"}
+{"t": "2026-08-27T17:32:30", "kind": "rx", "value": "NULLING_STABILITY stage=exp_recheck ch=0 sensor=MQ8 code=511 stable=0 spread=0.003931463 observeMs=3381"}
+{"t": "2026-08-27T17:32:30", "kind": "rx", "value": "NULLING_EXP_RECHECK ch=0 sensor=MQ8 code=511 voltage=0.032485683 delta=0.031247 valid=1 zeroMargin=1 outBaseline=1 write=1 passed=1"}
+{"t": "2026-08-27T17:32:30", "kind": "rx", "value": "NULLING_STAGE_TRANSITION ch=0 sensor=MQ8 from=exponential to=binary pauseMs=0"}
+{"t": "2026-08-27T17:32:30", "kind": "rx", "value": "NULLING_BIN_START ch=0 sensor=MQ8 low=447 high=511"}
+{"t": "2026-08-27T17:32:31", "kind": "rx", "value": "NULLING_STABILITY stage=bin ch=0 sensor=MQ8 code=479 stable=1 spread=0.000120560 observeMs=802"}
+{"t": "2026-08-27T17:32:31", "kind": "rx", "value": "NULLING_BIN_STEP ch=0 sensor=MQ8 low=447 high=511 mid=479 voltage=0.001250 delta=0.000012 valid=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:32:34", "kind": "rx", "value": "NULLING_STABILITY stage=bin ch=0 sensor=MQ8 code=495 stable=1 spread=0.000080963 observeMs=2515"}
+{"t": "2026-08-27T17:32:34", "kind": "rx", "value": "NULLING_BIN_STEP ch=0 sensor=MQ8 low=479 high=511 mid=495 voltage=0.001345 delta=0.000107 valid=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:32:37", "kind": "rx", "value": "NULLING_STABILITY stage=bin ch=0 sensor=MQ8 code=503 stable=0 spread=0.002552549 observeMs=3375"}
+{"t": "2026-08-27T17:32:37", "kind": "rx", "value": "NULLING_BIN_STEP ch=0 sensor=MQ8 low=495 high=511 mid=503 voltage=0.006119 delta=0.004881 valid=1 zeroMargin=1 outBaseline=1 write=1"}
+{"t": "2026-08-27T17:32:39", "kind": "rx", "value": "NULLING_STABILITY stage=bin ch=0 sensor=MQ8 code=499 stable=1 spread=0.000059802 observeMs=1662"}
+{"t": "2026-08-27T17:32:39", "kind": "rx", "value": "NULLING_BIN_STEP ch=0 sensor=MQ8 low=495 high=503 mid=499 voltage=0.001244 delta=0.000005 valid=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:32:43", "kind": "rx", "value": "NULLING_STABILITY stage=bin ch=0 sensor=MQ8 code=501 stable=1 spread=0.000110714 observeMs=3375"}
+{"t": "2026-08-27T17:32:43", "kind": "rx", "value": "NULLING_BIN_STEP ch=0 sensor=MQ8 low=499 high=503 mid=501 voltage=0.001257 delta=0.000019 valid=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:32:44", "kind": "rx", "value": "NULLING_STABILITY stage=bin ch=0 sensor=MQ8 code=502 stable=1 spread=0.000087872 observeMs=806"}
+{"t": "2026-08-27T17:32:44", "kind": "rx", "value": "NULLING_BIN_STEP ch=0 sensor=MQ8 low=501 high=503 mid=502 voltage=0.001269 delta=0.000031 valid=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:32:44", "kind": "rx", "value": "NULLING_BIN_DONE ch=0 sensor=MQ8 selected=503"}
+{"t": "2026-08-27T17:32:44", "kind": "rx", "value": "NULLING_STAGE_TRANSITION ch=0 sensor=MQ8 from=binary to=confirm pauseMs=0"}
+{"t": "2026-08-27T17:32:44", "kind": "rx", "value": "NULLING_CONFIRM_START ch=0 sensor=MQ8 selected=503 start=493 end=513 samples=21 below=10 above=10 baseline=0.001238 threshold=0.000619 minFinalV=0.000000"}
+{"t": "2026-08-27T17:32:45", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=493 stable=1 spread=0.000089192 observeMs=950"}
+{"t": "2026-08-27T17:32:45", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=493 voltage=0.001214948 delta=-0.000023 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:32:46", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=494 stable=1 spread=0.000090688 observeMs=949"}
+{"t": "2026-08-27T17:32:46", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=494 voltage=0.001268287 delta=0.000030 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:32:47", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=495 stable=1 spread=0.000070731 observeMs=948"}
+{"t": "2026-08-27T17:32:47", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=495 voltage=0.001203122 delta=-0.000035 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:32:48", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=496 stable=1 spread=0.000106222 observeMs=941"}
+{"t": "2026-08-27T17:32:48", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=496 voltage=0.001195460 delta=-0.000043 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:32:50", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=497 stable=1 spread=0.000088476 observeMs=1946"}
+{"t": "2026-08-27T17:32:50", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=497 voltage=0.001247584 delta=0.000009 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:32:51", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=498 stable=1 spread=0.000078930 observeMs=948"}
+{"t": "2026-08-27T17:32:51", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=498 voltage=0.001231650 delta=-0.000007 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:32:52", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=499 stable=1 spread=0.000053258 observeMs=949"}
+{"t": "2026-08-27T17:32:52", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=499 voltage=0.001253241 delta=0.000015 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:32:54", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=500 stable=1 spread=0.000087436 observeMs=948"}
+{"t": "2026-08-27T17:32:54", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=500 voltage=0.001238535 delta=0.000000 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:32:56", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=501 stable=1 spread=0.000078319 observeMs=1944"}
+{"t": "2026-08-27T17:32:56", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=501 voltage=0.001233936 delta=-0.000004 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:32:58", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=502 stable=1 spread=0.000020895 observeMs=1950"}
+{"t": "2026-08-27T17:32:58", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=502 voltage=0.001249771 delta=0.000011 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:32:59", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=503 stable=1 spread=0.000029150 observeMs=954"}
+{"t": "2026-08-27T17:32:59", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=503 voltage=0.001247030 delta=0.000009 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:33:00", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=504 stable=1 spread=0.000083942 observeMs=954"}
+{"t": "2026-08-27T17:33:00", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=504 voltage=0.001249284 delta=0.000011 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:33:02", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=505 stable=1 spread=0.000082478 observeMs=1944"}
+{"t": "2026-08-27T17:33:02", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=505 voltage=0.001233894 delta=-0.000005 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:33:03", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=506 stable=1 spread=0.000076889 observeMs=952"}
+{"t": "2026-08-27T17:33:03", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=506 voltage=0.001244599 delta=0.000006 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:33:04", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=507 stable=1 spread=0.000044472 observeMs=948"}
+{"t": "2026-08-27T17:33:04", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=507 voltage=0.001262339 delta=0.000024 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:33:05", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=508 stable=1 spread=0.000037380 observeMs=949"}
+{"t": "2026-08-27T17:33:05", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=508 voltage=0.001290282 delta=0.000052 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:33:07", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=509 stable=1 spread=0.000111701 observeMs=947"}
+{"t": "2026-08-27T17:33:07", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=509 voltage=0.001236224 delta=-0.000002 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:33:08", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=510 stable=1 spread=0.000026568 observeMs=948"}
+{"t": "2026-08-27T17:33:08", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=510 voltage=0.001251366 delta=0.000013 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:33:10", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=511 stable=1 spread=0.000044346 observeMs=1958"}
+{"t": "2026-08-27T17:33:10", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=511 voltage=0.001244438 delta=0.000006 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:33:11", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=512 stable=1 spread=0.000053787 observeMs=950"}
+{"t": "2026-08-27T17:33:11", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=512 voltage=0.001263350 delta=0.000025 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:33:12", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=513 stable=1 spread=0.000042745 observeMs=950"}
+{"t": "2026-08-27T17:33:12", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=513 voltage=0.001299394 delta=0.000061 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:33:12", "kind": "rx", "value": "NULLING_CONFIRM_FAIL ch=0 sensor=MQ8"}
+{"t": "2026-08-27T17:33:12", "kind": "rx", "value": "NULLING_CONFIRM_RESUME_EXP ch=0 sensor=MQ8 low=447 high=511 selected=503 reason=confirm_failed"}
+{"t": "2026-08-27T17:33:12", "kind": "rx", "value": "NULLING_STAGE_TRANSITION ch=0 sensor=MQ8 from=confirm to=exponential_resume pauseMs=0"}
+{"t": "2026-08-27T17:33:12", "kind": "rx", "value": "NULLING_EXP_RESUME ch=0 sensor=MQ8 from=511 next=575 step=64"}
+{"t": "2026-08-27T17:33:12", "kind": "rx", "value": "NULLING_EXP_START ch=0 sensor=MQ8 baseline=0.001238 threshold=0.000619 minFinalV=0.000000 minBracketDac=100"}
+{"t": "2026-08-27T17:33:16", "kind": "rx", "value": "NULLING_STABILITY stage=exp ch=0 sensor=MQ8 code=575 stable=0 spread=0.002242297 observeMs=3375"}
+{"t": "2026-08-27T17:33:16", "kind": "rx", "value": "NULLING_EXP_STEP ch=0 sensor=MQ8 code=575 voltage=0.058879 delta=0.057641 valid=1 zeroMargin=1 outBaseline=1"}
+{"t": "2026-08-27T17:33:16", "kind": "rx", "value": "NULLING_EXP_RANGE ch=0 sensor=MQ8 low=511 high=575"}
+{"t": "2026-08-27T17:33:19", "kind": "rx", "value": "NULLING_STABILITY stage=exp_recheck ch=0 sensor=MQ8 code=575 stable=0 spread=0.002100606 observeMs=3372"}
+{"t": "2026-08-27T17:33:19", "kind": "rx", "value": "NULLING_EXP_RECHECK ch=0 sensor=MQ8 code=575 voltage=0.057251401 delta=0.056013 valid=1 zeroMargin=1 outBaseline=1 write=1 passed=1"}
+{"t": "2026-08-27T17:33:19", "kind": "rx", "value": "NULLING_STAGE_TRANSITION ch=0 sensor=MQ8 from=exponential to=binary pauseMs=0"}
+{"t": "2026-08-27T17:33:19", "kind": "rx", "value": "NULLING_BIN_START ch=0 sensor=MQ8 low=511 high=575"}
+{"t": "2026-08-27T17:33:23", "kind": "rx", "value": "NULLING_STABILITY stage=bin ch=0 sensor=MQ8 code=543 stable=0 spread=0.002013333 observeMs=3367"}
+{"t": "2026-08-27T17:33:23", "kind": "rx", "value": "NULLING_BIN_STEP ch=0 sensor=MQ8 low=511 high=575 mid=543 voltage=0.023351 delta=0.022113 valid=1 zeroMargin=1 outBaseline=1 write=1"}
+{"t": "2026-08-27T17:33:25", "kind": "rx", "value": "NULLING_STABILITY stage=bin ch=0 sensor=MQ8 code=527 stable=1 spread=0.000109672 observeMs=1660"}
+{"t": "2026-08-27T17:33:25", "kind": "rx", "value": "NULLING_BIN_STEP ch=0 sensor=MQ8 low=511 high=543 mid=527 voltage=0.001279 delta=0.000040 valid=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:33:28", "kind": "rx", "value": "NULLING_STABILITY stage=bin ch=0 sensor=MQ8 code=535 stable=0 spread=0.008633113 observeMs=3376"}
+{"t": "2026-08-27T17:33:28", "kind": "rx", "value": "NULLING_BIN_STEP ch=0 sensor=MQ8 low=527 high=543 mid=535 voltage=0.006211 delta=0.004972 valid=1 zeroMargin=1 outBaseline=1 write=1"}
+{"t": "2026-08-27T17:33:32", "kind": "rx", "value": "NULLING_STABILITY stage=bin ch=0 sensor=MQ8 code=531 stable=0 spread=0.002252703 observeMs=3386"}
+{"t": "2026-08-27T17:33:32", "kind": "rx", "value": "NULLING_BIN_STEP ch=0 sensor=MQ8 low=527 high=535 mid=531 voltage=0.003000 delta=0.001761 valid=1 zeroMargin=1 outBaseline=1 write=1"}
+{"t": "2026-08-27T17:33:33", "kind": "rx", "value": "NULLING_STABILITY stage=bin ch=0 sensor=MQ8 code=529 stable=1 spread=0.000023253 observeMs=804"}
+{"t": "2026-08-27T17:33:33", "kind": "rx", "value": "NULLING_BIN_STEP ch=0 sensor=MQ8 low=527 high=531 mid=529 voltage=0.001254 delta=0.000016 valid=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:33:34", "kind": "rx", "value": "NULLING_STABILITY stage=bin ch=0 sensor=MQ8 code=530 stable=1 spread=0.000012246 observeMs=801"}
+{"t": "2026-08-27T17:33:34", "kind": "rx", "value": "NULLING_BIN_STEP ch=0 sensor=MQ8 low=529 high=531 mid=530 voltage=0.001265 delta=0.000027 valid=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:33:34", "kind": "rx", "value": "NULLING_BIN_DONE ch=0 sensor=MQ8 selected=531"}
+{"t": "2026-08-27T17:33:34", "kind": "rx", "value": "NULLING_STAGE_TRANSITION ch=0 sensor=MQ8 from=binary to=confirm pauseMs=0"}
+{"t": "2026-08-27T17:33:34", "kind": "rx", "value": "NULLING_CONFIRM_START ch=0 sensor=MQ8 selected=531 start=521 end=575 samples=55 below=10 above=44 baseline=0.001238 threshold=0.000619 minFinalV=0.000000"}
+{"t": "2026-08-27T17:33:35", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=521 stable=1 spread=0.000062556 observeMs=949"}
+{"t": "2026-08-27T17:33:35", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=521 voltage=0.001199459 delta=-0.000039 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:33:36", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=522 stable=1 spread=0.000070008 observeMs=951"}
+{"t": "2026-08-27T17:33:36", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=522 voltage=0.001288502 delta=0.000050 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:33:37", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=523 stable=1 spread=0.000030685 observeMs=951"}
+{"t": "2026-08-27T17:33:37", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=523 voltage=0.001256992 delta=0.000019 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:33:38", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=524 stable=1 spread=0.000100649 observeMs=949"}
+{"t": "2026-08-27T17:33:38", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=524 voltage=0.001207191 delta=-0.000031 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:33:40", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=525 stable=1 spread=0.000050128 observeMs=1941"}
+{"t": "2026-08-27T17:33:40", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=525 voltage=0.001277975 delta=0.000040 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:33:41", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=526 stable=1 spread=0.000054672 observeMs=945"}
+{"t": "2026-08-27T17:33:41", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=526 voltage=0.001233959 delta=-0.000004 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:33:42", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=527 stable=1 spread=0.000057620 observeMs=955"}
+{"t": "2026-08-27T17:33:42", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=527 voltage=0.001289285 delta=0.000051 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:33:45", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=528 stable=1 spread=0.000056034 observeMs=2938"}
+{"t": "2026-08-27T17:33:45", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=528 voltage=0.001256860 delta=0.000018 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:33:47", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=529 stable=1 spread=0.000024392 observeMs=942"}
+{"t": "2026-08-27T17:33:47", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=529 voltage=0.001208669 delta=-0.000030 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:33:48", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=530 stable=1 spread=0.000104817 observeMs=947"}
+{"t": "2026-08-27T17:33:48", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=530 voltage=0.001274161 delta=0.000036 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:33:49", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=531 stable=1 spread=0.000076681 observeMs=952"}
+{"t": "2026-08-27T17:33:49", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=531 voltage=0.001245801 delta=0.000007 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:33:50", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=532 stable=1 spread=0.000102410 observeMs=951"}
+{"t": "2026-08-27T17:33:50", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=532 voltage=0.001295774 delta=0.000057 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:33:53", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=533 stable=1 spread=0.000054530 observeMs=2950"}
+{"t": "2026-08-27T17:33:53", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=533 voltage=0.001245463 delta=0.000007 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:33:54", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=534 stable=1 spread=0.000021026 observeMs=955"}
+{"t": "2026-08-27T17:33:54", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=534 voltage=0.001237059 delta=-0.000001 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:33:57", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=535 stable=1 spread=0.000064268 observeMs=2939"}
+{"t": "2026-08-27T17:33:57", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=535 voltage=0.001252826 delta=0.000014 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:34:01", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=536 stable=0 spread=0.000653294 observeMs=3944"}
+{"t": "2026-08-27T17:34:01", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=536 voltage=0.002243543 delta=0.001005 valid=1 aboveMin=1 zeroMargin=1 outBaseline=1 write=1"}
+{"t": "2026-08-27T17:34:05", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=537 stable=0 spread=0.000850576 observeMs=3933"}
+{"t": "2026-08-27T17:34:05", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=537 voltage=0.002545927 delta=0.001308 valid=1 aboveMin=1 zeroMargin=1 outBaseline=1 write=1"}
+{"t": "2026-08-27T17:34:10", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=538 stable=0 spread=0.000990060 observeMs=3934"}
+{"t": "2026-08-27T17:34:10", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=538 voltage=0.001628424 delta=0.000390 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:34:14", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=539 stable=0 spread=0.001010584 observeMs=3940"}
+{"t": "2026-08-27T17:34:14", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=539 voltage=0.002248889 delta=0.001010 valid=1 aboveMin=1 zeroMargin=1 outBaseline=1 write=1"}
+{"t": "2026-08-27T17:34:18", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=540 stable=0 spread=0.001514451 observeMs=3942"}
+{"t": "2026-08-27T17:34:18", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=540 voltage=0.002706446 delta=0.001468 valid=1 aboveMin=1 zeroMargin=1 outBaseline=1 write=1"}
+{"t": "2026-08-27T17:34:22", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=541 stable=0 spread=0.001758492 observeMs=3940"}
+{"t": "2026-08-27T17:34:22", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=541 voltage=0.002278434 delta=0.001040 valid=1 aboveMin=1 zeroMargin=1 outBaseline=1 write=1"}
+{"t": "2026-08-27T17:34:26", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=542 stable=0 spread=0.001673208 observeMs=3936"}
+{"t": "2026-08-27T17:34:26", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=542 voltage=0.002682326 delta=0.001444 valid=1 aboveMin=1 zeroMargin=1 outBaseline=1 write=1"}
+{"t": "2026-08-27T17:34:30", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=543 stable=0 spread=0.000575496 observeMs=3949"}
+{"t": "2026-08-27T17:34:30", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=543 voltage=0.003470008 delta=0.002232 valid=1 aboveMin=1 zeroMargin=1 outBaseline=1 write=1"}
+{"t": "2026-08-27T17:34:34", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=544 stable=0 spread=0.003413791 observeMs=3961"}
+{"t": "2026-08-27T17:34:34", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=544 voltage=0.003727476 delta=0.002489 valid=1 aboveMin=1 zeroMargin=1 outBaseline=1 write=1"}
+{"t": "2026-08-27T17:34:38", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=545 stable=1 spread=0.000084348 observeMs=3941"}
+{"t": "2026-08-27T17:34:38", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=545 voltage=0.005558973 delta=0.004321 valid=1 aboveMin=1 zeroMargin=1 outBaseline=1 write=1"}
+{"t": "2026-08-27T17:34:42", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=546 stable=0 spread=0.004429390 observeMs=3949"}
+{"t": "2026-08-27T17:34:42", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=546 voltage=0.006326402 delta=0.005088 valid=1 aboveMin=1 zeroMargin=1 outBaseline=1 write=1"}
+{"t": "2026-08-27T17:34:46", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=547 stable=0 spread=0.008398295 observeMs=3928"}
+{"t": "2026-08-27T17:34:46", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=547 voltage=0.007621639 delta=0.006383 valid=1 aboveMin=1 zeroMargin=1 outBaseline=1 write=1"}
+{"t": "2026-08-27T17:34:51", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=548 stable=0 spread=0.002989626 observeMs=3945"}
+{"t": "2026-08-27T17:34:51", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=548 voltage=0.003173572 delta=0.001935 valid=1 aboveMin=1 zeroMargin=1 outBaseline=1 write=1"}
+{"t": "2026-08-27T17:34:55", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=549 stable=0 spread=0.007548488 observeMs=3933"}
+{"t": "2026-08-27T17:34:55", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=549 voltage=0.009474037 delta=0.008236 valid=1 aboveMin=1 zeroMargin=1 outBaseline=1 write=1"}
+{"t": "2026-08-27T17:34:59", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=550 stable=0 spread=0.003293244 observeMs=3938"}
+{"t": "2026-08-27T17:34:59", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=550 voltage=0.008366859 delta=0.007128 valid=1 aboveMin=1 zeroMargin=1 outBaseline=1 write=1"}
+{"t": "2026-08-27T17:35:03", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=551 stable=0 spread=0.003323758 observeMs=3931"}
+{"t": "2026-08-27T17:35:03", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=551 voltage=0.008933873 delta=0.007695 valid=1 aboveMin=1 zeroMargin=1 outBaseline=1 write=1"}
+{"t": "2026-08-27T17:35:07", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=552 stable=0 spread=0.005235182 observeMs=3943"}
+{"t": "2026-08-27T17:35:07", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=552 voltage=0.010541698 delta=0.009303 valid=1 aboveMin=1 zeroMargin=1 outBaseline=1 write=1"}
+{"t": "2026-08-27T17:35:11", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=553 stable=0 spread=0.007630737 observeMs=3937"}
+{"t": "2026-08-27T17:35:11", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=553 voltage=0.011757304 delta=0.010519 valid=1 aboveMin=1 zeroMargin=1 outBaseline=1 write=1"}
+{"t": "2026-08-27T17:35:15", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=554 stable=0 spread=0.002220075 observeMs=3952"}
+{"t": "2026-08-27T17:35:15", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=554 voltage=0.011536742 delta=0.010298 valid=1 aboveMin=1 zeroMargin=1 outBaseline=1 write=1"}
+{"t": "2026-08-27T17:35:19", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=555 stable=0 spread=0.002696795 observeMs=3936"}
+{"t": "2026-08-27T17:35:19", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=555 voltage=0.014212644 delta=0.012974 valid=1 aboveMin=1 zeroMargin=1 outBaseline=1 write=1"}
+{"t": "2026-08-27T17:35:23", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=556 stable=0 spread=0.004458990 observeMs=3937"}
+{"t": "2026-08-27T17:35:23", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=556 voltage=0.014121654 delta=0.012883 valid=1 aboveMin=1 zeroMargin=1 outBaseline=1 write=1"}
+{"t": "2026-08-27T17:35:27", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=557 stable=0 spread=0.004619922 observeMs=3940"}
+{"t": "2026-08-27T17:35:28", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=557 voltage=0.015659280 delta=0.014421 valid=1 aboveMin=1 zeroMargin=1 outBaseline=1 write=1"}
+{"t": "2026-08-27T17:35:32", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=558 stable=0 spread=0.004172668 observeMs=3946"}
+{"t": "2026-08-27T17:35:32", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=558 voltage=0.019513965 delta=0.018276 valid=1 aboveMin=1 zeroMargin=1 outBaseline=1 write=1"}
+{"t": "2026-08-27T17:35:36", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=559 stable=0 spread=0.005576218 observeMs=3954"}
+{"t": "2026-08-27T17:35:36", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=559 voltage=0.020001162 delta=0.018763 valid=1 aboveMin=1 zeroMargin=1 outBaseline=1 write=1"}
+{"t": "2026-08-27T17:35:40", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=560 stable=0 spread=0.001541808 observeMs=3948"}
+{"t": "2026-08-27T17:35:40", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=560 voltage=0.016480558 delta=0.015242 valid=1 aboveMin=1 zeroMargin=1 outBaseline=1 write=1"}
+{"t": "2026-08-27T17:35:44", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=561 stable=0 spread=0.001133807 observeMs=3932"}
+{"t": "2026-08-27T17:35:44", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=561 voltage=0.018221391 delta=0.016983 valid=1 aboveMin=1 zeroMargin=1 outBaseline=1 write=1"}
+{"t": "2026-08-27T17:35:48", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=562 stable=0 spread=0.004561864 observeMs=3944"}
+{"t": "2026-08-27T17:35:48", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=562 voltage=0.019207641 delta=0.017969 valid=1 aboveMin=1 zeroMargin=1 outBaseline=1 write=1"}
+{"t": "2026-08-27T17:35:52", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=563 stable=0 spread=0.003278419 observeMs=3948"}
+{"t": "2026-08-27T17:35:52", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=563 voltage=0.018660115 delta=0.017422 valid=1 aboveMin=1 zeroMargin=1 outBaseline=1 write=1"}
+{"t": "2026-08-27T17:35:56", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=564 stable=0 spread=0.001617741 observeMs=3943"}
+{"t": "2026-08-27T17:35:56", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=564 voltage=0.023005404 delta=0.021767 valid=1 aboveMin=1 zeroMargin=1 outBaseline=1 write=1"}
+{"t": "2026-08-27T17:36:00", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=565 stable=0 spread=0.002088282 observeMs=3941"}
+{"t": "2026-08-27T17:36:00", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=565 voltage=0.022618081 delta=0.021380 valid=1 aboveMin=1 zeroMargin=1 outBaseline=1 write=1"}
+{"t": "2026-08-27T17:36:04", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=566 stable=0 spread=0.004047215 observeMs=3929"}
+{"t": "2026-08-27T17:36:04", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=566 voltage=0.021777868 delta=0.020539 valid=1 aboveMin=1 zeroMargin=1 outBaseline=1 write=1"}
+{"t": "2026-08-27T17:36:09", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=567 stable=0 spread=0.000890104 observeMs=3944"}
+{"t": "2026-08-27T17:36:09", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=567 voltage=0.021499494 delta=0.020261 valid=1 aboveMin=1 zeroMargin=1 outBaseline=1 write=1"}
+{"t": "2026-08-27T17:36:13", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=568 stable=0 spread=0.001940213 observeMs=3949"}
+{"t": "2026-08-27T17:36:13", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=568 voltage=0.024683235 delta=0.023445 valid=1 aboveMin=1 zeroMargin=1 outBaseline=1 write=1"}
+{"t": "2026-08-27T17:36:17", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=569 stable=0 spread=0.004428163 observeMs=3939"}
+{"t": "2026-08-27T17:36:17", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=569 voltage=0.025138889 delta=0.023900 valid=1 aboveMin=1 zeroMargin=1 outBaseline=1 write=1"}
+{"t": "2026-08-27T17:36:21", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=570 stable=0 spread=0.000824232 observeMs=3940"}
+{"t": "2026-08-27T17:36:21", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=570 voltage=0.024791081 delta=0.023553 valid=1 aboveMin=1 zeroMargin=1 outBaseline=1 write=1"}
+{"t": "2026-08-27T17:36:25", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=571 stable=0 spread=0.000580272 observeMs=3949"}
+{"t": "2026-08-27T17:36:25", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=571 voltage=0.029468173 delta=0.028230 valid=1 aboveMin=1 zeroMargin=1 outBaseline=1 write=1"}
+{"t": "2026-08-27T17:36:29", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=572 stable=0 spread=0.002372792 observeMs=3940"}
+{"t": "2026-08-27T17:36:29", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=572 voltage=0.028664896 delta=0.027426 valid=1 aboveMin=1 zeroMargin=1 outBaseline=1 write=1"}
+{"t": "2026-08-27T17:36:33", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=573 stable=0 spread=0.001593295 observeMs=3939"}
+{"t": "2026-08-27T17:36:33", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=573 voltage=0.027367985 delta=0.026130 valid=1 aboveMin=1 zeroMargin=1 outBaseline=1 write=1"}
+{"t": "2026-08-27T17:36:37", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=574 stable=0 spread=0.004959153 observeMs=3944"}
+{"t": "2026-08-27T17:36:37", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=574 voltage=0.030312439 delta=0.029074 valid=1 aboveMin=1 zeroMargin=1 outBaseline=1 write=1"}
+{"t": "2026-08-27T17:36:41", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=0 sensor=MQ8 code=575 stable=0 spread=0.003873784 observeMs=3944"}
+{"t": "2026-08-27T17:36:41", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=0 sensor=MQ8 code=575 voltage=0.029931659 delta=0.028693 valid=1 aboveMin=1 zeroMargin=1 outBaseline=1 write=1"}
+{"t": "2026-08-27T17:36:45", "kind": "rx", "value": "NULLING_STABILITY stage=verify ch=0 sensor=MQ8 code=536 stable=0 spread=0.000149041 observeMs=3374"}
+{"t": "2026-08-27T17:36:45", "kind": "rx", "value": "NULLING_CONFIRM_VERIFY ch=0 sensor=MQ8 code=536 voltage=0.001298412 delta=0.000060 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0"}
+{"t": "2026-08-27T17:36:46", "kind": "rx", "value": "NULLING_STABILITY stage=verify ch=0 sensor=MQ8 code=539 stable=1 spread=0.000100363 observeMs=803"}
+{"t": "2026-08-27T17:36:46", "kind": "rx", "value": "NULLING_CONFIRM_VERIFY ch=0 sensor=MQ8 code=539 voltage=0.001178056 delta=-0.000060 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0"}
+{"t": "2026-08-27T17:36:47", "kind": "rx", "value": "NULLING_STABILITY stage=verify ch=0 sensor=MQ8 code=541 stable=1 spread=0.000098185 observeMs=806"}
+{"t": "2026-08-27T17:36:47", "kind": "rx", "value": "NULLING_CONFIRM_VERIFY ch=0 sensor=MQ8 code=541 voltage=0.001242531 delta=0.000004 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0"}
+{"t": "2026-08-27T17:36:49", "kind": "rx", "value": "NULLING_STABILITY stage=verify ch=0 sensor=MQ8 code=537 stable=1 spread=0.000048219 observeMs=1660"}
+{"t": "2026-08-27T17:36:49", "kind": "rx", "value": "NULLING_CONFIRM_VERIFY ch=0 sensor=MQ8 code=537 voltage=0.001281840 delta=0.000043 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0"}
+{"t": "2026-08-27T17:36:52", "kind": "rx", "value": "NULLING_STABILITY stage=verify ch=0 sensor=MQ8 code=542 stable=1 spread=0.000081931 observeMs=3380"}
+{"t": "2026-08-27T17:36:52", "kind": "rx", "value": "NULLING_CONFIRM_VERIFY ch=0 sensor=MQ8 code=542 voltage=0.001237164 delta=-0.000001 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0"}
+{"t": "2026-08-27T17:36:54", "kind": "rx", "value": "NULLING_STABILITY stage=verify ch=0 sensor=MQ8 code=540 stable=1 spread=0.000048318 observeMs=1656"}
+{"t": "2026-08-27T17:36:54", "kind": "rx", "value": "NULLING_CONFIRM_VERIFY ch=0 sensor=MQ8 code=540 voltage=0.001163261 delta=-0.000075 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0"}
+{"t": "2026-08-27T17:36:55", "kind": "rx", "value": "NULLING_STABILITY stage=verify ch=0 sensor=MQ8 code=548 stable=1 spread=0.000090652 observeMs=807"}
+{"t": "2026-08-27T17:36:55", "kind": "rx", "value": "NULLING_CONFIRM_VERIFY ch=0 sensor=MQ8 code=548 voltage=0.001160010 delta=-0.000078 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0"}
+{"t": "2026-08-27T17:36:56", "kind": "rx", "value": "NULLING_STABILITY stage=verify ch=0 sensor=MQ8 code=543 stable=1 spread=0.000033363 observeMs=811"}
+{"t": "2026-08-27T17:36:56", "kind": "rx", "value": "NULLING_CONFIRM_VERIFY ch=0 sensor=MQ8 code=543 voltage=0.001235295 delta=-0.000003 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0"}
+{"t": "2026-08-27T17:36:59", "kind": "rx", "value": "NULLING_STABILITY stage=verify ch=0 sensor=MQ8 code=544 stable=1 spread=0.000032527 observeMs=2521"}
+{"t": "2026-08-27T17:36:59", "kind": "rx", "value": "NULLING_CONFIRM_VERIFY ch=0 sensor=MQ8 code=544 voltage=0.001244938 delta=0.000007 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0"}
+{"t": "2026-08-27T17:37:00", "kind": "rx", "value": "NULLING_STABILITY stage=verify ch=0 sensor=MQ8 code=545 stable=1 spread=0.000070178 observeMs=811"}
+{"t": "2026-08-27T17:37:00", "kind": "rx", "value": "NULLING_CONFIRM_VERIFY ch=0 sensor=MQ8 code=545 voltage=0.001214684 delta=-0.000024 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0"}
+{"t": "2026-08-27T17:37:01", "kind": "rx", "value": "NULLING_STABILITY stage=verify ch=0 sensor=MQ8 code=546 stable=1 spread=0.000098532 observeMs=811"}
+{"t": "2026-08-27T17:37:01", "kind": "rx", "value": "NULLING_CONFIRM_VERIFY ch=0 sensor=MQ8 code=546 voltage=0.001130697 delta=-0.000108 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0"}
+{"t": "2026-08-27T17:37:04", "kind": "rx", "value": "NULLING_STABILITY stage=verify ch=0 sensor=MQ8 code=547 stable=1 spread=0.000092407 observeMs=3365"}
+{"t": "2026-08-27T17:37:04", "kind": "rx", "value": "NULLING_CONFIRM_VERIFY ch=0 sensor=MQ8 code=547 voltage=0.001266240 delta=0.000028 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0"}
+{"t": "2026-08-27T17:37:05", "kind": "rx", "value": "NULLING_STABILITY stage=verify ch=0 sensor=MQ8 code=550 stable=1 spread=0.000108556 observeMs=808"}
+{"t": "2026-08-27T17:37:05", "kind": "rx", "value": "NULLING_CONFIRM_VERIFY ch=0 sensor=MQ8 code=550 voltage=0.001229641 delta=-0.000009 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0"}
+{"t": "2026-08-27T17:37:09", "kind": "rx", "value": "NULLING_STABILITY stage=verify ch=0 sensor=MQ8 code=551 stable=1 spread=0.000108403 observeMs=3361"}
+{"t": "2026-08-27T17:37:09", "kind": "rx", "value": "NULLING_CONFIRM_VERIFY ch=0 sensor=MQ8 code=551 voltage=0.001217009 delta=-0.000021 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0"}
+{"t": "2026-08-27T17:37:10", "kind": "rx", "value": "NULLING_STABILITY stage=verify ch=0 sensor=MQ8 code=549 stable=1 spread=0.000069019 observeMs=808"}
+{"t": "2026-08-27T17:37:10", "kind": "rx", "value": "NULLING_CONFIRM_VERIFY ch=0 sensor=MQ8 code=549 voltage=0.001249684 delta=0.000011 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0"}
+{"t": "2026-08-27T17:37:11", "kind": "rx", "value": "NULLING_STABILITY stage=verify ch=0 sensor=MQ8 code=552 stable=1 spread=0.000049910 observeMs=1663"}
+{"t": "2026-08-27T17:37:11", "kind": "rx", "value": "NULLING_CONFIRM_VERIFY ch=0 sensor=MQ8 code=552 voltage=0.001225287 delta=-0.000013 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0"}
+{"t": "2026-08-27T17:37:13", "kind": "rx", "value": "NULLING_STABILITY stage=verify ch=0 sensor=MQ8 code=554 stable=1 spread=0.000041144 observeMs=1652"}
+{"t": "2026-08-27T17:37:13", "kind": "rx", "value": "NULLING_CONFIRM_VERIFY ch=0 sensor=MQ8 code=554 voltage=0.001198869 delta=-0.000040 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0"}
+{"t": "2026-08-27T17:37:14", "kind": "rx", "value": "NULLING_STABILITY stage=verify ch=0 sensor=MQ8 code=553 stable=1 spread=0.000042576 observeMs=806"}
+{"t": "2026-08-27T17:37:14", "kind": "rx", "value": "NULLING_CONFIRM_VERIFY ch=0 sensor=MQ8 code=553 voltage=0.001143945 delta=-0.000094 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0"}
+{"t": "2026-08-27T17:37:15", "kind": "rx", "value": "NULLING_STABILITY stage=verify ch=0 sensor=MQ8 code=556 stable=1 spread=0.000079339 observeMs=797"}
+{"t": "2026-08-27T17:37:15", "kind": "rx", "value": "NULLING_CONFIRM_VERIFY ch=0 sensor=MQ8 code=556 voltage=0.001259301 delta=0.000021 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0"}
+{"t": "2026-08-27T17:37:17", "kind": "rx", "value": "NULLING_STABILITY stage=verify ch=0 sensor=MQ8 code=555 stable=1 spread=0.000099975 observeMs=1662"}
+{"t": "2026-08-27T17:37:17", "kind": "rx", "value": "NULLING_CONFIRM_VERIFY ch=0 sensor=MQ8 code=555 voltage=0.001258836 delta=0.000020 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0"}
+{"t": "2026-08-27T17:37:18", "kind": "rx", "value": "NULLING_STABILITY stage=verify ch=0 sensor=MQ8 code=557 stable=1 spread=0.000078006 observeMs=809"}
+{"t": "2026-08-27T17:37:18", "kind": "rx", "value": "NULLING_CONFIRM_VERIFY ch=0 sensor=MQ8 code=557 voltage=0.001292503 delta=0.000054 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0"}
+{"t": "2026-08-27T17:37:21", "kind": "rx", "value": "NULLING_STABILITY stage=verify ch=0 sensor=MQ8 code=560 stable=0 spread=0.001597627 observeMs=3381"}
+{"t": "2026-08-27T17:37:22", "kind": "rx", "value": "NULLING_CONFIRM_VERIFY ch=0 sensor=MQ8 code=560 voltage=0.002368501 delta=0.001130 valid=1 aboveMin=1 zeroMargin=1 outBaseline=1"}
+{"t": "2026-08-27T17:37:22", "kind": "rx", "value": "NULLING_CONFIRM_OK ch=0 sensor=MQ8 code=560 voltage=0.002368501 mode=positive_verified"}
+{"t": "2026-08-27T17:37:25", "kind": "rx", "value": "NULLING_STABILITY stage=final ch=0 sensor=MQ8 code=560 stable=0 spread=0.000739858 observeMs=3366"}
+{"t": "2026-08-27T17:37:25", "kind": "rx", "value": "NULLING_CH_OK ch=0 sensor=MQ8 dac=560 baseline=0.001238 after=0.002295367 delta=0.001057 threshold=0.000619"}
+{"t": "2026-08-27T17:37:25", "kind": "rx", "value": "NULLING_CH_START ch=1 sensor=MQ135"}
+{"t": "2026-08-27T17:37:25", "kind": "rx", "value": "NULLING_MCP_WRITE ch=1 sensor=MQ135 mux=6 address=0x60 code=0 ack=1 source=zero"}
+{"t": "2026-08-27T17:37:25", "kind": "rx", "value": "NULLING_BASELINE_START ch=1 sensor=MQ135 codeMin=0 codeMax=10 avgCount=8"}
+{"t": "2026-08-27T17:37:26", "kind": "rx", "value": "NULLING_STABILITY stage=baseline ch=1 sensor=MQ135 code=0 stable=1 spread=0.000039381 observeMs=804"}
+{"t": "2026-08-27T17:37:26", "kind": "rx", "value": "NULLING_BASELINE_STEP ch=1 sensor=MQ135 code=0 voltage=0.001088373 valid=1 write=1"}
+{"t": "2026-08-27T17:37:27", "kind": "rx", "value": "NULLING_STABILITY stage=baseline ch=1 sensor=MQ135 code=1 stable=1 spread=0.000190034 observeMs=800"}
+{"t": "2026-08-27T17:37:27", "kind": "rx", "value": "NULLING_BASELINE_STEP ch=1 sensor=MQ135 code=1 voltage=0.001143443 valid=1 write=1"}
+{"t": "2026-08-27T17:37:28", "kind": "rx", "value": "NULLING_STABILITY stage=baseline ch=1 sensor=MQ135 code=2 stable=1 spread=0.000165456 observeMs=807"}
+{"t": "2026-08-27T17:37:28", "kind": "rx", "value": "NULLING_BASELINE_STEP ch=1 sensor=MQ135 code=2 voltage=0.001085503 valid=1 write=1"}
+{"t": "2026-08-27T17:37:29", "kind": "rx", "value": "NULLING_STABILITY stage=baseline ch=1 sensor=MQ135 code=3 stable=1 spread=0.000083281 observeMs=802"}
+{"t": "2026-08-27T17:37:29", "kind": "rx", "value": "NULLING_BASELINE_STEP ch=1 sensor=MQ135 code=3 voltage=0.001122890 valid=1 write=1"}
+{"t": "2026-08-27T17:37:30", "kind": "rx", "value": "NULLING_STABILITY stage=baseline ch=1 sensor=MQ135 code=4 stable=1 spread=0.000041520 observeMs=814"}
+{"t": "2026-08-27T17:37:30", "kind": "rx", "value": "NULLING_BASELINE_STEP ch=1 sensor=MQ135 code=4 voltage=0.001120516 valid=1 write=1"}
+{"t": "2026-08-27T17:37:31", "kind": "rx", "value": "NULLING_STABILITY stage=baseline ch=1 sensor=MQ135 code=5 stable=1 spread=0.000076600 observeMs=809"}
+{"t": "2026-08-27T17:37:31", "kind": "rx", "value": "NULLING_BASELINE_STEP ch=1 sensor=MQ135 code=5 voltage=0.001038116 valid=1 write=1"}
+{"t": "2026-08-27T17:37:32", "kind": "rx", "value": "NULLING_STABILITY stage=baseline ch=1 sensor=MQ135 code=6 stable=1 spread=0.000079455 observeMs=808"}
+{"t": "2026-08-27T17:37:32", "kind": "rx", "value": "NULLING_BASELINE_STEP ch=1 sensor=MQ135 code=6 voltage=0.001065499 valid=1 write=1"}
+{"t": "2026-08-27T17:37:33", "kind": "rx", "value": "NULLING_STABILITY stage=baseline ch=1 sensor=MQ135 code=7 stable=1 spread=0.000036134 observeMs=807"}
+{"t": "2026-08-27T17:37:33", "kind": "rx", "value": "NULLING_BASELINE_STEP ch=1 sensor=MQ135 code=7 voltage=0.001032354 valid=1 write=1"}
+{"t": "2026-08-27T17:37:34", "kind": "rx", "value": "NULLING_STABILITY stage=baseline ch=1 sensor=MQ135 code=8 stable=1 spread=0.000069118 observeMs=807"}
+{"t": "2026-08-27T17:37:34", "kind": "rx", "value": "NULLING_BASELINE_STEP ch=1 sensor=MQ135 code=8 voltage=0.001031870 valid=1 write=1"}
+{"t": "2026-08-27T17:37:35", "kind": "rx", "value": "NULLING_STABILITY stage=baseline ch=1 sensor=MQ135 code=9 stable=1 spread=0.000048280 observeMs=807"}
+{"t": "2026-08-27T17:37:35", "kind": "rx", "value": "NULLING_BASELINE_STEP ch=1 sensor=MQ135 code=9 voltage=0.001015459 valid=1 write=1"}
+{"t": "2026-08-27T17:37:36", "kind": "rx", "value": "NULLING_STABILITY stage=baseline ch=1 sensor=MQ135 code=10 stable=1 spread=0.000057451 observeMs=802"}
+{"t": "2026-08-27T17:37:36", "kind": "rx", "value": "NULLING_BASELINE_STEP ch=1 sensor=MQ135 code=10 voltage=0.001030904 valid=1 write=1"}
+{"t": "2026-08-27T17:37:36", "kind": "rx", "value": "NULLING_BASELINE_DONE ch=1 sensor=MQ135 baseline=0.001070 validSamples=11 medianSpread=0.000069118 madSpread=0.000020838 stabilityTolerance=0.000131631"}
+{"t": "2026-08-27T17:37:36", "kind": "rx", "value": "NULLING_THRESHOLD_DERIVED ch=1 sensor=MQ135 effective=0.000535224 baselineTerm=0.000535224 noiseTerm=0.000394893 floor=0.000010000 ratio=0.500 noiseMultiplier=3.000"}
+{"t": "2026-08-27T17:37:36", "kind": "rx", "value": "NULLING_STAGE_TRANSITION ch=1 sensor=MQ135 from=baseline to=exponential pauseMs=0"}
+{"t": "2026-08-27T17:37:36", "kind": "rx", "value": "NULLING_EXP_START ch=1 sensor=MQ135 baseline=0.001070 threshold=0.000535 minFinalV=0.000000 minBracketDac=100"}
+{"t": "2026-08-27T17:37:37", "kind": "rx", "value": "NULLING_STABILITY stage=exp ch=1 sensor=MQ135 code=1 stable=1 spread=0.000024379 observeMs=805"}
+{"t": "2026-08-27T17:37:37", "kind": "rx", "value": "NULLING_EXP_STEP ch=1 sensor=MQ135 code=1 voltage=0.001017 delta=-0.000053 valid=1 zeroMargin=1 outBaseline=0"}
+{"t": "2026-08-27T17:37:40", "kind": "rx", "value": "NULLING_STABILITY stage=exp ch=1 sensor=MQ135 code=3 stable=1 spread=0.000069487 observeMs=2515"}
+{"t": "2026-08-27T17:37:40", "kind": "rx", "value": "NULLING_EXP_STEP ch=1 sensor=MQ135 code=3 voltage=0.001009 delta=-0.000062 valid=1 zeroMargin=1 outBaseline=0"}
+{"t": "2026-08-27T17:37:41", "kind": "rx", "value": "NULLING_STABILITY stage=exp ch=1 sensor=MQ135 code=7 stable=1 spread=0.000041596 observeMs=795"}
+{"t": "2026-08-27T17:37:41", "kind": "rx", "value": "NULLING_EXP_STEP ch=1 sensor=MQ135 code=7 voltage=0.001004 delta=-0.000067 valid=1 zeroMargin=1 outBaseline=0"}
+{"t": "2026-08-27T17:37:41", "kind": "rx", "value": "NULLING_STABILITY stage=exp ch=1 sensor=MQ135 code=15 stable=1 spread=0.000123779 observeMs=807"}
+{"t": "2026-08-27T17:37:41", "kind": "rx", "value": "NULLING_EXP_STEP ch=1 sensor=MQ135 code=15 voltage=0.001001 delta=-0.000070 valid=1 zeroMargin=1 outBaseline=0"}
+{"t": "2026-08-27T17:37:42", "kind": "rx", "value": "NULLING_STABILITY stage=exp ch=1 sensor=MQ135 code=31 stable=1 spread=0.000036814 observeMs=806"}
+{"t": "2026-08-27T17:37:42", "kind": "rx", "value": "NULLING_EXP_STEP ch=1 sensor=MQ135 code=31 voltage=0.001023 delta=-0.000048 valid=1 zeroMargin=1 outBaseline=0"}
+{"t": "2026-08-27T17:37:44", "kind": "rx", "value": "NULLING_STABILITY stage=exp ch=1 sensor=MQ135 code=63 stable=1 spread=0.000016718 observeMs=1666"}
+{"t": "2026-08-27T17:37:44", "kind": "rx", "value": "NULLING_EXP_STEP ch=1 sensor=MQ135 code=63 voltage=0.001052 delta=-0.000018 valid=1 zeroMargin=1 outBaseline=0"}
+{"t": "2026-08-27T17:37:46", "kind": "rx", "value": "NULLING_STABILITY stage=exp ch=1 sensor=MQ135 code=127 stable=1 spread=0.000089269 observeMs=1669"}
+{"t": "2026-08-27T17:37:46", "kind": "rx", "value": "NULLING_EXP_STEP ch=1 sensor=MQ135 code=127 voltage=0.000981 delta=-0.000090 valid=1 zeroMargin=1 outBaseline=0"}
+{"t": "2026-08-27T17:37:47", "kind": "rx", "value": "NULLING_STABILITY stage=exp ch=1 sensor=MQ135 code=191 stable=1 spread=0.000060016 observeMs=806"}
+{"t": "2026-08-27T17:37:47", "kind": "rx", "value": "NULLING_EXP_STEP ch=1 sensor=MQ135 code=191 voltage=0.000967 delta=-0.000104 valid=1 zeroMargin=1 outBaseline=0"}
+{"t": "2026-08-27T17:37:51", "kind": "rx", "value": "NULLING_STABILITY stage=exp ch=1 sensor=MQ135 code=255 stable=0 spread=0.005727556 observeMs=3366"}
+{"t": "2026-08-27T17:37:51", "kind": "rx", "value": "NULLING_EXP_STEP ch=1 sensor=MQ135 code=255 voltage=0.004502 delta=0.003431 valid=1 zeroMargin=1 outBaseline=1"}
+{"t": "2026-08-27T17:37:51", "kind": "rx", "value": "NULLING_EXP_RANGE ch=1 sensor=MQ135 low=191 high=255"}
+{"t": "2026-08-27T17:37:52", "kind": "rx", "value": "NULLING_STABILITY stage=exp_recheck ch=1 sensor=MQ135 code=255 stable=1 spread=0.000036551 observeMs=805"}
+{"t": "2026-08-27T17:37:52", "kind": "rx", "value": "NULLING_EXP_RECHECK ch=1 sensor=MQ135 code=255 voltage=0.001040708 delta=-0.000030 valid=1 zeroMargin=1 outBaseline=0 write=1 passed=0"}
+{"t": "2026-08-27T17:37:52", "kind": "rx", "value": "NULLING_EXP_BRACKET_REJECT ch=1 sensor=MQ135 low=191 high=255 reason=recheck_failed"}
+{"t": "2026-08-27T17:37:52", "kind": "rx", "value": "NULLING_EXP_RESUME ch=1 sensor=MQ135 from=255 next=319 step=64"}
+{"t": "2026-08-27T17:37:52", "kind": "rx", "value": "NULLING_EXP_START ch=1 sensor=MQ135 baseline=0.001070 threshold=0.000535 minFinalV=0.000000 minBracketDac=100"}
+{"t": "2026-08-27T17:37:55", "kind": "rx", "value": "NULLING_STABILITY stage=exp ch=1 sensor=MQ135 code=319 stable=0 spread=0.004824769 observeMs=3383"}
+{"t": "2026-08-27T17:37:55", "kind": "rx", "value": "NULLING_EXP_STEP ch=1 sensor=MQ135 code=319 voltage=0.063394 delta=0.062323 valid=1 zeroMargin=1 outBaseline=1"}
+{"t": "2026-08-27T17:37:55", "kind": "rx", "value": "NULLING_EXP_RANGE ch=1 sensor=MQ135 low=255 high=319"}
+{"t": "2026-08-27T17:37:59", "kind": "rx", "value": "NULLING_STABILITY stage=exp_recheck ch=1 sensor=MQ135 code=319 stable=0 spread=0.006126540 observeMs=3510"}
+{"t": "2026-08-27T17:37:59", "kind": "rx", "value": "NULLING_EXP_RECHECK ch=1 sensor=MQ135 code=319 voltage=0.024979398 delta=0.023909 valid=1 zeroMargin=1 outBaseline=1 write=1 passed=1"}
+{"t": "2026-08-27T17:37:59", "kind": "rx", "value": "NULLING_STAGE_TRANSITION ch=1 sensor=MQ135 from=exponential to=binary pauseMs=0"}
+{"t": "2026-08-27T17:37:59", "kind": "rx", "value": "NULLING_BIN_START ch=1 sensor=MQ135 low=255 high=319"}
+{"t": "2026-08-27T17:38:00", "kind": "rx", "value": "NULLING_STABILITY stage=bin ch=1 sensor=MQ135 code=287 stable=1 spread=0.000072139 observeMs=802"}
+{"t": "2026-08-27T17:38:00", "kind": "rx", "value": "NULLING_BIN_STEP ch=1 sensor=MQ135 low=255 high=319 mid=287 voltage=0.001087 delta=0.000017 valid=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:38:01", "kind": "rx", "value": "NULLING_STABILITY stage=bin ch=1 sensor=MQ135 code=303 stable=1 spread=0.000038309 observeMs=806"}
+{"t": "2026-08-27T17:38:01", "kind": "rx", "value": "NULLING_BIN_STEP ch=1 sensor=MQ135 low=287 high=319 mid=303 voltage=0.001071 delta=0.000000 valid=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:38:03", "kind": "rx", "value": "NULLING_STABILITY stage=bin ch=1 sensor=MQ135 code=311 stable=1 spread=0.000091557 observeMs=1662"}
+{"t": "2026-08-27T17:38:03", "kind": "rx", "value": "NULLING_BIN_STEP ch=1 sensor=MQ135 low=303 high=319 mid=311 voltage=0.001088 delta=0.000017 valid=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:38:05", "kind": "rx", "value": "NULLING_STABILITY stage=bin ch=1 sensor=MQ135 code=315 stable=1 spread=0.000030175 observeMs=2502"}
+{"t": "2026-08-27T17:38:05", "kind": "rx", "value": "NULLING_BIN_STEP ch=1 sensor=MQ135 low=311 high=319 mid=315 voltage=0.001089 delta=0.000019 valid=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:38:06", "kind": "rx", "value": "NULLING_STABILITY stage=bin ch=1 sensor=MQ135 code=317 stable=1 spread=0.000059584 observeMs=808"}
+{"t": "2026-08-27T17:38:06", "kind": "rx", "value": "NULLING_BIN_STEP ch=1 sensor=MQ135 low=315 high=319 mid=317 voltage=0.001044 delta=-0.000026 valid=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:38:07", "kind": "rx", "value": "NULLING_STABILITY stage=bin ch=1 sensor=MQ135 code=318 stable=1 spread=0.000016708 observeMs=810"}
+{"t": "2026-08-27T17:38:07", "kind": "rx", "value": "NULLING_BIN_STEP ch=1 sensor=MQ135 low=317 high=319 mid=318 voltage=0.001085 delta=0.000014 valid=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:38:07", "kind": "rx", "value": "NULLING_BIN_DONE ch=1 sensor=MQ135 selected=319"}
+{"t": "2026-08-27T17:38:07", "kind": "rx", "value": "NULLING_STAGE_TRANSITION ch=1 sensor=MQ135 from=binary to=confirm pauseMs=0"}
+{"t": "2026-08-27T17:38:07", "kind": "rx", "value": "NULLING_CONFIRM_START ch=1 sensor=MQ135 selected=319 start=309 end=329 samples=21 below=10 above=10 baseline=0.001070 threshold=0.000535 minFinalV=0.000000"}
+{"t": "2026-08-27T17:38:09", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=1 sensor=MQ135 code=309 stable=1 spread=0.000114425 observeMs=1942"}
+{"t": "2026-08-27T17:38:09", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=1 sensor=MQ135 code=309 voltage=0.001153070 delta=0.000083 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:38:10", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=1 sensor=MQ135 code=310 stable=1 spread=0.000054893 observeMs=946"}
+{"t": "2026-08-27T17:38:10", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=1 sensor=MQ135 code=310 voltage=0.001037915 delta=-0.000033 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:38:12", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=1 sensor=MQ135 code=311 stable=1 spread=0.000130260 observeMs=950"}
+{"t": "2026-08-27T17:38:12", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=1 sensor=MQ135 code=311 voltage=0.001090039 delta=0.000020 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:38:13", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=1 sensor=MQ135 code=312 stable=1 spread=0.000048896 observeMs=949"}
+{"t": "2026-08-27T17:38:13", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=1 sensor=MQ135 code=312 voltage=0.001119172 delta=0.000049 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:38:14", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=1 sensor=MQ135 code=313 stable=1 spread=0.000070945 observeMs=946"}
+{"t": "2026-08-27T17:38:14", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=1 sensor=MQ135 code=313 voltage=0.001102912 delta=0.000032 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:38:15", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=1 sensor=MQ135 code=314 stable=1 spread=0.000076127 observeMs=944"}
+{"t": "2026-08-27T17:38:15", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=1 sensor=MQ135 code=314 voltage=0.001119659 delta=0.000049 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:38:16", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=1 sensor=MQ135 code=315 stable=1 spread=0.000083383 observeMs=945"}
+{"t": "2026-08-27T17:38:16", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=1 sensor=MQ135 code=315 voltage=0.001091520 delta=0.000021 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:38:17", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=1 sensor=MQ135 code=316 stable=1 spread=0.000080539 observeMs=947"}
+{"t": "2026-08-27T17:38:17", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=1 sensor=MQ135 code=316 voltage=0.001083806 delta=0.000013 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:38:19", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=1 sensor=MQ135 code=317 stable=1 spread=0.000108666 observeMs=1949"}
+{"t": "2026-08-27T17:38:19", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=1 sensor=MQ135 code=317 voltage=0.001125091 delta=0.000055 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:38:20", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=1 sensor=MQ135 code=318 stable=1 spread=0.000035799 observeMs=948"}
+{"t": "2026-08-27T17:38:20", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=1 sensor=MQ135 code=318 voltage=0.001072964 delta=0.000003 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:38:21", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=1 sensor=MQ135 code=319 stable=1 spread=0.000102858 observeMs=943"}
+{"t": "2026-08-27T17:38:21", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=1 sensor=MQ135 code=319 voltage=0.001117187 delta=0.000047 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:38:23", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=1 sensor=MQ135 code=320 stable=1 spread=0.000079672 observeMs=946"}
+{"t": "2026-08-27T17:38:23", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=1 sensor=MQ135 code=320 voltage=0.001106428 delta=0.000036 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:38:24", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=1 sensor=MQ135 code=321 stable=1 spread=0.000089360 observeMs=948"}
+{"t": "2026-08-27T17:38:24", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=1 sensor=MQ135 code=321 voltage=0.001031149 delta=-0.000039 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:38:25", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=1 sensor=MQ135 code=322 stable=1 spread=0.000073368 observeMs=948"}
+{"t": "2026-08-27T17:38:25", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=1 sensor=MQ135 code=322 voltage=0.001079965 delta=0.000010 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:38:26", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=1 sensor=MQ135 code=323 stable=1 spread=0.000066776 observeMs=940"}
+{"t": "2026-08-27T17:38:26", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=1 sensor=MQ135 code=323 voltage=0.001087216 delta=0.000017 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:38:27", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=1 sensor=MQ135 code=324 stable=1 spread=0.000108425 observeMs=947"}
+{"t": "2026-08-27T17:38:27", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=1 sensor=MQ135 code=324 voltage=0.001052928 delta=-0.000018 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:38:28", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=1 sensor=MQ135 code=325 stable=1 spread=0.000115802 observeMs=948"}
+{"t": "2026-08-27T17:38:28", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=1 sensor=MQ135 code=325 voltage=0.001109871 delta=0.000039 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:38:29", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=1 sensor=MQ135 code=326 stable=1 spread=0.000095818 observeMs=957"}
+{"t": "2026-08-27T17:38:29", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=1 sensor=MQ135 code=326 voltage=0.001109741 delta=0.000039 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:38:31", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=1 sensor=MQ135 code=327 stable=1 spread=0.000071517 observeMs=1940"}
+{"t": "2026-08-27T17:38:31", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=1 sensor=MQ135 code=327 voltage=0.001060302 delta=-0.000010 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:38:32", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=1 sensor=MQ135 code=328 stable=1 spread=0.000033343 observeMs=949"}
+{"t": "2026-08-27T17:38:32", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=1 sensor=MQ135 code=328 voltage=0.001098506 delta=0.000028 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:38:34", "kind": "rx", "value": "NULLING_STABILITY stage=confirm ch=1 sensor=MQ135 code=329 stable=1 spread=0.000090421 observeMs=945"}
+{"t": "2026-08-27T17:38:34", "kind": "rx", "value": "NULLING_CONFIRM_STEP ch=1 sensor=MQ135 code=329 voltage=0.001055732 delta=-0.000015 valid=1 aboveMin=1 zeroMargin=1 outBaseline=0 write=1"}
+{"t": "2026-08-27T17:38:34", "kind": "rx", "value": "NULLING_CONFIRM_FAIL ch=1 sensor=MQ135"}
+{"t": "2026-08-27T17:38:34", "kind": "rx", "value": "NULLING_CONFIRM_RESUME_EXP ch=1 sensor=MQ135 low=255 high=319 selected=319 reason=confirm_failed"}
+{"t": "2026-08-27T17:38:34", "kind": "rx", "value": "NULLING_STAGE_TRANSITION ch=1 sensor=MQ135 from=confirm to=exponential_resume pauseMs=0"}
+{"t": "2026-08-27T17:38:34", "kind": "rx", "value": "NULLING_EXP_RESUME ch=1 sensor=MQ135 from=319 next=383 step=64"}
+{"t": "2026-08-27T17:38:34", "kind": "rx", "value": "NULLING_EXP_START ch=1 sensor=MQ135 baseline=0.001070 threshold=0.000535 minFinalV=0.000000 minBracketDac=100"}
+{"t": "2026-08-27T17:38:35", "kind": "rx", "value": "NULLING_STABILITY stage=exp ch=1 sensor=MQ135 code=383 stable=1 spread=0.000088953 observeMs=1664"}
+{"t": "2026-08-27T17:38:35", "kind": "rx", "value": "NULLING_EXP_STEP ch=1 sensor=MQ135 code=383 voltage=0.001094 delta=0.000023 valid=1 zeroMargin=1 outBaseline=0"}

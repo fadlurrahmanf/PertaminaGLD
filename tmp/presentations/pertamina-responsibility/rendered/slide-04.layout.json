@@ -1,0 +1,1550 @@
+{
+  "schema": "openai.presentation.layout/v4",
+  "unit": "px",
+  "slide": {
+    "aid": "sl/w3kg8q",
+    "id": "w3kg8q",
+    "slide": 4,
+    "layoutId": "be4b8f75-84ef-4272-944b-e7d31fdb41b2",
+    "layoutName": "Title Slide",
+    "layoutType": "title",
+    "masterLayoutId": "b3585e2a-1f6b-42c9-9c69-ca2590313385",
+    "masterLayoutName": "Master",
+    "frame": {
+      "left": 0,
+      "top": 0,
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "theme": {
+    "colorSchemeName": "ChatGPT",
+    "colors": {
+      "accent1": "#156082",
+      "accent2": "#E97132",
+      "accent3": "#196B24",
+      "accent4": "#0F9ED5",
+      "accent5": "#A02B93",
+      "accent6": "#4EA72E",
+      "bg1": "#FFFFFF",
+      "bg2": "#000000",
+      "tx1": "#1F1F1F",
+      "tx2": "#FFFFFF",
+      "dk1": "#000000",
+      "lt1": "#FFFFFF",
+      "dk2": "#0E2841",
+      "lt2": "#E8E8E8",
+      "hlink": "#467886",
+      "folHlink": "#96607D"
+    },
+    "typefaces": [
+      "Arial"
+    ]
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "be4b8f75-84ef-4272-944b-e7d31fdb41b2",
+      "name": "Title Slide",
+      "type": "title",
+      "parentLayoutId": "b3585e2a-1f6b-42c9-9c69-ca2590313385",
+      "elements": []
+    },
+    {
+      "scope": "master",
+      "id": "b3585e2a-1f6b-42c9-9c69-ca2590313385",
+      "name": "Master",
+      "type": "master",
+      "elements": []
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/ju9w76p8",
+      "id": "1",
+      "name": "slide-title",
+      "bbox": [
+        42,
+        32,
+        1160,
+        70
+      ],
+      "geometry": "rect",
+      "text": "Gateway: Pertamina perlu membuka jalur IP dan menjelaskan security jaringan",
+      "textPreview": "Gateway: Pertamina perlu membuka jalur IP dan menjelaskan security jaringan",
+      "resolvedFontSize": 30.42,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 39,
+        "typeface": "Arial",
+        "color": "#111827",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.78,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Gateway: Pertamina perlu membuka jalur IP dan menjelaskan security jaringan"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Gateway: Pertamina perlu membuka jalur IP dan menjelaskan security jaringan",
+          "resolvedTextStyle": {
+            "fontSize": 39,
+            "typeface": "Arial",
+            "color": "#111827",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Gateway: Pertamina perlu membuka jalur IP dan menjelaskan security jaringan",
+              "fontSize": 39,
+              "typeface": "Arial",
+              "color": "#111827",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 2,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/4vidgb6t",
+      "id": "2",
+      "name": "page",
+      "bbox": [
+        1185,
+        665,
+        50,
+        22
+      ],
+      "geometry": "rect",
+      "text": "04",
+      "textPreview": "04",
+      "resolvedFontSize": 10.33,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 13,
+        "typeface": "Arial",
+        "color": "#5F6670",
+        "alignment": "right",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.79,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "04"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "04",
+          "resolvedTextStyle": {
+            "fontSize": 13,
+            "typeface": "Arial",
+            "color": "#5F6670",
+            "alignment": "right"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "04",
+              "fontSize": 13,
+              "typeface": "Arial",
+              "color": "#5F6670",
+              "alignment": "right"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 3,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/5wre9g7e",
+      "id": "3",
+      "name": "left-panel",
+      "bbox": [
+        42,
+        135,
+        560,
+        360
+      ],
+      "geometry": "rect",
+      "fillColor": "#F1F3F5",
+      "lineColor": "#C4C9D0",
+      "lineWidth": 1
+    },
+    {
+      "order": 4,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/6xkfiloz",
+      "id": "4",
+      "name": "right-panel",
+      "bbox": [
+        630,
+        135,
+        608,
+        360
+      ],
+      "geometry": "rect",
+      "fillColor": "#DDEEFF",
+      "lineColor": "#C4C9D0",
+      "lineWidth": 1
+    },
+    {
+      "order": 5,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/rytwbqpk",
+      "id": "5",
+      "name": "text",
+      "bbox": [
+        64,
+        159,
+        510,
+        38
+      ],
+      "geometry": "rect",
+      "text": "RENCANA LGU",
+      "textPreview": "RENCANA LGU",
+      "resolvedFontSize": 23.67,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 24,
+        "typeface": "Arial",
+        "color": "#246BFD",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.99,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "RENCANA LGU"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "RENCANA LGU",
+          "resolvedTextStyle": {
+            "fontSize": 24,
+            "typeface": "Arial",
+            "color": "#246BFD",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "RENCANA LGU",
+              "fontSize": 24,
+              "typeface": "Arial",
+              "color": "#246BFD",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 6,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/sz2xkv65",
+      "id": "6",
+      "name": "text",
+      "bbox": [
+        652,
+        159,
+        558,
+        60
+      ],
+      "geometry": "rect",
+      "text": "INFORMASI PERTAMINA",
+      "textPreview": "INFORMASI PERTAMINA",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 24,
+        "typeface": "Arial",
+        "color": "#246BFD",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "INFORMASI PERTAMINA"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "INFORMASI PERTAMINA",
+          "resolvedTextStyle": {
+            "fontSize": 24,
+            "typeface": "Arial",
+            "color": "#246BFD",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "INFORMASI PERTAMINA",
+              "fontSize": 24,
+              "typeface": "Arial",
+              "color": "#246BFD",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 7,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/tkbed07q",
+      "id": "7",
+      "name": "bullet-0",
+      "bbox": [
+        64,
+        231,
+        9,
+        9
+      ],
+      "geometry": "rect",
+      "fillColor": "#246BFD",
+      "lineColor": "#246BFD",
+      "lineWidth": 1
+    },
+    {
+      "order": 8,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/elkfm5ov",
+      "id": "8",
+      "name": "bullet-text-0",
+      "bbox": [
+        89,
+        223,
+        485,
+        59
+      ],
+      "geometry": "rect",
+      "text": "Gateway menggunakan adaptor 5 VDC dan ditempatkan di dalam ruangan.",
+      "textPreview": "Gateway menggunakan adaptor 5 VDC dan ditempatkan di dalam ruangan.",
+      "resolvedFontSize": 18,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 18,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Gateway menggunakan adaptor 5 VDC dan ditempatkan"
+          },
+          {
+            "index": 2,
+            "text": "di dalam ruangan."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Gateway menggunakan adaptor 5 VDC dan ditempatkan di dalam ruangan.",
+          "resolvedTextStyle": {
+            "fontSize": 18,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Gateway menggunakan adaptor 5 VDC dan ditempatkan di dalam ruangan.",
+              "fontSize": 18,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 9,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/fmtwfqpg",
+      "id": "9",
+      "name": "bullet-1",
+      "bbox": [
+        64,
+        293,
+        9,
+        9
+      ],
+      "geometry": "rect",
+      "fillColor": "#246BFD",
+      "lineColor": "#246BFD",
+      "lineWidth": 1
+    },
+    {
+      "order": 10,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/ryds72hk",
+      "id": "10",
+      "name": "bullet-text-1",
+      "bbox": [
+        89,
+        285,
+        485,
+        59
+      ],
+      "geometry": "rect",
+      "text": "Antenna ditempatkan di rooftop dengan kebutuhan jalur kabel dan proteksi.",
+      "textPreview": "Antenna ditempatkan di rooftop dengan kebutuhan jalur kabel dan proteksi.",
+      "resolvedFontSize": 18,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 18,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Antenna ditempatkan di rooftop dengan kebutuhan jalur"
+          },
+          {
+            "index": 2,
+            "text": "kabel dan proteksi."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Antenna ditempatkan di rooftop dengan kebutuhan jalur kabel dan proteksi.",
+          "resolvedTextStyle": {
+            "fontSize": 18,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Antenna ditempatkan di rooftop dengan kebutuhan jalur kabel dan proteksi.",
+              "fontSize": 18,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 11,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/qx4reh0z",
+      "id": "11",
+      "name": "bullet-2",
+      "bbox": [
+        64,
+        355,
+        9,
+        9
+      ],
+      "geometry": "rect",
+      "fillColor": "#246BFD",
+      "lineColor": "#246BFD",
+      "lineWidth": 1
+    },
+    {
+      "order": 12,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/d0va9czq",
+      "id": "12",
+      "name": "bullet-text-2",
+      "bbox": [
+        89,
+        347,
+        485,
+        59
+      ],
+      "geometry": "rect",
+      "text": "Konfigurasi Wi-Fi dasar saat ini memakai SSID dan password.",
+      "textPreview": "Konfigurasi Wi-Fi dasar saat ini memakai SSID dan password.",
+      "resolvedFontSize": 18,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 18,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Konfigurasi Wi-Fi dasar saat ini memakai SSID dan"
+          },
+          {
+            "index": 2,
+            "text": "password."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Konfigurasi Wi-Fi dasar saat ini memakai SSID dan password.",
+          "resolvedTextStyle": {
+            "fontSize": 18,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Konfigurasi Wi-Fi dasar saat ini memakai SSID dan password.",
+              "fontSize": 18,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 13,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/szmtg7i5",
+      "id": "13",
+      "name": "bullet-3",
+      "bbox": [
+        64,
+        417,
+        9,
+        9
+      ],
+      "geometry": "rect",
+      "fillColor": "#246BFD",
+      "lineColor": "#246BFD",
+      "lineWidth": 1
+    },
+    {
+      "order": 14,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/3uts32ho",
+      "id": "14",
+      "name": "bullet-text-3",
+      "bbox": [
+        89,
+        409,
+        485,
+        59
+      ],
+      "geometry": "rect",
+      "text": "Gateway terhubung ke broker MQTT melalui IP atau hostname server.",
+      "textPreview": "Gateway terhubung ke broker MQTT melalui IP atau hostname server.",
+      "resolvedFontSize": 18,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 18,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Gateway terhubung ke broker MQTT melalui IP atau"
+          },
+          {
+            "index": 2,
+            "text": "hostname server."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Gateway terhubung ke broker MQTT melalui IP atau hostname server.",
+          "resolvedTextStyle": {
+            "fontSize": 18,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Gateway terhubung ke broker MQTT melalui IP atau hostname server.",
+              "fontSize": 18,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 15,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/itkrax03",
+      "id": "15",
+      "name": "bullet-0",
+      "bbox": [
+        652,
+        231,
+        9,
+        9
+      ],
+      "geometry": "rect",
+      "fillColor": "#268A5E",
+      "lineColor": "#268A5E",
+      "lineWidth": 1
+    },
+    {
+      "order": 16,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/5wva5czu",
+      "id": "16",
+      "name": "bullet-text-0",
+      "bbox": [
+        677,
+        223,
+        520,
+        59
+      ],
+      "geometry": "rect",
+      "text": "Prosedur registrasi MAC, SSID/security, DHCP/static IP, VLAN, DNS, NTP dan firewall.",
+      "textPreview": "Prosedur registrasi MAC, SSID/security, DHCP/static IP, VLAN, DNS, NTP dan firewall.",
+      "resolvedFontSize": 18,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 18,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Prosedur registrasi MAC, SSID/security, DHCP/static IP,"
+          },
+          {
+            "index": 2,
+            "text": "VLAN, DNS, NTP dan firewall."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Prosedur registrasi MAC, SSID/security, DHCP/static IP, VLAN, DNS, NTP dan firewall.",
+          "resolvedTextStyle": {
+            "fontSize": 18,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Prosedur registrasi MAC, SSID/security, DHCP/static IP, VLAN, DNS, NTP dan firewall.",
+              "fontSize": 18,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 17,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/4v29c7i9",
+      "id": "17",
+      "name": "bullet-1",
+      "bbox": [
+        652,
+        293,
+        9,
+        9
+      ],
+      "geometry": "rect",
+      "fillColor": "#268A5E",
+      "lineColor": "#268A5E",
+      "lineWidth": 1
+    },
+    {
+      "order": 18,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/nqxsfmhs",
+      "id": "18",
+      "name": "bullet-text-1",
+      "bbox": [
+        677,
+        285,
+        520,
+        59
+      ],
+      "geometry": "rect",
+      "text": "Alamat/port broker, credential, TLS/mTLS, certificate dan topic ACL.",
+      "textPreview": "Alamat/port broker, credential, TLS/mTLS, certificate dan topic ACL.",
+      "resolvedFontSize": 18,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 18,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Alamat/port broker, credential, TLS/mTLS, certificate dan topic"
+          },
+          {
+            "index": 2,
+            "text": "ACL."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Alamat/port broker, credential, TLS/mTLS, certificate dan topic ACL.",
+          "resolvedTextStyle": {
+            "fontSize": 18,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Alamat/port broker, credential, TLS/mTLS, certificate dan topic ACL.",
+              "fontSize": 18,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 19,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/2pobm1g7",
+      "id": "19",
+      "name": "bullet-2",
+      "bbox": [
+        652,
+        355,
+        9,
+        9
+      ],
+      "geometry": "rect",
+      "fillColor": "#268A5E",
+      "lineColor": "#268A5E",
+      "lineWidth": 1
+    },
+    {
+      "order": 20,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/yl8vel0f",
+      "id": "20",
+      "name": "bullet-text-2",
+      "bbox": [
+        677,
+        347,
+        520,
+        59
+      ],
+      "geometry": "rect",
+      "text": "Titik daya indoor, akses rooftop, batas antenna, rute coax, grounding dan proteksi petir.",
+      "textPreview": "Titik daya indoor, akses rooftop, batas antenna, rute coax, grounding dan proteksi petir.",
+      "resolvedFontSize": 18,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 18,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Titik daya indoor, akses rooftop, batas antenna, rute coax,"
+          },
+          {
+            "index": 2,
+            "text": "grounding dan proteksi petir."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Titik daya indoor, akses rooftop, batas antenna, rute coax, grounding dan proteksi petir.",
+          "resolvedTextStyle": {
+            "fontSize": 18,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Titik daya indoor, akses rooftop, batas antenna, rute coax, grounding dan proteksi petir.",
+              "fontSize": 18,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 21,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/zmhw7q10",
+      "id": "21",
+      "name": "bullet-3",
+      "bbox": [
+        652,
+        417,
+        9,
+        9
+      ],
+      "geometry": "rect",
+      "fillColor": "#268A5E",
+      "lineColor": "#268A5E",
+      "lineWidth": 1
+    },
+    {
+      "order": 22,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/knadgvil",
+      "id": "22",
+      "name": "bullet-text-3",
+      "bbox": [
+        677,
+        409,
+        520,
+        59
+      ],
+      "geometry": "rect",
+      "text": "Jalur IP/routing ke broker - tidak harus satu SSID atau subnet.",
+      "textPreview": "Jalur IP/routing ke broker - tidak harus satu SSID atau subnet.",
+      "resolvedFontSize": 18,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 18,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Jalur IP/routing ke broker - tidak harus satu SSID atau subnet."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Jalur IP/routing ke broker - tidak harus satu SSID atau subnet.",
+          "resolvedTextStyle": {
+            "fontSize": 18,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Jalur IP/routing ke broker - tidak harus satu SSID atau subnet.",
+              "fontSize": 18,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 23,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/loje90j6",
+      "id": "23",
+      "name": "metric-0",
+      "bbox": [
+        42,
+        535,
+        260,
+        94
+      ],
+      "geometry": "rect",
+      "fillColor": "#F1F3F5",
+      "lineColor": "#C4C9D0",
+      "lineWidth": 1
+    },
+    {
+      "order": 24,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/mpsvi50r",
+      "id": "24",
+      "name": "text",
+      "bbox": [
+        60,
+        550,
+        224,
+        34
+      ],
+      "geometry": "rect",
+      "text": "< 1 KB",
+      "textPreview": "< 1 KB",
+      "resolvedFontSize": 20.33,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 29,
+        "typeface": "Arial",
+        "color": "#111827",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.7,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "< 1 KB"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "< 1 KB",
+          "resolvedTextStyle": {
+            "fontSize": 29,
+            "typeface": "Arial",
+            "color": "#111827",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "< 1 KB",
+              "fontSize": 29,
+              "typeface": "Arial",
+              "color": "#111827",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 25,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/7a1wba1c",
+      "id": "25",
+      "name": "text",
+      "bbox": [
+        60,
+        591,
+        224,
+        25
+      ],
+      "geometry": "rect",
+      "text": "Target data per pesan",
+      "textPreview": "Target data per pesan",
+      "resolvedFontSize": 12.83,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 16,
+        "typeface": "Arial",
+        "color": "#5F6670",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.8,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Target data per pesan"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Target data per pesan",
+          "resolvedTextStyle": {
+            "fontSize": 16,
+            "typeface": "Arial",
+            "color": "#5F6670",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Target data per pesan",
+              "fontSize": 16,
+              "typeface": "Arial",
+              "color": "#5F6670",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 26,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/8badkfih",
+      "id": "26",
+      "name": "metric-1",
+      "bbox": [
+        322,
+        535,
+        300,
+        94
+      ],
+      "geometry": "rect",
+      "fillColor": "#DDEEFF",
+      "lineColor": "#C4C9D0",
+      "lineWidth": 1
+    },
+    {
+      "order": 27,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/9cjedkj2",
+      "id": "27",
+      "name": "text",
+      "bbox": [
+        340,
+        550,
+        264,
+        34
+      ],
+      "geometry": "rect",
+      "text": "90 byte / 10 detik",
+      "textPreview": "90 byte / 10 detik",
+      "resolvedFontSize": 20.33,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 25,
+        "typeface": "Arial",
+        "color": "#111827",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.81,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "90 byte / 10 detik"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "90 byte / 10 detik",
+          "resolvedTextStyle": {
+            "fontSize": 25,
+            "typeface": "Arial",
+            "color": "#111827",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "90 byte / 10 detik",
+              "fontSize": 25,
+              "typeface": "Arial",
+              "color": "#111827",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 28,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/2tov61k7",
+      "id": "28",
+      "name": "text",
+      "bbox": [
+        340,
+        591,
+        264,
+        25
+      ],
+      "geometry": "rect",
+      "text": "Estimasi periode tercepat",
+      "textPreview": "Estimasi periode tercepat",
+      "resolvedFontSize": 12.83,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 16,
+        "typeface": "Arial",
+        "color": "#5F6670",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.8,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Estimasi periode tercepat"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Estimasi periode tercepat",
+          "resolvedTextStyle": {
+            "fontSize": 16,
+            "typeface": "Arial",
+            "color": "#5F6670",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Estimasi periode tercepat",
+              "fontSize": 16,
+              "typeface": "Arial",
+              "color": "#5F6670",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 29,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/nuxcz61s",
+      "id": "29",
+      "name": "metric-2",
+      "bbox": [
+        642,
+        535,
+        538,
+        94
+      ],
+      "geometry": "rect",
+      "fillColor": "#FFF4D7",
+      "lineColor": "#C4C9D0",
+      "lineWidth": 1
+    },
+    {
+      "order": 30,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/58nylo3a",
+      "id": "30",
+      "name": "text",
+      "bbox": [
+        660,
+        550,
+        502,
+        34
+      ],
+      "geometry": "rect",
+      "text": "Validasi MQTT",
+      "textPreview": "Validasi MQTT",
+      "resolvedFontSize": 20.33,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 29,
+        "typeface": "Arial",
+        "color": "#246BFD",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.7,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Validasi MQTT"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Validasi MQTT",
+          "resolvedTextStyle": {
+            "fontSize": 29,
+            "typeface": "Arial",
+            "color": "#246BFD",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Validasi MQTT",
+              "fontSize": 29,
+              "typeface": "Arial",
+              "color": "#246BFD",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 31,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/47excj2p",
+      "id": "31",
+      "name": "text",
+      "bbox": [
+        660,
+        591,
+        502,
+        25
+      ],
+      "geometry": "rect",
+      "text": "Ukur paket aktual karena JSON, topic, TCP/IP dan security menambah overhead",
+      "textPreview": "Ukur paket aktual karena JSON, topic, TCP/IP dan security menambah overhead",
+      "resolvedFontSize": 12.83,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 16,
+        "typeface": "Arial",
+        "color": "#5F6670",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.8,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Ukur paket aktual karena JSON, topic, TCP/IP dan security menambah overhead"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Ukur paket aktual karena JSON, topic, TCP/IP dan security menambah overhead",
+          "resolvedTextStyle": {
+            "fontSize": 16,
+            "typeface": "Arial",
+            "color": "#5F6670",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Ukur paket aktual karena JSON, topic, TCP/IP dan security menambah overhead",
+              "fontSize": 16,
+              "typeface": "Arial",
+              "color": "#5F6670",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    }
+  ],
+  "composeRuns": []
+}

@@ -19,8 +19,8 @@
 
 // CNN dual-branch + datasheet-evidence gas classification model (INT8).
 // See ModelMetadata.h for the fail-closed production-approval contract.
-#include "../model/ModelMetadata.h"
-#include "../model/NeuralNetwork.h"
+#include "ModelMetadata.h"
+#include "NeuralNetwork.h"
 
 namespace {
 

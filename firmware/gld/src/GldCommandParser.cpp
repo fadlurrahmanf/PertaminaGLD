@@ -45,12 +45,28 @@ bool decodeLine(const char* line, GldSerialCommand& outCommand) {
         outCommand.type = GldSerialCommandType::GetStatus;
         return true;
     }
+    if (strcmp(line, "GET_TELEMETRY") == 0) {
+        outCommand.type = GldSerialCommandType::GetTelemetry;
+        return true;
+    }
     if (strcmp(line, "RESTART") == 0) {
         outCommand.type = GldSerialCommandType::Restart;
         return true;
     }
     if (strcmp(line, "RUN_BOOT_CHECK") == 0) {
         outCommand.type = GldSerialCommandType::RunBootCheck;
+        return true;
+    }
+    if (strcmp(line, "RUN_CURRENT_STATE_CHECK") == 0) {
+        outCommand.type = GldSerialCommandType::RunCurrentStateCheck;
+        return true;
+    }
+    if (strcmp(line, "RUN_I2C_SCAN") == 0) {
+        outCommand.type = GldSerialCommandType::RunI2cScan;
+        return true;
+    }
+    if (strcmp(line, "RUN_TCA_CHANNEL_SCAN") == 0) {
+        outCommand.type = GldSerialCommandType::RunTcaChannelScan;
         return true;
     }
     if (strcmp(line, "RUN_ADS_MCP_SWEEP") == 0) {
@@ -101,6 +117,24 @@ bool decodeLine(const char* line, GldSerialCommand& outCommand) {
         outCommand.payload[sizeof(outCommand.payload) - 1] = '\0';
         return true;
     }
+    if (strncmp(line, "SET_SENSOR_POWER_JSON ", 22) == 0) {
+        outCommand.type = GldSerialCommandType::SetSensorPowerJson;
+        strncpy(outCommand.payload, line + 22, sizeof(outCommand.payload) - 1);
+        outCommand.payload[sizeof(outCommand.payload) - 1] = '\0';
+        return true;
+    }
+    if (strncmp(line, "SET_ALARM_MODE_JSON ", 20) == 0) {
+        outCommand.type = GldSerialCommandType::SetAlarmModeJson;
+        strncpy(outCommand.payload, line + 20, sizeof(outCommand.payload) - 1);
+        outCommand.payload[sizeof(outCommand.payload) - 1] = '\0';
+        return true;
+    }
+    if (strncmp(line, "SET_MANUAL_ALARM_JSON ", 22) == 0) {
+        outCommand.type = GldSerialCommandType::SetManualAlarmJson;
+        strncpy(outCommand.payload, line + 22, sizeof(outCommand.payload) - 1);
+        outCommand.payload[sizeof(outCommand.payload) - 1] = '\0';
+        return true;
+    }
     if (strcmp(line, "VERIFY_CLEAN_AIR_FOR_NULLING") == 0) {
         outCommand.type = GldSerialCommandType::VerifyCleanAirForNulling;
         return true;
@@ -117,6 +151,14 @@ bool decodeLine(const char* line, GldSerialCommand& outCommand) {
     }
     if (strcmp(line, "GET_QC_STATUS") == 0) {
         outCommand.type = GldSerialCommandType::GetQcStatus;
+        return true;
+    }
+    if (strcmp(line, "RETRY_NULLING") == 0) {
+        outCommand.type = GldSerialCommandType::RetryNulling;
+        return true;
+    }
+    if (strcmp(line, "RETRY_FAILED_NULLING") == 0) {
+        outCommand.type = GldSerialCommandType::RetryFailedNulling;
         return true;
     }
     if (strncmp(line, "RUN_NULLING_SINGLE_JSON ", 24) == 0) {

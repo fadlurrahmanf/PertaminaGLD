@@ -1,0 +1,187 @@
+{
+  "sourcePptx": "D:\\Github\\PertaminaGLD\\output\\presentation\\Presentasi-Rapat-Cilacap-2026-08-18.pptx",
+  "workspace": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision",
+  "outDir": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision\\template-inspect",
+  "generatedAt": "2026-08-19T06:18:25.744Z",
+  "slideCount": 16,
+  "slideArtifacts": [
+    {
+      "slide": 1,
+      "previewPath": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision\\template-inspect\\source-slides\\source-slide-01.png",
+      "previewRelativePath": "template-inspect/source-slides/source-slide-01.png",
+      "layoutPath": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision\\template-inspect\\layouts\\source-slide-01.layout.json",
+      "layoutRelativePath": "template-inspect/layouts/source-slide-01.layout.json"
+    },
+    {
+      "slide": 2,
+      "previewPath": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision\\template-inspect\\source-slides\\source-slide-02.png",
+      "previewRelativePath": "template-inspect/source-slides/source-slide-02.png",
+      "layoutPath": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision\\template-inspect\\layouts\\source-slide-02.layout.json",
+      "layoutRelativePath": "template-inspect/layouts/source-slide-02.layout.json"
+    },
+    {
+      "slide": 3,
+      "previewPath": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision\\template-inspect\\source-slides\\source-slide-03.png",
+      "previewRelativePath": "template-inspect/source-slides/source-slide-03.png",
+      "layoutPath": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision\\template-inspect\\layouts\\source-slide-03.layout.json",
+      "layoutRelativePath": "template-inspect/layouts/source-slide-03.layout.json"
+    },
+    {
+      "slide": 4,
+      "previewPath": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision\\template-inspect\\source-slides\\source-slide-04.png",
+      "previewRelativePath": "template-inspect/source-slides/source-slide-04.png",
+      "layoutPath": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision\\template-inspect\\layouts\\source-slide-04.layout.json",
+      "layoutRelativePath": "template-inspect/layouts/source-slide-04.layout.json"
+    },
+    {
+      "slide": 5,
+      "previewPath": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision\\template-inspect\\source-slides\\source-slide-05.png",
+      "previewRelativePath": "template-inspect/source-slides/source-slide-05.png",
+      "layoutPath": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision\\template-inspect\\layouts\\source-slide-05.layout.json",
+      "layoutRelativePath": "template-inspect/layouts/source-slide-05.layout.json"
+    },
+    {
+      "slide": 6,
+      "previewPath": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision\\template-inspect\\source-slides\\source-slide-06.png",
+      "previewRelativePath": "template-inspect/source-slides/source-slide-06.png",
+      "layoutPath": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision\\template-inspect\\layouts\\source-slide-06.layout.json",
+      "layoutRelativePath": "template-inspect/layouts/source-slide-06.layout.json"
+    },
+    {
+      "slide": 7,
+      "previewPath": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision\\template-inspect\\source-slides\\source-slide-07.png",
+      "previewRelativePath": "template-inspect/source-slides/source-slide-07.png",
+      "layoutPath": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision\\template-inspect\\layouts\\source-slide-07.layout.json",
+      "layoutRelativePath": "template-inspect/layouts/source-slide-07.layout.json"
+    },
+    {
+      "slide": 8,
+      "previewPath": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision\\template-inspect\\source-slides\\source-slide-08.png",
+      "previewRelativePath": "template-inspect/source-slides/source-slide-08.png",
+      "layoutPath": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision\\template-inspect\\layouts\\source-slide-08.layout.json",
+      "layoutRelativePath": "template-inspect/layouts/source-slide-08.layout.json"
+    },
+    {
+      "slide": 9,
+      "previewPath": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision\\template-inspect\\source-slides\\source-slide-09.png",
+      "previewRelativePath": "template-inspect/source-slides/source-slide-09.png",
+      "layoutPath": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision\\template-inspect\\layouts\\source-slide-09.layout.json",
+      "layoutRelativePath": "template-inspect/layouts/source-slide-09.layout.json"
+    },
+    {
+      "slide": 10,
+      "previewPath": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision\\template-inspect\\source-slides\\source-slide-10.png",
+      "previewRelativePath": "template-inspect/source-slides/source-slide-10.png",
+      "layoutPath": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision\\template-inspect\\layouts\\source-slide-10.layout.json",
+      "layoutRelativePath": "template-inspect/layouts/source-slide-10.layout.json"
+    },
+    {
+      "slide": 11,
+      "previewPath": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision\\template-inspect\\source-slides\\source-slide-11.png",
+      "previewRelativePath": "template-inspect/source-slides/source-slide-11.png",
+      "layoutPath": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision\\template-inspect\\layouts\\source-slide-11.layout.json",
+      "layoutRelativePath": "template-inspect/layouts/source-slide-11.layout.json"
+    },
+    {
+      "slide": 12,
+      "previewPath": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision\\template-inspect\\source-slides\\source-slide-12.png",
+      "previewRelativePath": "template-inspect/source-slides/source-slide-12.png",
+      "layoutPath": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision\\template-inspect\\layouts\\source-slide-12.layout.json",
+      "layoutRelativePath": "template-inspect/layouts/source-slide-12.layout.json"
+    },
+    {
+      "slide": 13,
+      "previewPath": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision\\template-inspect\\source-slides\\source-slide-13.png",
+      "previewRelativePath": "template-inspect/source-slides/source-slide-13.png",
+      "layoutPath": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision\\template-inspect\\layouts\\source-slide-13.layout.json",
+      "layoutRelativePath": "template-inspect/layouts/source-slide-13.layout.json"
+    },
+    {
+      "slide": 14,
+      "previewPath": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision\\template-inspect\\source-slides\\source-slide-14.png",
+      "previewRelativePath": "template-inspect/source-slides/source-slide-14.png",
+      "layoutPath": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision\\template-inspect\\layouts\\source-slide-14.layout.json",
+      "layoutRelativePath": "template-inspect/layouts/source-slide-14.layout.json"
+    },
+    {
+      "slide": 15,
+      "previewPath": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision\\template-inspect\\source-slides\\source-slide-15.png",
+      "previewRelativePath": "template-inspect/source-slides/source-slide-15.png",
+      "layoutPath": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision\\template-inspect\\layouts\\source-slide-15.layout.json",
+      "layoutRelativePath": "template-inspect/layouts/source-slide-15.layout.json"
+    },
+    {
+      "slide": 16,
+      "previewPath": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision\\template-inspect\\source-slides\\source-slide-16.png",
+      "previewRelativePath": "template-inspect/source-slides/source-slide-16.png",
+      "layoutPath": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision\\template-inspect\\layouts\\source-slide-16.layout.json",
+      "layoutRelativePath": "template-inspect/layouts/source-slide-16.layout.json"
+    }
+  ],
+  "inspectPath": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision\\template-inspect\\template-inspect.ndjson",
+  "inspectRelativePath": "template-inspect/template-inspect.ndjson",
+  "inspectTruncated": true,
+  "inspectMetadata": {
+    "revision": "qe7khu",
+    "target": {
+      "id": "pr/etkpgh"
+    },
+    "kind": {
+      "requested": "slide,textbox,shape,image,table,chart",
+      "tokens": [
+        "slide",
+        "textbox",
+        "shape",
+        "image",
+        "table",
+        "chart"
+      ]
+    },
+    "include": {
+      "tokens": []
+    },
+    "exclude": {
+      "tokens": []
+    },
+    "notices": []
+  },
+  "extractedMedia": [
+    {
+      "entry": "ppt/media/image.png",
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision\\template-inspect\\assets\\ppt\\media\\image.png",
+      "relativePath": "template-inspect/assets/ppt/media/image.png",
+      "bytes": 229496
+    },
+    {
+      "entry": "ppt/media/image.jpeg",
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision\\template-inspect\\assets\\ppt\\media\\image.jpeg",
+      "relativePath": "template-inspect/assets/ppt/media/image.jpeg",
+      "bytes": 122204
+    },
+    {
+      "entry": "ppt/media/image2.png",
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision\\template-inspect\\assets\\ppt\\media\\image2.png",
+      "relativePath": "template-inspect/assets/ppt/media/image2.png",
+      "bytes": 76032
+    },
+    {
+      "entry": "ppt/media/image2.jpeg",
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\presentation-confirmed-revision\\template-inspect\\assets\\ppt\\media\\image2.jpeg",
+      "relativePath": "template-inspect/assets/ppt/media/image2.jpeg",
+      "bytes": 244089
+    }
+  ],
+  "fonts": [
+    "+mj-lt",
+    "+mn-lt",
+    "Arial",
+    "Calibri",
+    "Calibri Light"
+  ],
+  "packageParts": {
+    "mediaCount": 4,
+    "slideXmlCount": 16,
+    "chartCount": 0,
+    "tableSlideCount": 2
+  }
+}

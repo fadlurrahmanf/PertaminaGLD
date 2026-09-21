@@ -64,6 +64,15 @@
   border-top: 1px solid var(--hairline);
 }
 
+.nulling-stage-label {
+  display: block;
+  margin-bottom: var(--space-2);
+  color: var(--text-muted);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .nulling-stage-detail .kv {
   gap: 6px;
 }

@@ -1,0 +1,3390 @@
+{
+  "schema": "openai.presentation.layout/v4",
+  "unit": "px",
+  "slide": {
+    "aid": "sl/2qqjre",
+    "id": "2qqjre",
+    "slide": 4,
+    "layoutId": "6a1a93d3-ea1d-429f-9522-c5e67327db04",
+    "layoutName": "Title Slide",
+    "layoutType": "title",
+    "masterLayoutId": "ea845d38-f203-4a15-8d29-592c4f07080e",
+    "masterLayoutName": "Master",
+    "backgroundColor": "#FFFFFF",
+    "frame": {
+      "left": 0,
+      "top": 0,
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "theme": {
+    "colorSchemeName": "ChatGPT",
+    "colors": {
+      "accent1": "#156082",
+      "accent2": "#E97132",
+      "accent3": "#196B24",
+      "accent4": "#0F9ED5",
+      "accent5": "#A02B93",
+      "accent6": "#4EA72E",
+      "bg1": "#FFFFFF",
+      "bg2": "#000000",
+      "tx1": "#1F1F1F",
+      "tx2": "#FFFFFF",
+      "dk1": "#000000",
+      "lt1": "#FFFFFF",
+      "dk2": "#0E2841",
+      "lt2": "#E8E8E8",
+      "hlink": "#467886",
+      "folHlink": "#96607D"
+    },
+    "typefaces": [
+      "Arial"
+    ]
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "6a1a93d3-ea1d-429f-9522-c5e67327db04",
+      "name": "Title Slide",
+      "type": "title",
+      "parentLayoutId": "ea845d38-f203-4a15-8d29-592c4f07080e",
+      "elements": []
+    },
+    {
+      "scope": "master",
+      "id": "ea845d38-f203-4a15-8d29-592c4f07080e",
+      "name": "Master",
+      "type": "master",
+      "elements": []
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/7ix0vmpg",
+      "id": "1",
+      "name": "section-4",
+      "bbox": [
+        52,
+        30,
+        480,
+        18
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.0"
+      },
+      "geometry": "rect",
+      "text": "END-TO-END SYSTEM",
+      "textPreview": "END-TO-END SYSTEM",
+      "resolvedFontSize": 14,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 14,
+        "typeface": "Arial",
+        "color": "#667085",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "END-TO-END SYSTEM"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "END-TO-END SYSTEM",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 14,
+            "typeface": "Arial",
+            "color": "#667085",
+            "bold": true,
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "END-TO-END SYSTEM",
+              "anchor": 1,
+              "fontSize": 14,
+              "typeface": "Arial",
+              "color": "#667085",
+              "bold": true,
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 2,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/8j6hor61",
+      "id": "2",
+      "name": "title-4",
+      "bbox": [
+        52,
+        58,
+        1176,
+        60
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.1"
+      },
+      "geometry": "rect",
+      "text": "Alur sistem jelas; bukti lapangan belum",
+      "textPreview": "Alur sistem jelas; bukti lapangan belum",
+      "resolvedFontSize": 48,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 48,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Alur sistem jelas; bukti lapangan belum"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Alur sistem jelas; bukti lapangan belum",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 48,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Alur sistem jelas; bukti lapangan belum",
+              "anchor": 1,
+              "fontSize": 48,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 3,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/9kfixw7m",
+      "id": "3",
+      "name": "footer-rule-4",
+      "bbox": [
+        52,
+        668,
+        1176,
+        1
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.2"
+      },
+      "geometry": "line",
+      "lineColor": "#B8BCC4",
+      "lineWidth": 1
+    },
+    {
+      "order": 4,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/u5ozqho7",
+      "id": "4",
+      "name": "footer-left-4",
+      "bbox": [
+        52,
+        680,
+        360,
+        20
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.3"
+      },
+      "geometry": "rect",
+      "text": "INTERNAL • 18 AGUSTUS 2026",
+      "textPreview": "INTERNAL • 18 AGUSTUS 2026",
+      "resolvedFontSize": 14,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 14,
+        "typeface": "Arial",
+        "color": "#667085",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "INTERNAL • 18 AGUSTUS 2026"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "INTERNAL • 18 AGUSTUS 2026",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 14,
+            "typeface": "Arial",
+            "color": "#667085",
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "INTERNAL • 18 AGUSTUS 2026",
+              "anchor": 1,
+              "fontSize": 14,
+              "typeface": "Arial",
+              "color": "#667085",
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 5,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/v6x0zmps",
+      "id": "5",
+      "name": "footer-number-4",
+      "bbox": [
+        1178,
+        680,
+        50,
+        20
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.4"
+      },
+      "geometry": "rect",
+      "text": "04",
+      "textPreview": "04",
+      "resolvedFontSize": 14,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 14,
+        "typeface": "Arial",
+        "color": "#667085",
+        "alignment": "right",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "04"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "04",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 14,
+            "typeface": "Arial",
+            "color": "#667085",
+            "alignment": "right",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "04",
+              "anchor": 1,
+              "fontSize": 14,
+              "typeface": "Arial",
+              "color": "#667085",
+              "alignment": "right",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 6,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/w76hsr6d",
+      "id": "6",
+      "name": "architecture-sub",
+      "bbox": [
+        52,
+        130,
+        1176,
+        52
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.5"
+      },
+      "geometry": "rect",
+      "text": "Source saat ini mendukung alur data dan command; RF, broker, deployment, serta site network masih memerlukan bukti live.",
+      "textPreview": "Source saat ini mendukung alur data dan command; RF, broker, deployment, serta site network masih memerlukan bukti live.",
+      "resolvedFontSize": 21.67,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 22,
+        "typeface": "Arial",
+        "color": "#667085",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.98,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Source saat ini mendukung alur data dan command; RF, broker, deployment, serta site network masih memerlukan bukti"
+          },
+          {
+            "index": 2,
+            "text": "live."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Source saat ini mendukung alur data dan command; RF, broker, deployment, serta site network masih memerlukan bukti live.",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 22,
+            "typeface": "Arial",
+            "color": "#667085",
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Source saat ini mendukung alur data dan command; RF, broker, deployment, serta site network masih memerlukan bukti live.",
+              "anchor": 1,
+              "fontSize": 22,
+              "typeface": "Arial",
+              "color": "#667085",
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 7,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/h8fi1w7i",
+      "id": "7",
+      "name": "arrow-gld-ch",
+      "bbox": [
+        278,
+        292,
+        92,
+        34
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.6"
+      },
+      "geometry": "rightArrow",
+      "fillColor": "#3D8DFF",
+      "lineColor": "#3D8DFF",
+      "lineWidth": 0
+    },
+    {
+      "order": 8,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/a9kzuxo3",
+      "id": "8",
+      "name": "arrow-ch-gw",
+      "bbox": [
+        574,
+        292,
+        92,
+        34
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.7"
+      },
+      "geometry": "rightArrow",
+      "fillColor": "#3D8DFF",
+      "lineColor": "#3D8DFF",
+      "lineWidth": 0
+    },
+    {
+      "order": 9,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/badgn2p8",
+      "id": "9",
+      "name": "arrow-gw-server",
+      "bbox": [
+        870,
+        292,
+        92,
+        34
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.8"
+      },
+      "geometry": "rightArrow",
+      "fillColor": "#3D8DFF",
+      "lineColor": "#3D8DFF",
+      "lineWidth": 0
+    },
+    {
+      "order": 10,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/nm9o3i1s",
+      "id": "10",
+      "name": "node-gld",
+      "bbox": [
+        70,
+        230,
+        208,
+        160
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.9"
+      },
+      "geometry": "rect",
+      "fillColor": "#EAF5FB",
+      "lineColor": "#3D8DFF",
+      "lineWidth": 2
+    },
+    {
+      "order": 11,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/ml07udk7",
+      "id": "11",
+      "name": "node-ch",
+      "bbox": [
+        366,
+        230,
+        208,
+        160
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.10"
+      },
+      "geometry": "rect",
+      "fillColor": "#F7F7F7",
+      "lineColor": "#B8BCC4",
+      "lineWidth": 1
+    },
+    {
+      "order": 12,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/9or658ji",
+      "id": "12",
+      "name": "node-gw",
+      "bbox": [
+        662,
+        230,
+        208,
+        160
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.11"
+      },
+      "geometry": "rect",
+      "fillColor": "#F7F7F7",
+      "lineColor": "#B8BCC4",
+      "lineWidth": 1
+    },
+    {
+      "order": 13,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/8nipwn2x",
+      "id": "13",
+      "name": "node-server",
+      "bbox": [
+        958,
+        230,
+        252,
+        160
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.12"
+      },
+      "geometry": "rect",
+      "fillColor": "#F7F7F7",
+      "lineColor": "#B8BCC4",
+      "lineWidth": 1
+    },
+    {
+      "order": 14,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/zi9ozy1g",
+      "id": "14",
+      "name": "node-gld-title",
+      "bbox": [
+        94,
+        260,
+        160,
+        42
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.13"
+      },
+      "geometry": "rect",
+      "text": "GLD",
+      "textPreview": "GLD",
+      "resolvedFontSize": 34,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 34,
+        "typeface": "Arial",
+        "color": "#111827",
+        "bold": true,
+        "alignment": "center",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "GLD"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "GLD",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 34,
+            "typeface": "Arial",
+            "color": "#111827",
+            "bold": true,
+            "alignment": "center",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "GLD",
+              "anchor": 1,
+              "fontSize": 34,
+              "typeface": "Arial",
+              "color": "#111827",
+              "bold": true,
+              "alignment": "center",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 15,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/yh07qtkv",
+      "id": "15",
+      "name": "node-gld-body",
+      "bbox": [
+        94,
+        312,
+        160,
+        58
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.14"
+      },
+      "geometry": "rect",
+      "text": "Sensing • inferensi\nSTAR uplink",
+      "textPreview": "Sensing • inferensi | STAR uplink",
+      "resolvedFontSize": 19.32,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 20,
+        "typeface": "Arial",
+        "color": "#667085",
+        "alignment": "center",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.97,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Sensing • inferensi"
+          },
+          {
+            "index": 2,
+            "text": "STAR uplink"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Sensing • inferensi\nSTAR uplink",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 20,
+            "typeface": "Arial",
+            "color": "#667085",
+            "alignment": "center",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Sensing • inferensi\nSTAR uplink",
+              "anchor": 1,
+              "fontSize": 20,
+              "typeface": "Arial",
+              "color": "#667085",
+              "alignment": "center",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 16,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/lkr618jm",
+      "id": "16",
+      "name": "node-ch-title",
+      "bbox": [
+        390,
+        260,
+        160,
+        42
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.15"
+      },
+      "geometry": "rect",
+      "text": "CH",
+      "textPreview": "CH",
+      "resolvedFontSize": 34,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 34,
+        "typeface": "Arial",
+        "color": "#111827",
+        "bold": true,
+        "alignment": "center",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "CH"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "CH",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 34,
+            "typeface": "Arial",
+            "color": "#111827",
+            "bold": true,
+            "alignment": "center",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "CH",
+              "anchor": 1,
+              "fontSize": 34,
+              "typeface": "Arial",
+              "color": "#111827",
+              "bold": true,
+              "alignment": "center",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 17,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/0jips321",
+      "id": "17",
+      "name": "node-ch-body",
+      "bbox": [
+        390,
+        312,
+        160,
+        58
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.16"
+      },
+      "geometry": "rect",
+      "text": "STAR receiver\nMESH relay",
+      "textPreview": "STAR receiver | MESH relay",
+      "resolvedFontSize": 20,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 20,
+        "typeface": "Arial",
+        "color": "#667085",
+        "alignment": "center",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "STAR receiver"
+          },
+          {
+            "index": 2,
+            "text": "MESH relay"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "STAR receiver\nMESH relay",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 20,
+            "typeface": "Arial",
+            "color": "#667085",
+            "alignment": "center",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "STAR receiver\nMESH relay",
+              "anchor": 1,
+              "fontSize": 20,
+              "typeface": "Arial",
+              "color": "#667085",
+              "alignment": "center",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 18,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/bepovy1k",
+      "id": "18",
+      "name": "node-gw-title",
+      "bbox": [
+        686,
+        260,
+        160,
+        42
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.17"
+      },
+      "geometry": "rect",
+      "text": "GATEWAY",
+      "textPreview": "GATEWAY",
+      "resolvedFontSize": 28,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 28,
+        "typeface": "Arial",
+        "color": "#111827",
+        "bold": true,
+        "alignment": "center",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "GATEWAY"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "GATEWAY",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 28,
+            "typeface": "Arial",
+            "color": "#111827",
+            "bold": true,
+            "alignment": "center",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "GATEWAY",
+              "anchor": 1,
+              "fontSize": 28,
+              "typeface": "Arial",
+              "color": "#111827",
+              "bold": true,
+              "alignment": "center",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 19,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/qtgnmtkz",
+      "id": "19",
+      "name": "node-gw-body",
+      "bbox": [
+        686,
+        312,
+        160,
+        58
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.18"
+      },
+      "geometry": "rect",
+      "text": "MESH root\nMQTT bridge",
+      "textPreview": "MESH root | MQTT bridge",
+      "resolvedFontSize": 20,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 20,
+        "typeface": "Arial",
+        "color": "#667085",
+        "alignment": "center",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "MESH root"
+          },
+          {
+            "index": 2,
+            "text": "MQTT bridge"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "MESH root\nMQTT bridge",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 20,
+            "typeface": "Arial",
+            "color": "#667085",
+            "alignment": "center",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "MESH root\nMQTT bridge",
+              "anchor": 1,
+              "fontSize": 20,
+              "typeface": "Arial",
+              "color": "#667085",
+              "alignment": "center",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 20,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/upw7yt4r",
+      "id": "20",
+      "name": "node-server-title",
+      "bbox": [
+        982,
+        260,
+        204,
+        42
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.19"
+      },
+      "geometry": "rect",
+      "text": "SERVER",
+      "textPreview": "SERVER",
+      "resolvedFontSize": 28,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 28,
+        "typeface": "Arial",
+        "color": "#111827",
+        "bold": true,
+        "alignment": "center",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "SERVER"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "SERVER",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 28,
+            "typeface": "Arial",
+            "color": "#111827",
+            "bold": true,
+            "alignment": "center",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "SERVER",
+              "anchor": 1,
+              "fontSize": 28,
+              "typeface": "Arial",
+              "color": "#111827",
+              "bold": true,
+              "alignment": "center",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 21,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/fqp87e5c",
+      "id": "21",
+      "name": "node-server-body",
+      "bbox": [
+        982,
+        312,
+        204,
+        58
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.20"
+      },
+      "geometry": "rect",
+      "text": "Broker • Node-RED\nDashboard • dataset",
+      "textPreview": "Broker • Node-RED | Dashboard • dataset",
+      "resolvedFontSize": 20,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 20,
+        "typeface": "Arial",
+        "color": "#667085",
+        "alignment": "center",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Broker • Node-RED"
+          },
+          {
+            "index": 2,
+            "text": "Dashboard • dataset"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Broker • Node-RED\nDashboard • dataset",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 20,
+            "typeface": "Arial",
+            "color": "#667085",
+            "alignment": "center",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Broker • Node-RED\nDashboard • dataset",
+              "anchor": 1,
+              "fontSize": 20,
+              "typeface": "Arial",
+              "color": "#667085",
+              "alignment": "center",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 22,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/gryp0jmx",
+      "id": "22",
+      "name": "link-star",
+      "bbox": [
+        270,
+        342,
+        110,
+        24
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.21"
+      },
+      "geometry": "rect",
+      "text": "STAR 920 MHz",
+      "textPreview": "STAR 920 MHz",
+      "resolvedFontSize": 15,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 15,
+        "typeface": "Arial",
+        "color": "#667085",
+        "alignment": "center",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "STAR 920 MHz"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "STAR 920 MHz",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 15,
+            "typeface": "Arial",
+            "color": "#667085",
+            "alignment": "center",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "STAR 920 MHz",
+              "anchor": 1,
+              "fontSize": 15,
+              "typeface": "Arial",
+              "color": "#667085",
+              "alignment": "center",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 23,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/1c7q9oni",
+      "id": "23",
+      "name": "link-mesh",
+      "bbox": [
+        566,
+        342,
+        110,
+        24
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.22"
+      },
+      "geometry": "rect",
+      "text": "MESH 921 MHz",
+      "textPreview": "MESH 921 MHz",
+      "resolvedFontSize": 15,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 15,
+        "typeface": "Arial",
+        "color": "#667085",
+        "alignment": "center",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "MESH 921 MHz"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "MESH 921 MHz",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 15,
+            "typeface": "Arial",
+            "color": "#667085",
+            "alignment": "center",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "MESH 921 MHz",
+              "anchor": 1,
+              "fontSize": 15,
+              "typeface": "Arial",
+              "color": "#667085",
+              "alignment": "center",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 24,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/2dg72t4n",
+      "id": "24",
+      "name": "link-mqtt",
+      "bbox": [
+        862,
+        342,
+        110,
+        24
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.23"
+      },
+      "geometry": "rect",
+      "text": "Wi-Fi / MQTT",
+      "textPreview": "Wi-Fi / MQTT",
+      "resolvedFontSize": 15,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 15,
+        "typeface": "Arial",
+        "color": "#667085",
+        "alignment": "center",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Wi-Fi / MQTT"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Wi-Fi / MQTT",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 15,
+            "typeface": "Arial",
+            "color": "#667085",
+            "alignment": "center",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Wi-Fi / MQTT",
+              "anchor": 1,
+              "fontSize": 15,
+              "typeface": "Arial",
+              "color": "#667085",
+              "alignment": "center",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 25,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/3ep8by58",
+      "id": "25",
+      "name": "architecture-note",
+      "bbox": [
+        70,
+        454,
+        1140,
+        118
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.24"
+      },
+      "geometry": "rect",
+      "fillColor": "#EAF5FB",
+      "lineWidth": 0
+    },
+    {
+      "order": 26,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/ofyp43mt",
+      "id": "26",
+      "name": "architecture-note-title",
+      "bbox": [
+        94,
+        480,
+        260,
+        32
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.25"
+      },
+      "geometry": "rect",
+      "text": "Interpretasi yang aman",
+      "textPreview": "Interpretasi yang aman",
+      "resolvedFontSize": 23.77,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 26,
+        "typeface": "Arial",
+        "color": "#3D8DFF",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.91,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Interpretasi yang aman"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Interpretasi yang aman",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 26,
+            "typeface": "Arial",
+            "color": "#3D8DFF",
+            "bold": true,
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Interpretasi yang aman",
+              "anchor": 1,
+              "fontSize": 26,
+              "typeface": "Arial",
+              "color": "#3D8DFF",
+              "bold": true,
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 27,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/pg7qd8ne",
+      "id": "27",
+      "name": "architecture-note-body",
+      "bbox": [
+        365,
+        474,
+        815,
+        62
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.26"
+      },
+      "geometry": "rect",
+      "text": "Diagram ini menjelaskan boundary dan ownership aliran. Ia bukan bukti range RF, konektivitas broker, TLS, deployment revision, atau keberhasilan lapangan.",
+      "textPreview": "Diagram ini menjelaskan boundary dan ownership aliran. Ia bukan bukti range RF, konektivitas broker, TLS, deployment revision, atau keber...",
+      "resolvedFontSize": 21,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 21,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Diagram ini menjelaskan boundary dan ownership aliran. Ia bukan bukti range RF,"
+          },
+          {
+            "index": 2,
+            "text": "konektivitas broker, TLS, deployment revision, atau keberhasilan lapangan."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Diagram ini menjelaskan boundary dan ownership aliran. Ia bukan bukti range RF, konektivitas broker, TLS, deployment revision, atau keberhasilan lapangan.",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 21,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Diagram ini menjelaskan boundary dan ownership aliran. Ia bukan bukti range RF, konektivitas broker, TLS, deployment revision, atau keberhasilan lapangan.",
+              "anchor": 1,
+              "fontSize": 21,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    }
+  ],
+  "composeRuns": [
+    {
+      "index": 1,
+      "frame": {
+        "left": 0,
+        "top": 0,
+        "width": 1280,
+        "height": 720
+      },
+      "baseUnit": 1,
+      "root": {
+        "path": "0",
+        "kind": "layers",
+        "name": "system-flow",
+        "requestedSize": {
+          "width": {
+            "mode": "fill",
+            "value": 1
+          },
+          "height": {
+            "mode": "fill",
+            "value": 1
+          }
+        },
+        "intrinsicSize": {
+          "width": 1228,
+          "height": 700
+        },
+        "frame": {
+          "left": 0,
+          "top": 0,
+          "width": 1280,
+          "height": 720
+        },
+        "children": [
+          {
+            "path": "0.0",
+            "kind": "text",
+            "name": "section-4",
+            "position": {
+              "left": 52,
+              "top": 30
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 480
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 18
+              }
+            },
+            "intrinsicSize": {
+              "width": 480,
+              "height": 18
+            },
+            "frame": {
+              "left": 52,
+              "top": 30,
+              "width": 480,
+              "height": 18
+            },
+            "snappedFrame": {
+              "left": 52,
+              "top": 30,
+              "width": 480,
+              "height": 18
+            },
+            "children": [],
+            "text": "END-TO-END SYSTEM",
+            "transform": "none",
+            "element": {
+              "aid": "sh/7ix0vmpg",
+              "id": "1",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.1",
+            "kind": "text",
+            "name": "title-4",
+            "position": {
+              "left": 52,
+              "top": 58
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 1176
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 60
+              }
+            },
+            "intrinsicSize": {
+              "width": 1176,
+              "height": 60
+            },
+            "frame": {
+              "left": 52,
+              "top": 58,
+              "width": 1176,
+              "height": 60
+            },
+            "snappedFrame": {
+              "left": 52,
+              "top": 58,
+              "width": 1176,
+              "height": 60
+            },
+            "children": [],
+            "text": "Alur sistem jelas; bukti lapangan belum",
+            "transform": "none",
+            "element": {
+              "aid": "sh/8j6hor61",
+              "id": "2",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.2",
+            "kind": "shape",
+            "name": "footer-rule-4",
+            "position": {
+              "left": 52,
+              "top": 668
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 1176
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 1
+              }
+            },
+            "intrinsicSize": {
+              "width": 1176,
+              "height": 1
+            },
+            "frame": {
+              "left": 52,
+              "top": 668,
+              "width": 1176,
+              "height": 1
+            },
+            "snappedFrame": {
+              "left": 52,
+              "top": 668,
+              "width": 1176,
+              "height": 1
+            },
+            "children": [],
+            "geometry": "line",
+            "element": {
+              "aid": "sh/9kfixw7m",
+              "id": "3",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.3",
+            "kind": "text",
+            "name": "footer-left-4",
+            "position": {
+              "left": 52,
+              "top": 680
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 360
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 20
+              }
+            },
+            "intrinsicSize": {
+              "width": 360,
+              "height": 20
+            },
+            "frame": {
+              "left": 52,
+              "top": 680,
+              "width": 360,
+              "height": 20
+            },
+            "snappedFrame": {
+              "left": 52,
+              "top": 680,
+              "width": 360,
+              "height": 20
+            },
+            "children": [],
+            "text": "INTERNAL • 18 AGUSTUS 2026",
+            "transform": "none",
+            "element": {
+              "aid": "sh/u5ozqho7",
+              "id": "4",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.4",
+            "kind": "text",
+            "name": "footer-number-4",
+            "position": {
+              "left": 1178,
+              "top": 680
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 50
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 20
+              }
+            },
+            "intrinsicSize": {
+              "width": 50,
+              "height": 20
+            },
+            "frame": {
+              "left": 1178,
+              "top": 680,
+              "width": 50,
+              "height": 20
+            },
+            "snappedFrame": {
+              "left": 1178,
+              "top": 680,
+              "width": 50,
+              "height": 20
+            },
+            "children": [],
+            "text": "04",
+            "transform": "none",
+            "element": {
+              "aid": "sh/v6x0zmps",
+              "id": "5",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.5",
+            "kind": "text",
+            "name": "architecture-sub",
+            "position": {
+              "left": 52,
+              "top": 130
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 1176
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 52
+              }
+            },
+            "intrinsicSize": {
+              "width": 1176,
+              "height": 52
+            },
+            "frame": {
+              "left": 52,
+              "top": 130,
+              "width": 1176,
+              "height": 52
+            },
+            "snappedFrame": {
+              "left": 52,
+              "top": 130,
+              "width": 1176,
+              "height": 52
+            },
+            "children": [],
+            "text": "Source saat ini mendukung alur data dan command; RF, broker, deployment, serta site network masih memerlukan bukti live.",
+            "transform": "none",
+            "element": {
+              "aid": "sh/w76hsr6d",
+              "id": "6",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.6",
+            "kind": "shape",
+            "name": "arrow-gld-ch",
+            "position": {
+              "left": 278,
+              "top": 292
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 92
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 34
+              }
+            },
+            "intrinsicSize": {
+              "width": 92,
+              "height": 34
+            },
+            "frame": {
+              "left": 278,
+              "top": 292,
+              "width": 92,
+              "height": 34
+            },
+            "snappedFrame": {
+              "left": 278,
+              "top": 292,
+              "width": 92,
+              "height": 34
+            },
+            "children": [],
+            "geometry": "rightArrow",
+            "element": {
+              "aid": "sh/h8fi1w7i",
+              "id": "7",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.7",
+            "kind": "shape",
+            "name": "arrow-ch-gw",
+            "position": {
+              "left": 574,
+              "top": 292
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 92
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 34
+              }
+            },
+            "intrinsicSize": {
+              "width": 92,
+              "height": 34
+            },
+            "frame": {
+              "left": 574,
+              "top": 292,
+              "width": 92,
+              "height": 34
+            },
+            "snappedFrame": {
+              "left": 574,
+              "top": 292,
+              "width": 92,
+              "height": 34
+            },
+            "children": [],
+            "geometry": "rightArrow",
+            "element": {
+              "aid": "sh/a9kzuxo3",
+              "id": "8",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.8",
+            "kind": "shape",
+            "name": "arrow-gw-server",
+            "position": {
+              "left": 870,
+              "top": 292
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 92
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 34
+              }
+            },
+            "intrinsicSize": {
+              "width": 92,
+              "height": 34
+            },
+            "frame": {
+              "left": 870,
+              "top": 292,
+              "width": 92,
+              "height": 34
+            },
+            "snappedFrame": {
+              "left": 870,
+              "top": 292,
+              "width": 92,
+              "height": 34
+            },
+            "children": [],
+            "geometry": "rightArrow",
+            "element": {
+              "aid": "sh/badgn2p8",
+              "id": "9",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.9",
+            "kind": "shape",
+            "name": "node-gld",
+            "position": {
+              "left": 70,
+              "top": 230
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 208
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 160
+              }
+            },
+            "intrinsicSize": {
+              "width": 208,
+              "height": 160
+            },
+            "frame": {
+              "left": 70,
+              "top": 230,
+              "width": 208,
+              "height": 160
+            },
+            "snappedFrame": {
+              "left": 70,
+              "top": 230,
+              "width": 208,
+              "height": 160
+            },
+            "children": [],
+            "geometry": "rect",
+            "element": {
+              "aid": "sh/nm9o3i1s",
+              "id": "10",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.10",
+            "kind": "shape",
+            "name": "node-ch",
+            "position": {
+              "left": 366,
+              "top": 230
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 208
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 160
+              }
+            },
+            "intrinsicSize": {
+              "width": 208,
+              "height": 160
+            },
+            "frame": {
+              "left": 366,
+              "top": 230,
+              "width": 208,
+              "height": 160
+            },
+            "snappedFrame": {
+              "left": 366,
+              "top": 230,
+              "width": 208,
+              "height": 160
+            },
+            "children": [],
+            "geometry": "rect",
+            "element": {
+              "aid": "sh/ml07udk7",
+              "id": "11",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.11",
+            "kind": "shape",
+            "name": "node-gw",
+            "position": {
+              "left": 662,
+              "top": 230
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 208
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 160
+              }
+            },
+            "intrinsicSize": {
+              "width": 208,
+              "height": 160
+            },
+            "frame": {
+              "left": 662,
+              "top": 230,
+              "width": 208,
+              "height": 160
+            },
+            "snappedFrame": {
+              "left": 662,
+              "top": 230,
+              "width": 208,
+              "height": 160
+            },
+            "children": [],
+            "geometry": "rect",
+            "element": {
+              "aid": "sh/9or658ji",
+              "id": "12",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.12",
+            "kind": "shape",
+            "name": "node-server",
+            "position": {
+              "left": 958,
+              "top": 230
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 252
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 160
+              }
+            },
+            "intrinsicSize": {
+              "width": 252,
+              "height": 160
+            },
+            "frame": {
+              "left": 958,
+              "top": 230,
+              "width": 252,
+              "height": 160
+            },
+            "snappedFrame": {
+              "left": 958,
+              "top": 230,
+              "width": 252,
+              "height": 160
+            },
+            "children": [],
+            "geometry": "rect",
+            "element": {
+              "aid": "sh/8nipwn2x",
+              "id": "13",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.13",
+            "kind": "text",
+            "name": "node-gld-title",
+            "position": {
+              "left": 94,
+              "top": 260
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 160
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 42
+              }
+            },
+            "intrinsicSize": {
+              "width": 160,
+              "height": 42
+            },
+            "frame": {
+              "left": 94,
+              "top": 260,
+              "width": 160,
+              "height": 42
+            },
+            "snappedFrame": {
+              "left": 94,
+              "top": 260,
+              "width": 160,
+              "height": 42
+            },
+            "children": [],
+            "text": "GLD",
+            "transform": "none",
+            "element": {
+              "aid": "sh/zi9ozy1g",
+              "id": "14",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.14",
+            "kind": "text",
+            "name": "node-gld-body",
+            "position": {
+              "left": 94,
+              "top": 312
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 160
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 58
+              }
+            },
+            "intrinsicSize": {
+              "width": 160,
+              "height": 58
+            },
+            "frame": {
+              "left": 94,
+              "top": 312,
+              "width": 160,
+              "height": 58
+            },
+            "snappedFrame": {
+              "left": 94,
+              "top": 312,
+              "width": 160,
+              "height": 58
+            },
+            "children": [],
+            "text": "Sensing • inferensi\nSTAR uplink",
+            "transform": "none",
+            "element": {
+              "aid": "sh/yh07qtkv",
+              "id": "15",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.15",
+            "kind": "text",
+            "name": "node-ch-title",
+            "position": {
+              "left": 390,
+              "top": 260
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 160
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 42
+              }
+            },
+            "intrinsicSize": {
+              "width": 160,
+              "height": 42
+            },
+            "frame": {
+              "left": 390,
+              "top": 260,
+              "width": 160,
+              "height": 42
+            },
+            "snappedFrame": {
+              "left": 390,
+              "top": 260,
+              "width": 160,
+              "height": 42
+            },
+            "children": [],
+            "text": "CH",
+            "transform": "none",
+            "element": {
+              "aid": "sh/lkr618jm",
+              "id": "16",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.16",
+            "kind": "text",
+            "name": "node-ch-body",
+            "position": {
+              "left": 390,
+              "top": 312
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 160
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 58
+              }
+            },
+            "intrinsicSize": {
+              "width": 160,
+              "height": 58
+            },
+            "frame": {
+              "left": 390,
+              "top": 312,
+              "width": 160,
+              "height": 58
+            },
+            "snappedFrame": {
+              "left": 390,
+              "top": 312,
+              "width": 160,
+              "height": 58
+            },
+            "children": [],
+            "text": "STAR receiver\nMESH relay",
+            "transform": "none",
+            "element": {
+              "aid": "sh/0jips321",
+              "id": "17",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.17",
+            "kind": "text",
+            "name": "node-gw-title",
+            "position": {
+              "left": 686,
+              "top": 260
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 160
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 42
+              }
+            },
+            "intrinsicSize": {
+              "width": 160,
+              "height": 42
+            },
+            "frame": {
+              "left": 686,
+              "top": 260,
+              "width": 160,
+              "height": 42
+            },
+            "snappedFrame": {
+              "left": 686,
+              "top": 260,
+              "width": 160,
+              "height": 42
+            },
+            "children": [],
+            "text": "GATEWAY",
+            "transform": "none",
+            "element": {
+              "aid": "sh/bepovy1k",
+              "id": "18",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.18",
+            "kind": "text",
+            "name": "node-gw-body",
+            "position": {
+              "left": 686,
+              "top": 312
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 160
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 58
+              }
+            },
+            "intrinsicSize": {
+              "width": 160,
+              "height": 58
+            },
+            "frame": {
+              "left": 686,
+              "top": 312,
+              "width": 160,
+              "height": 58
+            },
+            "snappedFrame": {
+              "left": 686,
+              "top": 312,
+              "width": 160,
+              "height": 58
+            },
+            "children": [],
+            "text": "MESH root\nMQTT bridge",
+            "transform": "none",
+            "element": {
+              "aid": "sh/qtgnmtkz",
+              "id": "19",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.19",
+            "kind": "text",
+            "name": "node-server-title",
+            "position": {
+              "left": 982,
+              "top": 260
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 204
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 42
+              }
+            },
+            "intrinsicSize": {
+              "width": 204,
+              "height": 42
+            },
+            "frame": {
+              "left": 982,
+              "top": 260,
+              "width": 204,
+              "height": 42
+            },
+            "snappedFrame": {
+              "left": 982,
+              "top": 260,
+              "width": 204,
+              "height": 42
+            },
+            "children": [],
+            "text": "SERVER",
+            "transform": "none",
+            "element": {
+              "aid": "sh/upw7yt4r",
+              "id": "20",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.20",
+            "kind": "text",
+            "name": "node-server-body",
+            "position": {
+              "left": 982,
+              "top": 312
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 204
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 58
+              }
+            },
+            "intrinsicSize": {
+              "width": 204,
+              "height": 58
+            },
+            "frame": {
+              "left": 982,
+              "top": 312,
+              "width": 204,
+              "height": 58
+            },
+            "snappedFrame": {
+              "left": 982,
+              "top": 312,
+              "width": 204,
+              "height": 58
+            },
+            "children": [],
+            "text": "Broker • Node-RED\nDashboard • dataset",
+            "transform": "none",
+            "element": {
+              "aid": "sh/fqp87e5c",
+              "id": "21",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.21",
+            "kind": "text",
+            "name": "link-star",
+            "position": {
+              "left": 270,
+              "top": 342
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 110
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 24
+              }
+            },
+            "intrinsicSize": {
+              "width": 110,
+              "height": 24
+            },
+            "frame": {
+              "left": 270,
+              "top": 342,
+              "width": 110,
+              "height": 24
+            },
+            "snappedFrame": {
+              "left": 270,
+              "top": 342,
+              "width": 110,
+              "height": 24
+            },
+            "children": [],
+            "text": "STAR 920 MHz",
+            "transform": "none",
+            "element": {
+              "aid": "sh/gryp0jmx",
+              "id": "22",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.22",
+            "kind": "text",
+            "name": "link-mesh",
+            "position": {
+              "left": 566,
+              "top": 342
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 110
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 24
+              }
+            },
+            "intrinsicSize": {
+              "width": 110,
+              "height": 24
+            },
+            "frame": {
+              "left": 566,
+              "top": 342,
+              "width": 110,
+              "height": 24
+            },
+            "snappedFrame": {
+              "left": 566,
+              "top": 342,
+              "width": 110,
+              "height": 24
+            },
+            "children": [],
+            "text": "MESH 921 MHz",
+            "transform": "none",
+            "element": {
+              "aid": "sh/1c7q9oni",
+              "id": "23",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.23",
+            "kind": "text",
+            "name": "link-mqtt",
+            "position": {
+              "left": 862,
+              "top": 342
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 110
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 24
+              }
+            },
+            "intrinsicSize": {
+              "width": 110,
+              "height": 24
+            },
+            "frame": {
+              "left": 862,
+              "top": 342,
+              "width": 110,
+              "height": 24
+            },
+            "snappedFrame": {
+              "left": 862,
+              "top": 342,
+              "width": 110,
+              "height": 24
+            },
+            "children": [],
+            "text": "Wi-Fi / MQTT",
+            "transform": "none",
+            "element": {
+              "aid": "sh/2dg72t4n",
+              "id": "24",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.24",
+            "kind": "shape",
+            "name": "architecture-note",
+            "position": {
+              "left": 70,
+              "top": 454
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 1140
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 118
+              }
+            },
+            "intrinsicSize": {
+              "width": 1140,
+              "height": 118
+            },
+            "frame": {
+              "left": 70,
+              "top": 454,
+              "width": 1140,
+              "height": 118
+            },
+            "snappedFrame": {
+              "left": 70,
+              "top": 454,
+              "width": 1140,
+              "height": 118
+            },
+            "children": [],
+            "geometry": "rect",
+            "element": {
+              "aid": "sh/3ep8by58",
+              "id": "25",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.25",
+            "kind": "text",
+            "name": "architecture-note-title",
+            "position": {
+              "left": 94,
+              "top": 480
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 260
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 32
+              }
+            },
+            "intrinsicSize": {
+              "width": 260,
+              "height": 32
+            },
+            "frame": {
+              "left": 94,
+              "top": 480,
+              "width": 260,
+              "height": 32
+            },
+            "snappedFrame": {
+              "left": 94,
+              "top": 480,
+              "width": 260,
+              "height": 32
+            },
+            "children": [],
+            "text": "Interpretasi yang aman",
+            "transform": "none",
+            "element": {
+              "aid": "sh/ofyp43mt",
+              "id": "26",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.26",
+            "kind": "text",
+            "name": "architecture-note-body",
+            "position": {
+              "left": 365,
+              "top": 474
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 815
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 62
+              }
+            },
+            "intrinsicSize": {
+              "width": 815,
+              "height": 62
+            },
+            "frame": {
+              "left": 365,
+              "top": 474,
+              "width": 815,
+              "height": 62
+            },
+            "snappedFrame": {
+              "left": 365,
+              "top": 474,
+              "width": 815,
+              "height": 62
+            },
+            "children": [],
+            "text": "Diagram ini menjelaskan boundary dan ownership aliran. Ia bukan bukti range RF, konektivitas broker, TLS, deployment revision, atau keberhasilan lapangan.",
+            "transform": "none",
+            "element": {
+              "aid": "sh/pg7qd8ne",
+              "id": "27",
+              "kind": "shape"
+            }
+          }
+        ],
+        "padding": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        },
+        "alignItems": "stretch",
+        "justifyItems": "stretch",
+        "contentFrame": {
+          "left": 0,
+          "top": 0,
+          "width": 1280,
+          "height": 720
+        },
+        "items": [
+          {
+            "path": "0.0",
+            "frame": {
+              "left": 52,
+              "top": 30,
+              "width": 480,
+              "height": 18
+            }
+          },
+          {
+            "path": "0.1",
+            "frame": {
+              "left": 52,
+              "top": 58,
+              "width": 1176,
+              "height": 60
+            }
+          },
+          {
+            "path": "0.2",
+            "frame": {
+              "left": 52,
+              "top": 668,
+              "width": 1176,
+              "height": 1
+            }
+          },
+          {
+            "path": "0.3",
+            "frame": {
+              "left": 52,
+              "top": 680,
+              "width": 360,
+              "height": 20
+            }
+          },
+          {
+            "path": "0.4",
+            "frame": {
+              "left": 1178,
+              "top": 680,
+              "width": 50,
+              "height": 20
+            }
+          },
+          {
+            "path": "0.5",
+            "frame": {
+              "left": 52,
+              "top": 130,
+              "width": 1176,
+              "height": 52
+            }
+          },
+          {
+            "path": "0.6",
+            "frame": {
+              "left": 278,
+              "top": 292,
+              "width": 92,
+              "height": 34
+            }
+          },
+          {
+            "path": "0.7",
+            "frame": {
+              "left": 574,
+              "top": 292,
+              "width": 92,
+              "height": 34
+            }
+          },
+          {
+            "path": "0.8",
+            "frame": {
+              "left": 870,
+              "top": 292,
+              "width": 92,
+              "height": 34
+            }
+          },
+          {
+            "path": "0.9",
+            "frame": {
+              "left": 70,
+              "top": 230,
+              "width": 208,
+              "height": 160
+            }
+          },
+          {
+            "path": "0.10",
+            "frame": {
+              "left": 366,
+              "top": 230,
+              "width": 208,
+              "height": 160
+            }
+          },
+          {
+            "path": "0.11",
+            "frame": {
+              "left": 662,
+              "top": 230,
+              "width": 208,
+              "height": 160
+            }
+          },
+          {
+            "path": "0.12",
+            "frame": {
+              "left": 958,
+              "top": 230,
+              "width": 252,
+              "height": 160
+            }
+          },
+          {
+            "path": "0.13",
+            "frame": {
+              "left": 94,
+              "top": 260,
+              "width": 160,
+              "height": 42
+            }
+          },
+          {
+            "path": "0.14",
+            "frame": {
+              "left": 94,
+              "top": 312,
+              "width": 160,
+              "height": 58
+            }
+          },
+          {
+            "path": "0.15",
+            "frame": {
+              "left": 390,
+              "top": 260,
+              "width": 160,
+              "height": 42
+            }
+          },
+          {
+            "path": "0.16",
+            "frame": {
+              "left": 390,
+              "top": 312,
+              "width": 160,
+              "height": 58
+            }
+          },
+          {
+            "path": "0.17",
+            "frame": {
+              "left": 686,
+              "top": 260,
+              "width": 160,
+              "height": 42
+            }
+          },
+          {
+            "path": "0.18",
+            "frame": {
+              "left": 686,
+              "top": 312,
+              "width": 160,
+              "height": 58
+            }
+          },
+          {
+            "path": "0.19",
+            "frame": {
+              "left": 982,
+              "top": 260,
+              "width": 204,
+              "height": 42
+            }
+          },
+          {
+            "path": "0.20",
+            "frame": {
+              "left": 982,
+              "top": 312,
+              "width": 204,
+              "height": 58
+            }
+          },
+          {
+            "path": "0.21",
+            "frame": {
+              "left": 270,
+              "top": 342,
+              "width": 110,
+              "height": 24
+            }
+          },
+          {
+            "path": "0.22",
+            "frame": {
+              "left": 566,
+              "top": 342,
+              "width": 110,
+              "height": 24
+            }
+          },
+          {
+            "path": "0.23",
+            "frame": {
+              "left": 862,
+              "top": 342,
+              "width": 110,
+              "height": 24
+            }
+          },
+          {
+            "path": "0.24",
+            "frame": {
+              "left": 70,
+              "top": 454,
+              "width": 1140,
+              "height": 118
+            }
+          },
+          {
+            "path": "0.25",
+            "frame": {
+              "left": 94,
+              "top": 480,
+              "width": 260,
+              "height": 32
+            }
+          },
+          {
+            "path": "0.26",
+            "frame": {
+              "left": 365,
+              "top": 474,
+              "width": 815,
+              "height": 62
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

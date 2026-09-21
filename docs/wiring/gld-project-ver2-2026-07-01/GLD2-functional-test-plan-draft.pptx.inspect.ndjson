@@ -1,0 +1,48 @@
+{"kind":"deck","id":"pr/ubuyyj","name":"Deck"}
+{"kind":"layout","layoutId":"25cc7dd3-f1a3-4c52-a351-ec54f7a92df1","name":"Master","type":"master"}
+{"kind":"layout","layoutId":"f170f92e-b37c-4905-a24b-2570c8d0a762","name":"Title Slide","type":"title"}
+{"kind":"slide","id":"sl/03eimh","slide":1,"title":"Laporan Hasil Uji Fungsional GLD2","textShapes":5}
+{"kind":"textbox","id":"sh/8je18z6p","slide":1,"text":"Laporan Hasil Uji Fungsional GLD2","textPreview":"Laporan Hasil Uji Fungsional GLD2","textChars":33,"textLines":1,"bbox":[62,152,1100,70]}
+{"kind":"textbox","id":"sh/7il0zup4","slide":1,"text":"Ringkasan bukti firmware, temuan nulling, dan bukti fisik yang masih diperlukan","textPreview":"Ringkasan bukti firmware, temuan nulling, dan bukti fisik yang masih diperlukan","textChars":79,"textLines":1,"bbox":[66,242,1040,34]}
+{"kind":"textbox","id":"sh/6hcj6poz","slide":1,"text":"Konteks bench: 27 Agustus 2026 | Board GLD2 COM3 | Bukti harus dibaca sesuai kelasnya","textPreview":"Konteks bench: 27 Agustus 2026 | Board GLD2 COM3 | Bukti harus dibaca sesuai kelasnya","textChars":85,"textLines":1,"bbox":[66,302,1050,30]}
+{"kind":"textbox","id":"sh/lg3ixk7e","slide":1,"text":"Status ini bukan sertifikasi produk; hanya merangkum hasil uji yang sudah ada.","textPreview":"Status ini bukan sertifikasi produk; hanya merangkum hasil uji yang sudah ada.","textChars":78,"textLines":1,"bbox":[66,585,900,24]}
+{"kind":"textbox","id":"sh/kfu14f6t","slide":1,"text":"GLD2 Functional Test Report | 1","textPreview":"GLD2 Functional Test Report | 1","textChars":31,"textLines":1,"bbox":[62,682,500,18]}
+{"kind":"notes","id":"nt/03eimh","slide":1,"text":"[Sources]\nBench conversation and serial observations supplied in this task on 2026-08-27.\nWiring source: docs/wiring/gld-project-ver2-2026-07-01/source-GLD2.zip."}
+{"kind":"slide","id":"sl/95xsdt","slide":2,"title":"Yang sudah terbukti OK dari uji bench","textShapes":4}
+{"kind":"textbox","id":"sh/retkvy9w","slide":2,"text":"Yang sudah terbukti OK dari uji bench","textPreview":"Yang sudah terbukti OK dari uji bench","textChars":37,"textLines":1,"bbox":[62,38,1156,48]}
+{"kind":"textbox","id":"sh/sf21o3qh","slide":2,"text":"Bukti berikut berasal dari boot report, scan, kontrol serial, dan readback pada board GLD2.","textPreview":"Bukti berikut berasal dari boot report, scan, kontrol serial, dan readback pada board GLD2.","textChars":91,"textLines":1,"bbox":[64,89,1136,26]}
+{"kind":"shape","id":"sh/tgb2x8r2","slide":2,"bbox":[62,123,1156,3]}
+{"kind":"textbox","id":"sh/fitkzi98","slide":2,"text":"Batas bukti: ACK/readback membuktikan komunikasi dan perintah firmware; tegangan rail/beban fisik perlu bukti alat ukur tersendiri.","textPreview":"Batas bukti: ACK/readback membuktikan komunikasi dan perintah firmware; tegangan rail/beban fisik perlu bukti alat ukur tersendiri.","textChars":131,"textLines":1,"bbox":[64,625,1140,24]}
+{"kind":"textbox","id":"sh/g3m1snqt","slide":2,"text":"GLD2 Functional Test Report | 2","textPreview":"GLD2 Functional Test Report | 2","textChars":31,"textLines":1,"bbox":[62,682,500,18]}
+{"kind":"table","id":"tb/bu90r21s","slide":2,"name":"","rows":7,"cols":3,"preview":"Komponen/fungsi | Status | Bukti serial/hasil nyata","bbox":[62,142,1156,458]}
+{"kind":"notes","id":"nt/95xsdt","slide":2,"text":"[Sources]\nLive bench observations in user-provided transcript: root I2C, 8 MCP, PCF ON/OFF, DAC readback, manual and AUTO alarm.\nFirmware mapping: firmware/gld/include/BoardPinsGLD2.h."}
+{"kind":"slide","id":"sl/s2whtn","slide":3,"title":"Mapping sensor telah terbukti konsisten pada uji I2C/DAC","textShapes":4}
+{"kind":"textbox","id":"sh/m1czi503","slide":3,"text":"Mapping sensor telah terbukti konsisten pada uji I2C/DAC","textPreview":"Mapping sensor telah terbukti konsisten pada uji I2C/DAC","textChars":56,"textLines":1,"bbox":[62,38,1156,48]}
+{"kind":"textbox","id":"sh/9o3idkju","slide":3,"text":"Header–EN–TCA–AIN berikut menjadi acuan yang dipakai saat mendeteksi dan mengendalikan delapan MCP.","textPreview":"Header–EN–TCA–AIN berikut menjadi acuan yang dipakai saat mendeteksi dan mengendalikan delapan MCP.","textChars":99,"textLines":1,"bbox":[64,89,1136,26]}
+{"kind":"shape","id":"sh/8nuhkfi9","slide":3,"bbox":[62,123,1156,3]}
+{"kind":"textbox","id":"sh/apczmp0f","slide":3,"text":"Catatan: semua MCP memakai alamat 0x60; firmware harus mengaktifkan EN dan memilih channel TCA pasangan sebelum akses.","textPreview":"Catatan: semua MCP memakai alamat 0x60; firmware harus mengaktifkan EN dan memilih channel TCA pasangan sebelum akses.","textChars":118,"textLines":1,"bbox":[62,630,1156,24]}
+{"kind":"textbox","id":"sh/xsnih4jq","slide":3,"text":"GLD2 Functional Test Report | 3","textPreview":"GLD2 Functional Test Report | 3","textChars":31,"textLines":1,"bbox":[62,682,500,18]}
+{"kind":"table","id":"tb/e5wb290v","slide":3,"name":"","rows":9,"cols":5,"preview":"Header | Sensor | PCF EN | TCA | ADS AIN","bbox":[150,150,980,450]}
+{"kind":"notes","id":"nt/s2whtn","slide":3,"text":"[Sources]\nSource: firmware/gld/include/BoardPinsGLD2.h.\nEvidence: live sequential MCP discovery and DAC write/readback described in bench transcript."}
+{"kind":"slide","id":"sl/f8pece","slide":4,"title":"Temuan utama: nulling belum valid sebagai profil inference","textShapes":4}
+{"kind":"textbox","id":"sh/5wb2xsby","slide":4,"text":"Temuan utama: nulling belum valid sebagai profil inference","textPreview":"Temuan utama: nulling belum valid sebagai profil inference","textChars":58,"textLines":1,"bbox":[62,38,1156,48]}
+{"kind":"textbox","id":"sh/it032ds7","slide":4,"text":"Komunikasi hardware lulus, tetapi algoritme nulling belum menghasilkan profil 8/8 yang dapat diterima.","textPreview":"Komunikasi hardware lulus, tetapi algoritme nulling belum menghasilkan profil 8/8 yang dapat diterima.","textChars":102,"textLines":1,"bbox":[64,89,1136,26]}
+{"kind":"shape","id":"sh/3utkvits","slide":4,"bbox":[62,123,1156,3]}
+{"kind":"textbox","id":"sh/d0bm1sru","slide":4,"text":"Gate: jangan mengaktifkan/mengikat profil nulling baru untuk inference sebelum satu run menghasilkan 8/8 dengan bukti confirm yang dapat ditinjau.","textPreview":"Gate: jangan mengaktifkan/mengikat profil nulling baru untuk inference sebelum satu run menghasilkan 8/8 dengan bukti confirm yang dapat ...","textChars":146,"textLines":1,"bbox":[64,605,1140,28]}
+{"kind":"textbox","id":"sh/qxk36xs3","slide":4,"text":"GLD2 Functional Test Report | 4","textPreview":"GLD2 Functional Test Report | 4","textChars":31,"textLines":1,"bbox":[62,682,500,18]}
+{"kind":"table","id":"tb/5orelkfy","slide":4,"name":"","rows":6,"cols":3,"preview":"Area | Status | Bukti/implikasi","bbox":[62,148,1156,425]}
+{"kind":"notes","id":"nt/f8pece","slide":4,"text":"[Sources]\nBench transcript dated 2026-08-27: nulling v9/v11 observations.\nNo claim of a physical sensor defect is made; the current evidence is algorithm/measurement behavior."}
+{"kind":"slide","id":"sl/gqcytx","slide":5,"title":"Bukti fisik atau end-to-end yang masih pending","textShapes":3}
+{"kind":"textbox","id":"sh/qhwzmlkf","slide":5,"text":"Bukti fisik atau end-to-end yang masih pending","textPreview":"Bukti fisik atau end-to-end yang masih pending","textChars":46,"textLines":1,"bbox":[62,38,1156,48]}
+{"kind":"textbox","id":"sh/dknixg36","slide":5,"text":"TPS22919 terbukti dari rantai kontrol firmware; sisanya belum memiliki bukti penerimaan yang diperlukan.","textPreview":"TPS22919 terbukti dari rantai kontrol firmware; sisanya belum memiliki bukti penerimaan yang diperlukan.","textChars":104,"textLines":1,"bbox":[64,89,1136,26]}
+{"kind":"shape","id":"sh/cje1ob2l","slide":5,"bbox":[62,123,1156,3]}
+{"kind":"textbox","id":"sh/y5wjqlkr","slide":5,"text":"GLD2 Functional Test Report | 5","textPreview":"GLD2 Functional Test Report | 5","textChars":31,"textLines":1,"bbox":[62,682,500,18]}
+{"kind":"table","id":"tb/ipgfyp4z","slide":5,"name":"","rows":8,"cols":3,"preview":"Komponen/fungsi | Status | Bukti yang tersedia / masih diperlukan","bbox":[62,148,1156,480]}
+{"kind":"notes","id":"nt/gqcytx","slide":5,"text":"[Sources]\nLive bench observations: PCF/EN ON-OFF and downstream MCP response prove firmware control chain.\nSource: BoardPinsGLD2.h: TPL DONE GPIO17, CLR GPIO16, RS-485 pins.\nPhysical rail voltage/end-to-end proof is not available in current bench evidence."}
+{"kind":"slide","id":"sl/8281lt","slide":6,"title":"Rencana uji setelah nulling diselesaikan","textShapes":3}
+{"kind":"textbox","id":"sh/943y1svi","slide":6,"text":"Rencana uji setelah nulling diselesaikan","textPreview":"Rencana uji setelah nulling diselesaikan","textChars":40,"textLines":1,"bbox":[62,38,1156,48]}
+{"kind":"textbox","id":"sh/m1sf6xwr","slide":6,"text":"Satu slide rencana: fokus pertama menyelesaikan gate nulling, lalu uji non-destruktif, terakhir power-cycle.","textPreview":"Satu slide rencana: fokus pertama menyelesaikan gate nulling, lalu uji non-destruktif, terakhir power-cycle.","textChars":108,"textLines":1,"bbox":[64,89,1136,26]}
+{"kind":"shape","id":"sh/n21gz2dc","slide":6,"bbox":[62,123,1156,3]}
+{"kind":"textbox","id":"sh/l0jexsv6","slide":6,"text":"GLD2 Functional Test Report | 6","textPreview":"GLD2 Functional Test Report | 6","textChars":31,"textLines":1,"bbox":[62,682,500,18]}
+{"kind":"table","id":"tb/ho3u5grm","slide":6,"name":"","rows":5,"cols":3,"preview":"Tahap | Tujuan | Kriteria lanjut","bbox":[62,168,1156,315]}
+{"kind":"notes","id":"nt/8281lt","slide":6,"text":"[Sources]\nSource: user-requested sequencing in current conversation."}

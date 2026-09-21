@@ -1,6 +1,6 @@
 param(
     [string]$NodeRedUrl = "http://127.0.0.1:1880",
-    [string]$NodeRedUserDir = "C:\Users\asus\.node-red",
+    [string]$NodeRedUserDir = (Join-Path $env:USERPROFILE ".node-red"),
     [string]$GatewayStatusUrl = "http://192.168.4.1/api/status",
     [string]$GatewayBaseUrl = "http://192.168.4.1",
     [string]$MqttHost = "127.0.0.1",

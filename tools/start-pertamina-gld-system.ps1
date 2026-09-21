@@ -24,6 +24,7 @@ $RuntimeDir = Join-Path $RepoRoot "apps\runtime\operator-hub"
 $LogDir = Join-Path $RuntimeDir "logs"
 $CredentialsPath = Join-Path $RepoRoot "apps\runtime\operator-hub\credentials.local.json"
 $StartupStatePath = Join-Path $RuntimeDir "startup-flow-state.json"
+$StartupProfilePath = Join-Path $RepoRoot "apps\runtime\operator-hub\startup.local.json"
 $NodeRedEnvPath = Join-Path $NodeRedDir ".env"
 $NodeRedTopologyBootstrapPath = Join-Path $NodeRedUserDir "pertamina-gld-topology-bootstrap.json"
 $NodeRedTopologyContextPath = Join-Path $NodeRedUserDir "pgl-context\pgl_tab\flow.json"
@@ -32,6 +33,56 @@ $BrokerFirewallRuleName = "Pertamina GLD MQTT Broker 1884 (Bn Private)"
 
 function Write-Step([string]$Message) {
     Write-Host "[Pertamina GLD] $Message"
+}
+
+function Test-TcpEndpoint([string]$HostName, [int]$Port, [int]$TimeoutMs = 1500) {
+    $client = [System.Net.Sockets.TcpClient]::new()
+    try {
+        $task = $client.ConnectAsync($HostName, $Port)
+        if (-not $task.Wait($TimeoutMs)) {
+            return $false
+        }
+        return $client.Connected
+    } catch {
+        return $false
+    } finally {
+        $client.Dispose()
+    }
+}
+
+function Wait-TcpEndpoint([string]$HostName, [int]$Port, [string]$Name, [int]$TimeoutSec) {
+    $deadline = (Get-Date).AddSeconds($TimeoutSec)
+    while ((Get-Date) -lt $deadline) {
+        if (Test-TcpEndpoint $HostName $Port) {
+            Write-Step "$Name is reachable at ${HostName}:$Port"
+            return $true
+        }
+        Start-Sleep -Milliseconds 500
+    }
+    Write-Warning "$Name did not become reachable at ${HostName}:$Port within $TimeoutSec seconds"
+    return $false
+}
+
+function Get-OperatorHubStatus() {
+    try {
+        return Invoke-RestMethod -Uri "http://127.0.0.1:5173/api/status" -TimeoutSec 4
+    } catch {
+        return $null
+    }
+}
+
+function Test-OperatorHubReady() {
+    $status = Get-OperatorHubStatus
+    return [bool]($status -and $status.apps.gw.identityOk -and $status.apps.ch.identityOk -and $status.apps.gld.identityOk)
+}
+
+function Test-NodeRedReady() {
+    try {
+        $topology = Invoke-RestMethod -Uri "$NodeRedUrl/pertamina-gld/topology" -TimeoutSec 4
+        return [bool]($topology -and $topology.kind -eq "pgl-topology")
+    } catch {
+        return $false
+    }
 }
 
 function Test-Listening([int]$Port) {
@@ -205,6 +256,69 @@ function Wait-Port([int]$Port, [string]$Name, [int]$TimeoutSec) {
     return $false
 }
 
+function Ensure-NodeRedFunctionGlobalContext([string]$UserDir) {
+    $settingsPath = Join-Path $UserDir "settings.js"
+    if (-not (Test-Path $settingsPath)) {
+        throw "Node-RED settings.js was not found at $settingsPath. Run Node-RED once to initialize the user directory, then rerun this launcher."
+    }
+
+    $content = [System.IO.File]::ReadAllText($settingsPath)
+    $required = @(
+        @{ Name = "crypto"; Line = "        crypto: require('crypto')," },
+        @{ Name = "fs"; Line = "        fs: require('fs')," },
+        @{ Name = "path"; Line = "        path: require('path')," }
+    )
+    $missingLines = @()
+    foreach ($item in $required) {
+        $pattern = '(?m)^\s*' + [regex]::Escape($item.Name) + '\s*:\s*require\([''"]' + [regex]::Escape($item.Name) + '[''"]\)\s*,?'
+        if ($content -notmatch $pattern) {
+            $missingLines += $item.Line
+        }
+    }
+    if ($missingLines.Count -eq 0) {
+        Write-Step "Node-RED functionGlobalContext already exposes crypto, fs, and path"
+        return $false
+    }
+
+    $openingPattern = "(?m)^(\s*functionGlobalContext\s*:\s*\{\s*)$"
+    $opening = [regex]::Match($content, $openingPattern)
+    if (-not $opening.Success) {
+        throw "Could not locate functionGlobalContext in $settingsPath; update it manually before starting Node-RED"
+    }
+    $backupPath = "$settingsPath.backup-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+    [System.IO.File]::Copy($settingsPath, $backupPath, $false)
+    $newline = if ($content.Contains("`r`n")) { "`r`n" } else { "`n" }
+    $replacement = $opening.Groups[1].Value + $newline + ($missingLines -join $newline)
+    $updated = $content.Substring(0, $opening.Index) + $replacement + $content.Substring($opening.Index + $opening.Length)
+    [System.IO.File]::WriteAllText($settingsPath, $updated, [System.Text.UTF8Encoding]::new($false))
+    & node --check $settingsPath
+    if ($LASTEXITCODE -ne 0) {
+        [System.IO.File]::Copy($backupPath, $settingsPath, $true)
+        throw "Node-RED settings update failed syntax validation; restored $backupPath"
+    }
+    Write-Step "Node-RED functionGlobalContext updated (backup: $backupPath)"
+    return $true
+}
+
+function Stop-NodeRedForSettingsReload() {
+    $listenerLines = netstat -ano -p tcp | Select-String -Pattern '^\s*TCP\s+\S+:1880\s+\S+\s+LISTENING\s+(\d+)\s*$'
+    foreach ($line in $listenerLines) {
+        if ($line.Line -notmatch 'LISTENING\s+(\d+)\s*$') {
+            continue
+        }
+        $processId = [int]$Matches[1]
+        $process = Get-Process -Id $processId -ErrorAction SilentlyContinue
+        if ($process -and $process.ProcessName -eq "node") {
+            Write-Step "Restarting Node-RED PID $processId to load updated settings.js"
+            Stop-Process -Id $processId -Force
+        }
+    }
+    $deadline = (Get-Date).AddSeconds(10)
+    while ((Get-Date) -lt $deadline -and (Test-TcpEndpoint "127.0.0.1" 1880 300)) {
+        Start-Sleep -Milliseconds 250
+    }
+}
+
 function Start-LoggedCmd([string]$Command, [string]$WorkingDirectory, [string]$LogName) {
     New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
     $logPath = Join-Path $LogDir $LogName
@@ -297,7 +411,7 @@ function Save-FlowStartupState($Broker) {
 }
 
 function Start-OperatorHub() {
-    if (Test-Listening 5173) {
+    if (Test-OperatorHubReady) {
         Write-Step "Operator Hub already running"
         return
     }
@@ -307,11 +421,22 @@ function Start-OperatorHub() {
     }
     Write-Step "Starting Operator Hub"
     Start-LoggedProcess $pyExe @("-u", "bridge.py", "--host", "127.0.0.1", "--port", "5173", "--mqtt-broker-host", $RequiredServerIPv4) $OperatorHubDir "operator-hub.log"
-    Wait-Port 5173 "Operator Hub" $StartupTimeoutSec | Out-Null
+    if (-not (Wait-Port 5173 "Operator Hub" $StartupTimeoutSec)) {
+        throw "Operator Hub did not start listening on port 5173 within $StartupTimeoutSec seconds."
+    }
+    $deadline = (Get-Date).AddSeconds($StartupTimeoutSec)
+    while ((Get-Date) -lt $deadline) {
+        if (Test-OperatorHubReady) {
+            Write-Step "Operator Hub and child apps are healthy"
+            return
+        }
+        Start-Sleep -Milliseconds 500
+    }
+    throw "Operator Hub did not become healthy within $StartupTimeoutSec seconds. Check port 5173 and apps\operator-hub."
 }
 
 function Start-NodeRed() {
-    if (Test-Listening 1880) {
+    if (Test-NodeRedReady) {
         Write-Step "Node-RED already running"
         return
     }
@@ -336,7 +461,7 @@ function Start-NodeRed() {
 function Wait-BrokerCredentials() {
     $deadline = (Get-Date).AddSeconds($StartupTimeoutSec)
     while ((Get-Date) -lt $deadline) {
-        if ((Test-Path $CredentialsPath) -and (Test-Listening 1884)) {
+        if (Test-Path $CredentialsPath) {
             $broker = Get-Content -Raw $CredentialsPath | ConvertFrom-Json
             if ([string]$broker.host -ne $RequiredServerIPv4) {
                 throw "MQTT broker credentials report $($broker.host), expected $RequiredServerIPv4. Stop the stale Operator Hub process and rerun the launcher."
@@ -344,7 +469,8 @@ function Wait-BrokerCredentials() {
             if (-not (Test-ListeningAt $RequiredServerIPv4 1884)) {
                 throw "MQTT port 1884 is listening on the wrong interface; expected $RequiredServerIPv4`:1884."
             }
-            if ($broker.port -eq 1884 -and $broker.username -and $broker.password) {
+            if ($broker.port -eq 1884 -and $broker.username -and $broker.password -and $broker.topicRoot -and
+                (Test-TcpEndpoint ([string]$broker.host) ([int]$broker.port))) {
                 Write-Step "MQTT broker ready at $($broker.host):$($broker.port)"
                 return $broker
             }
@@ -388,9 +514,9 @@ function Apply-NodeRedFlow($Broker) {
 }
 
 function Connect-GatewayOperatorMonitor($Broker) {
-    if (-not (Wait-Port 5373 "Gateway Operator" 15)) {
-        Write-Warning "Gateway Operator is not available; MQTT monitor was not connected"
-        return
+    if (-not (Wait-TcpEndpoint "127.0.0.1" 5373 "Gateway Operator" 15)) {
+        Write-Step "Gateway Operator is not available; skipping MQTT monitor (broker/Node-RED remain active)"
+        return $null
     }
     try {
         $health = Invoke-RestMethod -Uri "http://127.0.0.1:5373/api/health" -TimeoutSec 5
@@ -407,10 +533,66 @@ function Connect-GatewayOperatorMonitor($Broker) {
             topicRoot = [string]$Broker.topicRoot
         } | ConvertTo-Json -Depth 5
         Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:5373/api/mqtt/connect" -Headers $headers -ContentType "application/json" -Body $body -TimeoutSec 8 | Out-Null
-        Write-Step "Gateway Operator MQTT monitor connected"
+        $deadline = (Get-Date).AddSeconds(12)
+        while ((Get-Date) -lt $deadline) {
+            $health = Invoke-RestMethod -Uri "http://127.0.0.1:5373/api/health" -TimeoutSec 5
+            if ($health.mqtt.connected -and $health.mqtt.host -eq [string]$Broker.host -and
+                [int]$health.mqtt.port -eq [int]$Broker.port -and $health.mqtt.topicRoot -eq [string]$Broker.topicRoot) {
+                Write-Step "Gateway Operator MQTT monitor connected"
+                return $health
+            }
+            Start-Sleep -Milliseconds 500
+        }
+        throw "Gateway Operator MQTT monitor did not confirm connection"
     } catch {
-        Write-Warning "Gateway Operator MQTT monitor connect failed: $($_.Exception.Message)"
+        Write-Step "Gateway Operator MQTT monitor unavailable: $($_.Exception.Message). Continuing; broker/Node-RED remain active"
+        return $null
     }
+}
+
+function Connect-GatewaySerial($Broker) {
+    if (-not (Test-Path $StartupProfilePath)) {
+        Write-Step "No startup.local.json profile; skipping automatic Gateway COM connection"
+        return $null
+    }
+    $profile = Get-Content -Raw $StartupProfilePath | ConvertFrom-Json
+    if ($profile.PSObject.Properties.Name -contains "gatewaySerialEnabled" -and -not [bool]$profile.gatewaySerialEnabled) {
+        Write-Step "Gateway serial auto-connect disabled (battery/MQTT mode)"
+        return $null
+    }
+    $preferredPort = [string]$profile.gatewayComPort
+    $slot = if ($profile.gatewayComSlot) { [int]$profile.gatewayComSlot } else { 1 }
+    $baud = if ($profile.gatewayBaud) { [int]$profile.gatewayBaud } else { 115200 }
+    if (-not $preferredPort) {
+        Write-Step "Gateway COM is not configured in startup.local.json; skipping serial connection"
+        return $null
+    }
+
+    $health = Invoke-RestMethod -Uri "http://127.0.0.1:5373/api/health" -TimeoutSec 5
+    $headers = @{ "X-GW-Bridge-Token" = $health.csrfToken }
+    $ports = Invoke-RestMethod -Uri "http://127.0.0.1:5373/api/ports" -Headers $headers -TimeoutSec 5
+    $device = $ports.ports | Where-Object { $_.path -eq $preferredPort } | Select-Object -First 1
+    if (-not $device) {
+        Write-Warning "Configured Gateway port $preferredPort is not present; connect the Gateway USB and rerun startup"
+        return $null
+    }
+
+    $slotState = $health.slots.PSObject.Properties[[string]$slot].Value
+    if (-not ($slotState -and $slotState.connected -and $slotState.port -eq $preferredPort)) {
+        $connectBody = @{ slot = $slot; port = $preferredPort; baud = $baud } | ConvertTo-Json
+        Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:5373/api/serial/connect" -Headers $headers -ContentType "application/json" -Body $connectBody -TimeoutSec 8 | Out-Null
+    }
+
+    $deviceMqtt = @{
+        host = [string]$Broker.host
+        port = [int]$Broker.port
+        username = [string]$Broker.username
+        password = [string]$Broker.password
+    } | ConvertTo-Json -Compress
+    $writeBody = @{ slot = $slot; line = "SET_MQTT_CONFIG_JSON $deviceMqtt" } | ConvertTo-Json
+    Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:5373/api/serial/write" -Headers $headers -ContentType "application/json" -Body $writeBody -TimeoutSec 8 | Out-Null
+    Write-Step "Gateway serial connected on $preferredPort (slot $slot); current MQTT settings sent to device NVS"
+    return $preferredPort
 }
 
 function Wait-Topology() {
@@ -464,19 +646,27 @@ Start-OperatorHub
 $broker = Wait-BrokerCredentials
 Ensure-BrokerFirewall "post-start"
 Load-DotEnv $NodeRedEnvPath
+$nodeRedSettingsChanged = Ensure-NodeRedFunctionGlobalContext $NodeRedUserDir
+if ($nodeRedSettingsChanged) {
+    Stop-NodeRedForSettingsReload
+}
 Restore-NodeRedTopologyContext
 Start-NodeRed
 if (Test-FlowDeployNeeded $broker) {
     Apply-NodeRedFlow $broker
 }
+$gatewayPort = $null
 if ($ConnectGatewayOperatorMonitor) {
-    Connect-GatewayOperatorMonitor $broker
+    Connect-GatewayOperatorMonitor $broker | Out-Null
+    $gatewayPort = Connect-GatewaySerial $broker
 } else {
     Write-Step "Gateway Operator MQTT monitor connect skipped for fast startup"
 }
 if ($WaitForTopology) {
     Wait-Topology | Out-Null
 }
+
+Write-Step "Ready summary: Hub=5173 Node-RED=1880 MQTT=$($broker.host):$($broker.port) GatewayOperator=5373 COM=$(if ($gatewayPort) { $gatewayPort } else { 'manual' })"
 
 if (-not $NoBrowser) {
     Open-SystemDashboards

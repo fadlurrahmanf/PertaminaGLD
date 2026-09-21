@@ -16,17 +16,43 @@ namespace {
 
 constexpr uint8_t  AVG_COUNT            = 8;
 constexpr uint8_t  CONFIRM_COUNT        = 10;
-constexpr uint16_t BASELINE_PRESCAN_MAX = 10;
 constexpr uint16_t EXP_INIT_STEP        = 1;
-constexpr uint16_t EXP_MAX_STEP         = 2048;
-constexpr float    BASELINE_THRESHOLD_RATIO = 0.5f;
-constexpr uint8_t  CONFIRM_WINDOW       = 10;  // baseline >= 0: 5 before + 5 after selected
-constexpr uint8_t  CONFIRM_WINDOW_BEFORE_WIDE = 10;  // baseline < 0: 10 before + 10 after selected
-constexpr uint8_t  CONFIRM_WINDOW_WIDE  = 20;
-// How many single-LSB DAC bumps the final check may try if a verified confirm
-// code still reads below threshold on the separate final verification read.
+// The MQ bridge can cross its clipped-baseline region within a narrow DAC
+// interval.  Preserve exponential expansion at the start, then cap its
+// increment so the 511-to-1023 type of jump cannot skip that transition.
+constexpr uint16_t EXP_MAX_STEP         = 64;
+// Do not let an early, noise-sized DAC response create an exponential bracket.
+// Binary refinement may still choose below this code; this is a gate on the
+// bracket-search phase only, not an absolute final-DAC floor.
+constexpr uint16_t EXP_MIN_BRACKET_DAC  = 100;
+constexpr uint8_t  CONFIRM_SIDE_SAMPLES = 10;
+// Confirm scans the remaining verified exponential bracket, plus a small
+// lower shoulder around the binary candidate. With EXP_MAX_STEP=64 this is
+// bounded to 75 candidates, not an unbounded linear extension.
+constexpr uint16_t CONFIRM_CANDIDATE_CAPACITY =
+    EXP_MAX_STEP + CONFIRM_SIDE_SAMPLES + 1;
 constexpr uint8_t  FINAL_CHECK_MAX_BUMPS = 20;
-constexpr uint32_t SETTLE_MS            = 5;
+// MQ bridge/INA/ADS measurements continue to settle after a MCP4725 code
+// change.  A single early sample can therefore bracket a transient rather
+// than the real zero crossing.  Keep the existing four-stage algorithm, but
+// make every decision from a small time-separated stability window.
+constexpr uint32_t SETTLE_MS               = 150;
+constexpr uint32_t STABILITY_SAMPLE_GAP_MS = 50;
+constexpr uint8_t  STABILITY_WINDOW_COUNT  = 3;
+constexpr uint32_t STABILITY_MAX_OBSERVE_MS = 3000;
+// Large MCP4725 jumps can leave the MQ bridge/INA path in a long transient.
+// Keep the mandated nulling stages, but travel to each requested DAC point in
+// bounded increments so the observation starts from a controlled transition.
+constexpr uint16_t DAC_RAMP_STEP             = 64;
+constexpr uint32_t DAC_RAMP_STEP_DELAY_MS    = 25;
+constexpr uint8_t  STABLE_GAIN_SAMPLES  = 3;
+constexpr uint8_t  MAX_AVERAGE_ATTEMPTS = AVG_COUNT + 16;
+constexpr float    BASELINE_THRESHOLD_RATIO = 0.5f;
+constexpr float    BASELINE_NOISE_MULTIPLIER = 3.0f;
+// In external-power operation all MQ rails remain ON during nulling. The TCA
+// alone isolates the selected MCP4725 I2C channel; cycling TPS22919 rails here
+// would cool/restart the MQ bridge and invalidate the calibration samples.
+constexpr uint32_t NULLING_ALL_SENSORS_WARMUP_MS = 30000;
 // No deliberate pause between algorithm phases. The transition log is retained
 // for the operator UI, while the per-write DAC/ADC settle remains separate.
 constexpr uint32_t STAGE_TRANSITION_DELAY_MS = 0;
@@ -39,6 +65,9 @@ constexpr const char* NVS_CONFIG_KEY       = "config";
 struct Snapshot {
     float   voltage;
     bool    valid;
+    float   spreadV;
+    bool    stable;
+    uint32_t observeMs;
 };
 
 const char* sensorName(uint8_t ch) {
@@ -60,7 +89,7 @@ const char* channelErrorName(uint8_t errorCode) {
 
 void emitLog(GldNullingLogFn logFn, const char* fmt, ...) {
     if (!logFn) return;
-    char line[224];
+    char line[384];
     va_list args;
     va_start(args, fmt);
     vsnprintf(line, sizeof(line), fmt, args);
@@ -90,84 +119,216 @@ void pauseForMonitor(GldNullingTickFn tickFn, uint32_t durationMs = STAGE_TRANSI
     serviceTick(tickFn);
 }
 
+bool writeDacRamped(GldDacMux& dac, uint8_t ch, uint16_t target,
+                    GldNullingTickFn tickFn) {
+    uint16_t current = dac.lastValue(ch);
+    if (current < target) {
+        while (static_cast<uint32_t>(target) - current > DAC_RAMP_STEP) {
+            current = static_cast<uint16_t>(current + DAC_RAMP_STEP);
+            if (!dac.writeDac(ch, current)) return false;
+            pauseForMonitor(tickFn, DAC_RAMP_STEP_DELAY_MS);
+        }
+    } else {
+        while (static_cast<uint32_t>(current) - target > DAC_RAMP_STEP) {
+            current = static_cast<uint16_t>(current - DAC_RAMP_STEP);
+            if (!dac.writeDac(ch, current)) return false;
+            pauseForMonitor(tickFn, DAC_RAMP_STEP_DELAY_MS);
+        }
+    }
+    return dac.writeDac(ch, target);
+}
+
+void emitStability(GldNullingLogFn logFn, const char* stage, uint8_t ch,
+                   uint16_t code, const Snapshot& sample) {
+    emitLog(logFn, "NULLING_STABILITY stage=%s ch=%u sensor=%s code=%u stable=%u spread=%.9f observeMs=%lu",
+            stage, static_cast<unsigned>(ch), sensorName(ch),
+            static_cast<unsigned>(code), sample.stable ? 1u : 0u, sample.spreadV,
+            static_cast<unsigned long>(sample.observeMs));
+}
+
+// Keep the long external-power warmup observable in the Expert Console while
+// preserving the 50 ms service tick cadence used for WDT and serial handling.
+void warmupAllSensorsWithCountdown(GldNullingLogFn logFn, GldNullingTickFn tickFn) {
+    constexpr uint32_t kCountdownStepMs = 1000;
+    const uint32_t totalSeconds =
+        (NULLING_ALL_SENSORS_WARMUP_MS + kCountdownStepMs - 1U) / kCountdownStepMs;
+    emitLog(logFn, "NULLING_WARMUP_START totalSec=%lu",
+            static_cast<unsigned long>(totalSeconds));
+    for (uint32_t remainingSeconds = totalSeconds; remainingSeconds > 0; --remainingSeconds) {
+        emitLog(logFn, "NULLING_WARMUP remainingSec=%lu",
+                static_cast<unsigned long>(remainingSeconds));
+        pauseForMonitor(tickFn, kCountdownStepMs);
+    }
+    emitLog(logFn, "NULLING_WARMUP_DONE");
+}
+
 void emitStageTransition(GldNullingLogFn logFn, uint8_t ch, const char* from, const char* to) {
     emitLog(logFn, "NULLING_STAGE_TRANSITION ch=%u sensor=%s from=%s to=%s pauseMs=%lu",
             static_cast<unsigned>(ch), sensorName(ch), from, to,
             static_cast<unsigned long>(STAGE_TRANSITION_DELAY_MS));
 }
 
-float dynamicThresholdForBaseline(float baselineV, const GldNullingConfig& config) {
-    return fmaxf(fabsf(baselineV) * BASELINE_THRESHOLD_RATIO, config.thresholdV);
-}
-
-float targetForBaseline(float baselineV, float thresholdV) {
-    return baselineV + thresholdV;
-}
-
-float requiredFinalVoltage(const GldNullingConfig& config) {
-    // A zero floor makes positivity/non-negativity a hard safety invariant,
-    // including for an old NVS config that may contain a negative minFinalV.
-    return fmaxf(config.minFinalV, 0.0f);
-}
-
-bool crossedBaselineThreshold(float voltage, float baselineV, float thresholdV) {
-    return (voltage - baselineV) >= thresholdV;
-}
-
-bool meetsNullingTarget(float voltage, float baselineV, float thresholdV,
-                        const GldNullingConfig& config) {
-    return crossedBaselineThreshold(voltage, baselineV, thresholdV) &&
-           voltage >= requiredFinalVoltage(config);
-}
-
 Snapshot readAverage(GldAds1256Reader& ads, uint8_t ch, uint8_t count,
                      GldNullingTickFn tickFn) {
     float sum = 0.0f;
-    bool valid = true;
-    for (uint8_t i = 0; i < count; ++i) {
+    uint8_t accepted = 0;
+    uint8_t stableGain = 0;
+    uint8_t consecutiveSameGain = 0;
+    for (uint8_t attempt = 0; attempt < MAX_AVERAGE_ATTEMPTS && accepted < count; ++attempt) {
         serviceTick(tickFn);
         const GldAds1256Reading r = ads.readChannel(ch);
+        if (r.status != GldAds1256Status::Ok || r.saturated) {
+            accepted = 0;
+            consecutiveSameGain = 0;
+            continue;
+        }
+        if (consecutiveSameGain == 0 || r.gain != stableGain) {
+            stableGain = r.gain;
+            consecutiveSameGain = 1;
+            accepted = 0;
+            sum = 0.0f;
+            continue;
+        }
+        ++consecutiveSameGain;
+        if (consecutiveSameGain < STABLE_GAIN_SAMPLES) continue;
         sum += r.voltage;
-        valid = valid && (r.status == GldAds1256Status::Ok);
+        ++accepted;
     }
     serviceTick(tickFn);
-    return {sum / static_cast<float>(count), valid};
+    return {accepted == count ? sum / static_cast<float>(count) : 0.0f,
+            accepted == count, 0.0f, accepted == count, 0};
 }
 
-// Searches for the DAC code where the reading first rises past a dynamic
-// threshold derived from the baseline: target = baseline + max(abs(baseline)/2,
-// configured minimum threshold). For example, a 0.002 V baseline targets about
-// 0.003 V; a tiny 0.00001 V baseline targets about 0.00002 V.
+float medianOf(float* values, uint8_t count) {
+    for (uint8_t i = 1; i < count; ++i) {
+        const float value = values[i];
+        uint8_t j = i;
+        while (j > 0 && values[j - 1] > value) {
+            values[j] = values[j - 1];
+            --j;
+        }
+        values[j] = value;
+    }
+    return values[count / 2u];
+}
+
+float adaptiveStabilityToleranceV(const float* spreads, uint8_t count,
+                                  float& medianSpreadV, float& madSpreadV) {
+    float ordered[11]{};
+    for (uint8_t i = 0; i < count; ++i) ordered[i] = spreads[i];
+    medianSpreadV = medianOf(ordered, count);
+    float deviations[11]{};
+    for (uint8_t i = 0; i < count; ++i) {
+        deviations[i] = fabsf(spreads[i] - medianSpreadV);
+    }
+    madSpreadV = medianOf(deviations, count);
+    // Each board/channel derives its own band from the baseline's temporal
+    // spread.  The multiplier is a robust-noise confidence factor, not an
+    // absolute voltage setting.  The fallback only covers an ideal zero-noise
+    // calculation so the comparison remains meaningful.
+    const float derived = medianSpreadV + 3.0f * madSpreadV;
+    return derived > 0.0f ? derived : 0.000001f;
+}
+
+float effectiveThresholdForChannel(float baselineV, float stabilityToleranceV,
+                                   const GldNullingConfig& config) {
+    const float baselineTerm = fabsf(baselineV) * BASELINE_THRESHOLD_RATIO;
+    const float noiseTerm = stabilityToleranceV * BASELINE_NOISE_MULTIPLIER;
+    return fmaxf(config.thresholdV, fmaxf(baselineTerm, noiseTerm));
+}
+
+Snapshot readSettledAverage(GldAds1256Reader& ads, uint8_t ch, uint8_t count,
+                            GldNullingTickFn tickFn,
+                            float toleranceV) {
+    Snapshot last{0.0f, false, 0.0f, false, 0};
+    const uint32_t startedMs = millis();
+    for (;;) {
+        float values[STABILITY_WINDOW_COUNT]{};
+        bool allValid = true;
+        for (uint8_t i = 0; i < STABILITY_WINDOW_COUNT; ++i) {
+            const Snapshot sample = readAverage(ads, ch, count, tickFn);
+            if (!sample.valid) {
+                allValid = false;
+                break;
+            }
+            values[i] = sample.voltage;
+            if (i + 1u < STABILITY_WINDOW_COUNT) {
+                pauseForMonitor(tickFn, STABILITY_SAMPLE_GAP_MS);
+            }
+        }
+        if (!allValid) {
+            last = {0.0f, false, 0.0f, false, millis() - startedMs};
+            if (last.observeMs >= STABILITY_MAX_OBSERVE_MS) return last;
+            pauseForMonitor(tickFn, STABILITY_SAMPLE_GAP_MS);
+            continue;
+        }
+        float low = values[0];
+        float high = values[0];
+        for (uint8_t i = 1; i < STABILITY_WINDOW_COUNT; ++i) {
+            if (values[i] < low) low = values[i];
+            if (values[i] > high) high = values[i];
+        }
+        // Median avoids letting one residual settling sample choose the DAC.
+        if (values[0] > values[1]) { const float tmp = values[0]; values[0] = values[1]; values[1] = tmp; }
+        if (values[1] > values[2]) { const float tmp = values[1]; values[1] = values[2]; values[2] = tmp; }
+        if (values[0] > values[1]) { const float tmp = values[0]; values[0] = values[1]; values[1] = tmp; }
+        last = {values[1], true, high - low, (high - low) <= toleranceV,
+                millis() - startedMs};
+        if (last.stable) return last;
+        if (last.observeMs >= STABILITY_MAX_OBSERVE_MS) return last;
+        pauseForMonitor(tickFn, STABILITY_SAMPLE_GAP_MS);
+    }
+    return last;
+}
+
+// First code at or above EXP_MIN_BRACKET_DAC that has cleared the zero-margin
+// and risen from the measured baseline by the configured threshold.
 bool findRange(GldAds1256Reader& ads, GldDacMux& dac,
                 uint8_t ch, float baselineV,
                 uint16_t& outLow, uint16_t& outHigh,
                 GldNullingLogFn logFn, GldNullingTickFn tickFn,
-                const GldNullingConfig& config) {
-    uint16_t step     = EXP_INIT_STEP;
-    uint16_t previous = 0;
-    uint16_t current  = 1;
-    const float thresholdV = dynamicThresholdForBaseline(baselineV, config);
-    const float targetV = fmaxf(targetForBaseline(baselineV, thresholdV),
-                                 requiredFinalVoltage(config));
-    emitLog(logFn, "NULLING_EXP_START ch=%u sensor=%s baseline=%.6f threshold=%.6f minThreshold=%.6f ratio=%.6f target=%.6f",
-            static_cast<unsigned>(ch), sensorName(ch), baselineV, thresholdV,
-            config.thresholdV, BASELINE_THRESHOLD_RATIO, targetV);
+                const GldNullingConfig& config, float stabilityToleranceV,
+                uint16_t resumeFrom = 0) {
+    uint16_t step     = resumeFrom == 0 ? EXP_INIT_STEP : EXP_MAX_STEP;
+    uint16_t previous = resumeFrom;
+    uint16_t current  = resumeFrom == 0
+                            ? 1
+                            : static_cast<uint16_t>(min<uint32_t>(
+                                  static_cast<uint32_t>(resumeFrom) + step,
+                                  board::GLD_DAC_CODE_MAX));
+    if (resumeFrom != 0) {
+        emitLog(logFn, "NULLING_EXP_RESUME ch=%u sensor=%s from=%u next=%u step=%u",
+                static_cast<unsigned>(ch), sensorName(ch),
+                static_cast<unsigned>(resumeFrom), static_cast<unsigned>(current),
+                static_cast<unsigned>(step));
+    }
+    emitLog(logFn, "NULLING_EXP_START ch=%u sensor=%s baseline=%.6f threshold=%.6f minFinalV=%.6f minBracketDac=%u",
+            static_cast<unsigned>(ch), sensorName(ch), baselineV, config.thresholdV, config.minFinalV,
+            static_cast<unsigned>(EXP_MIN_BRACKET_DAC));
 
     while (current <= board::GLD_DAC_CODE_MAX) {
-        if (!dac.writeDac(ch, current)) {
+        if (!writeDacRamped(dac, ch, current, tickFn)) {
             emitLog(logFn, "NULLING_EXP_WRITE_FAIL ch=%u sensor=%s code=%u",
                     static_cast<unsigned>(ch), sensorName(ch),
                     static_cast<unsigned>(current));
             return false;
         }
         settle(tickFn);
-        const Snapshot snap = readAverage(ads, ch, AVG_COUNT, tickFn);
+        const Snapshot snap = readSettledAverage(ads, ch, AVG_COUNT, tickFn, stabilityToleranceV);
+        emitStability(logFn, "exp", ch, current, snap);
         const float delta = snap.voltage - baselineV;
-        emitLog(logFn, "NULLING_EXP_STEP ch=%u sensor=%s code=%u voltage=%.6f delta=%.6f valid=%u",
+        const bool zeroMargin = snap.voltage >= -config.thresholdV;
+        const bool outBaseline = delta >= config.thresholdV;
+        emitLog(logFn, "NULLING_EXP_STEP ch=%u sensor=%s code=%u voltage=%.6f delta=%.6f valid=%u zeroMargin=%u outBaseline=%u",
                 static_cast<unsigned>(ch), sensorName(ch),
                 static_cast<unsigned>(current), snap.voltage, delta,
-                snap.valid ? 1u : 0u);
-        if (snap.valid && meetsNullingTarget(snap.voltage, baselineV, thresholdV, config)) {
+                snap.valid ? 1u : 0u, zeroMargin ? 1u : 0u, outBaseline ? 1u : 0u);
+        // A bridge may legitimately be noisy while it first leaves the
+        // clipped baseline.  Do not skip that first valid crossing solely on
+        // temporal spread; spread remains logged for diagnosis, while the
+        // same-gain averaged reading and the independent Confirm verify guard
+        // the selected result.
+        if (current >= EXP_MIN_BRACKET_DAC && snap.valid && zeroMargin && outBaseline) {
             outLow  = previous;
             outHigh = current;
             emitLog(logFn, "NULLING_EXP_RANGE ch=%u sensor=%s low=%u high=%u",
@@ -191,46 +352,65 @@ bool findRange(GldAds1256Reader& ads, GldDacMux& dac,
     return false;
 }
 
-// Narrows to the precise code where voltage first crosses the same
-// baseline-relative target as findRange().
 uint16_t binarySearch(GldAds1256Reader& ads, GldDacMux& dac,
                       uint8_t ch, float baselineV,
                       uint16_t low, uint16_t high,
                       GldNullingLogFn logFn, GldNullingTickFn tickFn,
-                      const GldNullingConfig& config) {
-    const float thresholdV = dynamicThresholdForBaseline(baselineV, config);
-    const float targetV = fmaxf(targetForBaseline(baselineV, thresholdV),
-                                 requiredFinalVoltage(config));
-    emitLog(logFn, "NULLING_BIN_START ch=%u sensor=%s low=%u high=%u threshold=%.6f target=%.6f",
+                      const GldNullingConfig& config, float stabilityToleranceV) {
+    emitLog(logFn, "NULLING_BIN_START ch=%u sensor=%s low=%u high=%u",
             static_cast<unsigned>(ch), sensorName(ch),
-            static_cast<unsigned>(low), static_cast<unsigned>(high),
-            thresholdV, targetV);
+            static_cast<unsigned>(low), static_cast<unsigned>(high));
+
     while (low + 1 < high) {
         const uint16_t mid = static_cast<uint16_t>((low + high) / 2);
-        const bool writeOk = dac.writeDac(ch, mid);
+        const bool writeOk = writeDacRamped(dac, ch, mid, tickFn);
         settle(tickFn);
-        const Snapshot snap = readAverage(ads, ch, AVG_COUNT, tickFn);
+        const Snapshot snap = readSettledAverage(ads, ch, AVG_COUNT, tickFn, stabilityToleranceV);
+        emitStability(logFn, "bin", ch, mid, snap);
         const float delta = snap.voltage - baselineV;
-        emitLog(logFn, "NULLING_BIN_STEP ch=%u sensor=%s low=%u high=%u mid=%u voltage=%.6f delta=%.6f valid=%u write=%u",
-                static_cast<unsigned>(ch), sensorName(ch),
-                static_cast<unsigned>(low), static_cast<unsigned>(high),
-                static_cast<unsigned>(mid), snap.voltage, delta,
-                snap.valid ? 1u : 0u, writeOk ? 1u : 0u);
-        if (!snap.valid || !meetsNullingTarget(snap.voltage, baselineV, thresholdV, config)) {
-            low = mid;
-        } else {
-            high = mid;
-        }
+        const bool zeroMargin = snap.voltage >= -config.thresholdV;
+        const bool outBaseline = delta >= config.thresholdV;
+        const bool passed = writeOk && snap.valid && zeroMargin && outBaseline;
+        emitLog(logFn, "NULLING_BIN_STEP ch=%u sensor=%s low=%u high=%u mid=%u voltage=%.6f delta=%.6f valid=%u zeroMargin=%u outBaseline=%u write=%u",
+                static_cast<unsigned>(ch), sensorName(ch), static_cast<unsigned>(low),
+                static_cast<unsigned>(high), static_cast<unsigned>(mid), snap.voltage, delta,
+                snap.valid ? 1u : 0u, zeroMargin ? 1u : 0u, outBaseline ? 1u : 0u,
+                writeOk ? 1u : 0u);
+        if (passed) high = mid;
+        else low = mid;
     }
     emitLog(logFn, "NULLING_BIN_DONE ch=%u sensor=%s selected=%u",
             static_cast<unsigned>(ch), sensorName(ch), static_cast<unsigned>(high));
     return high;
 }
 
-// Scans a window of DAC codes around the binary-search boundary and picks the
-// best confirmed code: prefer the code whose reading crosses the dynamic
-// baseline-relative target with the least overshoot. Baseline < 0 channels get
-// a wider window (10 codes before + 10 after the binary search result).
+// The first crossing seen by exponential search can be a transient sample.
+// Re-read exactly that same high endpoint before allowing binary search to use
+// its bracket.  A false crossing is handled by resuming exponential search
+// after the endpoint, never by returning to DAC 0.
+bool recheckExponentialCrossing(GldAds1256Reader& ads, GldDacMux& dac,
+                                uint8_t ch, float baselineV, uint16_t high,
+                                GldNullingLogFn logFn, GldNullingTickFn tickFn,
+                                const GldNullingConfig& config,
+                                float stabilityToleranceV) {
+    const bool writeOk = writeDacRamped(dac, ch, high, tickFn);
+    settle(tickFn);
+    const Snapshot snap = readSettledAverage(ads, ch, AVG_COUNT, tickFn, stabilityToleranceV);
+    emitStability(logFn, "exp_recheck", ch, high, snap);
+    const float delta = snap.voltage - baselineV;
+    const bool zeroMargin = snap.voltage >= -config.thresholdV;
+    const bool outBaseline = delta >= config.thresholdV;
+    const bool passed = writeOk && snap.valid && zeroMargin && outBaseline;
+    emitLog(logFn, "NULLING_EXP_RECHECK ch=%u sensor=%s code=%u voltage=%.9f delta=%.6f valid=%u zeroMargin=%u outBaseline=%u write=%u passed=%u",
+            static_cast<unsigned>(ch), sensorName(ch), static_cast<unsigned>(high),
+            snap.voltage, delta, snap.valid ? 1u : 0u, zeroMargin ? 1u : 0u,
+            outBaseline ? 1u : 0u, writeOk ? 1u : 0u, passed ? 1u : 0u);
+    return passed;
+}
+
+// Scans 10 DAC codes below and 10 above the binary-search boundary, including
+// the boundary itself (21 points in total), then picks the first stable,
+// observable rise above the clipped baseline.
 //
 // Right at the threshold boundary, one DAC LSB step can swing the reading by
 // several hundred microvolts to a few millivolts, so the single code closest
@@ -238,85 +418,97 @@ uint16_t binarySearch(GldAds1256Reader& ads, GldDacMux& dac,
 // is therefore re-verified with an independent read before being accepted.
 bool confirmCode(GldAds1256Reader& ads, GldDacMux& dac,
                  uint8_t ch, float baselineV, uint16_t& dacCode,
+                 uint16_t bracketHigh,
                  GldNullingLogFn logFn, GldNullingTickFn tickFn,
-                 const GldNullingConfig& config) {
-    const bool wideSearch = baselineV < 0.0f;
-    const int windowBefore = wideSearch ? static_cast<int>(CONFIRM_WINDOW_BEFORE_WIDE)
-                                         : static_cast<int>(CONFIRM_WINDOW) / 2;
-    const int windowSize = wideSearch ? static_cast<int>(CONFIRM_WINDOW_WIDE)
-                                       : static_cast<int>(CONFIRM_WINDOW);
-
-    int start = static_cast<int>(dacCode) - windowBefore;
-    if (start < board::GLD_DAC_CODE_MIN) start = board::GLD_DAC_CODE_MIN;
-    int end = start + windowSize - 1;
-    if (end > board::GLD_DAC_CODE_MAX) {
-        end   = board::GLD_DAC_CODE_MAX;
-        start = max<int>(board::GLD_DAC_CODE_MIN, end - windowSize + 1);
+                 const GldNullingConfig& config, float stabilityToleranceV) {
+    int start = static_cast<int>(dacCode) - static_cast<int>(CONFIRM_SIDE_SAMPLES);
+    int end = max<int>(static_cast<int>(dacCode) + static_cast<int>(CONFIRM_SIDE_SAMPLES),
+                       static_cast<int>(bracketHigh));
+    if (start < board::GLD_DAC_CODE_MIN) {
+        end += board::GLD_DAC_CODE_MIN - start;
+        start = board::GLD_DAC_CODE_MIN;
     }
-    const float thresholdV = dynamicThresholdForBaseline(baselineV, config);
-    const float targetV = fmaxf(targetForBaseline(baselineV, thresholdV),
-                                 requiredFinalVoltage(config));
-    emitLog(logFn, "NULLING_CONFIRM_START ch=%u sensor=%s start=%d end=%d minFinalV=%.6f threshold=%.6f target=%.6f wide=%u",
-            static_cast<unsigned>(ch), sensorName(ch), start, end, requiredFinalVoltage(config),
-            thresholdV, targetV, wideSearch ? 1u : 0u);
+    if (end > board::GLD_DAC_CODE_MAX) {
+        start -= end - board::GLD_DAC_CODE_MAX;
+        end = board::GLD_DAC_CODE_MAX;
+        start = max<int>(board::GLD_DAC_CODE_MIN, start);
+    }
+    const int belowCount = static_cast<int>(dacCode) - start;
+    const int aboveCount = end - static_cast<int>(dacCode);
+    emitLog(logFn, "NULLING_CONFIRM_START ch=%u sensor=%s selected=%u start=%d end=%d samples=%d below=%d above=%d baseline=%.6f threshold=%.6f minFinalV=%.6f",
+            static_cast<unsigned>(ch), sensorName(ch), static_cast<unsigned>(dacCode), start, end,
+            end - start + 1, belowCount, aboveCount, baselineV, config.thresholdV, config.minFinalV);
 
     struct Candidate { uint16_t code; float voltage; };
-    Candidate candidates[CONFIRM_WINDOW_WIDE];
-    int candidateCount = 0;
-
+    Candidate positives[CONFIRM_CANDIDATE_CAPACITY];
+    int positiveCount = 0;
+    bool haveFallback = false;
+    uint16_t fallbackCode = 0;
+    float fallbackVoltage = 0.0f;
     for (int code = start; code <= end; ++code) {
-        const bool writeOk = dac.writeDac(ch, static_cast<uint16_t>(code));
+        const bool writeOk = writeDacRamped(dac, ch, static_cast<uint16_t>(code), tickFn);
         settle(tickFn);
-        const Snapshot snap = readAverage(ads, ch, CONFIRM_COUNT, tickFn);
+        const Snapshot snap = readSettledAverage(ads, ch, CONFIRM_COUNT, tickFn, stabilityToleranceV);
+        emitStability(logFn, "confirm", ch, static_cast<uint16_t>(code), snap);
         const float delta = snap.voltage - baselineV;
-        const bool aboveMin = snap.voltage >= requiredFinalVoltage(config);
-        const bool crossed = crossedBaselineThreshold(snap.voltage, baselineV, thresholdV);
-        emitLog(logFn, "NULLING_CONFIRM_STEP ch=%u sensor=%s code=%d voltage=%.9f delta=%.6f valid=%u aboveMin=%u crossed=%u write=%u",
-                static_cast<unsigned>(ch), sensorName(ch), code,
-                snap.voltage, delta, snap.valid ? 1u : 0u,
-                aboveMin ? 1u : 0u, crossed ? 1u : 0u, writeOk ? 1u : 0u);
-
-        if (!writeOk || !snap.valid) continue;
-
-        if (crossed && aboveMin) {
-            if (candidateCount < static_cast<int>(CONFIRM_WINDOW_WIDE)) {
-                candidates[candidateCount++] = {static_cast<uint16_t>(code), snap.voltage};
-            }
+        const bool aboveMin = snap.voltage >= config.minFinalV;
+        const bool zeroMargin = snap.voltage >= -config.thresholdV;
+        const bool outBaseline = delta >= config.thresholdV;
+        emitLog(logFn, "NULLING_CONFIRM_STEP ch=%u sensor=%s code=%d voltage=%.9f delta=%.6f valid=%u aboveMin=%u zeroMargin=%u outBaseline=%u write=%u",
+                static_cast<unsigned>(ch), sensorName(ch), code, snap.voltage, delta,
+                snap.valid ? 1u : 0u, aboveMin ? 1u : 0u, zeroMargin ? 1u : 0u,
+                outBaseline ? 1u : 0u,
+                writeOk ? 1u : 0u);
+        if (!writeOk || !snap.valid || !zeroMargin || !outBaseline || !aboveMin) continue;
+        if (snap.voltage >= 0.0f && positiveCount < CONFIRM_CANDIDATE_CAPACITY) {
+            positives[positiveCount++] = {static_cast<uint16_t>(code), snap.voltage};
+        }
+        else if (!haveFallback || snap.voltage > fallbackVoltage) {
+            fallbackCode = static_cast<uint16_t>(code);
+            fallbackVoltage = snap.voltage;
+            haveFallback = true;
         }
     }
-
-    while (candidateCount > 0) {
+    while (positiveCount > 0) {
         int bestIdx = 0;
-        for (int i = 1; i < candidateCount; ++i) {
-            if (candidates[i].voltage < candidates[bestIdx].voltage) bestIdx = i;
+        for (int i = 1; i < positiveCount; ++i) {
+            if (positives[i].voltage < positives[bestIdx].voltage) bestIdx = i;
         }
-        const uint16_t candidateCode = candidates[bestIdx].code;
-
-        dac.writeDac(ch, candidateCode);
+        const uint16_t candidate = positives[bestIdx].code;
+        if (!writeDacRamped(dac, ch, candidate, tickFn)) {
+            positives[bestIdx] = positives[positiveCount - 1];
+            --positiveCount;
+            continue;
+        }
         settle(tickFn);
-        const Snapshot verify = readAverage(ads, ch, AVG_COUNT, tickFn);
+        const Snapshot verify = readSettledAverage(ads, ch, AVG_COUNT, tickFn, stabilityToleranceV);
+        emitStability(logFn, "verify", ch, candidate, verify);
         const float verifyDelta = verify.voltage - baselineV;
-        emitLog(logFn, "NULLING_CONFIRM_VERIFY ch=%u sensor=%s code=%u voltage=%.9f delta=%.6f valid=%u",
-                static_cast<unsigned>(ch), sensorName(ch),
-                static_cast<unsigned>(candidateCode), verify.voltage, verifyDelta,
-                verify.valid ? 1u : 0u);
-
-        if (verify.valid && meetsNullingTarget(verify.voltage, baselineV, thresholdV, config)) {
-            dacCode = candidateCode;
-            emitLog(logFn, "NULLING_CONFIRM_OK ch=%u sensor=%s code=%u voltage=%.9f delta=%.6f threshold=%.6f target=%.6f mode=baseline_threshold_verified",
-                    static_cast<unsigned>(ch), sensorName(ch),
-                    static_cast<unsigned>(dacCode), verify.voltage, verifyDelta,
-                    thresholdV, targetV);
+        const bool verifyAboveMin = verify.voltage >= config.minFinalV;
+        const bool verifyZeroMargin = verify.voltage >= -config.thresholdV;
+        const bool verifyOutBaseline = verifyDelta >= config.thresholdV;
+        emitLog(logFn, "NULLING_CONFIRM_VERIFY ch=%u sensor=%s code=%u voltage=%.9f delta=%.6f valid=%u aboveMin=%u zeroMargin=%u outBaseline=%u",
+                static_cast<unsigned>(ch), sensorName(ch), static_cast<unsigned>(candidate),
+                verify.voltage, verifyDelta, verify.valid ? 1u : 0u,
+                verifyAboveMin ? 1u : 0u, verifyZeroMargin ? 1u : 0u,
+                verifyOutBaseline ? 1u : 0u);
+        if (verify.valid && verifyAboveMin && verifyZeroMargin && verifyOutBaseline) {
+            dacCode = candidate;
+            emitLog(logFn, "NULLING_CONFIRM_OK ch=%u sensor=%s code=%u voltage=%.9f mode=positive_verified",
+                    static_cast<unsigned>(ch), sensorName(ch), static_cast<unsigned>(dacCode), verify.voltage);
             return true;
         }
-
-        // Didn't reconfirm - drop it and try the next-closest-to-target candidate.
-        candidates[bestIdx] = candidates[candidateCount - 1];
-        --candidateCount;
+        positives[bestIdx] = positives[positiveCount - 1];
+        --positiveCount;
     }
 
-    emitLog(logFn, "NULLING_CONFIRM_FAIL ch=%u sensor=%s",
-            static_cast<unsigned>(ch), sensorName(ch));
+    if (haveFallback) {
+        dacCode = fallbackCode;
+        emitLog(logFn, "NULLING_CONFIRM_OK ch=%u sensor=%s code=%u voltage=%.9f mode=fallback_above_min",
+                static_cast<unsigned>(ch), sensorName(ch), static_cast<unsigned>(dacCode), fallbackVoltage);
+        return true;
+    }
+    emitLog(logFn, "NULLING_CONFIRM_FAIL ch=%u sensor=%s", static_cast<unsigned>(ch), sensorName(ch));
     return false;
 }
 
@@ -337,7 +529,12 @@ ChannelResult nullOneChannel(GldAds1256Reader& ads, GldDacMux& dac,
     emitLog(logFn, "NULLING_CH_START ch=%u sensor=%s",
             static_cast<unsigned>(ch), sensorName(ch));
 
-    if (!dac.writeDac(ch, 0)) {
+    const bool zeroWriteOk = writeDacRamped(dac, ch, 0, tickFn);
+    emitLog(logFn, "NULLING_MCP_WRITE ch=%u sensor=%s mux=%u address=0x%02X code=0 ack=%u source=zero",
+            static_cast<unsigned>(ch), sensorName(ch),
+            static_cast<unsigned>(board::SENSOR_TO_MUX_CH[ch]),
+            static_cast<unsigned>(board::MCP4725_ADDR), zeroWriteOk ? 1u : 0u);
+    if (!zeroWriteOk) {
         r.errorCode = 1;
         emitLog(logFn, "NULLING_CH_FAIL ch=%u sensor=%s stage=zero error=%u reason=%s",
                 static_cast<unsigned>(ch), sensorName(ch),
@@ -346,134 +543,142 @@ ChannelResult nullOneChannel(GldAds1256Reader& ads, GldDacMux& dac,
     }
     settle(tickFn);
 
+    constexpr uint16_t BASELINE_PRESCAN_MAX = 10;
     emitLog(logFn, "NULLING_BASELINE_START ch=%u sensor=%s codeMin=%u codeMax=%u avgCount=%u",
             static_cast<unsigned>(ch), sensorName(ch),
             static_cast<unsigned>(board::GLD_DAC_CODE_MIN),
-            static_cast<unsigned>(BASELINE_PRESCAN_MAX),
-            static_cast<unsigned>(AVG_COUNT));
-    float baselineSum  = 0.0f;
-    uint8_t baseCount  = 0;
+            static_cast<unsigned>(BASELINE_PRESCAN_MAX), static_cast<unsigned>(AVG_COUNT));
+    float baselineSum = 0.0f;
+    float baselineSpreads[11]{};
+    uint8_t baselineCount = 0;
     for (uint16_t code = 0; code <= BASELINE_PRESCAN_MAX; ++code) {
-        const bool writeOk = dac.writeDac(ch, code);
+        const bool writeOk = writeDacRamped(dac, ch, code, tickFn);
         settle(tickFn);
-        const Snapshot s = readAverage(ads, ch, AVG_COUNT, tickFn);
-        emitLog(logFn, "NULLING_BASELINE_STEP ch=%u sensor=%s code=%u voltage=%.6f valid=%u write=%u",
-                static_cast<unsigned>(ch), sensorName(ch),
-                static_cast<unsigned>(code), s.voltage,
-                s.valid ? 1u : 0u, writeOk ? 1u : 0u);
-        if (s.valid) { baselineSum += s.voltage; ++baseCount; }
+        // Baseline intentionally records the observed spread before deciding
+        // the channel's own stability limit; do not apply a global gate here.
+        const Snapshot sample = readSettledAverage(ads, ch, AVG_COUNT, tickFn, 1.0e9f);
+        emitStability(logFn, "baseline", ch, code, sample);
+        emitLog(logFn, "NULLING_BASELINE_STEP ch=%u sensor=%s code=%u voltage=%.9f valid=%u write=%u",
+                static_cast<unsigned>(ch), sensorName(ch), static_cast<unsigned>(code),
+                sample.voltage, sample.valid ? 1u : 0u, writeOk ? 1u : 0u);
+        if (sample.valid) {
+            baselineSum += sample.voltage;
+            baselineSpreads[baselineCount] = sample.spreadV;
+            ++baselineCount;
+        }
     }
-    if (baseCount == 0) {
+    if (baselineCount == 0) {
         r.errorCode = 2;
         emitLog(logFn, "NULLING_CH_FAIL ch=%u sensor=%s stage=baseline error=%u reason=%s",
                 static_cast<unsigned>(ch), sensorName(ch),
                 static_cast<unsigned>(r.errorCode), channelErrorName(r.errorCode));
         return r;
     }
-    r.baselineV = baselineSum / static_cast<float>(baseCount);
-    emitLog(logFn, "NULLING_BASELINE_DONE ch=%u sensor=%s baseline=%.6f validSamples=%u",
+    r.baselineV = baselineSum / static_cast<float>(baselineCount);
+    float medianSpreadV = 0.0f;
+    float madSpreadV = 0.0f;
+    const float stabilityToleranceV = adaptiveStabilityToleranceV(
+        baselineSpreads, baselineCount, medianSpreadV, madSpreadV);
+    emitLog(logFn, "NULLING_BASELINE_DONE ch=%u sensor=%s baseline=%.6f validSamples=%u medianSpread=%.9f madSpread=%.9f stabilityTolerance=%.9f",
             static_cast<unsigned>(ch), sensorName(ch), r.baselineV,
-            static_cast<unsigned>(baseCount));
+            static_cast<unsigned>(baselineCount), medianSpreadV, madSpreadV, stabilityToleranceV);
 
+    GldNullingConfig channelConfig = config;
+    channelConfig.thresholdV = effectiveThresholdForChannel(
+        r.baselineV, stabilityToleranceV, config);
+    emitLog(logFn, "NULLING_THRESHOLD_DERIVED ch=%u sensor=%s effective=%.9f baselineTerm=%.9f noiseTerm=%.9f floor=%.9f ratio=%.3f noiseMultiplier=%.3f",
+            static_cast<unsigned>(ch), sensorName(ch), channelConfig.thresholdV,
+            fabsf(r.baselineV) * BASELINE_THRESHOLD_RATIO,
+            stabilityToleranceV * BASELINE_NOISE_MULTIPLIER,
+            config.thresholdV, BASELINE_THRESHOLD_RATIO, BASELINE_NOISE_MULTIPLIER);
+
+    uint16_t low = 0;
+    uint16_t high = 0;
+    uint16_t resumeFrom = 0;
     emitStageTransition(logFn, ch, "baseline", "exponential");
-    pauseForMonitor(tickFn);
-
-    uint16_t low = 0, high = 0;
-    if (!findRange(ads, dac, ch, r.baselineV, low, high, logFn, tickFn, config)) {
-        r.errorCode = 3;
-        emitLog(logFn, "NULLING_CH_FAIL ch=%u sensor=%s stage=exponential error=%u reason=%s",
+    uint16_t selected = 0;
+    while (true) {
+        if (!findRange(ads, dac, ch, r.baselineV, low, high, logFn, tickFn, channelConfig,
+                       stabilityToleranceV, resumeFrom)) {
+            r.errorCode = 3;
+            emitLog(logFn, "NULLING_CH_FAIL ch=%u sensor=%s stage=exponential error=%u reason=%s",
+                    static_cast<unsigned>(ch), sensorName(ch), static_cast<unsigned>(r.errorCode),
+                    channelErrorName(r.errorCode));
+            return r;
+        }
+        if (!recheckExponentialCrossing(ads, dac, ch, r.baselineV, high, logFn, tickFn,
+                                        channelConfig, stabilityToleranceV)) {
+            emitLog(logFn, "NULLING_EXP_BRACKET_REJECT ch=%u sensor=%s low=%u high=%u reason=recheck_failed",
+                    static_cast<unsigned>(ch), sensorName(ch),
+                    static_cast<unsigned>(low), static_cast<unsigned>(high));
+            resumeFrom = high;
+            continue;
+        }
+        emitStageTransition(logFn, ch, "exponential", "binary");
+        selected = binarySearch(ads, dac, ch, r.baselineV, low, high, logFn, tickFn,
+                                channelConfig, stabilityToleranceV);
+        emitStageTransition(logFn, ch, "binary", "confirm");
+        if (confirmCode(ads, dac, ch, r.baselineV, selected, high, logFn, tickFn,
+                        channelConfig, stabilityToleranceV)) {
+            break;
+        }
+        emitLog(logFn, "NULLING_CONFIRM_RESUME_EXP ch=%u sensor=%s low=%u high=%u selected=%u reason=confirm_failed",
                 static_cast<unsigned>(ch), sensorName(ch),
-                static_cast<unsigned>(r.errorCode), channelErrorName(r.errorCode));
-        return r;
+                static_cast<unsigned>(low), static_cast<unsigned>(high),
+                static_cast<unsigned>(selected));
+        resumeFrom = high;
+        emitStageTransition(logFn, ch, "confirm", "exponential_resume");
     }
 
-    emitStageTransition(logFn, ch, "exponential", "binary");
-    pauseForMonitor(tickFn);
-
-    uint16_t selected = binarySearch(ads, dac, ch, r.baselineV, low, high, logFn, tickFn, config);
-
-    emitStageTransition(logFn, ch, "binary", "confirm");
-    pauseForMonitor(tickFn);
-
-    if (!confirmCode(ads, dac, ch, r.baselineV, selected, logFn, tickFn, config)) {
-        r.errorCode = 4;
-        emitLog(logFn, "NULLING_CH_FAIL ch=%u sensor=%s stage=confirm error=%u reason=%s",
-                static_cast<unsigned>(ch), sensorName(ch),
-                static_cast<unsigned>(r.errorCode), channelErrorName(r.errorCode));
-        return r;
-    }
-
-    if (!dac.writeDac(ch, selected)) {
+    if (!writeDacRamped(dac, ch, selected, tickFn)) {
         r.errorCode = 5;
         emitLog(logFn, "NULLING_CH_FAIL ch=%u sensor=%s stage=final_write error=%u reason=%s",
-                static_cast<unsigned>(ch), sensorName(ch),
-                static_cast<unsigned>(r.errorCode), channelErrorName(r.errorCode));
+                static_cast<unsigned>(ch), sensorName(ch), static_cast<unsigned>(r.errorCode),
+                channelErrorName(r.errorCode));
         return r;
     }
     settle(tickFn);
-    Snapshot after = readAverage(ads, ch, AVG_COUNT, tickFn);
+    Snapshot after = readSettledAverage(ads, ch, AVG_COUNT, tickFn, stabilityToleranceV);
+    emitStability(logFn, "final", ch, selected, after);
     r.afterV = after.voltage;
     if (!after.valid) {
         r.errorCode = 6;
         emitLog(logFn, "NULLING_CH_FAIL ch=%u sensor=%s stage=after_read error=%u reason=%s",
-                static_cast<unsigned>(ch), sensorName(ch),
-                static_cast<unsigned>(r.errorCode), channelErrorName(r.errorCode));
+                static_cast<unsigned>(ch), sensorName(ch), static_cast<unsigned>(r.errorCode),
+                channelErrorName(r.errorCode));
         return r;
     }
-
-    // Right at the threshold boundary, noise can flip a verified read back
-    // under the threshold on this independent final read. Keep nudging the DAC
-    // code up one LSB at a time and re-checking before failing.
-    const float thresholdV = dynamicThresholdForBaseline(r.baselineV, config);
-    const float targetV = fmaxf(targetForBaseline(r.baselineV, thresholdV),
-                                 requiredFinalVoltage(config));
     uint8_t finalBumps = 0;
-    while (!meetsNullingTarget(after.voltage, r.baselineV, thresholdV, config) &&
+    float afterDelta = after.voltage - r.baselineV;
+    bool afterZeroMargin = after.voltage >= -channelConfig.thresholdV;
+    while ((after.voltage < channelConfig.minFinalV || !afterZeroMargin || afterDelta < channelConfig.thresholdV) &&
            finalBumps < FINAL_CHECK_MAX_BUMPS &&
            selected < board::GLD_DAC_CODE_MAX) {
         ++selected;
         ++finalBumps;
-        emitLog(logFn, "NULLING_FINAL_BUMP ch=%u sensor=%s code=%u previousVoltage=%.9f bump=%u",
-                static_cast<unsigned>(ch), sensorName(ch),
-                static_cast<unsigned>(selected), after.voltage,
-                static_cast<unsigned>(finalBumps));
-        if (!dac.writeDac(ch, selected)) {
-            r.errorCode = 5;
-            emitLog(logFn, "NULLING_CH_FAIL ch=%u sensor=%s stage=final_write error=%u reason=%s",
-                    static_cast<unsigned>(ch), sensorName(ch),
-                    static_cast<unsigned>(r.errorCode), channelErrorName(r.errorCode));
-            return r;
-        }
+        if (!writeDacRamped(dac, ch, selected, tickFn)) { r.errorCode = 5; return r; }
         settle(tickFn);
-        after = readAverage(ads, ch, AVG_COUNT, tickFn);
+        after = readSettledAverage(ads, ch, AVG_COUNT, tickFn, stabilityToleranceV);
+        emitStability(logFn, "final_bump", ch, selected, after);
         r.afterV = after.voltage;
-        if (!after.valid) {
-            r.errorCode = 6;
-            emitLog(logFn, "NULLING_CH_FAIL ch=%u sensor=%s stage=after_read error=%u reason=%s",
-                    static_cast<unsigned>(ch), sensorName(ch),
-                    static_cast<unsigned>(r.errorCode), channelErrorName(r.errorCode));
-            return r;
-        }
+        if (!after.valid) { r.errorCode = 6; return r; }
+        afterDelta = after.voltage - r.baselineV;
+        afterZeroMargin = after.voltage >= -channelConfig.thresholdV;
     }
-
-    const float afterDelta = after.voltage - r.baselineV;
-    if (!meetsNullingTarget(after.voltage, r.baselineV, thresholdV, config)) {
+    if (after.voltage < channelConfig.minFinalV || !afterZeroMargin || afterDelta < channelConfig.thresholdV) {
         r.errorCode = 7;
-        emitLog(logFn, "NULLING_CH_FAIL ch=%u sensor=%s stage=final_check error=%u reason=%s after=%.9f delta=%.6f threshold=%.6f target=%.6f bumps=%u",
-                static_cast<unsigned>(ch), sensorName(ch),
-                static_cast<unsigned>(r.errorCode), channelErrorName(r.errorCode),
-                after.voltage, afterDelta, thresholdV, targetV,
-                static_cast<unsigned>(finalBumps));
+        emitLog(logFn, "NULLING_CH_FAIL ch=%u sensor=%s stage=final_check error=%u reason=%s after=%.9f delta=%.6f threshold=%.6f min=%.9f zeroMargin=%u bumps=%u",
+                static_cast<unsigned>(ch), sensorName(ch), static_cast<unsigned>(r.errorCode),
+                channelErrorName(r.errorCode), after.voltage, afterDelta, channelConfig.thresholdV, channelConfig.minFinalV,
+                afterZeroMargin ? 1u : 0u, static_cast<unsigned>(finalBumps));
         return r;
     }
-
     r.dacCode  = selected;
     r.success  = true;
     r.errorCode = 0;
-    emitLog(logFn, "NULLING_CH_OK ch=%u sensor=%s dac=%u baseline=%.6f after=%.9f delta=%.6f threshold=%.6f target=%.6f",
+    emitLog(logFn, "NULLING_CH_OK ch=%u sensor=%s dac=%u baseline=%.6f after=%.9f delta=%.6f threshold=%.6f",
             static_cast<unsigned>(ch), sensorName(ch),
-            static_cast<unsigned>(r.dacCode), r.baselineV, r.afterV,
-            afterDelta, thresholdV, targetV);
+            static_cast<unsigned>(r.dacCode), r.baselineV, r.afterV, afterDelta, channelConfig.thresholdV);
     return r;
 }
 
@@ -483,16 +688,24 @@ GldNullingServiceResult runNullingService(GldAds1256Reader& ads,
                                           GldDacMux& dac,
                                           GldNullingLogFn logFn,
                                           GldNullingTickFn tickFn,
-                                          const GldNullingConfig& config) {
+                                          const GldNullingConfig& config,
+                                          uint8_t channelMask) {
     GldNullingServiceResult out{};
     out.status = GldNullingStatus::Ok;
 
-    emitLog(logFn, "NULLING_SERVICE_START channels=%u avgCount=%u confirmCount=%u settleMs=%lu thresholdV=%.6f thresholdMode=baseline_relative thresholdRatio=%.6f minFinalV=%.6f",
-            static_cast<unsigned>(board::SENSOR_COUNT),
+    const uint8_t validMask = static_cast<uint8_t>((1u << board::SENSOR_COUNT) - 1u);
+    const uint8_t selectedMask = static_cast<uint8_t>(channelMask & validMask);
+    for (uint8_t ch = 0; ch < board::SENSOR_COUNT; ++ch) {
+        if ((selectedMask & static_cast<uint8_t>(1u << ch)) != 0u) ++out.attemptedCount;
+    }
+
+    out.profile.algorithmVersion = NULLING_PROFILE_ALGORITHM_VERSION;
+    emitLog(logFn, "NULLING_SERVICE_START channels=%u channelMask=0x%02X avgCount=%u confirmCount=%u settleMs=%lu stabilityWindows=%u stabilityGapMs=%lu stability=adaptive_per_channel thresholdV=%.6f minFinalV=%.6f",
+            static_cast<unsigned>(out.attemptedCount), static_cast<unsigned>(selectedMask),
             static_cast<unsigned>(AVG_COUNT),
-            static_cast<unsigned>(CONFIRM_COUNT),
-            static_cast<unsigned long>(SETTLE_MS),
-            config.thresholdV, BASELINE_THRESHOLD_RATIO, requiredFinalVoltage(config));
+            static_cast<unsigned>(CONFIRM_COUNT), static_cast<unsigned long>(SETTLE_MS),
+            static_cast<unsigned>(STABILITY_WINDOW_COUNT), static_cast<unsigned long>(STABILITY_SAMPLE_GAP_MS),
+            config.thresholdV, config.minFinalV);
 
     if (!ads.ready()) {
         serviceTick(tickFn);
@@ -506,9 +719,22 @@ GldNullingServiceResult runNullingService(GldAds1256Reader& ads,
         emitLog(logFn, "NULLING_SERVICE_BLOCKED status=%s", gldNullingStatusName(out.status));
         return out;
     }
+    if (selectedMask == 0u) {
+        out.status = GldNullingStatus::AllChannelsFailed;
+        emitLog(logFn, "NULLING_SERVICE_BLOCKED status=%s reason=no_channels_selected", gldNullingStatusName(out.status));
+        return out;
+    }
+
+    // All sensor bridges warm up together before the caller begins its
+    // board-specific DAC-write policy.  GLD2 may then isolate the active
+    // module if an all-rails-on I2C path is not electrically reliable.
+    emitLog(logFn, "NULLING_SENSOR_POWER_MODE=all_on_warmup_dac_policy=caller_managed warmupMs=%lu",
+            static_cast<unsigned long>(NULLING_ALL_SENSORS_WARMUP_MS));
+    warmupAllSensorsWithCountdown(logFn, tickFn);
 
     uint8_t successes = 0;
     for (uint8_t ch = 0; ch < board::SENSOR_COUNT; ++ch) {
+        if ((selectedMask & static_cast<uint8_t>(1u << ch)) == 0u) continue;
         serviceTick(tickFn);
         const ChannelResult cr = nullOneChannel(ads, dac, ch, logFn, tickFn, config);
         out.profile.dacCode[ch]   = cr.dacCode;
@@ -521,13 +747,14 @@ GldNullingServiceResult runNullingService(GldAds1256Reader& ads,
     out.successCount = successes;
     if (successes == 0) {
         out.status = GldNullingStatus::AllChannelsFailed;
-    } else if (successes < board::SENSOR_COUNT) {
+    } else if (successes < out.attemptedCount) {
         out.status = GldNullingStatus::PartialSuccess;
     }
+    emitLog(logFn, "NULLING_SENSOR_POWER_RESTORE=CALLER_MANAGED");
     emitLog(logFn, "NULLING_SERVICE_DONE status=%s successCount=%u/%u",
             gldNullingStatusName(out.status),
             static_cast<unsigned>(out.successCount),
-            static_cast<unsigned>(board::SENSOR_COUNT));
+            static_cast<unsigned>(out.attemptedCount));
     return out;
 }
 
@@ -667,10 +894,6 @@ bool loadNullingConfig(GldNullingConfig& out) {
     const size_t read = prefs.getBytes(NVS_CONFIG_KEY, &out, sizeof(out));
     prefs.end();
     if (read != sizeof(GldNullingConfig) || !isNullingConfigValid(out)) return false;
-    // Keep an older persisted negative floor from weakening the positive-result
-    // invariant after firmware upgrade. It is normalized in RAM; a subsequent
-    // config Apply persists the normalized value.
-    out.minFinalV = fmaxf(out.minFinalV, 0.0f);
     return true;
 }
 

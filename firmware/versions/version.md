@@ -10,6 +10,113 @@ YYYY-MM-DD HH:mm:ss Asia/Jakarta
 
 ---
 
+## GLD v0.8.19 / CH v0.8.0 / Gateway v0.2.0 - 2026-08-25 Asia/Jakarta
+
+**Summary:** Product firmware now has explicit, audited board profiles for the
+rectangle (kecil) and circle (besar) CH/Gateway PCBs. Gateway non-TLS and TLS
+remain separate selectable environments, while GLD2 alarm output defaults to
+automatic inference control and can be placed in a session-only manual-test
+mode from the operator application.
+
+### Behavior
+
+- Operator Hub requires an explicit board choice for every CH/Gateway upload;
+  Gateway also requires an explicit MQTT non-TLS or MQTT over TLS choice.
+- Product environments are `ch_small`, `ch_large`, `gw_small`, `gw_large`,
+  `gw_small_tls`, and `gw_large_tls`. Legacy aliases remain defined but are not
+  selected implicitly by Simple Hub.
+- CH and Gateway report the compiled `boardProfile` for post-flash readback.
+  Gateway additionally reports its MQTT transport and TLS capability markers.
+- Gateway TLS is fail-closed: MQTT stays blocked until a single canonical public
+  Root CA PEM block (256-3900 bytes), a valid NTP host, Wi-Fi, and trusted system time are
+  available. Root CA input is canonicalized and its canonical size is checked
+  again before the exact serialized command is bounded to the firmware's
+  6143-byte serial-line limit. The TLS client uses `setCACert`; insecure TLS is
+  not enabled.
+- Network credentials and TLS material are redacted from operator serial-event
+  output. Wi-Fi/MQTT/NTP fields are rejected when their UTF-8 byte lengths exceed
+  their firmware buffers instead of being silently truncated. Runtime network
+  updates use a staged candidate and a two-slot, generation-bound NVS journal:
+  the inactive namespace is fully cleared and verified, the complete candidate
+  is written with magic last and read back key-by-key, then one selector entry
+  commits the new slot. Failed/power-interrupted writes retain the previously
+  selected slot (or legacy/default source during first migration), and the live
+  RAM configuration changes only after verified commit. Legacy storage is
+  reclaimed only after the journal selector is recoverable.
+- The NVS record schema is identical in TLS and non-TLS Gateway builds. A
+  persisted `tlsReady` marker is forced false by non-TLS writes, so switching
+  TLS -> non-TLS -> TLS cannot silently reactivate an old trust decision; TLS
+  must be provisioned again before MQTT is allowed.
+- Configurable LoRa operating frequency is restricted to 920-923 MHz in CH,
+  Gateway, and their operator controls.
+- GLD2 alarm mode defaults to `AUTO`; `MANUAL` and its ON/OFF command are
+  session-only, accepted solely for controlled output testing, and every boot
+  restores `AUTO`. Inference/radio alarm state remains truthful in either mode.
+- GLD2 drives the external 24 V alarm path as a steady command using the safe
+  sequence EN_BOOST HIGH then GPIO40 HIGH for ON, and GPIO40 LOW then EN_BOOST
+  LOW for OFF. The external alarm device owns its one-second pulse pattern.
+- Generated operator-package manifests include the selected board shape and
+  Gateway transport. Provenance records the Git state of the scoped
+  `firmware/` tree before package staging, a deterministic SHA-256 snapshot of
+  the firmware workspace (excluding `.pio`, Python caches, and bytecode), and
+  the honest package timestamp. The workspace snapshot also covers tests,
+  tools, and notes; it is not labelled as an exact compiler-input hash.
+- Firmware upload with NVS preservation verifies the existing device identity;
+  upload with an explicit NVS reset instead verifies the documented compile-time
+  default (`1001`, `0010`, or `0001`) and reports that reset explicitly.
+- Operator Hub preflight readiness requires the exact `latest` directory for
+  all ten selectable packages; legacy aliases and old archives cannot make
+  firmware flashing appear ready. Hub API/bootstrap
+  requests also require an exact loopback Host and matching Origin to prevent
+  DNS-rebinding token exposure.
+- Current GLD firmware uses explicit AUTO/MANUAL alarm modes. The Expert console
+  keeps a separate legacy path for old `manualOnly` firmware so it never sends
+  the unsupported mode command to those devices.
+- Gateway serial formatting reserves a 512-byte buffer for the status JSON used
+  by board/TLS post-flash readback.
+
+### Changed Areas
+
+- `firmware/platformio.ini`
+- `firmware/ch/include/ChBoardPinsCircle.h`
+- `firmware/ch/include/ChBoardPinsRectangle.h`
+- `firmware/ch/src/ChStarMeshRuntimeMain.cpp`
+- `firmware/gateway/include/GatewayBoardPinsCircle.h`
+- `firmware/gateway/include/GatewayBoardPinsRectangle.h`
+- `firmware/gateway/src/GatewayMqttMeshMain.cpp`
+- `firmware/gld/include/GldAlarmControl.h`
+- `firmware/gld/include/GldCommandParser.h`
+- `firmware/gld/src/GldCommandParser.cpp`
+- `firmware/gld/src/GldUnifiedMain.cpp`
+- `firmware/shared/include/FirmwareVersion.h`
+- `firmware/tools/operator_package_post.py`
+- `apps/operator-hub/`
+- `apps/ch-operator/`
+- `apps/gw-operator/`
+- `apps/gld-operator/`
+
+### Test Result
+
+- Isolated builds: `gld_v2`, `ch_small`, `ch_large`, `gw_small`, `gw_large`,
+  `gw_small_tls`, and `gw_large_tls` -> success.
+- Operator Hub board/package/TLS/alarm/origin-security contracts -> 51/51 pass.
+- Board pin/radio/TLS/NVS-journal/status-buffer source contracts -> 12/12 pass.
+- Gateway secret-redaction tests -> 2/2 pass.
+- Gateway MESH JavaScript tests -> 3/3 pass.
+- GLD alarm-control source contract and operator JavaScript syntax -> pass.
+- Operator package provenance and child-package validator contracts -> 9/9
+  pass, including legacy manifest compatibility.
+- `python firmware/tests/run_tests.py` -> 46/52 pass. The six remaining
+  failures are pre-existing stale assertions also unsatisfied by the baseline
+  commit (route-verify literal parsing, CH-GW mirror equality, legacy package
+  generator wording, obsolete ADS1256 include, removed `echoTypedChar`, and an
+  obsolete Gateway payload-write literal).
+- `git diff --check` -> pass with line-ending normalization warnings only.
+- No firmware upload, COM-port access, device reset, NVS mutation, RF test, or
+  live MQTT/TLS broker test was performed for this release.
+
+---
+
 ## GLD v0.8.14 / CH v0.7.1 / Gateway v0.1.3 - 2026-07-20 Asia/Jakarta
 
 **Summary:** Battery inference now follows a bounded wake procedure and adds a

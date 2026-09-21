@@ -1,0 +1,288 @@
+{"kind":"slide","id":"sl/y90nupkv","slide":1,"title":"PERTAMINA • LGU | INTERNAL","textShapes":5}
+{"kind":"textbox","id":"sh/wn6dc7eh","slide":1,"name":"cover-kicker","text":"PERTAMINA • LGU | INTERNAL","textPreview":"PERTAMINA • LGU | INTERNAL","textChars":26,"textLines":1,"bbox":[52,42,480,22]}
+{"kind":"textbox","id":"sh/547294r6","slide":1,"name":"cover-title","text":"Ringkasan Meeting\ndan Rencana Implementasi","textPreview":"Ringkasan Meeting | dan Rencana Implementasi","textChars":42,"textLines":2,"bbox":[52,150,565,190]}
+{"kind":"textbox","id":"sh/k3yl0zql","slide":1,"name":"cover-subtitle","text":"Keputusan terkonfirmasi, arsitektur, area SRU, kebutuhan site, dan rencana menuju target September 2027.","textPreview":"Keputusan terkonfirmasi, arsitektur, area SRU, kebutuhan site, dan rencana menuju target September 2027.","textChars":104,"textLines":1,"bbox":[52,390,535,110]}
+{"kind":"shape","id":"sh/7qp4be9c","slide":1,"name":"cover-accent","bbox":[52,548,360,8]}
+{"kind":"textbox","id":"sh/65g3298r","slide":1,"name":"cover-date","text":"19 AGUSTUS 2026","textPreview":"19 AGUSTUS 2026","textChars":15,"textLines":1,"bbox":[52,578,300,26]}
+{"kind":"shape","id":"sh/ts7md4r2","slide":1,"name":"cover-image-backing","bbox":[658,42,570,588]}
+{"kind":"shape","id":"sh/sryl4zqx","slide":1,"name":"cover-footer-rule","bbox":[52,668,1176,1]}
+{"kind":"textbox","id":"sh/fu94fe98","slide":1,"name":"cover-footer","text":"INTERNAL • TERKONFIRMASI","textPreview":"INTERNAL • TERKONFIRMASI","textChars":24,"textLines":1,"bbox":[52,680,360,20]}
+{"kind":"image","id":"im/ipofexcz","slide":1,"name":"","bbox":[658,42,570,588]}
+{"kind":"notes","id":"nt/y90nupkv","slide":1,"text":"[Sources]\n- Konfirmasi pengguna, 19 Agustus 2026.\n- Rekaman dan catatan meeting."}
+{"kind":"slide","id":"sl/hwbqtkby","slide":2,"title":"OUTLINE","textShapes":5}
+{"kind":"textbox","id":"sh/r65knqtk","slide":2,"name":"section-2","text":"OUTLINE","textPreview":"OUTLINE","textChars":7,"textLines":1,"bbox":[52,30,480,18]}
+{"kind":"textbox","id":"sh/9072xkry","slide":2,"name":"title-2","text":"Outline pembahasan","textPreview":"Outline pembahasan","textChars":18,"textLines":1,"bbox":[52,58,1176,60]}
+{"kind":"shape","id":"sh/ozy1ofad","slide":2,"name":"footer-rule-2","bbox":[52,668,1176,1]}
+{"kind":"textbox","id":"sh/b29kza94","slide":2,"name":"footer-left-2","text":"INTERNAL • 19 AGUSTUS 2026","textPreview":"INTERNAL • 19 AGUSTUS 2026","textChars":26,"textLines":1,"bbox":[52,680,360,20]}
+{"kind":"textbox","id":"sh/a10jqpsj","slide":2,"name":"footer-number-2","text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[1178,680,50,20]}
+{"kind":"textbox","id":"sh/x4r21kru","slide":2,"name":"outline-intro","text":"Lima bagian merangkum keputusan, rancangan, kebutuhan implementasi, dan tindak lanjut.","textPreview":"Lima bagian merangkum keputusan, rancangan, kebutuhan implementasi, dan tindak lanjut.","textChars":86,"textLines":1,"bbox":[52,132,950,32]}
+{"kind":"table","id":"tb/fm9kvatk","slide":2,"name":"","rows":5,"cols":2,"preview":"01 | Hasil meeting dan agenda kunjungan","bbox":[52,196,1176,405]}
+{"kind":"notes","id":"nt/hwbqtkby","slide":2,"text":"[Sources]\n- Konfirmasi pengguna, 19 Agustus 2026.\n- Sintesis pembahasan program Kilang Cilacap."}
+{"kind":"slide","id":"sl/ofy9wn61","slide":3,"title":"HASIL MEETING","textShapes":13}
+{"kind":"textbox","id":"sh/ja54na9g","slide":3,"name":"section-3","text":"HASIL MEETING","textPreview":"HASIL MEETING","textChars":13,"textLines":1,"bbox":[52,30,480,18]}
+{"kind":"textbox","id":"sh/cza94vmx","slide":3,"name":"title-3","text":"Arah rapat: target kerja dan agenda kunjungan","textPreview":"Arah rapat: target kerja dan agenda kunjungan","textChars":45,"textLines":1,"bbox":[52,58,1176,60]}
+{"kind":"shape","id":"sh/d0jax03i","slide":3,"name":"footer-rule-3","bbox":[52,668,1176,1]}
+{"kind":"textbox","id":"sh/298ryl4v","slide":3,"name":"footer-left-3","text":"INTERNAL • 19 AGUSTUS 2026","textPreview":"INTERNAL • 19 AGUSTUS 2026","textChars":26,"textLines":1,"bbox":[52,680,360,20]}
+{"kind":"textbox","id":"sh/3ah8rqlg","slide":3,"name":"footer-number-3","text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[1178,680,50,20]}
+{"kind":"textbox","id":"sh/obq90bml","slide":3,"name":"meeting-intro","text":"Catatan meeting dan konfirmasi lanjutan menetapkan empat arah utama:","textPreview":"Catatan meeting dan konfirmasi lanjutan menetapkan empat arah utama:","textChars":68,"textLines":1,"bbox":[52,132,560,32]}
+{"kind":"textbox","id":"sh/pcjqtg36","slide":3,"name":"meeting-metric-1","text":"SEP 2027","textPreview":"SEP 2027","textChars":8,"textLines":1,"bbox":[52,190,245,55]}
+{"kind":"textbox","id":"sh/m5cra54z","slide":3,"name":"meeting-metric-1-label","text":"Target fase awal untuk Kilang Cilacap.","textPreview":"Target fase awal untuk Kilang Cilacap.","textChars":38,"textLines":1,"bbox":[52,250,245,92]}
+{"kind":"textbox","id":"sh/n6ls3alk","slide":3,"name":"meeting-metric-2","text":"AKHIR SEP 2026","textPreview":"AKHIR SEP 2026","textChars":14,"textLines":1,"bbox":[330,190,280,55]}
+{"kind":"textbox","id":"sh/n2l4fq98","slide":3,"name":"meeting-metric-2-label","text":"Paket support, kabel, material, dan drawing disiapkan.","textPreview":"Paket support, kabel, material, dan drawing disiapkan.","textChars":54,"textLines":1,"bbox":[330,250,280,92]}
+{"kind":"shape","id":"sh/m1c3mlsn","slide":3,"name":"meeting-correction","bbox":[52,382,558,146]}
+{"kind":"textbox","id":"sh/943mhgre","slide":3,"name":"meeting-correction-title","text":"“3 minggu” mengacu pada kunjungan","textPreview":"“3 minggu” mengacu pada kunjungan","textChars":33,"textLines":1,"bbox":[76,406,510,34]}
+{"kind":"textbox","id":"sh/83ulovat","slide":3,"name":"meeting-correction-body","text":"Per 10 Agustus 2026, kalimat “3 minggu lagi” berarti rencana kunjungan sekitar akhir Agustus 2026.","textPreview":"Per 10 Agustus 2026, kalimat “3 minggu lagi” berarti rencana kunjungan sekitar akhir Agustus 2026.","textChars":98,"textLines":1,"bbox":[76,454,510,58]}
+{"kind":"textbox","id":"sh/v6l4jq94","slide":3,"name":"meeting-contract","text":"Ruang lingkup Cilacap: 3 unit GLD; jumlah CH menyesuaikan kebutuhan cakupan area SRU.","textPreview":"Ruang lingkup Cilacap: 3 unit GLD; jumlah CH menyesuaikan kebutuhan cakupan area SRU.","textChars":85,"textLines":1,"bbox":[52,558,558,52]}
+{"kind":"shape","id":"sh/a5c3ql8z","slide":3,"name":"meeting-image-backing","bbox":[658,132,570,478]}
+{"kind":"textbox","id":"sh/x8nml0ra","slide":3,"name":"meeting-image-caption","text":"Catatan meeting sebagai referensi pembahasan.","textPreview":"Catatan meeting sebagai referensi pembahasan.","textChars":45,"textLines":1,"bbox":[658,620,570,28]}
+{"kind":"image","id":"im/tk36hgva","slide":3,"name":"","bbox":[658,132,570,478]}
+{"kind":"notes","id":"nt/ofy9wn61","slide":3,"text":"[Sources]\n- Konfirmasi pengguna, 19 Agustus 2026.\n- Rekaman dan catatan meeting.\n- Acuan tanggal: 10 Agustus 2026; frasa tiga minggu merujuk pada rencana kunjungan."}
+{"kind":"slide","id":"sl/jyx0ra1s","slide":4,"title":"ARSITEKTUR SISTEM","textShapes":18}
+{"kind":"textbox","id":"sh/tsrqlc7u","slide":4,"name":"section-4","text":"ARSITEKTUR SISTEM","textPreview":"ARSITEKTUR SISTEM","textChars":17,"textLines":1,"bbox":[52,30,480,18]}
+{"kind":"textbox","id":"sh/1cj2d8b6","slide":4,"name":"title-4","text":" Alur sistem GLD–CH–Gateway–Server","textPreview":"Alur sistem GLD–CH–Gateway–Server","textChars":34,"textLines":1,"bbox":[52,58,1176,60]}
+{"kind":"shape","id":"sh/0ba143al","slide":4,"name":"footer-rule-4","bbox":[52,668,1176,1]}
+{"kind":"textbox","id":"sh/rm1k7yt4","slide":4,"name":"footer-left-4","text":"INTERNAL • 19 AGUSTUS 2026","textPreview":"INTERNAL • 19 AGUSTUS 2026","textChars":26,"textLines":1,"bbox":[52,680,360,20]}
+{"kind":"textbox","id":"sh/ql8jytsj","slide":4,"name":"footer-number-4","text":"04","textPreview":"04","textChars":2,"textLines":1,"bbox":[1178,680,50,20]}
+{"kind":"textbox","id":"sh/doj29oba","slide":4,"name":"architecture-sub","text":"Tiga GLD menjadi titik awal di Cilacap; jumlah CH menyesuaikan cakupan area SRU.","textPreview":"Tiga GLD menjadi titik awal di Cilacap; jumlah CH menyesuaikan cakupan area SRU.","textChars":80,"textLines":1,"bbox":[52,130,1176,52]}
+{"kind":"shape","id":"sh/sna103ap","slide":4,"name":"arrow-gld-ch","bbox":[278,292,92,34]}
+{"kind":"shape","id":"sh/3ihk3et8","slide":4,"name":"arrow-ch-gw","bbox":[574,292,92,34]}
+{"kind":"shape","id":"sh/ih8ju9sn","slide":4,"name":"arrow-gw-server","bbox":[870,292,92,34]}
+{"kind":"shape","id":"sh/kbm987y5","slide":4,"name":"node-gld","bbox":[70,230,208,160]}
+{"kind":"shape","id":"sh/5cva1cfq","slide":4,"name":"node-ch","bbox":[366,230,208,160]}
+{"kind":"shape","id":"sh/i94r6xgz","slide":4,"name":"node-gw","bbox":[662,230,208,160]}
+{"kind":"shape","id":"sh/jadsz2xk","slide":4,"name":"node-server","bbox":[958,230,252,160]}
+{"kind":"textbox","id":"sh/w72947yt","slide":4,"name":"node-gld-title","text":"GLD","textPreview":"GLD","textChars":3,"textLines":1,"bbox":[94,260,160,42]}
+{"kind":"textbox","id":"sh/x8vaxsfe","slide":4,"name":"node-gld-body","text":"Sensing • inferensi\nSTAR uplink","textPreview":"Sensing • inferensi | STAR uplink","textChars":31,"textLines":2,"bbox":[94,312,160,58]}
+{"kind":"textbox","id":"sh/a5kr2xg3","slide":4,"name":"node-ch-title","text":"CH","textPreview":"CH","textChars":2,"textLines":1,"bbox":[390,260,160,42]}
+{"kind":"textbox","id":"sh/v6tsv2xo","slide":4,"name":"node-ch-body","text":"STAR receiver\nMESH relay","textPreview":"STAR receiver | MESH relay","textChars":24,"textLines":2,"bbox":[390,312,160,58]}
+{"kind":"textbox","id":"sh/g36tgryd","slide":4,"name":"node-gw-title","text":"GATEWAY","textPreview":"GATEWAY","textChars":7,"textLines":1,"bbox":[686,260,160,42]}
+{"kind":"textbox","id":"sh/h4fa9wfy","slide":4,"name":"node-gw-body","text":"Bridge radio–jaringan\nAgenda bersama IT","textPreview":"Bridge radio–jaringan | Agenda bersama IT","textChars":39,"textLines":2,"bbox":[686,312,160,58]}
+{"kind":"textbox","id":"sh/p0batw72","slide":4,"name":"node-server-title","text":"SERVER","textPreview":"SERVER","textChars":6,"textLines":1,"bbox":[982,260,204,42]}
+{"kind":"textbox","id":"sh/oz29krqh","slide":4,"name":"node-server-body","text":"Broker • dashboard\nAgenda bersama IT","textPreview":"Broker • dashboard | Agenda bersama IT","textChars":36,"textLines":2,"bbox":[982,312,204,58]}
+{"kind":"textbox","id":"sh/3ytsrmpw","slide":4,"name":"link-star","text":"STAR 920 MHz","textPreview":"STAR 920 MHz","textChars":12,"textLines":1,"bbox":[270,342,110,24]}
+{"kind":"textbox","id":"sh/2xkrih8b","slide":4,"name":"link-mesh","text":"MESH 921 MHz","textPreview":"MESH 921 MHz","textChars":12,"textLines":1,"bbox":[566,342,110,24]}
+{"kind":"textbox","id":"sh/1wbapc7q","slide":4,"name":"link-mqtt","text":"JARINGAN DATA","textPreview":"JARINGAN DATA","textChars":13,"textLines":1,"bbox":[862,342,110,24]}
+{"kind":"shape","id":"sh/gv29g7q5","slide":4,"name":"architecture-note","bbox":[70,454,1140,118]}
+{"kind":"textbox","id":"sh/fu9sn2p0","slide":4,"name":"architecture-note-title","text":"Ruang lingkup pembahasan","textPreview":"Ruang lingkup pembahasan","textChars":24,"textLines":1,"bbox":[94,480,260,32]}
+{"kind":"textbox","id":"sh/et0reh8f","slide":4,"name":"architecture-note-body","text":"Alur GLD dan CH menjadi baseline sistem. Konfigurasi Gateway, jaringan, keamanan, dan server dibahas bersama tim IT sebelum ditetapkan.","textPreview":"Alur GLD dan CH menjadi baseline sistem. Konfigurasi Gateway, jaringan, keamanan, dan server dibahas bersama tim IT sebelum ditetapkan.","textChars":135,"textLines":1,"bbox":[365,474,815,62]}
+{"kind":"notes","id":"nt/jyx0ra1s","slide":4,"text":"[Sources]\n- Konfirmasi pengguna, 19 Agustus 2026.\n- Audit rangkaian, desain PCB, dan firmware."}
+{"kind":"slide","id":"sl/i107q5of","slide":5,"title":"STATUS SISTEM","textShapes":5}
+{"kind":"textbox","id":"sh/n6dcr65o","slide":5,"name":"section-5","text":"STATUS SISTEM","textPreview":"STATUS SISTEM","textChars":13,"textLines":1,"bbox":[52,30,480,18]}
+{"kind":"textbox","id":"sh/dgbulwnm","slide":5,"name":"title-5","text":"Status keputusan terkonfirmasi","textPreview":"Status keputusan terkonfirmasi","textChars":30,"textLines":1,"bbox":[52,58,1176,60]}
+{"kind":"shape","id":"sh/cf2tcr61","slide":5,"name":"footer-rule-5","bbox":[52,668,1176,1]}
+{"kind":"textbox","id":"sh/z2tcnm5s","slide":5,"name":"footer-left-5","text":"INTERNAL • 19 AGUSTUS 2026","textPreview":"INTERNAL • 19 AGUSTUS 2026","textChars":26,"textLines":1,"bbox":[52,680,360,20]}
+{"kind":"textbox","id":"sh/yhkbe1o7","slide":5,"name":"footer-number-5","text":"05","textPreview":"05","textChars":2,"textLines":1,"bbox":[1178,680,50,20]}
+{"kind":"textbox","id":"sh/l4bupwny","slide":5,"name":"readiness-sub","text":"Baseline berikut memisahkan keputusan program dari agenda tindak lanjut implementasi.","textPreview":"Baseline berikut memisahkan keputusan program dari agenda tindak lanjut implementasi.","textChars":85,"textLines":1,"bbox":[52,132,1176,36]}
+{"kind":"table","id":"tb/vex4n2t4","slide":5,"name":"","rows":6,"cols":3,"preview":"Area | Keputusan saat ini | Tindak lanjut","bbox":[52,196,1176,410]}
+{"kind":"notes","id":"nt/i107q5of","slide":5,"text":"[Sources]\n- Konfirmasi pengguna, 19 Agustus 2026.\n- Rekaman dan catatan meeting."}
+{"kind":"slide","id":"sl/x8f69ofe","slide":6,"title":"DAYA GLD","textShapes":14}
+{"kind":"textbox","id":"sh/svmt4v6t","slide":6,"name":"section-6","text":"DAYA GLD","textPreview":"DAYA GLD","textChars":8,"textLines":1,"bbox":[52,30,480,18]}
+{"kind":"textbox","id":"sh/yhg7epsj","slide":6,"name":"title-6","text":"Catu daya GLD ditetapkan 24 VDC/2 A","textPreview":"Catu daya GLD ditetapkan 24 VDC/2 A","textChars":35,"textLines":1,"bbox":[52,58,1176,60]}
+{"kind":"shape","id":"sh/zi98nu94","slide":6,"name":"footer-rule-6","bbox":[52,668,1176,1]}
+{"kind":"textbox","id":"sh/87ipkzal","slide":6,"name":"footer-left-6","text":"INTERNAL • 19 AGUSTUS 2026","textPreview":"INTERNAL • 19 AGUSTUS 2026","textChars":26,"textLines":1,"bbox":[52,680,360,20]}
+{"kind":"textbox","id":"sh/98rqt4r6","slide":6,"name":"footer-number-6","text":"06","textPreview":"06","textChars":2,"textLines":1,"bbox":[1178,680,50,20]}
+{"kind":"shape","id":"sh/ml07i9sv","slide":6,"name":"power-left","bbox":[52,150,420,420]}
+{"kind":"textbox","id":"sh/7m98ru9g","slide":6,"name":"power-rating","text":"24 VDC / 2 A","textPreview":"24 VDC / 2 A","textChars":12,"textLines":1,"bbox":[82,194,360,74]}
+{"kind":"textbox","id":"sh/oryp8fah","slide":6,"name":"power-rating-label","text":"Spesifikasi suplai GLD\nyang dikonfirmasi","textPreview":"Spesifikasi suplai GLD | yang dikonfirmasi","textChars":40,"textLines":2,"bbox":[82,282,360,68]}
+{"kind":"shape","id":"sh/pc76hkr2","slide":6,"name":"power-mid-rule","bbox":[102,372,320,1]}
+{"kind":"textbox","id":"sh/h4bupgn6","slide":6,"name":"power-consumption","text":"3 UNIT GLD","textPreview":"3 UNIT GLD","textChars":10,"textLines":1,"bbox":[82,396,360,54]}
+{"kind":"textbox","id":"sh/w32twb6l","slide":6,"name":"power-consumption-label","text":"Ruang lingkup pemasangan di Kilang Cilacap","textPreview":"Ruang lingkup pemasangan di Kilang Cilacap","textChars":42,"textLines":1,"bbox":[102,464,320,58]}
+{"kind":"shape","id":"sh/v2tcn650","slide":6,"name":"power-blocker","bbox":[512,150,716,150]}
+{"kind":"textbox","id":"sh/u1kbu1ov","slide":6,"name":"power-blocker-title","text":"VALIDASI: proteksi 16 V pada jalur 24 V","textPreview":"VALIDASI: proteksi 16 V pada jalur 24 V","textChars":39,"textLines":1,"bbox":[540,178,660,38]}
+{"kind":"textbox","id":"sh/5svutgni","slide":6,"name":"power-blocker-body","text":"Komponen input bertanda 16 V harus disesuaikan atau divalidasi untuk jalur 24 V sebelum perakitan lapangan.","textPreview":"Komponen input bertanda 16 V harus disesuaikan atau divalidasi untuk jalur 24 V sebelum perakitan lapangan.","textChars":107,"textLines":1,"bbox":[540,228,660,54]}
+{"kind":"textbox","id":"sh/47mt0b6x","slide":6,"name":"power-assumption-title","text":"Fokus verifikasi daya","textPreview":"Fokus verifikasi daya","textChars":21,"textLines":1,"bbox":[512,338,340,34]}
+{"kind":"textbox","id":"sh/j6dcr65c","slide":6,"name":"power-assumptions","text":"• Cold-start dan inrush\n• Voltage drop kabel\n• Seluruh beban aktif\n• Temperatur enclosure","textPreview":"• Cold-start dan inrush | • Voltage drop kabel | • Seluruh beban aktif | • Temperatur enclosure","textChars":89,"textLines":4,"bbox":[536,388,330,150]}
+{"kind":"textbox","id":"sh/i54bylor","slide":6,"name":"power-1a-title","text":"Kriteria penerimaan","textPreview":"Kriteria penerimaan","textChars":19,"textLines":1,"bbox":[894,338,310,34]}
+{"kind":"textbox","id":"sh/twfux0ne","slide":6,"name":"power-1a","text":"Catu 24 VDC/2 A stabil pada start, operasi kontinu, transmisi radio, alarm, dan beban tambahan dalam skenario FAT.","textPreview":"Catu 24 VDC/2 A stabil pada start, operasi kontinu, transmisi radio, alarm, dan beban tambahan dalam skenario FAT.","textChars":114,"textLines":1,"bbox":[894,388,310,150]}
+{"kind":"notes","id":"nt/x8f69ofe","slide":6,"text":"[Sources]\n- Konfirmasi pengguna, 19 Agustus 2026: catu GLD 24 VDC/2 A dan ruang lingkup 3 unit.\n- Audit rangkaian dan desain PCB: komponen proteksi bertanda 16 V berada pada jalur input 24 V."}
+{"kind":"slide","id":"sl/gnmp4jqx","slide":7,"title":"FAT GLD","textShapes":13}
+{"kind":"textbox","id":"sh/4fm1wb6p","slide":7,"name":"section-7","text":"FAT GLD","textPreview":"FAT GLD","textChars":7,"textLines":1,"bbox":[52,30,480,18]}
+{"kind":"textbox","id":"sh/cb2tkvap","slide":7,"name":"title-7","text":"FAT memverifikasi kinerja catu GLD 24 VDC/2 A","textPreview":"FAT memverifikasi kinerja catu GLD 24 VDC/2 A","textChars":45,"textLines":1,"bbox":[52,58,1176,60]}
+{"kind":"shape","id":"sh/dcbud0ra","slide":7,"name":"footer-rule-7","bbox":[52,668,1176,1]}
+{"kind":"textbox","id":"sh/ydkbm5sv","slide":7,"name":"footer-left-7","text":"INTERNAL • 19 AGUSTUS 2026","textPreview":"INTERNAL • 19 AGUSTUS 2026","textChars":26,"textLines":1,"bbox":[52,680,360,20]}
+{"kind":"textbox","id":"sh/zedcfa9g","slide":7,"name":"footer-number-7","text":"07","textPreview":"07","textChars":2,"textLines":1,"bbox":[1178,680,50,20]}
+{"kind":"shape","id":"sh/kzmdova1","slide":7,"name":"fat-track","bbox":[86,580,1100,1]}
+{"kind":"shape","id":"sh/l0vuh0rm","slide":7,"name":"fat-dot-1","bbox":[86,574,12,12]}
+{"kind":"shape","id":"sh/eh0ba1sr","slide":7,"name":"fat-dot-2","bbox":[458,574,12,12]}
+{"kind":"shape","id":"sh/fi9c369c","slide":7,"name":"fat-dot-3","bbox":[830,574,12,12]}
+{"kind":"shape","id":"sh/baxkjqlk","slide":7,"name":"fat-card-1","bbox":[86,154,330,360]}
+{"kind":"shape","id":"sh/a9ojq5kz","slide":7,"name":"fat-card-2","bbox":[458,154,330,360]}
+{"kind":"shape","id":"sh/xcz2l03q","slide":7,"name":"fat-card-3","bbox":[830,154,356,360]}
+{"kind":"textbox","id":"sh/cbq1sv25","slide":7,"name":"fat-1-title","text":"1. IDENTIFIKASI","textPreview":"1. IDENTIFIKASI","textChars":15,"textLines":1,"bbox":[116,186,270,30]}
+{"kind":"textbox","id":"sh/n6x0fqlo","slide":7,"name":"fat-1-body","text":"• MPN dan lot delapan sensor MQ\n• Resistansi heater saat dingin\n• Fan, alarm, dan beban tambahan\n• Panjang serta ukuran kabel","textPreview":"• MPN dan lot delapan sensor MQ | • Resistansi heater saat dingin | • Fan, alarm, dan beban tambahan | • Panjang serta ukuran kabel","textChars":125,"textLines":4,"bbox":[116,242,270,210]}
+{"kind":"textbox","id":"sh/25ojml43","slide":7,"name":"fat-2-title","text":"2. PENGUKURAN","textPreview":"2. PENGUKURAN","textChars":13,"textLines":1,"bbox":[488,186,270,30]}
+{"kind":"textbox","id":"sh/p8fih03e","slide":7,"name":"fat-2-body","text":"• Cold-start setelah OFF ≥30 menit\n• Profil arus hingga 120 menit\n• Log input 24 V dan rail internal\n• Capture peak dengan instrumen memadai","textPreview":"• Cold-start setelah OFF ≥30 menit | • Profil arus hingga 120 menit | • Log input 24 V dan rail internal | • Capture peak dengan instrume...","textChars":140,"textLines":4,"bbox":[488,242,270,220]}
+{"kind":"textbox","id":"sh/o761ov2t","slide":7,"name":"fat-3-title","text":"3. STRESS & ACCEPT","textPreview":"3. STRESS & ACCEPT","textChars":18,"textLines":1,"bbox":[860,186,296,30]}
+{"kind":"textbox","id":"sh/f2d0b6lc","slide":7,"name":"fat-3-body","text":"• Seluruh heater + radio + RS485 + LED\n• Alarm/fan terpisah dan bersamaan\n• Kabel terpanjang + enclosure tertutup\n• Tanpa current-limit atau reset","textPreview":"• Seluruh heater + radio + RS485 + LED | • Alarm/fan terpisah dan bersamaan | • Kabel terpanjang + enclosure tertutup | • Tanpa current-l...","textChars":146,"textLines":4,"bbox":[860,242,296,220]}
+{"kind":"textbox","id":"sh/eh4jil4r","slide":7,"name":"fat-label-1","text":"INPUT TERVERIFIKASI","textPreview":"INPUT TERVERIFIKASI","textChars":19,"textLines":1,"bbox":[86,610,300,24]}
+{"kind":"textbox","id":"sh/id4ju1oz","slide":7,"name":"fat-label-2","text":"WAVEFORM & THERMAL","textPreview":"WAVEFORM & THERMAL","textChars":18,"textLines":1,"bbox":[458,610,300,24]}
+{"kind":"textbox","id":"sh/jedkn654","slide":7,"name":"fat-label-3","text":"24 VDC/2 A TERVERIFIKASI","textPreview":"24 VDC/2 A TERVERIFIKASI","textChars":24,"textLines":1,"bbox":[830,610,356,24]}
+{"kind":"notes","id":"nt/gnmp4jqx","slide":7,"text":"[Sources]\n- Konfirmasi pengguna, 19 Agustus 2026.\n- Audit rangkaian, desain PCB, dan rencana FAT internal."}
+{"kind":"slide","id":"sl/fu1gfa1s","slide":8,"title":"ENERGI CH","textShapes":11}
+{"kind":"textbox","id":"sh/ehgvihwr","slide":8,"name":"section-8","text":"ENERGI CH","textPreview":"ENERGI CH","textChars":9,"textLines":1,"bbox":[52,30,480,18]}
+{"kind":"textbox","id":"sh/18byd4zy","slide":8,"name":"title-8","text":"CH memakai 1 baterai 4000 mAh dan 2 panel 6 W","textPreview":"CH memakai 1 baterai 4000 mAh dan 2 panel 6 W","textChars":45,"textLines":1,"bbox":[52,58,1176,60]}
+{"kind":"shape","id":"sh/g72x4zyd","slide":8,"name":"footer-rule-8","bbox":[52,668,1176,1]}
+{"kind":"textbox","id":"sh/ri9g7uhw","slide":8,"name":"footer-left-8","text":"INTERNAL • 19 AGUSTUS 2026","textPreview":"INTERNAL • 19 AGUSTUS 2026","textChars":26,"textLines":1,"bbox":[52,680,360,20]}
+{"kind":"textbox","id":"sh/6h0fypgb","slide":8,"name":"footer-number-8","text":"08","textPreview":"08","textChars":2,"textLines":1,"bbox":[1178,680,50,20]}
+{"kind":"shape","id":"sh/tkby9kzm","slide":8,"name":"ch-image-backing","bbox":[52,150,430,470]}
+{"kind":"textbox","id":"sh/sjix0zy1","slide":8,"name":"ch-image-caption","text":"Konsep enclosure CH; ukuran mounting sementara ditulis ... cm.","textPreview":"Konsep enclosure CH; ukuran mounting sementara ditulis ... cm.","textChars":62,"textLines":1,"bbox":[52,628,430,26]}
+{"kind":"textbox","id":"sh/je9g3ahk","slide":8,"name":"ch-source-title","text":"Konfigurasi yang ditetapkan","textPreview":"Konfigurasi yang ditetapkan","textChars":27,"textLines":1,"bbox":[530,154,310,34]}
+{"kind":"textbox","id":"sh/id0fu50z","slide":8,"name":"ch-source-body","text":"• 1 baterai LiitoKala 4000 mAh\n• 2 panel surya, masing-masing 6 W\n• Radio STAR 920 MHz dan MESH 921 MHz\n• Charger dan jalur daya single-cell","textPreview":"• 1 baterai LiitoKala 4000 mAh | • 2 panel surya, masing-masing 6 W | • Radio STAR 920 MHz dan MESH 921 MHz | • Charger dan jalur daya si...","textChars":140,"textLines":4,"bbox":[530,208,320,176]}
+{"kind":"textbox","id":"sh/o7ydoret","slide":8,"name":"ch-gap-title","text":"Implementasi di area SRU","textPreview":"Implementasi di area SRU","textChars":24,"textLines":1,"bbox":[880,154,320,34]}
+{"kind":"textbox","id":"sh/98rehwve","slide":8,"name":"ch-gap-body","text":"• Jumlah CH menyesuaikan cakupan\n• Penempatan mengikuti hasil survei\n• Rute antena disesuaikan dengan titik\n• Dimensi mounting: ... cm","textPreview":"• Jumlah CH menyesuaikan cakupan | • Penempatan mengikuti hasil survei | • Rute antena disesuaikan dengan titik | • Dimensi mounting: ... cm","textChars":134,"textLines":4,"bbox":[880,208,320,190]}
+{"kind":"shape","id":"sh/m5gvmhwn","slide":8,"name":"ch-note","bbox":[530,438,670,142]}
+{"kind":"textbox","id":"sh/n6pwfmd8","slide":8,"name":"ch-note-title","text":"Verifikasi energi","textPreview":"Verifikasi energi","textChars":17,"textLines":1,"bbox":[558,464,180,32]}
+{"kind":"textbox","id":"sh/0jydkreh","slide":8,"name":"ch-note-body","text":"Pengisian, autonomy, temperatur, dan pola komunikasi diuji sebagai bagian dari verifikasi CH sebelum pemasangan.","textPreview":"Pengisian, autonomy, temperatur, dan pola komunikasi diuji sebagai bagian dari verifikasi CH sebelum pemasangan.","textChars":112,"textLines":1,"bbox":[748,460,420,66]}
+{"kind":"image","id":"im/0rmpoj2t","slide":8,"name":"","bbox":[119.09,150,295.82,470]}
+{"kind":"notes","id":"nt/fu1gfa1s","slide":8,"text":"[Sources]\n- Konfirmasi pengguna, 19 Agustus 2026: 1 baterai LiitoKala 4000 mAh dan 2 panel 6 W per CH.\n- Audit rangkaian, desain PCB, dan firmware CH."}
+{"kind":"slide","id":"sl/udsvah03","slide":9,"title":"GATEWAY & JARINGAN","textShapes":10}
+{"kind":"textbox","id":"sh/cnu1kzyd","slide":9,"name":"section-9","text":"GATEWAY & JARINGAN","textPreview":"GATEWAY & JARINGAN","textChars":18,"textLines":1,"bbox":[52,30,480,18]}
+{"kind":"textbox","id":"sh/1cfmhgne","slide":9,"name":"title-9","text":"Bahan pembicaraan Gateway dan jaringan IT","textPreview":"Bahan pembicaraan Gateway dan jaringan IT","textChars":41,"textLines":1,"bbox":[52,58,1176,60]}
+{"kind":"shape","id":"sh/0b65obm9","slide":9,"name":"footer-rule-9","bbox":[52,668,1176,1]}
+{"kind":"textbox","id":"sh/nex4jq5k","slide":9,"name":"footer-left-9","text":"INTERNAL • 19 AGUSTUS 2026","textPreview":"INTERNAL • 19 AGUSTUS 2026","textChars":26,"textLines":1,"bbox":[52,680,360,20]}
+{"kind":"textbox","id":"sh/mdonql4z","slide":9,"name":"footer-number-9","text":"09","textPreview":"09","textChars":2,"textLines":1,"bbox":[1178,680,50,20]}
+{"kind":"textbox","id":"sh/9gzml0nq","slide":9,"name":"gw-intro","text":"Gateway, jaringan, dan server belum dibahas atau disepakati; bagian ini menjadi agenda pembicaraan awal dengan tim IT.","textPreview":"Gateway, jaringan, dan server belum dibahas atau disepakati; bagian ini menjadi agenda pembicaraan awal dengan tim IT.","textChars":118,"textLines":1,"bbox":[52,130,1176,54]}
+{"kind":"shape","id":"sh/ofq5svm5","slide":9,"name":"gw-physical","bbox":[52,216,540,350]}
+{"kind":"textbox","id":"sh/bih4na5w","slide":9,"name":"gw-physical-title","text":"Penempatan & perangkat","textPreview":"Penempatan & perangkat","textChars":22,"textLines":1,"bbox":[82,250,480,34]}
+{"kind":"textbox","id":"sh/ah8nu54b","slide":9,"name":"gw-physical-body","text":"• Lokasi Gateway\n• Pilihan koneksi site\n• Posisi dan rute antena\n• Catu daya serta grounding\n• Dukungan operasional","textPreview":"• Lokasi Gateway | • Pilihan koneksi site | • Posisi dan rute antena | • Catu daya serta grounding | • Dukungan operasional","textChars":115,"textLines":5,"bbox":[82,312,480,200]}
+{"kind":"shape","id":"sh/oza1gfyh","slide":9,"name":"gw-ticket","bbox":[636,216,592,350]}
+{"kind":"textbox","id":"sh/p0ji9kf2","slide":9,"name":"gw-ticket-title","text":"Data untuk dibahas dengan IT","textPreview":"Data untuk dibahas dengan IT","textChars":28,"textLines":1,"bbox":[666,250,532,34]}
+{"kind":"textbox","id":"sh/2xsjepgb","slide":9,"name":"gw-ticket-body","text":"1  MAC Wi-Fi unit\n2  Alamat broker/server\n3  Port komunikasi\n4  SSID, VLAN, DHCP, DNS, NTP\n5  Keamanan dan penanggung jawab","textPreview":"1  MAC Wi-Fi unit | 2  Alamat broker/server | 3  Port komunikasi | 4  SSID, VLAN, DHCP, DNS, NTP | 5  Keamanan dan penanggung jawab","textChars":123,"textLines":5,"bbox":[666,310,532,218]}
+{"kind":"textbox","id":"sh/3y107axw","slide":9,"name":"gw-footnote","text":"Output pembicaraan: lokasi, metode koneksi, parameter jaringan, penanggung jawab, dan kriteria penerimaan.","textPreview":"Output pembicaraan: lokasi, metode koneksi, parameter jaringan, penanggung jawab, dan kriteria penerimaan.","textChars":106,"textLines":1,"bbox":[52,594,1176,48]}
+{"kind":"notes","id":"nt/udsvah03","slide":9,"text":"[Sources]\n- Konfirmasi pengguna, 19 Agustus 2026: topik Gateway, jaringan, dan server belum dibahas atau disepakati.\n- Agenda teknis disusun dari arsitektur sistem dan kebutuhan onboarding IT."}
+{"kind":"slide","id":"sl/m90b6t0r","slide":10,"title":"KEAMANAN JARINGAN","textShapes":12}
+{"kind":"textbox","id":"sh/ozitcv29","slide":10,"name":"section-10","text":"KEAMANAN JARINGAN","textPreview":"KEAMANAN JARINGAN","textChars":17,"textLines":1,"bbox":[52,30,480,18]}
+{"kind":"textbox","id":"sh/xc3mho32","slide":10,"name":"title-10","text":" Agenda keamanan jaringan","textPreview":"Agenda keamanan jaringan","textChars":25,"textLines":1,"bbox":[52,58,1176,60]}
+{"kind":"shape","id":"sh/cbu58j2h","slide":10,"name":"footer-rule-10","bbox":[52,668,1176,1]}
+{"kind":"textbox","id":"sh/zelojyl8","slide":10,"name":"footer-left-10","text":"INTERNAL • 19 AGUSTUS 2026","textPreview":"INTERNAL • 19 AGUSTUS 2026","textChars":26,"textLines":1,"bbox":[52,680,360,20]}
+{"kind":"textbox","id":"sh/ydcnatkn","slide":10,"name":"footer-number-10","text":"10","textPreview":"10","textChars":2,"textLines":1,"bbox":[1178,680,50,20]}
+{"kind":"textbox","id":"sh/l036l83y","slide":10,"name":"tls-intro","text":"Opsi berikut disiapkan untuk menentukan arah keamanan komunikasi bersama tim IT.","textPreview":"Opsi berikut disiapkan untuk menentukan arah keamanan komunikasi bersama tim IT.","textChars":80,"textLines":1,"bbox":[52,132,1176,36]}
+{"kind":"shape","id":"sh/kzu5c32t","slide":10,"name":"tls-current","bbox":[52,206,520,300]}
+{"kind":"textbox","id":"sh/725onyl4","slide":10,"name":"tls-current-label","text":"KEPUTUSAN ARSITEKTUR","textPreview":"KEPUTUSAN ARSITEKTUR","textChars":20,"textLines":1,"bbox":[82,236,460,28]}
+{"kind":"textbox","id":"sh/m1cnetkj","slide":10,"name":"tls-current-title","text":"Proteksi komunikasi","textPreview":"Proteksi komunikasi","textChars":19,"textLines":1,"bbox":[82,282,460,50]}
+{"kind":"textbox","id":"sh/s7yt4b21","slide":10,"name":"tls-current-body","text":"• Protokol dan penggunaan TLS\n• Identitas setiap perangkat\n• Autentikasi dan autorisasi\n• Pengelolaan kredensial","textPreview":"• Protokol dan penggunaan TLS | • Identitas setiap perangkat | • Autentikasi dan autorisasi | • Pengelolaan kredensial","textChars":112,"textLines":4,"bbox":[82,352,460,128]}
+{"kind":"shape","id":"sh/d87uxg3m","slide":10,"name":"tls-arrow","bbox":[590,324,100,46]}
+{"kind":"shape","id":"sh/q5gb21kb","slide":10,"name":"tls-required","bbox":[708,206,520,300]}
+{"kind":"textbox","id":"sh/r6pcv6lw","slide":10,"name":"tls-required-label","text":"BUKTI PENERIMAAN","textPreview":"BUKTI PENERIMAAN","textChars":16,"textLines":1,"bbox":[738,236,460,28]}
+{"kind":"textbox","id":"sh/0bit8b2d","slide":10,"name":"tls-required-title","text":"Uji dan pencatatan","textPreview":"Uji dan pencatatan","textChars":18,"textLines":1,"bbox":[738,282,460,50]}
+{"kind":"textbox","id":"sh/1cru1g3y","slide":10,"name":"tls-required-body","text":"• Topic ACL dan broker log\n• CONNACK serta pub/sub\n• Reconnect dan restart\n• Siklus hidup sertifikat","textPreview":"• Topic ACL dan broker log | • CONNACK serta pub/sub | • Reconnect dan restart | • Siklus hidup sertifikat","textChars":100,"textLines":4,"bbox":[738,352,460,128]}
+{"kind":"shape","id":"sh/e9gb61k7","slide":10,"name":"tls-note","bbox":[52,548,1176,76]}
+{"kind":"textbox","id":"sh/fapcz6ls","slide":10,"name":"tls-note-text","text":"Poin keputusan bersama IT: protokol, identitas, akses, logging, kredensial, dan pengujian penerimaan.","textPreview":"Poin keputusan bersama IT: protokol, identitas, akses, logging, kredensial, dan pengujian penerimaan.","textChars":101,"textLines":1,"bbox":[82,570,1116,34]}
+{"kind":"notes","id":"nt/m90b6t0r","slide":10,"text":"[Sources]\n- Konfirmasi pengguna, 19 Agustus 2026: keamanan jaringan menjadi bahan pembicaraan bersama tim IT.\n- Audit firmware dan arsitektur sistem sebagai dasar agenda teknis."}
+{"kind":"slide","id":"sl/jetc3ut0","slide":11,"title":"SERVER & DASHBOARD","textShapes":15}
+{"kind":"textbox","id":"sh/tsnip0ny","slide":11,"name":"section-11","text":"SERVER & DASHBOARD","textPreview":"SERVER & DASHBOARD","textChars":18,"textLines":1,"bbox":[52,30,480,18]}
+{"kind":"textbox","id":"sh/xcryxg7y","slide":11,"name":"title-11","text":"Bahan pembicaraan server dan dashboard","textPreview":"Bahan pembicaraan server dan dashboard","textChars":38,"textLines":1,"bbox":[52,58,1176,60]}
+{"kind":"shape","id":"sh/wbih4b6d","slide":11,"name":"footer-rule-11","bbox":[52,668,1176,1]}
+{"kind":"textbox","id":"sh/n69grmpw","slide":11,"name":"footer-left-11","text":"INTERNAL • 19 AGUSTUS 2026","textPreview":"INTERNAL • 19 AGUSTUS 2026","textChars":26,"textLines":1,"bbox":[52,680,360,20]}
+{"kind":"textbox","id":"sh/250zy18b","slide":11,"name":"footer-number-11","text":"11","textPreview":"11","textChars":2,"textLines":1,"bbox":[1178,680,50,20]}
+{"kind":"textbox","id":"sh/98rytw72","slide":11,"name":"server-intro","text":"Pembahasan awal perlu menetapkan layanan, platform, keamanan, operasi, dan kriteria penerimaan.","textPreview":"Pembahasan awal perlu menetapkan layanan, platform, keamanan, operasi, dan kriteria penerimaan.","textChars":95,"textLines":1,"bbox":[52,130,1176,48]}
+{"kind":"shape","id":"sh/o7ih0r6h","slide":11,"name":"server-source","bbox":[52,208,350,348]}
+{"kind":"shape","id":"sh/72t03qp0","slide":11,"name":"server-pilot","bbox":[465,208,350,348]}
+{"kind":"shape","id":"sh/61kzalof","slide":11,"name":"server-prod","bbox":[878,208,350,348]}
+{"kind":"textbox","id":"sh/ofqtgnyt","slide":11,"name":"server-source-title","text":"KEBUTUHAN LAYANAN","textPreview":"KEBUTUHAN LAYANAN","textChars":17,"textLines":1,"bbox":[82,240,290,28]}
+{"kind":"textbox","id":"sh/9gza9sze","slide":11,"name":"server-source-big","text":"Data & dashboard","textPreview":"Data & dashboard","textChars":16,"textLines":1,"bbox":[82,286,290,42]}
+{"kind":"textbox","id":"sh/mdobedg3","slide":11,"name":"server-source-body","text":"• Broker komunikasi\n• Pengolahan data\n• Dashboard pengguna\n• Dataset dan log","textPreview":"• Broker komunikasi | • Pengolahan data | • Dashboard pengguna | • Dataset dan log","textChars":76,"textLines":4,"bbox":[82,350,290,150]}
+{"kind":"textbox","id":"sh/nehs7iho","slide":11,"name":"server-pilot-title","text":"PLATFORM & HOSTING","textPreview":"PLATFORM & HOSTING","textChars":18,"textLines":1,"bbox":[495,240,290,28]}
+{"kind":"textbox","id":"sh/0b6tc3yx","slide":11,"name":"server-pilot-big","text":"Keputusan bersama IT","textPreview":"Keputusan bersama IT","textChars":20,"textLines":1,"bbox":[495,286,290,78]}
+{"kind":"textbox","id":"sh/1cfa58zi","slide":11,"name":"server-pilot-body","text":"Lokasi hosting, kapasitas, sistem operasi, runtime, akses pengguna, dan integrasi jaringan.","textPreview":"Lokasi hosting, kapasitas, sistem operasi, runtime, akses pengguna, dan integrasi jaringan.","textChars":91,"textLines":1,"bbox":[495,392,290,104]}
+{"kind":"textbox","id":"sh/epobatgr","slide":11,"name":"server-prod-title","text":"OPERASI & KEAMANAN","textPreview":"OPERASI & KEAMANAN","textChars":18,"textLines":1,"bbox":[908,240,290,28]}
+{"kind":"textbox","id":"sh/zaxs3yhc","slide":11,"name":"server-prod-big","text":"Runbook layanan","textPreview":"Runbook layanan","textChars":15,"textLines":1,"bbox":[908,286,290,42]}
+{"kind":"textbox","id":"sh/cn6t83y1","slide":11,"name":"server-prod-body","text":"• TLS dan ACL\n• Backup dan restore\n• Monitoring serta retention\n• HTTPS/RBAC dan owner operasi","textPreview":"• TLS dan ACL | • Backup dan restore | • Monitoring serta retention | • HTTPS/RBAC dan owner operasi","textChars":94,"textLines":4,"bbox":[908,350,290,150]}
+{"kind":"textbox","id":"sh/dofa18z6","slide":11,"name":"server-two-gaps","text":"Output pembicaraan: arsitektur, kapasitas, keamanan, operasi, owner, dan acceptance test yang disepakati.","textPreview":"Output pembicaraan: arsitektur, kapasitas, keamanan, operasi, owner, dan acceptance test yang disepakati.","textChars":105,"textLines":1,"bbox":[52,590,1176,44]}
+{"kind":"notes","id":"nt/jetc3ut0","slide":11,"text":"[Sources]\n- Konfirmasi pengguna, 19 Agustus 2026: server dan dashboard menjadi bahan pembicaraan, bukan keputusan final.\n- Agenda teknis disusun dari kebutuhan sistem end-to-end."}
+{"kind":"slide","id":"sl/8f2psfyx","slide":12,"title":"LOKASI SRU","textShapes":11}
+{"kind":"textbox","id":"sh/9sj65kn2","slide":12,"name":"section-12","text":"LOKASI SRU","textPreview":"LOKASI SRU","textChars":10,"textLines":1,"bbox":[52,30,480,18]}
+{"kind":"textbox","id":"sh/1gbm9s3a","slide":12,"name":"title-12","text":"Lokasi pemasangan diarahkan ke area SRU","textPreview":"Lokasi pemasangan diarahkan ke area SRU","textChars":39,"textLines":1,"bbox":[52,58,1176,60]}
+{"kind":"shape","id":"sh/0f2lgnmp","slide":12,"name":"footer-rule-12","bbox":[52,668,1176,1]}
+{"kind":"textbox","id":"sh/ra943il8","slide":12,"name":"footer-left-12","text":"INTERNAL • 19 AGUSTUS 2026","textPreview":"INTERNAL • 19 AGUSTUS 2026","textChars":26,"textLines":1,"bbox":[52,680,360,20]}
+{"kind":"textbox","id":"sh/q903ad4n","slide":12,"name":"footer-number-12","text":"12","textPreview":"12","textChars":2,"textLines":1,"bbox":[1178,680,50,20]}
+{"kind":"shape","id":"sh/dcbm583y","slide":12,"name":"safety-banner","bbox":[52,142,1176,104]}
+{"kind":"textbox","id":"sh/sb2lcnmd","slide":12,"name":"safety-banner-label","text":"AREA SRU","textPreview":"AREA SRU","textChars":8,"textLines":1,"bbox":[82,170,220,34]}
+{"kind":"textbox","id":"sh/b6d4f2lc","slide":12,"name":"safety-banner-text","text":"Rencana awal pemasangan di area LPG telah dialihkan ke area SRU.","textPreview":"Rencana awal pemasangan di area LPG telah dialihkan ke area SRU.","textChars":64,"textLines":1,"bbox":[302,170,896,40]}
+{"kind":"textbox","id":"sh/a543mx4r","slide":12,"name":"safety-rule-title","text":"Ruang lingkup Cilacap","textPreview":"Ruang lingkup Cilacap","textChars":21,"textLines":1,"bbox":[52,292,360,34]}
+{"kind":"textbox","id":"sh/wvupgz6t","slide":12,"name":"safety-rules","text":"• Rencana awal: area LPG\n• Lokasi pemasangan: area SRU\n• Ruang lingkup: 3 unit GLD\n• Jumlah CH menyesuaikan cakupan","textPreview":"• Rencana awal: area LPG | • Lokasi pemasangan: area SRU | • Ruang lingkup: 3 unit GLD | • Jumlah CH menyesuaikan cakupan","textChars":115,"textLines":4,"bbox":[76,344,560,196]}
+{"kind":"textbox","id":"sh/xw3q94ne","slide":12,"name":"safety-gates-title","text":"Koordinasi site & HSE","textPreview":"Koordinasi site & HSE","textChars":21,"textLines":1,"bbox":[688,292,500,34]}
+{"kind":"textbox","id":"sh/atc7epon","slide":12,"name":"safety-gates","text":"1  Penetapan titik pemasangan\n2  Klasifikasi area setiap titik\n3  Desain instalasi dan izin kerja\n4  Pemeriksaan serta persetujuan site","textPreview":"1  Penetapan titik pemasangan | 2  Klasifikasi area setiap titik | 3  Desain instalasi dan izin kerja | 4  Pemeriksaan serta persetujuan ...","textChars":135,"textLines":4,"bbox":[712,344,476,196]}
+{"kind":"shape","id":"sh/bulo7u58","slide":12,"name":"safety-bottom","bbox":[52,574,1176,64]}
+{"kind":"textbox","id":"sh/orapcf6h","slide":12,"name":"safety-bottom-text","text":"Pemasangan mengikuti ketentuan site dan persyaratan HSE Pertamina.","textPreview":"Pemasangan mengikuti ketentuan site dan persyaratan HSE Pertamina.","textChars":66,"textLines":1,"bbox":[76,594,1128,28]}
+{"kind":"notes","id":"nt/8f2psfyx","slide":12,"text":"[Sources]\n- Konfirmasi pengguna, 19 Agustus 2026: lokasi berubah dari area LPG ke area SRU.\n- Rekaman dan catatan meeting."}
+{"kind":"slide","id":"sl/hgzapcr6","slide":13,"title":"MOUNTING & SITE","textShapes":9}
+{"kind":"textbox","id":"sh/t8fy5k3i","slide":13,"name":"section-13","text":"MOUNTING & SITE","textPreview":"MOUNTING & SITE","textChars":15,"textLines":1,"bbox":[52,30,480,18]}
+{"kind":"textbox","id":"sh/q50nydsj","slide":13,"name":"title-13","text":"Mounting untuk area SRU","textPreview":"Mounting untuk area SRU","textChars":23,"textLines":1,"bbox":[52,58,1176,60]}
+{"kind":"shape","id":"sh/bq9orito","slide":13,"name":"footer-rule-13","bbox":[52,668,1176,1]}
+{"kind":"textbox","id":"sh/o3i5w3ad","slide":13,"name":"footer-left-13","text":"INTERNAL • 19 AGUSTUS 2026","textPreview":"INTERNAL • 19 AGUSTUS 2026","textChars":26,"textLines":1,"bbox":[52,680,360,20]}
+{"kind":"textbox","id":"sh/p4r6p8by","slide":13,"name":"footer-number-13","text":"13","textPreview":"13","textChars":2,"textLines":1,"bbox":[1178,680,50,20]}
+{"kind":"textbox","id":"sh/21gnuts7","slide":13,"name":"mounting-intro","text":"Dimensi sementara ditulis ... cm; drawing fabrikasi mengikuti pengukuran titik pemasangan.","textPreview":"Dimensi sementara ditulis ... cm; drawing fabrikasi mengikuti pengukuran titik pemasangan.","textChars":90,"textLines":1,"bbox":[52,130,540,56]}
+{"kind":"textbox","id":"sh/32ponyts","slide":13,"name":"mounting-survey-title","text":"Data fabrikasi yang dicatat","textPreview":"Data fabrikasi yang dicatat","textChars":27,"textLines":1,"bbox":[52,218,500,34]}
+{"kind":"textbox","id":"sh/gzy5s3a1","slide":13,"name":"mounting-survey-body","text":"• OD, material, tebal, dan beban struktur\n• Angin, getaran, korosi, dan anchor\n• Sumber daya, rute kabel, gland, voltage drop\n• Tinggi antena, LOS, coax, grounding\n• Akses kerja dan ruang pemeliharaan","textPreview":"• OD, material, tebal, dan beban struktur | • Angin, getaran, korosi, dan anchor | • Sumber daya, rute kabel, gland, voltage drop | • Tin...","textChars":200,"textLines":5,"bbox":[76,274,500,222]}
+{"kind":"shape","id":"sh/1076lobm","slide":13,"name":"mounting-proposal","bbox":[52,524,540,102]}
+{"kind":"textbox","id":"sh/hcfy9k3u","slide":13,"name":"mounting-proposal-text","text":"DIMENSI MOUNTING: ... cm","textPreview":"DIMENSI MOUNTING: ... cm","textChars":24,"textLines":1,"bbox":[76,548,492,54]}
+{"kind":"shape","id":"sh/gb6x0zm9","slide":13,"name":"mounting-image-backing","bbox":[636,146,592,444]}
+{"kind":"textbox","id":"sh/vaxg7ulo","slide":13,"name":"mounting-caption","text":"Referensi survei untuk persiapan pemasangan di area SRU.","textPreview":"Referensi survei untuk persiapan pemasangan di area SRU.","textChars":56,"textLines":1,"bbox":[636,604,592,28]}
+{"kind":"image","id":"im/nah0vqt0","slide":13,"name":"","bbox":[636,146,592,444]}
+{"kind":"notes","id":"nt/hgzapcr6","slide":13,"text":"[Sources]\n- Konfirmasi pengguna, 19 Agustus 2026: dimensi sementara ditulis ... cm.\n- Rekaman dan catatan meeting serta referensi survei lapangan."}
+{"kind":"slide","id":"sl/6lsnupw7","slide":14,"title":"ROADMAP","textShapes":13}
+{"kind":"textbox","id":"sh/fqdg3q98","slide":14,"name":"section-14","text":"ROADMAP","textPreview":"ROADMAP","textChars":7,"textLines":1,"bbox":[52,30,480,18]}
+{"kind":"textbox","id":"sh/xc7eds76","slide":14,"name":"title-14","text":"Roadmap menuju target September 2027","textPreview":"Roadmap menuju target September 2027","textChars":36,"textLines":1,"bbox":[52,58,1176,60]}
+{"kind":"shape","id":"sh/wbydknq1","slide":14,"name":"footer-rule-14","bbox":[52,668,1176,1]}
+{"kind":"textbox","id":"sh/jepwf2pc","slide":14,"name":"footer-left-14","text":"INTERNAL • 19 AGUSTUS 2026","textPreview":"INTERNAL • 19 AGUSTUS 2026","textChars":26,"textLines":1,"bbox":[52,680,360,20]}
+{"kind":"textbox","id":"sh/idgvmx8r","slide":14,"name":"footer-number-14","text":"14","textPreview":"14","textChars":2,"textLines":1,"bbox":[1178,680,50,20]}
+{"kind":"shape","id":"sh/5grehs7i","slide":14,"name":"roadmap-track","bbox":[72,582,1135,1]}
+{"kind":"shape","id":"sh/kfidonqx","slide":14,"name":"roadmap-dot-1","bbox":[72,576,12,12]}
+{"kind":"shape","id":"sh/zi5c3y98","slide":14,"name":"roadmap-dot-2","bbox":[452,576,12,12]}
+{"kind":"shape","id":"sh/ehwvat8n","slide":14,"name":"roadmap-dot-3","bbox":[832,576,12,12]}
+{"kind":"shape","id":"sh/c3e1gjyd","slide":14,"name":"roadmap-card-1","bbox":[72,154,336,360]}
+{"kind":"shape","id":"sh/x4ni9ofy","slide":14,"name":"roadmap-card-2","bbox":[452,154,336,360]}
+{"kind":"shape","id":"sh/a1wze9g7","slide":14,"name":"roadmap-card-3","bbox":[832,154,376,360]}
+{"kind":"textbox","id":"sh/b2507exs","slide":14,"name":"roadmap-1-title","text":"AGUSTUS 2026","textPreview":"AGUSTUS 2026","textChars":12,"textLines":1,"bbox":[102,186,276,30]}
+{"kind":"textbox","id":"sh/kre1k3y9","slide":14,"name":"roadmap-1-body","text":"• 10 Agustus: acuan “3 minggu lagi”\n• Rencana kunjungan sekitar akhir Agustus\n• Catu GLD ditetapkan 24 VDC/2 A\n• Konfigurasi energi CH ditetapkan","textPreview":"• 10 Agustus: acuan “3 minggu lagi” | • Rencana kunjungan sekitar akhir Agustus | • Catu GLD ditetapkan 24 VDC/2 A | • Konfigurasi energi...","textChars":145,"textLines":4,"bbox":[102,246,276,194]}
+{"kind":"textbox","id":"sh/ls7idofu","slide":14,"name":"roadmap-2-title","text":"SEPTEMBER 2026","textPreview":"SEPTEMBER 2026","textChars":14,"textLines":1,"bbox":[482,186,276,30]}
+{"kind":"textbox","id":"sh/y5wjitgj","slide":14,"name":"roadmap-2-body","text":"• Survei area SRU\n• Pengukuran mounting ... cm\n• Support, kabel, drawing, dan BOM\n• Bahan pembicaraan bersama IT","textPreview":"• Survei area SRU | • Pengukuran mounting ... cm | • Support, kabel, drawing, dan BOM | • Bahan pembicaraan bersama IT","textChars":112,"textLines":4,"bbox":[482,246,276,194]}
+{"kind":"textbox","id":"sh/z650byxo","slide":14,"name":"roadmap-3-title","text":"OKT 2026 → SEP 2027","textPreview":"OKT 2026 → SEP 2027","textChars":19,"textLines":1,"bbox":[862,186,316,30]}
+{"kind":"textbox","id":"sh/0buh8zy5","slide":14,"name":"roadmap-3-body","text":"• Penyelesaian desain dan FAT\n• Proses sertifikasi\n• Fabrikasi dan pemasangan\n• SAT, pelatihan, serah terima\n• Target penerimaan fase awal","textPreview":"• Penyelesaian desain dan FAT | • Proses sertifikasi | • Fabrikasi dan pemasangan | • SAT, pelatihan, serah terima | • Target penerimaan ...","textChars":138,"textLines":5,"bbox":[862,246,316,224]}
+{"kind":"textbox","id":"sh/1w3i14fq","slide":14,"name":"roadmap-label-1","text":"BASELINE & KUNJUNGAN","textPreview":"BASELINE & KUNJUNGAN","textChars":20,"textLines":1,"bbox":[72,612,300,22]}
+{"kind":"textbox","id":"sh/hsvy50re","slide":14,"name":"roadmap-label-2","text":"SITE & SUPPORT PACK","textPreview":"SITE & SUPPORT PACK","textChars":19,"textLines":1,"bbox":[452,612,300,22]}
+{"kind":"textbox","id":"sh/grmxwvqt","slide":14,"name":"roadmap-label-3","text":"IMPLEMENTASI → TERIMA","textPreview":"IMPLEMENTASI → TERIMA","textChars":21,"textLines":1,"bbox":[832,612,376,22]}
+{"kind":"notes","id":"nt/6lsnupw7","slide":14,"text":"[Sources]\n- Konfirmasi pengguna, 19 Agustus 2026.\n- Rekaman dan catatan meeting."}
+{"kind":"slide","id":"sl/vaxsvy10","slide":15,"title":"TANGGUNG JAWAB","textShapes":12}
+{"kind":"textbox","id":"sh/judsvqxg","slide":15,"name":"section-15","text":"TANGGUNG JAWAB","textPreview":"TANGGUNG JAWAB","textChars":14,"textLines":1,"bbox":[52,30,480,18]}
+{"kind":"textbox","id":"sh/547mhg3m","slide":15,"name":"title-15","text":"Tanggung jawab ditetapkan per organisasi","textPreview":"Tanggung jawab ditetapkan per organisasi","textChars":40,"textLines":1,"bbox":[52,58,1176,60]}
+{"kind":"shape","id":"sh/k3y5ov21","slide":15,"name":"footer-rule-15","bbox":[52,668,1176,1]}
+{"kind":"textbox","id":"sh/76p4jqls","slide":15,"name":"footer-left-15","text":"INTERNAL • 19 AGUSTUS 2026","textPreview":"INTERNAL • 19 AGUSTUS 2026","textChars":26,"textLines":1,"bbox":[52,680,360,20]}
+{"kind":"textbox","id":"sh/65gnqlk7","slide":15,"name":"footer-number-15","text":"15","textPreview":"15","textChars":2,"textLines":1,"bbox":[1178,680,50,20]}
+{"kind":"textbox","id":"sh/t87ml0ji","slide":15,"name":"ownership-intro","text":"Pembagian tanggung jawab menjadi dasar koordinasi dan action list implementasi.","textPreview":"Pembagian tanggung jawab menjadi dasar koordinasi dan action list implementasi.","textChars":79,"textLines":1,"bbox":[52,130,1176,42]}
+{"kind":"shape","id":"sh/s7y5sv2x","slide":15,"name":"owner-lgu","bbox":[52,204,350,374]}
+{"kind":"shape","id":"sh/na5476l8","slide":15,"name":"owner-pertamina","bbox":[465,204,350,374]}
+{"kind":"shape","id":"sh/m9c3e1kn","slide":15,"name":"owner-vendor","bbox":[878,204,350,374]}
+{"kind":"textbox","id":"sh/wrm9kvep","slide":15,"name":"owner-lgu-title","text":"LGU","textPreview":"LGU","textChars":3,"textLines":1,"bbox":[82,236,290,42]}
+{"kind":"textbox","id":"sh/hsvat0fa","slide":15,"name":"owner-lgu-body","text":"R / A untuk:\n• GLD, CH, datasheet, dan BOM\n• Spesifikasi teknis dan desain support\n• FAT serta bukti teknis\n• Bahan pembicaraan Gateway/server\n• Dukungan SAT","textPreview":"R / A untuk: | • GLD, CH, datasheet, dan BOM | • Spesifikasi teknis dan desain support | • FAT serta bukti teknis | • Bahan pembicaraan G...","textChars":157,"textLines":6,"bbox":[82,302,290,224]}
+{"kind":"textbox","id":"sh/upkrilwj","slide":15,"name":"owner-pertamina-title","text":"PERTAMINA CILACAP","textPreview":"PERTAMINA CILACAP","textChars":17,"textLines":1,"bbox":[495,236,290,42]}
+{"kind":"textbox","id":"sh/vqdsrqx4","slide":15,"name":"owner-pertamina-body","text":"A / C untuk:\n• Titik pemasangan area SRU\n• Basis HSE, izin, dan utilitas\n• Kabel, struktur, dan kontraktor\n• Persetujuan instalasi\n• Penerimaan dan sign-off","textPreview":"A / C untuk: | • Titik pemasangan area SRU | • Basis HSE, izin, dan utilitas | • Kabel, struktur, dan kontraktor | • Persetujuan instalas...","textChars":156,"textLines":6,"bbox":[495,302,290,224]}
+{"kind":"textbox","id":"sh/4vm9ovel","slide":15,"name":"owner-vendor-title","text":"IT & VENDOR","textPreview":"IT & VENDOR","textChars":11,"textLines":1,"bbox":[908,236,290,42]}
+{"kind":"textbox","id":"sh/5wvax0f6","slide":15,"name":"owner-vendor-body","text":"R / C untuk:\n• IT: jaringan, server, dan keamanan\n• IT: parameter serta acceptance\n• Vendor: dukungan kunjungan\n• Vendor: data sertifikasi\n• Dukungan pengujian/inspeksi","textPreview":"R / C untuk: | • IT: jaringan, server, dan keamanan | • IT: parameter serta acceptance | • Vendor: dukungan kunjungan | • Vendor: data se...","textChars":168,"textLines":6,"bbox":[908,302,290,224]}
+{"kind":"textbox","id":"sh/it4rm5wv","slide":15,"name":"ownership-key","text":"R = Responsible • A = Accountable • C = Consulted","textPreview":"R = Responsible • A = Accountable • C = Consulted","textChars":49,"textLines":1,"bbox":[52,606,1176,28]}
+{"kind":"notes","id":"nt/vaxsvy10","slide":15,"text":"[Sources]\n- Konfirmasi pengguna, 19 Agustus 2026: pembagian tanggung jawab organisasi tersedia.\n- Rekaman dan catatan meeting."}
+{"kind":"slide","id":"sl/gny5sjyp","slide":16,"title":"AKSI LANJUT","textShapes":20}
+{"kind":"textbox","id":"sh/9c7i1o7u","slide":16,"name":"section-16","text":"AKSI LANJUT","textPreview":"AKSI LANJUT","textChars":11,"textLines":1,"bbox":[52,30,480,18]}
+{"kind":"textbox","id":"sh/8z2h8bq1","slide":16,"name":"title-16","text":"Baseline dan tindak lanjut","textPreview":"Baseline dan tindak lanjut","textChars":26,"textLines":1,"bbox":[52,58,1176,60]}
+{"kind":"shape","id":"sh/9kby1g7m","slide":16,"name":"footer-rule-16","bbox":[52,668,1176,1]}
+{"kind":"textbox","id":"sh/ytkf2h8j","slide":16,"name":"footer-left-16","text":"INTERNAL • 19 AGUSTUS 2026","textPreview":"INTERNAL • 19 AGUSTUS 2026","textChars":26,"textLines":1,"bbox":[52,680,360,20]}
+{"kind":"textbox","id":"sh/zutgvm94","slide":16,"name":"footer-number-16","text":"16","textPreview":"16","textChars":2,"textLines":1,"bbox":[1178,680,50,20]}
+{"kind":"textbox","id":"sh/kv2h4rqp","slide":16,"name":"decision-intro","text":"Fakta yang dikonfirmasi menjadi baseline; topik IT disiapkan sebagai agenda pembicaraan.","textPreview":"Fakta yang dikonfirmasi menjadi baseline; topik IT disiapkan sebagai agenda pembicaraan.","textChars":88,"textLines":1,"bbox":[52,132,1176,36]}
+{"kind":"textbox","id":"sh/lwbyxwra","slide":16,"name":"decision-1-num","text":"01","textPreview":"01","textChars":2,"textLines":1,"bbox":[52,202,70,42]}
+{"kind":"textbox","id":"sh/ip4zel83","slide":16,"name":"decision-1","text":"Gunakan catu GLD 24 VDC/2 A.","textPreview":"Gunakan catu GLD 24 VDC/2 A.","textChars":28,"textLines":1,"bbox":[130,202,470,48]}
+{"kind":"textbox","id":"sh/3qdg7qpo","slide":16,"name":"decision-2-num","text":"02","textPreview":"02","textChars":2,"textLines":1,"bbox":[52,294,70,42]}
+{"kind":"textbox","id":"sh/fm1gzq5o","slide":16,"name":"decision-2","text":"Siapkan 3 unit GLD untuk area SRU.","textPreview":"Siapkan 3 unit GLD untuk area SRU.","textChars":34,"textLines":1,"bbox":[130,294,470,54]}
+{"kind":"textbox","id":"sh/e1sf65o3","slide":16,"name":"decision-3-num","text":"03","textPreview":"03","textChars":2,"textLines":1,"bbox":[52,394,70,42]}
+{"kind":"textbox","id":"sh/1ojy10ne","slide":16,"name":"decision-3","text":"Jumlah CH mengikuti cakupan; tiap CH memakai 1 baterai 4000 mAh dan 2 panel 6 W.","textPreview":"Jumlah CH mengikuti cakupan; tiap CH memakai 1 baterai 4000 mAh dan 2 panel 6 W.","textChars":80,"textLines":1,"bbox":[130,394,470,54]}
+{"kind":"textbox","id":"sh/gnax8v6t","slide":16,"name":"decision-4-num","text":"04","textPreview":"04","textChars":2,"textLines":1,"bbox":[662,202,70,42]}
+{"kind":"textbox","id":"sh/nqlg3a5k","slide":16,"name":"decision-4","text":"Catat “3 minggu dari 10 Agustus” sebagai rencana kunjungan.","textPreview":"Catat “3 minggu dari 10 Agustus” sebagai rencana kunjungan.","textChars":59,"textLines":1,"bbox":[740,202,470,48]}
+{"kind":"textbox","id":"sh/2pcfa5oz","slide":16,"name":"decision-5-num","text":"05","textPreview":"05","textChars":2,"textLines":1,"bbox":[662,294,70,42]}
+{"kind":"textbox","id":"sh/ps3y5knq","slide":16,"name":"decision-5","text":"Gunakan ... cm untuk dimensi mounting sementara.","textPreview":"Gunakan ... cm untuk dimensi mounting sementara.","textChars":48,"textLines":1,"bbox":[740,294,470,54]}
+{"kind":"textbox","id":"sh/oruhcf65","slide":16,"name":"decision-6-num","text":"06","textPreview":"06","textChars":2,"textLines":1,"bbox":[662,394,70,42]}
+{"kind":"textbox","id":"sh/bulg7u5g","slide":16,"name":"decision-6","text":"Siapkan pembicaraan Gateway, jaringan, keamanan, dan server bersama IT.","textPreview":"Siapkan pembicaraan Gateway, jaringan, keamanan, dan server bersama IT.","textChars":71,"textLines":1,"bbox":[740,394,470,54]}
+{"kind":"shape","id":"sh/atczepob","slide":16,"name":"decision-output","bbox":[52,520,1176,116]}
+{"kind":"textbox","id":"sh/mpgj6t8j","slide":16,"name":"decision-output-title","text":"OUTPUT","textPreview":"OUTPUT","textChars":6,"textLines":1,"bbox":[82,548,220,28]}
+{"kind":"textbox","id":"sh/7qp0zepo","slide":16,"name":"decision-output-body","text":"Baseline teknis • agenda kunjungan • input survei SRU • bahan pembicaraan IT • tanggung jawab organisasi","textPreview":"Baseline teknis • agenda kunjungan • input survei SRU • bahan pembicaraan IT • tanggung jawab organisasi","textChars":104,"textLines":1,"bbox":[302,544,896,40]}
+{"kind":"textbox","id":"sh/8by18jq9","slide":16,"name":"decision-output-note","text":"Tindak lanjut dicatat sebagai action list dengan owner organisasi, jadwal, dan bukti penyelesaian.","textPreview":"Tindak lanjut dicatat sebagai action list dengan owner organisasi, jadwal, dan bukti penyelesaian.","textChars":98,"textLines":1,"bbox":[302,590,896,28]}
+{"kind":"notes","id":"nt/gny5sjyp","slide":16,"text":"[Sources]\n- Konfirmasi pengguna, 19 Agustus 2026.\n- Rekaman dan catatan meeting.\n- Audit rangkaian, desain PCB, dan firmware."}

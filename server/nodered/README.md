@@ -1,5 +1,30 @@
 # Pertamina GLD Node-RED Flow
 
+## Mode lokal portable (PC baru)
+
+Untuk bench lokal yang tidak bergantung pada IP broker lama, jalankan:
+
+```text
+tools\start-local-nodered-mqtt.bat
+```
+
+Launcher ini membuat credential lokal pertama kali, menyalakan broker MQTT pada
+`127.0.0.1:1884`, menyalakan Node-RED pada `127.0.0.1:1880`, menerapkan flow,
+dan hanya selesai jika broker merekam CONNECT dari client
+`node-red-pertamina-gld`.
+
+Titik inisialisasi broker adalah `tools\local_mqtt_broker.py`. Broker dapat
+dijalankan sendiri dengan `tools\run-local-mqtt-broker.bat`; launcher full-stack
+memanggil runner yang sama secara otomatis. Node-RED hanya client MQTT, bukan
+pemilik/penjalannya. Credential dan status lokal dibuat di
+`apps\runtime\local-mqtt\` dan sengaja tidak masuk Git.
+
+Saat deploy, launcher tidak menulis ulang file flow di repository; hanya flow
+Node-RED pada profil pengguna aktif yang diperbarui.
+
+Broker ini hanya untuk bench lokal loopback dan MQTT 3.1.1 QoS 0, bukan TLS atau
+deployment produksi.
+
 Flow ini adalah server-side bridge untuk tahap bench GLD -> CH -> Gateway -> Node-RED.
 Jalur utama kasus sebenarnya adalah MQTT/LAN dari Gateway ke server, bukan AP.
 
@@ -18,6 +43,19 @@ Jalur utama kasus sebenarnya adalah MQTT/LAN dari Gateway ke server, bukan AP.
   - Wrapper PowerShell ke generator JS utama supaya hanya ada satu definisi flow.
 - `.env.example`
   - Contoh variabel lokal. Jangan commit `.env` berisi secret produksi.
+
+## Secret AES dan status deployment
+
+`GLD_AES128_KEY_HEX`, `GLD_KEY_ID`, dan `PGL_COMMAND_AUTH_TOKEN` adalah
+secret runtime. Generator tidak pernah menyalin nilainya ke
+`pertamina-gld-server.flow.json`; Node-RED yang berjalan harus menerima ketiga
+variabel tersebut dari service environment atau secret store-nya sendiri.
+
+Operator Hub hanya membaca `server/nodered/.env` sebagai sumber provisioning
+untuk GLD. Status **source siap** berarti bridge dapat mengirim key ke GLD,
+bukan bukti flow Node-RED yang sedang berjalan sudah di-deploy atau direstart
+dengan key tersebut. Setelah mengubah secret, update environment proses
+Node-RED lalu deploy/restart Node-RED melalui prosedur server yang berwenang.
 
 ## Jalur Input
 

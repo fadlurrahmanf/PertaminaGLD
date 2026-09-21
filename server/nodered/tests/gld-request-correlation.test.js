@@ -354,8 +354,10 @@ try {
     PGL_GLD_TARGET_CH_MAP_JSON: JSON.stringify({ "0x1002": "0x0012" })
   });
   assert.equal(unsolicitedAlarm[2][0].payload.nodeIdHex, "0x1002");
-  assert(alarmTargetStore.pglGldDiscovery["0x0012"].devices["0x1002"]);
-  assert.equal(alarmTargetStore.pglGldDiscovery["0x0011"], undefined);
+  // A live transport/mesh source is authoritative. The static target map is
+  // only a compatibility fallback when no CH source can be inferred.
+  assert(alarmTargetStore.pglGldDiscovery["0x0011"].devices["0x1002"]);
+  assert.equal(alarmTargetStore.pglGldDiscovery["0x0012"], undefined);
 
   const unquotedAlarmTargetStore = { pglGldRequestIndex: {}, pglGldDiscovery: {} };
   const unsolicitedAlarmUnquotedMap = runDecoder(buildAppFrame({
@@ -368,8 +370,8 @@ try {
     PGL_GLD_TARGET_CH_MAP_JSON: "{0x1001:0x0012,0x1002:0x0012}"
   });
   assert.equal(unsolicitedAlarmUnquotedMap[2][0].payload.nodeIdHex, "0x1002");
-  assert(unquotedAlarmTargetStore.pglGldDiscovery["0x0012"].devices["0x1002"]);
-  assert.equal(unquotedAlarmTargetStore.pglGldDiscovery["0x0011"], undefined);
+  assert(unquotedAlarmTargetStore.pglGldDiscovery["0x0011"].devices["0x1002"]);
+  assert.equal(unquotedAlarmTargetStore.pglGldDiscovery["0x0012"], undefined);
 
   console.log("PASS routed GLD response request correlation");
 } finally {

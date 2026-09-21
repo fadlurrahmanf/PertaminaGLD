@@ -1,0 +1,7 @@
+interface:
+  display_name: "PertaminaGLD Agentic Audit"
+  short_description: "Evidence-bounded multi-agent repository audits"
+  default_prompt: "Use $pertaminagld-agentic-audit to audit PertaminaGLD read-only and report evidence-backed findings."
+
+policy:
+  allow_implicit_invocation: true

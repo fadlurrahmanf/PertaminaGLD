@@ -1,0 +1,44 @@
+Communication job
+By the end, Pertamina site/HSE/IT/project and LGU should agree the immediate decisions, owners, and evidence gates needed to reach the September 2027 target because the system concept is coherent but safety, field power, CH energy, IT security, server packaging, and site-interface evidence are not yet closed.
+
+Audience
+- Pertamina RU IV/site, HSE, IT, electrical/mechanical, project/procurement
+- LGU engineering, lab/model, firmware/network, mechanical, and certification workstream
+
+Purpose
+- Facilitate decisions and assignment during the next coordination meeting
+- Keep claims evidence-bounded and suitable for stakeholder discussion
+- Use GLD as the only visible device label for the audited GLD scope
+- Do not show source or deliverable file names
+
+Narrative arc
+1. Open with the meeting outcome and correct the schedule misunderstanding.
+2. Show the end-to-end system and current readiness by boundary.
+3. Explain the most consequential technical decisions for GLD, CH, Gateway, and server.
+4. Establish the hazardous-area and site-interface hold points.
+5. Close with the roadmap, ownership, and decisions required now.
+
+Slide outline
+01 Cover — Readiness and action plan for Cilacap
+02 Outline — five discussion sections
+03 Meeting outcome — decisions, targets, and correction of the three-week claim
+04 System flow — GLD to CH to Gateway to server
+05 Readiness — what is source-confirmed versus still unproven
+06 GLD power — provisional 24 VDC/2 A and input-protection blocker
+07 GLD FAT — evidence required before freezing 1 A versus 2 A
+08 CH — radio path defined; energy/autonomy not frozen
+09 Gateway onboarding — exact IT data and physical placement
+10 Security — plaintext-to-TLS gap and acceptance
+11 Server — provisional pilot baseline and production closure
+12 Hazardous area — no classified-area trial before written acceptance
+13 Mounting/site — dimensions and routes remain survey outputs
+14 Roadmap — end-September 2026 support pack to September 2027 field acceptance
+15 Ownership — organizational role split
+16 Closing — decisions requested today
+
+Visual approach
+- Codex Grid: white canvas, black type, gray evidence surfaces, blue highlight, red only for blockers/holds.
+- Use user-provided evidence imagery on cover, CH, meeting outcome, and mounting slides.
+- One simple native-shape system-flow diagram; otherwise favor typography, tables, and timelines.
+- 1280 x 720, Arial fallback, at least 68 px cover title, 48 px slide titles, 32 px subheads, 21 px body.
+

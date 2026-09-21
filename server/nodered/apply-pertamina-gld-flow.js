@@ -34,18 +34,16 @@ const mqttUser = args.get("mqtt-user") || process.env.MQTT_USER || "";
 const mqttPassword = args.get("mqtt-password") || process.env.MQTT_PASS || "";
 const generateOnly = args.has("generate-only");
 const checkOnly = args.has("check");
+const writeFlow = !args.has("no-write-flow");
 const enableGatewayPoll = args.has("enable-gateway-poll");
 const nodeRedToken = args.get("node-red-token") || process.env.NODE_RED_ADMIN_TOKEN || "";
 const mqttTls = args.has("mqtt-tls");
 const mqttTlsInsecure = args.has("mqtt-tls-insecure");
 const mqttCaPath = String(args.get("mqtt-ca") || "");
-const replayStatePath = String(args.get("replay-state-path") || path.join(nodeRedUserDir, "pertamina-gld-replay-state.json"));
+const replayStatePath = String(args.get("replay-state-path") || process.env.PGL_REPLAY_STATE_PATH || ".node-red/pertamina-gld-replay-state.json");
 const fieldTestLogDir = String(args.get("field-test-log-dir") || path.join(scriptDir, "field-test-logs"));
 const fieldTestSnapshotIntervalSec = String(args.get("field-test-snapshot-interval-sec") || "30");
-const gldKeyId = String(args.get("gld-key-id") || process.env.GLD_KEY_ID || "");
-const gldAes128KeyHex = cleanHex(args.get("gld-aes128-key-hex") || process.env.GLD_AES128_KEY_HEX || "").toUpperCase();
 const gldTargetChMapJson = canonicalizeGldTargetChMap(args.get("gld-target-ch-map-json") || process.env.PGL_GLD_TARGET_CH_MAP_JSON || "");
-const commandAuthToken = String(args.get("command-auth-token") || process.env.PGL_COMMAND_AUTH_TOKEN || "");
 
 function cleanHex(input) {
   return String(input || "").replace(/^0x/i, "").replace(/[^0-9a-fA-F]/g, "");
@@ -119,13 +117,6 @@ if ((mqttUser && !mqttPassword) || (!mqttUser && mqttPassword)) {
 if (!isLoopbackHost(mqttHost) && !mqttUser) {
   throw new Error("Remote MQTT requires explicit credentials");
 }
-if (gldAes128KeyHex && gldAes128KeyHex.length !== 32) {
-  throw new Error("GLD AES-128 key must be exactly 32 hex characters");
-}
-if (gldKeyId && !Number.isFinite(Number(gldKeyId))) {
-  throw new Error("GLD key id must be numeric");
-}
-
 function id(name) {
   return `pgl_${name}`;
 }
@@ -149,10 +140,11 @@ function addOptionalFlowEnv(name, value) {
   }
 }
 
-addOptionalFlowEnv("GLD_KEY_ID", gldKeyId);
-addOptionalFlowEnv("GLD_AES128_KEY_HEX", gldAes128KeyHex);
 addOptionalFlowEnv("PGL_GLD_TARGET_CH_MAP_JSON", gldTargetChMapJson);
-addOptionalFlowEnv("PGL_COMMAND_AUTH_TOKEN", commandAuthToken);
+// Secrets intentionally never become part of the exported flow JSON. The
+// running Node-RED process must receive these from its service environment or
+// secret store: GLD_KEY_ID, GLD_AES128_KEY_HEX, and PGL_COMMAND_AUTH_TOKEN.
+// Function-node env.get() resolves those process-level values at runtime.
 
 function nodeBase(type, name, extra) {
   return Object.assign({ id: id(name), type, z: tab }, extra);
@@ -2414,8 +2406,8 @@ const nodes = [
     y: 330,
     wires: [[id("decode")]]
   }),
-  nodeBase("mqtt in", "mqtt_gateway_status_in", {
-    name: "MQTT Gateway status in",
+  nodeBase("mqtt in", "mqtt_gateway_status", {
+    name: "MQTT Gateway status",
     topic: "gld/gateway/status",
     qos: "0",
     datatype: "auto-detect",
@@ -2426,7 +2418,7 @@ const nodes = [
     inputs: 0,
     x: 180,
     y: 360,
-    wires: [[id("decode")]]
+    wires: [[id("decode_gateway_status")]]
   }),
   nodeBase("mqtt in", "mqtt_raw", {
     name: "MQTT Gateway raw",
@@ -2439,7 +2431,7 @@ const nodes = [
     rh: 0,
     inputs: 0,
     x: 180,
-    y: 380,
+    y: 390,
     wires: [[id("decode")]]
   }),
   nodeBase("mqtt in", "mqtt_pertamina_uplink", {
@@ -2453,7 +2445,7 @@ const nodes = [
     rh: 0,
     inputs: 0,
     x: 190,
-    y: 440,
+    y: 450,
     wires: [[id("decode")]]
   }),
   nodeBase("function", "decode", {
@@ -2476,6 +2468,24 @@ const nodes = [
       [id("mqtt_events"), id("debug_events"), id("compact_topology_debug"), id("field_test_log")],
       [id("mqtt_decoded"), id("compact_decoded_debug"), id("http_decode_ok"), id("field_test_log")],
       [id("mqtt_error"), id("debug_error"), id("http_decode_error"), id("field_test_log")]
+    ]
+  }),
+  nodeBase("function", "decode_gateway_status", {
+    name: "decode Gateway status (no republish)",
+    func: decodeFunction,
+    outputs: 4,
+    timeout: 0,
+    noerr: 0,
+    initialize: "",
+    finalize: "",
+    libs: [{ var: "fs", module: "fs" }, { var: "path", module: "path" }],
+    x: 700,
+    y: 200,
+    wires: [
+      [id("debug_status"), id("field_test_log")],
+      [id("debug_events"), id("compact_topology_debug"), id("field_test_log")],
+      [id("compact_decoded_debug"), id("field_test_log")],
+      [id("mqtt_error"), id("debug_error"), id("field_test_log")]
     ]
   }),
   nodeBase("function", "http_decode_ok", {
@@ -3285,7 +3295,9 @@ if (checkOnly) {
   console.log(JSON.stringify({ generated: false, drift: false, flowPath, nodes: nodes.length }));
   process.exit(0);
 }
-fs.writeFileSync(flowPath, renderedFlow);
+if (writeFlow) {
+  fs.writeFileSync(flowPath, renderedFlow);
+}
 
 if (generateOnly) {
   console.log(JSON.stringify({ generated: true, flowPath, nodes: nodes.length }));

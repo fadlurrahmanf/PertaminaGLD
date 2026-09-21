@@ -1,0 +1,979 @@
+{
+  "schema": "openai.presentation.layout/v4",
+  "unit": "px",
+  "slide": {
+    "aid": "sl/i107q5of",
+    "id": "i107q5of",
+    "slide": 5,
+    "layoutId": "/ppt/slideLayouts/slideLayout1.xml",
+    "layoutName": "Title Slide",
+    "layoutType": "title",
+    "masterLayoutId": "/ppt/slideMasters/slideMaster1.xml",
+    "masterLayoutName": "Master",
+    "backgroundColor": "#FFFFFF",
+    "frame": {
+      "left": 0,
+      "top": 0,
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "theme": {
+    "colorSchemeName": "ChatGPT",
+    "colors": {
+      "accent1": "#156082",
+      "accent2": "#E97132",
+      "accent3": "#196B24",
+      "accent4": "#0F9ED5",
+      "accent5": "#A02B93",
+      "accent6": "#4EA72E",
+      "dk1": "#000000",
+      "lt1": "#FFFFFF",
+      "dk2": "#0E2841",
+      "lt2": "#E8E8E8",
+      "hlink": "#467886",
+      "folHlink": "#96607D"
+    },
+    "fontScheme": {
+      "name": "Office",
+      "majorFont": {
+        "latinTypeface": "Calibri Light",
+        "eastAsianTypeface": "Calibri Light",
+        "complexScriptTypeface": "Calibri Light"
+      },
+      "minorFont": {
+        "latinTypeface": "Calibri",
+        "eastAsianTypeface": "Calibri",
+        "complexScriptTypeface": "Calibri"
+      }
+    },
+    "typefaces": [
+      "Arial",
+      "Calibri",
+      "Calibri Light"
+    ]
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "/ppt/slideLayouts/slideLayout1.xml",
+      "name": "Title Slide",
+      "type": "title",
+      "parentLayoutId": "/ppt/slideMasters/slideMaster1.xml",
+      "elements": []
+    },
+    {
+      "scope": "master",
+      "id": "/ppt/slideMasters/slideMaster1.xml",
+      "name": "Master",
+      "type": "master",
+      "elements": []
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/n6dcr65o",
+      "id": "8",
+      "name": "section-5",
+      "bbox": [
+        52,
+        30,
+        480,
+        18
+      ],
+      "geometry": "rect",
+      "text": "STATUS SISTEM",
+      "textPreview": "STATUS SISTEM",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 24,
+        "typeface": "Calibri",
+        "color": "tx1",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "STATUS SISTEM"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "STATUS SISTEM",
+          "resolvedTextStyle": {
+            "fontSize": 14,
+            "typeface": "Arial",
+            "color": "#667085",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "STATUS SISTEM",
+              "fontSize": 14,
+              "typeface": "Arial",
+              "color": "#667085",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 2,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/dgbulwnm",
+      "id": "2",
+      "name": "title-5",
+      "bbox": [
+        52,
+        58,
+        1176,
+        60
+      ],
+      "geometry": "rect",
+      "text": "Status keputusan terkonfirmasi",
+      "textPreview": "Status keputusan terkonfirmasi",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 24,
+        "typeface": "Calibri",
+        "color": "tx1",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Status keputusan terkonfirmasi"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Status keputusan terkonfirmasi",
+          "resolvedTextStyle": {
+            "fontSize": 48,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Status keputusan terkonfirmasi",
+              "fontSize": 48,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 3,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/cf2tcr61",
+      "id": "3",
+      "name": "footer-rule-5",
+      "bbox": [
+        52,
+        668,
+        1176,
+        1
+      ],
+      "geometry": "line",
+      "lineColor": "#B8BCC4",
+      "lineWidth": 1
+    },
+    {
+      "order": 4,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/z2tcnm5s",
+      "id": "4",
+      "name": "footer-left-5",
+      "bbox": [
+        52,
+        680,
+        360,
+        20
+      ],
+      "geometry": "rect",
+      "text": "INTERNAL • 19 AGUSTUS 2026",
+      "textPreview": "INTERNAL • 19 AGUSTUS 2026",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 24,
+        "typeface": "Calibri",
+        "color": "tx1",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "INTERNAL • 19 AGUSTUS 2026"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "INTERNAL • 19 AGUSTUS 2026",
+          "resolvedTextStyle": {
+            "fontSize": 14,
+            "typeface": "Arial",
+            "color": "#667085",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "INTERNAL • 19 AGUSTUS 2026",
+              "fontSize": 14,
+              "typeface": "Arial",
+              "color": "#667085",
+              "alignment": "left"
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 5,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/yhkbe1o7",
+      "id": "5",
+      "name": "footer-number-5",
+      "bbox": [
+        1178,
+        680,
+        50,
+        20
+      ],
+      "geometry": "rect",
+      "text": "05",
+      "textPreview": "05",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 24,
+        "typeface": "Calibri",
+        "color": "tx1",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "05"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "05",
+          "resolvedTextStyle": {
+            "fontSize": 14,
+            "typeface": "Arial",
+            "color": "#667085",
+            "alignment": "right"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "05",
+              "fontSize": 14,
+              "typeface": "Arial",
+              "color": "#667085",
+              "alignment": "right"
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 6,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/l4bupwny",
+      "id": "6",
+      "name": "readiness-sub",
+      "bbox": [
+        52,
+        132,
+        1176,
+        36
+      ],
+      "geometry": "rect",
+      "text": "Baseline berikut memisahkan keputusan program dari agenda tindak lanjut implementasi.",
+      "textPreview": "Baseline berikut memisahkan keputusan program dari agenda tindak lanjut implementasi.",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 24,
+        "typeface": "Calibri",
+        "color": "tx1",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Baseline berikut memisahkan keputusan program dari agenda tindak lanjut implementasi."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Baseline berikut memisahkan keputusan program dari agenda tindak lanjut implementasi.",
+          "resolvedTextStyle": {
+            "fontSize": 22,
+            "typeface": "Arial",
+            "color": "#667085",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Baseline berikut memisahkan keputusan program dari agenda tindak lanjut implementasi.",
+              "fontSize": 22,
+              "typeface": "Arial",
+              "color": "#667085",
+              "alignment": "left"
+            }
+          ],
+          "bulletCharacter": "",
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 7,
+      "kind": "table",
+      "scope": "slide",
+      "aid": "tb/vex4n2t4",
+      "id": "9",
+      "bbox": [
+        52,
+        196,
+        1176,
+        410
+      ],
+      "text": "Area | Keputusan saat ini | Tindak lanjut\nGLD | 3 unit; catu 24 VDC/2 A | Validasi rangkaian input dan FAT\nCH | 1 baterai 4000 mAh; 2 panel × 6 W | Jumlah mengikuti cakupan SRU\nGateway | Menjadi agenda pembicaraan | Bahas penempatan dan koneksi bersama IT\nServer | Menjadi agenda pembicaraan | Bahas layanan, keamanan, dan operasi\nSite | Lokasi dialihkan dari LPG ke SRU | Ukur mounting ... cm dan siapkan instalasi",
+      "textPreview": "Area | Keputusan saat ini | Tindak lanjut | GLD | 3 unit; catu 24 VDC/2 A | Validasi rangkaian input dan FAT | CH | 1 baterai 4000 mAh; 2...",
+      "rows": 6,
+      "cols": 3,
+      "cells": [
+        {
+          "index": 1,
+          "row": 1,
+          "column": 1,
+          "bbox": [
+            52,
+            196,
+            170,
+            68.33
+          ],
+          "text": "Area",
+          "textPreview": "Area",
+          "fillColor": "#EDEDED",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Area",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Area",
+                  "fontSize": 18,
+                  "typeface": "Arial",
+                  "color": "#111827",
+                  "bold": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "row": 1,
+          "column": 2,
+          "bbox": [
+            222,
+            196,
+            470,
+            68.33
+          ],
+          "text": "Keputusan saat ini",
+          "textPreview": "Keputusan saat ini",
+          "fillColor": "#EDEDED",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Keputusan saat ini",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Keputusan saat ini",
+                  "fontSize": 18,
+                  "typeface": "Arial",
+                  "color": "#111827",
+                  "bold": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 3,
+          "row": 1,
+          "column": 3,
+          "bbox": [
+            692,
+            196,
+            536,
+            68.33
+          ],
+          "text": "Tindak lanjut",
+          "textPreview": "Tindak lanjut",
+          "fillColor": "#EDEDED",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Tindak lanjut",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Tindak lanjut",
+                  "fontSize": 18,
+                  "typeface": "Arial",
+                  "color": "#111827",
+                  "bold": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 4,
+          "row": 2,
+          "column": 1,
+          "bbox": [
+            52,
+            264.33,
+            170,
+            68.33
+          ],
+          "text": "GLD",
+          "textPreview": "GLD",
+          "fillColor": "#EAF5FB",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "GLD",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "GLD",
+                  "fontSize": 19,
+                  "typeface": "Arial",
+                  "color": "#111827",
+                  "bold": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 5,
+          "row": 2,
+          "column": 2,
+          "bbox": [
+            222,
+            264.33,
+            470,
+            68.33
+          ],
+          "text": "3 unit; catu 24 VDC/2 A",
+          "textPreview": "3 unit; catu 24 VDC/2 A",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "3 unit; catu 24 VDC/2 A",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "3 unit; catu 24 VDC/2 A",
+                  "fontSize": 18,
+                  "typeface": "Arial",
+                  "color": "#111827"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 6,
+          "row": 2,
+          "column": 3,
+          "bbox": [
+            692,
+            264.33,
+            536,
+            68.33
+          ],
+          "text": "Validasi rangkaian input dan FAT",
+          "textPreview": "Validasi rangkaian input dan FAT",
+          "fillColor": "#FFF9E8",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Validasi rangkaian input dan FAT",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Validasi rangkaian input dan FAT",
+                  "fontSize": 18,
+                  "typeface": "Arial",
+                  "color": "#111827"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 7,
+          "row": 3,
+          "column": 1,
+          "bbox": [
+            52,
+            332.67,
+            170,
+            68.33
+          ],
+          "text": "CH",
+          "textPreview": "CH",
+          "fillColor": "#EAF5FB",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "CH",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "CH",
+                  "fontSize": 19,
+                  "typeface": "Arial",
+                  "color": "#111827",
+                  "bold": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 8,
+          "row": 3,
+          "column": 2,
+          "bbox": [
+            222,
+            332.67,
+            470,
+            68.33
+          ],
+          "text": "1 baterai 4000 mAh; 2 panel × 6 W",
+          "textPreview": "1 baterai 4000 mAh; 2 panel × 6 W",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "1 baterai 4000 mAh; 2 panel × 6 W",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "1 baterai 4000 mAh; 2 panel × 6 W",
+                  "fontSize": 18,
+                  "typeface": "Arial",
+                  "color": "#111827"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 9,
+          "row": 3,
+          "column": 3,
+          "bbox": [
+            692,
+            332.67,
+            536,
+            68.33
+          ],
+          "text": "Jumlah mengikuti cakupan SRU",
+          "textPreview": "Jumlah mengikuti cakupan SRU",
+          "fillColor": "#FFF9E8",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Jumlah mengikuti cakupan SRU",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Jumlah mengikuti cakupan SRU",
+                  "fontSize": 18,
+                  "typeface": "Arial",
+                  "color": "#111827"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 10,
+          "row": 4,
+          "column": 1,
+          "bbox": [
+            52,
+            401,
+            170,
+            68.33
+          ],
+          "text": "Gateway",
+          "textPreview": "Gateway",
+          "fillColor": "#EAF5FB",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Gateway",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Gateway",
+                  "fontSize": 19,
+                  "typeface": "Arial",
+                  "color": "#111827",
+                  "bold": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 11,
+          "row": 4,
+          "column": 2,
+          "bbox": [
+            222,
+            401,
+            470,
+            68.33
+          ],
+          "text": "Menjadi agenda pembicaraan",
+          "textPreview": "Menjadi agenda pembicaraan",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Menjadi agenda pembicaraan",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Menjadi agenda pembicaraan",
+                  "fontSize": 18,
+                  "typeface": "Arial",
+                  "color": "#111827"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 12,
+          "row": 4,
+          "column": 3,
+          "bbox": [
+            692,
+            401,
+            536,
+            68.33
+          ],
+          "text": "Bahas penempatan dan koneksi bersama IT",
+          "textPreview": "Bahas penempatan dan koneksi bersama IT",
+          "fillColor": "#FFF9E8",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Bahas penempatan dan koneksi bersama IT",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Bahas penempatan dan koneksi bersama IT",
+                  "fontSize": 18,
+                  "typeface": "Arial",
+                  "color": "#111827"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 13,
+          "row": 5,
+          "column": 1,
+          "bbox": [
+            52,
+            469.33,
+            170,
+            68.33
+          ],
+          "text": "Server",
+          "textPreview": "Server",
+          "fillColor": "#EAF5FB",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Server",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Server",
+                  "fontSize": 19,
+                  "typeface": "Arial",
+                  "color": "#111827",
+                  "bold": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 14,
+          "row": 5,
+          "column": 2,
+          "bbox": [
+            222,
+            469.33,
+            470,
+            68.33
+          ],
+          "text": "Menjadi agenda pembicaraan",
+          "textPreview": "Menjadi agenda pembicaraan",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Menjadi agenda pembicaraan",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Menjadi agenda pembicaraan",
+                  "fontSize": 18,
+                  "typeface": "Arial",
+                  "color": "#111827"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 15,
+          "row": 5,
+          "column": 3,
+          "bbox": [
+            692,
+            469.33,
+            536,
+            68.33
+          ],
+          "text": "Bahas layanan, keamanan, dan operasi",
+          "textPreview": "Bahas layanan, keamanan, dan operasi",
+          "fillColor": "#FFF9E8",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Bahas layanan, keamanan, dan operasi",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Bahas layanan, keamanan, dan operasi",
+                  "fontSize": 18,
+                  "typeface": "Arial",
+                  "color": "#111827"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 16,
+          "row": 6,
+          "column": 1,
+          "bbox": [
+            52,
+            537.67,
+            170,
+            68.33
+          ],
+          "text": "Site",
+          "textPreview": "Site",
+          "fillColor": "#EAF5FB",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Site",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Site",
+                  "fontSize": 19,
+                  "typeface": "Arial",
+                  "color": "#111827",
+                  "bold": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 17,
+          "row": 6,
+          "column": 2,
+          "bbox": [
+            222,
+            537.67,
+            470,
+            68.33
+          ],
+          "text": "Lokasi dialihkan dari LPG ke SRU",
+          "textPreview": "Lokasi dialihkan dari LPG ke SRU",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Lokasi dialihkan dari LPG ke SRU",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Lokasi dialihkan dari LPG ke SRU",
+                  "fontSize": 18,
+                  "typeface": "Arial",
+                  "color": "#111827"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "index": 18,
+          "row": 6,
+          "column": 3,
+          "bbox": [
+            692,
+            537.67,
+            536,
+            68.33
+          ],
+          "text": "Ukur mounting ... cm dan siapkan instalasi",
+          "textPreview": "Ukur mounting ... cm dan siapkan instalasi",
+          "fillColor": "#FFF9E8",
+          "paragraphs": [
+            {
+              "index": 1,
+              "text": "Ukur mounting ... cm dan siapkan instalasi",
+              "runs": [
+                {
+                  "index": 1,
+                  "text": "Ukur mounting ... cm dan siapkan instalasi",
+                  "fontSize": 18,
+                  "typeface": "Arial",
+                  "color": "#111827"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "composeRuns": []
+}

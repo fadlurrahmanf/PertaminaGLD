@@ -1,0 +1,954 @@
+{
+  "schema": "openai.presentation.layout/v4",
+  "unit": "px",
+  "slide": {
+    "aid": "sl/atmn30",
+    "id": "atmn30",
+    "slide": 8,
+    "layoutId": "be4b8f75-84ef-4272-944b-e7d31fdb41b2",
+    "layoutName": "Title Slide",
+    "layoutType": "title",
+    "masterLayoutId": "b3585e2a-1f6b-42c9-9c69-ca2590313385",
+    "masterLayoutName": "Master",
+    "frame": {
+      "left": 0,
+      "top": 0,
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "theme": {
+    "colorSchemeName": "ChatGPT",
+    "colors": {
+      "accent1": "#156082",
+      "accent2": "#E97132",
+      "accent3": "#196B24",
+      "accent4": "#0F9ED5",
+      "accent5": "#A02B93",
+      "accent6": "#4EA72E",
+      "bg1": "#FFFFFF",
+      "bg2": "#000000",
+      "tx1": "#1F1F1F",
+      "tx2": "#FFFFFF",
+      "dk1": "#000000",
+      "lt1": "#FFFFFF",
+      "dk2": "#0E2841",
+      "lt2": "#E8E8E8",
+      "hlink": "#467886",
+      "folHlink": "#96607D"
+    },
+    "typefaces": [
+      "Arial"
+    ]
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "be4b8f75-84ef-4272-944b-e7d31fdb41b2",
+      "name": "Title Slide",
+      "type": "title",
+      "parentLayoutId": "b3585e2a-1f6b-42c9-9c69-ca2590313385",
+      "elements": []
+    },
+    {
+      "scope": "master",
+      "id": "b3585e2a-1f6b-42c9-9c69-ca2590313385",
+      "name": "Master",
+      "type": "master",
+      "elements": []
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/98rm543e",
+      "id": "1",
+      "name": "slide-title",
+      "bbox": [
+        42,
+        32,
+        1160,
+        70
+      ],
+      "geometry": "rect",
+      "text": "Informasi minimum dari Pertamina sebelum pemasangan",
+      "textPreview": "Informasi minimum dari Pertamina sebelum pemasangan",
+      "resolvedFontSize": 39,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 39,
+        "typeface": "Arial",
+        "color": "#111827",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Informasi minimum dari Pertamina sebelum pemasangan"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Informasi minimum dari Pertamina sebelum pemasangan",
+          "resolvedTextStyle": {
+            "fontSize": 39,
+            "typeface": "Arial",
+            "color": "#111827",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Informasi minimum dari Pertamina sebelum pemasangan",
+              "fontSize": 39,
+              "typeface": "Arial",
+              "color": "#111827",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 2,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/m5gna9kn",
+      "id": "2",
+      "name": "page",
+      "bbox": [
+        1185,
+        665,
+        50,
+        22
+      ],
+      "geometry": "rect",
+      "text": "08",
+      "textPreview": "08",
+      "resolvedFontSize": 10.33,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 13,
+        "typeface": "Arial",
+        "color": "#5F6670",
+        "alignment": "right",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.79,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "08"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "08",
+          "resolvedTextStyle": {
+            "fontSize": 13,
+            "typeface": "Arial",
+            "color": "#5F6670",
+            "alignment": "right"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "08",
+              "fontSize": 13,
+              "typeface": "Arial",
+              "color": "#5F6670",
+              "alignment": "right"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 3,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/n6p43ul8",
+      "id": "3",
+      "name": "bullet-0",
+      "bbox": [
+        42,
+        138,
+        9,
+        9
+      ],
+      "geometry": "rect",
+      "fillColor": "#268A5E",
+      "lineColor": "#268A5E",
+      "lineWidth": 1
+    },
+    {
+      "order": 4,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/03y58z2h",
+      "id": "4",
+      "name": "bullet-text-0",
+      "bbox": [
+        67,
+        130,
+        1113,
+        59
+      ],
+      "geometry": "rect",
+      "text": "Bukti kesiapan power GLD 24 VDC minimal 2 A: lokasi, polaritas, proteksi, grounding dan hasil ukur.",
+      "textPreview": "Bukti kesiapan power GLD 24 VDC minimal 2 A: lokasi, polaritas, proteksi, grounding dan hasil ukur.",
+      "resolvedFontSize": 19,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 19,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Bukti kesiapan power GLD 24 VDC minimal 2 A: lokasi, polaritas, proteksi, grounding dan hasil ukur."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Bukti kesiapan power GLD 24 VDC minimal 2 A: lokasi, polaritas, proteksi, grounding dan hasil ukur.",
+          "resolvedTextStyle": {
+            "fontSize": 19,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Bukti kesiapan power GLD 24 VDC minimal 2 A: lokasi, polaritas, proteksi, grounding dan hasil ukur.",
+              "fontSize": 19,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 5,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/l47m1432",
+      "id": "5",
+      "name": "bullet-1",
+      "bbox": [
+        42,
+        200,
+        9,
+        9
+      ],
+      "geometry": "rect",
+      "fillColor": "#268A5E",
+      "lineColor": "#268A5E",
+      "lineWidth": 1
+    },
+    {
+      "order": 6,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/yhgn6pkr",
+      "id": "6",
+      "name": "bullet-text-1",
+      "bbox": [
+        67,
+        192,
+        1113,
+        59
+      ],
+      "geometry": "rect",
+      "text": "Data mounting CH: foto, ukuran tiang/handrail, fastener, batas beban, area bahaya dan sertifikasi.",
+      "textPreview": "Data mounting CH: foto, ukuran tiang/handrail, fastener, batas beban, area bahaya dan sertifikasi.",
+      "resolvedFontSize": 19,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 19,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Data mounting CH: foto, ukuran tiang/handrail, fastener, batas beban, area bahaya dan sertifikasi."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Data mounting CH: foto, ukuran tiang/handrail, fastener, batas beban, area bahaya dan sertifikasi.",
+          "resolvedTextStyle": {
+            "fontSize": 19,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Data mounting CH: foto, ukuran tiang/handrail, fastener, batas beban, area bahaya dan sertifikasi.",
+              "fontSize": 19,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 7,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/zip4zulc",
+      "id": "7",
+      "name": "bullet-2",
+      "bbox": [
+        42,
+        262,
+        9,
+        9
+      ],
+      "geometry": "rect",
+      "fillColor": "#268A5E",
+      "lineColor": "#268A5E",
+      "lineWidth": 1
+    },
+    {
+      "order": 8,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/kz25kj21",
+      "id": "8",
+      "name": "bullet-text-2",
+      "bbox": [
+        67,
+        254,
+        1113,
+        59
+      ],
+      "geometry": "rect",
+      "text": "Standar panel surya, kabel panel–CH, battery, enclosure, grounding dan proteksi petir.",
+      "textPreview": "Standar panel surya, kabel panel–CH, battery, enclosure, grounding dan proteksi petir.",
+      "resolvedFontSize": 19,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 19,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Standar panel surya, kabel panel–CH, battery, enclosure, grounding dan proteksi petir."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Standar panel surya, kabel panel–CH, battery, enclosure, grounding dan proteksi petir.",
+          "resolvedTextStyle": {
+            "fontSize": 19,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Standar panel surya, kabel panel–CH, battery, enclosure, grounding dan proteksi petir.",
+              "fontSize": 19,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 9,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/50b6dojm",
+      "id": "9",
+      "name": "bullet-3",
+      "bbox": [
+        42,
+        324,
+        9,
+        9
+      ],
+      "geometry": "rect",
+      "fillColor": "#268A5E",
+      "lineColor": "#268A5E",
+      "lineWidth": 1
+    },
+    {
+      "order": 10,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/hgvut4n2",
+      "id": "10",
+      "name": "bullet-text-3",
+      "bbox": [
+        67,
+        316,
+        1113,
+        59
+      ],
+      "geometry": "rect",
+      "text": "Lokasi Gateway indoor, adaptor 5 V, akses rooftop, batas antenna dan jalur coax.",
+      "textPreview": "Lokasi Gateway indoor, adaptor 5 V, akses rooftop, batas antenna dan jalur coax.",
+      "resolvedFontSize": 19,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 19,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Lokasi Gateway indoor, adaptor 5 V, akses rooftop, batas antenna dan jalur coax."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Lokasi Gateway indoor, adaptor 5 V, akses rooftop, batas antenna dan jalur coax.",
+          "resolvedTextStyle": {
+            "fontSize": 19,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Lokasi Gateway indoor, adaptor 5 V, akses rooftop, batas antenna dan jalur coax.",
+              "fontSize": 19,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 11,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/wvmtkzmx",
+      "id": "11",
+      "name": "bullet-4",
+      "bbox": [
+        42,
+        386,
+        9,
+        9
+      ],
+      "geometry": "rect",
+      "fillColor": "#268A5E",
+      "lineColor": "#268A5E",
+      "lineWidth": 1
+    },
+    {
+      "order": 12,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/vudcru5c",
+      "id": "12",
+      "name": "bullet-text-4",
+      "bbox": [
+        67,
+        378,
+        1113,
+        59
+      ],
+      "geometry": "rect",
+      "text": "Registrasi jaringan: MAC, SSID/security, VLAN, IP, DNS, NTP, firewall, broker, ACL dan certificate.",
+      "textPreview": "Registrasi jaringan: MAC, SSID/security, VLAN, IP, DNS, NTP, firewall, broker, ACL dan certificate.",
+      "resolvedFontSize": 19,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 19,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Registrasi jaringan: MAC, SSID/security, VLAN, IP, DNS, NTP, firewall, broker, ACL dan certificate."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Registrasi jaringan: MAC, SSID/security, VLAN, IP, DNS, NTP, firewall, broker, ACL dan certificate.",
+          "resolvedTextStyle": {
+            "fontSize": 19,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Registrasi jaringan: MAC, SSID/security, VLAN, IP, DNS, NTP, firewall, broker, ACL dan certificate.",
+              "fontSize": 19,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 13,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/ut4bi9or",
+      "id": "13",
+      "name": "bullet-5",
+      "bbox": [
+        42,
+        448,
+        9,
+        9
+      ],
+      "geometry": "rect",
+      "fillColor": "#268A5E",
+      "lineColor": "#268A5E",
+      "lineWidth": 1
+    },
+    {
+      "order": 14,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/9svup4n6",
+      "id": "14",
+      "name": "bullet-text-5",
+      "bbox": [
+        67,
+        440,
+        1113,
+        59
+      ],
+      "geometry": "rect",
+      "text": "Spesifikasi server: VM/host, CPU/RAM/storage, OS, database, akses admin, backup dan PIC.",
+      "textPreview": "Spesifikasi server: VM/host, CPU/RAM/storage, OS, database, akses admin, backup dan PIC.",
+      "resolvedFontSize": 19,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 19,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Spesifikasi server: VM/host, CPU/RAM/storage, OS, database, akses admin, backup dan PIC."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Spesifikasi server: VM/host, CPU/RAM/storage, OS, database, akses admin, backup dan PIC.",
+          "resolvedTextStyle": {
+            "fontSize": 19,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Spesifikasi server: VM/host, CPU/RAM/storage, OS, database, akses admin, backup dan PIC.",
+              "fontSize": 19,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 15,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/8rmtgz6l",
+      "id": "15",
+      "name": "bullet-6",
+      "bbox": [
+        42,
+        510,
+        9,
+        9
+      ],
+      "geometry": "rect",
+      "fillColor": "#268A5E",
+      "lineColor": "#268A5E",
+      "lineWidth": 1
+    },
+    {
+      "order": 16,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/7qdsnu50",
+      "id": "16",
+      "name": "bullet-text-6",
+      "bbox": [
+        67,
+        502,
+        1113,
+        59
+      ],
+      "geometry": "rect",
+      "text": "Jadwal instalasi, daftar PIC, skenario SAT, kriteria lulus dan penandatangan acceptance.",
+      "textPreview": "Jadwal instalasi, daftar PIC, skenario SAT, kriteria lulus dan penandatangan acceptance.",
+      "resolvedFontSize": 19,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 19,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Jadwal instalasi, daftar PIC, skenario SAT, kriteria lulus dan penandatangan acceptance."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Jadwal instalasi, daftar PIC, skenario SAT, kriteria lulus dan penandatangan acceptance.",
+          "resolvedTextStyle": {
+            "fontSize": 19,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Jadwal instalasi, daftar PIC, skenario SAT, kriteria lulus dan penandatangan acceptance.",
+              "fontSize": 19,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 17,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/mpkbepof",
+      "id": "17",
+      "name": "tech-note",
+      "bbox": [
+        42,
+        578,
+        1138,
+        73
+      ],
+      "geometry": "rect",
+      "fillColor": "#FFF4D7",
+      "lineColor": "#C4C9D0",
+      "lineWidth": 1
+    },
+    {
+      "order": 18,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/tofulona",
+      "id": "18",
+      "name": "text",
+      "bbox": [
+        62,
+        594,
+        190,
+        25
+      ],
+      "geometry": "rect",
+      "text": "Catatan teknis",
+      "textPreview": "Catatan teknis",
+      "resolvedFontSize": 12.83,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 20,
+        "typeface": "Arial",
+        "color": "#246BFD",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.64,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Catatan teknis"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Catatan teknis",
+          "resolvedTextStyle": {
+            "fontSize": 20,
+            "typeface": "Arial",
+            "color": "#246BFD",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Catatan teknis",
+              "fontSize": 20,
+              "typeface": "Arial",
+              "color": "#246BFD",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 19,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/sn6tsjmp",
+      "id": "19",
+      "name": "text",
+      "bbox": [
+        250,
+        590,
+        900,
+        38
+      ],
+      "geometry": "rect",
+      "text": "“Satu jaringan” berarti tersedia IP routing ke broker. Nilai 90 byte adalah target data; paket MQTT aktual tetap harus diukur saat SAT.",
+      "textPreview": "“Satu jaringan” berarti tersedia IP routing ke broker. Nilai 90 byte adalah target data; paket MQTT aktual tetap harus diukur saat SAT.",
+      "resolvedFontSize": 14.05,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 19,
+        "typeface": "Arial",
+        "color": "#111827",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.74,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "“Satu jaringan” berarti tersedia IP routing ke broker. Nilai 90 byte adalah target data; paket MQTT aktual tetap harus diukur saat SAT."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "“Satu jaringan” berarti tersedia IP routing ke broker. Nilai 90 byte adalah target data; paket MQTT aktual tetap harus diukur saat SAT.",
+          "resolvedTextStyle": {
+            "fontSize": 19,
+            "typeface": "Arial",
+            "color": "#111827",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "“Satu jaringan” berarti tersedia IP routing ke broker. Nilai 90 byte adalah target data; paket MQTT aktual tetap harus diukur saat SAT.",
+              "fontSize": 19,
+              "typeface": "Arial",
+              "color": "#111827",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    }
+  ],
+  "composeRuns": []
+}

@@ -1,0 +1,384 @@
+{
+  "schema": "openai.presentation.layout/v4",
+  "unit": "px",
+  "slide": {
+    "aid": "sl/3v75d1",
+    "id": "3v75d1",
+    "slide": 1,
+    "layoutId": "16452bcd-0fe5-4b23-a757-5e1fc78af60a",
+    "layoutName": "Title Slide",
+    "layoutType": "title",
+    "masterLayoutId": "e0d1eaf0-323f-4a0e-8639-fc71f34a8a69",
+    "masterLayoutName": "Master",
+    "backgroundColor": "#FFFFFF",
+    "frame": {
+      "left": 0,
+      "top": 0,
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "theme": {
+    "colorSchemeName": "ChatGPT",
+    "colors": {
+      "accent1": "#156082",
+      "accent2": "#E97132",
+      "accent3": "#196B24",
+      "accent4": "#0F9ED5",
+      "accent5": "#A02B93",
+      "accent6": "#4EA72E",
+      "bg1": "#FFFFFF",
+      "bg2": "#000000",
+      "tx1": "#1F1F1F",
+      "tx2": "#FFFFFF",
+      "dk1": "#000000",
+      "lt1": "#FFFFFF",
+      "dk2": "#0E2841",
+      "lt2": "#E8E8E8",
+      "hlink": "#467886",
+      "folHlink": "#96607D"
+    },
+    "typefaces": [
+      "Arial"
+    ]
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "16452bcd-0fe5-4b23-a757-5e1fc78af60a",
+      "name": "Title Slide",
+      "type": "title",
+      "parentLayoutId": "e0d1eaf0-323f-4a0e-8639-fc71f34a8a69",
+      "elements": []
+    },
+    {
+      "scope": "master",
+      "id": "e0d1eaf0-323f-4a0e-8639-fc71f34a8a69",
+      "name": "Master",
+      "type": "master",
+      "elements": []
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/g3yt0vmd",
+      "id": "1",
+      "name": "eyebrow",
+      "bbox": [
+        42,
+        42,
+        500,
+        40
+      ],
+      "geometry": "rect",
+      "text": "PERTAMINA × LGU",
+      "textPreview": "PERTAMINA × LGU",
+      "resolvedFontSize": 25,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 25,
+        "typeface": "Arial",
+        "color": "#5F6670",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "PERTAMINA × LGU"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "PERTAMINA × LGU",
+          "resolvedTextStyle": {
+            "fontSize": 25,
+            "typeface": "Arial",
+            "color": "#5F6670",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "PERTAMINA × LGU",
+              "fontSize": 25,
+              "typeface": "Arial",
+              "color": "#5F6670",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 2,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/v25srq5s",
+      "id": "2",
+      "name": "cover-title",
+      "bbox": [
+        42,
+        175,
+        1030,
+        245
+      ],
+      "geometry": "rect",
+      "text": "Kesiapan Integrasi\nGLD · CH · Gateway · Server",
+      "textPreview": "Kesiapan Integrasi | GLD · CH · Gateway · Server",
+      "resolvedFontSize": 65,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 65,
+        "typeface": "Arial",
+        "color": "#111111",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Kesiapan Integrasi"
+          },
+          {
+            "index": 2,
+            "text": "GLD · CH · Gateway · Server"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Kesiapan Integrasi",
+          "resolvedTextStyle": {
+            "fontSize": 65,
+            "typeface": "Arial",
+            "color": "#111111",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Kesiapan Integrasi",
+              "fontSize": 65,
+              "typeface": "Arial",
+              "color": "#111111",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        },
+        {
+          "index": 2,
+          "text": "GLD · CH · Gateway · Server",
+          "resolvedTextStyle": {
+            "fontSize": 65,
+            "typeface": "Arial",
+            "color": "#111111",
+            "bold": true,
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "GLD · CH · Gateway · Server",
+              "fontSize": 65,
+              "typeface": "Arial",
+              "color": "#111111",
+              "bold": true,
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 3,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/u1wbyl47",
+      "id": "3",
+      "name": "cover-subtitle",
+      "bbox": [
+        42,
+        505,
+        800,
+        55
+      ],
+      "geometry": "rect",
+      "text": "Daftar pertanyaan dan keputusan sebelum pemasangan awal",
+      "textPreview": "Daftar pertanyaan dan keputusan sebelum pemasangan awal",
+      "resolvedFontSize": 28,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 28,
+        "typeface": "Arial",
+        "color": "#5F6670",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Daftar pertanyaan dan keputusan sebelum pemasangan awal"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Daftar pertanyaan dan keputusan sebelum pemasangan awal",
+          "resolvedTextStyle": {
+            "fontSize": 28,
+            "typeface": "Arial",
+            "color": "#5F6670",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Daftar pertanyaan dan keputusan sebelum pemasangan awal",
+              "fontSize": 28,
+              "typeface": "Arial",
+              "color": "#5F6670",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    },
+    {
+      "order": 4,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/tgnapgn2",
+      "id": "4",
+      "name": "accent-rule",
+      "bbox": [
+        1010,
+        505,
+        180,
+        7
+      ],
+      "geometry": "rect",
+      "fillColor": "#3D8DFF",
+      "lineColor": "#3D8DFF",
+      "lineWidth": 1
+    },
+    {
+      "order": 5,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/8fetwbmh",
+      "id": "5",
+      "name": "text",
+      "bbox": [
+        42,
+        600,
+        400,
+        35
+      ],
+      "geometry": "rect",
+      "text": "13 Agustus 2026",
+      "textPreview": "13 Agustus 2026",
+      "resolvedFontSize": 18,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 18,
+        "typeface": "Arial",
+        "color": "#5F6670",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 4.8,
+          "right": 9.6,
+          "bottom": 4.8,
+          "left": 9.6
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "13 Agustus 2026"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "13 Agustus 2026",
+          "resolvedTextStyle": {
+            "fontSize": 18,
+            "typeface": "Arial",
+            "color": "#5F6670",
+            "alignment": "left"
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "13 Agustus 2026",
+              "fontSize": 18,
+              "typeface": "Arial",
+              "color": "#5F6670",
+              "alignment": "left"
+            }
+          ],
+          "marginLeft": 0
+        }
+      ],
+      "lineWidth": 0
+    }
+  ],
+  "composeRuns": []
+}

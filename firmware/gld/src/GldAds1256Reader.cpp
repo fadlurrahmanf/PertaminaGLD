@@ -41,6 +41,10 @@ uint8_t adsInputForSensor(uint8_t sensorChannel) {
     return pgl::gld::board::SENSOR_TO_ADS_CH[sensorChannel];
 }
 
+bool isValidPin(int pin) {
+    return pin >= 0;
+}
+
 bool waitDrdyLow(uint32_t timeoutMs) {
     const uint32_t start = millis();
     while (digitalRead(pgl::gld::board::PIN_ADS1256_DRDY) != LOW) {
@@ -152,14 +156,29 @@ bool GldAds1256Reader::begin(SPIClass& spi) {
 
     pinMode(pgl::gld::board::PIN_ADS1256_CS, OUTPUT);
     pinMode(pgl::gld::board::PIN_ADS1256_DRDY, INPUT);
-    pinMode(pgl::gld::board::PIN_ADS1256_SYNC, OUTPUT);
+    if (isValidPin(pgl::gld::board::PIN_ADS1256_PDOWN)) {
+        pinMode(pgl::gld::board::PIN_ADS1256_PDOWN, OUTPUT);
+    }
+    if (isValidPin(pgl::gld::board::PIN_ADS1256_RESET)) {
+        pinMode(pgl::gld::board::PIN_ADS1256_RESET, OUTPUT);
+    }
     digitalWrite(pgl::gld::board::PIN_ADS1256_CS, HIGH);
-    digitalWrite(pgl::gld::board::PIN_ADS1256_SYNC, HIGH);
-
-    digitalWrite(pgl::gld::board::PIN_ADS1256_SYNC, LOW);
-    delay(100);
-    digitalWrite(pgl::gld::board::PIN_ADS1256_SYNC, HIGH);
-    delay(100);
+    // PDWN is active-low. GLD2 exposes it independently from the active-low
+    // RESET pin, while legacy boards retain their prior single-pin sequence.
+    if (isValidPin(pgl::gld::board::PIN_ADS1256_PDOWN)) {
+        digitalWrite(pgl::gld::board::PIN_ADS1256_PDOWN, HIGH);
+    }
+    if (isValidPin(pgl::gld::board::PIN_ADS1256_RESET)) {
+        digitalWrite(pgl::gld::board::PIN_ADS1256_RESET, LOW);
+        delay(10);
+        digitalWrite(pgl::gld::board::PIN_ADS1256_RESET, HIGH);
+        delay(10);
+    } else if (isValidPin(pgl::gld::board::PIN_ADS1256_PDOWN)) {
+        digitalWrite(pgl::gld::board::PIN_ADS1256_PDOWN, LOW);
+        delay(100);
+        digitalWrite(pgl::gld::board::PIN_ADS1256_PDOWN, HIGH);
+        delay(100);
+    }
 
     spi_->begin(
         pgl::gld::board::PIN_SPI_SCK,

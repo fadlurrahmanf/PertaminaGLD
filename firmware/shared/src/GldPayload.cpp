@@ -16,7 +16,7 @@ uint16_t readU16Be(const uint8_t* in) {
 }  // namespace
 
 bool isValidGasClass(uint8_t gasClass) {
-    return gasClass <= GLD_GAS_ANOMALY;
+    return gasClass <= GLD_GAS_H2;
 }
 
 bool isValidConfidence(uint8_t confidence) {

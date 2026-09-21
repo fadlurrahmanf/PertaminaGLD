@@ -1,0 +1,2222 @@
+{
+  "schema": "openai.presentation.layout/v4",
+  "unit": "px",
+  "slide": {
+    "aid": "sl/f7fb7k",
+    "id": "f7fb7k",
+    "slide": 15,
+    "layoutId": "6a1a93d3-ea1d-429f-9522-c5e67327db04",
+    "layoutName": "Title Slide",
+    "layoutType": "title",
+    "masterLayoutId": "ea845d38-f203-4a15-8d29-592c4f07080e",
+    "masterLayoutName": "Master",
+    "backgroundColor": "#FFFFFF",
+    "frame": {
+      "left": 0,
+      "top": 0,
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "theme": {
+    "colorSchemeName": "ChatGPT",
+    "colors": {
+      "accent1": "#156082",
+      "accent2": "#E97132",
+      "accent3": "#196B24",
+      "accent4": "#0F9ED5",
+      "accent5": "#A02B93",
+      "accent6": "#4EA72E",
+      "bg1": "#FFFFFF",
+      "bg2": "#000000",
+      "tx1": "#1F1F1F",
+      "tx2": "#FFFFFF",
+      "dk1": "#000000",
+      "lt1": "#FFFFFF",
+      "dk2": "#0E2841",
+      "lt2": "#E8E8E8",
+      "hlink": "#467886",
+      "folHlink": "#96607D"
+    },
+    "typefaces": [
+      "Arial"
+    ]
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "6a1a93d3-ea1d-429f-9522-c5e67327db04",
+      "name": "Title Slide",
+      "type": "title",
+      "parentLayoutId": "ea845d38-f203-4a15-8d29-592c4f07080e",
+      "elements": []
+    },
+    {
+      "scope": "master",
+      "id": "ea845d38-f203-4a15-8d29-592c4f07080e",
+      "name": "Master",
+      "type": "master",
+      "elements": []
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/98rutcnu",
+      "id": "1",
+      "name": "section-15",
+      "bbox": [
+        52,
+        30,
+        480,
+        18
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.0"
+      },
+      "geometry": "rect",
+      "text": "RESPONSIBILITY SPLIT",
+      "textPreview": "RESPONSIBILITY SPLIT",
+      "resolvedFontSize": 14,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 14,
+        "typeface": "Arial",
+        "color": "#667085",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "RESPONSIBILITY SPLIT"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "RESPONSIBILITY SPLIT",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 14,
+            "typeface": "Arial",
+            "color": "#667085",
+            "bold": true,
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "RESPONSIBILITY SPLIT",
+              "anchor": 1,
+              "fontSize": 14,
+              "typeface": "Arial",
+              "color": "#667085",
+              "bold": true,
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 2,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/m50vixo3",
+      "id": "2",
+      "name": "title-15",
+      "bbox": [
+        52,
+        58,
+        1176,
+        60
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.1"
+      },
+      "geometry": "rect",
+      "text": "Ownership ditetapkan per organisasi",
+      "textPreview": "Ownership ditetapkan per organisasi",
+      "resolvedFontSize": 48,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 48,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Ownership ditetapkan per organisasi"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Ownership ditetapkan per organisasi",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 48,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Ownership ditetapkan per organisasi",
+              "anchor": 1,
+              "fontSize": 48,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 3,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/769cr25o",
+      "id": "3",
+      "name": "footer-rule-15",
+      "bbox": [
+        52,
+        668,
+        1176,
+        1
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.2"
+      },
+      "geometry": "line",
+      "lineColor": "#B8BCC4",
+      "lineWidth": 1
+    },
+    {
+      "order": 4,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/wvido76l",
+      "id": "4",
+      "name": "footer-left-15",
+      "bbox": [
+        52,
+        680,
+        360,
+        20
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.3"
+      },
+      "geometry": "rect",
+      "text": "INTERNAL • 18 AGUSTUS 2026",
+      "textPreview": "INTERNAL • 18 AGUSTUS 2026",
+      "resolvedFontSize": 14,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 14,
+        "typeface": "Arial",
+        "color": "#667085",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "INTERNAL • 18 AGUSTUS 2026"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "INTERNAL • 18 AGUSTUS 2026",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 14,
+            "typeface": "Arial",
+            "color": "#667085",
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "INTERNAL • 18 AGUSTUS 2026",
+              "anchor": 1,
+              "fontSize": 14,
+              "typeface": "Arial",
+              "color": "#667085",
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 5,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/hwbexcnq",
+      "id": "5",
+      "name": "footer-number-15",
+      "bbox": [
+        1178,
+        680,
+        50,
+        20
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.4"
+      },
+      "geometry": "rect",
+      "text": "15",
+      "textPreview": "15",
+      "resolvedFontSize": 14,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 14,
+        "typeface": "Arial",
+        "color": "#667085",
+        "alignment": "right",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "15"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "15",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 14,
+            "typeface": "Arial",
+            "color": "#667085",
+            "alignment": "right",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "15",
+              "anchor": 1,
+              "fontSize": 14,
+              "typeface": "Arial",
+              "color": "#667085",
+              "alignment": "right",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 6,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/u90vmhof",
+      "id": "6",
+      "name": "ownership-intro",
+      "bbox": [
+        52,
+        130,
+        1176,
+        42
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.5"
+      },
+      "geometry": "rect",
+      "text": "Nama individual dan signatory harus disahkan; tidak disimpulkan dari audio tanpa diarization.",
+      "textPreview": "Nama individual dan signatory harus disahkan; tidak disimpulkan dari audio tanpa diarization.",
+      "resolvedFontSize": 22,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 22,
+        "typeface": "Arial",
+        "color": "#667085",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Nama individual dan signatory harus disahkan; tidak disimpulkan dari audio tanpa diarization."
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Nama individual dan signatory harus disahkan; tidak disimpulkan dari audio tanpa diarization.",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 22,
+            "typeface": "Arial",
+            "color": "#667085",
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "Nama individual dan signatory harus disahkan; tidak disimpulkan dari audio tanpa diarization.",
+              "anchor": 1,
+              "fontSize": 22,
+              "typeface": "Arial",
+              "color": "#667085",
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 7,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/vu9wv250",
+      "id": "7",
+      "name": "owner-lgu",
+      "bbox": [
+        52,
+        204,
+        350,
+        374
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.6"
+      },
+      "geometry": "rect",
+      "fillColor": "#EAF5FB",
+      "lineWidth": 0
+    },
+    {
+      "order": 8,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/czydcn61",
+      "id": "8",
+      "name": "owner-pertamina",
+      "bbox": [
+        465,
+        204,
+        350,
+        374
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.7"
+      },
+      "geometry": "rect",
+      "fillColor": "#F7F7F7",
+      "lineWidth": 0
+    },
+    {
+      "order": 9,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/x07ulsnm",
+      "id": "9",
+      "name": "owner-vendor",
+      "bbox": [
+        878,
+        204,
+        350,
+        374
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.8"
+      },
+      "geometry": "rect",
+      "fillColor": "#F7F7F7",
+      "lineWidth": 0
+    },
+    {
+      "order": 10,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/90rm1w3y",
+      "id": "10",
+      "name": "owner-lgu-title",
+      "bbox": [
+        82,
+        236,
+        290,
+        42
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.9"
+      },
+      "geometry": "rect",
+      "text": "LGU",
+      "textPreview": "LGU",
+      "resolvedFontSize": 34,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 34,
+        "typeface": "Arial",
+        "color": "#3D8DFF",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "LGU"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "LGU",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 34,
+            "typeface": "Arial",
+            "color": "#3D8DFF",
+            "bold": true,
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "LGU",
+              "anchor": 1,
+              "fontSize": 34,
+              "typeface": "Arial",
+              "color": "#3D8DFF",
+              "bold": true,
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 11,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/8fi58r2d",
+      "id": "11",
+      "name": "owner-lgu-body",
+      "bbox": [
+        82,
+        302,
+        290,
+        224
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.10"
+      },
+      "geometry": "rect",
+      "text": "R / A untuk:\n• Device datasheet dan BOM\n• GLD power/FAT dan CH energy\n• Gateway config/test support\n• Server package dan runbook\n• Controlled design dossier",
+      "textPreview": "R / A untuk: | • Device datasheet dan BOM | • GLD power/FAT dan CH energy | • Gateway config/test support | • Server package dan runbook ...",
+      "resolvedFontSize": 21,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 21,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 7,
+        "lines": [
+          {
+            "index": 1,
+            "text": "R / A untuk:"
+          },
+          {
+            "index": 2,
+            "text": "• Device datasheet dan BOM"
+          },
+          {
+            "index": 3,
+            "text": "• GLD power/FAT dan CH"
+          },
+          {
+            "index": 4,
+            "text": "energy"
+          },
+          {
+            "index": 5,
+            "text": "• Gateway config/test support"
+          },
+          {
+            "index": 6,
+            "text": "• Server package dan runbook"
+          },
+          {
+            "index": 7,
+            "text": "• Controlled design dossier"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "R / A untuk:\n• Device datasheet dan BOM\n• GLD power/FAT dan CH energy\n• Gateway config/test support\n• Server package dan runbook\n• Controlled design dossier",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 21,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "R / A untuk:\n• Device datasheet dan BOM\n• GLD power/FAT dan CH energy\n• Gateway config/test support\n• Server package dan runbook\n• Controlled design dossier",
+              "anchor": 1,
+              "fontSize": 21,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 12,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/nep4zmls",
+      "id": "12",
+      "name": "owner-pertamina-title",
+      "bbox": [
+        495,
+        236,
+        290,
+        42
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.11"
+      },
+      "geometry": "rect",
+      "text": "PERTAMINA",
+      "textPreview": "PERTAMINA",
+      "resolvedFontSize": 34,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 34,
+        "typeface": "Arial",
+        "color": "#111827",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "PERTAMINA"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "PERTAMINA",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 34,
+            "typeface": "Arial",
+            "color": "#111827",
+            "bold": true,
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "PERTAMINA",
+              "anchor": 1,
+              "fontSize": 34,
+              "typeface": "Arial",
+              "color": "#111827",
+              "bold": true,
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 13,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/mdg36hk7",
+      "id": "13",
+      "name": "owner-pertamina-body",
+      "bbox": [
+        495,
+        302,
+        290,
+        224
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.12"
+      },
+      "geometry": "rect",
+      "text": "A / C untuk:\n• Area classification dan HSE basis\n• Site power, cable, structure\n• Permit, contractor, installation\n• IT platform, VLAN/firewall/policy\n• Acceptance dan sign-off",
+      "textPreview": "A / C untuk: | • Area classification dan HSE basis | • Site power, cable, structure | • Permit, contractor, installation | • IT platform,...",
+      "resolvedFontSize": 21,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 21,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 8,
+        "lines": [
+          {
+            "index": 1,
+            "text": "A / C untuk:"
+          },
+          {
+            "index": 2,
+            "text": "• Area classification dan HSE"
+          },
+          {
+            "index": 3,
+            "text": "basis"
+          },
+          {
+            "index": 4,
+            "text": "• Site power, cable, structure"
+          },
+          {
+            "index": 5,
+            "text": "• Permit, contractor, installation"
+          },
+          {
+            "index": 6,
+            "text": "• IT platform,"
+          },
+          {
+            "index": 7,
+            "text": "VLAN/firewall/policy"
+          },
+          {
+            "index": 8,
+            "text": "• Acceptance dan sign-off"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "A / C untuk:\n• Area classification dan HSE basis\n• Site power, cable, structure\n• Permit, contractor, installation\n• IT platform, VLAN/firewall/policy\n• Acceptance dan sign-off",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 21,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "A / C untuk:\n• Area classification dan HSE basis\n• Site power, cable, structure\n• Permit, contractor, installation\n• IT platform, VLAN/firewall/policy\n• Acceptance dan sign-off",
+              "anchor": 1,
+              "fontSize": 21,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 14,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/x4rm5g3u",
+      "id": "14",
+      "name": "owner-vendor-title",
+      "bbox": [
+        908,
+        236,
+        290,
+        42
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.13"
+      },
+      "geometry": "rect",
+      "text": "VENDOR / ExCB",
+      "textPreview": "VENDOR / ExCB",
+      "resolvedFontSize": 30,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 30,
+        "typeface": "Arial",
+        "color": "#111827",
+        "bold": true,
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "VENDOR / ExCB"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "VENDOR / ExCB",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 30,
+            "typeface": "Arial",
+            "color": "#111827",
+            "bold": true,
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "VENDOR / ExCB",
+              "anchor": 1,
+              "fontSize": 30,
+              "typeface": "Arial",
+              "color": "#111827",
+              "bold": true,
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 15,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/w3i5cb29",
+      "id": "15",
+      "name": "owner-vendor-body",
+      "bbox": [
+        908,
+        302,
+        290,
+        224
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.14"
+      },
+      "geometry": "rect",
+      "text": "R / C untuk:\n• Exact part dan certificate data\n• Assessment/test schedule\n• Certificate scope dan conditions\n• Battery/solar/enclosure evidence\n• Inspection support",
+      "textPreview": "R / C untuk: | • Exact part dan certificate data | • Assessment/test schedule | • Certificate scope dan conditions | • Battery/solar/encl...",
+      "resolvedFontSize": 20.84,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 21,
+        "typeface": "Arial",
+        "color": "#111827",
+        "alignment": "left",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 0.99,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 9,
+        "lines": [
+          {
+            "index": 1,
+            "text": "R / C untuk:"
+          },
+          {
+            "index": 2,
+            "text": "• Exact part dan certificate"
+          },
+          {
+            "index": 3,
+            "text": "data"
+          },
+          {
+            "index": 4,
+            "text": "• Assessment/test schedule"
+          },
+          {
+            "index": 5,
+            "text": "• Certificate scope dan"
+          },
+          {
+            "index": 6,
+            "text": "conditions"
+          },
+          {
+            "index": 7,
+            "text": "• Battery/solar/enclosure"
+          },
+          {
+            "index": 8,
+            "text": "evidence"
+          },
+          {
+            "index": 9,
+            "text": "• Inspection support"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "R / C untuk:\n• Exact part dan certificate data\n• Assessment/test schedule\n• Certificate scope dan conditions\n• Battery/solar/enclosure evidence\n• Inspection support",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 21,
+            "typeface": "Arial",
+            "color": "#111827",
+            "alignment": "left",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "R / C untuk:\n• Exact part dan certificate data\n• Assessment/test schedule\n• Certificate scope dan conditions\n• Battery/solar/enclosure evidence\n• Inspection support",
+              "anchor": 1,
+              "fontSize": 21,
+              "typeface": "Arial",
+              "color": "#111827",
+              "alignment": "left",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    },
+    {
+      "order": 16,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/v29436l4",
+      "id": "16",
+      "name": "ownership-key",
+      "bbox": [
+        52,
+        606,
+        1176,
+        28
+      ],
+      "composeSource": {
+        "run": 1,
+        "path": "0.15"
+      },
+      "geometry": "rect",
+      "text": "R = Responsible • A = Accountable • C = Consulted",
+      "textPreview": "R = Responsible • A = Accountable • C = Consulted",
+      "resolvedFontSize": 18,
+      "resolvedTextStyle": {
+        "anchor": 1,
+        "fontSize": 18,
+        "typeface": "Arial",
+        "color": "#667085",
+        "bold": true,
+        "alignment": "center",
+        "verticalAlignment": "top",
+        "wrap": "square",
+        "autoFit": "shrinkText",
+        "autoFitScale": 1,
+        "insets": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        }
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "R = Responsible • A = Accountable • C = Consulted"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "R = Responsible • A = Accountable • C = Consulted",
+          "resolvedTextStyle": {
+            "anchor": 1,
+            "fontSize": 18,
+            "typeface": "Arial",
+            "color": "#667085",
+            "bold": true,
+            "alignment": "center",
+            "verticalAlignment": "top",
+            "wrap": "square",
+            "autoFit": "shrinkText",
+            "insets": {
+              "top": 0,
+              "right": 0,
+              "bottom": 0,
+              "left": 0
+            }
+          },
+          "runs": [
+            {
+              "index": 1,
+              "text": "R = Responsible • A = Accountable • C = Consulted",
+              "anchor": 1,
+              "fontSize": 18,
+              "typeface": "Arial",
+              "color": "#667085",
+              "bold": true,
+              "alignment": "center",
+              "verticalAlignment": "top",
+              "wrap": "square",
+              "autoFit": "shrinkText",
+              "insets": {
+                "top": 0,
+                "right": 0,
+                "bottom": 0,
+                "left": 0
+              }
+            }
+          ],
+          "marginLeft": 0
+        }
+      ]
+    }
+  ],
+  "composeRuns": [
+    {
+      "index": 1,
+      "frame": {
+        "left": 0,
+        "top": 0,
+        "width": 1280,
+        "height": 720
+      },
+      "baseUnit": 1,
+      "root": {
+        "path": "0",
+        "kind": "layers",
+        "name": "ownership-three-column",
+        "requestedSize": {
+          "width": {
+            "mode": "fill",
+            "value": 1
+          },
+          "height": {
+            "mode": "fill",
+            "value": 1
+          }
+        },
+        "intrinsicSize": {
+          "width": 1228,
+          "height": 700
+        },
+        "frame": {
+          "left": 0,
+          "top": 0,
+          "width": 1280,
+          "height": 720
+        },
+        "children": [
+          {
+            "path": "0.0",
+            "kind": "text",
+            "name": "section-15",
+            "position": {
+              "left": 52,
+              "top": 30
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 480
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 18
+              }
+            },
+            "intrinsicSize": {
+              "width": 480,
+              "height": 18
+            },
+            "frame": {
+              "left": 52,
+              "top": 30,
+              "width": 480,
+              "height": 18
+            },
+            "snappedFrame": {
+              "left": 52,
+              "top": 30,
+              "width": 480,
+              "height": 18
+            },
+            "children": [],
+            "text": "RESPONSIBILITY SPLIT",
+            "transform": "none",
+            "element": {
+              "aid": "sh/98rutcnu",
+              "id": "1",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.1",
+            "kind": "text",
+            "name": "title-15",
+            "position": {
+              "left": 52,
+              "top": 58
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 1176
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 60
+              }
+            },
+            "intrinsicSize": {
+              "width": 1176,
+              "height": 60
+            },
+            "frame": {
+              "left": 52,
+              "top": 58,
+              "width": 1176,
+              "height": 60
+            },
+            "snappedFrame": {
+              "left": 52,
+              "top": 58,
+              "width": 1176,
+              "height": 60
+            },
+            "children": [],
+            "text": "Ownership ditetapkan per organisasi",
+            "transform": "none",
+            "element": {
+              "aid": "sh/m50vixo3",
+              "id": "2",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.2",
+            "kind": "shape",
+            "name": "footer-rule-15",
+            "position": {
+              "left": 52,
+              "top": 668
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 1176
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 1
+              }
+            },
+            "intrinsicSize": {
+              "width": 1176,
+              "height": 1
+            },
+            "frame": {
+              "left": 52,
+              "top": 668,
+              "width": 1176,
+              "height": 1
+            },
+            "snappedFrame": {
+              "left": 52,
+              "top": 668,
+              "width": 1176,
+              "height": 1
+            },
+            "children": [],
+            "geometry": "line",
+            "element": {
+              "aid": "sh/769cr25o",
+              "id": "3",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.3",
+            "kind": "text",
+            "name": "footer-left-15",
+            "position": {
+              "left": 52,
+              "top": 680
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 360
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 20
+              }
+            },
+            "intrinsicSize": {
+              "width": 360,
+              "height": 20
+            },
+            "frame": {
+              "left": 52,
+              "top": 680,
+              "width": 360,
+              "height": 20
+            },
+            "snappedFrame": {
+              "left": 52,
+              "top": 680,
+              "width": 360,
+              "height": 20
+            },
+            "children": [],
+            "text": "INTERNAL • 18 AGUSTUS 2026",
+            "transform": "none",
+            "element": {
+              "aid": "sh/wvido76l",
+              "id": "4",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.4",
+            "kind": "text",
+            "name": "footer-number-15",
+            "position": {
+              "left": 1178,
+              "top": 680
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 50
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 20
+              }
+            },
+            "intrinsicSize": {
+              "width": 50,
+              "height": 20
+            },
+            "frame": {
+              "left": 1178,
+              "top": 680,
+              "width": 50,
+              "height": 20
+            },
+            "snappedFrame": {
+              "left": 1178,
+              "top": 680,
+              "width": 50,
+              "height": 20
+            },
+            "children": [],
+            "text": "15",
+            "transform": "none",
+            "element": {
+              "aid": "sh/hwbexcnq",
+              "id": "5",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.5",
+            "kind": "text",
+            "name": "ownership-intro",
+            "position": {
+              "left": 52,
+              "top": 130
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 1176
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 42
+              }
+            },
+            "intrinsicSize": {
+              "width": 1176,
+              "height": 42
+            },
+            "frame": {
+              "left": 52,
+              "top": 130,
+              "width": 1176,
+              "height": 42
+            },
+            "snappedFrame": {
+              "left": 52,
+              "top": 130,
+              "width": 1176,
+              "height": 42
+            },
+            "children": [],
+            "text": "Nama individual dan signatory harus disahkan; tidak disimpulkan dari audio tanpa diarization.",
+            "transform": "none",
+            "element": {
+              "aid": "sh/u90vmhof",
+              "id": "6",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.6",
+            "kind": "shape",
+            "name": "owner-lgu",
+            "position": {
+              "left": 52,
+              "top": 204
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 350
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 374
+              }
+            },
+            "intrinsicSize": {
+              "width": 350,
+              "height": 374
+            },
+            "frame": {
+              "left": 52,
+              "top": 204,
+              "width": 350,
+              "height": 374
+            },
+            "snappedFrame": {
+              "left": 52,
+              "top": 204,
+              "width": 350,
+              "height": 374
+            },
+            "children": [],
+            "geometry": "rect",
+            "element": {
+              "aid": "sh/vu9wv250",
+              "id": "7",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.7",
+            "kind": "shape",
+            "name": "owner-pertamina",
+            "position": {
+              "left": 465,
+              "top": 204
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 350
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 374
+              }
+            },
+            "intrinsicSize": {
+              "width": 350,
+              "height": 374
+            },
+            "frame": {
+              "left": 465,
+              "top": 204,
+              "width": 350,
+              "height": 374
+            },
+            "snappedFrame": {
+              "left": 465,
+              "top": 204,
+              "width": 350,
+              "height": 374
+            },
+            "children": [],
+            "geometry": "rect",
+            "element": {
+              "aid": "sh/czydcn61",
+              "id": "8",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.8",
+            "kind": "shape",
+            "name": "owner-vendor",
+            "position": {
+              "left": 878,
+              "top": 204
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 350
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 374
+              }
+            },
+            "intrinsicSize": {
+              "width": 350,
+              "height": 374
+            },
+            "frame": {
+              "left": 878,
+              "top": 204,
+              "width": 350,
+              "height": 374
+            },
+            "snappedFrame": {
+              "left": 878,
+              "top": 204,
+              "width": 350,
+              "height": 374
+            },
+            "children": [],
+            "geometry": "rect",
+            "element": {
+              "aid": "sh/x07ulsnm",
+              "id": "9",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.9",
+            "kind": "text",
+            "name": "owner-lgu-title",
+            "position": {
+              "left": 82,
+              "top": 236
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 290
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 42
+              }
+            },
+            "intrinsicSize": {
+              "width": 290,
+              "height": 42
+            },
+            "frame": {
+              "left": 82,
+              "top": 236,
+              "width": 290,
+              "height": 42
+            },
+            "snappedFrame": {
+              "left": 82,
+              "top": 236,
+              "width": 290,
+              "height": 42
+            },
+            "children": [],
+            "text": "LGU",
+            "transform": "none",
+            "element": {
+              "aid": "sh/90rm1w3y",
+              "id": "10",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.10",
+            "kind": "text",
+            "name": "owner-lgu-body",
+            "position": {
+              "left": 82,
+              "top": 302
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 290
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 224
+              }
+            },
+            "intrinsicSize": {
+              "width": 290,
+              "height": 224
+            },
+            "frame": {
+              "left": 82,
+              "top": 302,
+              "width": 290,
+              "height": 224
+            },
+            "snappedFrame": {
+              "left": 82,
+              "top": 302,
+              "width": 290,
+              "height": 224
+            },
+            "children": [],
+            "text": "R / A untuk:\n• Device datasheet dan BOM\n• GLD power/FAT dan CH energy\n• Gateway config/test support\n• Server package dan runbook\n• Controlled design dossier",
+            "transform": "none",
+            "element": {
+              "aid": "sh/8fi58r2d",
+              "id": "11",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.11",
+            "kind": "text",
+            "name": "owner-pertamina-title",
+            "position": {
+              "left": 495,
+              "top": 236
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 290
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 42
+              }
+            },
+            "intrinsicSize": {
+              "width": 290,
+              "height": 42
+            },
+            "frame": {
+              "left": 495,
+              "top": 236,
+              "width": 290,
+              "height": 42
+            },
+            "snappedFrame": {
+              "left": 495,
+              "top": 236,
+              "width": 290,
+              "height": 42
+            },
+            "children": [],
+            "text": "PERTAMINA",
+            "transform": "none",
+            "element": {
+              "aid": "sh/nep4zmls",
+              "id": "12",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.12",
+            "kind": "text",
+            "name": "owner-pertamina-body",
+            "position": {
+              "left": 495,
+              "top": 302
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 290
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 224
+              }
+            },
+            "intrinsicSize": {
+              "width": 290,
+              "height": 224
+            },
+            "frame": {
+              "left": 495,
+              "top": 302,
+              "width": 290,
+              "height": 224
+            },
+            "snappedFrame": {
+              "left": 495,
+              "top": 302,
+              "width": 290,
+              "height": 224
+            },
+            "children": [],
+            "text": "A / C untuk:\n• Area classification dan HSE basis\n• Site power, cable, structure\n• Permit, contractor, installation\n• IT platform, VLAN/firewall/policy\n• Acceptance dan sign-off",
+            "transform": "none",
+            "element": {
+              "aid": "sh/mdg36hk7",
+              "id": "13",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.13",
+            "kind": "text",
+            "name": "owner-vendor-title",
+            "position": {
+              "left": 908,
+              "top": 236
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 290
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 42
+              }
+            },
+            "intrinsicSize": {
+              "width": 290,
+              "height": 42
+            },
+            "frame": {
+              "left": 908,
+              "top": 236,
+              "width": 290,
+              "height": 42
+            },
+            "snappedFrame": {
+              "left": 908,
+              "top": 236,
+              "width": 290,
+              "height": 42
+            },
+            "children": [],
+            "text": "VENDOR / ExCB",
+            "transform": "none",
+            "element": {
+              "aid": "sh/x4rm5g3u",
+              "id": "14",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.14",
+            "kind": "text",
+            "name": "owner-vendor-body",
+            "position": {
+              "left": 908,
+              "top": 302
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 290
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 224
+              }
+            },
+            "intrinsicSize": {
+              "width": 290,
+              "height": 224
+            },
+            "frame": {
+              "left": 908,
+              "top": 302,
+              "width": 290,
+              "height": 224
+            },
+            "snappedFrame": {
+              "left": 908,
+              "top": 302,
+              "width": 290,
+              "height": 224
+            },
+            "children": [],
+            "text": "R / C untuk:\n• Exact part dan certificate data\n• Assessment/test schedule\n• Certificate scope dan conditions\n• Battery/solar/enclosure evidence\n• Inspection support",
+            "transform": "none",
+            "element": {
+              "aid": "sh/w3i5cb29",
+              "id": "15",
+              "kind": "shape"
+            }
+          },
+          {
+            "path": "0.15",
+            "kind": "text",
+            "name": "ownership-key",
+            "position": {
+              "left": 52,
+              "top": 606
+            },
+            "requestedSize": {
+              "width": {
+                "mode": "fixed",
+                "value": 1176
+              },
+              "height": {
+                "mode": "fixed",
+                "value": 28
+              }
+            },
+            "intrinsicSize": {
+              "width": 1176,
+              "height": 28
+            },
+            "frame": {
+              "left": 52,
+              "top": 606,
+              "width": 1176,
+              "height": 28
+            },
+            "snappedFrame": {
+              "left": 52,
+              "top": 606,
+              "width": 1176,
+              "height": 28
+            },
+            "children": [],
+            "text": "R = Responsible • A = Accountable • C = Consulted",
+            "transform": "none",
+            "element": {
+              "aid": "sh/v29436l4",
+              "id": "16",
+              "kind": "shape"
+            }
+          }
+        ],
+        "padding": {
+          "top": 0,
+          "right": 0,
+          "bottom": 0,
+          "left": 0
+        },
+        "alignItems": "stretch",
+        "justifyItems": "stretch",
+        "contentFrame": {
+          "left": 0,
+          "top": 0,
+          "width": 1280,
+          "height": 720
+        },
+        "items": [
+          {
+            "path": "0.0",
+            "frame": {
+              "left": 52,
+              "top": 30,
+              "width": 480,
+              "height": 18
+            }
+          },
+          {
+            "path": "0.1",
+            "frame": {
+              "left": 52,
+              "top": 58,
+              "width": 1176,
+              "height": 60
+            }
+          },
+          {
+            "path": "0.2",
+            "frame": {
+              "left": 52,
+              "top": 668,
+              "width": 1176,
+              "height": 1
+            }
+          },
+          {
+            "path": "0.3",
+            "frame": {
+              "left": 52,
+              "top": 680,
+              "width": 360,
+              "height": 20
+            }
+          },
+          {
+            "path": "0.4",
+            "frame": {
+              "left": 1178,
+              "top": 680,
+              "width": 50,
+              "height": 20
+            }
+          },
+          {
+            "path": "0.5",
+            "frame": {
+              "left": 52,
+              "top": 130,
+              "width": 1176,
+              "height": 42
+            }
+          },
+          {
+            "path": "0.6",
+            "frame": {
+              "left": 52,
+              "top": 204,
+              "width": 350,
+              "height": 374
+            }
+          },
+          {
+            "path": "0.7",
+            "frame": {
+              "left": 465,
+              "top": 204,
+              "width": 350,
+              "height": 374
+            }
+          },
+          {
+            "path": "0.8",
+            "frame": {
+              "left": 878,
+              "top": 204,
+              "width": 350,
+              "height": 374
+            }
+          },
+          {
+            "path": "0.9",
+            "frame": {
+              "left": 82,
+              "top": 236,
+              "width": 290,
+              "height": 42
+            }
+          },
+          {
+            "path": "0.10",
+            "frame": {
+              "left": 82,
+              "top": 302,
+              "width": 290,
+              "height": 224
+            }
+          },
+          {
+            "path": "0.11",
+            "frame": {
+              "left": 495,
+              "top": 236,
+              "width": 290,
+              "height": 42
+            }
+          },
+          {
+            "path": "0.12",
+            "frame": {
+              "left": 495,
+              "top": 302,
+              "width": 290,
+              "height": 224
+            }
+          },
+          {
+            "path": "0.13",
+            "frame": {
+              "left": 908,
+              "top": 236,
+              "width": 290,
+              "height": 42
+            }
+          },
+          {
+            "path": "0.14",
+            "frame": {
+              "left": 908,
+              "top": 302,
+              "width": 290,
+              "height": 224
+            }
+          },
+          {
+            "path": "0.15",
+            "frame": {
+              "left": 52,
+              "top": 606,
+              "width": 1176,
+              "height": 28
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

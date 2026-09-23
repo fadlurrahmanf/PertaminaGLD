@@ -1,0 +1,3265 @@
+
+--- PDF PAGE 1 ---
+                                                                                                                              TCA9548A
+                                                                                         SCPS207H – MAY 2012 – REVISED SEPTEMBER 2024
+                       TCA9548A Low-Voltage 8-Channel I2C Switch with Reset
+
+1 Features                                                             3 Description
+•  1-to-8 Bidirectional translating switches                           The   TCA9548A   device   has   eight   bidirectional
+•  I2C Bus and SMBus compatible                                        translating  switches  that  can  be  controlled  through
+•  Active-low reset input                                              the I2C bus. The SCL/SDA upstream pair fans out to
+•  Three address pins, allowing up to eight                            eight downstream pairs, or channels. Any individual
+   TCA9548A devices on the I2C bus                                     SCn/SDn  channel  or  combination  of  channels  can
+•  Channel selection through an I2C Bus, in any                        be  selected,  determined  by  the  contents  of  the
+   combination                                                         programmable  control  register.  These  downstream
+•  Power up with all switch channels deselected                        channels can be used to resolve I2C target address
+•  Low RON switches                                                    conflicts.   For   example,   if   eight   identical   digital
+•  Allows voltage-level translation between 1.8V,                      temperature sensors are needed in the application,
+   2.5V, 3.3V, and 5V buses                                            one sensor can be connected at each channel: 0-7.
+•  No glitch on power up                                               The system controller can reset the TCA9548A in the
+•  Supports hot insertion                                              event of a time-out, or other improper operation by
+•  Low standby current                                                 asserting  a  low  in  the     RESET  input.  Similarly,  the
+•  Operating power-supply voltage range of                             power-on reset deselects all channels and initializes
+   1.65V to 5.5V                                                       the  I2C/SMBus  state  machine.  Asserting               RESET
+•  5-V Tolerant inputs                                                 causes  the  same  reset  and  initialization  to  occur
+•  0 to 400kHz Clock frequency                                         without powering down the part. This allows recovery
+•  Latch-up performance exceeds 100mA Per JESD                         if one of the downstream I2C buses get stuck in a low
+   78, class II                                                        state.
+•  ESD Protection exceeds JESD 22
+   –   ±2000V Human-body model (A114-A)                                The pass gates of the switches are constructed so
+   –   200V Machine model (A115-A)                                     that the VCC pin can be used to limit the maximum
+   –   ±1000V Charged-device model (C101)                              high  voltage,  which  is  passed  by  the  TCA9548A.
+2 Applications                                                         Limiting the maximum high voltage allows the use of
+                                                                       different bus voltages on each pair, so that 1.8V, 2.5V
+•  Servers                                                             or 3.3V parts can communicate with 5V parts, without
+•  Routers (telecom switching equipment)                               any  additional  protection.  External  pullup  resistors
+•  Factory Automation                                                  pull the bus up to the desired voltage level for each
+•  Products with I2C target address conflicts (such as                 channel. All I/O pins are 5V tolerant.
+   multiple, identical temperature sensors)                                              Packaging Information
+                                                                        PART NUMBER           PACKAGE (1)           BODY SIZE (NOM)
+
+                                                                                              PW (TSSOP, 24)        7.80mm × 4.40mm
+                                                                        TCA9548A              RGE (VQFN, 24)        4.00mm × 4.00mm
+                                                                                              DGS (VSSOP, 24)       6.10mm x 3.00mm
+
+                                                                       (1)   For all available packages, see the orderable addendum at
+                                                                             the end of the data sheet.
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                Simplified Application Diagram
+
+
+      An IMPORTANT NOTICE at the end of this data sheet addresses availability, warranty, changes, use in safety-critical applications,
+      intellectual property matters and other important disclaimers. PRODUCTION DATA.
+
+--- PDF PAGE 2 ---
+TCA9548A
+SCPS207H – MAY 2012 – REVISED SEPTEMBER 2024                                                                                                                                      www.ti.com
+
+                                                                              Table of Contents
+
+ 1 Features............................................................................1                7.3 Feature Description...................................................13
+ 2 Applications.....................................................................1                   7.4 Device Functional Modes..........................................14
+ 3 Description.......................................................................1                  7.5 Programming............................................................           14
+ 4 Pin Configuration and Functions...................................3                               8 Application and Implementation..................................19
+ 5 Specifications..................................................................4                    8.1 Application Information.............................................              19
+    5.1 Absolute Maximum Ratings........................................4                               8.2 Typical Application....................................................           19
+    5.2 ESD Ratings...............................................................          4           8.3 Power Supply Recommendations.............................22
+    5.3 Recommended Operating Conditions.........................4                                      8.4 Layout.......................................................................     24
+    5.4 Thermal Information....................................................5                     9 Device and Documentation Support............................26
+    5.5 Electrical Characteristics.............................................6                        9.1 Documentation Support............................................                 26
+    5.6 I2C Interface Timing Requirements.............................7                                 9.2 Receiving Notification of Documentation Updates....26
+    5.7 Reset Timing Requirements........................................8                              9.3 Support Resources...................................................              26
+    5.8 Switching Characteristics............................................8                          9.4 Trademarks...............................................................26
+    5.9 Typical Characteristics................................................9                        9.5 Electrostatic Discharge Caution................................26
+ 6 Parameter Measurement Information..........................10                                        9.6 Glossary....................................................................26
+ 7 Detailed Description......................................................12                      10 Revision History..........................................................            26
+    7.1 Overview...................................................................12                11 Mechanical, Packaging, and Orderable
+    7.2 Functional Block Diagram.........................................13                             Information....................................................................       27
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+2        Submit Document Feedback                                                                                                      Copyright © 2024 Texas Instruments Incorporated
+                                                                           Product Folder Links: TCA9548A
+
+--- PDF PAGE 3 ---
+                                                                                                                                                                        TCA9548A
+www.ti.com                                                                                                              SCPS207H – MAY 2012 – REVISED SEPTEMBER 2024
+
+4 Pin Configuration and Functions
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                              Figure 4-2. RGE Package, 24-Pin VQFN (Top View)
+
+       Figure 4-1. PW, DGS Package, 24-Pin TSSOP,
+                              VSSOP (Top View)
+
+                                                                       Table 4-1. Pin Functions
+                             PIN
+       NAME           TSSOP, VSSOP          VQFN (RGE)             TYPE                                                    DESCRIPTION
+                         (PW, DGS)
+ A0                            1                  22                  I         Address input 0. Connect directly to VCC or ground
+ A1                            2                  23                  I         Address input 1. Connect directly to VCC or ground
+ A2                           21                  18                  I         Address input 2. Connect directly to VCC or ground
+ GND                          12                   9                 —          Ground
+ RESET                         3                  24                  I         Active-low reset input. Connect to VCC or VDPUM (1) through a pull-up resistor, if not used
+ SD0                           4                   1                 I/O        Serial data 0. Connect to VDPU0 (1) through a pull-up resistor
+ SC0                           5                   2                 I/O        Serial clock 0. Connect to VDPU0 (1) through a pull-up resistor
+ SD1                           6                   3                 I/O        Serial data 1. Connect to VDPU1 (1) through a pull-up resistor
+ SC1                           7                   4                 I/O        Serial clock 1. Connect to VDPU1 (1) through a pull-up resistor
+ SD2                           8                   5                 I/O        Serial data 2. Connect to VDPU2 (1) through a pull-up resistor
+ SC2                           9                   6                 I/O        Serial clock 2. Connect to VDPU2 (1) through a pull-up resistor
+ SD3                          10                   7                 I/O        Serial data 3. Connect to VDPU3 (1) through a pull-up resistor
+ SC3                          11                   8                 I/O        Serial clock 3. Connect to VDPU3 (1) through a pull-up resistor
+ SD4                          13                  10                 I/O        Serial data 4. Connect to VDPU4 (1) through a pull-up resistor
+ SC4                          14                   11                I/O        Serial clock 4. Connect to VDPU4 (1) through a pull-up resistor
+ SD5                          15                  12                 I/O        Serial data 5. Connect to VDPU5 (1) through a pull-up resistor
+ SC5                          16                  13                 I/O        Serial clock 5. Connect to VDPU5 (1) through a pull-up resistor
+ SD6                          17                  14                 I/O        Serial data 6. Connect to VDPU6 (1) through a pull-up resistor
+ SC6                          18                  15                 I/O        Serial clock 6. Connect to VDPU6 (1) through a pull-up resistor
+ SD7                          19                  16                 I/O        Serial data 7. Connect to VDPU7 (1) through a pull-up resistor
+ SC7                          20                  17                 I/O        Serial clock 7. Connect to VDPU7 (1) through a pull-up resistor
+ SCL                          22                  19                 I/O        Serial clock bus. Connect to VDPUM (1) through a pull-up resistor
+ SDA                          23                  20                 I/O        Serial data bus. Connect to VDPUM (1) through a pull-up resistor
+
+ VCC                          24                  21               Power        Supply voltage
+
+(1)     VDPUX is the pull-up reference voltage for the associated data line. VDPUM is the controller I2C reference voltage and VDPU0-VDPU7 are
+        the target channel reference voltages.
+
+
+Copyright © 2024 Texas Instruments Incorporated                                                                                           Submit Document Feedback                     3
+                                                                       Product Folder Links: TCA9548A
+
+--- PDF PAGE 4 ---
+TCA9548A
+SCPS207H – MAY 2012 – REVISED SEPTEMBER 2024                                                                                                             www.ti.com
+
+5 Specifications
+5.1 Absolute Maximum Ratings
+over operating free-air temperature range (unless otherwise noted) (1)
+
+                                                                                                                                         MIN        MAX       UNIT
+ VCC          Supply voltage                                                                                                             –0.5           7       V
+ VI           Input voltage(2)                                                                                                           –0.5           7       V
+
+ II           Input current                                                                                                              –20           20      mA
+ IO           Output current                                                                                                             –25                   mA
+ ICC          Supply current                                                                                                            –100          100      mA
+ Tstg         Storage temperature                                                                                                        –65          150      °C
+ TJ           Max Junction Temperature                                              VCC ≤ 3.6 V                                                       130      ℃
+ TJ                                                                                 VCC ≤ 5.5 V                                                        90
+
+(1)    Stresses beyond those listed under Absolute Maximum Ratings may cause permanent damage to the device. These are stress
+       ratings only, which do not imply functional operation of the device at these or any other conditions beyond those indicated under
+       Recommended Operating Conditions. Exposure to absolute-maximum-rated conditions for extended periods may affect device
+       reliability.
+(2)    The input negative-voltage and output voltage ratings may be exceeded if the input and output current ratings are observed.
+5.2 ESD Ratings
+                                                                                                                                           VALUE            UNIT
+                                                 Human body model (HBM), per ANSI/ESDA/JEDEC JS-001(1)                                      ±2000
+ V(ESD)       Electrostatic discharge                                                                                     (2)                                 V
+                                                 Charged-device model (CDM), per JEDEC specification JESD22-C101                            ±1000
+
+(1)    JEDEC document JEP155 states that 500-V HBM allows safe manufacturing with a standard ESD control process.
+(2)    JEDEC document JEP157 states that 250-V CDM allows safe manufacturing with a standard ESD control process.
+5.3 Recommended Operating Conditions
+                                                                                                                                      MIN            MAX      UNIT
+                                                             -40 ℃ ≤ TA ≤ 85 ℃                                                        1.65             5.5
+ VCC         Supply voltage                                  85 ℃ < T   ≤ 125 ℃                                                       1.65             3.6      V
+                                                                      A
+ V           High-level input voltage                        SCL, SDA                                                           0.7 × VCC                6      V
+   IH                                                        A2–A0, RESET                                                       0.7 × V         V    + 0.5
+                                                                                                                                        CC        CC
+                                                             SCL, SDA                                                                 –0.5      0.3 × VCC
+ VIL         Low-level input voltage                         A2–A0, RESET                                                             –0.5      0.3 × V         V
+                                                                                                                                                        CC
+ T           Operating free-air temperature                  3.6 V < VCC ≤ 5.5 V                                                       –40              85      °C
+   A                                                         1.65 V ≤ V    ≤ 3.6 V                                                     –40            125
+                                                                       CC
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+4       Submit Document Feedback                                                                                    Copyright © 2024 Texas Instruments Incorporated
+                                                                Product Folder Links: TCA9548A
+
+--- PDF PAGE 5 ---
+                                                                                                                                                              TCA9548A
+www.ti.com                                                                                                       SCPS207H – MAY 2012 – REVISED SEPTEMBER 2024
+
+5.4 Thermal Information
+                                                                                                                         TCA9548A
+                                     THERMAL METRIC(1)                                              PW (TSSOP)          RGE (VQFN)          DGS (VSSOP)            UNIT
+
+                                                                                                       24 PINS             24 PINS             24 PINS
+ RθJA           Junction-to-ambient thermal resistance                                                  108.8                57.2                86.1              °C/W
+ RθJC(top)      Junction-to-case (top) thermal resistance                                                54.1                62.5                34.3              °C/W
+ RθJB           Junction-to-board thermal resistance                                                     62.7                34.4                47.3              °C/W
+ ψJT            Junction-to-top characterization parameter                                               10.9                 3.8                 1.5              °C/W
+ ψJB            Junction-to-board characterization parameter                                             62.3                34.4                47.0              °C/W
+ RθJC(bot)      Junction-to-case (bottom) thermal resistance                                             N/A                 15.5                 N/A              °C/W
+
+(1)     For more information about traditional and new thermal metrics, see the Semiconductor and IC Package Thermal Metrics application
+        report.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Copyright © 2024 Texas Instruments Incorporated                                                                                   Submit Document Feedback                  5
+                                                                  Product Folder Links: TCA9548A
+
+--- PDF PAGE 6 ---
+TCA9548A
+SCPS207H – MAY 2012 – REVISED SEPTEMBER 2024                                                                                                                       www.ti.com
+
+5.5 Electrical Characteristics
+VCC = 1.65 V to 5.5 V, over recommended operating free-air temperature ranges supported by Recommended Operating
+Conditions (unless otherwise noted) (1)
+                         PARAMETER                                          TEST CONDITIONS                             VCC                 MIN     TYP (2)     MAX      UNIT
+ VPORR           Power-on reset voltage, VCC rising              No load, VI = VCC or GND(3)                                                            1.2       1.5      V
+ VPORF           Power-on reset voltage, VCC falling(4)          No load, VI = VCC or GND(3)                                                 0.8          1                V
+
+                                                                                                                         5 V                            3.6
+                                                                                                                   4.5 V to 5.5 V            2.6                  4.5
+                                                                                                                        3.3 V                           1.9
+                                                                                                                    3 V to 3.6 V             1.6                  2.8
+ Vo(sw)          Switch output voltage                           Vi(sw) = VCC, ISWout = –100 μA                         2.5 V                           1.5                V
+
+                                                                                                                   2.3 V to 2.7 V            1.1                     2
+                                                                                                                        1.8 V                           1.1
+                                                                                                                  1.65 V to 1.95 V           0.6                 1.25
+ I               SDA                                             VOL = 0.4 V                                      1.65 V to 5.5 V              3          6               mA
+  OL                                                             V    = 0.6 V                                                                  6          9
+                                                                   OL
+                 SCL, SDA                                                                                                                     –1                     1
+                 SC7–SC0, SD7–SD0                                                  (3)                                                        –1                     1
+ II              A2–A0                                           VI = VCC or GND                                  1.65 V to 5.5 V             –1                     1    μA
+
+                 RESET                                                                                                                        –1                     1
+                                                                                                                        5.5 V                            50        80
+
+                                                                                   (3)                                  3.6 V                            20        35
+                                        fSCL = 400 kHz           VI = VCC or GND      , IO = 0                          2.7 V                            11        20
+
+                 Operating mode                                                                                        1.65 V                             6        10
+                                                                                                                        5.5 V                             9        30
+
+                                                                                   (3)                                  3.6 V                             6        15
+                                        fSCL = 100 kHz           VI = VCC or GND      , IO = 0                          2.7 V                             4          8
+
+                                                                                                                       1.65 V                             2          4    μA
+                                                                                                                        5.5 V                           0.2          2
+ ICC                                                                       (3)                                          3.6 V                           0.1          2
+                                        Low inputs               VI = GND     , IO = 0, -40 ℃ ≤ TA ≤ 85 ℃               2.7 V                           0.1          1
+
+                                                                                                                       1.65 V                           0.1          1
+                                                                                                                        5.5 V                           0.2          2
+                 Standby mode                                                                                           3.6 V                           0.1          2
+                                        High inputs              VI = VCC, IO = 0, -40 ℃ ≤ TA ≤ 85 ℃                    2.7 V                           0.1          1
+
+                                                                                                                       1.65 V                           0.1          1
+                                                                                                                        3.6 V                             1          2    μA
+                                        Low and High Inputs      Vi = Vcc or GND, Io = 0, 85 ℃ < TA ≤                   2.7 V                           0.7       1.5     μA
+                                                                 125 ℃
+                                                                                                                       1.65 V                           0.4          1    μA
+                                                                 SCL or SDA input at 0.6 V,                                                               3        20
+                 Supply-current                                  Other inputs at VCC or GND(3)
+ ΔICC            change                 SCL, SDA                 SCL or SDA input at V       – 0.6 V,             1.65 V to 5.5 V                                         μA
+                                                                                          CC   (3)                                                        3        20
+                                                                 Other inputs at VCC or GND
+                 A2–A0                                                             (3)                                                                    4          5
+ C               RESET                                           VI = VCC or GND                                  1.65 V to 5.5 V                         4          5     pF
+   i
+                 SCL                                             VI = VCC or GND(3), Switch OFF                                                          20        28
+
+        (5)      SDA                                                               (3)                                                                   20        28
+ Cio(off)        SC7–SC0, SD7–SD0                                VI = VCC or GND      , Switch OFF                1.65 V to 5.5 V                       5.5       7.5      pF
+
+
+
+
+
+
+
+
+
+6       Submit Document Feedback                                                                                           Copyright © 2024 Texas Instruments Incorporated
+                                                                    Product Folder Links: TCA9548A
+
+--- PDF PAGE 7 ---
+                                                                                                                                                                         TCA9548A
+www.ti.com                                                                                                              SCPS207H – MAY 2012 – REVISED SEPTEMBER 2024
+
+VCC = 1.65 V to 5.5 V, over recommended operating free-air temperature ranges supported by Recommended Operating
+Conditions (unless otherwise noted) (1)
+                          PARAMETER                                            TEST CONDITIONS                               VCC                  MIN     TYP (2)      MAX      UNIT
+                                                                                                                        4.5 V to 5.5 V               4         10         20
+                                                                    VO = 0.4 V, IO = 15 mA                               3 V to 3.6 V                5         12         30
+ RON              Switch-on resistance                                                                                  2.3 V to 2.7 V               7         15         45      Ω
+                                                                    VO = 0.4 V, IO = 10 mA
+                                                                                                                      1.65 V to 1.95 V              10         25         70
+
+(1)     For operation between specified voltage ranges, refer to the worst-case parameter in both applicable ranges
+(2)     All typical values are at nominal supply voltage (1.8-, 2.5-,3.3-, or 5-V VCC), TA = 25°C
+(3)     RESET = VCC (held high) when all other input voltages, VI = GND.
+(4)     The power-on reset circuit resets the I2C bus logic with VCC < VPORF
+(5)     Cio(ON) depends on internal capacitance and external capacitance added to the SCn lines when channels(s) are ON.
+5.6 I2C Interface Timing Requirements
+over recommended operating free-air temperature range (unless otherwise noted) (see Figure 6-1)
+                                                                                                                                                   MIN              MAX       UNIT
+ STANDARD MODE
+ fscl               I2C clock frequency                                                                                                               0              100       kHz
+ tsch               I2C clock high time                                                                                                               4                         μs
+ tscl               I2C clock low time                                                                                                              4.7                         μs
+ tsp                I2C spike time                                                                                                                                    50        ns
+ tsds               I2C serial-data setup time                                                                                                     250                          ns
+ tsdh               I2C serial-data hold time                                                                                                       0(1)                        μs
+ ticr               I2C input rise time                                                                                                                             1000        ns
+ ticf               I2C input fall time                                                                                                                              300        ns
+ tocf               I2C output (SDn) fall time (10-pF to 400-pF bus)                                                                                                 300        ns
+ tbuf               I2C bus free time between stop and start                                                                                        4.7                         μs
+ tsts               I2C start or repeated start condition setup                                                                                     4.7                         μs
+ tsth               I2C start or repeated start condition hold                                                                                        4                         μs
+ tsps               I2C stop condition setup                                                                                                          4                         μs
+ tvdL(Data)         Valid-data time (high to low)(2)                          SCL low to SDA output low valid                                                           1       μs
+ tvdH(Data)         Valid-data time (low to high)(2)                          SCL low to SDA output high valid                                                        0.6       μs
+
+ tvd(ack)           Valid-data time of ACK condition                          ACK signal from SCL low                                                                   1       μs
+                                                                              to SDA output low
+ Cb                 I2C bus capacitive load                                                                                                                          400        pF
+
+ FAST MODE
+ fscl               I2C clock frequency                                                                                                               0              400       kHz
+ tsch               I2C clock high time                                                                                                             0.6                         μs
+ tscl               I2C clock low time                                                                                                              1.3                         μs
+ tsp                I2C spike time                                                                                                                                    50        ns
+ tsds               I2C serial-data setup time                                                                                                     100                          ns
+ tsdh               I2C serial-data hold time                                                                                                       0(1)                        μs
+ ticr               I2C input rise time                                                                                                20 + 0.1Cb  (3)               300        ns
+ ticf               I2C input fall time                                                                                                20 + 0.1Cb  (3)               300        ns
+ tocf               I2C output (SDn) fall time (10-pF to 400-pF bus)                                                                   20 + 0.1Cb  (3)               300        ns
+ tbuf               I2C bus free time between stop and start                                                                                        1.3                         μs
+ tsts               I2C start or repeated start condition setup                                                                                     0.6                         μs
+ tsth               I2C start or repeated start condition hold                                                                                      0.6                         μs
+ tsps               I2C stop condition setup                                                                                                        0.6                         μs
+ tvdL(Data)         Valid-data time (high to low)(2)                          SCL low to SDA output low valid                                                           1       μs
+ tvdH(Data)         Valid-data time (low to high)(2)                          SCL low to SDA output high valid                                                        0.6       μs
+
+ tvd(ack)           Valid-data time of ACK condition                          ACK signal from SCL low                                                                   1       μs
+                                                                              to SDA output low
+
+
+
+Copyright © 2024 Texas Instruments Incorporated                                                                                            Submit Document Feedback                     7
+                                                                       Product Folder Links: TCA9548A
+
+--- PDF PAGE 8 ---
+TCA9548A
+SCPS207H – MAY 2012 – REVISED SEPTEMBER 2024                                                                                                             www.ti.com
+
+over recommended operating free-air temperature range (unless otherwise noted) (see Figure 6-1)
+                                                                                                                                    MIN            MAX       UNIT
+ Cb               I2C bus capacitive load                                                                                                            400      pF
+
+(1)    A device internally must provide a hold time of at least 300 ns for the SDA signal (referred to the VIH min of the SCL signal), to bridge
+       the undefined region of the falling edge of SCL.
+(2)    Data taken using a 1-kΩ pull-up resistor and 50-pF load.
+(3)    Cb = total bus capacitance of one bus line in pF.
+
+5.7 Reset Timing Requirements
+over recommended operating free-air temperature range (unless otherwise noted)
+                                                           PARAMETER                                                                       MIN       MAX      UNIT
+ tW(L)         Pulse duration, RESET low                                                                                                      6                 ns
+ tREC(STA)     Recovery time from RESET to start                                                                                              0                 ns
+
+5.8 Switching Characteristics
+over recommended operating free-air temperature range, CL ≤100 pF (unless otherwise noted) (see Figure 6-1)
+                                PARAMETER                                           FROM (INPUT)                 TO (OUTPUT)                MIN       MAX     UNIT
+
+    (1)                                        RON = 20 Ω, CL = 15 pF                                                                                   0.3
+ tpd        Propagation delay time             R     = 20 Ω, C  = 50 pF       SDA or SCL                   SDn or SCn                                     1     ns
+                                                 ON           L
+ trst (2)   RESET time (SDA clear)                                            RESET                        SDA                                         500      ns
+
+(1)    The propagation delay is the calculated RC time constant of the typical ON-state resistance of the switch and the specified load
+       capacitance, when driven by anideal voltage source (zero output impedance).
+(2)    trst is the propagation delay measured from the time the RESET pin is first asserted low to the time the SDA pin is asserted high,
+       signaling a stop condition. It must be a minimum of tWL.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+8       Submit Document Feedback                                                                                    Copyright © 2024 Texas Instruments Incorporated
+                                                                Product Folder Links: TCA9548A
+
+--- PDF PAGE 9 ---
+                                                                                                                                                  TCA9548A
+www.ti.com                                                                                              SCPS207H – MAY 2012 – REVISED SEPTEMBER 2024
+
+5.9 Typical Characteristics
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  Figure 5-1. SDA Output Low Voltage (VOL) vs Load Current (IOL)
+                     at Three VCC Levels (TA = 25 °C)
+
+                                                                                    Figure 5-2. Standby Current (ICC) vs Supply Voltage (VCC) at
+                                                                                                        Four Temperature Points
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  Figure 5-3. Target Channel (SCn/SDn) Capacitance (Cio(OFF)) vs
+           Supply Voltage (VCC) at Four Temperature Points
+
+                                                                                 Figure 5-4. On-Resistance (RON) vs Supply Voltage (VCC) at Four
+                                                                                                           Temperature Points
+
+\
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Copyright © 2024 Texas Instruments Incorporated                                                                         Submit Document Feedback              9
+                                                             Product Folder Links: TCA9548A
+
+--- PDF PAGE 10 ---
+TCA9548A
+SCPS207H – MAY 2012 – REVISED SEPTEMBER 2024                                                                                                   www.ti.com
+
+6 Parameter Measurement Information
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+A.    CL includes probe and jig capacitance.
+B.    All inputs are supplied by generators having the following characteristics: PRR ≤ 10 MHz, ZO = 50 Ω, tr/tf  ≤ 30 ns.
+C.    Not all parameters and waveforms are applicable to all devices.
+                                        Figure 6-1. I2C Load Circuit and Voltage Waveforms
+
+
+
+
+
+
+
+
+
+
+
+
+10     Submit Document Feedback                                                                              Copyright © 2024 Texas Instruments Incorporated
+                                                            Product Folder Links: TCA9548A
+
+--- PDF PAGE 11 ---
+                                                                                                                                                      TCA9548A
+www.ti.com                                                                                                 SCPS207H – MAY 2012 – REVISED SEPTEMBER 2024
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+A.    CL includes probe and jig capacitance.
+B.    All inputs are supplied by generators having the following characteristics: PRR ≤ 10 MHz, ZO = 50 Ω, tr/tf  ≤ 30 ns.
+C.    I/Os are configured as inputs.
+D.    Not all parameters and waveforms are applicable to all devices.
+                                        Figure 6-2. Reset Load Circuit and Voltage Waveforms
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Copyright © 2024 Texas Instruments Incorporated                                                                            Submit Document Feedback               11
+                                                               Product Folder Links: TCA9548A
+
+--- PDF PAGE 12 ---
+TCA9548A
+SCPS207H – MAY 2012 – REVISED SEPTEMBER 2024                                                                                www.ti.com
+
+7 Detailed Description
+7.1 Overview
+The TCA9548A is an 8-channel, bidirectional translating I2C switch. The controller SCL/SDA signal pair is
+directed to eight channels of target devices, SC0/SD0-SC7/SD7. Any individual downstream channel can be
+selected as well as any combination of the eight channels.
+The device offers an active-low          RESET input which resets the state machine and allows the TCA9548A to
+recover must one of the downstream I2C buses get stuck in a low state. The state machine of the device
+can also be reset by cycling the power supply, VCC, also known as a power-on reset (POR). Both the RESET
+function and a POR cause all channels to be deselected.
+The connections of the I2C data path are controlled by the same I2C controller device that is switched to
+communicate with multiple I2C targets. After the successful acknowledgment of the target address (hardware
+selectable by A0, A1, and A2 pins), a single 8-bit control register is written to or read from to determine the
+selected channels.
+The TCA9548A may also be used for voltage translation, allowing the use of different bus voltages on each
+SCn/SDn pair such that 1.8-V, 2.5-V, or 3.3-V parts can communicate with 5-V parts. This is achieved by using
+external pull-up resistors to pull the bus up to the desired voltage for the controller and each target channel.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+12    Submit Document Feedback                                                                Copyright © 2024 Texas Instruments Incorporated
+                                                    Product Folder Links: TCA9548A
+
+--- PDF PAGE 13 ---
+                                                                                                                               TCA9548A
+www.ti.com                                                                                SCPS207H – MAY 2012 – REVISED SEPTEMBER 2024
+
+7.2 Functional Block Diagram
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+7.3 Feature Description
+The TCA9548A is an 8-channel, bidirectional translating switch for I2C buses that supports Standard-Mode
+(100 kHz) and Fast-Mode (400 kHz) operation. The TCA9548A features I2C control using a single 8-bit control
+register in which each bit controls the enabling and disabling of one of the corresponding 8 switch channels for
+I2C data flow. Depending on the application, voltage translation of the I2C bus can also be achieved using the
+TCA9548A to allow 1.8-V, 2.5-V, or 3.3-V parts to communicate with 5-V parts. Additionally, in the event that
+
+
+
+
+Copyright © 2024 Texas Instruments Incorporated                                                          Submit Document Feedback        13
+                                                     Product Folder Links: TCA9548A
+
+--- PDF PAGE 14 ---
+TCA9548A
+SCPS207H – MAY 2012 – REVISED SEPTEMBER 2024                                                                                     www.ti.com
+
+communication on the I2C bus enters a fault state, the TCA9548A can be reset to resume normal operation
+using the RESET pin feature or by a power-on reset which results from cycling power to the device.
+7.4 Device Functional Modes
+7.4.1 RESET Input
+The RESET input is an active-low signal that may be used to recover from a bus-fault condition. When this signal
+is asserted low for a minimum of tWL, the TCA9548A resets its registers and I2C state machine and deselects all
+channels. The RESET input must be connected to VCC through a pull-up resistor.
+7.4.2 Power-On Reset
+When power is applied to the VCC pin, an internal power-on reset holds the TCA9548A in a reset condition until
+VCC has reached VPORR. At this point, the reset condition is released, and the TCA9548A registers and I2C state
+machine are initialized to their default states, all zeroes, causing all the channels to be deselected. Thereafter,
+VCC must be lowered below VPORF to reset the device.
+7.5 Programming
+7.5.1 I2C Interface
+The TCA9548A has a standard bidirectional I2C interface that is controlled by a controller device in order to
+be configured or read the status of this device. Each target on the I2C bus has a specific device address
+to  differentiate  between  other  target  devices  that  are  on  the  same  I2C  bus.  Many  target  devices  require
+configuration upon startup to set the behavior of the device. This is typically done when the controller accesses
+internal register maps of the target, which have unique register addresses. A device can have one or multiple
+registers where data is stored, written, or read.
+The physical I2C interface consists of the serial clock (SCL) and serial data (SDA) lines. Both SDA and SCL lines
+must be connected to VCC through a pull-up resistor. The size of the pull-up resistor is determined by the amount
+of capacitance on the I2C lines. (For further details, see the I2C Pull-up Resistor Calculation application report.
+Data transfer may be initiated only when the bus is idle. A bus is considered idle if both SDA and SCL lines are
+high after a STOP condition (See Figure 7-1 and Figure 7-2).
+The following is the general procedure for a controller to access a target device:
+1.   If a controller wants to send data to a target:
+     •   Controller-transmitter sends a START condition and addresses the target-receiver.
+     •   Controller-transmitter sends data to target-receiver.
+     •   Controller-transmitter terminates the transfer with a STOP condition.
+2.   If a controller wants to receive or read data from a target:
+     •   Controller-receiver sends a START condition and addresses the target-transmitter.
+     •   Controller-receiver sends the requested register to read to target-transmitter.
+     •   Controller-receiver receives data from the target-transmitter.
+     •   Controller-receiver terminates the transfer with a STOP condition.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                     Figure 7-1. Definition of Start and Stop Conditions
+
+14     Submit Document Feedback                                                                   Copyright © 2024 Texas Instruments Incorporated
+                                                      Product Folder Links: TCA9548A
+
+--- PDF PAGE 15 ---
+                                                                                                                                        TCA9548A
+www.ti.com                                                                                       SCPS207H – MAY 2012 – REVISED SEPTEMBER 2024
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                          Figure 7-2. Bit Transfer
+
+7.5.2 Device Address
+Figure 7-3 shows the address byte of the TCA9548A.
+
+
+
+
+
+
+
+
+
+
+                                                     Figure 7-3. TCA9548A Address
+
+The last bit of the target address defines the operation (read or write) to be performed. When it is high (1), a read
+is selected, while a low (0) selects a write operation.
+Table 7-1 shows the TCA9548A address reference.
+                                                      Table 7-1. Address Reference
+                                                 INPUTS                    I2C BUS TARGETADDRESS
+                                         A2         A1        A0
+                                          L          L         L         112 (decimal), 70 (hexadecimal)
+                                          L          L         H         113 (decimal), 71 (hexadecimal)
+                                          L         H          L         114 (decimal), 72 (hexadecimal)
+                                          L         H          H         115 (decimal), 73 (hexadecimal)
+                                          H          L         L         116 (decimal), 74 (hexadecimal)
+                                          H          L         H         117 (decimal), 75 (hexadecimal)
+                                          H         H          L         118 (decimal), 76 (hexadecimal)
+                                          H         H          H         119 (decimal), 77 (hexadecimal)
+
+
+
+
+
+
+
+Copyright © 2024 Texas Instruments Incorporated                                                                 Submit Document Feedback           15
+                                                         Product Folder Links: TCA9548A
+
+--- PDF PAGE 16 ---
+TCA9548A
+SCPS207H – MAY 2012 – REVISED SEPTEMBER 2024                                                                                      www.ti.com
+
+7.5.3 Bus Transactions
+Data must be sent to and received from the target devices, and this is accomplished by reading from or writing to
+registers in the target device.
+Registers are locations in the memory of the target which contain information, whether it be the configuration
+information or some sampled data to send back to the controller. The controller must write information to these
+registers in order to instruct the target device to perform a task.
+While it is common to have registers in I2C targets, note that not all target devices have registers. Some devices
+are simple and contain only 1 register, which may be written to directly by sending the register data immediately
+after the target address, instead of addressing a register. The TCA9548A is example of a single-register device,
+which is controlled via I2C commands. Since it has 1 bit to enable or disable a channel, there is only 1 register
+needed, and the controller merely writes the register data after the target address, skipping the register number.
+7.5.3.1 Writes
+To write on the I2C bus, the controller sends a START condition on the bus with the address of the target, as
+well as the last bit (the R/ W bit) set to 0, which signifies a write. The target acknowledges, letting the controller
+know it is ready. After this, the controller starts sending the control register data to the target until the controller
+has sent all the data necessary (which is sometimes only a single byte), and the controller terminates the
+transmission with a STOP condition.
+There is no limit to the number of bytes sent, but the last byte sent is what is in the register.
+Figure 7-4 shows an example of writing a single byte to a target register.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                    Figure 7-4. Write to Register
+
+7.5.3.2 Reads
+Reading from a target is very similar to writing, but the controller sends a START condition, followed by the
+target address with the R/         W bit set to 1 (signifying a read). The target acknowledges the read request, and
+the controller releases the SDA bus but continues supplying the clock to the target. During this part of the
+transaction, the controller becomes the controller-receiver, and the target becomes the target-transmitter.
+The controller continues to send out the clock pulses, but releases the SDA line so that the target can transmit
+data. At the end of every byte of data, the controller sends an ACK to the target, letting the target know that it
+is ready for more data. Once the controller has received the number of bytes it is expecting, it sends a NACK,
+signaling to the target to halt communications and release the bus. The controller follows this up with a STOP
+condition.
+Figure 7-5 shows an example of reading a single byte from a target register.
+
+
+16     Submit Document Feedback                                                                    Copyright © 2024 Texas Instruments Incorporated
+                                                       Product Folder Links: TCA9548A
+
+--- PDF PAGE 17 ---
+                                                                                                                               TCA9548A
+www.ti.com                                                                                SCPS207H – MAY 2012 – REVISED SEPTEMBER 2024
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                            Figure 7-5. Read from Control Register
+
+7.5.4 Control Register
+Following the successful acknowledgment of the address byte, the bus controller sends a command byte that is
+stored in the control register in the TCA9548A (see Figure 7-6). This register can be written and read via the I2C
+bus. Each bit in the command byte corresponds to a SCn/SDn channel and a high (or 1) selects this channel.
+Multiple SCn/SDn channels may be selected at the same time. When a channel is selected, the channel
+becomes active after a stop condition has been placed on the I2C bus. This makes sure that all SCn/SDn lines
+are in a high state when the channel is made active, so that no false conditions are generated at the time of
+connection. A stop condition always must occur immediately after the acknowledge cycle. If multiple bytes are
+received by the TCA9548A, it saves the last byte received.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                   Figure 7-6. Control Register
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Copyright © 2024 Texas Instruments Incorporated                                                         Submit Document Feedback         17
+                                                     Product Folder Links: TCA9548A
+
+--- PDF PAGE 18 ---
+TCA9548A
+SCPS207H – MAY 2012 – REVISED SEPTEMBER 2024                                                                                       www.ti.com
+
+Table 7-2 shows the TCA9548A Command Byte Definition.
+                                               Table 7-2. Command Byte Definition
+                                     CONTROL REGISTER BITS                                                           COMMAND
+     B7           B6           B5           B4           B3           B2           B1           B0
+      X            X            X            X            X            X            X            0       Channel 0 disabled
+                                                                                                 1       Channel 0 enabled
+      X            X            X            X            X            X            0            X       Channel 1 disabled
+                                                                                    1                    Channel 1 enabled
+      X            X            X            X            X            0            X            X       Channel 2 disabled
+                                                                       1                                 Channel 2 enabled
+      X            X            X            X            0            X            X            X       Channel 3 disabled
+                                                          1                                              Channel 3 enabled
+      X            X            X            0            X            X            X            X       Channel 4 disabled
+                                             1                                                           Channel 4 enabled
+      X            X            0            X            X            X            X            X       Channel 5 disabled
+                                1                                                                        Channel 5 enabled
+      X            0            X            X            X            X            X            X       Channel 6 disabled
+                   1                                                                                     Channel 6 enabled
+      0            X            X            X            X            X            X            X       Channel 7 disabled
+      1                                                                                                  Channel 7 enabled
+      0            0            0            0            0            0            0            0       No channel selected, power-up/reset
+                                                                                                         default state
+
+7.5.5 RESET Input
+The RESET input is an active-low signal that may be used to recover from a bus-fault condition. When this signal
+is asserted low for a minimum of tWL, the TCA9548A resets its registers and I2C state machine and deselects all
+channels. The RESET input must be connected to VCC through a pull-up resistor.
+7.5.6 Power-On Reset
+When power (from 0 V) is applied to VCC, an internal power-on reset holds the TCA9548A in a reset condition
+until VCC has reached VPOR. At that point, the reset condition is released and the TCA9548A registers and I2C
+state machine initialize to their default states. After that, VCC must be lowered to below VPOR and then back up to
+the operating voltage for a power-reset cycle.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+18     Submit Document Feedback                                                                     Copyright © 2024 Texas Instruments Incorporated
+                                                       Product Folder Links: TCA9548A
+
+--- PDF PAGE 19 ---
+                                                                                                                                TCA9548A
+www.ti.com                                                                                 SCPS207H – MAY 2012 – REVISED SEPTEMBER 2024
+
+8 Application and Implementation
+
+                                                                   Note
+       Information  in  the  following  applications  sections  is  not  part  of  the  TI  component  specification,
+       and  TI  does  not  warrant  its  accuracy  or  completeness.  TI’s  customers  are  responsible  for
+       determining suitability of components for their purposes, as well as validating and testing their design
+       implementation to confirm system functionality.
+
+8.1 Application Information
+Applications of the TCA9548A contain an I2C (or SMBus) controller device and up to eight I2C target devices.
+The downstream channels are used to resolve I2C target address conflicts. For example, if eight identical digital
+temperature sensors are needed in the application, one sensor can be connected at each channel: 0-7. When
+the temperature at a specific location is read, the appropriate channel can be enabled and all other channels
+switched off, the data can be retrieved, and the I2C controller can move on and read the next channel.
+In an application where the I2C bus contains many additional target devices that do not result in I2C target
+address  conflicts,  these  target  devices  can  be  connected  to  any  desired  channel  to  distribute  the  total
+bus capacitance across multiple channels. If multiple switches are enabled simultaneously, additional design
+requirements  must  be  considered  (see  the              Design  Requirements  section  and            Detailed  Design  Procedure
+section).
+8.2 Typical Application
+Figure 8-1 shows an application in which the TCA9548A can be used.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Copyright © 2024 Texas Instruments Incorporated                                                          Submit Document Feedback         19
+                                                      Product Folder Links: TCA9548A
+
+--- PDF PAGE 20 ---
+TCA9548A
+SCPS207H – MAY 2012 – REVISED SEPTEMBER 2024                                                                                                 www.ti.com
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      Pin numbers shown are for the PW package.
+                                               Figure 8-1. Typical Application Schematic
+
+
+
+
+
+
+
+
+
+20     Submit Document Feedback                                                                            Copyright © 2024 Texas Instruments Incorporated
+                                                           Product Folder Links: TCA9548A
+
+--- PDF PAGE 21 ---
+                                                                                                                              TCA9548A
+www.ti.com                                                                               SCPS207H – MAY 2012 – REVISED SEPTEMBER 2024
+
+8.2.1 Design Requirements
+A typical application of the TCA9548A contains one or more data pull-up voltages, VDPUX, one for the controller
+device (VDPUM) and one for each of the selectable target channels (VDPU0 – VDPU7). In the event where
+the controller device and all target devices operate at the same voltage, then VDPUM = VDPUX = VCC. In
+an application where voltage translation is necessary, additional design requirements must be considered to
+determine an appropriate VCC voltage.
+The A0, A1, and A2 pins are hardware selectable to control the target address of the TCA9548A. These pins
+may be tied directly to GND or VCC in the application.
+If multiple target channels are activated simultaneously in the application, then the total IOL from SCL/SDA to
+GND on the controller side is the sum of the currents through all pull-up resistors, Rp.
+The pass-gate transistors of the TCA9548A are constructed such that the VCC voltage can be used to limit the
+maximum voltage that is passed from one I2C bus to another.
+
+Figure 8-2 shows the voltage characteristics of the pass-gate transistors (note that the graph was generated
+using data specified in the Section 5.5 table). In order for the TCA9548A to act as a voltage translator, the Vpass
+voltage must be equal to or lower than the lowest bus voltage. For example, if the main bus is running at 5 V
+and the downstream buses are 3.3 V and 2.7 V, Vpass must be equal to or below 2.7 V to effectively clamp the
+downstream bus voltages. As shown in Figure 8-2, Vpass(max) is 2.7 V when the TCA9548A supply voltage is 4 V
+or lower, so the TCA9548A supply voltage could be set to 3.3 V. Pull-up resistors then can be used to bring the
+bus voltages to their appropriate levels (see Figure 8-1).
+8.2.2 Detailed Design Procedure
+Once all the targets are assigned to the appropriate target channels and bus voltages are identified, the pull-up
+resistors, Rp, for each of the buses need to be selected appropriately. The minimum pull-up resistance is a
+function of VDPUX, VOL,(max), and IOL as shown in Equation 1:
+
+
+
+                                                                                                                                 (1)
+
+The maximum pull-up resistance is a function of the maximum rise time, tr (300 ns for fast-mode operation, fSCL
+= 400 kHz) and bus capacitance, Cb as shown in Equation 2:
+
+
+
+                                                                                                                                 (2)
+
+The maximum bus capacitance for an I2C bus must not exceed 400 pF for fast-mode operation. The bus
+capacitance can be approximated by adding the capacitance of the TCA9548A, Cio(OFF), the capacitance of
+wires, connections and traces, and the capacitance of each individual target on a given channel. If multiple
+channels are activated simultaneously, each of the targets on all channels contribute to total bus capacitance.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Copyright © 2024 Texas Instruments Incorporated                                                        Submit Document Feedback         21
+                                                     Product Folder Links: TCA9548A
+
+--- PDF PAGE 22 ---
+TCA9548A
+SCPS207H – MAY 2012 – REVISED SEPTEMBER 2024                                                                                      www.ti.com
+
+8.2.3 Application Curves
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+       Standard-mode (fSCL kHz, tr     SPACE (fSCL kHz, tr)                   Standard-mode (fSCL = 100       Fast-mode (fSCL = 400 kHz, tr
+    Figure 8-2. Pass-Gate Voltage (V                ) vs Supply               kHz, tr = 1 µs)                 = 300 ns)
+                                               pass
+       Voltage (VCC) at Three Temperature Points                         Figure 8-3. Maximum Pull-Up Resistance (Rp(max))
+                                                                                          vs Bus Capacitance (Cb)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                VOL = 0.2*VDPUX, IOL = 2 mA when VDPUX ≤ 2 V
+                                                VOL = 0.4 V, IOL = 3 mA when VDPUX > 2 V
+              Figure 8-4. Minimum Pullup Resistance (Rp(min)) vs Pullup Reference Voltage (VDPUX)
+
+8.3 Power Supply Recommendations
+The operating power-supply voltage range of the TCA9548A is 1.65 V to 5.5 V applied at the VCC pin. When the
+TCA9548A is powered on for the first time or anytime, the device must be reset by cycling the power supply. The
+power-on reset requirements must be followed to make sure the I2C bus logic is initialized properly.
+
+8.3.1 Power-On Reset Requirements
+In the event of a glitch or data corruption, PCA9548A can be reset to its default conditions by using the power-on
+reset feature. Power-on reset requires that the device go through a power cycle to be completely reset. This
+reset also happens when the device is powered on for the first time in an application.
+A power-on reset is shown in Figure 8-5.
+
+
+
+
+
+
+
+
+
+
+
+
+
+22     Submit Document Feedback                                                                    Copyright © 2024 Texas Instruments Incorporated
+                                                      Product Folder Links: TCA9548A
+
+--- PDF PAGE 23 ---
+                                                                                                                                     TCA9548A
+www.ti.com                                                                                     SCPS207H – MAY 2012 – REVISED SEPTEMBER 2024
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+     VCC is Lowered Below the POR Threshold, Then Ramped Back Up to VCC
+                                              Figure 8-5. Power-On Reset Waveform
+
+Table 8-1 specifies the performance of the power-on reset feature for PCA9548A for both types of power-on
+reset.
+                            Table 8-1. Recommended Supply Sequencing and Ramp Rates (1)
+
+                                                  PARAMETER                                                             MIN      MAX     UNIT
+ VCC_FT              Fall time                                                              See Figure 8-5                 1      100     ms
+ VCC_RT              Rise time                                                              See Figure 8-5               0.1      100     ms
+ V                   Time to re-ramp (when VCC drops below VPORF(min) – 50 mV or            See Figure 8-5                40               μs
+  CC_TRR             when VCC drops to GND)
+
+ V                   Level that VCC can glitch down to, but not cause a functional          See Figure 8-6                         1.2     V
+  CC_GH              disruption when VCC_GW = 1 μs
+
+ V                   Glitch width that does not cause a functional disruption when          See Figure 8-6                          10     μs
+  CC_GW              VCC_GH = 0.5 × VCC
+
+(1)   All supply sequencing and ramp rate values are measured at TA = 25°C
+Glitches in the power supply can also affect the power-on reset performance of this device. The glitch width
+(VCC_GW) and height (VCC_GH) are dependent on each other. The bypass capacitance, source impedance, and
+device impedance are factors that affect power-on reset performance. Figure 8-6 and Table 8-1 provide more
+information on how to measure these specifications.
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                            Figure 8-6. Glitch Width and Glitch Height
+
+VPOR is critical to the power-on reset. VPOR is the voltage level at which the reset condition is released and all
+the registers and the I2C/SMBus state machine are initialized to their default states. The value of VPOR differs
+based on the VCC being lowered to or from 0. Figure 8-7 and Table 8-1 provide more details on this specification.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Copyright © 2024 Texas Instruments Incorporated                                                              Submit Document Feedback          23
+                                                        Product Folder Links: TCA9548A
+
+--- PDF PAGE 24 ---
+TCA9548A
+SCPS207H – MAY 2012 – REVISED SEPTEMBER 2024                                                                                   www.ti.com
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                           Figure 8-7. VPOR
+
+8.4 Layout
+8.4.1 Layout Guidelines
+For PCB layout of the TCA9548A, common PCB layout practices must be followed but additional concerns
+related to high-speed data transfer such as matched impedances and differential pairs are not a concern for I2C
+signal speeds. It is common to have a dedicated ground plane on an inner layer of the board and pins that are
+connected to ground must have a low-impedance path to the ground plane in the form of wide polygon pours
+and multiple vias. By-pass and de-coupling capacitors are commonly used to control the voltage on the VCC pin,
+using a larger capacitor to provide additional power in the event of a short power supply glitch and a smaller
+capacitor to filter out high-frequency ripple.
+In an application where voltage translation is not required, all VDPUX voltages and VCC could be at the same
+potential and a single copper plane could connect all of pull-up resistors to the appropriate reference voltage. In
+an application where voltage translation is required, VDPUM and VDPU0 – VDPU7, may all be on the same layer of
+the board with split planes to isolate different voltage potentials.
+To reduce the total I2C bus capacitance added by PCB parasitics, data lines (SCn and SDn) must be a short
+as possible and the widths of the traces must also be minimized (for example, 5-10 mils depending on copper
+weight).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+24     Submit Document Feedback                                                                  Copyright © 2024 Texas Instruments Incorporated
+                                                     Product Folder Links: TCA9548A
+
+--- PDF PAGE 25 ---
+                                                                                                                                         TCA9548A
+www.ti.com                                                                                        SCPS207H – MAY 2012 – REVISED SEPTEMBER 2024
+
+8.4.2 Layout Example
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                      Figure 8-8. Layout Schematic
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Copyright © 2024 Texas Instruments Incorporated                                                                  Submit Document Feedback           25
+                                                          Product Folder Links: TCA9548A
+
+--- PDF PAGE 26 ---
+TCA9548A
+SCPS207H – MAY 2012 – REVISED SEPTEMBER 2024                                                                                           www.ti.com
+
+9 Device and Documentation Support
+9.1 Documentation Support
+9.1.1 Related Documentation
+For related documentation see the following:
+•   I2C Bus Pull-Up Resistor Calculation
+•   Maximum Clock Frequency of I2C Bus Using Repeaters
+•   Introduction to Logic
+•   Understanding the I2C Bus
+•   Choosing the Correct I2C Device for New Designs
+•   TCA9548AEVM User's Guide
+9.2 Receiving Notification of Documentation Updates
+To receive notification of documentation updates, navigate to the device product folder on                                    ti.com. Click on
+Notifications to register and receive a weekly digest of any product information that has changed. For change
+details, review the revision history included in any revised document.
+9.3 Support Resources
+TI E2E™ support forums are an engineer's go-to source for fast, verified answers and design help — straight
+from the experts. Search existing answers or ask your own question to get the quick design help you need.
+Linked content is provided "AS IS" by the respective contributors. They do not constitute TI specifications and do
+not necessarily reflect TI's views; see TI's Terms of Use.
+9.4 Trademarks
+TI E2E™ is a trademark of Texas Instruments.
+All trademarks are the property of their respective owners.
+9.5 Electrostatic Discharge Caution
+                   This integrated circuit can be damaged by ESD. Texas Instruments recommends that all integrated circuits be handled
+                   with appropriate precautions. Failure to observe proper handling and installation procedures can cause damage.
+                   ESD damage can range from subtle performance degradation to complete device failure. Precision integrated circuits may
+                   be more susceptible to damage because very small parametric changes could cause the device not to meet its published
+                   specifications.
+
+9.6 Glossary
+ TI Glossary            This glossary lists and explains terms, acronyms, and definitions.
+
+10 Revision History
+NOTE: Page numbers for previous revisions may differ from page numbers in the current version.
+Changes from Revision G (October 2019) to Revision H (September 2024)                                                                       Page
+•   Changed instances of legacy terminology to controller and target where mentioned........................................1
+•   Added DGS package..........................................................................................................................................1
+
+
+
+Changes from Revision F (November 2016) to Revision G (October 2019)                                                                        Page
+•   Changed the appearance of the PW package and the RGE package images .................................................                         3
+•   Updated typical characteristic curves for 125C..................................................................................................9
+•   Changed RL = 1 kW To: RL = 1 KΩ in Figure 6-2 ............................................................................................  10
+
+
+
+
+
+
+
+26     Submit Document Feedback                                                                        Copyright © 2024 Texas Instruments Incorporated
+                                                         Product Folder Links: TCA9548A
+
+--- PDF PAGE 27 ---
+                                                                                                                                               TCA9548A
+www.ti.com                                                                                            SCPS207H – MAY 2012 – REVISED SEPTEMBER 2024
+Changes from Revision E (October 2015) to Revision F (November 2016)                                                                                 Page
+•    Updated the Description section.........................................................................................................................1
+•    Added new orderable part number, TCA9548AMRGER....................................................................................                    1
+
+
+
+Changes from Revision D (January 2015) to Revision E (October 2015)                                                                                  Page
+•    Updated Pin Functions table. ............................................................................................................................3
+•    Added new I2C Sections and read/write description .......................................................................................           16
+
+
+
+Changes from Revision C (November 2013) to Revision D (January 2015)                                                                                 Page
+•    Added Pin Configuration and Functions section, ESD Ratings table, Feature Description section, Device
+     Functional Modes, Application and Implementation section, Power Supply Recommendations section, Layout
+     section, Device and Documentation Support section, and Mechanical, Packaging, and Orderable Information
+     section ...............................................................................................................................................................1
+•    Updated Typical Application schematic. ..........................................................................................................   19
+
+
+11 Mechanical, Packaging, and Orderable Information
+The following pages include mechanical, packaging, and orderable information. This information is the most
+current data available for the designated devices. This data is subject to change without notice and revision of
+this document. For browser-based versions of this data sheet, refer to the left-hand navigation.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Copyright © 2024 Texas Instruments Incorporated                                                                       Submit Document Feedback            27
+                                                            Product Folder Links: TCA9548A
+
+--- PDF PAGE 28 ---
+                                                                                                                                                                                   PACKAGE OPTION ADDENDUM
+
+
+
+    www.ti.com                                                                                                                                                                                                                           8-Nov-2025
+
+
+
+PACKAGING INFORMATION
+
+    Orderable part number             Status      Material type        Package | Pins          Package qty | Carrier          RoHS               Lead finish/               MSL rating/               Op temp (°C)                 Part marking
+                                         (1)             (2)                                                                    (3)             Ball material               Peak reflow                                                   (6)
+                                                                                                                                                       (4)                        (5)
+        TCA9548ADGSR                   Active       Production       VSSOP (DGS) | 24           5000 | LARGE T&R               Yes                 NIPDAU              Level-1-260C-UNLIM                -40 to 85                      548A
+      TCA9548ADGSR.B                   Active       Production       VSSOP (DGS) | 24           5000 | LARGE T&R               Yes                 NIPDAU              Level-1-260C-UNLIM                -40 to 85                      548A
+       TCA9548AMRGER                   Active       Production        VQFN (RGE) | 24           3000 | LARGE T&R               Yes                 NIPDAU             Level-2-260C-1 YEAR                -40 to 85                    PW548A
+     TCA9548AMRGER.B                   Active       Production        VQFN (RGE) | 24           3000 | LARGE T&R               Yes                 NIPDAU             Level-2-260C-1 YEAR                -40 to 85                    PW548A
+     TCA9548AMRGERG4                   Active       Production        VQFN (RGE) | 24           3000 | LARGE T&R               Yes                 NIPDAU             Level-2-260C-1 YEAR                -40 to 85                    PW548A
+    TCA9548AMRGERG4.B                  Active       Production        VQFN (RGE) | 24           3000 | LARGE T&R               Yes                 NIPDAU             Level-2-260C-1 YEAR                -40 to 85                    PW548A
+        TCA9548APWR                    Active       Production        TSSOP (PW) | 24           2000 | LARGE T&R               Yes                 NIPDAU              Level-1-260C-UNLIM                -40 to 85                    PW548A
+       TCA9548APWR.B                   Active       Production        TSSOP (PW) | 24           2000 | LARGE T&R               Yes                 NIPDAU              Level-1-260C-UNLIM                -40 to 85                    PW548A
+       TCA9548APWRG4                   Active       Production        TSSOP (PW) | 24           2000 | LARGE T&R               Yes                 NIPDAU              Level-1-260C-UNLIM                -40 to 85                    PW548A
+     TCA9548APWRG4.B                   Active       Production        TSSOP (PW) | 24           2000 | LARGE T&R               Yes                 NIPDAU              Level-1-260C-UNLIM                -40 to 85                    PW548A
+        TCA9548ARGER                   Active       Production        VQFN (RGE) | 24           3000 | LARGE T&R               Yes                 NIPDAU             Level-2-260C-1 YEAR                -40 to 85                    PW548A
+      TCA9548ARGER.B                   Active       Production        VQFN (RGE) | 24           3000 | LARGE T&R               Yes                 NIPDAU             Level-2-260C-1 YEAR                -40 to 85                    PW548A
+      TCA9548ARGERG4                   Active       Production        VQFN (RGE) | 24           3000 | LARGE T&R               Yes                 NIPDAU             Level-2-260C-1 YEAR                -40 to 85                    PW548A
+     TCA9548ARGERG4.B                  Active       Production        VQFN (RGE) | 24           3000 | LARGE T&R               Yes                 NIPDAU             Level-2-260C-1 YEAR                -40 to 85                    PW548A
+
+(1) Status:  For more details on status, see our product life cycle.
+
+(2) Material type:  When designated, preproduction parts are prototypes/experimental devices, and are not yet approved or released for full production. Testing and final process, including without limitation quality assurance,
+reliability performance testing, and/or process qualification, may not yet be complete, and this item is subject to further changes or possible discontinuation. If available for ordering, purchases will be subject to an additional
+waiver at checkout, and are intended for early internal evaluation purposes only. These items are sold without warranties of any kind.
+
+(3) RoHS values:  Yes, No, RoHS Exempt. See the TI RoHS Statement for additional information and value definition.
+
+(4) Lead finish/Ball material:  Parts may have multiple material finish options. Finish options are separated by a vertical ruled line. Lead finish/Ball material values may wrap to two lines if the finish value exceeds the maximum
+column width.
+
+(5) MSL rating/Peak reflow:  The moisture sensitivity level ratings and peak solder (reflow) temperatures. In the event that a part has multiple moisture sensitivity ratings, only the lowest level per JEDEC standards is shown.
+Refer to the shipping label for the actual reflow temperature that will be used to mount the part to the printed circuit board.
+
+(6) Part marking:  There may be an additional marking, which relates to the logo, the lot trace code information, or the environmental category of the part.
+
+
+
+                                                                                                                   Addendum-Page 1
+
+--- PDF PAGE 29 ---
+                                                                                                                                                                                                 PACKAGE OPTION ADDENDUM
+
+
+
+    www.ti.com                                                                                                                                                                                                                                             8-Nov-2025
+
+
+
+
+
+Multiple part markings will be inside parentheses. Only one part marking contained in parentheses and separated by a "~" will appear on a part. If a line is indented then it is a continuation of the previous line and the two
+combined represent the entire part marking for that device.
+
+Important Information and Disclaimer:The information provided on this page represents TI's knowledge and belief as of the date that it is provided. TI bases its knowledge and belief on information provided by third parties, and
+makes no representation or warranty as to the accuracy of such information. Efforts are underway to better integrate information from third parties. TI has taken and continues to take reasonable steps to provide representative
+and accurate information but may not have conducted destructive testing or chemical analysis on incoming materials and chemicals. TI and TI suppliers consider certain information to be proprietary, and thus CAS numbers
+and other limited information may not be available for release.
+
+In no event shall TI's liability arising out of such information exceed the total purchase price of the TI part(s) at issue in this document sold by TI to Customer on an annual basis.
+
+ OTHER QUALIFIED VERSIONS OF TCA9548A :
+•Automotive : TCA9548A-Q1
+
+ NOTE: Qualified Version Definitions:
+         •Automotive - Q100 devices qualified for high-reliability automotive applications targeting zero defects
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                            Addendum-Page 2
+
+--- PDF PAGE 30 ---
+                                                                        PACKAGE MATERIALS INFORMATION
+
+
+
+
+
+
+www.ti.com                                                                                                                             9-Oct-2025
+
+TAPE AND REEL INFORMATION
+
+
+       REEL DIMENSIONS                                                          TAPE DIMENSIONS
+                                                                             K0      P1
+
+
+
+                                                                                                         B0   W
+
+                                        Reel
+                                      Diameter
+                                                                          Cavity         A0
+
+                                                         A0   Dimension designed to accommodate the component width
+                                                         B0   Dimension designed to accommodate the component length
+                                                         K0   Dimension designed to accommodate the component thickness
+                                                         W    Overall width of the carrier tape
+                                                         P1   Pitch between successive cavity centers
+
+
+                                       Reel Width (W1)
+                             QUADRANT ASSIGNMENTS FOR PIN 1 ORIENTATION IN TAPE
+
+                                                                                          Sprocket Holes
+
+
+                                               Q1    Q2        Q1    Q2
+
+                                               Q3    Q4        Q3    Q4               User Direction of Feed
+
+
+
+                                                       Pocket Quadrants
+
+
+*All dimensions are nominal
+          Device            Package   Package    Pins     SPQ       Reel       Reel      A0      B0      K0      P1       W       Pin1
+                              Type     Drawing                    Diameter    Width     (mm)    (mm)    (mm)    (mm)    (mm)   Quadrant
+                                                                    (mm)    W1 (mm)
+     TCA9548ADGSR            VSSOP       DGS      24      5000      330.0      16.4     5.44     6.4    1.45     8.0     16.0      Q1
+    TCA9548AMRGER            VQFN        RGE      24      3000      330.0      12.4     4.25    4.25    1.15     8.0     12.0      Q1
+  TCA9548AMRGERG4            VQFN        RGE      24      3000      330.0      12.4     4.25    4.25    1.15     8.0     12.0      Q1
+     TCA9548APWR             TSSOP       PW       24      2000      330.0      16.4     6.95     8.3     1.6     8.0     16.0      Q1
+    TCA9548APWRG4            TSSOP       PW       24      2000      330.0      16.4     6.95     8.3     1.6     8.0     16.0      Q1
+     TCA9548ARGER            VQFN        RGE      24      3000      330.0      12.4     4.25    4.25    1.15     8.0     12.0      Q2
+   TCA9548ARGERG4            VQFN        RGE      24      3000      330.0      12.4     4.25    4.25    1.15     8.0     12.0      Q2
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                               Pack Materials-Page 1
+
+--- PDF PAGE 31 ---
+                                                                  PACKAGE MATERIALS INFORMATION
+
+
+
+
+
+
+www.ti.com                                                                                                                   9-Oct-2025
+
+
+TAPE AND REEL BOX DIMENSIONS
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                 Width (mm)  H
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                 W                                            L
+
+
+
+
+
+
+
+*All dimensions are nominal
+         Device             Package Type     Package Drawing     Pins     SPQ      Length (mm)     Width (mm)    Height (mm)
+     TCA9548ADGSR               VSSOP               DGS           24      5000         353.0          353.0          32.0
+    TCA9548AMRGER               VQFN                RGE           24      3000         353.0          353.0          32.0
+  TCA9548AMRGERG4               VQFN                RGE           24      3000         353.0          353.0          32.0
+     TCA9548APWR                TSSOP               PW            24      2000         353.0          353.0          32.0
+    TCA9548APWRG4               TSSOP               PW            24      2000         353.0          353.0          32.0
+     TCA9548ARGER               VQFN                RGE           24      3000         353.0          353.0          32.0
+   TCA9548ARGERG4               VQFN                RGE           24      3000         353.0          353.0          32.0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                          Pack Materials-Page 2
+
+--- PDF PAGE 32 ---
+                                                                                                                                                                                                                                                                                                                                               GENERIC PACKAGE VIEW
+RGE 24                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 VQFN - 1 mm max height
+                                                                                                                                                                                                                                                                                                                                                                                  PLASTIC QUAD FLATPACK - NO LEAD
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                           Im ages abov e are just a representation of  the package f am ily, actual package m ay v ary.
+                           Ref er to the product data sheet f or package details.
+
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           4204104/H
+
+--- PDF PAGE 33 ---
+                                                                                                        PACKAGE OUTLINE
+RGE0024C                                                                                              VQFN - 1 mm max height
+
+                                                                                               PLASTIC QUAD FLATPACK- NO LEAD
+
+                           B                             4.13.9                          A
+
+
+
+
+
+
+
+
+
+
+
+
+       PIN 1 INDEX AREA                                                                  4.13.9
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                       1 MAX                                                                 C
+
+                                                                                                   SEATING PLANE
+                        0.050.00                       2X 2.5                                   0.08  C
+
+                                                          2.1±0.1                                                            (0.2) TYP
+                                         7 12
+
+                 20X 0.5      6
+                                                                                     13
+
+
+
+
+                    2X                                       25                        SYMM
+                    2.5
+
+
+
+
+
+                              1                                                      18
+
+                  PIN 1 ID                                                                    24X 0.300.18
+             (OPTIONAL)                                                  1924                     0.1     C  A  B
+                                                       SYMM     24X 0.500.30                      0.05     C
+
+                                                                                                                           4224376 / C   07/2021
+NOTES:
+
+ 1.All linear dimensions are in millimeters. Any dimensions in parenthesis are for reference only. Dimensioning and tolerancing
+       per ASME Y14.5M.
+  2.This drawing is subject to change without notice.
+ 3.The package thermal pad must be soldered to the printed circuit board for thermal and mechanical performance.
+
+
+
+
+
+
+
+
+
+
+                                                                   www.ti.com
+
+--- PDF PAGE 34 ---
+                                                                                                EXAMPLE BOARD LAYOUT
+                                                                                                               VQFN - 1 mm max heightRGE0024C
+
+                                                                                                       PLASTIC QUAD FLATPACK- NO LEAD
+
+                                                                            (3.8)
+
+                                                                          (    2.1)
+                                                                                                   1924
+
+
+                       24X (0.6)
+
+                  24X (0.24)
+                                    1
+                                                                                                                      18
+                   20X (0.5)
+
+
+
+
+
+                           SYMM                                                 25
+                                                                                                                                    (3.8)
+
+
+                                                                                                                            2X
+                                                                                                                           (0.8)
+
+                (Ø0.2) VIA
+                   TYP
+                                   6                                                                                  13
+
+                    (R0.05)
+
+
+
+
+                                                       7 12
+                                                                                  2X(0.8)
+                                                                           SYMM
+
+
+                                                               LAND PATTERN EXAMPLE
+                                                                            SCALE: 20X
+
+
+
+                                  0.07 MAX                                                                      0.07 MIN
+                                ALL AROUND                         METAL                                     ALL AROUND
+                                                                                                                 SOLDER MASK
+                                                                                                                 OPENING
+                                                                  SOLDER MASK                                    METAL UNDER
+                                                                  OPENING                                        SOLDER MASK
+
+
+                                             NON SOLDER MASK
+                                                   DEFINED                                   SOLDER MASK
+                                                (PREFERRED)                                     DEFINED
+                                                                 SOLDER MASK DETAILS                                                 4224376 / C   06/2021
+
+
+NOTES: (continued)
+
+  4.This package is designed to be soldered to a thermal pad on the board. For more information, see Texas Instruments
+       literature number SLUA271 (www.ti.com/lit/slua271).
+ 5.Solder mask tolerances between and around signal pads can vary based on board fabrication site.
+
+
+
+
+
+
+
+
+
+
+
+                                                                         www.ti.com
+
+--- PDF PAGE 35 ---
+                                                                                                     EXAMPLE STENCIL DESIGN
+                                                                                                                       VQFN - 1 mm max heightRGE0024C
+
+                                                                                                              PLASTIC QUAD FLATPACK- NO LEAD
+
+
+                                                                                  (3.8)
+
+                                                                                       4X (   0.94)
+                                                                                                            1924
+
+
+                           24X (0.6)
+                     24X (0.24)        1
+
+                                                                                                                                18
+                    20X (0.5)
+
+
+
+
+
+                         SYMM                                                                                                             (3.8)
+                                                                                                                                  (0.57)
+                                                                                                                                   TYP
+
+
+
+
+
+                                       6                                                                                        13
+
+               (R0.05) TYP                                                                                                 25
+
+
+
+                            METAL
+                               TYP                          7 12
+                                                                                                      (0.57)
+                                                                                 SYMM                  TYP
+
+
+
+                                                                  SOLDER PASTE EXAMPLE
+                                                               BASED ON 0.125 mm THICK STENCIL
+
+                                                                             EXPOSED PAD
+                                                                80% PRINTED COVERAGE BY AREA
+                                                                               SCALE: 20X
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                                               4224376 / C   06/2021
+
+NOTES: (continued)
+
+  6.Laser cutting apertures with trapezoidal walls and rounded corners may offer better paste release. IPC-7525 may have alternate
+        design recommendations..
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                              www.ti.com
+
+--- PDF PAGE 36 ---
+                                                                                                                   PACKAGE OUTLINE
+PW0024A                                                                                                     TSSOP - 1.2 mm max height
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                           SCALE  2.000
+                                                                                                                                SMALL OUTLINE PACKAGE
+
+
+
+
+                                                                                                                                                     SEATING
+                                                                                                                                                     PLANE
+                                             6.6                                                                                  C
+           A                                 6.2 TYP
+                                                 PIN 1 INDEX AREA                                                                                     0.1               C
+
+                                                                                            22X           0.65
+                 1                                                              24
+
+
+
+
+
+
+
+
+
+
+                                                                                             2X
+          7.9                                                                               7.15
+          7.7
+       NOTE 3
+
+
+
+
+
+
+
+
+
+
+                12
+                                                                                 13
+                                                4.5                                         24X 0.300.19                        1.2 MAX
+                    B                           4.3                                             0.1     C               A               B
+                                             NOTE 4
+
+
+
+
+
+
+
+                                                                                                  0.25
+                                                                                      GAGE PLANE
+                                                                                                                                                           0.15
+                                                                                                                                                           0.05
+
+
+                                                                   (0.15) TYP
+                                           SEE DETAIL  A                                                             0.75
+                                                                                           0  -8                     0.50
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                                        A  20
+                                                                                                                                   DETAIL A
+                                                                                                                                     TYPICAL
+
+                                                                                                                                           4220208/A   02/2017
+
+NOTES:
+
+1. All linear dimensions are in millimeters. Any dimensions in parenthesis are for reference only. Dimensioning and tolerancing
+    per ASME Y14.5M.
+2. This drawing is subject to change without notice.
+3. This dimension does not include mold flash, protrusions, or gate burrs. Mold flash, protrusions, or gate burrs shall not
+    exceed 0.15 mm per side.
+4. This dimension does not include interlead flash. Interlead flash shall not exceed 0.25 mm per side.
+5. Reference JEDEC registration MO-153.
+
+
+
+
+
+                                                                               www.ti.com
+
+--- PDF PAGE 37 ---
+                                                                                                                                                                      EXAMPLE BOARD LAYOUT
+ PW0024A                                                                                                                                                                               TSSOP - 1.2 mm max height
+
+                                                                                                                                                                                                                          SMALL OUTLINE PACKAGE
+
+
+
+
+
+                                                                                     24X (1.5)                                        SYMM
+
+                                                                             1                                                                                                                                   (R0.05) TYP
+                                                         24X (0.45)                                                                                                                                    24
+
+
+
+
+
+
+
+
+
+                                                      22X (0.65)
+                                                                                                                                                                                                              SYMM
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                            12                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 13
+
+
+                                                                                                                                       (5.8)
+
+                                                                                                          LAND PATTERN EXAMPLE
+                                                                                                                 EXPOSED METAL SHOWN
+                                                                                                                                SCALE: 10X
+
+
+
+
+
+                                  SOLDER MASK                                                         METAL                                               METAL UNDER                                                   SOLDER MASK
+                                              OPENING                                                                                                     SOLDER MASK                                                   OPENING
+
+
+                  EXPOSED METAL                                                                                                                                                                                                         EXPOSED METAL
+
+                                                                           0.05 MAX                                                                                                                0.05 MIN
+                                                                           ALL AROUND                                                                                                              ALL AROUND
+
+                                                           NON-SOLDER MASK                                                                                                                  SOLDER MASK
+                                                                       DEFINED                                                                                                                    DEFINED
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                                15.000
+                                                                 (PREFERRED)                                   SOLDER MASK DETAILS
+
+                                                                                                                                                                                                                                            4220208/A   02/2017
+NOTES: (continued)
+
+6. Publication IPC-7351 may have alternate designs.
+7. Solder mask tolerances between and around signal pads can vary based on board fabrication site.
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                                       www.ti.com
+
+--- PDF PAGE 38 ---
+                                                                                                                                                                                               EXAMPLE STENCIL DESIGN
+ PW0024A                                                                                                                                                                                                               TSSOP - 1.2 mm max height
+
+                                                                                                                                                                                                                                                               SMALL OUTLINE PACKAGE
+
+
+
+
+
+
+                                                                                                    24X (1.5)                                               SYMM
+                                                                                           1                                                                                                                                                           (R0.05) TYP
+                                                                   24X (0.45)                                                                                                                                                             24
+
+
+
+
+
+
+
+
+
+                                                                22X (0.65)
+                                                                                                                                                                                                                                               SYMM
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                         12                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                13
+
+
+
+                                                                                                                                                               (5.8)
+
+
+                                                                                                                            SOLDER PASTE EXAMPLE
+                                                                                                                       BASED ON 0.125 mm THICK STENCIL
+                                                                                                                                                      SCALE: 10X
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                                                                                                                                                                                     4220208/A   02/2017
+NOTES: (continued)
+
+8. Laser cutting apertures with trapezoidal walls and rounded corners may offer better paste release. IPC-7525 may have alternate
+    design recommendations.
+9. Board assembly site may have different recommendations for stencil design.
+
+
+
+
+
+
+
+
+
+
+                                                                                                                                                              www.ti.com
+
+--- PDF PAGE 39 ---
+                                                                                                                                                                                                        PACKAGE OUTLINE
+ DGS0024A                                                                                                                                                                                  VSSOP - 1.1 mm max height
+
+                                                                                                                                                                                                                               SMALL OUTLINE PACKAGE
+
+
+
+
+
+
+                            PIN 1 INDEX
+                                          AREA                                                                                                                                                                             C
+
+                                         A                                              5.1                                                                                                                       0.1               C                         SEATING
+                                                                                        4.7 TYP                                                                                                                                                               PLANE
+                                                                                                                                                          22X           0.5
+                                                     1                                                                                   24
+
+
+
+
+
+
+
+
+                                       6.2                                                                                                           2X           5.5
+                                       6.0
+                                  NOTE 3
+
+
+
+                                                                                                                                                                                              4X (0        -15     )
+
+
+                                                  12                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 13
+
+                                                                                                                                                         24X 0.2750.165
+                                                       B                                                                                                                                                                                                                             3.12.90.1C               A               B
+
+
+
+
+
+           SEE DETAIL  A                                                                                                    4X (7        -15      )
+
+
+                                                                                                                                                        (0.15) TYP
+
+
+
+
+
+                                                                                                                                                                         0.25
+                                                                                                                                                     GAGE PLANE                                                                                                     1.1 MAX
+
+
+
+
+                                                                                                                                                                                                                              0.7                                         0.15
+                                                                                                                                                                 0   -8                                                       0.4                                         0.05
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                                                                                                                                          A  20
+                                                                                                                                                                                                                                 DETAIL A
+                                                                                                                                                                                                                                    TYPICAL
+
+
+                                                                                                                                                                                                                                                  4226366/A   10/2020
+NOTES:                                                                                                                                                                                     PowerPAD is a trademark of Texas Instruments.
+
+1. All linear dimensions are in millimeters. Any dimensions in parenthesis are for reference only. Dimensioning and tolerancing
+    per ASME Y14.5M.
+2. This drawing is subject to change without notice.
+3. This dimension does not include mold flash, protrusions, or gate burrs. Mold flash, protrusions, or gate burrs shall not
+    exceed 0.15 mm per side.
+4. No JEDEC registration as of September 2020.
+5. Features may differ or may not be present.
+
+
+
+
+
+                                                                                                                                          www.ti.com
+
+--- PDF PAGE 40 ---
+                                                                                                                                                            EXAMPLE BOARD LAYOUT
+ DGS0024A                                                                                                                                                                   VSSOP - 1.1 mm max height
+
+                                                                                                                                                                                                             SMALL OUTLINE PACKAGE
+
+
+
+
+
+
+                                       24X (1.45)                                                                            SYMM
+
+
+                                                               1                                                                                                                                      24
+
+                                 24X (0.3)
+
+                             (R0.05) TYP
+
+
+                                   22X (0.5)
+
+
+
+                                                                                                                                                                                                         SYMM
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                            12                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   13
+
+
+
+                                                                                                                               (4.4)
+                                                                                                   LAND PATTERN EXAMPLE
+                                                                                                                        SCALE: 15X
+
+
+
+                               SOLDER MASK                                                        METAL                                       METAL UNDER                                                     SOLDER MASK
+                                          OPENING                                                                                            SOLDER MASK                                                      OPENING
+
+
+
+
+                                 0.05 MAX                                                              EXPOSED METAL                             0.05 MIN                                                               EXPOSED METAL
+                         ALL AROUND                       NON-SOLDER MASK                                                               ALL AROUND                            SOLDER MASK
+                                                                     DEFINED                                                                                                        DEFINED
+                                                                (PREFERRED)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                        15.000
+                                                                                                        SOLDER MASK DETAILS
+                                                                                                                                                                                                                              4226366/A   10/2020
+NOTES: (continued)
+
+  6. Publication IPC-7351 may have alternate designs.
+  7. Solder mask tolerances between and around signal pads can vary based on board fabrication site.
+  8. This package is designed to be soldered to a thermal pad on the board. For more information, see Texas Instruments literature
+      numbers SLMA002 (www.ti.com/lit/slma002) and SLMA004 (www.ti.com/lit/slma004).
+  9. Size of metal pad may vary due to creepage requirement.
+10. Vias are optional depending on application, refer to device data sheet. It is recommended that vias under paste be filled, plugged
+      or tented.
+
+
+
+
+
+
+                                                                                                                               www.ti.com
+
+--- PDF PAGE 41 ---
+                                                                                                                                                                                                                 EXAMPLE STENCIL DESIGN
+ DGS0024A                                                                                                                                                                                                                                 VSSOP - 1.1 mm max height
+
+                                                                                                                                                                                                                                                                                       SMALL OUTLINE PACKAGE
+
+
+
+
+
+
+
+
+
+                                                   24X (1.45)                                                                                                             SYMM
+                                                24X (0.3)
+
+                                                                                     1                                                                                                                                                                                       24
+
+
+
+
+                                      (R0.05) TYP
+
+
+                                               22X (0.5)
+
+
+
+
+                                                                                                                                                                                                                                                                                   SYMM
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                  12                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  13
+
+
+                                                                                                                                                                             (4.4)
+                                                                                                                                        SOLDER PASTE EXAMPLE
+                                                                                                                                   BASED ON 0.125 mm THICK STENCIL
+                                                                                                                                                                     SCALE: 15X
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                                                                                                                                                                                                               4226366/A   10/2020
+NOTES: (continued)
+
+11. Laser cutting apertures with trapezoidal walls and rounded corners may offer better paste release. IPC-7525 may have alternate
+      design recommendations.
+12. Board assembly site may have different recommendations for stencil design.
+
+
+
+
+
+
+
+
+
+
+                                                                                                                                                                             www.ti.com
+
+--- PDF PAGE 42 ---
+                                            IMPORTANT NOTICE AND DISCLAIMER
+TI PROVIDES TECHNICAL AND RELIABILITY DATA (INCLUDING DATASHEETS), DESIGN RESOURCES (INCLUDING REFERENCE
+DESIGNS), APPLICATION OR OTHER DESIGN ADVICE, WEB TOOLS, SAFETY INFORMATION, AND OTHER RESOURCES “AS IS”
+AND WITH ALL FAULTS, AND DISCLAIMS ALL WARRANTIES, EXPRESS AND IMPLIED, INCLUDING WITHOUT LIMITATION ANY
+IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NON-INFRINGEMENT OF THIRD
+PARTY INTELLECTUAL PROPERTY RIGHTS.
+These resources are intended for skilled developers designing with TI products. You are solely responsible for (1) selecting the appropriate
+TI products for your application, (2) designing, validating and testing your application, and (3) ensuring your application meets applicable
+standards, and any other safety, security, regulatory or other requirements.
+These resources are subject to change without notice. TI grants you permission to use these resources only for development of an
+application that uses the TI products described in the resource. Other reproduction and display of these resources is prohibited. No license
+is granted to any other TI intellectual property right or to any third party intellectual property right. TI disclaims responsibility for, and you fully
+indemnify TI and its representatives against any claims, damages, costs, losses, and liabilities arising out of your use of these resources.
+TI’s products are provided subject to TI’s Terms of Sale,                      TI’s General Quality Guidelines, or other applicable terms available either on
+ti.com or provided in conjunction with such TI products. TI’s provision of these resources does not expand or otherwise alter TI’s applicable
+warranties or warranty disclaimers for TI products. Unless TI explicitly designates a product as custom or customer-specified, TI products
+are standard, catalog, general purpose devices.
+TI objects to and rejects any additional or different terms you may propose.
+IMPORTANT NOTICE
+
+
+                                                    Copyright © 2026, Texas Instruments Incorporated
+                                                                    Last updated 10/2025

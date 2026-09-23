@@ -8,6 +8,12 @@
   "named_net_mismatches": 0,
   "svg_pages": 9,
   "pdf_pages": 9,
-  "visual_review": "All 9 revised PDF pages rendered and inspected after grouping the ESP32 buses and clarifying energy, data, and control flows; no clipped text, table remnants, or block-crossing lines in reviewed pages.",
-  "scope": "Schematic and PCB net evidence only; no hardware operations."
+  "source_links_in_pdf": 0,
+  "source_links_in_companion_notes": 32,
+  "page09_table": "Eight load allocations with source-equivalent amperes, percentage of full5A capacity and watts. Total0.33225A/6.6449%; provisionalremainder4.66775A/93.3551%. Table calculated from unrounded model values.",
+  "power_label_format": "Calculated local voltage/current on power lines; page09 attributes load watts to equivalent24V source current with conversion losses separate. No algebraic current codes or Current not determined labels. External5V source omitted at user request.",
+  "calculation_basis": "24V-only reference scenario, all8MQ modules active, ESP RFoff, LoRaTX, alarmoff. Typical converter curves92%/93%, solved selector/module switch drops and explicit passive allowances. Total7.9739316953W,24V0.332247154A. Active alarm/startup/input wiring losses excluded; remainder provisional.",
+  "visual_review": "All nine pages rendered and inspected. Text extents, overlap and conductor/block-interior checks pass. Former pages10-17 removed from PDF/SVG viewer/package.",
+  "independent_review": "GLD_Agent independently verified rail KCL, per-module power/current conservation, eight source-equivalent allocations and5A capacity reconciliation to below1e-15. VMID loaded-voltage label and companion assumptions corrected.",
+  "scope": "Schematic, PCB nets, user-supplied filter/module images, configured sensor names and datasheet calculations. No firmware edits or hardware operations."
 }

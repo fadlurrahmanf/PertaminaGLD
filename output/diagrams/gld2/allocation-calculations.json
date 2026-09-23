@@ -1,0 +1,194 @@
+{
+  "scenario": "24V-only nominal allocation, all8heaters, LoRaTX, ESP RFoff, RS485RX, USBactive, SHT heateroff, LEDoff, alarmoff; no battery or5VEXT contribution",
+  "eta24": 0.92,
+  "eta33": 0.93,
+  "buck_V": 4.98848167539267,
+  "rail_V": 4.929730551474946,
+  "heater_W": 6.353704786776228,
+  "digital": {
+    "ESP32": 0.0917,
+    "LoRa": 0.119,
+    "ADS": 0.0009,
+    "SHT40": 0.00032,
+    "PCF8574": 0.0001,
+    "RS485": 0.0007,
+    "USB": 0.004
+  },
+  "digital_pullups_A": 0.002409,
+  "digital_A": 0.219129,
+  "digital_W": 0.7231257,
+  "digital_input_A": 0.15772758937025322,
+  "vmid_A": 0.0018961960733421591,
+  "vref_A": 0.00014059160949274547,
+  "analog_A": 0.012933274210408652,
+  "module_analog_A": 0.0006101297401007715,
+  "modules": [
+    {
+      "model": "MQ8",
+      "module_V": 4.915094802015432,
+      "heater_A": 0.1638364934005144,
+      "heater_W": 0.8052718970933039,
+      "analog_A": 0.0006101297401007715,
+      "electronics_A": 0.0006181297401007715,
+      "electronics_W": 0.003038283358536128,
+      "switch_loss_W": 0.0024067995757492845,
+      "header_A": 0.16445462314061518
+    },
+    {
+      "model": "MQ135",
+      "module_V": 4.915094802015432,
+      "heater_A": 0.1638364934005144,
+      "heater_W": 0.8052718970933039,
+      "analog_A": 0.0006101297401007715,
+      "electronics_A": 0.0006181297401007715,
+      "electronics_W": 0.003038283358536128,
+      "switch_loss_W": 0.0024067995757492845,
+      "header_A": 0.16445462314061518
+    },
+    {
+      "model": "MQ3",
+      "module_V": 4.916416816872334,
+      "heater_A": 0.14898232778401013,
+      "heater_W": 0.7324592217340938,
+      "analog_A": 0.0006101958408436167,
+      "electronics_A": 0.0006181958408436167,
+      "electronics_W": 0.003039414937920911,
+      "switch_loss_W": 0.001991635158076266,
+      "header_A": 0.14960052362485377
+    },
+    {
+      "model": "MQ5",
+      "module_V": 4.915094802015432,
+      "heater_A": 0.1638364934005144,
+      "heater_W": 0.8052718970933039,
+      "analog_A": 0.0006101297401007715,
+      "electronics_A": 0.0006181297401007715,
+      "electronics_W": 0.003038283358536128,
+      "switch_loss_W": 0.0024067995757492845,
+      "header_A": 0.16445462314061518
+    },
+    {
+      "model": "MQ4",
+      "module_V": 4.914056574721395,
+      "heater_A": 0.1755020205257641,
+      "heater_W": 0.8624268578415204,
+      "analog_A": 0.0006100778287360698,
+      "electronics_A": 0.0006180778287360698,
+      "electronics_W": 0.0030373948098040364,
+      "switch_loss_W": 0.0027603769356274377,
+      "header_A": 0.17612009835450018
+    },
+    {
+      "model": "MQ7",
+      "module_V": 4.916416816872334,
+      "heater_A": 0.14898232778401013,
+      "heater_W": 0.7324592217340938,
+      "analog_A": 0.0006101958408436167,
+      "electronics_A": 0.0006181958408436167,
+      "electronics_W": 0.003039414937920911,
+      "switch_loss_W": 0.001991635158076266,
+      "header_A": 0.14960052362485377
+    },
+    {
+      "model": "MQ6",
+      "module_V": 4.915094802015432,
+      "heater_A": 0.1638364934005144,
+      "heater_W": 0.8052718970933039,
+      "analog_A": 0.0006101297401007715,
+      "electronics_A": 0.0006181297401007715,
+      "electronics_W": 0.003038283358536128,
+      "switch_loss_W": 0.0024067995757492845,
+      "header_A": 0.16445462314061518
+    },
+    {
+      "model": "MQ2",
+      "module_V": 4.915094802015432,
+      "heater_A": 0.1638364934005144,
+      "heater_W": 0.8052718970933039,
+      "analog_A": 0.0006101297401007715,
+      "electronics_A": 0.0006181297401007715,
+      "electronics_W": 0.003038283358536128,
+      "switch_loss_W": 0.0024067995757492845,
+      "header_A": 0.16445462314061518
+    }
+  ],
+  "modules_A": 1.2975942613072837,
+  "mux_A": 0.0005229730551474946,
+  "main5_A": 1.4687780979430929,
+  "main5_W": 7.2406802627673255,
+  "aon_A": 0.0010010499999999999,
+  "aon_input_A": 0.001001075,
+  "bias_A": 0.0002808647345906428,
+  "buck_output_A": 1.4700600376776833,
+  "buck_input_A": 0.3321271539711133,
+  "groups": [
+    {
+      "title": "Eight MQ heaters",
+      "W": 6.353704786776228,
+      "detail": "Eight heaters; calculated path drops",
+      "equivalent_24V_A": 0.2647376994490095
+    },
+    {
+      "title": "Module electronics",
+      "W": 0.024307641478326498,
+      "detail": "8 x DAC, INA333, buffer and passives",
+      "equivalent_24V_A": 0.0010128183949302707
+    },
+    {
+      "title": "ESP32",
+      "W": 0.30261,
+      "detail": "3.3 V / 91.7 mA; RF off reference",
+      "equivalent_24V_A": 0.01260875
+    },
+    {
+      "title": "LoRa radio",
+      "W": 0.39269999999999994,
+      "detail": "3.3 V / 119 mA; TX reference",
+      "equivalent_24V_A": 0.0163625
+    },
+    {
+      "title": "ADS and analog reference",
+      "W": 0.06672755700565454,
+      "detail": "ADC, ADR03, OPA320 and VMID",
+      "equivalent_24V_A": 0.0027803148752356057
+    },
+    {
+      "title": "Other digital loads",
+      "W": 0.02742381624755877,
+      "detail": "SHT40, PCF, USB, RS485, mux, pullups",
+      "equivalent_24V_A": 0.0011426590103149486
+    },
+    {
+      "title": "AON and board bias",
+      "W": 0.007584553581769448,
+      "detail": "Supervision, dividers and gate bias",
+      "equivalent_24V_A": 0.0003160230659070603
+    },
+    {
+      "title": "Conversion and switch loss",
+      "W": 0.798873340217183,
+      "detail": "Two converters, selector, switches, LDO",
+      "equivalent_24V_A": 0.03328638917571596
+    }
+  ],
+  "losses": {
+    "main_buck": 0.6376841356245375,
+    "digital_buck": 0.054428816129032165,
+    "selector": 0.0862923640398932,
+    "module_switches": 0.01877764513052639,
+    "aon_path": 0.0016903792931937172
+  },
+  "total_W": 7.973931695306719,
+  "total_A": 0.3322471539711133,
+  "source_capacity_A": 5,
+  "source_capacity_W": 120,
+  "remaining_A": 4.667752846028887,
+  "remaining_W": 112.02606830469328,
+  "alarm_included_A": 0,
+  "exclusions": [
+    "Unidentified active alarm and inrush",
+    "Input fuse/filter/FET/wiring ohmic losses",
+    "Unmodelled signal-switching, memory/I/O and leakage currents",
+    "Heater warm-up and fitted-vendor variation"
+  ]
+}

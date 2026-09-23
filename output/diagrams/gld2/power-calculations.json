@@ -1,0 +1,301 @@
+{
+  "basis": "Room-temperature resistance model at exactly 5.000 V; reference vendors, not fitted-maker confirmation.",
+  "sensors": [
+    {
+      "model": "MQ8",
+      "ohms": 30,
+      "tolerance_ohms": 3,
+      "reference_vendor": "Winsen",
+      "source": "S20",
+      "current_A_at_5V": 0.16666666666666666,
+      "power_W_at_5V": 0.8333333333333334,
+      "current_A_at_5V_min_R": 0.18518518518518517
+    },
+    {
+      "model": "MQ135",
+      "ohms": 30,
+      "tolerance_ohms": 3,
+      "reference_vendor": "Winsen",
+      "source": "S21",
+      "current_A_at_5V": 0.16666666666666666,
+      "power_W_at_5V": 0.8333333333333334,
+      "current_A_at_5V_min_R": 0.18518518518518517
+    },
+    {
+      "model": "MQ3",
+      "ohms": 33,
+      "tolerance_ohms": 1.65,
+      "reference_vendor": "Hanwei",
+      "source": "S22",
+      "current_A_at_5V": 0.15151515151515152,
+      "power_W_at_5V": 0.7575757575757576,
+      "current_A_at_5V_min_R": 0.15948963317384368
+    },
+    {
+      "model": "MQ5",
+      "ohms": 30,
+      "tolerance_ohms": 3,
+      "reference_vendor": "Winsen",
+      "source": "S23",
+      "current_A_at_5V": 0.16666666666666666,
+      "power_W_at_5V": 0.8333333333333334,
+      "current_A_at_5V_min_R": 0.18518518518518517
+    },
+    {
+      "model": "MQ4",
+      "ohms": 28,
+      "tolerance_ohms": 3,
+      "reference_vendor": "Winsen",
+      "source": "S24",
+      "current_A_at_5V": 0.17857142857142858,
+      "power_W_at_5V": 0.8928571428571429,
+      "current_A_at_5V_min_R": 0.2
+    },
+    {
+      "model": "MQ7",
+      "ohms": 33,
+      "tolerance_ohms": 1.65,
+      "reference_vendor": "Hanwei",
+      "source": "S25",
+      "current_A_at_5V": 0.15151515151515152,
+      "power_W_at_5V": 0.7575757575757576,
+      "current_A_at_5V_min_R": 0.15948963317384368
+    },
+    {
+      "model": "MQ6",
+      "ohms": 30,
+      "tolerance_ohms": 3,
+      "reference_vendor": "Winsen",
+      "source": "S26",
+      "current_A_at_5V": 0.16666666666666666,
+      "power_W_at_5V": 0.8333333333333334,
+      "current_A_at_5V_min_R": 0.18518518518518517
+    },
+    {
+      "model": "MQ2",
+      "ohms": 30,
+      "tolerance_ohms": 3,
+      "reference_vendor": "Winsen",
+      "source": "S27",
+      "current_A_at_5V": 0.16666666666666666,
+      "power_W_at_5V": 0.8333333333333334,
+      "current_A_at_5V_min_R": 0.18518518518518517
+    }
+  ],
+  "heater_power_W": 6.574675324675325,
+  "heater_current_A": 1.314935064935065,
+  "ic_reference_cases": [
+    {
+      "case": "ESP32 dual-core 128-bit access 240MHz, peripheral clocks off",
+      "Vtest": 3.3,
+      "Ireference_A": 0.0917,
+      "Imax_A": null,
+      "Preference_W": 0.30261,
+      "Pmax_W": null,
+      "source": "S10"
+    },
+    {
+      "case": "ESP32 802.11b TX 20.5dBm peak reference",
+      "Vtest": 3.3,
+      "Ireference_A": 0.355,
+      "Imax_A": null,
+      "Preference_W": 1.1715,
+      "Pmax_W": null,
+      "source": "S10"
+    },
+    {
+      "case": "E22 TX typical",
+      "Vtest": 3.3,
+      "Ireference_A": 0.119,
+      "Imax_A": null,
+      "Preference_W": 0.39269999999999994,
+      "Pmax_W": null,
+      "source": "S11"
+    },
+    {
+      "case": "E22 RX typical",
+      "Vtest": 3.3,
+      "Ireference_A": 0.0068,
+      "Imax_A": null,
+      "Preference_W": 0.022439999999999998,
+      "Pmax_W": null,
+      "source": "S11"
+    },
+    {
+      "case": "E22 sleep typical",
+      "Vtest": 3.3,
+      "Ireference_A": 2e-06,
+      "Imax_A": null,
+      "Preference_W": 6.5999999999999995e-06,
+      "Pmax_W": null,
+      "source": "S11"
+    },
+    {
+      "case": "SHT40 measurement heater off",
+      "Vtest": 3.3,
+      "Ireference_A": 0.00032,
+      "Imax_A": 0.0005,
+      "Preference_W": 0.001056,
+      "Pmax_W": 0.00165,
+      "source": "S12"
+    },
+    {
+      "case": "SHT40 heater 200mW setting active",
+      "Vtest": 3.3,
+      "Ireference_A": 0.06,
+      "Imax_A": 0.1,
+      "Preference_W": 0.19799999999999998,
+      "Pmax_W": 0.33,
+      "source": "S12"
+    },
+    {
+      "case": "THVD1410 RX only unloaded",
+      "Vtest": 3.3,
+      "Ireference_A": 0.0007,
+      "Imax_A": 0.00096,
+      "Preference_W": 0.00231,
+      "Pmax_W": 0.003168,
+      "source": "S15"
+    },
+    {
+      "case": "THVD1410 TX only unloaded",
+      "Vtest": 3.3,
+      "Ireference_A": 0.002,
+      "Imax_A": 0.0025,
+      "Preference_W": 0.0066,
+      "Pmax_W": 0.00825,
+      "source": "S15"
+    },
+    {
+      "case": "PCF8574 NXP reference 100kHz unloaded",
+      "Vtest": 6,
+      "Ireference_A": 4e-05,
+      "Imax_A": 0.0001,
+      "Preference_W": 0.00024000000000000003,
+      "Pmax_W": 0.0006000000000000001,
+      "source": "S14"
+    },
+    {
+      "case": "CH340C active 25C USB pins excluded",
+      "Vtest": 3.3,
+      "Ireference_A": 0.004,
+      "Imax_A": 0.012,
+      "Preference_W": 0.0132,
+      "Pmax_W": 0.039599999999999996,
+      "source": "S32"
+    },
+    {
+      "case": "CH340C suspended 25C USB pins excluded",
+      "Vtest": 3.3,
+      "Ireference_A": 4e-05,
+      "Imax_A": 0.00015,
+      "Preference_W": 0.000132,
+      "Pmax_W": 0.0004949999999999999,
+      "source": "S32"
+    },
+    {
+      "case": "TCA9548A 100kHz unloaded",
+      "Vtest": 5.5,
+      "Ireference_A": 9e-06,
+      "Imax_A": 3e-05,
+      "Preference_W": 4.9500000000000004e-05,
+      "Pmax_W": 0.000165,
+      "source": "S13"
+    },
+    {
+      "case": "ADS AVDD PGA1 buffer off 7.68MHz",
+      "Vtest": 5,
+      "Ireference_A": 0.007,
+      "Imax_A": 0.01,
+      "Preference_W": 0.035,
+      "Pmax_W": 0.05,
+      "source": "S07"
+    },
+    {
+      "case": "ADS DVDD CLKOUT off 7.68MHz",
+      "Vtest": 3.3,
+      "Ireference_A": 0.0009,
+      "Imax_A": 0.002,
+      "Preference_W": 0.0029699999999999996,
+      "Pmax_W": 0.0066,
+      "source": "S07"
+    },
+    {
+      "case": "OPA320 25C no output load",
+      "Vtest": 5.5,
+      "Ireference_A": 0.0015,
+      "Imax_A": 0.00175,
+      "Preference_W": 0.00825,
+      "Pmax_W": 0.009625,
+      "source": "S08"
+    },
+    {
+      "case": "ADR03 no output load",
+      "Vtest": 5,
+      "Ireference_A": 0.00065,
+      "Imax_A": 0.001,
+      "Preference_W": 0.00325,
+      "Pmax_W": 0.005,
+      "source": "S09"
+    },
+    {
+      "case": "TPL5010 operation, excludes timing conversion",
+      "Vtest": 3.3,
+      "Ireference_A": 3.5e-08,
+      "Imax_A": 5e-08,
+      "Preference_W": 1.155e-07,
+      "Pmax_W": 1.6499999999999998e-07,
+      "source": "S16"
+    },
+    {
+      "case": "SN74AUP1G74 static to85C valid levels",
+      "Vtest": 3.3,
+      "Ireference_A": null,
+      "Imax_A": 5e-07,
+      "Preference_W": null,
+      "Pmax_W": 1.6499999999999999e-06,
+      "source": "S17"
+    },
+    {
+      "case": "SN74LVC1G06 static valid levels",
+      "Vtest": 3.3,
+      "Ireference_A": null,
+      "Imax_A": 1e-05,
+      "Preference_W": null,
+      "Pmax_W": 3.3e-05,
+      "source": "S18"
+    },
+    {
+      "case": "TPS3839 unloaded",
+      "Vtest": 3.3,
+      "Ireference_A": 1.5e-07,
+      "Imax_A": 5e-07,
+      "Preference_W": 4.949999999999999e-07,
+      "Pmax_W": 1.6499999999999999e-06,
+      "source": "S19"
+    },
+    {
+      "case": "TPS22919 unloaded supply, excludes conduction loss",
+      "Vtest": 3.6,
+      "Ireference_A": 8e-06,
+      "Imax_A": 1.5e-05,
+      "Preference_W": 2.88e-05,
+      "Pmax_W": 5.4000000000000005e-05,
+      "source": "S30"
+    }
+  ],
+  "heater_current_A_min_R": 1.4449051922736134,
+  "heater_only_ideal_battery_A_at_4_2V": 1.5653988868274582,
+  "buck_V": 4.98848167539267,
+  "boost_PWM_V": 5.2675,
+  "boost_PFM_V": 5.3025,
+  "alarm_boost_pre_diode_V": 24.2113,
+  "battery_monitor_V": 1.4000000000000001,
+  "battery_divider_A": 1.4e-05,
+  "vmid_divider_A_at_5V": 0.00025,
+  "ads_typ_W": 0.037970000000000004,
+  "ads_table_max_W": 0.056600000000000004,
+  "lora_tx_W": 0.39269999999999994,
+  "lora_rx_W": 0.022439999999999998,
+  "mq7_cycle_reference_W": 0.33866666666666667
+}

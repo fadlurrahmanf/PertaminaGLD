@@ -1,0 +1,2756 @@
+
+--- PDF PAGE 1 ---
+                                                                                                                              TPS61175
+                                                                                           SLVS892F–DECEMBER 2008–REVISED APRIL 2019
+                       TPS61175 3-A High-Voltage Boost Converter With Soft Start
+                                      and Programmable Switching Frequency
+1  Features                                                              3  Description
+                                                                         The  TPS61175  device  is  a  monolithic  switching
+
+
+1•   2.9-V to 18-V Input voltage range
+•    3-A, 40-V Internal switch                                           regulator with integrated 3-A, 40-V power switch. The
+                                                                         device   can   be   configured   in   several   standard
+•    High-efficiency power conversion: Up to 93%                         switching-regulator    topologies,    including    boost,
+•    Frequency set by external resistor: 200 kHz to 2.2                  SEPIC,  and  flyback.  The  device  has  a  wide  input
+    MHz                                                                  voltage range to support application with input voltage
+•    Synchronous external switching frequency                            from multicell batteries or regulated 5-V, 12-V power
+•    User-defined soft start into full load                              rails.
+•    Skip-switching cycle for output regulation at light                 The  TPS61175  regulates  the  output  voltage  with
+    load                                                                 current mode pulse width modulation (PWM) control.
+                                                                         The switching frequency of PWM is set by either an
+•    14-Pin HTSSOP package with PowerPad™                                external resistor or an external clock signal. The user
+•    Create a custom design using the TPS61175 with                      can program the switching frequency from 200 kHz to
+    the WEBENCH Power Designer                                           2.2 MHz.
+                                                                         The   device   features   a   programmable   soft-start
+2  Applications                                                          function  to  limit  inrush  current  during  start-up,  and
+•    5-V to 12-V, 24-V Power conversion                                  has other built-in protection features, such as pulse-
+•    Supports SEPIC and flyback topologies                               by-pulse overcurrent limit and thermal shutdown. The
+                                                                         TPS61175 is available in 14-pin HTSSOP package
+•    ADSL modems                                                         with PowerPad.
+•    TV tuners                                                                               Device Information(1)
+
+                                                                            PART NUMBER              PACKAGE           BODY SIZE (NOM)
+                                                                          TPS61175              HTSSOP (14)           5.00 mm × 4.40 mm
+
+                                                                          (1)  For all available packages, see the orderable addendum at
+                                                                              the end of the data sheet.
+
+                                                       Simplified Schematic
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+1
+
+      An IMPORTANT NOTICE at the end of this data sheet addresses availability, warranty, changes, use in safety-critical applications,
+      intellectual property matters and other important disclaimers. PRODUCTION DATA.
+
+--- PDF PAGE 2 ---
+TPS61175
+SLVS892F–DECEMBER 2008–REVISED APRIL 2019                                                                                                                                www.ti.com
+                                                                              Table of Contents
+
+    1    Features.................................................................. 1                      8    Application and Implementation........................ 12
+    2    Applications........................................................... 1                                8.1   Application Information............................................ 12
+    3    Description............................................................. 1                               8.2   Typical Application ................................................. 12
+    4    Revision History..................................................... 2                           9    Power Supply Recommendations...................... 20
+    5    Pin Configuration and Functions......................... 3                                        10   Layout................................................................... 20
+    6    Specifications......................................................... 4                                10.1   Layout Guidelines................................................. 20
+           6.1   Absolute Maximum Ratings ..................................... 4                                 10.2   Layout Example.................................................... 20
+           6.2   ESD Ratings.............................................................. 4                      10.3   Thermal Considerations........................................ 21
+           6.3   Recommended Operating Conditions....................... 4                                 11   Device and Documentation Support................. 22
+           6.4   Thermal Information.................................................. 5                          11.1   Device Support...................................................... 22
+           6.5   Electrical Characteristics........................................... 5                          11.2   Development Support........................................... 22
+           6.6   Typical Characteristics.............................................. 6                          11.3   Receiving Notification of Documentation Updates 22
+    7    Detailed Description.............................................. 8                                     11.4   Community Resources.......................................... 22
+           7.1   Overview................................................................... 8                    11.5   Trademarks........................................................... 22
+           7.2   Functional Block Diagram......................................... 8                              11.6   Electrostatic Discharge Caution............................ 22
+           7.3   Feature Description................................................... 9                         11.7   Glossary................................................................ 23
+           7.4   Device Functional Modes........................................ 11                        12   Mechanical, Packaging, and Orderable
+                                                                                                                  Information........................................................... 23
+
+
+4  Revision History
+
+Changes from Revision E (February 2019) to Revision F                                                                                           Page
+
+•    Changed Soft Start figure reference to point to the correct soft start waveform. .................................................................. 9
+•    Changed "≤" sign in Equation 7 to "≥".................................................................................................................................. 14
+
+
+Changes from Revision D (April 2016) to Revision E                                                                                                  Page
+
+•    Changed Handing Ratings table to ESD Ratings; moved Storage Temperature to Absolute Maximum Ratings ................ 4
+•    Updated symbols in Thermal Information .............................................................................................................................. 5
+•    AddedtheIIN(MAX) for the IOUT(max) calculation equation......................................................................................................... 14
+
+
+Changes from Revision C (August 2014) to Revision D                                                                                              Page
+
+•    Revised second paragraph of Minimum ON Time and Pulse Skipping section or clarity.................................................... 11
+
+
+Changes from Revision B (February 2012) to Revision C                                                                                           Page
+
+•    Added Handling Rating table, Feature Description section, Device Functional Modes, Application and
+     Implementation section, Power Supply Recommendations section, Layout section, Device and Documentation
+     Support section, and Mechanical, Packaging, and Orderable Information section................................................................ 1
+
+
+Changes from Revision A (October 2010) to Revision B                                                                                            Page
+
+•    Replaced the Dissipation Ratings Table with the Thermal Information Table........................................................................ 4
+
+
+Changes from Original (December 2008) to Revision A                                                                                              Page
+
+•    Changed the Ordering Information table - Part Number From: TPS61175 To: TPS61175PWP; Removed the
+     Package Marking column ...................................................................................................................................................... 1
+
+
+
+2          Submit Documentation Feedback                                                                                       Copyright © 2008–2019, Texas Instruments Incorporated
+                                                                           Product Folder Links: TPS61175
+
+--- PDF PAGE 3 ---
+                                                                                                                                                               TPS61175
+www.ti.com                                                                                                                                                      SLVS892F–DECEMBER 2008–REVISED APRIL 2019
+5  Pin Configuration and Functions
+
+
+                                                                                   TSSOP
+                                                                                  14 Pins
+                                                                                 Top View
+
+
+
+
+
+
+
+
+
+
+
+                                                                            Pin Functions
+            PIN                 I/O                                                              DESCRIPTION
+   NAME             NO.
+ AGND                 7           I     Signal ground of the IC
+ COMP                 8          O      Output of the internal transconductance error amplifier. An external RC network is connected to this pin to
+                                        compensate the regulator.
+ EN                   4           I     Enable pin. When the voltage of this pin falls below the enable threshold for more than 10ms, the IC turns
+                                        off.
+ FB                   9           I     Feedback pin for positive voltage regulation. Connect to the center tap of a resistor divider to program the
+                                        output voltage.
+ FREQ                10          O      Switch frequency program pin. An external resistor is connected to this pin to set switch frequency. See
+                                        application section for information on how to size the FREQ resistor.
+ NC                  11           I     Reserved pin. Must connect this pin to ground.
+ PGND            12,13,14         I     Power ground of the IC. It is connected to the source of the PWM switch.
+ SS                   5          O      Soft start programming pin. A capacitor between the SS pin and GND pin programs soft start timing. See
+                                        Application and Implementation for information on how to size the SS capacitor.
+ SW                  1,2          I     This is the switching node of the IC. Connect SW to the switched side of the inductor.
+ SYNC                 6           I     Switch frequency synchronous pin. Customers can use an external signal to set the IC switch frequency
+                                        between 200-kHz and 2.2-MHz. If not used, this pin should be tied to AGND as short as possible to avoid
+                                        noise coupling.
+ Thermal Pad                            The thermal pad should be soldered to the analog ground. If possible, use thermal via to connect to top and
+                                        internal ground plane layers for ideal power dissipation.
+ VIN                  3           I     The input supply pin for the IC. Connect VIN to a supply voltage between 2.9 V and 18 V. It is acceptable
+                                        for the voltage on the pin to be different from the boost power stage input for applications requiring voltage
+                                        beyond VIN range.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Copyright © 2008–2019, Texas Instruments Incorporated                                                                      Submit Documentation Feedback                     3
+                                                                   Product Folder Links: TPS61175
+
+--- PDF PAGE 4 ---
+TPS61175
+SLVS892F–DECEMBER 2008–REVISED APRIL 2019                                                                                                                                www.ti.com
+6  Specifications
+
+6.1   Absolute Maximum Ratings
+over operating free-air temperature range (unless otherwise noted)(1)
+                                                                                                                             MIN               MAX         UNIT
+Supply voltages on pin VIN(2)                                                                                               –0.3                  20         V
+Voltages on pins EN(2)                                                                                                      –0.3                  20         V
+Voltage on pin FB, FREQ and COMP(2)                                                                                         –0.3                    3        V
+Voltage on pin SYNC, SS(2)                                                                                                  –0.3                    7        V
+Voltage on pin SW(2)                                                                                                        –0.3                  40         V
+Continuous power dissipation                                                                                               See Thermal Information
+Operating junction temperature range                                                                                         –40                 150        °C
+Storage temperature, Tstg                                                                                                    –65                 150        °C
+
+(1)   Stresses beyond those listed under absolute maximum ratings may cause permanent damage to the device. These are stress ratings
+     only and functional operation of the device at these or any other conditions beyond those indicated under recommended operating
+     conditions is not implied. Exposure to absolute-maximum-rated conditions for extended periods may affect device reliability.
+(2)   All voltage values are with respect to network ground terminal.
+
+6.2   ESD Ratings
+                                                                                                                                         VALUE            UNIT
+                                               Human-body model (HBM), per ANSI/ESDA/JEDEC JS-001(1)                                      ±2000
+V(ESD)      Electrostatic discharge            Charged-device model (CDM), per JEDEC specification JESD22-                                 ±500              V
+                                               C101(2)
+
+(1)   JEDEC document JEP155 states that 500-V HBM allows safe manufacturing with a standard ESD control process.
+(2)   JEDEC document JEP157 states that 250-V CDM allows safe manufacturing with a standard ESD control process.
+
+6.3   Recommended Operating Conditions
+over operating free-air temperature range (unless otherwise noted)
+                                                                                                                     MIN         NOM           MAX        UNIT
+VIN             Input voltage                                                                                          2.9                        18         V
+VO              Output voltage                                                                                        VIN                         38         V
+L               Inductor(1)                                                                                            4.7                        47        μH
+fSW             Switching frequency                                                                                   200                      2200        kHz
+CI              Input capacitor                                                                                        4.7                                  μF
+CO              Output capacitor                                                                                       4.7                                  μF
+VSYN            External switching frequency logic                                                                                                 5         V
+TA              Operating ambient temperature                                                                         –40                         85        °C
+TJ              Operating junction temperature                                                                        –40                        125        °C
+
+(1)   The inductance value depends on the switching frequency and end application. While larger values may be used, values between 4.7-
+     μH and 47-μH have been successfully tested in various applications. Refer to Selecting the Inductor for detail.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+4        Submit Documentation Feedback                                                                     Copyright © 2008–2019, Texas Instruments Incorporated
+                                                               Product Folder Links: TPS61175
+
+--- PDF PAGE 5 ---
+                                                                                                                                                      TPS61175
+www.ti.com                                                                                                                                                      SLVS892F–DECEMBER 2008–REVISED APRIL 2019
+
+6.4   Thermal Information
+                                                                                                                               TPS61175
+                                               THERMAL METRIC(1)                                                            PWP (HTSSOP)                UNIT
+                                                                                                                                14 PINS
+RθJA                Junction-to-ambient thermal resistance                                                                         45.2                 °C/W
+RθJC(top)           Junction-to-case (top) thermal resistance                                                                      34.9                 °C/W
+RθJB                Junction-to-board thermal resistance                                                                           30.1                 °C/W
+ψJT                 Junction-to-top characterization parameter                                                                     1.5                  °C/W
+ψJB                 Junction-to-board characterization parameter                                                                   29.9                 °C/W
+RθJC(bot)           Junction-to-case (bottom) thermal resistance                                                                   5.8                  °C/W
+
+(1)   For more information about traditional and new thermal metrics, see the Semiconductor and IC Package Thermal Metrics application
+     report (SPRA953).
+
+6.5   Electrical Characteristics
+FSW = 1.2 MHz (Rfreq = 80 kΩ), VIN = 3.6 V, TA = –40°C to +85°C, typical values are at TA = 25°C (unless otherwise noted)
+                         PARAMETER                                              TEST CONDITIONS                            MIN        TYP        MAX        UNIT
+SUPPLY CURRENT
+VIN            Input voltage range                                                                                          2.9                     18        V
+IQ             Operating quiescent current into Vin                 Device PWM switching without load                                              3.5       mA
+ISD            Shutdown current                                     EN=GND                                                                         1.5       μA
+VUVLO          Under-voltage lockout threshold                                                                                          2.5        2.7        V
+Vhys           Under-voltage lockout hysteresis                                                                                        130                   mV
+ENABLE AND REFERENCE CONTROL
+Venh           EN logic high voltage                                VIN = 2.9 V to 18 V                                     1.2                               V
+Venl           EN logic low voltage                                 VIN = 2.9 V to 18 V                                                            0.4        V
+VSYNh          SYN logic high voltage                                                                                       1.2
+VSYNl          SYN logic low voltage                                                                                                               0.4        V
+Ren            EN pull down resistor                                                                                       400         800       1600        kΩ
+Toff           Shutdown delay, SS discharge                         EN high to low                                           10                              ms
+VOLTAGE AND CURRENT CONTROL
+VREF           Voltage feedback regulation voltage                                                                       1.204       1.229      1.254         V
+IFB            Voltage feedback input bias current                                                                                                 200       nA
+Isink          Comp pin sink current                                VFB = VREF + 200 mV, VCOMP = 1 V                                    50                   μA
+Isource        Comp pin source current                              VFB = VREF –200 mV, VCOMP = 1 V                                    130                   μA
+VCCLP          Comp pin clamp voltage                               High Clamp, VFB = 1 V                                                 3                   V
+                                                                    Low Clamp, VFB = 1.5 V                                            0.75
+VCTH           Comp pin threshold                                   Duty cycle = 0%                                                   0.95                    V
+Gea            Error amplifier transconductance                                                                            240         340         440     μmho
+Rea            Error amplifier output resistance                                                                                        10                   MΩ
+fea            Error amplifier crossover frequency                                                                                     500                  KHz
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Copyright © 2008–2019, Texas Instruments Incorporated                                                               Submit Documentation Feedback                   5
+                                                               Product Folder Links: TPS61175
+
+--- PDF PAGE 6 ---
+TPS61175
+SLVS892F–DECEMBER 2008–REVISED APRIL 2019                                                                                                                                www.ti.com
+
+Electrical Characteristics (continued)
+
+FSW = 1.2 MHz (Rfreq = 80 kΩ), VIN = 3.6 V, TA = –40°C to +85°C, typical values are at TA = 25°C (unless otherwise noted)
+                         PARAMETER                                            TEST CONDITIONS                           MIN        TYP        MAX       UNIT
+FREQUENCY
+                                                                   Rfreq = 480 kΩ                                       0.16       0.21        0.26
+fS             Oscillator frequency                                Rfreq = 80 kΩ                                         1.0         1.2        1.4     MHz
+                                                                   Rfreq = 40 kΩ                                        1.76         2.2       2.64
+Dmax           Maximum duty cycle                                  VFB = 1 V, Rfreq = 80 kΩ                             89%        93%
+VFREQ          FREQ pin voltage                                                                                                   1.229                   V
+Tmin_on        Minimum on pulse width                              Rfreq = 80 kΩ                                                     60                   ns
+POWER SWITCH
+RDS(ON)        N-channel MOSFET on-resistance                      VIN = VGS = 3.6 V                                               0.13        0.25       Ω
+                                                                   VIN = VGS = 3.0 V                                               0.13         0.3
+ILN_NFET       N-channel leakage current                           VDS = 40 V, TA = 25°C                                                          1       μA
+OC, OVP AND SS
+ILIM           N-Channel MOSFET current limit                      D = Dmax                                                 3        3.8          5       A
+ISS            Soft start bias current                             Vss = 0 V                                                           6                  μA
+THERMAL SHUTDOWN
+Tshutdown      Thermal shutdown threshold                                                                                           160                   °C
+T hysteresis   Thermal shutdown threshold hysteresis                                                                                 15                   °C
+
+6.6   Typical Characteristics
+Circuit of Figure 1; L1 = D104C2-10μH; D1 = SS3P6L-E3/86A, R4 = 80kΩ, R3 = 10kΩ, C4 = 22nF,
+C2 = 10μF;VIN = 5V, VOUT = 24V, IOUT = 200mA (unless otherwise noted)
+                                                             Table 1. Table Of Graphs
+
+                                                                                                                                                     FIGURE
+Efficiency                             VIN = 5 V, VOUT = 12 V, 24 V, 35 V                                                                             Figure 1
+Efficiency                             VIN = 5 V, 12 V; VOUT = 24 V                                                                                   Figure 2
+Error amplifier                        vs Temperature                                                                                                 Figure 3
+transconductance
+Switch current limit                   vs Temperature                                                                                                 Figure 4
+Switch current limit                   vs Duty cycle                                                                                                  Figure 5
+FB accuracy                            vs Temperature                                                                                                 Figure 6
+Line transient response                VIN = 4.5 V to 5 V                                                                                            Figure 12
+Load transient response                IOUT = 100 mA to 300 mA; refer to 'compensating the control loop' for optimization                            Figure 13
+PWM Operation                                                                                                                                        Figure 14
+Pulse skipping                         No load                                                                                                       Figure 15
+Start-up                               C3 = 47 nF                                                                                                    Figure 16
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+6        Submit Documentation Feedback                                                                  Copyright © 2008–2019, Texas Instruments Incorporated
+                                                              Product Folder Links: TPS61175
+
+--- PDF PAGE 7 ---
+                                                                                                                                                                       TPS61175
+www.ti.com                                                                                                                                                      SLVS892F–DECEMBER 2008–REVISED APRIL 2019
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                       Figure 1. Efficiency vs Output Current                                                      Figure 2. Efficiency vs Output Current
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+           Figure 3. Error Amplifier Transconductance vs Free-Air                                                Figure 4. Overcurrent Limit vs Duty Cycle
+                                         Temperature
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+             Figure 5. Overcurrent Limit vs Free-Air Temperature                                              Figure 6. FB Voltage vs Free-Air Temperature
+
+
+Copyright © 2008–2019, Texas Instruments Incorporated                                                                             Submit Documentation Feedback                       7
+                                                                      Product Folder Links: TPS61175
+
+--- PDF PAGE 8 ---
+TPS61175
+SLVS892F–DECEMBER 2008–REVISED APRIL 2019                                                                                                                                www.ti.com
+7  Detailed Description
+
+7.1   Overview
+The TPS61175 integrates a 40-V low-side switch FET for up to 38-V output. The device regulates the output with
+current mode pulse width modulation (PWM) control. The PWM control circuitry turns on the switch at the
+beginning of each switching cycle. The input voltage is applied across the inductor and stores the energy as
+inductor current ramps up. During this portion of the switching cycle, the load current is provided by the output
+capacitor. When the inductor current rises to the threshold set by the error amplifier output, the power switch
+turns off and the external Schottky diode is forward biased. The inductor transfers stored energy to replenish the
+output capacitor and supply the load current. This operation repeats each every switching cycle. As shown in
+Functional Block Diagram, the duty cycle of the converter is determined by the PWM control comparator which
+compares the error amplifier output and the current signal. The switching frequency is programmed by the
+external resistor or synchronized to an external clock signal.
+A  ramp  signal  from  the  oscillator  is  added  to  the  current  ramp  to  provide  slope  compensation.  Slope
+compensation is necessary to avoid subharmonic oscillation that is intrinsic to the current mode control at duty
+cycle higher than 50%. If the inductor value is lower than 4.7μH, the slope compensation may not be adequate.
+The feedback loop regulates the FB pin to a reference voltage through a transconductance error amplifier. The
+output of the error amplifier is connected to the COMP pin. An external RC compensation network is connected
+to the COMP pin to optimize the feedback loop for stability and transient response.
+
+7.2   Functional Block Diagram
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+8       Submit Documentation Feedback                                                       Copyright © 2008–2019, Texas Instruments Incorporated
+                                                      Product Folder Links: TPS61175
+
+--- PDF PAGE 9 ---
+                                                                                                                                   TPS61175
+www.ti.com                                                                                                                                                      SLVS892F–DECEMBER 2008–REVISED APRIL 2019
+
+7.3   Feature Description
+
+7.3.1   Switching Frequency
+The switch frequency is set by a resistor (R4) connected to the FREQ pin of the TPS61175. Do not leave this pin
+open. A resistor must always be connected for proper operation. See Table 2 and Figure 7 for resistor values
+and corresponding frequencies.
+
+                                       Table 2. Switching Frequency vs External Resistor
+
+                                R4 (kΩ)                                                                fSW(kHz)
+                                  443                                                                     240
+                                  256                                                                     400
+                                  176                                                                     600
+                                   80                                                                     1200
+                                   51                                                                     2000
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                    Figure 7.  Switching Frequency vs External Resistor
+
+Alternatively, the TPS61175 switching frequency will synchronize to an external clock signal that is applied to the
+SYNC pin. The logic level of the external clock is shown in the specification table. The duty cycle of the clock is
+recommended in the range of 10% to 90%. The resistor also must be connected to the FREQ pin when IC is
+switching  by  the  external  clock.  The  external  clock  frequency  must  be  within  ±20%  of  the  corresponding
+frequency set by the resistor. For example, if the corresponding frequency as set by a resistor on the FREQ pin
+is 1.2-MHz, the external clock signal should be in the range of 0.96 MHz to 1.44 MHz.
+If the external clock signal is higher than the frequency per the resistor on the FREQ pin, the maximum duty
+cycle specification (DMAX) should be lowered by 2%. For instance, if the resistor set value is 2.5 MHz, and the
+external clock is 3 MHz, DMAX is 87% instead of 89%.
+
+7.3.2   Soft Start
+The TPS61175 has a built-in soft start circuit which significantly reduces the start-up current spike and output
+voltage overshoot. When the IC is enabled, an internal bias current (6μA typically) charges a capacitor (C3) on
+the SS pin. The voltage at the capacitor clamps the output of the internal error amplifier that determines the duty
+cycle of PWM control, thereby the input inrush current is eliminated. Once the capacitor reaches 1.8 V, the soft
+start cycle is completed and the soft-start voltage no longer clamps the error amplifier output. Refer to Figure 16
+for the soft start waveform. See Table 3 for C3 and corresponding soft start time. A 47-nF capacitor eliminates
+the output overshoot and reduces the peak inductor current for most applications.
+
+
+
+
+
+
+
+
+
+
+Copyright © 2008–2019, Texas Instruments Incorporated                                                 Submit Documentation Feedback            9
+                                                       Product Folder Links: TPS61175
+
+--- PDF PAGE 10 ---
+TPS61175
+SLVS892F–DECEMBER 2008–REVISED APRIL 2019                                                                                                                                www.ti.com
+
+                                                    Table 3. Soft-Start Time vs C3
+
+   VIN (V)        VOUT(V)        LOAD (A)          COUT(μF)          fSW(MHz)             C3 (nF)           tSS(ms)        OVERSHOT (mV)
+      5              24              0.4               10                1.2                 47                4                  none
+                                                                                             10               0.8                 210
+     12              35              0.6               10                 2                 100               6.5                 none
+                                                                                             10               0.4                 300
+
+When the EN is pulled low for 10 ms, the IC enters shutdown and the SS capacitor discharges through a 5-kΩ
+resistor for the next soft start.
+
+7.3.3   Overcurrent Protection
+The TPS61175 has a cycle-by-cycle overcurrent limit protection that turns off the power switch once the inductor
+current reaches the overcurrent limit threshold. The PWM circuitry resets itself at the beginning of the next switch
+cycle. During an overcurrent event, the output voltage begins to droop as a function of the load on the output.
+When the FB voltage drops lower than 0.9 V, the switching frequency is automatically reduced to 1/4 of the set
+value. The switching frequency does not reset until the overcurrent condition is removed. This feature is disabled
+during soft start.
+
+7.3.4   Enable and Thermal Shutdown
+The TPS61175 enters shutdown when the EN voltage is less than 0.4 V for more than 10 ms. In shutdown, the
+input supply current for the device is less than 1.5μA (maximum). The EN pin has an internal 800-kΩ pulldown
+resistor to disable the device when it is floating.
+An internal thermal shutdown turns off the device when the typical junction temperature of 160°C is exceeded.
+The IC restarts when the junction temperature drops by 15°C.
+
+7.3.5   Undervoltage Lockout (UVLO)
+An undervoltage lockout circuit prevents mis-operation of the device at input voltages below 2.5-V (typical).
+When the input voltage is below the undervoltage threshold, the device remains off, and the internal switch FET
+is turned off. The UVLO threshold is set below minimum operating voltage of 2.9 V to avoid any transient VIN dip
+triggering the UVLO and causing the device to reset. For the input voltages between UVLO threshold and 2.9 V,
+the device attempts to operate, but the specifications are not ensured.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+10      Submit Documentation Feedback                                                        Copyright © 2008–2019, Texas Instruments Incorporated
+                                                       Product Folder Links: TPS61175
+
+--- PDF PAGE 11 ---
+                                                                                                                                 TPS61175
+www.ti.com                                                                                                                                                      SLVS892F–DECEMBER 2008–REVISED APRIL 2019
+
+7.4   Device Functional Modes
+
+7.4.1   Minimum ON Time and Pulse Skipping
+Once the PWM switch is turned on, the TPS61175 has minimum ON pulse width of 60 ns. This sets the limit of
+the minimum duty cycle of the PWM switch, and it is independent of the set switching frequency. When operating
+conditions result in the TPS61175 having a minimum ON pulse width less than 60 ns, the IC enters pulse-
+skipping mode. In this mode, the device keeps the power switch off for several switching cycles to keep the
+output voltage from rising above the regulated voltage. This operation typically occurs in light load condition
+when  the  PWM  operates  in  discontinuous  mode.  Pulse  skipping  increases  the  output  voltage  ripple,  see
+Figure 15.
+When setting switching frequency higher than 1.2 MHz, TI recommends using an external synchronous clock as
+switching frequency to ensure pulse-skipping function works at light load. When using the internal switching
+frequency above 1.2 MHz, the pulse-skipping operation may not function. When the pulse-skipping function does
+not work at light load, the TPS61175 always runs in PWM mode with minimum ON pulse width. To keep the
+output voltage in regulation, a minimum load is required. The minimum load is related to the input voltage, output
+voltage, switching frequency, external inductor value and the maximum value of the minimum ON pulse width.
+Use Equation 1 and Equation 2 to calculate the required minimum load at the worst case. The maximum tmin_ON
+could be estimated to 80 ns. CSW is the total parasite capacitance at the switching node SW pin. It could be
+estimated to 100 pF.
+
+
+
+                                                                                                                                           (1)
+
+
+
+                                                                                                                                           (2)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Copyright © 2008–2019, Texas Instruments Incorporated                                               Submit Documentation Feedback           11
+                                                      Product Folder Links: TPS61175
+
+--- PDF PAGE 12 ---
+TPS61175
+SLVS892F–DECEMBER 2008–REVISED APRIL 2019                                                                                                                                www.ti.com
+8  Application and Implementation
+
+8.1   Application Information
+The following section provides a step-by-step  design  approach  for  configuring  the  TPS61175  as  a  voltage
+regulating boost converter, as shown in Figure 8. When configured as SEPIC or flyback converter, a different
+design approach is required.
+
+8.2   Typical Application
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                           Figure 8.  Boost Converter Configuration
+
+8.2.1   Design Requirements
+
+                                                     Table 4. Design Parameters
+                             PARAMETERS                                                                 VALUES
+                               Input voltage                                                               5 V
+                              Output voltage                                                              24 V
+                           Operating frequency                                                          1.2 MHz
+
+8.2.2   Detailed Design Procedure
+
+8.2.2.1   Custom Design with WEBENCH Tools
+Click here to create a custom design using the TPS61175 device with the WEBENCH® Power Designer.
+1.  Start by entering your VIN, VOUT and IOUT requirements.
+2.  Optimize your design for key parameters like efficiency, footprint and cost using the optimizer dial and
+     compare this design with other possible solutions from Texas Instruments.
+3.  WEBENCH Power Designer provides you with a customized schematic along with a list of materials with real
+     time pricing and component availability.
+4.  In most cases, you will also be able to:
+     –   Run electrical simulations to see important waveforms and circuit performance,
+     –   Run thermal simulations to understand the thermal performance of your board,
+     –   Export your customized schematic and layout into popular CAD formats,
+     –   Print PDF reports for the design, and share your design with colleagues.
+5.  Get more information about WEBENCH tools at www.ti.com/webench.
+
+
+
+
+
+
+
+
+
+
+
+
+12      Submit Documentation Feedback                                                       Copyright © 2008–2019, Texas Instruments Incorporated
+                                                      Product Folder Links: TPS61175
+
+--- PDF PAGE 13 ---
+                                                                                                                                 TPS61175
+www.ti.com                                                                                                                                                      SLVS892F–DECEMBER 2008–REVISED APRIL 2019
+
+8.2.2.2   Determining the Duty Cycle
+The TPS61175 has a maximum worst case duty cycle of 89% and a minimum on time of 60 ns. These two
+constraints place limitations on the operating frequency that can be used for a given input to output conversion
+ratio. The duty cycle at which the converter operates is dependent on the mode in which the converter is running.
+If the converter is running in discontinuous conduction mode (DCM), where the inductor current ramps to zero at
+the end of each cycle, the duty cycle varies with changes to the load much more than it does when running in
+continuous conduction mode (CCM). In continuous conduction mode, where the inductor maintains a dc current,
+the duty cycle is related primarily to the input and output voltages as computed in Equation 3:
+
+
+                                                                                                                                           (3)
+In discontinuous mode the duty cycle is a function of the load, input and output voltages, inductance and
+switching frequency as computed in Equation 4:
+
+
+                                                                                                                                           (4)
+All converters using a diode as the freewheeling or catch component have a load current level at which they
+transition from discontinuous conduction to continuous conduction. This is the point where the inductor current
+just falls to zero. At higher load currents, the inductor current does not fall to zero but remains flowing in a
+positive direction and assumes a trapezoidal wave shape as opposed to a triangular wave shape. This load
+boundary between discontinuous conduction and continuous conduction can be found for a set of converter
+parameters in Equation 5:
+
+
+
+                                                                                                                                           (5)
+For loads higher than the result of Equation 5, the duty cycle is given by Equation 3 and for loads less that the
+results of Equation 4, the duty cycle is given Equation 5. For Equation 3 through Equation 5, the variable
+definitions are as follows:
+•    VOUT is the output voltage of the converter in V
+•    VD is the forward conduction voltage drop across the rectifier or catch diode in V
+•    VIN is the input voltage to the converter in V
+•    IOUT is the output current of the converter in A
+•    L is the inductor value in H
+•    fSW is the switching frequency in Hz
+Unless otherwise stated, the design equations that follow assume that the converter is running in continuous
+mode.
+
+8.2.2.3   Selecting the Inductor
+The selection of the inductor affects steady state operation as well as transient behavior and loop stability. These
+factors make it the most important component in power regulator design. There are three important inductor
+specifications, inductor value, DC resistance and saturation current. Considering inductor value alone is not
+enough.
+Inductor values can have ±20% tolerance with no current bias. When the inductor current approaches saturation
+level, its inductance can fall to some percentage of its 0-A value depending on how the inductor vendor defines
+saturation current. For CCM operation, the rule of thumb is to choose the inductor so that its inductor ripple
+current (ΔIL) is no more than a certain percentage (RPL% = 20–40%) of its average DC value (IIN(AVG) = IL(AVG)).
+
+
+
+
+
+
+
+
+                                                                                                                                           (6)
+
+
+
+Copyright © 2008–2019, Texas Instruments Incorporated                                               Submit Documentation Feedback           13
+                                                      Product Folder Links: TPS61175
+
+--- PDF PAGE 14 ---
+TPS61175
+SLVS892F–DECEMBER 2008–REVISED APRIL 2019                                                                                                                                www.ti.com
+
+Rearranging and solving for L gives:
+
+
+
+
+                                                                                                                                            (7)
+Choosing  the  inductor  ripple  current  to  closer  to  20%  of  the  average  inductor  current  results  in  a  larger
+inductance value, maximizes the converter’s potential output current and minimizes EMI. Choosing the inductor
+ripple current closer to 40% of IL(AVG) results in a smaller inductance value, and a physically smaller inductor,
+improves transient response but results in potentially higher EMI and lower efficiency if the DCR of the smaller
+packaged inductor is significantly higher. Using an inductor with a smaller inductance value than computed
+above may result in the converter operating in DCM. This reduces the maximum output current of the boost
+converter,  causes  larger  input  voltage  and  output  ripple,  and  typically  reduces  efficiency.  Table  5  lists  the
+recommended inductor for the TPS61175.
+
+                                        Table 5. Recommended Inductors for TPS61175
+
+   PART NUMBER                 L             DCR MAX              SATURATION CURRENT                        SIZE                VENDOR
+                              (μH)              (mΩ)                          (A)                     (L × W × H mm)
+        D104C2                 10                44                           3.6                    10.4 × 10.4 × 4.8            TOKO
+      VLF10040                 15                42                           3.1                       10 × 9.7 × 4               TDK
+    CDRH105RNP                 22                61                           2.9                    10.5 × 10.3 × 5.1           Sumida
+       MSS1038                 15                50                           3.8                     10 × 10.2 × 3.8            Coilcraft
+
+The device has built-in slope compensation  to  avoid  subharmonic  oscillation  associated  with  current  mode
+control. If the inductor value is lower than 4.7μH, the slope compensation may not be adequate, and the loop
+can be unstable. Applications requiring inductors above 47μH have not been evaluated. Therefore, the user is
+responsible for verifying operation if they select an inductor that is outside the 4.7-μH to 47-μH recommended
+range.
+
+8.2.2.4   Computing the Maximum Output Current
+The over-current limit for the integrated power FET limits the maximum input current and thus the maximum input
+power for a given input voltage. Maximum output power is less than maximum input power due to power
+conversion losses. Therefore, the current limit setting, input voltage, output voltage and efficiency can all change
+the maximum current output (IOUT(MAX)). The current limit clamps the peak inductor current, therefore the ripple
+has to be subtracted to derive maximum DC current.
+
+
+
+      where
+            •    ILIM = overcurrent limit
+            •  ηest= efficiency estimate based on similar applications or computed above                                                        (8)
+For instance, when VIN = 12 V is boosted to VOUT = 24 V, the inductor is 10 µH, the Schottky forward voltage is
+0.4 V, and the switching frequency is 1.2 MHz; then the maximum output current is 1.2 A in typical condition,
+assuming 90% efficiency and a %RPL = 20%.
+
+8.2.2.5   Setting Output Voltage
+To set the output voltage in either DCM or CCM, select the values of R1 and R2 according to Equation 9:
+
+
+
+
+
+
+                                                                                                                                            (9)
+Considering the leakage current through the resistor divider and noise decoupling into FB pin, an optimum value
+for R2 is around 10 k. The output voltage tolerance depends on the VFB accuracy and the tolerance of R1 and
+R2.
+
+14      Submit Documentation Feedback                                                        Copyright © 2008–2019, Texas Instruments Incorporated
+                                                       Product Folder Links: TPS61175
+
+--- PDF PAGE 15 ---
+                                                                                                                                  TPS61175
+www.ti.com                                                                                                                                                      SLVS892F–DECEMBER 2008–REVISED APRIL 2019
+
+8.2.2.6   Setting the Switching Frequency
+Choose the appropriate resistor from the resistance versus frequency table Table 2 or graph Figure 7. A resistor
+must be placed from the FREQ pin to ground, even if an external oscillation is applied for synchronization.
+Increasing switching frequency reduces the value of external capacitors and inductors, but also reduces the
+power conversion efficiency. The user should set the frequency for the minimum tolerable efficiency.
+
+8.2.2.7   Setting the Soft-Start Time
+Choose the appropriate capacitor from the soft-start table, Table 3. Increasing the soft-start time reduces the
+overshoot during start-up.
+
+8.2.2.8   Selecting the Schottky Diode
+The  high  switching  frequency  of  the  TPS61175  demands  a  high-speed  rectification  for  optimum  efficiency.
+Ensure that the diode’s average and peak current rating exceed the average output current and peak inductor
+current. In addition, the diode’s reverse breakdown voltage must exceed the switch FET rating voltage of 40 V.
+So, the VISHAY SS3P6L-E3/86A is recommended for TPS61175. The power dissipation of the diode's package
+must be larger than IOUT(max) × VD.
+
+8.2.2.9   Selecting the Input and Output Capacitors
+The output capacitor is mainly selected to meet the requirements for the output ripple and load transient. Then
+the loop is compensated for the output capacitor selected. The output ripple voltage is related to the capacitor’s
+capacitance and its equivalent series resistance (ESR). Assuming a capacitor with zero ESR, the minimum
+capacitance needed for a given ripple can be calculated using Equation 10:
+
+
+
+                                                                                                                                           (10)
+where Vripple = peak to peak output ripple. The additional output ripple component caused by ESR is calculated
+using:
+     Vripple_ESR = I × RESR
+Due to its low ESR, Vripple_ESR can be neglected for ceramic capacitors, but must be considered if tantalum or
+electrolytic capacitors are used.
+The minimum ceramic output capacitance needed to meet a load transient requirement can be estimated using
+Equation 11:
+
+
+
+      where
+            •  ΔITRAN is the transient load current step
+            •  ΔVTRAN is the allowed voltage dip for the load current step
+            •    fLOOP-BW is the control loop bandwidth (that is, the frequency where the control loop gain crosses zero).       (11)
+Care must be taken when evaluating a ceramic capacitor’s derating under DC bias, aging and AC signal. For
+example, larger form factor capacitors (in 1206 size) have their self resonant frequencies in the range of the
+switching frequency. So the effective capacitance is significantly lower. The DC bias can also significantly reduce
+capacitance. Ceramic capacitors can loss as much as 50% of its capacitance at its rated voltage. Therefore, one
+must add margin on the voltage rating to ensure adequate capacitance at the required output voltage.
+For  a  typical  boost  converter  implementation,  at  least  4.7 μF  of  ceramic  input  and  output  capacitance  is
+recommended.  Additional  input  and  output  capacitance  may  be  required  to  meet  ripple  and/or  transient
+requirements.
+The popular vendors for high value ceramic capacitors are:
+     TDK (http://www.component.tdk.com/components.php)
+     Murata (http://www.murata.com/cap/index.html)
+
+
+
+
+Copyright © 2008–2019, Texas Instruments Incorporated                                                Submit Documentation Feedback           15
+                                                       Product Folder Links: TPS61175
+
+--- PDF PAGE 16 ---
+TPS61175
+SLVS892F–DECEMBER 2008–REVISED APRIL 2019                                                                                                                                www.ti.com
+
+8.2.2.10   Compensating the Small Signal Control Loop
+All continuous mode boost converters have a right half plane zero (ƒRHPZ) due to the inductor being removed
+from the output during charging. In a traditional voltage mode controlled boost converter, the inductor and output
+capacitor form a small signal double pole. For a negative feedback system to be stable, the fed back signal must
+have a gain less than 1 before having 180 degrees of phase shift. With its double pole and RHPZ all providing
+phase shift, voltage mode boost converters are a challenge to compensate. In a converter with current mode
+control,  there  are  essentially  two  loops,  an  inner  current  feedback  loop  created  by  the  inductor  current
+information sensed across RSENSE (40mΩ) and the output voltage feedback loop. The inner current loop allows
+the switch, inductor and modulator to be lumped together into a small signal variable current source controlled by
+the error amplifier, as shown in Figure 9.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                             Figure 9.  Small Signal Model of a Current Mode Boost in CCM
+
+The new power stage, including the slope compensation, small signal model becomes:
+
+
+
+
+
+                                                                                                                                            (12)
+Where
+
+
+                                                                                                                                            (13)
+
+
+                                                                                                                                            (14)
+
+
+
+                                                                                                                                            (15)
+And
+
+
+
+
+
+
+                                                                                                                                            (16)
+He(s) models the inductor current sampling effect as well as the slope compensation effect on the small signal
+response. Note that if Sn > Se, for example, when L is smaller than recommended, the converter operates as a
+voltage mode converter and the above model no longer holds.
+
+
+
+16      Submit Documentation Feedback                                                        Copyright © 2008–2019, Texas Instruments Incorporated
+                                                       Product Folder Links: TPS61175
+
+--- PDF PAGE 17 ---
+                                                                                                                                                                 TPS61175
+www.ti.com                                                                                                                                                      SLVS892F–DECEMBER 2008–REVISED APRIL 2019
+
+The slope compensation in TPS61175 is shown as follows:
+
+
+                                                                                                                                                                            (17)
+
+
+
+
+                       Where R4 is the frequency setting resistor                                                                                                         (18)
+Figure 10 shows a Bode plot of a typical CCM boost converter power stage.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                            Figure 10.  Bode Plot of Power Stage Gain and Phase
+
+The TPS61175 COMP pin is the output of the internal trans-conductance amplifier. Equation 19 shows the
+equation for feedback resistor network and the error amplifier.
+
+
+
+
+
+
+        where
+               •    GEA and REA are the amplifier’s trans-conductance and output resistance located in the Electrical
+                     Characteristics table.                                                                                                                                           (19)
+
+
+                                                                                                                                                                            (20)
+
+
+
+
+                       C5 is optional and can be modeled as 10 pF stray capacitance.                                                                       (21)
+and
+
+
+                                                                                                                                                                            (22)
+Figure 11 shows a typical bode plot for transfer function H(s).
+
+
+
+
+
+
+Copyright © 2008–2019, Texas Instruments Incorporated                                                                        Submit Documentation Feedback                     17
+                                                                    Product Folder Links: TPS61175
+
+--- PDF PAGE 18 ---
+TPS61175
+SLVS892F–DECEMBER 2008–REVISED APRIL 2019                                                                                                                                www.ti.com
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+           Figure 11.  Bode Plot of Feedback Resistors and Compensated Amplifier Gain and Phase
+
+The next step is to choose the loop crossover frequency, fC. The higher in frequency that the loop gain stays
+above zero before crossing over, the faster the loop response will be and therefore the lower the output voltage
+will droop during a step load. It is generally accepted that the loop gain cross over no higher than the lower of
+either 1/5 of the switching frequency, fSW, or 1/3 of the RHPZ frequency, fRHPZ. To approximate a single pole roll-
+off up to fP2, select R3 so that the compensation gain, KCOMP, at fC on Figure 11 is the reciprocal of the gain, KPW,
+read at frequency fC from the Figure 10 bode plot, or more simply:
+     KCOMP(fC) = 20 × log(GEA × R3 × R2/(R2+R1)) = 1/KPW(fC)
+This makes the total loop gain, T(s) = GPS(s) × HEA(s), zero at the fC. Then, select C4 so that fZ≅ fC/10 and
+optional fP2> fC × 10. Following this method should lead to a loop with a phase margin near 45 degrees. Lowering
+R3 while keeping fZ≅ fC/10 increases the phase margin and therefore increases the time it takes for the output
+voltage to settle following a step load.
+In the TPS61175, if the FB pin voltage changes suddenly due to a load step on the output voltage, the error
+amplifier increases its transconductance for 8-ms in an effort to speed up the IC’s transient response and reduce
+output voltage droop due to the load step. For example, if the FB voltage decreases 10 mV due to load change,
+the error amplifier increases its source current through COMP by 5 times; if FB voltage increases 11 mV, the sink
+current through COMP is increased to 3.5 times normal value. This feature often results in saw tooth ringing on
+the output voltage, shown as Figure 13. Designing the loop for greater than 45 degrees of phase margin and
+greater than 10-db gain margin minimizes the amplitude of this ringing. This feature is disabled during soft start.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+18      Submit Documentation Feedback                                                        Copyright © 2008–2019, Texas Instruments Incorporated
+                                                       Product Folder Links: TPS61175
+
+--- PDF PAGE 19 ---
+                                                                                                                                                                        TPS61175
+www.ti.com                                                                                                                                                      SLVS892F–DECEMBER 2008–REVISED APRIL 2019
+
+8.2.3   Application Curves
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                         Figure 12. Line Transient Response                                                           Figure 13. Load Transient Response
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                               Figure 14. PWM Operation                                                                      Figure 15. Pulse Skipping
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                Figure 16. Soft Start-up
+
+
+
+
+
+
+Copyright © 2008–2019, Texas Instruments Incorporated                                                                              Submit Documentation Feedback                       19
+                                                                       Product Folder Links: TPS61175
+
+--- PDF PAGE 20 ---
+TPS61175
+SLVS892F–DECEMBER 2008–REVISED APRIL 2019                                                                                                                                www.ti.com
+9  Power Supply Recommendations
+
+The device is designed to operate from an input voltage supply range between 2.9 V and 18 V. The input power
+supply’s output current must be rated according to the supply voltage, output voltage and output current of the
+TPS61175.
+
+10  Layout
+
+10.1   Layout Guidelines
+•    As for all switching power supplies, especially those running at high switching frequency and high currents,
+    layout is an important design step. If layout is not carefully done, the regulator could suffer from instability as
+    well as noise problems. To maximize efficiency, switch rise and fall times are very fast. To prevent radiation
+    of high frequency noise (for example, EMI), proper layout of the high frequency switching path is essential.
+•    Minimize the length and area of all traces connected to the SW pin and always use a ground plane under the
+    switching regulator to minimize interplane coupling.
+•    The high current path including the switch, Schottky diode, and output capacitor, contains nanosecond rise
+    and fall times and must be kept as short as possible.
+•    The input capacitor must not only to be close to the VIN pin, but also to the GND pin in order to reduce the
+    Iinput supply ripple.
+
+10.2   Layout Example
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                     Figure 17.  TPS61175 Layout
+
+
+
+
+
+
+
+
+
+
+
+
+
+20      Submit Documentation Feedback                                                         Copyright © 2008–2019, Texas Instruments Incorporated
+                                                        Product Folder Links: TPS61175
+
+--- PDF PAGE 21 ---
+                                                                                                                                         TPS61175
+www.ti.com                                                                                                                                                      SLVS892F–DECEMBER 2008–REVISED APRIL 2019
+
+10.3   Thermal Considerations
+Restrict the maximum IC junction temperature to 125°C under normal operating conditions. This restriction limits
+the power dissipation of the TPS61175. Calculate the maximum allowable dissipation, PD(maximum), and keep
+the actual dissipation less than or equal to PD(maximum). The maximum-power-dissipation limit is determined
+using Equation 23:
+
+
+
+       where
+             •    TA is the maximum ambient temperature for the application
+             •    RθJA is the thermal resistance junction-to-ambient given in Thermal Information.                                             (23)
+The TPS61175 comes in a thermally enhanced TSSOP package. This package includes a thermal pad that
+improves the thermal capabilities of the package. The RθJA of the TSSOP package greatly depends on the PCB
+layout and thermal pad connection. The thermal pad must be soldered to the analog ground on the PCB. Using
+thermal vias underneath the thermal pad.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Copyright © 2008–2019, Texas Instruments Incorporated                                                      Submit Documentation Feedback             21
+                                                          Product Folder Links: TPS61175
+
+--- PDF PAGE 22 ---
+TPS61175
+SLVS892F–DECEMBER 2008–REVISED APRIL 2019                                                                                                                                www.ti.com
+11  Device and Documentation Support
+
+11.1   Device Support
+
+11.1.1   Third-Party Products Disclaimer
+TI'S PUBLICATION OF INFORMATION REGARDING THIRD-PARTY PRODUCTS OR SERVICES DOES NOT
+CONSTITUTE AN ENDORSEMENT REGARDING THE SUITABILITY OF SUCH PRODUCTS OR SERVICES
+OR A WARRANTY, REPRESENTATION OR ENDORSEMENT OF SUCH PRODUCTS OR SERVICES, EITHER
+ALONE OR IN COMBINATION WITH ANY TI PRODUCT OR SERVICE.
+
+11.2   Development Support
+
+11.2.1   Custom Design with WEBENCH Tools
+Click here to create a custom design using the TPS61175 device with the WEBENCH® Power Designer.
+1.  Start by entering your VIN, VOUT and IOUT requirements.
+2.  Optimize your design for key parameters like efficiency, footprint and cost using the optimizer dial and
+    compare this design with other possible solutions from Texas Instruments.
+3.  WEBENCH Power Designer provides you with a customized schematic along with a list of materials with real
+    time pricing and component availability.
+4.  In most cases, you will also be able to:
+    –   Run electrical simulations to see important waveforms and circuit performance,
+    –   Run thermal simulations to understand the thermal performance of your board,
+    –   Export your customized schematic and layout into popular CAD formats,
+    –   Print PDF reports for the design, and share your design with colleagues.
+5.  Get more information about WEBENCH tools at www.ti.com/webench.
+
+11.3   Receiving Notification of Documentation Updates
+To receive notification of documentation updates, navigate to the device product folder on ti.com. In the upper
+right corner, click on Alert me to register and receive a weekly digest of any product information that has
+changed. For change details, review the revision history included in any revised document.
+
+11.4   Community Resources
+The following links connect to TI community resources. Linked contents are provided "AS IS" by the respective
+contributors. They do not constitute TI specifications and do not necessarily reflect TI's views; see TI's Terms of
+Use.
+TIE2E™ Online Community TI's Engineer-to-Engineer (E2E) Community. Created to foster collaboration
+                among engineers. At e2e.ti.com, you can ask questions, share knowledge, explore ideas and help
+                solve problems with fellow engineers.
+Design Support TI's Design Support Quickly find helpful E2E forums along with design support tools and
+                contact information for technical support.
+11.5   Trademarks
+PowerPad, E2E are trademarks of Texas Instruments.
+WEBENCH is a registered trademark of Texas Instruments.
+All other trademarks are the property of their respective owners.
+11.6   Electrostatic Discharge Caution
+
+         These devices have limited built-in ESD protection. The leads should be shorted together or the device placed in conductive foam
+         during storage or handling to prevent electrostatic damage to the MOS gates.
+
+
+
+
+
+
+
+22      Submit Documentation Feedback                                                   Copyright © 2008–2019, Texas Instruments Incorporated
+                                                    Product Folder Links: TPS61175
+
+--- PDF PAGE 23 ---
+                                                                                                                                             TPS61175
+www.ti.com                                                                                                                                                      SLVS892F–DECEMBER 2008–REVISED APRIL 2019
+
+11.7   Glossary
+SLYZ022 — TI Glossary.
+     This glossary lists and explains terms, acronyms, and definitions.
+
+12  Mechanical, Packaging, and Orderable Information
+
+The following pages include mechanical, packaging, and orderable information. This information is the most
+current data available for the designated devices. This data is subject to change without notice and revision of
+this document. For browser-based versions of this data sheet, refer to the left-hand navigation.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Copyright © 2008–2019, Texas Instruments Incorporated                                                         Submit Documentation Feedback              23
+                                                            Product Folder Links: TPS61175
+
+--- PDF PAGE 24 ---
+                                                                                                                                                                                              PACKAGE OPTION ADDENDUM
+
+
+
+    www.ti.com                                                                                                                                                                                                                                        10-Nov-2025
+
+
+
+PACKAGING INFORMATION
+
+    Orderable part number                Status      Material type          Package | Pins           Package qty | Carrier            RoHS                Lead finish/                 MSL rating/                 Op temp (°C)                   Part marking
+                                            (1)             (2)                                                                          (3)              Ball material                Peak reflow                                                       (6)
+                                                                                                                                                                 (4)                         (5)
+         TPS61175PWP                     Active        Production        HTSSOP (PWP) | 14                  90 | TUBE                   Yes                  NIPDAU              Level-2-260C-1 YEAR                 -40 to 125                       61175
+        TPS61175PWP.B                    Active        Production        HTSSOP (PWP) | 14                  90 | TUBE                   Yes                  NIPDAU              Level-2-260C-1 YEAR                 -40 to 125                       61175
+        TPS61175PWPR                     Active        Production        HTSSOP (PWP) | 14            2000 | LARGE T&R                  Yes                  NIPDAU              Level-2-260C-1 YEAR                 -40 to 125                       61175
+       TPS61175PWPR.B                    Active        Production        HTSSOP (PWP) | 14            2000 | LARGE T&R                  Yes                  NIPDAU              Level-2-260C-1 YEAR                 -40 to 125                       61175
+      TPS61175PWPRG4                     Active        Production        HTSSOP (PWP) | 14            2000 | LARGE T&R                  Yes                  NIPDAU              Level-2-260C-1 YEAR                 -40 to 125                       61175
+     TPS61175PWPRG4.B                    Active        Production        HTSSOP (PWP) | 14            2000 | LARGE T&R                  Yes                  NIPDAU              Level-2-260C-1 YEAR                 -40 to 125                       61175
+
+(1) Status:  For more details on status, see our product life cycle.
+
+(2) Material type:  When designated, preproduction parts are prototypes/experimental devices, and are not yet approved or released for full production. Testing and final process, including without limitation quality assurance,
+reliability performance testing, and/or process qualification, may not yet be complete, and this item is subject to further changes or possible discontinuation. If available for ordering, purchases will be subject to an additional
+waiver at checkout, and are intended for early internal evaluation purposes only. These items are sold without warranties of any kind.
+
+(3) RoHS values:  Yes, No, RoHS Exempt. See the TI RoHS Statement for additional information and value definition.
+
+(4) Lead finish/Ball material:  Parts may have multiple material finish options. Finish options are separated by a vertical ruled line. Lead finish/Ball material values may wrap to two lines if the finish value exceeds the maximum
+column width.
+
+(5) MSL rating/Peak reflow:  The moisture sensitivity level ratings and peak solder (reflow) temperatures. In the event that a part has multiple moisture sensitivity ratings, only the lowest level per JEDEC standards is shown.
+Refer to the shipping label for the actual reflow temperature that will be used to mount the part to the printed circuit board.
+
+(6) Part marking:  There may be an additional marking, which relates to the logo, the lot trace code information, or the environmental category of the part.
+
+Multiple part markings will be inside parentheses. Only one part marking contained in parentheses and separated by a "~" will appear on a part. If a line is indented then it is a continuation of the previous line and the two
+combined represent the entire part marking for that device.
+
+Important Information and Disclaimer:The information provided on this page represents TI's knowledge and belief as of the date that it is provided. TI bases its knowledge and belief on information provided by third parties, and
+makes no representation or warranty as to the accuracy of such information. Efforts are underway to better integrate information from third parties. TI has taken and continues to take reasonable steps to provide representative
+and accurate information but may not have conducted destructive testing or chemical analysis on incoming materials and chemicals. TI and TI suppliers consider certain information to be proprietary, and thus CAS numbers
+and other limited information may not be available for release.
+
+In no event shall TI's liability arising out of such information exceed the total purchase price of the TI part(s) at issue in this document sold by TI to Customer on an annual basis.
+
+
+
+                                                                                                                          Addendum-Page 1
+
+--- PDF PAGE 25 ---
+                                                                                                                                                                     PACKAGE OPTION ADDENDUM
+
+
+
+    www.ti.com                                                                                                                                                                                                       10-Nov-2025
+
+
+
+
+ OTHER QUALIFIED VERSIONS OF TPS61175 :
+•Automotive : TPS61175-Q1
+
+ NOTE: Qualified Version Definitions:
+        •Automotive - Q100 devices qualified for high-reliability automotive applications targeting zero defects
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                          Addendum-Page 2
+
+--- PDF PAGE 26 ---
+                                                                         PACKAGE MATERIALS INFORMATION
+
+
+
+
+
+
+www.ti.com                                                                                                                              10-Aug-2026
+
+TAPE AND REEL INFORMATION
+
+
+       REEL DIMENSIONS                                                           TAPE DIMENSIONS
+                                                                              K0      P1
+
+
+
+                                                                                                          B0   W
+
+                                        Reel
+                                      Diameter
+                                                                           Cavity         A0
+
+                                                         A0    Dimension designed to accommodate the component width
+                                                         B0    Dimension designed to accommodate the component length
+                                                         K0    Dimension designed to accommodate the component thickness
+                                                          W    Overall width of the carrier tape
+                                                         P1    Pitch between successive cavity centers
+
+
+                                        Reel Width (W1)
+                             QUADRANT ASSIGNMENTS FOR PIN 1 ORIENTATION IN TAPE
+
+                                                                                           Sprocket Holes
+
+
+                                                Q1    Q2        Q1    Q2
+
+                                                Q3    Q4        Q3    Q4               User Direction of Feed
+
+
+
+                                                        Pocket Quadrants
+
+
+*All dimensions are nominal
+          Device            Package    Package    Pins    SPQ        Reel       Reel      A0      B0       K0      P1      W        Pin1
+                              Type     Drawing                     Diameter    Width     (mm)    (mm)    (mm)    (mm)     (mm)   Quadrant
+                                                                     (mm)    W1 (mm)
+     TPS61175PWPR           HTSSOP       PWP       14     2000       330.0      12.4      6.9     5.6     1.6      8.0    12.0       Q1
+   TPS61175PWPRG4           HTSSOP       PWP       14     2000       330.0      12.4      6.9     5.6     1.6      8.0    12.0       Q1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                               Pack Materials-Page 1
+
+--- PDF PAGE 27 ---
+                                                                  PACKAGE MATERIALS INFORMATION
+
+
+
+
+
+
+www.ti.com                                                                                                                  10-Aug-2026
+
+
+TAPE AND REEL BOX DIMENSIONS
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                 Width (mm)  H
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                 W                                            L
+
+
+
+
+
+
+
+*All dimensions are nominal
+         Device             Package Type     Package Drawing     Pins     SPQ      Length (mm)     Width (mm)    Height (mm)
+     TPS61175PWPR              HTSSOP               PWP           14      2000         350.0          350.0          43.0
+   TPS61175PWPRG4              HTSSOP               PWP           14      2000         350.0          350.0          43.0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                          Pack Materials-Page 2
+
+--- PDF PAGE 28 ---
+                                                                PACKAGE MATERIALS INFORMATION
+
+
+
+
+
+
+www.ti.com                                                                                                             10-Aug-2026
+
+TUBE
+
+
+      T - Tube
+       height                                                     L - Tube length
+
+
+
+                W - Tube
+                  width
+
+
+        B - Alignment groove width
+
+
+
+*All dimensions are nominal
+         Device            Package Name    Package Type      Pins       SPQ      L (mm)     W (mm)     T (µm)      B (mm)
+     TPS61175PWP                PWP           HTSSOP          14         90        530       10.2       3600         3.5
+    TPS61175PWP.B               PWP           HTSSOP          14         90        530       10.2       3600         3.5
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                        Pack Materials-Page 3
+
+--- PDF PAGE 29 ---
+                                                                       GENERIC PACKAGE VIEW
+PWP 14                                                      PowerPAD  TSSOP - 1.2 mm max height
+4.4 x 5.0, 0.65 mm pitch                                                                    PLASTIC SMALL OUTLINE
+
+
+
+                 This image is a representation of the package family, actual package may vary.
+                               Refer to the product data sheet for package details.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                            4224995/A
+
+
+
+
+                                                        www.ti.com
+
+--- PDF PAGE 30 ---
+                                                                                                                                                                                                                                                                          PACKAGE OUTLINE
+
+
+                                                                                                                                                                                                                                                 TM
+ PWP0014K                                                                                                                                                                                        PowerPAD   TSSOP - 1.2 mm max height
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                                                              SCALE  2.500
+                                                                                                                                                                                                                                                                                                        SMALL OUTLINE PACKAGE
+
+
+
+
+                                                                                                              6.6                                                                                                                                                                        C
+                                     A                                                                        6.2 TYP
+                                                                                                                                PIN 1 INDEX                                                                                                                                0.1               C
+                                                                                                                                AREA                                                                                                                                                                                               SEATING
+                                                                                                                                                                                                             12X           0.65                                                                                                    PLANE
+                                                      1                                                                                                                                  14
+
+
+
+
+                                                                                                                                                                                                            2X
+                                   5.1                                                                                                                                                                      3.9
+                                   4.9
+                             NOTE 3
+
+                                                                                                                                                                                                                                                     4X (0             -12        )
+
+
+                                                     7                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      8
+                                                                                                                                                                                                            14X 0.300.17
+                                                        B                                                                                                                                                                                                                                                                              4.54.30.1C               A               B
+
+
+
+     SEE DETAIL  A
+
+
+
+                                                                                                                                                                                                            (0.15) TYP
+
+
+
+
+
+                             THERMAL                                              2X (0.6)                                                                       2X (0.4)
+                                             PAD                                 NOTE 5                                                                          NOTE 5
+
+
+                                                     7                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  8
+
+
+                                                                                                                                                                                                                              0.25
+                                                                                                                                                                                                    GAGE PLANE                                                                                                                                            1.2 MAX
+                                    2.59                                                                             15
+                                    1.89
+
+
+                                                                                                                                                                                                                                                                           0.75                                                                                  0.15
+                                                                                                                                                                                                                    0     -8                                               0.50                                                                                  0.05
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                                                                                                                                                                                                                       A  20
+                                                      1                                                                                                                                  14                                                                                                                DETAIL A
+                                                                                                                                                                                                                                                                                                               TYPICAL
+
+                                                                                                                     2.6
+                                                                                                                     1.9
+
+
+                                                                                                                                                                                                                                                                                                                                  4229706/B   12/2023
+NOTES:                                                                                                                                                                                                                                                   PowerPAD is a trademark of Texas Instruments.
+
+1. All linear dimensions are in millimeters. Any dimensions in parenthesis are for reference only. Dimensioning and tolerancing
+    per ASME Y14.5M.
+2. This drawing is subject to change without notice.
+3. This dimension does not include mold flash, protrusions, or gate burrs. Mold flash, protrusions, or gate burrs shall not
+    exceed 0.15 mm per side.
+4. Reference JEDEC registration MO-153.
+5. Features may differ or may not be present.
+
+
+
+
+
+                                                                                                                                                                                        www.ti.com
+
+--- PDF PAGE 31 ---
+                                                                                                                                                                                        EXAMPLE BOARD LAYOUT
+
+
+                                                                                                                                                                                                     TM
+ PWP0014K                                                                                                                                                    PowerPAD   TSSOP - 1.2 mm max height
+
+                                                                                                                                                                                                                                                  SMALL OUTLINE PACKAGE
+
+
+
+
+
+
+                                                                                                                                                      (3.4)
+                                                                                                                                                   NOTE 9
+                                                                                                                                                      (2.6)
+
+                                                14X (1.5)                                                                                            SYMM                                                               METAL COVERED
+                                                                                                                                                                                                                        BY SOLDER MASK
+
+
+                                       14X (0.45)                         1                                                                                                                                                              14                   (1.2) TYP
+
+
+
+                                      (R0.05) TYP                                                                                                                                                                                                                                  (5)
+                                                                                                                                                                                                                                                                             NOTE 9
+                                                               SYMM                                                                                            15                                                                                 (0.6)
+
+
+                                                                                                                                                                                                                                                              (2.59)
+
+                                                  12X (0.65)
+
+
+
+                                                                           7                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        8
+
+                                                          (      0.2) TYP
+                                                                            VIA                                                                                   (1.1) TYP                                                               SEE DETAILS
+                                                SOLDER MASK                                                                                           (5.8)
+                                                   DEFINED PAD
+
+                                                                                                                       LAND PATTERN EXAMPLE
+                                                                                                                               EXPOSED METAL SHOWN
+                                                                                                                                                SCALE: 12X
+
+
+
+
+
+                                      SOLDER MASK                                                                METAL                                                     METAL UNDER                                                          SOLDER MASK
+                                                   OPENING                                                                                                                 SOLDER MASK                                                          OPENING
+
+
+                    EXPOSED METAL                                                                                                                                                                                                                                 EXPOSED METAL
+
+                                                                                   0.05 MAX                                                                                                                              0.05 MIN
+                                                                                   ALL AROUND                                                                                                                            ALL AROUND
+
+                                                                  NON-SOLDER MASK
+                                                                               DEFINED                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         SOLDER MASKDEFINED
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                                                                                              15.000
+                                                                                                                           SOLDER MASK DETAILS
+                                                                                                                                                                                                                                                                       4229706/B   12/2023
+NOTES: (continued)
+
+  6. Publication IPC-7351 may have alternate designs.
+  7. Solder mask tolerances between and around signal pads can vary based on board fabrication site.
+  8. This package is designed to be soldered to a thermal pad on the board. For more information, see Texas Instruments literature
+      numbers SLMA002 (www.ti.com/lit/slma002) and SLMA004 (www.ti.com/lit/slma004).
+  9. Size of metal pad may vary due to creepage requirement.
+10. Vias are optional depending on application, refer to device data sheet. It is recommended that vias under paste be filled, plugged
+      or tented.
+
+
+
+
+
+
+                                                                                                                                                      www.ti.com
+
+--- PDF PAGE 32 ---
+                                                                                                                                                                      EXAMPLE STENCIL DESIGN
+
+
+                                                                                                                                                                                    TM
+PWP0014K                                                                                                                                        PowerPAD   TSSOP - 1.2 mm max height
+
+                                                                                                                                                                                                                             SMALL OUTLINE PACKAGE
+
+
+
+
+
+
+
+
+                                                                                                                                          (2.6)
+                                                                                                                                   BASED ON
+                                                                                                                                 0.125 THICK
+                                            14X (1.5)                                                                                STENCIL                                                  METAL COVERED
+                                                                                                                                                                                              BY SOLDER MASK
+
+
+                                    14X (0.45)                      1                                                                                                                                                  14
+
+
+
+
+                               (R0.05) TYP
+                                                         SYMM                                                                                    15                                                                                  (2.59)
+                                                                                                                                                                                                                               BASED ON
+                                                                                                                                                                                                                              0.125 THICK
+                                                                                                                                                                                                                                 STENCIL
+
+                                            12X (0.65)
+
+
+
+                                                                   7                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      8
+
+
+                                                                                                                                        SYMM
+
+                                                                                                                                                                                                                   SEE TABLE FOR
+                                                                                                                                          (5.8)                                                                    DIFFERENT OPENINGS
+                                                                                                                                                                                                                   FOR OTHER STENCIL
+                                                                                                                                                                                                                   THICKNESSES
+                                                                                                           SOLDER PASTE EXAMPLE
+                                                                                                       BASED ON 0.125 mm THICK STENCIL
+                                                                                                                                  SCALE: 12X
+
+
+
+
+
+                                                                                                          STENCIL                             SOLDER STENCIL
+                                                                                                       THICKNESS                                       OPENING
+                                                                                                                 0.1                                  2.91 X 2.90
+                                                                                                              0.125                        2.60 X 2.59 (SHOWN)
+                                                                                                               0.15                                   2.37 X 2.36
+                                                                                                              0.175                                   2.20 X 2.19
+
+
+
+
+
+                                                                                                                                                                                                                                                4229706/B   12/2023
+NOTES: (continued)
+
+11. Laser cutting apertures with trapezoidal walls and rounded corners may offer better paste release. IPC-7525 may have alternate
+      design recommendations.
+12. Board assembly site may have different recommendations for stencil design.
+
+
+
+
+
+
+
+
+
+
+                                                                                                                                         www.ti.com
+
+--- PDF PAGE 33 ---
+                                            IMPORTANT NOTICE AND DISCLAIMER
+TI PROVIDES TECHNICAL AND RELIABILITY DATA (INCLUDING DATASHEETS), DESIGN RESOURCES (INCLUDING REFERENCE
+DESIGNS), APPLICATION OR OTHER DESIGN ADVICE, WEB TOOLS, SAFETY INFORMATION, AND OTHER RESOURCES “AS IS”
+AND WITH ALL FAULTS, AND DISCLAIMS ALL WARRANTIES, EXPRESS AND IMPLIED, INCLUDING WITHOUT LIMITATION ANY
+IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE OR NON-INFRINGEMENT OF THIRD
+PARTY INTELLECTUAL PROPERTY RIGHTS.
+These resources are intended for skilled developers designing with TI products. You are solely responsible for (1) selecting the appropriate
+TI products for your application, (2) designing, validating and testing your application, and (3) ensuring your application meets applicable
+standards, and any other safety, security, regulatory or other requirements.
+These resources are subject to change without notice. TI grants you permission to use these resources only for development of an
+application that uses the TI products described in the resource. Other reproduction and display of these resources is prohibited. No license
+is granted to any other TI intellectual property right or to any third party intellectual property right. TI disclaims responsibility for, and you fully
+indemnify TI and its representatives against any claims, damages, costs, losses, and liabilities arising out of your use of these resources.
+TI’s products are provided subject to TI’s Terms of Sale,                      TI’s General Quality Guidelines, or other applicable terms available either on
+ti.com or provided in conjunction with such TI products. TI’s provision of these resources does not expand or otherwise alter TI’s applicable
+warranties or warranty disclaimers for TI products. Unless TI explicitly designates a product as custom or customer-specified, TI products
+are standard, catalog, general purpose devices.
+TI objects to and rejects any additional or different terms you may propose.
+IMPORTANT NOTICE
+
+
+                                                    Copyright © 2026, Texas Instruments Incorporated
+                                                                    Last updated 10/2025

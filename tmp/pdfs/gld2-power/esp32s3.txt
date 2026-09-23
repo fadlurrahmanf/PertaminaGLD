@@ -1,0 +1,3461 @@
+
+--- PDF PAGE 1 ---
+ESP32-S3-WROOM-1
+ESP32-S3-WROOM-1U
+Datasheet           Version1.8
+
+
+
+
+
+   2.4GHzWi-Fi(802.11b/g/n)andBluetooth®5module
+   BuiltaroundESP32-S3seriesofSoCs,Xtensa®dual-core32-bitLX7microprocessor
+   Flashupto16MB,PSRAMupto16MB
+   Upto36GPIOs,richsetofperipherals
+   On-boardPCBantennaorexternalantennaconnector
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                 ESP32-S3-WROOM-1         ESP32-S3-WROOM-1U
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                www.espressif.com
+
+--- PDF PAGE 2 ---
+1   ModuleOverview
+
+1    ModuleOverview
+
+  Note:
+
+
+   CheckthelinkortheQRcodetomakesurethatyouusethelatestversionofthisdocument:
+   https://www.espressif.com/documentation/esp32-s3-wroom-1_wroom-1u_datasheet_en.pdf
+
+1.1   Features
+
+CPUandOn-ChipMemory                                                – 4strappingGPIOs
+
+   • ESP32-S3seriesofSoCsembedded,Xtensa®                     • SPI,LCDinterface,Camerainterface,UART,I2C,
+     dual-core32-bitLX7microprocessor(with                      I2S,remotecontrol,pulsecounter,LEDPWM,
+     singleprecisionFPU),upto240MHz                             full-speedUSB2.0OTG,USBSerial/JTAG
+                                                                controller,MCPWM,SD/MMChostcontroller,
+   • 384KBROM                                                   GDMA,TWAI® controller(compatiblewithISO
+   • 512KBSRAM                                                  11898-1),ADC,touchsensor,temperature
+                                                                sensor,timersandwatchdogs
+   • 16KBSRAMinRTC
+
+   • Upto16MBPSRAM                                        IntegratedComponentsonModule
+
+                                                              • 40MHzcrystaloscillator
+Wi-Fi
+                                                              • Upto16MBQuadSPIflash
+   • 802.11b/g/n
+   • Bitrate: 802.11nupto150Mbps                          AntennaOptions
+                                                              • ESP32-S3-WROOM-1: On-boardPCBantenna
+   • A-MPDUandA-MSDUaggregation
+                                                              • ESP32-S3-WROOM-1U:Externalantennaviaa
+   • 0.4µsguardintervalsupport                                  connector
+
+   • Centerfrequencyrangeofoperatingchannel:
+     2412~2484MHz                                         OperatingConditions
+
+                                                              • Operatingvoltage/Powersupply: 3.0~3.6V
+Bluetooth
+                                                              • Operatingambienttemperature:
+   • BluetoothLE:Bluetooth5,Bluetoothmesh                          – 65°Cversion: –40~65°C
+
+   • Speed: 125Kbps,500Kbps,1Mbps,2Mbps                            – 85°Cversion: –40~85°C
+
+   • Advertisingextensions                                         – 105°Cversion: –40~105°C
+
+   • Multipleadvertisementsets
+   • Channelselectionalgorithm#2                          Certification
+
+   • Internalco-existencemechanismbetweenWi-Fi                • RFcertification: See  certificates
+
+     andBluetoothtosharethesameantenna                        • Greencertification: RoHS/REACH
+
+Peripherals                                               Test
+
+   • 36GPIOs                                                  • HTOL/HTSL/uHAST/TCT/ESD
+
+
+EspressifSystems                                                    2    ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                         SubmitDocumentationFeedback
+
+--- PDF PAGE 3 ---
+1   ModuleOverview
+
+
+1.2    SeriesComparison
+
+ESP32-S3-WROOM-1andESP32-S3-WROOM-1Uaretwopowerful,genericWi-Fi+BluetoothLEMCUmodules
+thatarebuiltaroundtheESP32-S3seriesofSoCs. Ontopofarichsetofperipherals,theaccelerationfor
+neuralnetworkcomputingandsignalprocessingworkloadsprovidedbytheSoCmakethemodulesanideal
+choiceforawidevarietyofapplicationscenariosrelatedtoAIandArtificialIntelligenceofThings(AIoT),such
+aswakeworddetection,speechcommandsrecognition,facedetectionandrecognition,smarthome,smart
+appliances,smartcontrolpanel,smartspeaker,etc.
+
+ESP32-S3-WROOM-1comeswithaPCBantenna. ESP32-S3-WROOM-1Ucomeswithanexternalantenna
+connector. AwideselectionofmodulevariantsareavailableforcustomersasshowninTable             1-1and  1-2. H4
+seriesmodulesoperateat–40~105°Cambienttemperature,R8andR16Vseriesmodulesoperateat–40~
+65°Cambienttemperature,andothermodulevariantsoperateat–40~85°Cambienttemperature. ForR8
+andR16VseriesmoduleswithOctalSPIPSRAM,ifthePSRAMECCfunctionisenabled,themaximumambient
+temperaturecanbeimprovedto85°C,whiletheusablesizeofPSRAMwillbereducedby1/16.
+
+                            Table1-1. ESP32-S3-WROOM-1SeriesComparison1
+
+    PartNumber2                            Flash3,4             PSRAM4         AmbientTemp.5       Size6
+                                                                                      (°C)         (mm)
+    ESP32-S3-WROOM-1-N4                 4MB(QuadSPI)                -              –40~85
+    ESP32-S3-WROOM-1-N8                 8MB(QuadSPI)                -              –40~85
+    ESP32-S3-WROOM-1-N16               16MB(QuadSPI)                -              –40~85           18.0
+    ESP32-S3-WROOM-1-H4                 4MB(QuadSPI)                -              –40~105           ×
+    ESP32-S3-WROOM-1-N4R2               4MB(QuadSPI)        2MB(QuadSPI)           –40~85          25.5
+    ESP32-S3-WROOM-1-N8R2               8MB(QuadSPI)        2MB(QuadSPI)           –40~85            ×
+    ESP32-S3-WROOM-1-N16R2             16MB(QuadSPI)        2MB(QuadSPI)           –40~85           3.1
+    ESP32-S3-WROOM-1-N4R8               4MB(QuadSPI)        8MB(OctalSPI)          –40~65
+    ESP32-S3-WROOM-1-N8R8               8MB(QuadSPI)        8MB(OctalSPI)          –40~65
+    ESP32-S3-WROOM-1-N16R8             16MB(QuadSPI)        8MB(OctalSPI)          –40~65
+    ESP32-S3-WROOM-1-N16R16VA7         16MB(QuadSPI)       16MB(OctalSPI)          –40~65
+    1 ThistablesharesthesamenotespresentedinTable         1-2below.
+
+                            Table1-2. ESP32-S3-WROOM-1USeriesComparison
+
+   PartNumber2                              Flash3,4            PSRAM4          AmbientTemp.5       Size6
+                                                                                       (°C)         (mm)
+   ESP32-S3-WROOM-1U-N4                 4MB(QuadSPI)                -               –40~85
+   ESP32-S3-WROOM-1U-N8                 8MB(QuadSPI)                -               –40~85
+   ESP32-S3-WROOM-1U-N16                16MB(QuadSPI)               -               –40~85          18.0
+   ESP32-S3-WROOM-1U-H4                 4MB(QuadSPI)                -               –40~105           ×
+   ESP32-S3-WROOM-1U-N4R2               4MB(QuadSPI)        2MB(QuadSPI)            –40~85          19.2
+   ESP32-S3-WROOM-1U-N8R2               8MB(QuadSPI)        2MB(QuadSPI)            –40~85            ×
+   ESP32-S3-WROOM-1U-N16R2              16MB(QuadSPI)       2MB(QuadSPI)            –40~85           3.2
+   ESP32-S3-WROOM-1U-N4R8               4MB(QuadSPI)         8MB(OctalSPI)          –40~65
+   ESP32-S3-WROOM-1U-N8R8               8MB(QuadSPI)         8MB(OctalSPI)          –40~65
+   ESP32-S3-WROOM-1U-N16R8              16MB(QuadSPI)        8MB(OctalSPI)          –40~65
+   ESP32-S3-WROOM-1U-N16R16VA7          16MB(QuadSPI)       16MB(OctalSPI)          –40~65
+
+
+
+EspressifSystems                                                    3ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                       SubmitDocumentationFeedback
+
+--- PDF PAGE 4 ---
+1   ModuleOverview
+
+
+
+    2 Forcustomizationof ESP32-S3-WROOM-1-H4, ESP32-S3-WROOM-1U-H4, and ESP32-S3-WROOM-1U-
+      N16R16VA,please     contact  us.
+    3 By default, the SPI flash on the module operates at a maximum clock frequency of 80 MHz and does
+      notsupporttheautosuspendfeature. Ifyouhavearequirementforahigherflashclockfrequencyof
+      120MHzorifyouneedtheflashautosuspendfeature,please                    contact  us.
+    4 The modules use PSRAM integrated in the chip’s package.  For specifications, refer to Section                 6.5
+      MemorySpecifications.
+    5 Ambient temperature specifies the recommended temperature range of the environment immediately
+      outsidetheEspressifmodule.
+    6 Fordetails,refertoSection      10.1ModuleDimensions.
+    7 Please note that the VDD_SPI voltage is 1.8 V for ESP32-S3-WROOM-1-N16R16VA and ESP32-S3-
+      WROOM-1U-N16R16VAonly.
+
+
+AtthecoreofthemodulesisanESP32-S3seriesofSoC,anXtensa® 32-bitLX7CPUthatoperatesatupto
+240MHz. YoucanpowerofftheCPUandmakeuseofthelow-powerco-processortoconstantlymonitorthe
+peripheralsforchangesorcrossingofthresholds.
+
+
+  Note:
+  FormoreinformationonESP32-S3,pleasereferto          ESP32-S3SeriesDatasheet.
+  For chip revision identification, ESP-IDF release that supportsa specific chip revision, and other informationon chip
+  revisions,pleasereferto  ESP32-S3SeriesSoCErrata      >SectionChipRevisionIdentification.
+
+
+1.3     Applications
+
+   •  SmartHome                                                   •  GenericLow-powerIoTSensorHubs
+
+   •  IndustrialAutomation                                        •  GenericLow-powerIoTDataLoggers
+
+   •  HealthCare                                                  •  CamerasforVideoStreaming
+
+   •  ConsumerElectronics                                         •  USBDevices
+
+   •  SmartAgriculture                                            •  SpeechRecognition
+
+   •  POSMachines                                                 •  ImageRecognition
+
+   •  ServiceRobot                                                •  Wi-Fi+BluetoothNetworkingCard
+
+   •  AudioDevices                                                •  TouchandProximitySensing
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+EspressifSystems                                                    4        ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                            SubmitDocumentationFeedback
+
+--- PDF PAGE 5 ---
+Contents
+
+Contents
+
+1    ModuleOverview                                                                                                     2
+1.1      Features                                                                                                       2
+1.2     SeriesComparison                                                                                                3
+1.3     Applications                                                                                                    4
+2   BlockDiagram                                                                                                        9
+3   PinDefinitions                                                                                                     10
+3.1      PinLayout                                                                                                     10
+3.2     PinDescription                                                                                                 11
+4   BootConfigurations                                                                                                 13
+4.1      ChipBootModeControl                                                                                           14
+4.2     VDD_SPIVoltageControl                                                                                          15
+4.3     ROMMessagesPrintingControl                                                                                     15
+4.4     JTAGSignalSourceControl                                                                                        15
+4.5     ChipPower-upandReset                                                                                           16
+5   Peripherals                                                                                                        17
+5.1      PeripheralOverview                                                                                            17
+5.2     PeripheralDescription                                                                                          17
+       5.2.1    ConnectivityInterface                                                                                  17
+                5.2.1.1      UARTController                                                                            17
+                5.2.1.2     I2CInterface                                                                               18
+                5.2.1.3     I2SInterface                                                                               18
+                5.2.1.4     LCDandCameraController                                                                     19
+                5.2.1.5     SerialPeripheralInterface(SPI)                                                             19
+                5.2.1.6     Two-WireAutomotiveInterface(TWAI®)                                                         21
+                5.2.1.7     USB2.0OTGFull-SpeedInterface                                                               21
+                5.2.1.8     USBSerial/JTAGController                                                                  22
+                5.2.1.9     SD/MMCHostController                                                                      23
+                5.2.1.10    MotorControlPWM(MCPWM)                                                                    24
+                5.2.1.11     RemoteControlPeripheral(RMT)                                                             24
+                5.2.1.12    PulseCountController(PCNT)                                                                25
+       5.2.2   AnalogSignalProcessing                                                                                 25
+                5.2.2.1     SARADC                                                                                    25
+                5.2.2.2    TemperatureSensor                                                                          25
+                5.2.2.3    TouchSensor                                                                                26
+6   ElectricalCharacteristics                                                                                         27
+6.1      AbsoluteMaximumRatings                                                                                       27
+6.2     RecommendedOperatingConditions                                                                                27
+6.3     DCCharacteristics(3.3V,25°C)                                                                                  27
+
+
+EspressifSystems                                                    5        ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                            SubmitDocumentationFeedback
+
+--- PDF PAGE 6 ---
+Contents
+
+
+6.4     CurrentConsumptionCharacteristics                                                                  28
+      6.4.1    CurrentConsumptioninActiveMode                                                              28
+      6.4.2   CurrentConsumptioninOtherModes                                                               29
+6.5     MemorySpecifications                                                                               30
+7   RFCharacteristics                                                                                      32
+7.1      Wi-FiRadio                                                                                        32
+      7.1.1      Wi-FiRFTransmitter(TX)Characteristics                                                     32
+      7.1.2     Wi-FiRFReceiver(RX)Characteristics                                                         33
+7.2     BluetoothLERadio                                                                                   34
+      7.2.1     BluetoothLERFTransmitter(TX)Characteristics                                                35
+      7.2.2    BluetoothLERFReceiver(RX)Characteristics                                                    36
+8   ModuleSchematics                                                                                       39
+9   PeripheralSchematics                                                                                    41
+10  PhysicalDimensions                                                                                     42
+10.1    ModuleDimensions                                                                                   42
+10.2   DimensionsofExternalAntennaConnector                                                                43
+11   PCBLayoutRecommendations                                                                              45
+11.1     PCBLandPattern                                                                                    45
+11.2    ModulePlacementforPCBDesign                                                                        46
+12  ProductHandling                                                                                        47
+12.1    StorageConditions                                                                                  47
+12.2   ElectrostaticDischarge(ESD)                                                                         47
+12.3   ReflowProfile                                                                                       47
+12.4    UltrasonicVibration                                                                                48
+DatasheetVersioning                                                                                        49
+RelatedDocumentationandResources                                                                           50
+RevisionHistory                                                                                             51
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+EspressifSystems                                                    6ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                       SubmitDocumentationFeedback
+
+--- PDF PAGE 7 ---
+ListofTables
+
+ListofTables
+
+
+   1-1    ESP32-S3-WROOM-1SeriesComparison1                                                                            3
+   1-2   ESP32-S3-WROOM-1USeriesComparison                                                                             3
+   3-1   PinDefinitions                                                                                                11
+   4-1   DefaultConfigurationofStrappingPins                                                                          13
+   4-2  DescriptionofTimingParametersfortheStrappingPins                                                              14
+   4-3  ChipBootModeControl                                                                                           14
+   4-4  VDD_SPIVoltageControl                                                                                         15
+   4-5  JTAGSignalSourceControl                                                                                       16
+   4-6  DescriptionofTimingParametersforPower-upandReset                                                              16
+   6-1   AbsoluteMaximumRatings                                                                                       27
+   6-2  RecommendedOperatingConditions                                                                                27
+   6-3  DCCharacteristics(3.3V,25°C)                                                                                  27
+   6-4  CurrentConsumptionforWi-Fi(2.4GHz)inActiveMode                                                                28
+   6-5  CurrentConsumptionforBluetoothLEinActiveMode                                                                  28
+   6-6  CurrentConsumptioninModem-sleepMode                                                                           29
+   6-7  CurrentConsumptioninLow-PowerModes                                                                            30
+   6-8  FlashSpecifications                                                                                           30
+   6-9  PSRAMSpecifications                                                                                           31
+   7-1   Wi-FiRFCharacteristics                                                                                       32
+   7-2   TXPowerwithSpectralMaskandEVMMeeting802.11Standards                                                          32
+   7-3   TXEVMTest1                                                                                                   32
+   7-4   RXSensitivity                                                                                                33
+   7-5   MaximumRXLevel                                                                                               34
+   7-6   RXAdjacentChannelRejection                                                                                   34
+   7-7   BluetoothLERFCharacteristics                                                                                 34
+   7-8   BluetoothLE-TransmitterCharacteristics-1Mbps                                                                 35
+   7-9   BluetoothLE-TransmitterCharacteristics-2Mbps                                                                 35
+   7-10 BluetoothLE-TransmitterCharacteristics-125Kbps                                                                35
+   7-11  BluetoothLE-TransmitterCharacteristics-500Kbps                                                               36
+   7-12  BluetoothLE-ReceiverCharacteristics-1Mbps                                                                    36
+   7-13  BluetoothLE-ReceiverCharacteristics-2Mbps                                                                    36
+   7-14  BluetoothLE-ReceiverCharacteristics-125Kbps                                                                  37
+   7-15  BluetoothLE-ReceiverCharacteristics-500Kbps                                                                  37
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+EspressifSystems                                                    7       ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                           SubmitDocumentationFeedback
+
+--- PDF PAGE 8 ---
+ListofFigures
+
+ListofFigures
+
+   2-1   ESP32-S3-WROOM-1BlockDiagram                                                                                9
+   2-2  ESP32-S3-WROOM-1UBlockDiagram                                                                                9
+   3-1   PinLayout(TopView)                                                                                         10
+   4-1   VisualizationofTimingParametersfortheStrappingPins                                                          14
+   4-2  VisualizationofTimingParametersforPower-upandReset                                                           16
+   8-1   ESP32-S3-WROOM-1Schematics                                                                                 39
+   8-2  ESP32-S3-WROOM-1USchematics                                                                                 40
+   9-1   PeripheralSchematics                                                                                        41
+   10-1 ESP32-S3-WROOM-1PhysicalDimensions                                                                          42
+   10-2 ESP32-S3-WROOM-1UPhysicalDimensions                                                                         42
+   10-3 DimensionsofExternalAntennaConnector                                                                        43
+   11-1   ESP32-S3-WROOM-1RecommendedPCBLandPattern                                                                 45
+   11-2  ESP32-S3-WROOM-1URecommendedPCBLandPattern                                                                 46
+   12-1  ReflowProfile                                                                                              47
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+EspressifSystems                                                    8      ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                           SubmitDocumentationFeedback
+
+--- PDF PAGE 9 ---
+2   BlockDiagram
+
+2     BlockDiagram
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                   Figure2-1. ESP32-S3-WROOM-1BlockDiagram
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                 Figure2-2. ESP32-S3-WROOM-1UBlockDiagram
+
+
+  Note:
+  Forthepinmappingbetweenthechipandthein-packagePSRAM,pleasereferto                  ESP32-S3SeriesDatasheet     >Table
+  PinMappingBetweenChipandIn-packageFlash/PSRAM.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+EspressifSystems                                                    9         ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                            SubmitDocumentationFeedback
+
+--- PDF PAGE 10 ---
+3   PinDefinitions
+
+3     PinDefinitions
+
+3.1    PinLayout
+
+Thepindiagrambelowshowstheapproximatelocationofpinsonthemodule. Fortheactualdiagramdrawnto
+scale,pleaserefertoFigure      10.1 ModuleDimensions.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                           Figure3-1. PinLayout(TopView)
+
+
+
+  Note:
+  ThepindiagramisapplicabletoESP32-S3-WROOM-1andESP32-S3-WROOM-1U,butthelatterhasnoantennakeepout
+  zone. Tolearnmoreaboutthekeepoutzoneformodule’santennaonthebaseboard,pleasereferto
+  ESP32-S3HardwareDesignGuidelines        >SectionGeneralPrinciplesofPCBLayoutforModules.
+
+
+
+
+
+EspressifSystems                                                   10         ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                            SubmitDocumentationFeedback
+
+--- PDF PAGE 11 ---
+3   PinDefinitions
+
+
+3.2     PinDescription
+
+Themodulehas41pins. SeepindefinitionsinTable          3-1 PinDefinitions.
+
+Forexplanationsofpinnamesandfunctionnames,aswellasconfigurationsofperipheralpins,pleasereferto
+ESP32-S3SeriesDatasheet.
+
+                                           Table3-1. PinDefinitions
+
+      Name      No.    Typea     Function
+      GND         1       P      GND
+      3V3         2       P      Powersupply
+                                 High: on,enablesthechip.
+      EN          3       I      Low: off,thechippowersoff.
+                                 Note: DonotleavetheENpinfloating.
+      IO4         4     I/O/T    RTC_GPIO4,GPIO4,TOUCH4,ADC1_CH3
+      IO5         5     I/O/T    RTC_GPIO5,GPIO5,TOUCH5,ADC1_CH4
+      IO6         6     I/O/T    RTC_GPIO6,GPIO6,TOUCH6,ADC1_CH5
+      IO7         7     I/O/T    RTC_GPIO7,GPIO7,TOUCH7,ADC1_CH6
+      IO15        8     I/O/T    RTC_GPIO15,GPIO15,U0RTS,ADC2_CH4,XTAL_32K_P
+      IO16        9     I/O/T    RTC_GPIO16,GPIO16,U0CTS,ADC2_CH5,XTAL_32K_N
+      IO17       10     I/O/T    RTC_GPIO17,GPIO17,U1TXD,ADC2_CH6
+      IO18       11     I/O/T    RTC_GPIO18,GPIO18,U1RXD,ADC2_CH7,CLK_OUT3
+      IO8        12     I/O/T    RTC_GPIO8,GPIO8,TOUCH8,ADC1_CH7,SUBSPICS1
+      IO19       13     I/O/T    RTC_GPIO19,GPIO19,U1RTS,ADC2_CH8,CLK_OUT2,USB_D-
+      IO20       14     I/O/T    RTC_GPIO20,GPIO20,U1CTS,ADC2_CH9,CLK_OUT1,USB_D+
+      IO3        15     I/O/T    RTC_GPIO3,GPIO3,TOUCH3,ADC1_CH2
+      IO46       16     I/O/T    GPIO46
+      IO9        17     I/O/T    RTC_GPIO9,GPIO9,TOUCH9,ADC1_CH8,FSPIHD,SUBSPIHD
+      IO10       18     I/O/T    RTC_GPIO10,GPIO10,TOUCH10,ADC1_CH9,FSPICS0,FSPIIO4,
+                                 SUBSPICS0
+      IO11       19     I/O/T    RTC_GPIO11,GPIO11,TOUCH11,ADC2_CH0,FSPID,FSPIIO5,SUBSPID
+      IO12       20     I/O/T    RTC_GPIO12,GPIO12,TOUCH12,ADC2_CH1,FSPICLK,FSPIIO6,
+                                 SUBSPICLK
+      IO13       21     I/O/T    RTC_GPIO13,GPIO13,TOUCH13,ADC2_CH2,FSPIQ,FSPIIO7,SUBSPIQ
+      IO14       22     I/O/T    RTC_GPIO14,GPIO14,TOUCH14,ADC2_CH3,FSPIWP,FSPIDQS,
+                                 SUBSPIWP
+      IO21       23     I/O/T    RTC_GPIO21,GPIO21
+      IO47c      24     I/O/T    SPICLK_P_DIFF,GPIO47,SUBSPICLK_P_DIFF
+      IO48c      25     I/O/T    SPICLK_N_DIFF,GPIO48,SUBSPICLK_N_DIFF
+      IO45       26     I/O/T    GPIO45
+      IO0        27     I/O/T    RTC_GPIO0,GPIO0
+      IO35b      28     I/O/T    SPIIO6,GPIO35,FSPID,SUBSPID
+      IO36b      29     I/O/T    SPIIO7,GPIO36,FSPICLK,SUBSPICLK
+      IO37b      30     I/O/T    SPIDQS,GPIO37,FSPIQ,SUBSPIQ
+      IO38       31     I/O/T    GPIO38,FSPIWP,SUBSPIWP
+                                                                                      Cont’donnextpage
+
+
+EspressifSystems                                                   11   ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                         SubmitDocumentationFeedback
+
+--- PDF PAGE 12 ---
+3   PinDefinitions
+
+
+                                      Table3-1–cont’dfrompreviouspage
+       Name      No.    Typea     Function
+       IO39      32     I/O/T     MTCK,GPIO39,CLK_OUT3,SUBSPICS1
+       IO40      33     I/O/T     MTDO,GPIO40,CLK_OUT2
+       IO41      34     I/O/T     MTDI,GPIO41,CLK_OUT1
+       IO42      35     I/O/T     MTMS,GPIO42
+       RXD0      36     I/O/T     U0RXD,GPIO44,CLK_OUT2
+       TXD0       37    I/O/T     U0TXD,GPIO43,CLK_OUT1
+       IO2       38     I/O/T     RTC_GPIO2,GPIO2,TOUCH2,ADC1_CH1
+       IO1       39     I/O/T     RTC_GPIO1,GPIO1,TOUCH1,ADC1_CH0
+       GND       40        P      GND
+       EPAD       41       P      GND
+       a P:powersupply;I:input;O:output;T:highimpedance. Pinfunctionsinboldfontarethedefault
+         pinfunctions. Forpin28 ∼30,thedefaultfunctionisdecidedbyeFusebit.
+       b FormoduleswithOctalSPIPSRAM,i.e.,modulesembeddedwithESP32-S3R8orESP32-S3R16V,
+         pinsIO35,IO36,andIO37areconnectedtotheOctalSPIPSRAMandarenotavailableforother
+         uses.
+       c FormodulesembeddedwithESP32-S3R16V,astheVDD_SPIvoltageoftheESP32-S3R16Vchip
+         is set to 1.8 V, the working voltage for GPIO47 and GPIO48 is also 1.8 V, which is different from
+         otherGPIOs.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+EspressifSystems                                                   12     ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                          SubmitDocumentationFeedback
+
+--- PDF PAGE 13 ---
+4   BootConfigurations
+
+4     BootConfigurations
+
+  Note:
+  The content below is excerpted from  ESP32-S3SeriesDatasheet     > SectionBootConfigurations. For the strapping
+  pinmappingbetweenthechipandmodules,pleaserefertoChapter            8 ModuleSchematics.
+
+
+
+ThechipallowsforconfiguringthefollowingbootparametersthroughstrappingpinsandeFusebitsat
+power-uporahardwarereset,withoutmicrocontrollerinteraction.
+
+   •  Chipbootmode
+
+        –  Strappingpin: GPIO0andGPIO46
+
+   •  VDD_SPIvoltage
+
+        –  Strappingpin: GPIO45
+
+        –  eFuseparameter: EFUSE_VDD_SPI_FORCEandEFUSE_VDD_SPI_TIEH
+
+   •  ROMmessageprinting
+
+        –  Strappingpin: GPIO46
+
+        –  eFuseparameter: EFUSE_UART_PRINT_CONTROLand
+           EFUSE_DIS_USB_SERIAL_JTAG_ROM_PRINT
+
+   •  JTAGsignalsource
+
+        –  Strappingpin: GPIO3
+
+        –  eFuseparameter: EFUSE_DIS_PAD_JTAG,EFUSE_DIS_USB_JTAG,andEFUSE_STRAP_JTAG_SEL
+
+ThedefaultvaluesofalltheaboveeFuseparametersare0,whichmeansthattheyarenotburnt. Giventhat
+eFuseisone-timeprogrammable,onceprogrammedto1,itcanneverberevertedto0. Forhowtoprogram
+eFuseparameters,pleasereferto       ESP32-S3TechnicalReferenceManual           >ChaptereFuseController.
+
+Thedefaultvaluesofthestrappingpins,namelythelogiclevels,aredeterminedbypins’internalweak
+pull-up/pull-downresistorsatresetifthepinsarenotconnectedtoanycircuit,orconnectedtoanexternal
+high-impedancecircuit.
+
+                                Table4-1. DefaultConfigurationofStrappingPins
+
+                                StrappingPin      DefaultConfiguration      BitValue
+                                GPIO0                 Weakpull-up               1
+                                GPIO3                    Floating               –
+                                GPIO45               Weakpull-down              0
+                                GPIO46               Weakpull-down              0
+
+
+Tochangethebitvalues,thestrappingpinsshouldbeconnectedtoexternalpull-down/pull-upresistances. If
+theESP32-S3isusedasadevicebyahostMCU,thestrappingpinvoltagelevelscanalsobecontrolledby
+thehostMCU.
+
+Allstrappingpinshavelatches. Atsystemreset,thelatchessamplethebitvaluesoftheirrespectivestrapping
+pinsandstorethemuntilthechipispowereddownorshutdown. Thestatesoflatchescannotbechangedin
+
+
+EspressifSystems                                                   13      ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                           SubmitDocumentationFeedback
+
+--- PDF PAGE 14 ---
+4   BootConfigurations
+
+
+anyotherway. Itmakesthestrappingpinvaluesavailableduringtheentirechipoperation,andthepinsare
+freeduptobeusedasregularIOpinsafterreset.
+
+Thetimingofsignalsconnectedtothestrappingpinsshouldadheretothe setuptimeandholdtime
+specificationsinTable   4-2  andFigure   4-1.
+
+                       Table4-2. DescriptionofTimingParametersfortheStrappingPins
+
+           Parameter     Description                                                              Min(ms)
+           tSU           Setuptimeisthetimereservedforthepowerrailstostabilizebe-                          0
+                         foretheENpinispulledhightoactivatethechip.
+                         Holdtime is the time reserved for the chip to read the strapping
+           tH            pinvaluesafterENisalreadyhighandbeforethesepinsstartop-                           3
+                         eratingasregularIOpins.
+
+
+                                                  tSU            tH
+
+
+
+
+
+
+
+
+                              EN
+
+
+
+
+
+
+
+
+
+
+                      Figure4-1. VisualizationofTimingParametersfortheStrappingPins
+
+
+4.1    ChipBootModeControl
+
+GPIO0andGPIO46controlthebootmodeaftertheresetisreleased. SeeTable                      4-3 ChipBootMode
+Control.
+
+                                        Table4-3. ChipBootModeControl
+
+                                   BootMode                    GPIO0      GPIO46
+                                   SPIBoot                        1      Anyvalue
+                                   JointDownloadBoot 2            0           0
+                                   1 Bold marks the default value and configura-
+                                     tion.
+                                   2 JointDownloadBootmodesupportsthefol-
+                                     lowingdownloadmethods:
+                                         • USBDownloadBoot:
+                                             – USB-Serial-JTAGDownloadBoot
+                                             – USB-OTGDownloadBoot
+                                         • UARTDownloadBoot
+
+
+EspressifSystems                                                   14      ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                           SubmitDocumentationFeedback
+
+--- PDF PAGE 15 ---
+4   BootConfigurations
+
+
+InSPIBootmode,theROMbootloaderloadsandexecutestheprogramfromSPIflashtobootthe
+system.
+
+InJointDownloadBootmode,userscandownloadbinaryfilesintoflashusingUART0orUSBinterface. Itis
+alsopossibletodownloadbinaryfilesintoSRAMandexecuteitfromSRAM.
+
+InadditiontoSPIBootandJointDownloadBootmodes,ESP32-S3alsosupportsSPIDownloadBootmode.
+Fordetails,pleasesee   ESP32-S3TechnicalReferenceManual         >ChapterChipBootControl.
+
+4.2     VDD_SPIVoltageControl
+
+DependingonthevalueofEFUSE_VDD_SPI_FORCE,thevoltagecanbecontrolledintwoways.
+
+                                      Table4-4. VDD_SPIVoltageControl
+
+     VDD_SPIpowersource2          Voltage    EFUSE_VDD_SPI_FORCE          GPIO45    EFUSE_VDD_SPI_TIEH
+     VDD3P3_RTCviaRSPI             3.3V                  0                   0              Ignored
+     FlashVoltageRegulator          1.8V                                     1
+     FlashVoltageRegulator          1.8V                 1                Ignored              0
+     VDD3P3_RTCviaRSPI             3.3V                                                         1
+     1 Boldmarksthedefaultvalueandconfiguration.
+     2 See  ESP32-S3SeriesDatasheet      >SectionPowerScheme.
+
+
+4.3     ROMMessagesPrintingControl
+
+DuringbootprocessthemessagesbytheROMcodecanbeprintedto:
+
+   • (Default)UART0andUSBSerial/JTAGcontroller
+
+   • USBSerial/JTAGcontroller
+
+   • UART0
+
+TheROMmessagesprintingtoUARTorUSBSerial/JTAGcontrollercanberespectivelydisabledbyconfiguring
+registersandeFuse. Fordetailedinformation,pleasereferto       ESP32-S3TechnicalReferenceManual         >
+ChapterChipBootControl.
+
+4.4     JTAGSignalSourceControl
+
+ThestrappingpinGPIO3canbeusedtocontrolthesourceofJTAGsignalsduringtheearlybootprocess. This
+pindoesnothaveanyinternalpullresistorsandthestrappingvaluemustbecontrolledbytheexternalcircuit
+thatcannotbeinahighimpedancestate.
+
+AsTable  4-5 shows,GPIO3isusedincombinationwithEFUSE_DIS_PAD_JTAG,EFUSE_DIS_USB_JTAG,and
+EFUSE_STRAP_JTAG_SEL.
+
+
+
+
+
+
+
+
+
+
+
+EspressifSystems                                                   15  ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                         SubmitDocumentationFeedback
+
+--- PDF PAGE 16 ---
+4   BootConfigurations
+
+
+                                       Table4-5. JTAGSignalSourceControl
+
+JTAGSignalSource               EFUSE_DIS_PAD_JTAG         EFUSE_DIS_USB_JTAG         EFUSE_STRAP_JTAG_SEL          GPIO3
+                                           0                          0                           0               Ignored
+USBSerial/JTAGController                   0                          0                           1                   1
+                                           1                          0                        Ignored            Ignored
+JTAGpins2                                  0                          0                           1                   0
+                                           0                          1                        Ignored            Ignored
+JTAGisdisabled                             1                          1                        Ignored            Ignored
+ 1 Boldmarksthedefaultvalueandconfiguration.
+ 2  JTAGpinsrefertoMTDI,MTCK,MTMS,andMTDO.
+
+
+4.5     ChipPower-upandReset
+
+Oncethepowerissuppliedtothechip,itspowerrailsneedashorttimetostabilize. Afterthat,EN–thepin
+usedforpower-upandreset–ispulledhightoactivatethechip. ForinformationonENaswellaspower-up
+andresettiming,seeFigure       4-2 andTable   4-6.
+
+                                           tSTBL                                   tRST
+
+
+                                2.8V
+              VDDA,
+            VDD3P3,
+       VDD3P3_RTC,
+        VDD3P3_CPU
+
+
+
+                  EN
+
+
+                     Figure4-2. VisualizationofTimingParametersforPower-upandReset
+
+
+
+                      Table4-6. DescriptionofTimingParametersforPower-upandReset
+
+           Parameter     Description                                                                Min(µs)
+                         Time   reserved   for   the   power   rails   of   VDDA,   VDD3P3,
+           tSTBL         VDD3P3_RTC,  and  VDD3P3_CPU  to  stabilize  before  the  EN                     50
+                         pinispulledhightoactivatethechip
+           tRST          Time reserved for EN to stay below VIL_nRST to reset the chip                    50
+                         (seeTable   6-3)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+EspressifSystems                                                   16       ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                           SubmitDocumentationFeedback
+
+--- PDF PAGE 17 ---
+5   Peripherals
+
+5     Peripherals
+
+5.1    PeripheralOverview
+
+ESP32-S3integratesarichsetofperipheralsincludingSPI,LCD,Camerainterface,UART,I2C,I2S,remote
+control,pulsecounter,LEDPWM,USBSerial/JTAG,MCPWM,SD/MMChostcontroller,TWAI® controller
+(compatiblewithISO11898-1,i.e.,CANSpecification2.0),ADC,touchsensor,andtemperaturesensor. Italso
+includesafull-speedUSB2.0On-The-Go(OTG)interfacetoenableUSBcommunication.
+
+Tolearnmoreabouton-chipcomponents,pleasereferto                ESP32-S3SeriesDatasheet        >SectionFunctional
+Description.
+
+
+  Note:
+  Thecontentbelowissourcedfrom       ESP32-S3SeriesDatasheet     >SectionPeripherals. Someinformationmaynotbe
+  applicabletoESP32-S3-WROOM-1andESP32-S3-WROOM-1UasnotalltheIOsignalsareexposedonthemodule.
+  To learn more about peripheral signals, please refer toESP32-S3TechnicalReferenceManual       > Section Peripheral
+  SignalsviaGPIOMatrix.
+
+
+5.2     PeripheralDescription
+
+Thissectiondescribesthechip’speripheralcapabilities,coveringconnectivityinterfacesandon-chipsensors
+thatextenditsfunctionality.
+
+5.2.1    ConnectivityInterface
+
+Thissubsectiondescribestheconnectivityinterfacesonthechipthatenablecommunicationandinteraction
+withexternaldevicesandnetworks.
+
+5.2.1.1   UARTController
+
+ESP32-S3hasthreeUART(UniversalAsynchronousReceiverTransmitter)controllers,i.e.,UART0,UART1,and
+UART2,whichsupportIrDAandasynchronouscommunication(RS232andRS485)ataspeedofupto5
+Mbps.
+
+FeatureList
+
+   •  Threeclocksourcesthatcanbedivided
+
+   •  Programmablebaudrate
+
+   •  1024x8-bitRAMsharedbyTXFIFOsandRXFIFOsofthethreeUARTcontrollers
+
+   •  Full-duplexasynchronouscommunication
+
+   •  Automaticbaudratedetectionofinputsignals
+
+   •  Databitsrangingfrom5to8
+
+   •  Stopbitsof1,1.5,2,or3bits
+
+   •  Paritybit
+
+
+
+EspressifSystems                                                   17       ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                           SubmitDocumentationFeedback
+
+--- PDF PAGE 18 ---
+5   Peripherals
+
+
+   •  SpecialcharacterAT_CMDdetection
+
+   •  RS485protocol
+
+   •  IrDAprotocol
+
+   •  High-speeddatacommunicationusingGDMA
+
+   •  UARTaswake-upsource
+
+   •  Softwareandhardwareflowcontrol
+
+Fordetails,see   ESP32-S3TechnicalReferenceManual          >ChapterUARTController.
+
+
+PinAssignment
+
+Fordetails,see   ESP32-S3SeriesDatasheet       >SectionPeripheralPinAssignment.
+
+5.2.1.2    I2CInterface
+
+ESP32-S3hastwoI2CbusinterfaceswhichareusedforI2Cmastermodeorslavemode,dependingonthe
+user’sconfiguration.
+
+FeatureList
+
+   •  Standardmode(100kbit/s)
+
+   •  Fastmode(400kbit/s)
+
+   •  Upto800kbit/s(constrainedbySCLandSDApull-upstrength)
+
+   •  7-bitand10-bitaddressingmode
+
+   •  Doubleaddressingmode(slaveaddressingandslaveregisteraddressing)
+
+ThehardwareprovidesacommandabstractionlayertosimplifytheusageoftheI2Cperipheral.
+
+Fordetails,see   ESP32-S3TechnicalReferenceManual          >ChapterI2CController.
+
+PinAssignment
+
+Fordetails,see   ESP32-S3SeriesDatasheet       >SectionPeripheralPinAssignment.
+
+5.2.1.3    I2SInterface
+
+ESP32-S3includestwostandardI2Sinterfaces. Theycanoperateinmastermodeorslavemode,in
+full-duplexmodeorhalf-duplexcommunicationmode,andcanbeconfiguredtooperatewithan8-bit,16-bit,
+24-bit,or32-bitresolutionasaninputoroutputchannel. BCKclockfrequency,from10kHzupto40MHz,is
+supported.
+
+TheI2SinterfacehasadedicatedDMAcontroller. ItsupportsTDMPCM,TDMMSBalignment,TDMLSB
+alignment,TDMPhillips,andPDMinterface.
+
+Fordetails,see   ESP32-S3TechnicalReferenceManual          >ChapterI2SController.
+
+
+
+
+
+
+EspressifSystems                                                   18     ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                          SubmitDocumentationFeedback
+
+--- PDF PAGE 19 ---
+5   Peripherals
+
+
+PinAssignment
+
+Fordetails,see  ESP32-S3SeriesDatasheet       >SectionPeripheralPinAssignment.
+
+5.2.1.4    LCDandCameraController
+
+TheLCDandCameracontrollerofESP32-S3consistsofaLCDmoduleandacameramodule.
+
+TheLCDmoduleisdesignedtosendparallelvideodatasignals,anditsbussupports8-bit~16-bitparallel
+RGB,I8080,andMOTO6800interfaces. Theseinterfacesoperateat40MHzorlower,andsupportconversion
+amongRGB565,YUV422,YUV420,andYUV411.
+
+Thecameramoduleisdesignedtoreceiveparallelvideodatasignals,anditsbussupportsan8-bit~16-bit
+DVPimagesensor,withclockfrequencyofupto40MHz. Thecamerainterfacesupportsconversionamong
+RGB565,YUV422,YUV420,andYUV411.
+
+Fordetails,see  ESP32-S3TechnicalReferenceManual          >ChapterLCDandCameraController.
+
+PinAssignment
+
+Fordetails,see  ESP32-S3SeriesDatasheet       >SectionPeripheralPinAssignment.
+
+5.2.1.5    SerialPeripheralInterface(SPI)
+
+ESP32-S3hasthefollowingSPIinterfaces:
+
+   • SPI0usedbyESP32-S3’sGDMAcontrollerandcachetoaccessin-packageoroff-packageflash/PSRAM
+
+   • SPI1usedbytheCPUtoaccessin-packageoroff-packageflash/PSRAM
+
+   • SPI2isageneralpurposeSPIcontrollerwithaccesstoaDMAchannelallocatedbytheGDMAcontroller
+
+   • SPI3isageneralpurposeSPIcontrollerwithaccesstoaDMAchannelallocatedbytheGDMAcontroller
+
+FeatureList
+
+   • SPI0andSPI1:
+
+        –  SupportsSingleSPI,DualSPI,QuadSPI,OctalSPI,QPI,andOPImodes
+
+        –  8-lineSPImodesupportssingledatarate(SDR)anddoubledatarate(DDR)
+
+        –  Configurableclockfrequencywithamaximumof120MHzfor8-lineSPISDR/DDRmodes
+
+        –  Datatransmissionisinbytes
+
+   • SPI2:
+
+        –  Supportsoperationasamasterorslave
+
+        –  ConnectstoaDMAchannelallocatedbytheGDMAcontroller
+
+        –  SupportsSingleSPI,DualSPI,QuadSPI,OctalSPI,QPI,andOPImodes
+
+        –  Configurableclockpolarity(CPOL)andphase(CPHA)
+
+        –  Configurableclockfrequency
+
+        –  Datatransmissionisinbytes
+
+
+EspressifSystems                                                   19   ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                         SubmitDocumentationFeedback
+
+--- PDF PAGE 20 ---
+5   Peripherals
+
+
+        –  Configurablereadandwritedatabitorder: most-significantbit(MSB)first,orleast-significantbit
+           (LSB)first
+
+        –  Asamaster
+
+             *  Supports2-linefull-duplexcommunicationwithclockfrequencyupto80MHz
+
+             *  Full-duplex8-lineSPImodesupportssingledatarate(SDR)only
+
+             *  Supports1-,2-,4-,8-linehalf-duplexcommunicationwithclockfrequencyupto80MHz
+
+             *  Half-duplex8-lineSPImodesupportsbothsingledatarate(upto80MHz)anddoubledatarate
+                (upto40MHz)
+
+             *  ProvidessixSPI_CSpinsforconnectionwithsixindependentSPIslaves
+
+             *  ConfigurableCSsetuptimeandholdtime
+
+        –  Asaslave
+
+             *  Supports2-linefull-duplexcommunicationwithclockfrequencyupto60MHz
+
+             *  Supports1-,2-,4-linehalf-duplexcommunicationwithclockfrequencyupto60MHz
+
+             *  Full-duplexandhalf-duplex8-lineSPImodesupportssingledatarate(SDR)only
+
+   •  SPI3:
+
+        –  Supportsoperationasamasterorslave
+
+        –  ConnectstoaDMAchannelallocatedbytheGDMAcontroller
+
+        –  SupportsSingleSPI,DualSPI,QuadSPI,andQPImodes
+
+        –  Configurableclockpolarity(CPOL)andphase(CPHA)
+
+        –  Configurableclockfrequency
+
+        –  Datatransmissionisinbytes
+
+        –  Configurablereadandwritedatabitorder: most-significantbit(MSB)first,orleast-significantbit
+           (LSB)first
+
+        –  Asamaster
+
+             *  Supports2-linefull-duplexcommunicationwithclockfrequencyupto80MHz
+
+             *  Supports1-,2-,4-linehalf-duplexcommunicationwithclockfrequencyupto80MHz
+
+             *  ProvidesthreeSPI_CSpinsforconnectionwiththreeindependentSPIslaves
+
+             *  ConfigurableCSsetuptimeandholdtime
+
+        –  Asaslave
+
+             *  Supports2-linefull-duplexcommunicationwithclockfrequencyupto60MHz
+
+             *  Supports1-,2-,4-linehalf-duplexcommunicationwithclockfrequencyupto60MHz
+
+Fordetails,see   ESP32-S3TechnicalReferenceManual           >ChapterSPIController.
+
+
+PinAssignment
+
+Fordetails,see   ESP32-S3SeriesDatasheet        >SectionPeripheralPinAssignment.
+
+
+EspressifSystems                                                   20      ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                           SubmitDocumentationFeedback
+
+--- PDF PAGE 21 ---
+5   Peripherals
+
+
+5.2.1.6    Two-WireAutomotiveInterface(TWAI®)
+
+TheTwo-WireAutomotiveInterface(TWAI®)isamulti-master,multi-castcommunicationprotocolwitherror
+detectionandsignalingaswellasinbuiltmessageprioritiesandarbitration.
+
+
+FeatureList
+
+   •  CompatiblewithISO11898-1protocol(CANSpecification2.0)
+
+   •  Standardframeformat(11-bitID)andextendedframeformat(29-bitID)
+
+   •  Bitratesfrom1Kbit/sto1Mbit/s
+
+   •  Multiplemodesofoperation:
+
+         – Normal
+
+         – ListenOnly
+
+         – Self-Test(noacknowledgmentrequired)
+
+   •  64-bytereceiveFIFO
+
+   •  Acceptancefilter(singleanddualfiltermodes)
+
+   •  Errordetectionandhandling:
+
+         – Errorcounters
+
+         – Configurableerrorinterruptthreshold
+
+         – Errorcodecapture
+
+         – Arbitrationlostcapture
+
+Fordetails,see   ESP32-S3TechnicalReferenceManual           >ChapterTwo-wireAutomotiveInterface.
+
+
+PinAssignment
+
+Fordetails,see   ESP32-S3SeriesDatasheet        >SectionPeripheralPinAssignment.
+
+5.2.1.7    USB2.0OTGFull-SpeedInterface
+
+ESP32-S3featuresafull-speedUSBOTGinterfacealongwithanintegratedtransceiver. TheUSBOTG
+interfacecomplieswiththeUSB2.0specification.
+
+
+GeneralFeatures
+
+   •  FSandLSdatarates
+
+   •  HNPandSRPasA-deviceorB-device
+
+   •  DynamicFIFO(DFIFO)sizing
+
+   •  Multiplemodesofmemoryaccess
+
+         – Scatter/GatherDMAmode
+
+         – BufferDMAmode
+
+
+
+EspressifSystems                                                   21       ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                           SubmitDocumentationFeedback
+
+--- PDF PAGE 22 ---
+5   Peripherals
+
+
+        –  Slavemode
+
+   •  Canchooseintegratedtransceiverorexternaltransceiver
+
+   •  UtilizingintegratedtransceiverwithUSBSerial/JTAGbytime-divisionmultiplexingwhenonlyintegrated
+      transceiverisused
+
+   •  SupportUSBOTGusingoneofthetransceiverswhileUSBSerial/JTAGusingtheotheronewhenboth
+      integratedtransceiverorexternaltransceiverareused
+
+DeviceModeFeatures
+
+   •  Endpointnumber0alwayspresent(bi-directional,consistingofEP0INandEP0OUT)
+
+   •  Sixadditionalendpoints(endpointnumbers1to6),configurableasINorOUT
+
+   •  MaximumoffiveINendpointsconcurrentlyactiveatanytime(includingEP0IN)
+
+   •  AllOUTendpointsshareasingleRXFIFO
+
+   •  EachINendpointhasadedicatedTXFIFO
+
+HostModeFeatures
+
+   •  Eightchannels(pipes)
+
+        –  Acontrolpipeconsistsoftwochannels(INandOUT),asINandOUTtransactionsmustbehandled
+           separately. OnlyControltransfertypeissupported.
+
+        –  EachoftheothersevenchannelsisdynamicallyconfigurabletobeINorOUT,andsupportsBulk,
+           Isochronous,andInterrupttransfertypes.
+
+   •  AllchannelsshareanRXFIFO,non-periodicTXFIFO,andperiodicTXFIFO.ThesizeofeachFIFOis
+      configurable.
+
+Fordetails,see   ESP32-S3TechnicalReferenceManual          >ChapterUSBOn-The-Go.
+
+PinAssignment
+
+Fordetails,see   ESP32-S3SeriesDatasheet       >SectionPeripheralPinAssignment.
+
+5.2.1.8    USBSerial/JTAGController
+
+ESP32-S3integratesaUSBSerial/JTAGcontroller.
+
+
+FeatureList
+
+   •  USBFull-speeddevice.
+
+   •  CanbeconfiguredtoeitheruseinternalUSBPHYofESP32-S3orexternalPHYviaGPIOmatrix.
+
+   •  Fixedfunctiondevice,hardwiredforCDC-ACM(CommunicationDeviceClass-AbstractControlModel)
+      andJTAGadapterfunctionality.
+
+   •  TwoOUTEndpoints,threeINEndpointsinadditiontoControlEndpoint0;Upto64-bytedatapayload
+      size.
+
+
+
+EspressifSystems                                                   22      ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                           SubmitDocumentationFeedback
+
+--- PDF PAGE 23 ---
+5   Peripherals
+
+
+   •  InternalPHY,sonoorveryfewexternalcomponentsneededtoconnecttoahostcomputer.
+
+   •  CDC-ACMadherentserialportemulationisplug-and-playonmostmodernOSes.
+
+   •  JTAGinterfaceallowsfastcommunicationwithCPUdebugcoreusingacompactrepresentationofJTAG
+      instructions.
+
+   •  CDC-ACMsupportshostcontrollablechipresetandentryintodownloadmode.
+
+Fordetails,see   ESP32-S3TechnicalReferenceManual          >ChapterUSBSerial/JTAGController.
+
+PinAssignment
+
+Fordetails,see   ESP32-S3SeriesDatasheet       >SectionPeripheralPinAssignment.
+
+5.2.1.9    SD/MMCHostController
+
+ESP32-S3hasanSD/MMCHostcontroller.
+
+FeatureList
+
+   •  SecureDigital(SD)memoryversion3.0andversion3.01
+
+   •  SecureDigitalI/O(SDIO)version3.0
+
+   •  ConsumerElectronicsAdvancedTransportArchitecture(CE-ATA)version1.1
+
+   •  MultimediaCards(MMCversion4.41,eMMCversion4.5andversion4.51)
+
+   •  Upto80MHzclockoutput
+
+   •  Threedatabusmodes:
+
+        –  1-bit
+
+        –  4-bit(supportstwoSD/SDIO/MMC4.41cards,andoneSDcardoperatingat1.8Vin4-bitmode)
+
+        –  8-bit
+
+  Note:
+  Whenworkingat80MHz,theclockphaseadjustmentislimitedandonlyphase0°and180°aresupported. ThePCB
+  layoutshouldbeoptimizedaccordinglytoensuretimingclosure.
+
+
+
+Fordetails,see   ESP32-S3TechnicalReferenceManual          >ChapterSD/MMCHostController.
+
+PinAssignment
+
+Fordetails,see   ESP32-S3SeriesDatasheet       >SectionPeripheralPinAssignment.
+
+
+FeatureList
+
+   •  Cangenerateadigitalwaveformwithconfigurableperiodsanddutycycle. Thedutycycleresolutioncan
+      beupto14bitswithina1msperiod
+
+   •  Multipleclocksources,includingAPBclockandexternalmaincrystalclock
+
+   •  CanoperatewhentheCPUisinLight-sleepmode
+
+
+EspressifSystems                                                   23     ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                          SubmitDocumentationFeedback
+
+--- PDF PAGE 24 ---
+5   Peripherals
+
+
+   • Gradualincreaseordecreaseofdutycycle,usefulfortheLEDRGBcolor-fadinggenerator
+
+Fordetails,see  ESP32-S3TechnicalReferenceManual          >ChapterLEDPWMController.
+
+PinAssignment
+
+Fordetails,see  ESP32-S3SeriesDatasheet       >SectionPeripheralPinAssignment.
+
+5.2.1.10    MotorControlPWM(MCPWM)
+
+ESP32-S3integratestwoMCPWMsthatcanbeusedtodrivedigitalmotorsandsmartlight. EachMCPWM
+peripheralhasoneclockdivider(prescaler),threePWMtimers,threePWMoperators,andacapturemodule.
+PWMtimersareusedforgeneratingtimingreferences. ThePWMoperatorsgeneratedesiredwaveformbased
+onthetimingreferences. AnyPWMoperatorcanbeconfiguredtousethetimingreferencesofanyPWM
+timers. DifferentPWMoperatorscanusethesamePWMtimer’stimingreferencestoproducerelatedPWM
+signals. PWMoperatorscanalsousedifferentPWMtimers’valuestoproducethePWMsignalsthatwork
+alone. DifferentPWMtimerscanalsobesynchronizedtogether.
+
+Fordetails,see  ESP32-S3TechnicalReferenceManual          >ChapterMotorControlPWM.
+
+PinAssignment
+
+Fordetails,see  ESP32-S3SeriesDatasheet       >SectionPeripheralPinAssignment.
+
+5.2.1.11   RemoteControlPeripheral(RMT)
+
+TheRemoteControlPeripheral(RMT)isdesignedtosendandreceiveinfraredremotecontrolsignals.
+
+FeatureList
+
+   • FourTXchannels
+
+   • FourRXchannels
+
+   • Supportmultiplechannels(programmable)transmittingdatasimultaneously
+
+   • Eightchannelssharea384x32-bitRAM
+
+   • SupportmodulationonTXpulses
+
+   • SupportfilteringanddemodulationonRXpulses
+
+   • WrapTXmode
+
+   • WrapRXmode
+
+   • ContinuousTXmode
+
+   • DMAaccessforTXmodeonchannel3
+
+   • DMAaccessforRXmodeonchannel7
+
+Fordetails,see  ESP32-S3TechnicalReferenceManual          >ChapterRemoteControlPeripheral.
+
+PinAssignment
+
+Fordetails,see  ESP32-S3SeriesDatasheet       >SectionPeripheralPinAssignment.
+
+
+EspressifSystems                                                   24    ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                         SubmitDocumentationFeedback
+
+--- PDF PAGE 25 ---
+5   Peripherals
+
+
+5.2.1.12    PulseCountController(PCNT)
+
+Thepulsecountcontroller(PCNT)capturespulseandcountspulseedgesthroughmultiplemodes.
+
+
+FeatureList
+
+   •  Fourindependentpulsecounters(units)thatcountfrom1to65535
+
+   •  Eachunitconsistsoftwoindependentchannelssharingonepulsecounter
+
+   •  Allchannelshaveinputpulsesignals(e.g. sig_ch0_un)withtheircorrespondingcontrolsignals(e.g.
+      ctrl_ch0_un)
+
+   •  Independentlyfilterglitchesofinputpulsesignals(sig_ch0_un           andsig_ch1_un)andcontrolsignals
+      (ctrl_ch0_un  andctrl_ch1_un)oneachunit
+
+   •  Eachchannelhasthefollowingparameters:
+
+        1. Selectionbetweencountingonpositiveornegativeedgesoftheinputpulsesignal
+
+        2. ConfigurationtoIncrement,Decrement,orDisablecountermodeforcontrolsignal’shighandlow
+           states
+
+Fordetails,see   ESP32-S3TechnicalReferenceManual          >ChapterPulseCountController.
+
+PinAssignment
+
+Fordetails,see   ESP32-S3SeriesDatasheet       >SectionPeripheralPinAssignment.
+
+5.2.2    AnalogSignalProcessing
+
+Thissubsectiondescribescomponentsonthechipthatsenseandprocessreal-worlddata.
+
+5.2.2.1    SARADC
+
+ESP32-S3integratestwo12-bitSARADCsandsupportsmeasurementson20channels(analog-enabledpins).
+Forpower-savingpurpose,theULPcoprocessorsinESP32-S3canalsobeusedtomeasurevoltageinsleep
+modes. Byusingthresholdsettingsorothermethods,wecanawakentheCPUfromsleepmodes.
+
+Fordetails,see   ESP32-S3TechnicalReferenceManual          >ChapterOn-ChipSensorsandAnalogSignal
+Processing.
+
+PinAssignment
+
+Fordetails,see   ESP32-S3SeriesDatasheet       >SectionPeripheralPinAssignment.
+
+5.2.2.2     TemperatureSensor
+
+Thetemperaturesensorgeneratesavoltagethatvarieswithtemperature. Thevoltageisinternallyconverted
+viaanADCintoadigitalvalue.
+
+Thetemperaturesensorhasarangeof–40°Cto125°C.Itisdesignedprimarilytosensethetemperature
+changesinsidethechip. Thetemperaturevaluedependsonfactorssuchasmicrocontrollerclockfrequency
+orI/Oload. Generally,thechip’sinternaltemperatureishigherthantheambienttemperature.
+
+
+EspressifSystems                                                   25     ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                          SubmitDocumentationFeedback
+
+--- PDF PAGE 26 ---
+5   Peripherals
+
+
+Fordetails,see   ESP32-S3TechnicalReferenceManual            >ChapterOn-ChipSensorsandAnalogSignal
+Processing.
+
+5.2.2.3     TouchSensor
+
+ESP32-S3has14capacitive-sensingGPIOs,whichdetectvariationsinducedbytouchingorapproachingthe
+GPIOswithafingerorotherobjects. Thelow-noisenatureofthedesignandthehighsensitivityofthecircuit
+allowrelativelysmallpadstobeused. Arraysofpadscanalsobeused,sothatalargerareaormorepoints
+canbedetected. Thetouchsensingperformancecanbefurtherenhancedbythewaterproofdesignand
+digitalfilteringfeature.
+
+
+  Note:
+  ESP32-S3touchsensorhasnotpassedtheConductedSusceptibility(CS)testfornow,andthushaslimitedapplication
+  scenarios.
+
+
+Fordetails,see   ESP32-S3TechnicalReferenceManual            >ChapterOn-ChipSensorsandAnalogSignal
+Processing.
+
+
+PinAssignment
+
+Fordetails,see   ESP32-S3SeriesDatasheet         >SectionPeripheralPinAssignment.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+EspressifSystems                                                   26        ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                            SubmitDocumentationFeedback
+
+--- PDF PAGE 27 ---
+5   Peripherals
+
+6     ElectricalCharacteristics
+
+6.1    AbsoluteMaximumRatings
+
+StressesabovethoselistedinTable      6-1 AbsoluteMaximumRatings      maycausepermanentdamagetothe
+device. Thesearestressratingsonlyandfunctionaloperationofthedeviceattheseoranyotherconditions
+beyondthoseindicatedunderTable       6-2 RecommendedOperatingConditions          isnotimplied. Exposureto
+absolute-maximum-ratedconditionsforextendedperiodsmayaffectdevicereliability.
+
+                                     Table6-1. AbsoluteMaximumRatings
+
+                             Symbol     Parameter                 Min    Max    Unit
+                             VDD33      Powersupplyvoltage       –0.3     3.6    V
+                             TSTORE     Storagetemperature        –40    105     °C
+
+
+6.2     RecommendedOperatingConditions
+
+
+                               Table6-2. RecommendedOperatingConditions
+
+            Symbol     Parameter                                            Min   Typ    Max    Unit
+            VDD33      Powersupplyvoltage                                   3.0    3.3    3.6     V
+            IVDD       Currentdeliveredbyexternalpowersupply                0.5     —      —      A
+                                                          65°Cversion                      65
+            TA         Operatingambienttemperature        85°Cversion      –40      —      85    °C
+                                                          105°Cversion                    105
+
+6.3     DCCharacteristics(3.3V,25°C)
+
+
+                                  Table6-3. DCCharacteristics(3.3V,25°C)
+
+ Parameter     Description                                           Min          Typ          Max          Unit
+ CIN           Pincapacitance                                               —         2              —      pF
+ VIH           High-levelinputvoltage                            0.75×VDD1           —     VDD1 +0.3         V
+ VIL           Low-levelinputvoltage                                     –0.3        —    0.25×VDD1          V
+ IIH           High-levelinputcurrent                                       —        —               50     nA
+ IIL           Low-levelinputcurrent                                        —        —               50     nA
+ VOH 2         High-leveloutputvoltage                            0.8×VDD1           —               —       V
+ VOL 2         Low-leveloutputvoltage                                       —        —      0.1×VDD1         V
+ IOH           High-levelsourcecurrent(VDD1 =3.3V,                          —       40               —      mA
+               VOH >=2.64V,PAD_DRIVER=3)
+ IOL           Low-levelsinkcurrent(VDD1 =3.3V,VOL =                        —        28              —      mA
+               0.495V,PAD_DRIVER=3)
+ RPU           Internalweakpull-upresistor                                  —        45              —      kΩ
+ RPD           Internalweakpull-downresistor                                —        45              —      kΩ
+
+
+
+
+EspressifSystems                                                   27   ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                         SubmitDocumentationFeedback
+
+--- PDF PAGE 28 ---
+5   Peripherals
+
+
+
+ VIH_nRST      Chipresetreleasevoltage(ENvoltageis               0.75×VDD1           —     VDD1 +0.3         V
+               withinthespecifiedrange)
+ VIL_nRST      Chipresetvoltage(ENvoltageiswithinthe                     –0.3        —    0.25×VDD1          V
+               specifiedrange)
+ 1 VDD–voltagefromapowerpinofarespectivepowerdomain.
+ 2 VOH andVOL aremeasuredusinghigh-impedanceload.
+
+
+6.4     CurrentConsumptionCharacteristics
+
+6.4.1   CurrentConsumptioninActiveMode
+
+Withtheuseofadvancedpower-managementtechnologies,themodulecanswitchbetweendifferentpower
+modes. Fordetailsondifferentpowermodes,pleasereferto           ESP32-S3SeriesDatasheet      >SectionPower
+ManagementUnit.
+
+Thecurrentconsumptionmeasurementsaretakenwitha3.3Vsupplyat25°Cambienttemperature.
+
+TXcurrentconsumptionisratedata100%dutycycle.
+
+RXcurrentconsumptionisratedwhentheperipheralsaredisabledandtheCPUidle.
+
+                     Table6-4. CurrentConsumptionforWi-Fi(2.4GHz)inActiveMode
+
+       WorkMode               RFCondition        Description                                 Peak(mA)
+                                                 802.11b,1Mbps,@20.5dBm                              355
+                              TX                 802.11g,54Mbps,@18dBm                                297
+       Active(RFworking)                         802.11n,HT20,MCS7,@17.5dBm                          286
+                                                 802.11n,HT40,MCS7,@17dBm                            285
+                              RX                 802.11b/g/n,HT20                                      95
+                                                 802.11n,HT40                                          97
+
+
+
+                      Table6-5. CurrentConsumptionforBluetoothLEinActiveMode
+
+       WorkMode               RFCondition        Description                                 Peak(mA)
+                                                 BluetoothLE@20.0dBm                                 344
+                              TX                 BluetoothLE@9.0dBm                                  202
+       Active(RFworking)                         BluetoothLE@0dBm                                     187
+                                                 BluetoothLE@–15.0dBm                                 119
+                              RX                 BluetoothLE                                           93
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+EspressifSystems                                                   28  ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                         SubmitDocumentationFeedback
+
+--- PDF PAGE 29 ---
+5   Peripherals
+
+
+
+  Note:
+  ThecontentbelowisexcerptedfromSection CurrentConsumptioninOtherModes in               ESP32-S3SeriesDatasheet.
+
+
+
+6.4.2     CurrentConsumptioninOtherModes
+
+Pleasenotethatifthechipembeddedhasin-packagePSRAM,thecurrentconsumptionofthemodulemight
+behighercomparedtothemeasurementsbelow.
+
+                              Table6-6. CurrentConsumptioninModem-sleepMode
+
+                      Frequency                                                                           Typ1      Typ2
+ Workmode               (MHz)        Description                                                          (mA)      (mA)
+
+                                     WAITI(Dualcoreinidlestate)                                             13.2      18.8
+                                     Singlecorerunning32-bitdataaccessinstructions,the                      16.2      21.8
+                                     othercoreinidlestate
+                               40    Dualcorerunning32-bitdataaccessinstructions                            18.7      24.4
+                                     Singlecorerunning128-bitdataaccessinstructions,the                     19.9      25.4
+                                     othercoreinidlestate
+                                     Dualcorerunning128-bitdataaccessinstructions                          23.0       28.8
+                                     WAITI                                                                 22.0       36.1
+                                     Singlecorerunning32-bitdataaccessinstructions,the                     28.4       42.6
+                                     othercoreinidlestate
+                               80    Dualcorerunning32-bitdataaccessinstructions                            33.1      47.3
+                                     Singlecorerunning128-bitdataaccessinstructions,the                     35.1      49.6
+                                     othercoreinidlestate
+ Modem-sleep3                        Dualcorerunning128-bitdataaccessinstructions                           41.8      56.3
+                                     WAITI                                                                  27.6      42.3
+                                     Singlecorerunning32-bitdataaccessinstructions,the                      39.9      54.6
+                                     othercoreinidlestate
+                              160    Dualcorerunning32-bitdataaccessinstructions                            49.6      64.1
+                                     Singlecorerunning128-bitdataaccessinstructions,the                    54.4       69.2
+                                     othercoreinidlestate
+                                     Dualcorerunning128-bitdataaccessinstructions                           66.7       81.1
+                                     WAITI                                                                 32.9       47.6
+                                     Singlecorerunning32-bitdataaccessinstructions,the                      51.2      65.9
+                                     othercoreinidlestate
+                              240    Dualcorerunning32-bitdataaccessinstructions                           66.2       81.3
+                                     Singlecorerunning128-bitdataaccessinstructions,the                     72.4      87.9
+                                     othercoreinidlestate
+                                     Dualcorerunning128-bitdataaccessinstructions                           91.7     107.9
+  1Currentconsumptionwhenallperipheralclocksare disabled.
+  2 Currentconsumptionwhenall peripheralclocksare enabled. In practice, thecurrentconsumptionmightbe
+   differentdependingonwhichperipheralsareenabled.
+  3 In Modem-sleep mode, Wi-Fi is clock gated, and the current consumption might be higher when accessing
+   flash. Foraflashratedat80Mbit/s,inSPI2-linemodetheconsumptionis10mA.
+
+
+
+EspressifSystems                                                   29        ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                            SubmitDocumentationFeedback
+
+--- PDF PAGE 30 ---
+5   Peripherals
+
+
+                            Table6-7. CurrentConsumptioninLow-PowerModes
+
+     Workmode       Description                                                                     Typ(µA)
+     Light-sleep1   VDD_SPIandWi-Fiarepowereddown,andallGPIOsarehigh-impedance.                          240
+                    TheULPco-processor                  ULP-FSM                                          170
+                    ispoweredon2                        ULP-RISC-V                                       190
+     Deep-sleep     ULPsensor-monitoredpattern3                                                            18
+                    RTCmemoryandRTCperipheralsarepoweredup.                                                 8
+                    RTCmemoryispoweredup. RTCperipheralsarepowereddown.                                     7
+     Poweroff       ENissettolowlevel. Thechipisshutdown.                                                   1
+     1 InLight-sleepmode,allrelatedSPIpinsarepulledup. ForchipsembeddedwithPSRAM,pleaseadd
+       correspondingPSRAMconsumptionvalues,e.g.,140µAfor8MB8-linePSRAM(3.3V),200µAfor
+       8MB8-linePSRAM(1.8V)and40µAfor2MB4-linePSRAM(3.3V).
+     2 During Deep-sleep, when the ULP co-processor is powered on, peripherals such as GPIO and I2C
+       areabletooperate.
+     3 The“ULPsensor-monitoredpattern”referstothemodewheretheULPcoprocessororthesensor
+       worksperiodically. Whentouchsensorsworkwithadutycycleof1%,thetypicalcurrentconsumption
+       is18µA.
+
+
+6.5     MemorySpecifications
+
+Thedatabelowissourcedfromthememoryvendordatasheet. Thesevaluesareguaranteedthroughdesign
+and/orcharacterizationbutarenotfullytestedinproduction. Devicesareshippedwiththememory
+erased.
+
+                                        Table6-8. FlashSpecifications
+
+                 Parameter     Description                        Min      Typ     Max     Unit
+                 VCC           Powersupplyvoltage(1.8V)             1.65   1.80   2.00       V
+                               Powersupplyvoltage(3.3V)              2.7    3.3     3.6      V
+                 FC            Maximumclockfrequency                 80      —       —     MHz
+                 —             Program/erasecycles              100,000      —       —    cycles
+                 TRET          Dataretentiontime                     20      —       —     years
+                 TPP           Pageprogramtime                        —     0.8       5     ms
+                 TSE           Sectorerasetime(4KB)                   —      70    500      ms
+                 TBE1          Blockerasetime(32KB)                   —     0.2       2      s
+                 TBE2          Blockerasetime(64KB)                   —     0.3       3      s
+                               Chiperasetime(16Mb)                    —       7     20       s
+                               Chiperasetime(32Mb)                    —      20     60       s
+                 TCE           Chiperasetime(64Mb)                    —      25    100       s
+                               Chiperasetime(128Mb)                   —     60     200       s
+                               Chiperasetime(256Mb)                   —      70    300       s
+
+
+
+
+
+
+
+
+
+EspressifSystems                                                   30   ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                         SubmitDocumentationFeedback
+
+--- PDF PAGE 31 ---
+5   Peripherals
+
+
+                                            Table6-9. PSRAMSpecifications
+
+                       Parameter      Description                          Min     Typ     Max     Unit
+                       VCC            Powersupplyvoltage(1.8V)             1.62    1.80     1.98     V
+                                      Powersupplyvoltage(3.3V)              2.7     3.3     3.6      V
+                       FC             Maximumclockfrequency                  80       —       —    MHz
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+EspressifSystems                                                   31            ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                              SubmitDocumentationFeedback
+
+--- PDF PAGE 32 ---
+5   Peripherals
+
+7     RFCharacteristics
+
+ThissectioncontainstableswithRFcharacteristicsoftheEspressifproduct.
+
+TheRFdataismeasuredattheantennaport,whereRFcableisconnected,includingthefront-endloss. The
+externalantennasusedforthetestsonthemoduleswithexternalantennaconnectorshaveanimpedanceof
+50Ω.
+Devicesshouldoperateinthecenterfrequencyrangeallocatedbyregionalregulatoryauthorities. Thetarget
+centerfrequencyrangeandthetargettransmitpowerareconfigurablebysoftware. See                 ESP  RF  TestTool and
+TestGuide  forinstructions.
+
+Unlessotherwisestated,theRFtestsareconductedwitha3.3V(±5%)supplyat25ºCambienttemperature.
+
+
+7.1   Wi-FiRadio
+
+
+                                       Table7-1. Wi-FiRFCharacteristics
+
+                  Name                                               Description
+                  Centerfrequencyrangeofoperatingchannel             2412~2484MHz
+                  Wi-Fiwirelessstandard                              IEEE802.11b/g/n
+
+
+7.1.1  Wi-FiRFTransmitter(TX)Characteristics
+
+                 Table7-2. TXPowerwithSpectralMaskandEVMMeeting802.11Standards
+
+                      Rate                                         Min       Typ       Max
+                                                                  (dBm)     (dBm)     (dBm)
+                      802.11b,1Mbps                                    —      20.5        —
+                      802.11b,11Mbps                                   —      20.5        —
+                      802.11g,6Mbps                                    —      20.0        —
+                      802.11g,54Mbps                                   —      18.0        —
+                      802.11n,HT20,MCS0                                —      19.0        —
+                      802.11n,HT20,MCS7                                —       17.5       —
+                      802.11n,HT40,MCS0                                —      18.5        —
+                      802.11n,HT40,MCS7                                —       17.0       —
+
+
+
+                                            Table7-3. TXEVMTest1
+
+                      Rate                                         Min       Typ      Limit
+                                                                   (dB)      (dB)      (dB)
+                      802.11b,1Mbps,@20.5dBm                           —     –24.5       –10
+                      802.11b,11Mbps,@20.5dBm                          —     –24.5       –10
+                      802.11g,6Mbps,@20dBm                             —    –23.0        –5
+                      802.11g,54Mbps,@18dBm                            —     –29.5      –25
+                                                                       Cont’donnextpage
+
+
+EspressifSystems                                                   32    ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                         SubmitDocumentationFeedback
+
+--- PDF PAGE 33 ---
+5   Peripherals
+
+
+                                    Table7-3–cont’dfrompreviouspage
+                      Rate                                        Min      Typ      Limit
+                                                                 (dB)      (dB)     (dB)
+                      802.11n,HT20,MCS0,@19dBm                       —    –24.0        –5
+                      802.11n,HT20,MCS7,@17.5dBm                     —    –30.5       –27
+                      802.11n,HT40,MCS0,@18.5dBm                     —    –25.0        –5
+                      802.11n,HT40,MCS7,@17dBm                       —    –30.0       –27
+                      1 EVM is measured at the corresponding typical TX power provided
+
+                        inTable 7-2 TXPowerwithSpectralMaskandEVMMeeting802.11
+                        Standards  above.
+
+
+7.1.2  Wi-FiRFReceiver(RX)Characteristics
+
+ForRXtests,thePER(packeterrorrate)limitis8%for802.11b,and10%for802.11g/n.
+
+                                           Table7-4. RXSensitivity
+
+                      Rate                                        Min      Typ      Max
+                                                                (dBm)     (dBm)    (dBm)
+                      802.11b,1Mbps                                  —    –98.2         —
+                      802.11b,2Mbps                                  —    –95.6         —
+                      802.11b,5.5Mbps                                —    –92.8         —
+                      802.11b,11Mbps                                 —    –88.5         —
+                      802.11g,6Mbps                                  —    –93.0         —
+                      802.11g,9Mbps                                  —    –92.0         —
+                      802.11g,12Mbps                                 —    –90.8         —
+                      802.11g,18Mbps                                 —    –88.5         —
+                      802.11g,24Mbps                                 —    –85.5         —
+                      802.11g,36Mbps                                 —    –82.2         —
+                      802.11g,48Mbps                                 —     –78.0        —
+                      802.11g,54Mbps                                 —     –76.2        —
+                      802.11n,HT20,MCS0                              —    –93.0         —
+                      802.11n,HT20,MCS1                              —    –90.6         —
+                      802.11n,HT20,MCS2                              —    –88.4         —
+                      802.11n,HT20,MCS3                              —    –84.8         —
+                      802.11n,HT20,MCS4                              —     –81.6        —
+                      802.11n,HT20,MCS5                              —     –77.4        —
+                      802.11n,HT20,MCS6                              —     –75.6        —
+                      802.11n,HT20,MCS7                              —     –74.2        —
+                      802.11n,HT40,MCS0                              —    –90.0         —
+                      802.11n,HT40,MCS1                              —     –87.5        —
+                      802.11n,HT40,MCS2                              —    –85.0         —
+                      802.11n,HT40,MCS3                              —    –82.0         —
+                      802.11n,HT40,MCS4                              —     –78.5        —
+                      802.11n,HT40,MCS5                              —     –74.4        —
+                                                                     Cont’donnextpage
+
+
+EspressifSystems                                                   33  ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                        SubmitDocumentationFeedback
+
+--- PDF PAGE 34 ---
+5   Peripherals
+
+
+                                    Table7-4–cont’dfrompreviouspage
+                      Rate                                        Min      Typ      Max
+                                                                (dBm)     (dBm)    (dBm)
+                      802.11n,HT40,MCS6                              —     –72.5        —
+                      802.11n,HT40,MCS7                              —     –71.2        —
+
+
+                                        Table7-5. MaximumRXLevel
+
+                      Rate                                        Min      Typ      Max
+                                                                (dBm)     (dBm)    (dBm)
+                      802.11b,1Mbps                                  —         5        —
+                      802.11b,11Mbps                                 —         5        —
+                      802.11g,6Mbps                                  —         5        —
+                      802.11g,54Mbps                                 —         0        —
+                      802.11n,HT20,MCS0                              —         5        —
+                      802.11n,HT20,MCS7                              —         0        —
+                      802.11n,HT40,MCS0                              —         5        —
+                      802.11n,HT40,MCS7                              —         0        —
+
+
+
+                                  Table7-6. RXAdjacentChannelRejection
+
+                      Rate                                        Min      Typ      Max
+                                                                 (dB)      (dB)     (dB)
+                      802.11b,1Mbps                                  —        35        —
+                      802.11b,11Mbps                                 —        35        —
+                      802.11g,6Mbps                                  —        31        —
+                      802.11g,54Mbps                                 —        14        —
+                      802.11n,HT20,MCS0                              —        31        —
+                      802.11n,HT20,MCS7                              —        13        —
+                      802.11n,HT40,MCS0                              —        19        —
+                      802.11n,HT40,MCS7                              —         8        —
+
+
+7.2    BluetoothLERadio
+
+
+                                  Table7-7. BluetoothLERFCharacteristics
+
+                  Name                                             Description
+                  Centerfrequencyrangeofoperatingchannel           2402~2480MHz
+                  RFtransmitpowerrange                             –24.0~20.0dBm
+
+
+
+
+
+
+
+
+
+
+EspressifSystems                                                   34  ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                        SubmitDocumentationFeedback
+
+--- PDF PAGE 35 ---
+5   Peripherals
+
+
+7.2.1   BluetoothLERFTransmitter(TX)Characteristics
+
+                         Table7-8. BluetoothLE-TransmitterCharacteristics-1Mbps
+
+  Parameter                           Description                         Min         Typ        Max        Unit
+                                      Max |fn|n=0, 1, 2,..k                   —        2.50           —      kHz
+  Carrierfrequencyoffsetanddrift      Max |f0−fn|                             —        2.00           —      kHz
+                                      Max |fn−fn−5|                           —         1.40          —      kHz
+                                      |f1−f0|                                 —         1.00          —      kHz
+                                      ∆f1avg                                  —      249.00           —      kHz
+  Modulationcharacteristics           Min∆f2max (foratleast                   —      198.00           —      kHz
+                                      99.9%ofall∆f2max)
+                                      ∆f2avg/∆f1avg                           —        0.86           —      —
+                                      ±2MHzoffset                             —      –37.00           —     dBm
+  In-bandspuriousemissions            ±3MHzoffset                             —     –42.00            —     dBm
+                                      >±3MHzoffset                            —     –44.00            —     dBm
+
+
+                         Table7-9. BluetoothLE-TransmitterCharacteristics-2Mbps
+
+  Parameter                           Description                         Min         Typ        Max        Unit
+                                      Max |fn|n=0, 1, 2,..k                   —        2.50           —      kHz
+  Carrierfrequencyoffsetanddrift      Max |f0−fn|                             —        2.00           —      kHz
+                                      Max |fn−fn−5|                           —         1.40          —      kHz
+                                      |f1−f0|                                 —         1.00          —      kHz
+                                      ∆f1avg                                  —      499.00           —      kHz
+  Modulationcharacteristics           Min∆f2max (foratleast                   —      416.00           —      kHz
+                                      99.9%ofall∆f2max)
+                                      ∆f2avg/∆f1avg                           —        0.89           —      —
+                                      ±4MHzoffset                             —     –42.00            —     dBm
+  In-bandspuriousemissions            ±5MHzoffset                             —     –44.00            —     dBm
+                                      >±5MHzoffset                            —      –47.00           —     dBm
+
+
+                       Table7-10. BluetoothLE-TransmitterCharacteristics-125Kbps
+
+  Parameter                           Description                         Min         Typ        Max        Unit
+                                      Max |fn|n=0, 1, 2,..k                   —        0.80           —      kHz
+  Carrierfrequencyoffsetanddrift      Max |f0−fn|                             —         1.00          —      kHz
+                                      |fn−fn−3|                               —        0.30           —      kHz
+                                      |f0−f3|                                 —         1.00          —      kHz
+                                      ∆f1avg                                  —     248.00            —      kHz
+  Modulationcharacteristics           Min∆f1max (foratleast                   —     222.00            —      kHz
+                                      99.9%ofall∆f1max)
+                                      ±2MHzoffset                             —      –37.00           —     dBm
+  In-bandspuriousemissions            ±3MHzoffset                             —     –42.00            —     dBm
+                                      >±3MHzoffset                            —     –44.00            —     dBm
+
+
+
+
+
+EspressifSystems                                                   35     ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                          SubmitDocumentationFeedback
+
+--- PDF PAGE 36 ---
+5   Peripherals
+
+
+                      Table7-11. BluetoothLE-TransmitterCharacteristics-500Kbps
+
+  Parameter                         Description                      Min        Typ        Max       Unit
+                                    Max |fn|n=0, 1, 2,..k                —       0.80          —     kHz
+  Carrierfrequencyoffsetanddrift    Max |f0−fn|                          —        1.00         —     kHz
+                                    |fn−fn−3|                            —       0.85          —     kHz
+                                    |f0−f3|                              —       0.34          —     kHz
+                                    ∆f2avg                               —     213.00          —     kHz
+  Modulationcharacteristics         Min∆f2max (foratleast                —     196.00          —     kHz
+                                    99.9%ofall∆f2max)
+                                    ±2MHzoffset                          —     –37.00          —     dBm
+  In-bandspuriousemissions          ±3MHzoffset                          —     –42.00          —     dBm
+                                    >±3MHzoffset                         —     –44.00          —     dBm
+
+
+
+7.2.2   BluetoothLERFReceiver(RX)Characteristics
+
+                        Table7-12. BluetoothLE-ReceiverCharacteristics-1Mbps
+
+  Parameter                                 Description                   Min      Typ      Max      Unit
+  Sensitivity@30.8%PER                      —                                —    –96.5        —     dBm
+  Maximumreceivedsignal@30.8%PER            —                                —         8       —     dBm
+  Co-channelC/I                             F=F0MHz                          —         8       —      dB
+                                            F=F0+1MHz                        —         4       —      dB
+                                            F=F0–1MHz                        —         4       —      dB
+                                            F=F0+2MHz                        —      –23        —      dB
+  AdjacentchannelselectivityC/I             F=F0–2MHz                        —      –23        —      dB
+                                            F=F0+3MHz                        —      –34        —      dB
+                                            F=F0–3MHz                        —      –34        —      dB
+                                            F>F0+3MHz                        —      –36        —      dB
+                                            F>F0–3MHz                        —      –37        —      dB
+  Imagefrequency                            —                                —      –36        —      dB
+  Adjacentchanneltoimagefrequency           F=Fimage +1MHz                   —      –39        —      dB
+                                            F=Fimage –1MHz                   —      –34        —      dB
+                                            30MHz~2000MHz                    —       –12       —     dBm
+  Out-of-bandblockingperformance            2003MHz~2399MHz                  —       –18       —     dBm
+                                            2484MHz~2997MHz                  —      –16        —     dBm
+                                            3000MHz~12.75GHz                 —      –10        —     dBm
+  Intermodulation                           —                                —      –29        —     dBm
+
+
+                        Table7-13. BluetoothLE-ReceiverCharacteristics-2Mbps
+
+  Parameter                                 Description                   Min      Typ      Max      Unit
+  Sensitivity@30.8%PER                      —                                —      –92        —     dBm
+  Maximumreceivedsignal@30.8%PER            —                                —         3       —     dBm
+                                                                                      Cont’donnextpage
+
+
+EspressifSystems                                                   36ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                       SubmitDocumentationFeedback
+
+--- PDF PAGE 37 ---
+5   Peripherals
+
+
+                                 Table7-13–cont’dfrompreviouspage
+  Parameter                               Description                 Min      Typ      Max      Unit
+  Co-channelC/I                           F=F0MHz                        —         8       —     dB
+                                          F=F0+2MHz                      —         4       —     dB
+                                          F=F0–2MHz                      —         4       —     dB
+                                          F=F0+4MHz                      —       –27       —     dB
+  AdjacentchannelselectivityC/I           F=F0–4MHz                      —       –27       —     dB
+                                          F=F0+6MHz                      —      –38        —     dB
+                                          F=F0–6MHz                      —      –38        —     dB
+                                          F>F0+6MHz                      —       –41       —     dB
+                                          F>F0–6MHz                      —       –41       —     dB
+  Imagefrequency                          —                              —       –27       —     dB
+  Adjacentchanneltoimagefrequency         F=Fimage +2MHz                 —      –38        —     dB
+                                          F=Fimage –2MHz                 —         4       —     dB
+                                          30MHz~2000MHz                  —       –15       —     dBm
+  Out-of-bandblockingperformance          2003MHz~2399MHz                —       –21       —     dBm
+                                          2484MHz~2997MHz                —       –21       —     dBm
+                                          3000MHz~12.75GHz               —        –9       —     dBm
+  Intermodulation                         —                              —      –29        —     dBm
+
+
+                      Table7-14. BluetoothLE-ReceiverCharacteristics-125Kbps
+
+  Parameter                               Description                 Min      Typ      Max      Unit
+  Sensitivity@30.8%PER                    —                              —    –103.5       —     dBm
+  Maximumreceivedsignal@30.8%PER          —                              —         8       —     dBm
+  Co-channelC/I                           F=F0MHz                        —         4       —     dB
+                                          F=F0+1MHz                      —         1       —     dB
+                                          F=F0–1MHz                      —         2       —     dB
+                                          F=F0+2MHz                      —       –26       —     dB
+  AdjacentchannelselectivityC/I           F=F0–2MHz                      —       –26       —     dB
+                                          F=F0+3MHz                      —      –36        —     dB
+                                          F=F0–3MHz                      —       –39       —     dB
+                                          F>F0+3MHz                      —      –42        —     dB
+                                          F>F0–3MHz                      —      –43        —     dB
+  Imagefrequency                          —                              —      –42        —     dB
+  Adjacentchanneltoimagefrequency         F=Fimage +1MHz                 —      –43        —     dB
+                                          F=Fimage –1MHz                 —      –36        —     dB
+
+
+
+                      Table7-15. BluetoothLE-ReceiverCharacteristics-500Kbps
+
+   Parameter                              Description                  Min     Typ     Max      Unit
+   Sensitivity@30.8%PER                   —                               —    –100       —     dBm
+   Maximumreceivedsignal@30.8%PER         —                               —       8       —     dBm
+   Co-channelC/I                          F=F0MHz                         —       4       —      dB
+                                                                                  Cont’donnextpage
+
+
+
+EspressifSystems                                                   37ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                      SubmitDocumentationFeedback
+
+--- PDF PAGE 38 ---
+5   Peripherals
+
+
+                                   Table7-15–cont’dfrompreviouspage
+   Parameter                                 Description                   Min     Typ      Max      Unit
+                                             F=F0+1MHz                        —        1       —      dB
+                                             F=F0–1MHz                        —       0        —      dB
+                                             F=F0+2MHz                        —     –24        —      dB
+   AdjacentchannelselectivityC/I             F=F0–2MHz                        —     –24        —      dB
+                                             F=F0+3MHz                        —     –37        —      dB
+                                             F=F0–3MHz                        —     –39        —      dB
+                                             F>F0+3MHz                        —     –38        —      dB
+                                             F>F0–3MHz                        —     –42        —      dB
+   Imagefrequency                            —                                —     –38        —      dB
+   Adjacentchanneltoimagefrequency           F=Fimage +1MHz                   —     –42        —      dB
+                                             F=Fimage –1MHz                   —     –37        —      dB
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+EspressifSystems                                                   38ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                        SubmitDocumentationFeedback
+
+--- PDF PAGE 39 ---
+5   Peripherals
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+EspressifSystems                                                   39                       ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                                    SubmitDocumentationFeedback
+
+--- PDF PAGE 40 ---
+5   Peripherals
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+EspressifSystems                                                   40                       ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                                    SubmitDocumentationFeedback
+
+--- PDF PAGE 41 ---
+9   PeripheralSchematics
+
+9     PeripheralSchematics
+
+Thisisthetypicalapplicationcircuitofthemoduleconnectedwithperipheralcomponents(forexample,
+powersupply,antenna,resetbutton,JTAGinterface,andUARTinterface).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                        Figure9-1. PeripheralSchematics
+
+
+   •  SolderingtheEPADtothegroundofthebaseboardisnotamust,however,itcanoptimizethermal
+      performance. Ifyouchoosetosolderit,pleaseapplythecorrectamountofsolderingpaste. Toomuch
+      solderingpastemayincreasethegapbetweenthemoduleandthebaseboard. Asaresult,theadhesion
+      betweenotherpinsandthebaseboardmaybepoor.
+
+   •  ToensurethatthepowersupplytotheESP32-S3chipisstableduringpower-up,itisadvisedtoaddan
+      RCdelaycircuitattheENpin. TherecommendedsettingfortheRCdelaycircuitisusuallyR=10kΩand
+      C=1µF.However,specificparametersshouldbeadjustedbasedonthepower-uptimingofthemodule
+      andthepower-upandresetsequencetimingofthechip. ForESP32-S3’spower-upandresetsequence
+      timingdiagram,pleasereferSection      4.5 ChipPower-upandReset.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+EspressifSystems                                                   41    ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                          SubmitDocumentationFeedback
+
+--- PDF PAGE 42 ---
+10   PhysicalDimensions
+
+10      PhysicalDimensions
+
+10.1     ModuleDimensions
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                              Figure10-1. ESP32-S3-WROOM-1PhysicalDimensions
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                             Figure10-2. ESP32-S3-WROOM-1UPhysicalDimensions
+
+
+  Note:
+  Forinformationabouttape,reel,andproductmarking,pleasereferto         ESP32-S3ModulePackagingInformation.
+
+
+
+
+
+
+
+EspressifSystems                                                   42       ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                            SubmitDocumentationFeedback
+
+--- PDF PAGE 43 ---
+10   PhysicalDimensions
+
+
+10.2      DimensionsofExternalAntennaConnector
+
+ESP32-S3-WROOM-1UusesthefirstgenerationexternalantennaconnectorasshowninFigure                        10-3
+DimensionsofExternalAntennaConnector. Thisconnectoriscompatiblewiththefollowing
+connectors:
+
+   •  U.FLSeriesconnectorfromHirose
+
+   •  MHFIconnectorfromI-PEX
+
+   •  AMCconnectorfromAmphenol
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                            Figure10-3. DimensionsofExternalAntennaConnector
+
+
+
+
+
+EspressifSystems                                                   43      ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                          SubmitDocumentationFeedback
+
+--- PDF PAGE 44 ---
+10   PhysicalDimensions
+
+
+TheexternalantennausedforESP32-S3-WROOM-1Uduringcertificationtestingisthefirstgeneration
+monopoleantenna,withmaterialcodeTFPD05H08750011.
+
+Themoduledoesnotincludeanexternalantennauponshipment. Ifneeded,selectasuitableexternal
+antennabasedontheproduct’susageenvironmentandperformancerequirements.
+
+Itisrecommendedtoselectanantennathatmeetsthefollowingrequirements:
+
+   •  2.4GHzband
+
+   •  50Ωimpedance
+
+   •  Themaximumgaindoesnotexceed2.33dBi,thegainoftheantennausedforcertification
+
+   •  TheconnectormatchesthespecificationsshowninFigure                 10-3  DimensionsofExternalAntenna
+      Connector
+
+
+  Note:
+  Ifyouuseanexternalantennaofadifferenttypeorgain,additionaltesting,suchasEMC,mayberequiredbeyondthe
+  existingantennatestreportsforEspressifmodules. Specificrequirementsdependonthecertificationtype.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+EspressifSystems                                                   44        ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                            SubmitDocumentationFeedback
+
+--- PDF PAGE 45 ---
+11   PCBLayoutRecommendations
+
+11    PCBLayoutRecommendations
+
+11.1   PCBLandPattern
+
+Thissectionprovidesthefollowingresourcesforyourreference:
+
+   • FiguresforrecommendedPCBlandpatternswithallthedimensionsneededforPCBdesign. SeeFigure
+     11-1ESP32-S3-WROOM-1RecommendedPCBLandPattern                andFigure   11-2ESP32-S3-WROOM-1U
+     RecommendedPCBLandPattern.
+
+   • SourcefilesofrecommendedPCBlandpatternstomeasuredimensionsnotcoveredinFigure                     11-1and
+     Figure 11-2. Youcanviewthesourcefilesfor       ESP32-S3-WROOM-1      and ESP32-S3-WROOM-1U       with
+     Autodesk   Viewer.
+
+   • 3Dmodelsof     ESP32-S3-WROOM-1      and ESP32-S3-WROOM-1U.Pleasemakesurethatyoudownloadthe
+     3Dmodelfilein.STEPformat(bewarethatsomebrowsersmightadd.txt).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                     Figure11-1. ESP32-S3-WROOM-1RecommendedPCBLandPattern
+
+
+
+EspressifSystems                                                   45  ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                        SubmitDocumentationFeedback
+
+--- PDF PAGE 46 ---
+11   PCBLayoutRecommendations
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                     Figure11-2. ESP32-S3-WROOM-1URecommendedPCBLandPattern
+
+
+11.2    ModulePlacementforPCBDesign
+
+Ifmodule-on-boarddesignisadopted,attentionshouldbepaidwhilepositioningthemoduleonthebase
+board. Theinterferenceofthebaseboardonthemodule’santennaperformanceshouldbeminimized.
+
+FordetailsaboutmoduleplacementforPCBdesign,pleasereferto                ESP32-S3HardwareDesignGuidelines         >
+SectionGeneralPrinciplesofPCBLayoutforModules.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+EspressifSystems                                                   46    ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                          SubmitDocumentationFeedback
+
+--- PDF PAGE 47 ---
+12   ProductHandling
+
+12     ProductHandling
+
+12.1    StorageConditions
+
+Theproductssealedinmoisturebarrierbags(MBB)shouldbestoredinanon-condensingatmospheric
+environmentof<40°Cand90%RH.Themoduleisratedatthemoisturesensitivitylevel(MSL)of3.
+
+Afterunpacking,themodulemustbesolderedwithin168hourswiththefactoryconditions25±5°Cand
+60%RH.Iftheaboveconditionsarenotmet,themoduleneedstobebaked.
+
+12.2     ElectrostaticDischarge(ESD)
+
+   • Humanbodymodel(HBM):±2000V
+   • Charged-devicemodel(CDM):±500V
+
+12.3     ReflowProfile
+
+Solderthemoduleinasinglereflow.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                          Figure12-1. ReflowProfile
+
+
+
+
+EspressifSystems                                                   47  ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                        SubmitDocumentationFeedback
+
+--- PDF PAGE 48 ---
+12   ProductHandling
+
+
+12.4      UltrasonicVibration
+
+AvoidexposingEspressifmodulestovibrationfromultrasonicequipment,suchasultrasonicweldersor
+ultrasoniccleaners. Thisvibrationmayinduceresonanceinthein-modulecrystalandleadtoitsmalfunctionor
+evenfailure. Asaconsequence,themodulemaystopworkingoritsperformancemaydeteriorate.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+EspressifSystems                                                   48         ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                            SubmitDocumentationFeedback
+
+--- PDF PAGE 49 ---
+DatasheetVersioning
+
+DatasheetVersioning
+
+
+ Datasheet            Status              Watermark             Definition
+ Version
+ v0.1~v0.5                                                      Thisdatasheetisunderdevelopmentforproducts
+ (excludingv0.5)      Draft               Confidential          inthedesignstage. Specificationsmaychange
+                                                                withoutpriornotice.
+                                                                Thisdatasheetisactivelyupdatedforproductsin
+ v0.5~v1.0            Preliminary         Preliminary           theverificationstage. Specificationsmaychange
+ (excludingv1.0)      release                                   beforemassproduction,andthechangeswillbe
+                                                                documentationinthedatasheet’sRevisionHistory.
+                                                                Thisdatasheetispubliclyreleasedforproductsin
+ v1.0andhigher        Officialrelease     —                     massproduction. Specificationsarefinalized,and
+                                                                majorchangeswillbecommunicatedvia             Product
+                                                                Change   Notifications  (PCN).
+                                          Not
+ Anyversion           —                   Recommended           Thisdatasheetisupdatedlessfrequentlyfor
+                                          forNewDesign          productsnotrecommendedfornewdesigns.
+                                          (NRND)1
+ Anyversion           —                   EndofLife             Thisdatasheetisnolongermtainedforproducts
+                                          (EOL)2                thathavereachedendoflife.
+  1Watermark will be added to the datasheet title page only when all the product variants covered by this
+   datasheetarenotrecommendedfornewdesigns.
+  2 Watermark will be added to the datasheet title page only when all the product variants covered by this
+   datasheethavereachedendoflife.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+EspressifSystems                                                   49        ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                            SubmitDocumentationFeedback
+
+--- PDF PAGE 50 ---
+RelatedDocumentationandResources
+
+RelatedDocumentationandResources
+
+RelatedDocumentation
+
+   •  ESP32-S3    Series Datasheet   –SpecificationsoftheESP32-S3hardware.
+   •  ESP32-S3    Technical  Reference   Manual   –DetailedinformationonhowtousetheESP32-S3memoryandperiph-
+      erals.
+   •  ESP32-S3    Hardware  Design   Guidelines  –GuidelinesonhowtointegratetheESP32-S3intoyourhardwareproduct.
+   •  ESP32-S3    Series SoC   Errata –DescriptionsofknownerrorsinESP32-S3seriesofSoCs.
+   •  Certificates
+      https://espressif.com/en/support/documents/certificates
+   •  ESP32-S3Product/ProcessChangeNotifications(PCN)
+      https://espressif.com/en/support/documents/pcns?keys=ESP32-S3
+   •  ESP32-S3Advisories–Informationonsecurity,bugs,compatibility,componentreliability.
+      https://espressif.com/en/support/documents/advisories?keys=ESP32-S3
+   •  DocumentationUpdatesandUpdateNotificationSubscription
+      https://espressif.com/en/support/download/documents
+DeveloperZone
+
+   •  ESP-IDF  Programming     Guide  forESP32-S3    –ExtensivedocumentationfortheESP-IDFdevelopmentframework.
+   •  ESP-IDFandotherdevelopmentframeworksonGitHub.
+      https://github.com/espressif
+   •  ESP32BBSForum–Engineer-to-Engineer(E2E)CommunityforEspressifproductswhereyoucanpostquestions,
+      shareknowledge,exploreideas,andhelpsolveproblemswithfellowengineers.
+      https://esp32.com/
+   •  ESP-FAQ–AsummarydocumentoffrequentlyaskedquestionsreleasedbyEspressif.
+      https://espressif.com/projects/esp-faq/en/latest/index.html
+   •  TheESPJournal–BestPractices,Articles,andNotesfromEspressiffolks.
+      https://blog.espressif.com/
+   •  SeethetabsSDKsandDemos,Apps,Tools,ATFirmware.
+      https://espressif.com/en/support/download/sdks-demos
+Products
+
+   •  ESP32-S3SeriesSoCs–BrowsethroughallESP32-S3SoCs.
+      https://espressif.com/en/products/socs?id=ESP32-S3
+   •  ESP32-S3SeriesModules–BrowsethroughallESP32-S3-basedmodules.
+      https://espressif.com/en/products/modules?id=ESP32-S3
+   •  ESP32-S3SeriesDevKits–BrowsethroughallESP32-S3-baseddevkits.
+      https://espressif.com/en/products/devkits?id=ESP32-S3
+   •  ESPProductSelector–FindanEspressifhardwareproductsuitableforyourneedsbycomparingorapplyingfilters.
+      https://products.espressif.com/#/product-selector?language=en
+ContactUs
+
+   •  SeethetabsSalesQuestions,TechnicalEnquiries,CircuitSchematic&PCBDesignReview,GetSamples
+      (Onlinestores),BecomeOurSupplier,Comments&Suggestions.
+      https://espressif.com/en/contact-us/sales-questions
+
+
+EspressifSystems                                                   50        ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                            SubmitDocumentationFeedback
+
+--- PDF PAGE 51 ---
+RevisionHistory
+
+RevisionHistory
+
+
+ Date             Version       Releasenotes
+                                    • Updated“OrderingCode”to“PartNumber”globally
+                                    • UpdatedthePinAssignmentpartforeachsubsectioninSection                 5.2  Pe-
+ 2026-03-02       v1.8                ripheralDescription
+                                    • AddedanoteinSection        5.2.1.9 SD/MMCHostController
+                                    • UpdatedTable    6-7 CurrentConsumptioninLow-PowerModes
+
+
+ 2025-11-18       v1.7              • AddedTable    6-5  CurrentConsumptionforBluetoothLEinActiveMode
+
+
+                                    • AddedSection     4.5 ChipPower-upandReset
+                                    • AddedSection     6.5 MemorySpecifications
+                                    • Added the external antenna information for certification in Section       10.2
+ 2025-07-25       v1.6                DimensionsofExternalAntennaConnector
+                                    • AddedSection     DatasheetVersioning
+                                    • Otherminorchanges
+
+
+                                    • Added a note about the pin mapping between the chip and the in-
+ 2025-06-10       v1.5                packageflash/PSRANinSection         2 BlockDiagram
+
+
+                                    • RenamedmodulevariantsESP32-S3-WROOM-1-N16R16VandESP32-S3-
+                                      WROOM-1U-N16R16V to ESP32-S3-WROOM-1-N16R16VA and ESP32-S3-
+                                      WROOM-1U-N16R16VA
+                                    • AddedareferencetothechiprevisioninformationinthenoteinSection
+                                      Section  1.2 SeriesComparison
+                                    • UpdatedSection     1.3 Applications
+                                    • RestructuredthepreviousSectionStrappingPinsasSection             4 BootCon-
+                                      figurations
+                                    • AddedSection     5.2 PeripheralDescription
+ 2024-11-14       v1.4              • Divided SectionElectricalCharacteristics into Section       6 ElectricalChar-
+                                      acteristics andSection    7 RFCharacteristics   withupdatedformattingand
+                                      wording
+                                    • DividedSectionPhysicalDimensionsandPCBLandPatternintoSection
+                                      10PhysicalDimensions      and 11PCBLayoutRecommendations           andadded
+                                      Section  11.2 ModulePlacementforPCBDesign
+                                    • Added the 3D model link of ESP32-S3-WROOM-1U in Section               11.1PCB
+                                      LandPattern
+                                    • UpdatedFigure    12-1 ReflowProfile
+                                    • Otherminorupdatestoformattingandwording
+
+
+                                                                                              Cont’donnextpage
+
+
+
+
+
+
+EspressifSystems                                                   51       ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                           SubmitDocumentationFeedback
+
+--- PDF PAGE 52 ---
+RevisionHistory
+
+
+                                             Cont’dfrompreviouspage
+ Date             Version       Releasenotes
+                                    •  Added the new module variants ESP32-S3-WROOM-1-N16R16VA and
+                                       ESP32-S3-WROOM-1U-N16R16VA,andupdatedtherelatedinformation
+                                    •  UpdatedtablenotestoTable        1-2 ESP32-S3-WROOM-1USeriesCompari-
+                                       son
+ 2023-11-24       v1.3              •  UpdatedSection     4.1ChipBootModeControl
+                                    •  UpdatedthemoduleschematicsinSection             8 ModuleSchematics
+                                    •  Updated the physical dimensions figure in Section        10.1 ModuleDimen-
+                                       sions
+                                    •  Otherminorupdates
+
+
+                                    •  UpdateSectionStrappingPins
+                                    •  UpdateSection    6.4  CurrentConsumptionCharacteristics
+                                    •  UpdatetheminimumvalueofRFtransmitpowerinSection                7.2.1Bluetooth
+                                       LERFTransmitter(TX)Characteristics
+ 2023-03-07       v1.2              •  UpdatedescriptionsinSection       9 PeripheralSchematics
+                                    •  AdddescriptionsinSection       11.1PCBLandPattern
+                                    •  UpdateSection    12.4
+                                    •  Otherminorchanges
+
+
+                                    •  UpdateTable    1-1andTable   1-2
+ 2022-07-22       v1.1              •  Otherminorupdates
+
+
+                                    •  UpdateBluetoothLERFdata
+                                    •  UpdatepowerconsumptiondatainTable            6-7
+ 2022-04-21       v1.0              •  Addcertificationandtestinformation
+                                    •  UpdateSectionStrappingPins
+
+
+ 2021-10-29       v0.6          Overallupdateforchipevision1
+ 2021-07-19       v0.5.1        Preliminaryrelease,forchiprevision0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+EspressifSystems                                                   52       ESP32-S3-WROOM-1&WROOM-1UDatasheetv1.8
+                                            SubmitDocumentationFeedback
+
+--- PDF PAGE 53 ---
+DisclaimerandCopyrightNotice
+Informationinthisdocument,includingURLreferences,issubjecttochangewithoutnotice.
+ALLTHIRDPARTY’SINFORMATIONINTHISDOCUMENTISPROVIDEDASISWITHNOWARRANTIESTOITSAUTHENTICITYAND
+ACCURACY.
+NO WARRANTY IS PROVIDED TO THIS DOCUMENT FOR ITS MERCHANTABILITY, NON-INFRINGEMENT, FITNESS FOR ANY PARTICULAR
+PURPOSE,NORDOESANYWARRANTYOTHERWISEARISINGOUTOFANYPROPOSAL,SPECIFICATIONORSAMPLE.
+All liability, including liability for infringement of any proprietary rights, relating to use of information in this document is disclaimed. No
+licensesexpressorimplied,byestoppelorotherwise,toanyintellectualpropertyrightsaregrantedherein.
+TheWi-FiAllianceMemberlogoisatrademarkoftheWi-FiAlliance. TheBluetoothlogoisaregisteredtrademarkofBluetoothSIG.
+All trade names, trademarks and registered trademarks mentioned in this document are property of their respective owners, and are
+herebyacknowledged.
+Copyright©2026EspressifSystems(Shanghai)Co.,Ltd. Allrightsreserved.
+www.espressif.com

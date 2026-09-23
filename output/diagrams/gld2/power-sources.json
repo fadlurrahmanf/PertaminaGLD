@@ -1,0 +1,226 @@
+[
+  {
+    "id": "S01",
+    "part": "LMR51450",
+    "location": "TI electrical characteristics: 0.8 V feedback",
+    "url": "https://www.ti.com/lit/ds/symlink/lmr51450.pdf",
+    "accessed": "2026-09-22"
+  },
+  {
+    "id": "S02",
+    "part": "TPS61088",
+    "location": "TI electrical characteristics: PWM/PFM feedback",
+    "url": "https://www.ti.com/lit/ds/symlink/tps61088.pdf",
+    "accessed": "2026-09-22"
+  },
+  {
+    "id": "S03",
+    "part": "TPS61175",
+    "location": "TI electrical characteristics: 1.229 V feedback",
+    "url": "https://www.ti.com/lit/ds/symlink/tps61175.pdf",
+    "accessed": "2026-09-22"
+  },
+  {
+    "id": "S04",
+    "part": "TPS62162",
+    "location": "TI fixed 3.3 V option; converter rating",
+    "url": "https://www.ti.com/lit/ds/symlink/tps62162.pdf",
+    "accessed": "2026-09-22"
+  },
+  {
+    "id": "S05",
+    "part": "TPS2116",
+    "location": "TI power multiplexer; rating is not load current",
+    "url": "https://www.ti.com/lit/ds/symlink/tps2116.pdf",
+    "accessed": "2026-09-22"
+  },
+  {
+    "id": "S06",
+    "part": "TPS7A02",
+    "location": "TI fixed 3.3 V option; ground current depends on load",
+    "url": "https://www.ti.com/lit/ds/symlink/tps7a02.pdf",
+    "accessed": "2026-09-22"
+  },
+  {
+    "id": "S07",
+    "part": "ADS1256",
+    "location": "TI electrical characteristics, 7.68 MHz clock",
+    "url": "https://www.ti.com/lit/ds/symlink/ads1256.pdf",
+    "accessed": "2026-09-22"
+  },
+  {
+    "id": "S08",
+    "part": "OPA320",
+    "location": "TI supply-current table, no output load",
+    "url": "https://www.ti.com/lit/ds/symlink/opa320.pdf",
+    "accessed": "2026-09-22"
+  },
+  {
+    "id": "S09",
+    "part": "ADR03",
+    "location": "Analog Devices Rev. S, Table 4",
+    "url": "https://www.analog.com/media/en/technical-documentation/data-sheets/ADR01_02_03_06.pdf",
+    "accessed": "2026-09-22"
+  },
+  {
+    "id": "S10",
+    "part": "ESP32-S3-WROOM-1",
+    "location": "Espressif v1.8, Tables 6-4 and 6-6",
+    "url": "https://www.espressif.com/sites/default/files/documentation/esp32-s3-wroom-1_wroom-1u_datasheet_en.pdf",
+    "accessed": "2026-09-22"
+  },
+  {
+    "id": "S11",
+    "part": "E22-900MM22S",
+    "location": "Ebyte electrical-parameter table",
+    "url": "https://www.cdebyte.com/products/E22-900MM22S/1",
+    "accessed": "2026-09-22"
+  },
+  {
+    "id": "S12",
+    "part": "SHT40",
+    "location": "Sensirion SHT4x current and heater tables",
+    "url": "https://sensirion.com/resource/datasheet/sht4x",
+    "accessed": "2026-09-22"
+  },
+  {
+    "id": "S13",
+    "part": "TCA9548A",
+    "location": "TI electrical characteristics, 100/400 kHz",
+    "url": "https://www.ti.com/lit/ds/symlink/tca9548a.pdf",
+    "accessed": "2026-09-22"
+  },
+  {
+    "id": "S14",
+    "part": "PCF8574",
+    "location": "NXP reference only; fitted vendor not established",
+    "url": "https://www.nxp.com/docs/en/data-sheet/PCF8574_PCF8574A.pdf",
+    "accessed": "2026-09-22"
+  },
+  {
+    "id": "S15",
+    "part": "THVD1410",
+    "location": "TI quiescent current; excludes bus load",
+    "url": "https://www.ti.com/lit/ds/symlink/thvd1410.pdf",
+    "accessed": "2026-09-22"
+  },
+  {
+    "id": "S16",
+    "part": "TPL5010",
+    "location": "TI supply current and timing conversion",
+    "url": "https://www.ti.com/lit/ds/symlink/tpl5010.pdf",
+    "accessed": "2026-09-22"
+  },
+  {
+    "id": "S17",
+    "part": "SN74AUP1G74",
+    "location": "TI static ICC at valid logic levels",
+    "url": "https://www.ti.com/lit/ds/symlink/sn74aup1g74.pdf",
+    "accessed": "2026-09-22"
+  },
+  {
+    "id": "S18",
+    "part": "SN74LVC1G06",
+    "location": "TI static ICC; excludes pull-up load",
+    "url": "https://www.ti.com/lit/ds/symlink/sn74lvc1g06.pdf",
+    "accessed": "2026-09-22"
+  },
+  {
+    "id": "S19",
+    "part": "TPS3839",
+    "location": "TI supply current, output unloaded",
+    "url": "https://www.ti.com/lit/ds/symlink/tps3839.pdf",
+    "accessed": "2026-09-22"
+  },
+  {
+    "id": "S20",
+    "part": "MQ8",
+    "location": "Winsen MQ-8 heater resistance at room temperature",
+    "url": "https://www.winsen-sensor.com/product/mq-8.html",
+    "accessed": "2026-09-22"
+  },
+  {
+    "id": "S21",
+    "part": "MQ135",
+    "location": "Winsen MQ135 heater resistance at room temperature",
+    "url": "https://www.winsen-sensor.com/manual/mq135.html",
+    "accessed": "2026-09-22"
+  },
+  {
+    "id": "S22",
+    "part": "MQ3",
+    "location": "Hanwei original datasheet, hosted by Olimex",
+    "url": "https://www.olimex.com/Products/Components/Sensors/Gas/SNS-MQ3/resources/SNS-MQ3.pdf",
+    "accessed": "2026-09-22"
+  },
+  {
+    "id": "S23",
+    "part": "MQ5",
+    "location": "Winsen MQ-5 heater resistance at room temperature",
+    "url": "https://www.winsen-sensor.com/product/mq-5.html",
+    "accessed": "2026-09-22"
+  },
+  {
+    "id": "S24",
+    "part": "MQ4",
+    "location": "Winsen MQ-4 heater resistance at room temperature",
+    "url": "https://www.winsen-sensor.com/product/mq-4.html",
+    "accessed": "2026-09-22"
+  },
+  {
+    "id": "S25",
+    "part": "MQ7",
+    "location": "Hanwei original datasheet, hosted by SparkFun",
+    "url": "https://www.sparkfun.com/datasheets/Sensors/Biometric/MQ-7.pdf",
+    "accessed": "2026-09-22"
+  },
+  {
+    "id": "S26",
+    "part": "MQ6",
+    "location": "Winsen MQ-6 heater resistance at room temperature",
+    "url": "https://www.winsen-sensor.com/product/mq-6.html",
+    "accessed": "2026-09-22"
+  },
+  {
+    "id": "S27",
+    "part": "MQ2",
+    "location": "Winsen MQ-2 heater resistance at room temperature",
+    "url": "https://www.winsen-sensor.com/product/mq-2.html",
+    "accessed": "2026-09-22"
+  },
+  {
+    "id": "S28",
+    "part": "INA333",
+    "location": "TI quiescent current, output unloaded",
+    "url": "https://www.ti.com/lit/ds/symlink/ina333.pdf",
+    "accessed": "2026-09-22"
+  },
+  {
+    "id": "S29",
+    "part": "MCP4725",
+    "location": "Microchip supply current, DS20002039E p3",
+    "url": "https://ww1.microchip.com/downloads/aemDocuments/documents/MSLD/ProductDocuments/DataSheets/MCP4725-Data-Sheet-20002039E.pdf",
+    "accessed": "2026-09-22"
+  },
+  {
+    "id": "S30",
+    "part": "TPS22919",
+    "location": "TI switch supply current and on-resistance",
+    "url": "https://www.ti.com/lit/ds/symlink/tps22919.pdf",
+    "accessed": "2026-09-22"
+  },
+  {
+    "id": "S31",
+    "part": "LM321DTR (XBLW)",
+    "location": "XBLW original datasheet v1.0 p2; distributor mirror",
+    "url": "https://xonstorage.z8.web.core.windows.net/pdf/xblw_lm321dtrxblw_xonlink.pdf",
+    "accessed": "2026-09-22"
+  },
+  {
+    "id": "S32",
+    "part": "CH340C",
+    "location": "WCH original datasheet v3D, section 6.3; distributor mirror",
+    "url": "https://www.hestore.eu/en/prod_getfile.php?id=21171",
+    "accessed": "2026-09-22"
+  }
+]

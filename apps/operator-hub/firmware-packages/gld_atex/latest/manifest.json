@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 2,
+  "packageType": "pertamina-gld-prebuilt-firmware",
+  "deviceId": "ANY",
+  "boardProfile": "GLD ATEX MotherBoardGLDVer2 / GPIO7 fan",
+  "environment": "gld_atex",
+  "firmwareVersion": "0.8.30",
+  "protocolVersion": "0.2.0",
+  "configSchemaVersion": "0.1.0",
+  "chip": "esp32s3",
+  "baud": 921600,
+  "createdAtUtc": "20260929T071501Z",
+  "source": {
+    "gitCommit": "1bad4011ab50a88ce728813f0059b1f90402aee6",
+    "gitTreeState": "dirty",
+    "gitTreeStateScope": "firmware/",
+    "firmwareTreeSnapshotSha256": "d249e0ccbed27ef3ca1fb0903472979108e26b52493777a96ccdb434aeba9992",
+    "platformioCoreVersion": "PlatformIO post-build hook",
+    "platformioIniSha256": "fdf49a8d10d3a68cd9c1475d614ace712952861501c2bf93e5512aec6a158275",
+    "buildCommand": "pio run -e gld_atex",
+    "packagedAtUtc": "20260929T071501Z"
+  },
+  "flashSetSha256": "be267388375d26f34cb5b8a4596536cb8ea876bc1f985b8fda4b9af38829b3bd",
+  "flashFiles": [
+    {
+      "path": "bootloader.bin",
+      "offset": "0x00000000",
+      "size": 15104,
+      "sha256": "2a71d69b471e20c2bac7fb469f3c6a807b3ebee780e348e5889db0da849ca363"
+    },
+    {
+      "path": "partitions.bin",
+      "offset": "0x00008000",
+      "size": 3072,
+      "sha256": "bd0f7954aca2ef7d925ee21aaa1f3dc8822d1d6ce5cbbd26a135e5886bfff6ce"
+    },
+    {
+      "path": "boot_app0.bin",
+      "offset": "0x0000E000",
+      "size": 8192,
+      "sha256": "f94c5d786a7a8fab06ac5d10e33bf37711a6697636dc037559ea19cc410a17f0"
+    },
+    {
+      "path": "firmware.bin",
+      "offset": "0x00010000",
+      "size": 1045008,
+      "sha256": "10391c34a922c7b07026648dbd25749fd1adda8218ef25fedca327a674bb03a0"
+    }
+  ]
+}

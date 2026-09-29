@@ -34,6 +34,7 @@ PROFILE_BY_ENV = {
     "gld_model_2": "WROOM-1U-N16R8 / Model 2",
     "gld_model_3": "WROOM-1U-N16R8 / Model 3",
     "gld_v2": "GLD2 WROOM-1U-N16R8",
+    "gld_atex": "GLD ATEX MotherBoardGLDVer2 / GPIO7 fan",
     "gldFieldtest": "WROOM-1U-N16R8 field-test",
     "gldFieldtestSensorlessAlarm": "WROOM-1U-N16R8 sensorless alarm field-test",
     "gldFieldtestSensorlessClear": "WROOM-1U-N16R8 sensorless clear field-test",

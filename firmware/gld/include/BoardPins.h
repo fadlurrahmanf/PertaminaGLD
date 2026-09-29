@@ -6,60 +6,74 @@
 #define PGL_GLD_BOARD_PROFILE_GLD2 0
 #endif
 
+#ifndef PGL_GLD_BOARD_PROFILE_GLD_ATEX
+#define PGL_GLD_BOARD_PROFILE_GLD_ATEX 0
+#endif
+
+#if PGL_GLD_BOARD_PROFILE_GLD_ATEX && !PGL_GLD_BOARD_PROFILE_GLD2
+#error "GLD ATEX must retain the GLD2 runtime profile"
+#endif
+
 #if PGL_GLD_BOARD_PROFILE_GLD2
 
+#if PGL_GLD_BOARD_PROFILE_GLD_ATEX
+#include "BoardPinsGLDATEX.h"
+namespace pgl::gld::board { namespace selected = gld_atex; }
+#else
 #include "BoardPinsGLD2.h"
+namespace pgl::gld::board { namespace selected = gld2; }
+#endif
 
 // The production runtime consumes pgl::gld::board. Keep this facade thin so
 // BoardPinsGLD2.h remains the source of the GLD2 schematic pin map.
 namespace pgl::gld::board {
-constexpr int PIN_SPI_SCK = gld2::PIN_SPI_SCK;
-constexpr int PIN_SPI_MOSI = gld2::PIN_SPI_MOSI;
-constexpr int PIN_SPI_MISO = gld2::PIN_SPI_MISO;
-constexpr int PIN_ADS1256_CS = gld2::PIN_ADS1256_CS;
-constexpr int PIN_ADS1256_DRDY = gld2::PIN_ADS1256_DRDY;
-constexpr int PIN_ADS1256_RESET = gld2::PIN_ADS1256_RESET;
-constexpr int PIN_ADS1256_PDOWN = gld2::PIN_ADS1256_PDOWN;
+constexpr int PIN_SPI_SCK = selected::PIN_SPI_SCK;
+constexpr int PIN_SPI_MOSI = selected::PIN_SPI_MOSI;
+constexpr int PIN_SPI_MISO = selected::PIN_SPI_MISO;
+constexpr int PIN_ADS1256_CS = selected::PIN_ADS1256_CS;
+constexpr int PIN_ADS1256_DRDY = selected::PIN_ADS1256_DRDY;
+constexpr int PIN_ADS1256_RESET = selected::PIN_ADS1256_RESET;
+constexpr int PIN_ADS1256_PDOWN = selected::PIN_ADS1256_PDOWN;
 constexpr int PIN_ADS1256_SYNC = PIN_ADS1256_PDOWN;
-constexpr int PIN_LORA_CS = gld2::PIN_LORA_CS;
-constexpr int PIN_LORA_RST = gld2::PIN_LORA_RST;
-constexpr int PIN_LORA_BUSY = gld2::PIN_LORA_BUSY;
-constexpr int PIN_LORA_DIO1 = gld2::PIN_LORA_DIO1;
-constexpr int PIN_LORA_RXEN = gld2::PIN_LORA_RXEN;
-constexpr int PIN_LORA_TXEN = gld2::PIN_LORA_TXEN;
-constexpr int PIN_I2C_SDA = gld2::PIN_I2C_SDA;
-constexpr int PIN_I2C_SCL = gld2::PIN_I2C_SCL;
-constexpr int PIN_STATUS_LED = gld2::PIN_STATUS_LED;
-constexpr int PIN_ALARM_LAMP = gld2::PIN_ALARM;
-constexpr int PIN_ALARM_ENABLE_BOOST = gld2::PIN_ALARM_ENABLE_BOOST;
+constexpr int PIN_LORA_CS = selected::PIN_LORA_CS;
+constexpr int PIN_LORA_RST = selected::PIN_LORA_RST;
+constexpr int PIN_LORA_BUSY = selected::PIN_LORA_BUSY;
+constexpr int PIN_LORA_DIO1 = selected::PIN_LORA_DIO1;
+constexpr int PIN_LORA_RXEN = selected::PIN_LORA_RXEN;
+constexpr int PIN_LORA_TXEN = selected::PIN_LORA_TXEN;
+constexpr int PIN_I2C_SDA = selected::PIN_I2C_SDA;
+constexpr int PIN_I2C_SCL = selected::PIN_I2C_SCL;
+constexpr int PIN_STATUS_LED = selected::PIN_STATUS_LED;
+constexpr int PIN_ALARM_LAMP = selected::PIN_ALARM;
+constexpr int PIN_ALARM_ENABLE_BOOST = selected::PIN_ALARM_ENABLE_BOOST;
 constexpr int PIN_BUZZER = -1;
-constexpr int PIN_DC_FAN = gld2::PIN_DC_FAN;
-constexpr bool HAS_DC_FAN = gld2::HAS_DC_FAN;
-constexpr int PIN_TPL5110_DONE = gld2::PIN_TPL5010_DONE;
-constexpr int PIN_POWER_LATCH_CLR = gld2::PIN_POWER_LATCH_CLR;
-constexpr int PIN_BATTERY_VOLTAGE = gld2::PIN_BATTERY_VOLTAGE;
-constexpr int PIN_24V_POWER_GOOD = gld2::PIN_24V_POWER_GOOD;
-constexpr int PIN_POWER_SOURCE_STATUS = gld2::PIN_POWER_SOURCE_STATUS;
-constexpr int PIN_USER_BUTTON = gld2::PIN_USER_BUTTON;
-constexpr int PIN_RS485_DIR = gld2::PIN_RS485_DIR;
-constexpr int PIN_RS485_RX = gld2::PIN_RS485_RX;
-constexpr int PIN_RS485_TX = gld2::PIN_RS485_TX;
-constexpr bool HAS_RS485 = gld2::HAS_RS485;
-constexpr uint8_t SENSOR_COUNT = gld2::SENSOR_COUNT;
-constexpr const char* const* SENSOR_NAMES = gld2::SENSOR_NAMES;
-constexpr const char* const* SENSOR_HEADERS = gld2::SENSOR_HEADERS;
-constexpr uint8_t TCA9548A_ADDR = gld2::TCA9548A_ADDR;
-constexpr uint8_t MCP4725_ADDR = gld2::MCP4725_ADDR;
-constexpr uint8_t PCF8574_ADDR = gld2::PCF8574_ADDR;
-constexpr uint8_t PCF8574_ALL_LOAD_SWITCHES_ON = gld2::PCF8574_ALL_LOAD_SWITCHES_ON;
-constexpr uint8_t PCF8574_ALL_LOAD_SWITCHES_OFF = gld2::PCF8574_ALL_LOAD_SWITCHES_OFF;
+constexpr int PIN_DC_FAN = selected::PIN_DC_FAN;
+constexpr bool HAS_DC_FAN = selected::HAS_DC_FAN;
+constexpr int PIN_TPL5110_DONE = selected::PIN_TPL5010_DONE;
+constexpr int PIN_POWER_LATCH_CLR = selected::PIN_POWER_LATCH_CLR;
+constexpr int PIN_BATTERY_VOLTAGE = selected::PIN_BATTERY_VOLTAGE;
+constexpr int PIN_24V_POWER_GOOD = selected::PIN_24V_POWER_GOOD;
+constexpr int PIN_POWER_SOURCE_STATUS = selected::PIN_POWER_SOURCE_STATUS;
+constexpr int PIN_USER_BUTTON = selected::PIN_USER_BUTTON;
+constexpr int PIN_RS485_DIR = selected::PIN_RS485_DIR;
+constexpr int PIN_RS485_RX = selected::PIN_RS485_RX;
+constexpr int PIN_RS485_TX = selected::PIN_RS485_TX;
+constexpr bool HAS_RS485 = selected::HAS_RS485;
+constexpr uint8_t SENSOR_COUNT = selected::SENSOR_COUNT;
+constexpr const char* const* SENSOR_NAMES = selected::SENSOR_NAMES;
+constexpr const char* const* SENSOR_HEADERS = selected::SENSOR_HEADERS;
+constexpr uint8_t TCA9548A_ADDR = selected::TCA9548A_ADDR;
+constexpr uint8_t MCP4725_ADDR = selected::MCP4725_ADDR;
+constexpr uint8_t PCF8574_ADDR = selected::PCF8574_ADDR;
+constexpr uint8_t PCF8574_ALL_LOAD_SWITCHES_ON = selected::PCF8574_ALL_LOAD_SWITCHES_ON;
+constexpr uint8_t PCF8574_ALL_LOAD_SWITCHES_OFF = selected::PCF8574_ALL_LOAD_SWITCHES_OFF;
 constexpr bool HAS_PCF8574 = true;
-constexpr uint16_t GLD_DAC_CODE_MIN = gld2::GLD_DAC_CODE_MIN;
-constexpr uint16_t GLD_DAC_CODE_MAX = gld2::GLD_DAC_CODE_MAX;
-constexpr const uint8_t* SENSOR_TO_MUX_CH = gld2::SENSOR_TO_MUX_CH;
-constexpr const uint8_t* SENSOR_TO_POWER_EN = gld2::SENSOR_TO_POWER_EN;
-constexpr const uint8_t* POWER_EN_TO_MUX_CH = gld2::POWER_EN_TO_MUX_CH;
-constexpr const uint8_t* SENSOR_TO_ADS_CH = gld2::SENSOR_TO_ADS_CH;
+constexpr uint16_t GLD_DAC_CODE_MIN = selected::GLD_DAC_CODE_MIN;
+constexpr uint16_t GLD_DAC_CODE_MAX = selected::GLD_DAC_CODE_MAX;
+constexpr const uint8_t* SENSOR_TO_MUX_CH = selected::SENSOR_TO_MUX_CH;
+constexpr const uint8_t* SENSOR_TO_POWER_EN = selected::SENSOR_TO_POWER_EN;
+constexpr const uint8_t* POWER_EN_TO_MUX_CH = selected::POWER_EN_TO_MUX_CH;
+constexpr const uint8_t* SENSOR_TO_ADS_CH = selected::SENSOR_TO_ADS_CH;
 }  // namespace pgl::gld::board
 
 #else

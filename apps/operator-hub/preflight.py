@@ -31,6 +31,7 @@ REQUIRED_ENVIRONMENTS = (
     "gld_model_2",
     "gld_model_3",
     "gld_v2",
+    "gld_atex",
     "ch_small",
     "ch_large",
     "gw_small",

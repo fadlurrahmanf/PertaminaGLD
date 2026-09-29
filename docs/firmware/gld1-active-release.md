@@ -1,8 +1,10 @@
-# GLD1 active release: v0.8.38 / 69a493c + alarm + Board 1 model v2
+# GLD1 active release: v0.8.38 / 69a493c + alarm + Models 1 and 3
 
 Baseline activated 2026-09-16 18:24 WIB. Board 1 / Model 1 refreshed 2026-09-21 17:28 WIB from the user-supplied `BOARD GLD 1.zip`.
 
-The installed Operator Hub packages are **v0.8.38** for both `gld/latest` and `gld_model_1/latest`. Source baseline is `69a493c32d2500134a21e029820cd4addea1794a` (18 August 2026), plus the approved GPIO41/J2 alarm. Nulling retains original **5 ms settle and no 30-second nulling warm-up**; ADC/DAC/runtime code remains the baseline. Settle is not total nulling duration. This update replaces only Model 1 weights, normalization, sensitivity table and model metadata, plus packaging provenance.
+The installed Operator Hub packages are **v0.8.38** for `gld/latest`, `gld_model_1/latest`, and `gld_model_3/latest`. Source baseline is `69a493c32d2500134a21e029820cd4addea1794a` (18 August 2026), plus the approved GPIO41/J2 alarm. Nulling retains original **5 ms settle and no 30-second nulling warm-up**; ADC/DAC/runtime code remains the baseline. Settle is not total nulling duration. The model refreshes replace weights, normalization, sensitivity table and model metadata, plus packaging provenance.
+
+Model 3 / Board 3 was published on 2026-09-29 from `BOARD GLD 3.zip`, with explicit user approval for this baseline and inference for board testing after nulling/bind. Model 1/2 and all other packages were unchanged by that refresh. See [Model 3 release and verification](gld-model-3-release.md); it has two classes and profile `cnn-dualbranch-board-3-2class-v1`.
 
 ## Current Model 1
 
@@ -16,12 +18,12 @@ The installed Operator Hub packages are **v0.8.38** for both `gld/latest` and `g
 ## Upload and migration
 
 1. Open/reopen Operator Hub, then refresh the Hub/GLD Expert page (Ctrl+F5).
-2. Select **GLD1 / Model 1 / v0.8.38**. In Expert, GLD1 plus Model 1 intentionally resolves to `gld_model_1`; both package variants are this same approved release.
+2. Select **GLD1 / Model 1 or Model 3 / v0.8.38**, matching the intended board. Expert resolves these to `gld_model_1` or `gld_model_3`; legacy `gld` contains Model 1, not Model 3.
 3. Read the warning and explicitly check **Reset NVS**. Save any configuration/provisioning details needed beforehand. This resets configuration, nulling and binding; the default device ID is 1001.
-4. Upload yourself. Restore the correct configuration, perform full nulling in confirmed clean air with 8/8 pass, then bind Model 1. Do not consider upload completion evidence of operational gas-detection readiness.
+4. Upload yourself. Restore the correct configuration, perform full nulling in confirmed clean air with 8/8 pass, then bind the selected model. Do not consider upload completion evidence of operational gas-detection readiness.
 5. Check the boot log for **Firmware version: 0.8.38** and **GLD1_BASE_COMMIT=69a493c**.
 
-The original unversioned 92-byte nulling profile can accept a newer 92-byte profile with shifted DAC values. The active child GLD bridge therefore enforces consent and the exact baseline NVS region before serial interaction. For only `gld` or `gld_model_1`, version 0.8.38, source commit 69a493c..., upload order is:
+The original unversioned 92-byte nulling profile can accept a newer 92-byte profile with shifted DAC values. The active child GLD bridge therefore enforces consent and the exact baseline NVS region before serial interaction. For only `gld`, `gld_model_1`, or `gld_model_3`, version 0.8.38, source commit 69a493c..., upload order is:
 
 - Erase verified NVS (0x9000 / 0x5000), with a 45-second bound and `--after no_reset`.
 - Only after successful erase, write firmware using `--before no_reset`.
@@ -33,6 +35,8 @@ The original unversioned 92-byte nulling profile can accept a newer 92-byte prof
 GPIO41 HIGH sinks J2 LAMP LOW normally; GPIO41 LOW releases J2 so a suitable external pull-up provides continuous HIGH during alarm. GPIO40 is unused. AUTO follows current valid inference; MANUAL is session-only. Neither a stored boot latch nor retry of an old radio alarm replays a stale physical alarm. Actual trigger voltage/tolerance/loading remain hardware checks; firmware cannot suppress possible J2 HIGH during reset before setup.
 
 ## Source, backups and verification
+
+The detailed verification counts below are the 2026-09-21 Model 1 snapshot, not a new claim about current running processes. Model 3's 2026-09-29 evidence and backups are recorded in its linked release note above.
 
 - Rebuild worktree: `D:/Github/PertaminaGLD-GLD1-69a493c`, branch `codex/gld1-69a493c-alarm`.
 - [Rebuild and detailed release instructions](D:/Github/PertaminaGLD-GLD1-69a493c/GLD1-BASELINE-RELEASE.md).
@@ -51,6 +55,7 @@ GPIO41 HIGH sinks J2 LAMP LOW normally; GPIO41 LOW releases J2 so a suitable ext
 |---|---|
 | gld | e7ea240274cc210cf3078a37fbcd10289f36b2718881633ef962785dece35e92 |
 | gld_model_1 | d1590f2d08f6af4465b4208a7478e8ec8f901bb95a0c5b5d17e9548c8e35cc94 |
+| gld_model_3 | a9cf9cde9d5507b21ae05513d4638d4e10f200d5099e8ebfb23d9773edaed81a |
 
 Historical baseline activation logs (2026-09-16, not current process state): `D:/Github/PertaminaGLD-GLD1-69a493c/tmp/operator-activation/`.
 

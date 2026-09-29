@@ -1,0 +1,17 @@
+#pragma once
+
+#include <cstdint>
+
+namespace pgl { namespace gld { namespace model {
+constexpr const char* PROFILE_ID = "cnn-dualbranch-board-3-2class-v1";
+constexpr const char* SCALER_PROFILE_ID = "cnn-dualbranch-board-3-2class-v1";
+// User approved enabling this model for board testing on 2026-09-29.
+// Valid nulling and matching model binding remain mandatory; field accuracy
+// is not established by host/build/package verification.
+constexpr bool PRODUCTION_APPROVED = true;
+constexpr int EXPECTED_ADC_INPUT_ELEMENTS = 8;
+constexpr int EXPECTED_EVIDENCE_INPUT_ELEMENTS = 7;
+constexpr int EXPECTED_OUTPUT_ELEMENTS = 2;
+// BOARD GLD 3.zip: Clean_Air -> CLEAR, LPG -> LPG.
+constexpr uint8_t CLASS_MAP[EXPECTED_OUTPUT_ELEMENTS] = {0, 1};
+}}}  // namespace pgl::gld::model

@@ -1064,7 +1064,7 @@ def requires_gld1_nvs_reset_before_boot(manifest: dict[str, Any]) -> bool:
     """Only the approved unversioned-profile GLD1 rollback needs this guard."""
     source = manifest.get("source")
     return (
-        manifest.get("environment") in {"gld", "gld_model_1"}
+        manifest.get("environment") in {"gld", "gld_model_1", "gld_model_3"}
         and manifest.get("firmwareVersion") == "0.8.38"
         and isinstance(source, dict)
         and source.get("gitCommit") == "69a493c32d2500134a21e029820cd4addea1794a"

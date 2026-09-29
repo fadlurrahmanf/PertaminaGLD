@@ -105,8 +105,9 @@ GLD_FIRMWARE_MODELS = (
     },
     {"value": "model_1", "label": "Model 1 - Board 1", "environment": "gld_model_1"},
     {"value": "model_2", "label": "Model 2 - Board 2", "environment": "gld_model_2"},
-    {"value": "model_3", "label": "Model 3 - Board 2 v2", "environment": "gld_model_3"},
+    {"value": "model_3", "label": "Model 3 - Board 3", "environment": "gld_model_3"},
     {"value": "gld_v2", "label": "GasleakDetector - Board V2", "environment": "gld_v2"},
+    {"value": "gld_atex", "label": "GasleakDetector - GLD ATEX (GPIO7 fan)", "environment": "gld_atex"},
 )
 FIRMWARE_ENVIRONMENTS = {
     "ch": {
@@ -481,7 +482,7 @@ def mqtt_configuration_from_payload(
 def requires_gld1_nvs_reset_before_boot(manifest: dict[str, object]) -> bool:
     source = manifest.get("source")
     return (
-        manifest.get("environment") in {"gld", "gld_model_1"}
+        manifest.get("environment") in {"gld", "gld_model_1", "gld_model_3"}
         and manifest.get("firmwareVersion") == "0.8.38"
         and isinstance(source, dict)
         and source.get("gitCommit") == "69a493c32d2500134a21e029820cd4addea1794a"

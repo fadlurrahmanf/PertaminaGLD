@@ -93,8 +93,9 @@ class FirmwareEnvironmentSelectionTests(unittest.TestCase):
         self.assertEqual(catalog["gw"]["environments"]["large"]["tls"], "gw_large_tls")
         self.assertEqual(catalog["gld"]["environments"]["gld"], "gld")
         self.assertEqual(catalog["gld"]["environments"]["gld_v2"], "gld_v2")
+        self.assertEqual(catalog["gld"]["environments"]["gld_atex"], "gld_atex")
         expected = {
-            "gld": {"gld", "gld_model_1", "gld_model_2", "gld_model_3", "gld_v2"},
+            "gld": {"gld", "gld_model_1", "gld_model_2", "gld_model_3", "gld_v2", "gld_atex"},
             "ch": {"ch_small", "ch_large"},
             "gw": {"gw_small", "gw_large", "gw_small_tls", "gw_large_tls"},
         }
@@ -174,6 +175,7 @@ class FirmwareEnvironmentSelectionTests(unittest.TestCase):
             "gld_model_2",
             "gld_model_3",
             "gld_v2",
+            "gld_atex",
             "ch_small",
             "ch_large",
             "gw_small",

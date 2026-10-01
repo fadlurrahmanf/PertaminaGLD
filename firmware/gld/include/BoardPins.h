@@ -102,10 +102,10 @@ constexpr const uint8_t* SENSOR_TO_ADS_CH = selected::SENSOR_TO_ADS_CH;
 #define PGL_GLD_PIN_LORA_TXEN 6
 #endif
 #ifndef PGL_GLD_PIN_ALARM_LAMP
-#define PGL_GLD_PIN_ALARM_LAMP 41
+#define PGL_GLD_PIN_ALARM_LAMP 17
 #endif
 #ifndef PGL_GLD_PIN_BUZZER
-// GLD1 uses one external alarm device on GPIO41/J2. GPIO40 is unused.
+// GLD1 uses one direct active-HIGH trigger on GPIO17; GPIO40/41 are unused.
 #define PGL_GLD_PIN_BUZZER -1
 #endif
 #ifndef PGL_GLD_PIN_STATUS_LED

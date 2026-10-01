@@ -1,0 +1,15 @@
+{
+  "environment": "gld_model_2",
+  "firmwareSha256": "c09d8538baf0d0402f52eb3b8ec5c1d6dc1ffa6447cbd37a8304a0dcb0220314",
+  "slot": "model_2",
+  "profileId": "cnn-dualbranch-board-2-2class-v2",
+  "classes": [
+    "Clean_Air",
+    "LPG"
+  ],
+  "sha256": "ba5caab562c87fabfe76b87540f86a3fbe55fc82320242e205bed0abf5f05230",
+  "size": 9632,
+  "sourceArchiveSha256": "a82b55f0747e99ee8c6e5e7b76c78a2cb706582f1454418e3a75e98ed90a26f5",
+  "normalizeParamsSha256": "9c1e401c2861d940d921e1e083ecd5fe07fd0610b31b890afe3df3cac58fba97",
+  "sensitivityTableSha256": "6f8bf32caaff031cf422b42db4889b34a2a9d211977fd47e1ee6eb48f134cefd"
+}

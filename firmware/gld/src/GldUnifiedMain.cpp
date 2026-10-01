@@ -1776,8 +1776,7 @@ void emitStatusJson() {
     addSensorPowerJson(doc.as<JsonObject>());
     JsonObject alarmControl = doc.createNestedObject("alarmControl");
     // AUTO/MANUAL is a common Operator Hub contract. The physical drive is
-    // board-specific: GLD1 uses inverted GPIO41 through ULN2003 plus an
-    // external pull-up for the active-HIGH J2 LAMP trigger, while
+    // board-specific: GLD1 uses a direct active-HIGH GPIO17 trigger, while
     // GLD2 uses EN_BOOST followed by its ALARM output.
     alarmControl["available"] = true;
     alarmControl["mode"] = pgl::gld::gldAlarmControlModeName(alarmControlMode);
@@ -1796,13 +1795,13 @@ void emitStatusJson() {
     alarmControl["outputDrive"] = "steady_24v";
     alarmControl["externalDevicePattern"] = "self_pulsed_1s_on_1s_off";
 #elif PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8
-    alarmControl["outputDrive"] = "active_low_gpio41_uln2003_pullup";
+    alarmControl["outputDrive"] = "active_high_gpio17_steady";
     alarmControl["externalDevicePattern"] = "steady_high_while_alarm";
     alarmControl["singleTrigger"] = true;
-    alarmControl["requiresExternalPullup"] = true;
-    // Command/expected levels only: there is no J2 voltage readback.
-    alarmControl["gpio41CommandLevel"] = physicalAlarmCommanded ? "LOW" : "HIGH";
-    alarmControl["j2LampExpectedLevel"] = physicalAlarmCommanded ? "HIGH" : "LOW";
+    alarmControl["requiresExternalPullup"] = false;
+    // Direct GPIO command only; not a measured voltage or the old J2 output.
+    alarmControl["outputPin"] = pgl::gld::board::PIN_ALARM_LAMP;
+    alarmControl["gpio17CommandLevel"] = physicalAlarmCommanded ? "HIGH" : "LOW";
 #else
     alarmControl["outputDrive"] = "active_low_lamp_buzzer_led";
     alarmControl["externalDevicePattern"] = "board_outputs_follow_command";
@@ -3375,9 +3374,8 @@ void optionalDigitalWrite(int pin, uint8_t value) {
 
 void setGld1AlarmOutput(bool alarmActive) {
 #if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
-    // ULN2003 sinks J2 LAMP when GPIO41 is HIGH. Release it for alarm;
-    // the external pull-up, not this GPIO, supplies the J2 HIGH voltage.
-    optionalDigitalWrite(pgl::gld::board::PIN_ALARM_LAMP, alarmActive ? LOW : HIGH);
+    // GLD1 direct GPIO17 trigger: steady HIGH during alarm, LOW otherwise.
+    optionalDigitalWrite(pgl::gld::board::PIN_ALARM_LAMP, alarmActive ? HIGH : LOW);
 #else
     (void)alarmActive;
 #endif
@@ -3385,8 +3383,8 @@ void setGld1AlarmOutput(bool alarmActive) {
 
 void beginGld1AlarmOutput() {
 #if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
-    // Preload the OFF level before enabling the output driver. This cannot
-    // suppress a pull-up HIGH during reset, before firmware executes.
+    // Preload LOW/OFF before enabling the GPIO17 output driver. Reset-time
+    // levels before setup executes remain a hardware responsibility.
     setGld1AlarmOutput(false);
     optionalPinMode(pgl::gld::board::PIN_ALARM_LAMP, OUTPUT);
     setGld1AlarmOutput(false);
@@ -3406,7 +3404,7 @@ void setupPins() {
     optionalPinMode(pgl::gld::board::PIN_ALARM_LAMP, OUTPUT);
     optionalDigitalWrite(pgl::gld::board::PIN_ALARM_LAMP, LOW);
 #elif PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8
-    // GPIO41 HIGH holds J2 LAMP LOW through the ULN2003 while normal.
+    // GLD1 GPIO17 stays LOW while normal.
     beginGld1AlarmOutput();
 #else
     optionalPinMode(pgl::gld::board::PIN_ALARM_LAMP, OUTPUT);
@@ -5543,9 +5541,8 @@ void drivePhysicalAlarmOutputs(bool enabled) {
         optionalDigitalWrite(pgl::gld::board::PIN_ALARM_ENABLE_BOOST, LOW);
     }
 #elif PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8
-    // One external device owns both lamp and buzzer. Release J2 LAMP for
-    // the full alarm (GPIO41 LOW), otherwise sink it (GPIO41 HIGH).
-    // An external pull-up is required; GPIO40 is intentionally unused.
+    // One external device owns both lamp and buzzer, triggered directly by
+    // GPIO17 HIGH for the full alarm. GPIO40 and GPIO41 are not alarm outputs.
     setGld1AlarmOutput(enabled);
     optionalDigitalWrite(pgl::gld::board::PIN_STATUS_LED,
                          enabled ? ACTIVE_LOW_OUTPUT_ON : ACTIVE_LOW_OUTPUT_OFF);
@@ -5580,8 +5577,7 @@ bool updateAlarmOutputs(bool alarm) {
     // It is deliberately not persisted or replayed at the next boot.
     lastAlarm = alarm;
     driveAlarmOutputs(alarm);
-    logPrintf("GLD1_ALARM_OUTPUT gpio41Command=%s j2LampExpected=%s pullupRequired=1 mode=%s physicalCommanded=%u\n",
-              physicalAlarmCommanded ? "LOW" : "HIGH",
+    logPrintf("GLD1_ALARM_OUTPUT gpio17Command=%s mode=%s physicalCommanded=%u\n",
               physicalAlarmCommanded ? "HIGH" : "LOW",
               pgl::gld::gldAlarmControlModeName(alarmControlMode),
               physicalAlarmCommanded ? 1u : 0u);
@@ -5780,8 +5776,7 @@ bool runScan(bool requireCompleteBatch = false) {
 #if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
         lastAlarm = false;
         driveAlarmOutputs(false);
-        logPrintf("GLD1_ALARM_OUTPUT gpio41Command=%s j2LampExpected=%s reason=inference_invalid\n",
-                  physicalAlarmCommanded ? "LOW" : "HIGH",
+        logPrintf("GLD1_ALARM_OUTPUT gpio17Command=%s reason=inference_invalid\n",
                   physicalAlarmCommanded ? "HIGH" : "LOW");
 #else
         logPrintf("GLD_ALARM_OUTPUT held=%u reason=sensor_or_inference_fault\n",
@@ -6497,7 +6492,7 @@ void runDatasetStateMachine() {
 
 void setup() {
 #if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
-    // Establish normal J2 LAMP LOW before serial startup and its 1 s wait.
+    // Establish normal GPIO17 LOW before serial startup and its 1 s wait.
     beginGld1AlarmOutput();
 #endif
     Serial.begin(115200);
@@ -6534,7 +6529,7 @@ void setup() {
                                   pgl::gld::board::PIN_RS485_TX);
 #endif
 #if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
-    // GLD1 holds GPIO41 HIGH (J2 LAMP LOW) until a fresh valid inference.
+    // GLD1 holds GPIO17 LOW until a fresh valid inference.
     (void)pgl::gld::writeGldAlarmLatched(false);
     lastAlarm = false;
     driveAlarmOutputs(false);

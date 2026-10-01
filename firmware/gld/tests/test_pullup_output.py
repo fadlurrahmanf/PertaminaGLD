@@ -1,10 +1,11 @@
 """Execute actual alarm output functions on a host; never access hardware.
 
-Checks inverted GPIO41, initial output-latch ordering, AUTO/MANUAL truth table,
+Checks active-HIGH GPIO17, initial output-latch ordering, AUTO/MANUAL truth table,
 logs based on the physical command, and the unchanged GLD2 output sequence.
 """
 
 import os
+import re
 from pathlib import Path
 import subprocess
 import tempfile
@@ -56,6 +57,7 @@ SCENARIOS = r'''
 int main() {
     beginGld1AlarmOutput();
 #if PGL_GLD_BOARD_PROFILE_GLD2
+    assert(board::PIN_TPL5110_DONE == 17 && board::PIN_ALARM_LAMP == 40);
     assert(events.empty());
     drivePhysicalAlarmOutputs(true);
     assert(events.size() == 2);
@@ -67,11 +69,26 @@ int main() {
     assert(events[0].pin == 40 && events[0].value == LOW);
     assert(events[1].pin == 15 && events[1].value == LOW);
 #else
-    assert(board::PIN_ALARM_LAMP == 41 && board::PIN_BUZZER == -1);
+    assert(board::PIN_ALARM_LAMP == 17 && board::PIN_BUZZER == -1);
+    for (int pin : {board::PIN_SPI_SCK, board::PIN_SPI_MOSI, board::PIN_SPI_MISO,
+                    board::PIN_ADS1256_CS, board::PIN_ADS1256_DRDY, board::PIN_ADS1256_SYNC,
+                    board::PIN_LORA_CS, board::PIN_LORA_RST, board::PIN_LORA_BUSY,
+                    board::PIN_LORA_DIO1, board::PIN_LORA_RXEN, board::PIN_LORA_TXEN,
+                    board::PIN_I2C_SDA, board::PIN_I2C_SCL, board::PIN_STATUS_LED,
+                    board::PIN_DC_FAN, board::PIN_TPL5110_DONE, board::PIN_POWER_LATCH_CLR,
+                    board::PIN_BATTERY_VOLTAGE, board::PIN_24V_POWER_GOOD,
+                    board::PIN_USER_BUTTON, board::PIN_RS485_DIR, board::PIN_RS485_RX,
+                    board::PIN_RS485_TX}) assert(pin != 17);
     assert(events.size() == 3);
-    assert(events[0].type == 'w' && events[0].pin == 41 && events[0].value == HIGH);
-    assert(events[1].type == 'm' && events[1].pin == 41 && events[1].value == OUTPUT);
-    assert(events[2].type == 'w' && events[2].pin == 41 && events[2].value == HIGH);
+    assert(events[0].type == 'w' && events[0].pin == 17 && events[0].value == LOW);
+    assert(events[1].type == 'm' && events[1].pin == 17 && events[1].value == OUTPUT);
+    assert(events[2].type == 'w' && events[2].pin == 17 && events[2].value == LOW);
+    for (int repeat = 0; repeat < 20; ++repeat) {
+        setGld1AlarmOutput(true);
+        assert(gpio[17] == HIGH);
+    }
+    setGld1AlarmOutput(false);
+    assert(gpio[17] == LOW);
 #endif
     for (bool manualMode : {false, true}) {
         alarmControlMode = manualMode ? pgl::gld::GldAlarmControlMode::Manual :
@@ -89,11 +106,10 @@ int main() {
                 assert(gpio[15] == (active ? HIGH : LOW));
                 for (const auto& event : events) assert(event.pin != 41);
 #else
-                assert(gpio[41] == (active ? LOW : HIGH));
+                assert(gpio[17] == (active ? HIGH : LOW));
                 assert(gpio[39] == (active ? LOW : HIGH));
-                for (const auto& event : events) assert(event.pin != 40);
-                assert(strstr(lastLog, active ? "gpio41Command=LOW" : "gpio41Command=HIGH"));
-                assert(strstr(lastLog, active ? "j2LampExpected=HIGH" : "j2LampExpected=LOW"));
+                for (const auto& event : events) assert(event.pin != 40 && event.pin != 41);
+                assert(strstr(lastLog, active ? "gpio17Command=HIGH" : "gpio17Command=LOW"));
                 assert(persisted == 0);
 #endif
                 // Invalid inference requests OFF in AUTO; explicit MANUAL
@@ -102,13 +118,13 @@ int main() {
                 const bool afterInvalid = manualMode && manualCommand;
                 assert(physicalAlarmCommanded == afterInvalid);
 #if !PGL_GLD_BOARD_PROFILE_GLD2
-                assert(gpio[41] == (afterInvalid ? LOW : HIGH));
+                assert(gpio[17] == (afterInvalid ? HIGH : LOW));
 #endif
             }
         }
     }
     puts(PGL_GLD_BOARD_PROFILE_GLD2 ? "GLD2 alarm output: PASS (unchanged sequence)" :
-         "GLD1 J2 pull-up output: PASS (startup, AUTO, MANUAL, invalid, commanded logs)");
+         "GLD1 GPIO17 output: PASS (startup, AUTO, MANUAL, invalid, commanded logs)");
 }
 '''
 
@@ -126,6 +142,13 @@ def main():
     with tempfile.TemporaryDirectory(prefix="gld-pullup-") as directory:
         for header in ("BoardPins.h", "BoardPinsGLD2.h", "GldAlarmControl.h"):
             original = (ROOT / "firmware/gld/include" / header).read_text(encoding="utf-8")
+            # Older MinGW needs the one-line nested namespace alias expanded
+            # too; this transforms the host fixture only, never board headers.
+            original = re.sub(
+                r"namespace ([\w:]+) \{ namespace (\w+) = (\w+); \}",
+                lambda m: " ".join(f"namespace {part} {{" for part in m[1].split("::"))
+                + f" namespace {m[2]} = {m[3]}; " + "}" * len(m[1].split("::")),
+                original)
             (Path(directory) / header).write_text(compatible_header(original), encoding="utf-8")
         fixture = Path(directory) / "alarm.cpp"
         fixture.write_text(program, encoding="utf-8")

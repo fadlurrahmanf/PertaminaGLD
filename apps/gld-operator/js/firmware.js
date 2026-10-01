@@ -9,16 +9,16 @@ import { requireUnlock } from "./security.js";
 import { restoreGldConfigAfterReset } from "./dataset.js";
 
 const GLD_MODEL_SLOTS = {
-  model_1: { label: "Model 1", available: true, environment: "gld_model_1", detail: "Board 1 v2, 2 kelas." },
-  model_2: { label: "Model 2", available: true, environment: "gld_model_2", detail: "Model Board 2: CO2, Clean_Air, H2, LPG." },
-  model_3: { label: "Model 3", available: true, environment: "gld_model_3", detail: "Board 3, 2 kelas. Untuk uji board setelah nulling dan bind." },
+  model_1: { label: "Model 1", available: true, environment: "gld_model_1", detail: "Board 1 — Kelas: Clean Air, LPG." },
+  model_2: { label: "Model 2", available: true, environment: "gld_model_2", detail: "Board 2 — Kelas: Clean Air, LPG." },
+  model_3: { label: "Model 3", available: true, environment: "gld_model_3", detail: "Board 3 — Kelas: Clean Air, LPG." },
   model_4: { label: "Model 4", available: false, detail: "Artefak dan package Model 4 belum tersedia." }
 };
 
 let builtinPackageRequestId = 0;
 
 function requiresGld1DowngradeReset(manifest) {
-  return ["gld", "gld_model_1", "gld_model_3"].includes(manifest?.environment) &&
+  return ["gld", "gld_model_1", "gld_model_2", "gld_model_3"].includes(manifest?.environment) &&
     manifest?.firmwareVersion === "0.8.38" &&
     manifest?.source?.gitCommit === "69a493c32d2500134a21e029820cd4addea1794a";
 }

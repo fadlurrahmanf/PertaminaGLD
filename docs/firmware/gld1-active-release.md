@@ -1,10 +1,12 @@
-# GLD1 active release: v0.8.38 / 69a493c + alarm + Models 1 and 3
+# GLD1 active release: v0.8.38 / 69a493c + GPIO17 alarm + Models 1, 2 and 3
 
 Baseline activated 2026-09-16 18:24 WIB. Board 1 / Model 1 refreshed 2026-09-21 17:28 WIB from the user-supplied `BOARD GLD 1.zip`.
 
-The installed Operator Hub packages are **v0.8.38** for `gld/latest`, `gld_model_1/latest`, and `gld_model_3/latest`. Source baseline is `69a493c32d2500134a21e029820cd4addea1794a` (18 August 2026), plus the approved GPIO41/J2 alarm. Nulling retains original **5 ms settle and no 30-second nulling warm-up**; ADC/DAC/runtime code remains the baseline. Settle is not total nulling duration. The model refreshes replace weights, normalization, sensitivity table and model metadata, plus packaging provenance.
+The installed Operator Hub packages are **v0.8.38** for `gld/latest`, `gld_model_1/latest`, `gld_model_2/latest`, and `gld_model_3/latest`. Model 1/3 were rebuilt on **2026-09-30 for direct GPIO17 alarm**; Model 2 was aligned on **2026-10-01** to its supplied ZIP. Source baseline is `69a493c32d2500134a21e029820cd4addea1794a` (18 August 2026). Nulling retains original **5 ms settle and no 30-second nulling warm-up**; ADC/DAC/runtime code remains the baseline. Settle is not total nulling duration. Version stays 0.8.38 to preserve the exact-baseline NVS migration guard.
 
-Model 3 / Board 3 was published on 2026-09-29 from `BOARD GLD 3.zip`, with explicit user approval for this baseline and inference for board testing after nulling/bind. Model 1/2 and all other packages were unchanged by that refresh. See [Model 3 release and verification](gld-model-3-release.md); it has two classes and profile `cnn-dualbranch-board-3-2class-v1`.
+Model 3 / Board 3 was published on 2026-09-29 from `BOARD GLD 3.zip`, with explicit user approval for this baseline and inference for board testing after nulling/bind. Model 1 and all other packages were unchanged by that refresh. See [Model 3 release and verification](gld-model-3-release.md); it has two classes and profile `cnn-dualbranch-board-3-2class-v1`.
+
+Model 2 / Board 2 was aligned on 2026-10-01 from `C:/Users/MSI/Downloads/ModelGLD/BOARD GLD1 Model 2.zip`: two classes `Clean_Air, LPG`, profile `cnn-dualbranch-board-2-2class-v2`, ZIP SHA-256 `a82b55f0747e99ee8c6e5e7b76c78a2cb706582f1454418e3a75e98ed90a26f5`, and model SHA-256 `ba5caab562c87fabfe76b87540f86a3fbe55fc82320242e205bed0abf5f05230`. Its package is uploadable and provenance-verified, but inference/bind is intentionally fail-closed pending board/gas validation and explicit approval. This differs from Model 2's prior four-class v0.8.34 package.
 
 ## Current Model 1
 
@@ -18,12 +20,12 @@ Model 3 / Board 3 was published on 2026-09-29 from `BOARD GLD 3.zip`, with expli
 ## Upload and migration
 
 1. Open/reopen Operator Hub, then refresh the Hub/GLD Expert page (Ctrl+F5).
-2. Select **GLD1 / Model 1 or Model 3 / v0.8.38**, matching the intended board. Expert resolves these to `gld_model_1` or `gld_model_3`; legacy `gld` contains Model 1, not Model 3.
+2. Select **GLD1 / Model 1, Model 2 or Model 3 / v0.8.38**, matching the intended board. Expert resolves these to `gld_model_1`, `gld_model_2` or `gld_model_3`; legacy `gld` contains Model 1. Model 2 must not be treated as inference-ready until its separate approval gate is opened.
 3. Read the warning and explicitly check **Reset NVS**. Save any configuration/provisioning details needed beforehand. This resets configuration, nulling and binding; the default device ID is 1001.
-4. Upload yourself. Restore the correct configuration, perform full nulling in confirmed clean air with 8/8 pass, then bind the selected model. Do not consider upload completion evidence of operational gas-detection readiness.
+4. Upload yourself. Restore the correct configuration and perform full nulling in confirmed clean air with 8/8 pass. Model 1/3 can then be bound according to their existing approvals; the current Model 2 build intentionally refuses bind/inference until its separate board/gas validation and approval. Do not consider upload completion evidence of operational gas-detection readiness.
 5. Check the boot log for **Firmware version: 0.8.38** and **GLD1_BASE_COMMIT=69a493c**.
 
-The original unversioned 92-byte nulling profile can accept a newer 92-byte profile with shifted DAC values. The active child GLD bridge therefore enforces consent and the exact baseline NVS region before serial interaction. For only `gld`, `gld_model_1`, or `gld_model_3`, version 0.8.38, source commit 69a493c..., upload order is:
+The original unversioned 92-byte nulling profile can accept a newer 92-byte profile with shifted DAC values. The active child GLD bridge therefore enforces consent and the exact baseline NVS region before serial interaction. For only `gld`, `gld_model_1`, `gld_model_2`, or `gld_model_3`, version 0.8.38, source commit 69a493c..., upload order is:
 
 - Erase verified NVS (0x9000 / 0x5000), with a 45-second bound and `--after no_reset`.
 - Only after successful erase, write firmware using `--before no_reset`.
@@ -32,7 +34,11 @@ The original unversioned 92-byte nulling profile can accept a newer 92-byte prof
 
 ## Alarm
 
-GPIO41 HIGH sinks J2 LAMP LOW normally; GPIO41 LOW releases J2 so a suitable external pull-up provides continuous HIGH during alarm. GPIO40 is unused. AUTO follows current valid inference; MANUAL is session-only. Neither a stored boot latch nor retry of an old radio alarm replays a stale physical alarm. Actual trigger voltage/tolerance/loading remain hardware checks; firmware cannot suppress possible J2 HIGH during reset before setup.
+GPIO17 is a direct logic trigger: **HIGH continuously during alarm, LOW normally**. Firmware preloads LOW before enabling OUTPUT at startup. GPIO40/41 are no longer alarm outputs. AUTO follows current valid inference; MANUAL remains session-only. Neither a stored boot latch nor retry of an old radio alarm replays a stale physical alarm. In the archived original GLD1 PCB, GPIO17 is U49 pad10 and is not routed to J2; the trigger wire must be connected to GPIO17, not the old ULN2003 J2 output. Actual voltage, load compatibility and levels before firmware starts remain unverified hardware checks.
+
+The GPIO17 firmware packages are ready for the existing upload route. Operator Hub/Expert application files have not been changed: the Simple Hub manual-alarm validator does not yet recognize `active_high_gpio17_steady`, and Expert's legacy fallback description is not valid for this new output. UI alignment awaits explicit scope approval; AUTO inference alarm operation does not depend on those controls.
+
+2026-09-30 verification: all three GLD1 builds passed (1,021,168-byte application binaries); startup, steady output, AUTO/MANUAL and invalid-inference host tests passed. Non-GLD1 preprocessed source remained identical. Strict upload validators accepted the manifest/four flash files, package binaries matched build output, unchanged model provenance/embedded model matched, and NVS migration guard remained active. No COM, physical upload, reset or hardware test. Task-start source/package backups: `tmp/gld1-gpio17-20260930/before/`. Repeat package checks: `C:/Users/MSI/.platformio/penv/Scripts/python.exe tmp/gld1-gpio17-20260930/verify_release.py --published`.
 
 ## Source, backups and verification
 
@@ -43,6 +49,7 @@ The detailed verification counts below are the 2026-09-21 Model 1 snapshot, not 
 - Main workspace firmware was deliberately not rolled back. **Do not rebuild this release from main firmware/**.
 - Previous v0.8.37 packages remain recoverable under `D:/Github/PertaminaGLD-GLD1-69a493c/release-backup/pre-rollback-v0.8.37/`.
 - Previous Model 1 headers and both packages were backed up under `D:/Github/PertaminaGLD/tmp/model1-20260921/` (`main-model1-before`, `release-model1-before`, `package-gld-before`, `package-gld_model_1-before`).
+- Previous Model 2 source/package and the supplied ZIP extraction are backed up under `D:/Github/PertaminaGLD/tmp/model2-20261001/`.
 - Each app binary is 1,021,216 bytes; RAM 134,056/327,680; flash app usage 1,020,837/6,553,600. Both builds passed.
 - Actual release TFLM library + unchanged NeuralNetwork code passed AllocateTensors and Invoke on four synthetic vectors with the existing 40 KiB arena. FlatBuffer structure, INT8 inputs 8+7, two outputs and class mapping passed. This is host compatibility evidence, not board/gas accuracy evidence.
 - Host alarm/parser/startup/baseline tests, 68 Operator Hub tests and executable Expert/Simple Hub UI regressions passed.
@@ -53,9 +60,10 @@ The detailed verification counts below are the 2026-09-21 Model 1 snapshot, not 
 
 | Package | Firmware SHA-256 |
 |---|---|
-| gld | e7ea240274cc210cf3078a37fbcd10289f36b2718881633ef962785dece35e92 |
-| gld_model_1 | d1590f2d08f6af4465b4208a7478e8ec8f901bb95a0c5b5d17e9548c8e35cc94 |
-| gld_model_3 | a9cf9cde9d5507b21ae05513d4638d4e10f200d5099e8ebfb23d9773edaed81a |
+| gld | 1027191e18f33b2c9dcdfa5eed7b28725de63192f7e8fc12e1ad17927555073a |
+| gld_model_1 | d18d661c929643816c530910750b5995862ceaa5a6aa61f587184ff69ed56632 |
+| gld_model_2 | c09d8538baf0d0402f52eb3b8ec5c1d6dc1ffa6447cbd37a8304a0dcb0220314 |
+| gld_model_3 | ea8d2eaf86884e8330ce71a3e57f3125947ae8d85a69e820f2719b62bc4baefe |
 
 Historical baseline activation logs (2026-09-16, not current process state): `D:/Github/PertaminaGLD-GLD1-69a493c/tmp/operator-activation/`.
 

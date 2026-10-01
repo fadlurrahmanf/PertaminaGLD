@@ -1,6 +1,6 @@
 {
   "environment": "gld_model_3",
-  "firmwareSha256": "a9cf9cde9d5507b21ae05513d4638d4e10f200d5099e8ebfb23d9773edaed81a",
+  "firmwareSha256": "ea8d2eaf86884e8330ce71a3e57f3125947ae8d85a69e820f2719b62bc4baefe",
   "slot": "model_3",
   "profileId": "cnn-dualbranch-board-3-2class-v1",
   "classes": [

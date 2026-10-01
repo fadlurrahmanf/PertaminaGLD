@@ -83,12 +83,12 @@ class DowngradeUploadTests(unittest.TestCase):
                     manifest, _ = make_package(env)
                     manifest["firmwareVersion"] = version
                     manifest["source"]["gitCommit"] = commit
-                    expected = env in {"gld", "gld_model_1", "gld_model_3"} and version == "0.8.38" and commit == BASE
+                    expected = env in {"gld", "gld_model_1", "gld_model_2", "gld_model_3"} and version == "0.8.38" and commit == BASE
                     self.assertEqual(child.requires_gld1_nvs_reset_before_boot(manifest), expected)
                     self.assertEqual(hub.requires_gld1_nvs_reset_before_boot(manifest), expected)
 
     def test_consent_rejected_before_serial_or_subprocess(self):
-        for env in ("gld", "gld_model_1", "gld_model_3"):
+        for env in ("gld", "gld_model_1", "gld_model_2", "gld_model_3"):
             for reset, confirmation in ((False, ""), (True, ""), ("true", "RESET NVS"), (True, "yes")):
                 request = payload_for(env)
                 request.update(resetNvs=reset, resetNvsConfirmation=confirmation)
@@ -98,7 +98,7 @@ class DowngradeUploadTests(unittest.TestCase):
         self.assertEqual(self.history, [])
 
     def test_guard_preerases_then_flashes_without_intervening_boot(self):
-        for env in ("gld", "gld_model_1", "gld_model_3"):
+        for env in ("gld", "gld_model_1", "gld_model_2", "gld_model_3"):
             self.history.clear()
             self.events.clear()
             result = child._firmware_upload_reserved(payload_for(env))
@@ -153,8 +153,8 @@ class DowngradeUploadTests(unittest.TestCase):
                 request = payload_for(env)
                 if env == "gld":
                     request["manifest"]["firmwareVersion"] = "0.8.37"
-                elif env == "gld_model_3":
-                    # The former Model 3 package is not this approved rollback.
+                elif env in {"gld_model_2", "gld_model_3"}:
+                    # Historical Model 2/3 packages are not this approved rollback.
                     request["manifest"]["firmwareVersion"] = "0.8.34"
                 request.update(resetNvs=reset, resetNvsConfirmation="")
                 child._firmware_upload_reserved(request)
@@ -168,7 +168,7 @@ class DowngradeUploadTests(unittest.TestCase):
 
     def test_hub_summary_exposes_reset_requirement(self):
         with tempfile.TemporaryDirectory(prefix="gld-summary-") as directory:
-            for env in ("gld", "gld_model_1", "gld_model_3", "gld_v2"):
+            for env in ("gld", "gld_model_1", "gld_model_2", "gld_model_3", "gld_v2"):
                 manifest, _ = make_package(env)
                 folder = Path(directory) / "firmware-packages" / env / "latest"
                 folder.mkdir(parents=True)

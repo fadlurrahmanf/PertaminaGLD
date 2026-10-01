@@ -1,4 +1,4 @@
-// Execute real Expert/Simple Hub functions with inert UI/network stubs.
+// Execute real Model 2/3 Expert/Simple Hub functions with inert UI/network stubs.
 // No serial, device upload, service restart or hardware access.
 const fs = require('fs');
 const path = require('path');
@@ -6,23 +6,28 @@ const vm = require('vm');
 const assert = require('assert/strict');
 const root = path.resolve(__dirname, '../../..');
 const read = p => fs.readFileSync(path.join(root, p), 'utf8');
-const manifest = {
-  environment: 'gld_model_3', firmwareVersion: '0.8.38',
+const models = [
+  {value:'model_2', environment:'gld_model_2', selectorLabel:'Model 2 — Board 2', detail:'Board 2 — Kelas: Clean Air, LPG.'},
+  {value:'model_3', environment:'gld_model_3', selectorLabel:'Model 3 — Board 3', detail:'Board 3 — Kelas: Clean Air, LPG.'},
+];
+const manifestFor = environment => ({
+  environment, firmwareVersion: '0.8.38',
   source: { gitCommit: '69a493c32d2500134a21e029820cd4addea1794a' },
   schemaVersion: 2, packageType: 'pertamina-gld-prebuilt-firmware',
   deviceId: 'ANY', chip: 'esp32s3', flashFiles: [{ path: 'firmware.bin' }]
-};
+});
 function element() {
   return { value:'', checked:false, disabled:false, hidden:false, textContent:'',
     dataset:{}, listeners:{}, classList:{toggle(){},add(){},remove(){}},
     setAttribute(){}, focus(){this.focused=true;}, replaceChildren(){},
     addEventListener(event, fn){this.listeners[event]=fn;} };
 }
-async function expert() {
+async function expert(model) {
+  const manifest = manifestFor(model.environment);
   const nodes = new Proxy({}, {get(obj,key){return obj[key] ||= element();}});
   nodes.firmwareUploadPort.value='COM999';
   nodes.firmwareUploadEnv.value='gld';
-  nodes.firmwareUploadModel.value='model_3';
+  nodes.firmwareUploadModel.value=model.value;
   const posts=[];
   const urls=[];
   let disconnects=0;
@@ -43,13 +48,13 @@ async function expert() {
   assert.equal(context.requiresGld1DowngradeReset(manifest),true);
   for(const invalid of [
     {...manifest,firmwareVersion:'0.8.34'},
-    {...manifest,environment:'gld_model_2'},
     {...manifest,environment:'gld_v3'},
     {...manifest,source:{gitCommit:'a'.repeat(40)}}
   ]) assert.equal(context.requiresGld1DowngradeReset(invalid),false);
   await context.loadBuiltinPackage('gld');
-  assert.equal(urls.at(-1),'/api/firmware/package?env=gld_model_3');
-  assert.equal(context.state.manifest.environment,'gld_model_3');
+  assert.equal(urls.at(-1),`/api/firmware/package?env=${model.environment}`);
+  assert.equal(context.state.manifest.environment,model.environment);
+  assert(nodes.firmwareUploadPackage.textContent.includes(model.detail));
   assert.equal(nodes.firmwareResetNvs.checked,false);
   assert.equal(nodes.firmwareUploadConfirmBtn.disabled,true);
   await context.performFirmwareUpload();
@@ -58,21 +63,21 @@ async function expert() {
   nodes.firmwareResetNvs.checked=true;
   context.updateFirmwareResetGuard();
   await context.performFirmwareUpload();
-  assert.equal(posts[0].env,'gld_model_3');
+  assert.equal(posts[0].env,model.environment);
   assert.equal(posts[0].resetNvs,true);
   assert.equal(posts[0].resetNvsConfirmation,'RESET NVS');
   assert.match(nodes.firmwareUploadStatus.textContent,/nulling 8\/8/);
-  assert.match(read('apps/gld-operator/index.html'),/value="model_3">Model 3 — Board 3/);
-  console.log('PASS Model 3 Expert: exact package routing, guard scope, explicit consent and upload payload');
+  assert(read('apps/gld-operator/index.html').includes(`value="${model.value}">${model.selectorLabel}`));
+  console.log(`PASS ${model.value} Expert: exact package routing, guard scope, explicit consent and upload payload`);
 }
-async function simple() {
+async function simple(modelCase) {
   let dialog;
   const context=vm.createContext({
     devices:{gld:{label:'GLD1'}}, Option:class{},
     overview:{firmwarePackageOptions:{gld:{
-      models:[{value:'model_3',label:'Model 3 - Board 3',environment:'gld_model_3'}],
-      environments:{model_3:'gld_model_3'},
-      packages:{gld_model_3:{available:true,firmwareVersion:'0.8.38',requiresNvsResetBeforeBoot:true}}
+      models:[{value:modelCase.value,label:modelCase.selectorLabel.replace('—','-'),environment:modelCase.environment}],
+      environments:{[modelCase.value]:modelCase.environment},
+      packages:{[modelCase.environment]:{available:true,firmwareVersion:'0.8.38',requiresNvsResetBeforeBoot:true}}
     }}},
     document:{body:{append(){}},createElement(){
       const nodes={};
@@ -88,7 +93,7 @@ async function simple() {
   vm.runInContext(source.slice(start,source.indexOf('\n}',start)+2),context);
   const resultPromise=context.requestFirmwareUploadOptions({device:'gld',port:'COM999',initialFirmware:false});
   const model=dialog.querySelector('#firmwareUploadModel');
-  model.value='model_3';
+  model.value=modelCase.value;
   model.listeners.change();
   assert.equal(dialog.querySelector('#firmwareUploadResetWarning').hidden,false);
   const accept=dialog.querySelector('#firmwareUploadAccept');
@@ -98,9 +103,9 @@ async function simple() {
   dialog.querySelector('#firmwareUploadReset').checked=true;
   accept.onclick({preventDefault(){}});
   const result=await resultPromise;
-  assert.equal(result.model,'model_3');
+  assert.equal(result.model,modelCase.value);
   assert.equal(result.resetNvs,true);
   assert.equal(result.resetNvsConfirmation,'RESET NVS');
-  console.log('PASS Model 3 Simple Hub: exact model selection, explicit reset consent and confirmation payload');
+  console.log(`PASS ${modelCase.value} Simple Hub: exact model selection, explicit reset consent and confirmation payload`);
 }
-(async()=>{await expert();await simple();})().catch(err=>{console.error(err);process.exitCode=1;});
+(async()=>{for (const model of models) { await expert(model); await simple(model); }})().catch(err=>{console.error(err);process.exitCode=1;});

@@ -1,0 +1,103 @@
+{"kind":"deck","id":"pr/lwzet9","name":"Deck"}
+{"kind":"layout","layoutId":"/ppt/slideMasters/slideMaster1.xml","name":"","type":"master","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"body","type":"body","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"dateTime","type":"dateTime","textPreview":"02/10/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout1.xml","name":"Title Slide","type":"title","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"subtitle","type":"subtitle","textPreview":"Click to edit Master subtitle style"},{"name":"dateTime","type":"dateTime","textPreview":"02/10/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout2.xml","name":"Title and Content","type":"obj","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"content placeholder 2","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"dateTime","type":"dateTime","textPreview":"02/10/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout3.xml","name":"Section Header","type":"secHead","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"body","type":"body","textPreview":"Click to edit Master text styles"},{"name":"dateTime","type":"dateTime","textPreview":"02/10/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout4.xml","name":"Two Content","type":"twoObj","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"content placeholder 2","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"content placeholder 3","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"dateTime","type":"dateTime","textPreview":"02/10/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout5.xml","name":"Comparison","type":"twoTxTwoObj","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"body","type":"body","textPreview":"Click to edit Master text styles"},{"name":"content placeholder 3","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"body","type":"body","textPreview":"Click to edit Master text styles"},{"name":"content placeholder 5","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"dateTime","type":"dateTime","textPreview":"02/10/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout6.xml","name":"Title Only","type":"titleOnly","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"dateTime","type":"dateTime","textPreview":"02/10/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout7.xml","name":"Blank","type":"blank","placeholders":[{"name":"dateTime","type":"dateTime","textPreview":"02/10/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout8.xml","name":"Content with Caption","type":"objTx","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"content placeholder 2","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"body","type":"body","textPreview":"Click to edit Master text styles"},{"name":"dateTime","type":"dateTime","textPreview":"02/10/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout9.xml","name":"Picture with Caption","type":"picTx","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"picture","type":"picture"},{"name":"body","type":"body","textPreview":"Click to edit Master text styles"},{"name":"dateTime","type":"dateTime","textPreview":"02/10/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout10.xml","name":"Title and Vertical Text","type":"vertTx","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"body","type":"body","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"dateTime","type":"dateTime","textPreview":"02/10/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout11.xml","name":"Vertical Title and Text","type":"vertTitleAndTx","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"body","type":"body","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"dateTime","type":"dateTime","textPreview":"02/10/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"slide","id":"sl/y90nupkv","slide":1,"title":"GLD","textShapes":1}
+{"kind":"textbox","id":"sh/547294r6","slide":1,"name":"Title 1","placeholder":"title","text":"GLD","textPreview":"GLD","textChars":3,"textLines":1,"bbox":[0,0,0,0]}
+{"kind":"shape","id":"sh/k3yl0zql","slide":1,"name":"Text Placeholder 2","placeholder":"body","bbox":[0,0,0,0]}
+{"kind":"notes","id":"nt/y90nupkv","slide":1,"text":""}
+{"kind":"slide","id":"sl/hwbqtkby","slide":2,"title":"V1","textShapes":3}
+{"kind":"textbox","id":"sh/r65knqtk","slide":2,"name":"TextBox 7","text":"V1","textPreview":"V1","textChars":2,"textLines":1,"bbox":[625.81,631.25,46.48,38.78]}
+{"kind":"shape","id":"sh/9wnqhczy","slide":2,"bbox":[35,440,1210,106]}
+{"kind":"textbox","id":"sh/mtwrmxg7","slide":2,"text":"Kekurangan dan perbaikan","textPreview":"Kekurangan dan perbaikan","textChars":24,"textLines":1,"bbox":[51,450,1178,22]}
+{"kind":"textbox","id":"sh/nu58f2hs","slide":2,"text":"Kekurangan: sensor masih menyatu di motherboard; PCF8574, SHT40, dan rangkaian proteksi tambahan belum ada.\nPerbaikan: versi berikutnya memisahkan sensor module dan menambah kontrol daya, lingkungan, serta proteksi.","textPreview":"Kekurangan: sensor masih menyatu di motherboard; PCF8574, SHT40, dan rangkaian proteksi tambahan belum ada. | Perbaikan: versi berikutnya...","textChars":215,"textLines":2,"bbox":[51,478,1178,58]}
+{"kind":"image","id":"im/nix0be18","slide":2,"name":"Picture 4","bbox":[0,0,640,571.4]}
+{"kind":"image","id":"im/jy5w3a14","slide":2,"name":"Picture 6","bbox":[659.07,0,620.93,571.4]}
+{"kind":"notes","id":"nt/hwbqtkby","slide":2,"text":""}
+{"kind":"slide","id":"sl/ofy9wn61","slide":3,"title":"GLD Low Power","textShapes":1}
+{"kind":"textbox","id":"sh/cza94vmx","slide":3,"name":"Title 1","placeholder":"title","text":"GLD Low Power","textPreview":"GLD Low Power","textChars":13,"textLines":1,"bbox":[0,0,0,0]}
+{"kind":"shape","id":"sh/d0jax03i","slide":3,"name":"Text Placeholder 2","placeholder":"body","bbox":[0,0,0,0]}
+{"kind":"notes","id":"nt/ofy9wn61","slide":3,"text":""}
+{"kind":"slide","id":"sl/jyx0ra1s","slide":4,"title":"Sensor MQ Module","textShapes":1}
+{"kind":"textbox","id":"sh/3ihk3et8","slide":4,"name":"TextBox 7","text":"Sensor MQ Module","textPreview":"Sensor MQ Module","textChars":16,"textLines":1,"bbox":[554.26,645.74,217.47,38.78]}
+{"kind":"image","id":"im/z6lc7q1o","slide":4,"name":"Picture 4","bbox":[0,0,620.73,589.58]}
+{"kind":"image","id":"im/fed47q18","slide":4,"name":"Picture 6","bbox":[698.49,0,581.51,589.58]}
+{"kind":"notes","id":"nt/jyx0ra1s","slide":4,"text":""}
+{"kind":"slide","id":"sl/i107q5of","slide":5,"title":"V2","textShapes":3}
+{"kind":"textbox","id":"sh/l4bupwny","slide":5,"name":"TextBox 5","text":"V2","textPreview":"V2","textChars":2,"textLines":1,"bbox":[625.81,631.25,46.48,38.78]}
+{"kind":"shape","id":"sh/m5kbi1oj","slide":5,"bbox":[35,438,1210,104]}
+{"kind":"textbox","id":"sh/w32dkbuh","slide":5,"text":"Kekurangan dan perbaikan","textPreview":"Kekurangan dan perbaikan","textChars":24,"textLines":1,"bbox":[51,448,1178,22]}
+{"kind":"textbox","id":"sh/x4vedgvm","slide":5,"text":"Kekurangan: V1 memakai jalur analog/driver INA333, OPA333, LM321, dan ULN2003 pada motherboard.\nPerbaikan: V2 memakai OPA320, 8 sensor module eksternal, PCF8574, SHT40, TCA/MCP, dan tetap menyediakan +5VA.","textPreview":"Kekurangan: V1 memakai jalur analog/driver INA333, OPA333, LM321, dan ULN2003 pada motherboard. | Perbaikan: V2 memakai OPA320, 8 sensor ...","textChars":205,"textLines":2,"bbox":[51,476,1178,56]}
+{"kind":"image","id":"im/h8juxg7q","slide":5,"name":"Picture 2","bbox":[0,0,640.61,518.94]}
+{"kind":"image","id":"im/apobah8v","slide":5,"name":"Picture 4","bbox":[723.78,0,556.22,526.19]}
+{"kind":"notes","id":"nt/i107q5of","slide":5,"text":""}
+{"kind":"slide","id":"sl/x8f69ofe","slide":6,"title":"V3","textShapes":3}
+{"kind":"textbox","id":"sh/ml07i9sv","slide":6,"name":"TextBox 5","text":"V3","textPreview":"V3","textChars":2,"textLines":1,"bbox":[625.81,631.25,46.48,38.78]}
+{"kind":"shape","id":"sh/pc76hkr2","slide":6,"bbox":[35,440,1210,96]}
+{"kind":"textbox","id":"sh/h4bupgn6","slide":6,"text":"Kekurangan dan perbaikan","textPreview":"Kekurangan dan perbaikan","textChars":24,"textLines":1,"bbox":[51,450,1178,22]}
+{"kind":"textbox","id":"sh/w32twb6l","slide":6,"text":"Kekurangan: penggantian IC atau perubahan acquisition terhadap V2 belum ditemukan pada source PCB.\nPerbaikan: V3 mempertahankan OPA320, ADS1256, PCF8574, SHT40, TCA/MCP, +5VA, dan TPL5010.","textPreview":"Kekurangan: penggantian IC atau perubahan acquisition terhadap V2 belum ditemukan pada source PCB. | Perbaikan: V3 mempertahankan OPA320,...","textChars":188,"textLines":2,"bbox":[51,478,1178,48]}
+{"kind":"image","id":"im/mxg36h47","slide":6,"name":"Picture 2","bbox":[0,0,640,557.91]}
+{"kind":"image","id":"im/lwn2dc3m","slide":6,"name":"Picture 4","bbox":[690.27,0,589.73,557.91]}
+{"kind":"notes","id":"nt/x8f69ofe","slide":6,"text":""}
+{"kind":"slide","id":"sl/gnmp4jqx","slide":7,"title":"V4","textShapes":3}
+{"kind":"textbox","id":"sh/kzmdova1","slide":7,"name":"TextBox 5","text":"V4","textPreview":"V4","textChars":2,"textLines":1,"bbox":[625.81,631.25,46.48,38.78]}
+{"kind":"shape","id":"sh/a9ojq5kz","slide":7,"bbox":[25,500,855,106]}
+{"kind":"textbox","id":"sh/xcz2l03q","slide":7,"text":"Kekurangan dan perbaikan","textPreview":"Kekurangan dan perbaikan","textChars":24,"textLines":1,"bbox":[41,510,823,22]}
+{"kind":"textbox","id":"sh/cbq1sv25","slide":7,"text":"Kekurangan: source PCB belum menunjukkan pembaruan acquisition dibanding V3.\nPerbaikan: V4 mempertahankan sensor module eksternal, OPA320, ADS1256, PCF8574, SHT40, +5VA, dan TPL5010.","textPreview":"Kekurangan: source PCB belum menunjukkan pembaruan acquisition dibanding V3. | Perbaikan: V4 mempertahankan sensor module eksternal, OPA3...","textChars":182,"textLines":2,"bbox":[41,538,823,58]}
+{"kind":"image","id":"im/4ralkf6t","slide":7,"name":"Picture 2","bbox":[0,0,430.45,369.51]}
+{"kind":"image","id":"im/rul4vapk","slide":7,"name":"Picture 4","bbox":[430.45,0,384.69,369.51]}
+{"kind":"image","id":"im/6tc3mpoz","slide":7,"name":"Picture 3","bbox":[895.31,0,384.69,377.68]}
+{"kind":"image","id":"im/wz6dk3it","slide":7,"name":"Picture 7","bbox":[913.59,375.22,366.41,344.78]}
+{"kind":"notes","id":"nt/gnmp4jqx","slide":7,"text":""}
+{"kind":"slide","id":"sl/fu1gfa1s","slide":8,"title":"V5","textShapes":3}
+{"kind":"textbox","id":"sh/tkby9kzm","slide":8,"name":"TextBox 5","text":"V5","textPreview":"V5","textChars":2,"textLines":1,"bbox":[828.06,259.54,46.48,38.78]}
+{"kind":"shape","id":"sh/zipwbmdc","slide":8,"name":"Rectangle 16","bbox":[0,0,806.9,366.75]}
+{"kind":"shape","id":"sh/kfixwbe1","slide":8,"name":"Rectangle 17","bbox":[0,365.5,771.3,354.5]}
+{"kind":"shape","id":"sh/lgbepgvm","slide":8,"name":"Rectangle 18","bbox":[899.54,-3.16,384.51,723.16]}
+{"kind":"shape","id":"sh/jq5w365o","slide":8,"bbox":[805,190,455,190]}
+{"kind":"textbox","id":"sh/i5wva1o3","slide":8,"text":"Kekurangan dan perbaikan","textPreview":"Kekurangan dan perbaikan","textChars":24,"textLines":1,"bbox":[821,200,423,22]}
+{"kind":"textbox","id":"sh/x4ne1wni","slide":8,"text":"Kekurangan: board adapter tidak memuat ADS1256, TCA, PCF8574, SHT40, OPA, MCP4725, atau +5VA.\nPerbaikan: V5 memusatkan fungsi interface E22, USB-UART, RS-485, dan OLED; TPS2116, TPS22964, TPS3839, TPS61175, serta TPL5010 tetap ada.","textPreview":"Kekurangan: board adapter tidak memuat ADS1256, TCA, PCF8574, SHT40, OPA, MCP4725, atau +5VA. | Perbaikan: V5 memusatkan fungsi interface...","textChars":231,"textLines":2,"bbox":[821,228,423,142]}
+{"kind":"image","id":"im/yp8rix47","slide":8,"name":"Picture 2","bbox":[0,0,399.4,369.92]}
+{"kind":"image","id":"im/jqhsb2ls","slide":8,"name":"Picture 4","bbox":[399.4,0,407.5,366.75]}
+{"kind":"image","id":"im/krqtkn2x","slide":8,"name":"Picture 9","bbox":[0,366.75,375.85,353.25]}
+{"kind":"image","id":"im/lszads3i","slide":8,"name":"Picture 11","bbox":[375.85,366.75,395.81,353.25]}
+{"kind":"image","id":"im/alored4v","slide":8,"name":"Picture 13","bbox":[895.7,-3.16,394.41,360]}
+{"kind":"image","id":"im/bmxs7ilg","slide":8,"name":"Picture 15","bbox":[899.18,355.93,390.93,368.54]}
+{"kind":"notes","id":"nt/fu1gfa1s","slide":8,"text":""}
+{"kind":"slide","id":"sl/udsvah03","slide":9,"title":"CH","textShapes":1}
+{"kind":"textbox","id":"sh/1cfmhgne","slide":9,"name":"Title 1","placeholder":"title","text":"CH","textPreview":"CH","textChars":2,"textLines":1,"bbox":[0,0,0,0]}
+{"kind":"shape","id":"sh/0b65obm9","slide":9,"name":"Text Placeholder 2","placeholder":"body","bbox":[0,0,0,0]}
+{"kind":"notes","id":"nt/udsvah03","slide":9,"text":""}
+{"kind":"slide","id":"sl/m90b6t0r","slide":10,"title":"CH V1","textShapes":3}
+{"kind":"textbox","id":"sh/l036l83y","slide":10,"name":"TextBox 5","text":"CH V1","textPreview":"CH V1","textChars":5,"textLines":1,"bbox":[502.78,351.4,85.36,38.78]}
+{"kind":"shape","id":"sh/m1cnetkj","slide":10,"bbox":[390,155,835,132]}
+{"kind":"textbox","id":"sh/s7yt4b21","slide":10,"text":"Kekurangan dan perbaikan","textPreview":"Kekurangan dan perbaikan","textChars":24,"textLines":1,"bbox":[406,165,803,22]}
+{"kind":"textbox","id":"sh/d87uxg3m","slide":10,"text":"Kekurangan: CH V1 belum memiliki WDT; perubahan IC belum dapat ditetapkan tanpa source PCB/BOM yang cocok.\nPerbaikan: V2 menambahkan WDT dan tetap menerima atau meneruskan data radio dari GLD.","textPreview":"Kekurangan: CH V1 belum memiliki WDT; perubahan IC belum dapat ditetapkan tanpa source PCB/BOM yang cocok. | Perbaikan: V2 menambahkan WD...","textChars":192,"textLines":2,"bbox":[406,193,803,84]}
+{"kind":"image","id":"im/tk7a9k3e","slide":10,"name":"Picture 2","bbox":[0,0,185.48,720]}
+{"kind":"image","id":"im/ulgr2p4z","slide":10,"name":"Picture 4","bbox":[185.48,0,174.5,720]}
+{"kind":"notes","id":"nt/m90b6t0r","slide":10,"text":""}
+{"kind":"slide","id":"sl/jetc3ut0","slide":11,"title":"CH V2","textShapes":3}
+{"kind":"textbox","id":"sh/98rytw72","slide":11,"name":"TextBox 5","text":"CH V2","textPreview":"CH V2","textChars":5,"textLines":1,"bbox":[575.05,647.55,85.36,38.78]}
+{"kind":"shape","id":"sh/61kzalof","slide":11,"bbox":[45,420,1190,110]}
+{"kind":"textbox","id":"sh/ofqtgnyt","slide":11,"text":"Kekurangan dan perbaikan","textPreview":"Kekurangan dan perbaikan","textChars":24,"textLines":1,"bbox":[61,430,1158,22]}
+{"kind":"textbox","id":"sh/9gza9sze","slide":11,"text":"Kekurangan: CH V1 tidak memiliki WDT dan menggunakan papan memanjang dengan holder baterai.\nPerbaikan: CH V2 memiliki WDT serta memakai PCB bundar/kompak; detail nomor IC perlu BOM yang sesuai.","textPreview":"Kekurangan: CH V1 tidak memiliki WDT dan menggunakan papan memanjang dengan holder baterai. | Perbaikan: CH V2 memiliki WDT serta memakai...","textChars":193,"textLines":2,"bbox":[61,458,1158,62]}
+{"kind":"image","id":"im/1k3i9gz2","slide":11,"name":"Picture 2","bbox":[0,0,640,619.81]}
+{"kind":"image","id":"im/2lcz2l0n","slide":11,"name":"Picture 4","bbox":[617.73,0,662.27,619.81]}
+{"kind":"notes","id":"nt/jetc3ut0","slide":11,"text":""}
+{"kind":"slide","id":"sl/8f2psfyx","slide":12,"title":"CH V3","textShapes":3}
+{"kind":"textbox","id":"sh/dcbm583y","slide":12,"name":"TextBox 5","text":"CH V3","textPreview":"CH V3","textChars":5,"textLines":1,"bbox":[504.45,340.61,85.36,38.78]}
+{"kind":"shape","id":"sh/a543mx4r","slide":12,"bbox":[400,125,825,130]}
+{"kind":"textbox","id":"sh/wvupgz6t","slide":12,"text":"Kekurangan dan perbaikan","textPreview":"Kekurangan dan perbaikan","textChars":24,"textLines":1,"bbox":[416,135,793,22]}
+{"kind":"textbox","id":"sh/xw3q94ne","slide":12,"text":"Kekurangan: detail penggantian IC dari CH V2 ke V3 belum dapat dibuktikan oleh source PCB/BOM.\nPerbaikan: CH V3 tetap memiliki WDT dan kembali memakai papan memanjang dengan holder baterai.","textPreview":"Kekurangan: detail penggantian IC dari CH V2 ke V3 belum dapat dibuktikan oleh source PCB/BOM. | Perbaikan: CH V3 tetap memiliki WDT dan ...","textChars":189,"textLines":2,"bbox":[416,163,793,82]}
+{"kind":"image","id":"im/943a14fq","slide":12,"name":"Picture 2","bbox":[0,0,179.21,720]}
+{"kind":"image","id":"im/yxsr2pg3","slide":12,"name":"Picture 4","bbox":[179.21,0,158.43,720]}
+{"kind":"notes","id":"nt/8f2psfyx","slide":12,"text":""}

@@ -3,7 +3,7 @@
 #include <cstdint>
 
 // GLD3 is electrically GLD2-compatible except for the source-verified fan
-// driver added in docs/wiring/Board_GLD3.zip. Keep this map separate so a
+// driver added in docs/wiring/GLD/V3/Board_GLD3.zip. Keep this map separate so a
 // GLD2 build never energises GPIO7 as a fan output.
 namespace pgl::gld::board::gld3 {
 

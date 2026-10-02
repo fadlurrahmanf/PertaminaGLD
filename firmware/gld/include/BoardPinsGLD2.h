@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-// Pin map verified against docs/wiring/gld-project-ver2-2026-07-01/source-GLD2.zip.
+// Pin map verified against docs/wiring/GLD/V2/source-GLD2.zip.
 // The active gld_v2 profile includes this map through BoardPins.h.
 namespace pgl::gld::board::gld2 {
 

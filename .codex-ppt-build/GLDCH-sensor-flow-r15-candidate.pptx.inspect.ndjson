@@ -1,0 +1,180 @@
+{"kind":"deck","id":"pr/5xujd8","name":"Deck"}
+{"kind":"layout","layoutId":"/ppt/slideMasters/slideMaster1.xml","name":"","type":"master","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"body","type":"body","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"dateTime","type":"dateTime","textPreview":"02/10/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout1.xml","name":"Title Slide","type":"title","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"subtitle","type":"subtitle","textPreview":"Click to edit Master subtitle style"},{"name":"dateTime","type":"dateTime","textPreview":"02/10/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout2.xml","name":"Title and Content","type":"obj","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"content placeholder 2","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"dateTime","type":"dateTime","textPreview":"02/10/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout3.xml","name":"Section Header","type":"secHead","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"body","type":"body","textPreview":"Click to edit Master text styles"},{"name":"dateTime","type":"dateTime","textPreview":"02/10/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout4.xml","name":"Two Content","type":"twoObj","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"content placeholder 2","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"content placeholder 3","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"dateTime","type":"dateTime","textPreview":"02/10/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout5.xml","name":"Comparison","type":"twoTxTwoObj","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"body","type":"body","textPreview":"Click to edit Master text styles"},{"name":"content placeholder 3","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"body","type":"body","textPreview":"Click to edit Master text styles"},{"name":"content placeholder 5","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"dateTime","type":"dateTime","textPreview":"02/10/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout6.xml","name":"Title Only","type":"titleOnly","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"dateTime","type":"dateTime","textPreview":"02/10/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout7.xml","name":"Blank","type":"blank","placeholders":[{"name":"dateTime","type":"dateTime","textPreview":"02/10/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout8.xml","name":"Content with Caption","type":"objTx","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"content placeholder 2","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"body","type":"body","textPreview":"Click to edit Master text styles"},{"name":"dateTime","type":"dateTime","textPreview":"02/10/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout9.xml","name":"Picture with Caption","type":"picTx","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"picture","type":"picture"},{"name":"body","type":"body","textPreview":"Click to edit Master text styles"},{"name":"dateTime","type":"dateTime","textPreview":"02/10/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout10.xml","name":"Title and Vertical Text","type":"vertTx","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"body","type":"body","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"dateTime","type":"dateTime","textPreview":"02/10/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout11.xml","name":"Vertical Title and Text","type":"vertTitleAndTx","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"body","type":"body","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"dateTime","type":"dateTime","textPreview":"02/10/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"slide","id":"sl/y90nupkv","slide":1,"title":"GLD","textShapes":1}
+{"kind":"textbox","id":"sh/547294r6","slide":1,"name":"Title 1","placeholder":"title","text":"GLD","textPreview":"GLD","textChars":3,"textLines":1,"bbox":[0,0,0,0]}
+{"kind":"shape","id":"sh/k3yl0zql","slide":1,"name":"Text Placeholder 2","placeholder":"body","bbox":[0,0,0,0]}
+{"kind":"notes","id":"nt/y90nupkv","slide":1,"text":""}
+{"kind":"slide","id":"sl/hwbqtkby","slide":2,"title":"V1","textShapes":1}
+{"kind":"textbox","id":"sh/r65knqtk","slide":2,"name":"TextBox 7","text":"V1","textPreview":"V1","textChars":2,"textLines":1,"bbox":[625.81,631.25,46.48,38.78]}
+{"kind":"shape","id":"sh/9wnqhczy","slide":2,"bbox":[35,440,1210,175]}
+{"kind":"table","id":"tb/l8n2t07y","slide":2,"name":"","rows":7,"cols":2,"preview":"Aspek | V1 — baseline","bbox":[35,440,1210,175]}
+{"kind":"image","id":"im/nix0be18","slide":2,"name":"Picture 4","bbox":[0,0,640,571.4]}
+{"kind":"image","id":"im/jy5w3a14","slide":2,"name":"Picture 6","bbox":[659.07,0,620.93,571.4]}
+{"kind":"notes","id":"nt/hwbqtkby","slide":2,"text":""}
+{"kind":"slide","id":"sl/ofy9wn61","slide":3,"title":"GLD Low Power","textShapes":1}
+{"kind":"textbox","id":"sh/cza94vmx","slide":3,"name":"Title 1","placeholder":"title","text":"GLD Low Power","textPreview":"GLD Low Power","textChars":13,"textLines":1,"bbox":[0,0,0,0]}
+{"kind":"shape","id":"sh/d0jax03i","slide":3,"name":"Text Placeholder 2","placeholder":"body","bbox":[0,0,0,0]}
+{"kind":"notes","id":"nt/ofy9wn61","slide":3,"text":""}
+{"kind":"slide","id":"sl/jyx0ra1s","slide":4,"title":"Sensor MQ Module","textShapes":1}
+{"kind":"textbox","id":"sh/3ihk3et8","slide":4,"name":"TextBox 7","text":"Sensor MQ Module","textPreview":"Sensor MQ Module","textChars":16,"textLines":1,"bbox":[554.26,645.74,217.47,38.78]}
+{"kind":"image","id":"im/z6lc7q1o","slide":4,"name":"Picture 4","bbox":[0,0,620.73,589.58]}
+{"kind":"image","id":"im/fed47q18","slide":4,"name":"Picture 6","bbox":[698.49,0,581.51,589.58]}
+{"kind":"notes","id":"nt/jyx0ra1s","slide":4,"text":""}
+{"kind":"slide","id":"sl/d2fnpe","slide":5,"title":"Sensor Module dalam Rantai GLD2","textShapes":19}
+{"kind":"shape","id":"sh/twv29c3a","slide":5,"bbox":[0,0,1280,720]}
+{"kind":"textbox","id":"sh/6t4jex4j","slide":5,"text":"Sensor Module dalam Rantai GLD2","textPreview":"Sensor Module dalam Rantai GLD2","textChars":31,"textLines":1,"bbox":[70,34,1140,45]}
+{"kind":"textbox","id":"sh/rudk72l4","slide":5,"text":"Delapan modul adalah sumber data; motherboard menyalakan, memilih, men-null, lalu mengubah sinyal menjadi data digital.","textPreview":"Delapan modul adalah sumber data; motherboard menyalakan, memilih, men-null, lalu mengubah sinyal menjadi data digital.","textChars":119,"textLines":1,"bbox":[70,79,1140,28]}
+{"kind":"shape","id":"sh/gj61k7m1","slide":5,"bbox":[70,145,230,165]}
+{"kind":"shape","id":"sh/1kf2dc36","slide":5,"bbox":[70,145,7,165]}
+{"kind":"textbox","id":"sh/eh4jih4v","slide":5,"text":"1. Elemen MQ","textPreview":"1. Elemen MQ","textChars":12,"textLines":1,"bbox":[88,158,198,28]}
+{"kind":"textbox","id":"sh/fidkb2lg","slide":5,"text":"MQ8, MQ135, MQ3, MQ5, MQ4, MQ7, MQ6, MQ2. Heater dan elemen sensor berada pada modul.","textPreview":"MQ8, MQ135, MQ3, MQ5, MQ4, MQ7, MQ6, MQ2. Heater dan elemen sensor berada pada modul.","textChars":85,"textLines":1,"bbox":[88,192,198,107]}
+{"kind":"textbox","id":"sh/wn218nmh","slide":5,"text":"analog","textPreview":"analog","textChars":6,"textLines":1,"bbox":[315,209,90,34]}
+{"kind":"shape","id":"sh/hobi1s32","slide":5,"bbox":[420,145,240,165]}
+{"kind":"shape","id":"sh/p8v254f2","slide":5,"bbox":[420,145,7,165]}
+{"kind":"textbox","id":"sh/47m1wzeh","slide":5,"text":"2. Slot sensor","textPreview":"2. Slot sensor","textChars":14,"textLines":1,"bbox":[438,158,208,28]}
+{"kind":"textbox","id":"sh/36tk3uxw","slide":5,"text":"+5V, GND, VMID, AIN, SDA/SCL cabang, dan EN tersedia pada header modul.","textPreview":"+5V, GND, VMID, AIN, SDA/SCL cabang, dan EN tersedia pada header modul.","textChars":71,"textLines":1,"bbox":[438,192,208,107]}
+{"kind":"textbox","id":"sh/25kjupwb","slide":5,"text":"AIN0–7","textPreview":"AIN0–7","textChars":6,"textLines":1,"bbox":[675,209,90,34]}
+{"kind":"shape","id":"sh/dwv294fy","slide":5,"bbox":[780,145,430,165]}
+{"kind":"shape","id":"sh/cvm10zed","slide":5,"bbox":[780,145,7,165]}
+{"kind":"textbox","id":"sh/radk7ux8","slide":5,"text":"3. Akuisisi GLD","textPreview":"3. Akuisisi GLD","textChars":15,"textLines":1,"bbox":[798,158,398,28]}
+{"kind":"textbox","id":"sh/q94jypwn","slide":5,"text":"Filter analog → ADS1256. ESP32-S3 membaca delapan kanal dan membentuk data/telemetri.","textPreview":"Filter analog → ADS1256. ESP32-S3 membaca delapan kanal dan membentuk data/telemetri.","textChars":85,"textLines":1,"bbox":[798,192,398,107]}
+{"kind":"shape","id":"sh/10f2dofa","slide":5,"bbox":[150,390,310,170]}
+{"kind":"shape","id":"sh/0z614jep","slide":5,"bbox":[150,390,7,170]}
+{"kind":"textbox","id":"sh/kfedwrqx","slide":5,"text":"Daya per modul","textPreview":"Daya per modul","textChars":14,"textLines":1,"bbox":[168,403,278,28]}
+{"kind":"textbox","id":"sh/5g7upc7i","slide":5,"text":"PCF8574 (0x20) mengeluarkan EN0–EN7. EN mengendalikan TPS22919; rail sensor dapat dipilih ON/OFF.","textPreview":"PCF8574 (0x20) mengeluarkan EN0–EN7. EN mengendalikan TPS22919; rail sensor dapat dipilih ON/OFF.","textChars":97,"textLines":1,"bbox":[168,437,278,112]}
+{"kind":"textbox","id":"sh/idwvuh87","slide":5,"text":"pilih","textPreview":"pilih","textChars":5,"textLines":1,"bbox":[480,455,105,34]}
+{"kind":"shape","id":"sh/je5cnm9c","slide":5,"bbox":[605,390,310,170]}
+{"kind":"shape","id":"sh/sjyd0rq9","slide":5,"bbox":[605,390,7,170]}
+{"kind":"textbox","id":"sh/tk7utw7u","slide":5,"text":"I2C per cabang","textPreview":"I2C per cabang","textChars":14,"textLines":1,"bbox":[623,403,278,28]}
+{"kind":"textbox","id":"sh/6hgvyh83","slide":5,"text":"TCA9548A (0x71) memilih SDA/SCL cabang. MCP4725 setiap cabang beralamat sama: 0x60.","textPreview":"TCA9548A (0x71) memilih SDA/SCL cabang. MCP4725 setiap cabang beralamat sama: 0x60.","textChars":83,"textLines":1,"bbox":[623,437,278,112]}
+{"kind":"textbox","id":"sh/7ipcrmpo","slide":5,"text":"nulling","textPreview":"nulling","textChars":7,"textLines":1,"bbox":[935,455,105,34]}
+{"kind":"shape","id":"sh/onutonqp","slide":5,"bbox":[1060,390,150,170]}
+{"kind":"shape","id":"sh/9onuhsra","slide":5,"bbox":[1060,390,7,170]}
+{"kind":"textbox","id":"sh/r2tgna9s","slide":5,"text":"Offset","textPreview":"Offset","textChars":6,"textLines":1,"bbox":[1078,403,118,28]}
+{"kind":"textbox","id":"sh/qhkfu5s7","slide":5,"text":"MCP4725 memberi tegangan DAC saat prosedur nulling.","textPreview":"MCP4725 memberi tegangan DAC saat prosedur nulling.","textChars":51,"textLines":1,"bbox":[1078,437,118,112]}
+{"kind":"textbox","id":"sh/d4byp0ry","slide":5,"text":"Bukti: source-GLD2.zip, BoardPinsGLD2.h, dan temuan live COM3 2026-08-19. Ini menjelaskan arsitektur GLD2; bukan klaim hasil gas/field test saat ini.","textPreview":"Bukti: source-GLD2.zip, BoardPinsGLD2.h, dan temuan live COM3 2026-08-19. Ini menjelaskan arsitektur GLD2; bukan klaim hasil gas/field te...","textChars":149,"textLines":1,"bbox":[70,635,1140,32]}
+{"kind":"notes","id":"nt/d2fnpe","slide":5,"text":"Sources: docs/wiring/gld-project-ver2-2026-07-01/GLD2-nulling-live-findings-2026-08-19.md; firmware/gld/include/BoardPinsGLD2.h; output/diagrams/gld2/component-pins.csv."}
+{"kind":"slide","id":"sl/i107q5of","slide":6,"title":"V2","textShapes":1}
+{"kind":"textbox","id":"sh/l4bupwny","slide":6,"name":"TextBox 5","text":"V2","textPreview":"V2","textChars":2,"textLines":1,"bbox":[625.81,631.25,46.48,38.78]}
+{"kind":"shape","id":"sh/m5kbi1oj","slide":6,"bbox":[35,420,1210,180]}
+{"kind":"table","id":"tb/fqx8zy54","slide":6,"name":"","rows":7,"cols":3,"preview":"Aspek | V1 | V2 / GLD2","bbox":[35,420,1210,180]}
+{"kind":"image","id":"im/h8juxg7q","slide":6,"name":"Picture 2","bbox":[0,0,640.61,518.94]}
+{"kind":"image","id":"im/apobah8v","slide":6,"name":"Picture 4","bbox":[723.78,0,556.22,526.19]}
+{"kind":"notes","id":"nt/i107q5of","slide":6,"text":""}
+{"kind":"slide","id":"sl/pqydiu","slide":7,"title":"Pemetaan 8 Sensor Module GLD2","textShapes":3}
+{"kind":"shape","id":"sh/qlkfy9wf","slide":7,"bbox":[0,0,1280,720]}
+{"kind":"textbox","id":"sh/doby9ov6","slide":7,"text":"Pemetaan 8 Sensor Module GLD2","textPreview":"Pemetaan 8 Sensor Module GLD2","textChars":29,"textLines":1,"bbox":[70,34,1140,45]}
+{"kind":"textbox","id":"sh/sn2x0jul","slide":7,"text":"Pemetaan ini harus dipakai saat akses MCP4725/nulling karena urutan EN tidak sama dengan urutan sensor fisik.","textPreview":"Pemetaan ini harus dipakai saat akses MCP4725/nulling karena urutan EN tidak sama dengan urutan sensor fisik.","textChars":109,"textLines":1,"bbox":[70,79,1140,28]}
+{"kind":"shape","id":"sh/epkf2tcr","slide":7,"bbox":[100,590,1080,70]}
+{"kind":"textbox","id":"sh/1cvydov2","slide":7,"text":"Urutan akses yang terbukti pada GLD2: matikan switch lain → aktifkan EN target → pilih TCA pasangannya → akses MCP 0x60. Root I2C: PCF8574 0x20, SHT40 0x44, TCA9548A 0x71.","textPreview":"Urutan akses yang terbukti pada GLD2: matikan switch lain → aktifkan EN target → pilih TCA pasangannya → akses MCP 0x60. Root I2C: PCF857...","textChars":171,"textLines":1,"bbox":[114,598,1052,54]}
+{"kind":"table","id":"tb/q9w3ilwf","slide":7,"name":"","rows":9,"cols":5,"preview":"Header | Sensor | PCF / EN | TCA | ADS1256","bbox":[160,135,960,420]}
+{"kind":"notes","id":"nt/pqydiu","slide":7,"text":"Sources: docs/wiring/gld-project-ver2-2026-07-01/GLD2-nulling-live-findings-2026-08-19.md; docs/wiring/gld-project-ver2-2026-07-01/GLD2-functional-test-plan-draft.md; firmware/gld/include/BoardPinsGLD2.h."}
+{"kind":"slide","id":"sl/x8f69ofe","slide":8,"title":"V3","textShapes":1}
+{"kind":"textbox","id":"sh/ml07i9sv","slide":8,"name":"TextBox 5","text":"V3","textPreview":"V3","textChars":2,"textLines":1,"bbox":[625.81,631.25,46.48,38.78]}
+{"kind":"shape","id":"sh/pc76hkr2","slide":8,"bbox":[35,450,1210,165]}
+{"kind":"table","id":"tb/epsjupkr","slide":8,"name":"","rows":7,"cols":3,"preview":"Aspek | V2 / GLD2 | V3","bbox":[35,450,1210,165]}
+{"kind":"image","id":"im/mxg36h47","slide":8,"name":"Picture 2","bbox":[0,0,640,557.91]}
+{"kind":"image","id":"im/lwn2dc3m","slide":8,"name":"Picture 4","bbox":[690.27,0,589.73,557.91]}
+{"kind":"notes","id":"nt/x8f69ofe","slide":8,"text":""}
+{"kind":"slide","id":"sl/gnmp4jqx","slide":9,"title":"V4 / ATEX","textShapes":1}
+{"kind":"textbox","id":"sh/kzmdova1","slide":9,"name":"TextBox 5","text":"V4 / ATEX","textPreview":"V4 / ATEX","textChars":9,"textLines":1,"bbox":[625.81,631.25,46.48,38.78]}
+{"kind":"shape","id":"sh/a9ojq5kz","slide":9,"bbox":[25,315,855,300]}
+{"kind":"table","id":"tb/25snm1gr","slide":9,"name":"","rows":8,"cols":3,"preview":"Aspek | V3 | V4 / ATEX","bbox":[25,315,855,300]}
+{"kind":"image","id":"im/4ralkf6t","slide":9,"name":"Picture 2","bbox":[0,0,430.45,369.51]}
+{"kind":"image","id":"im/rul4vapk","slide":9,"name":"Picture 4","bbox":[430.45,0,384.69,369.51]}
+{"kind":"image","id":"im/6tc3mpoz","slide":9,"name":"Picture 3","bbox":[895.31,0,384.69,377.68]}
+{"kind":"image","id":"im/wz6dk3it","slide":9,"name":"Picture 7","bbox":[913.59,375.22,366.41,344.78]}
+{"kind":"notes","id":"nt/gnmp4jqx","slide":9,"text":""}
+{"kind":"slide","id":"sl/fu1gfa1s","slide":10,"title":"V5","textShapes":1}
+{"kind":"textbox","id":"sh/tkby9kzm","slide":10,"name":"TextBox 5","text":"V5","textPreview":"V5","textChars":2,"textLines":1,"bbox":[828.06,259.54,46.48,38.78]}
+{"kind":"shape","id":"sh/zipwbmdc","slide":10,"name":"Rectangle 16","bbox":[0,0,806.9,366.75]}
+{"kind":"shape","id":"sh/kfixwbe1","slide":10,"name":"Rectangle 17","bbox":[0,365.5,771.3,354.5]}
+{"kind":"shape","id":"sh/lgbepgvm","slide":10,"name":"Rectangle 18","bbox":[899.54,-3.16,384.51,723.16]}
+{"kind":"shape","id":"sh/jq5w365o","slide":10,"bbox":[805,185,455,430]}
+{"kind":"table","id":"tb/10fqp4ba","slide":10,"name":"","rows":7,"cols":2,"preview":"Aspek | V5 adapter vs V4","bbox":[805,185,455,430]}
+{"kind":"image","id":"im/yp8rix47","slide":10,"name":"Picture 2","bbox":[0,0,399.4,369.92]}
+{"kind":"image","id":"im/jqhsb2ls","slide":10,"name":"Picture 4","bbox":[399.4,0,407.5,366.75]}
+{"kind":"image","id":"im/krqtkn2x","slide":10,"name":"Picture 9","bbox":[0,366.75,375.85,353.25]}
+{"kind":"image","id":"im/lszads3i","slide":10,"name":"Picture 11","bbox":[375.85,366.75,395.81,353.25]}
+{"kind":"image","id":"im/alored4v","slide":10,"name":"Picture 13","bbox":[895.7,-3.16,394.41,360]}
+{"kind":"image","id":"im/bmxs7ilg","slide":10,"name":"Picture 15","bbox":[899.18,355.93,390.93,368.54]}
+{"kind":"notes","id":"nt/fu1gfa1s","slide":10,"text":""}
+{"kind":"slide","id":"sl/pf3qar","slide":11,"title":"Perbandingan GLD V1–V5: Posisi Sensor Module","textShapes":2}
+{"kind":"shape","id":"sh/d8jqhk7e","slide":11,"bbox":[0,0,1280,720]}
+{"kind":"textbox","id":"sh/q58r65on","slide":11,"text":"Perbandingan GLD V1–V5: Posisi Sensor Module","textPreview":"Perbandingan GLD V1–V5: Posisi Sensor Module","textChars":44,"textLines":1,"bbox":[70,34,1140,45]}
+{"kind":"textbox","id":"sh/r6h8fap8","slide":11,"text":"Versi visual dibandingkan dari artefak PCB yang tersedia. Detail mapping header yang lengkap hanya terverifikasi untuk GLD2.","textPreview":"Versi visual dibandingkan dari artefak PCB yang tersedia. Detail mapping header yang lengkap hanya terverifikasi untuk GLD2.","textChars":124,"textLines":1,"bbox":[70,79,1140,28]}
+{"kind":"table","id":"tb/x0jyt0rm","slide":11,"name":"","rows":6,"cols":4,"preview":"Versi | Akuisisi / sensor | Perubahan board | Batas bukti","bbox":[55,120,1170,510]}
+{"kind":"notes","id":"nt/pf3qar","slide":11,"text":"Sources: docs/wiring/gld-project-ver2-2026-07-01/source-GLD_Project.zip; source-GLD2.zip; docs/wiring/Board_GLD3.zip; docs/wiring/GLD ATEX.zip; docs/wiring/GLD5.zip; firmware/gld/include/BoardPinsGLD2.h; firmware/gld/include/BoardPinsGLDATEX.h."}
+{"kind":"slide","id":"sl/udsvah03","slide":12,"title":"CH","textShapes":1}
+{"kind":"textbox","id":"sh/1cfmhgne","slide":12,"name":"Title 1","placeholder":"title","text":"CH","textPreview":"CH","textChars":2,"textLines":1,"bbox":[0,0,0,0]}
+{"kind":"shape","id":"sh/0b65obm9","slide":12,"name":"Text Placeholder 2","placeholder":"body","bbox":[0,0,0,0]}
+{"kind":"notes","id":"nt/udsvah03","slide":12,"text":""}
+{"kind":"slide","id":"sl/m90b6t0r","slide":13,"title":"CH V1","textShapes":1}
+{"kind":"textbox","id":"sh/l036l83y","slide":13,"name":"TextBox 5","text":"CH V1","textPreview":"CH V1","textChars":5,"textLines":1,"bbox":[502.78,351.4,85.36,38.78]}
+{"kind":"shape","id":"sh/m1cnetkj","slide":13,"bbox":[390,130,835,330]}
+{"kind":"table","id":"tb/fqhg3ixs","slide":13,"name":"","rows":6,"cols":2,"preview":"Aspek | CH V1 — baseline visual","bbox":[390,130,835,330]}
+{"kind":"image","id":"im/tk7a9k3e","slide":13,"name":"Picture 2","bbox":[0,0,185.48,720]}
+{"kind":"image","id":"im/ulgr2p4z","slide":13,"name":"Picture 4","bbox":[185.48,0,174.5,720]}
+{"kind":"notes","id":"nt/m90b6t0r","slide":13,"text":""}
+{"kind":"slide","id":"sl/jetc3ut0","slide":14,"title":"CH V2","textShapes":1}
+{"kind":"textbox","id":"sh/98rytw72","slide":14,"name":"TextBox 5","text":"CH V2","textPreview":"CH V2","textChars":5,"textLines":1,"bbox":[575.05,647.55,85.36,38.78]}
+{"kind":"shape","id":"sh/61kzalof","slide":14,"bbox":[45,395,1190,220]}
+{"kind":"table","id":"tb/rexkf2d4","slide":14,"name":"","rows":6,"cols":3,"preview":"Aspek | CH V1 | CH V2","bbox":[45,395,1190,220]}
+{"kind":"image","id":"im/1k3i9gz2","slide":14,"name":"Picture 2","bbox":[0,0,640,619.81]}
+{"kind":"image","id":"im/2lcz2l0n","slide":14,"name":"Picture 4","bbox":[617.73,0,662.27,619.81]}
+{"kind":"notes","id":"nt/jetc3ut0","slide":14,"text":""}
+{"kind":"slide","id":"sl/8f2psfyx","slide":15,"title":"CH V3","textShapes":1}
+{"kind":"textbox","id":"sh/dcbm583y","slide":15,"name":"TextBox 5","text":"CH V3","textPreview":"CH V3","textChars":5,"textLines":1,"bbox":[504.45,340.61,85.36,38.78]}
+{"kind":"shape","id":"sh/a543mx4r","slide":15,"bbox":[400,105,825,365]}
+{"kind":"table","id":"tb/3ilgzeds","slide":15,"name":"","rows":6,"cols":3,"preview":"Aspek | CH V2 | CH V3","bbox":[400,105,825,365]}
+{"kind":"image","id":"im/943a14fq","slide":15,"name":"Picture 2","bbox":[0,0,179.21,720]}
+{"kind":"image","id":"im/yxsr2pg3","slide":15,"name":"Picture 4","bbox":[179.21,0,158.43,720]}
+{"kind":"notes","id":"nt/8f2psfyx","slide":15,"text":""}
+{"kind":"slide","id":"sl/lc51ea","slide":16,"title":"Dari Sensor Module ke CH","textShapes":16}
+{"kind":"shape","id":"sh/hsb2lw7e","slide":16,"bbox":[0,0,1280,720]}
+{"kind":"textbox","id":"sh/u50jqh8n","slide":16,"text":"Dari Sensor Module ke CH","textPreview":"Dari Sensor Module ke CH","textChars":24,"textLines":1,"bbox":[70,34,1140,45]}
+{"kind":"textbox","id":"sh/vq9kjmp8","slide":16,"text":"CH tidak membaca AIN/ADC sensor secara langsung; perannya adalah menerima dan meneruskan data GLD melalui radio E22.","textPreview":"CH tidak membaca AIN/ADC sensor secara langsung; perannya adalah menerima dan meneruskan data GLD melalui radio E22.","textChars":116,"textLines":1,"bbox":[70,79,1140,28]}
+{"kind":"shape","id":"sh/83i1o7qx","slide":16,"bbox":[55,160,230,180]}
+{"kind":"shape","id":"sh/t4rihc7i","slide":16,"bbox":[55,160,7,180]}
+{"kind":"textbox","id":"sh/610jmx8r","slide":16,"text":"Sensor module ×8","textPreview":"Sensor module ×8","textChars":16,"textLines":1,"bbox":[73,173,198,28]}
+{"kind":"textbox","id":"sh/7290f2pc","slide":16,"text":"Elemen MQ menghasilkan sinyal analog. EN, I2C cabang, dan AIN kembali ke motherboard GLD.","textPreview":"Elemen MQ menghasilkan sinyal analog. EN, I2C cabang, dan AIN kembali ke motherboard GLD.","textChars":89,"textLines":1,"bbox":[73,207,198,122]}
+{"kind":"textbox","id":"sh/szm10b61","slide":16,"text":"AIN","textPreview":"AIN","textChars":3,"textLines":1,"bbox":[300,232,90,34]}
+{"kind":"shape","id":"sh/d0v2tg7m","slide":16,"bbox":[405,160,250,180]}
+{"kind":"shape","id":"sh/xwjepg7i","slide":16,"bbox":[405,160,7,180]}
+{"kind":"textbox","id":"sh/wvaxgb6x","slide":16,"text":"GLD acquisition","textPreview":"GLD acquisition","textChars":15,"textLines":1,"bbox":[423,173,218,28]}
+{"kind":"textbox","id":"sh/va1wn6ps","slide":16,"text":"PCF/TPS22919: daya; TCA/MCP: pilih & nulling; ADS1256: konversi analog ke data; ESP32-S3: proses.","textPreview":"PCF/TPS22919: daya; TCA/MCP: pilih & nulling; ADS1256: konversi analog ke data; ESP32-S3: proses.","textChars":97,"textLines":1,"bbox":[423,207,218,122]}
+{"kind":"textbox","id":"sh/a9sfe1o7","slide":16,"text":"LoRa","textPreview":"LoRa","textChars":4,"textLines":1,"bbox":[670,232,90,34]}
+{"kind":"shape","id":"sh/98jelw7m","slide":16,"bbox":[775,160,210,180]}
+{"kind":"shape","id":"sh/87qxcr61","slide":16,"bbox":[775,160,7,180]}
+{"kind":"textbox","id":"sh/n6hwjmpg","slide":16,"text":"E22 pada GLD","textPreview":"E22 pada GLD","textChars":12,"textLines":1,"bbox":[793,173,178,28]}
+{"kind":"textbox","id":"sh/m58fahov","slide":16,"text":"Radio membawa telemetri/data yang sudah dibentuk oleh GLD; bukan sinyal sensor analog.","textPreview":"Radio membawa telemetri/data yang sudah dibentuk oleh GLD; bukan sinyal sensor analog.","textChars":86,"textLines":1,"bbox":[793,207,178,122]}
+{"kind":"textbox","id":"sh/t43yx0nq","slide":16,"text":"LoRa","textPreview":"LoRa","textChars":4,"textLines":1,"bbox":[1000,232,90,34]}
+{"kind":"shape","id":"sh/s3uxov65","slide":16,"bbox":[1100,160,130,180]}
+{"kind":"shape","id":"sh/c72hkzeh","slide":16,"bbox":[1100,160,7,180]}
+{"kind":"textbox","id":"sh/d8bit4v2","slide":16,"text":"CH","textPreview":"CH","textChars":2,"textLines":1,"bbox":[1118,173,98,28]}
+{"kind":"textbox","id":"sh/q5kzipwb","slide":16,"text":"Dual E22: terima/relay data.","textPreview":"Dual E22: terima/relay data.","textChars":28,"textLines":1,"bbox":[1118,207,98,122]}
+{"kind":"shape","id":"sh/r6tgrudw","slide":16,"bbox":[170,445,940,125]}
+{"kind":"shape","id":"sh/43ihgfel","slide":16,"bbox":[170,445,7,125]}
+{"kind":"textbox","id":"sh/p4bypkvq","slide":16,"text":"Bukti CH yang tersedia","textPreview":"Bukti CH yang tersedia","textChars":22,"textLines":1,"bbox":[188,458,908,28]}
+{"kind":"textbox","id":"sh/2h0zepwf","slide":16,"text":"Source dualRadioCH_E220Ver4 membuktikan ESP32-S3, dua E22, BQ25185, TPS63020, TLV70233, TPL5010 dan CH340. Mapping radio/profile firmware ada, tetapi source tidak dipasangkan tegas ke gambar CH V1–V3 di deck.","textPreview":"Source dualRadioCH_E220Ver4 membuktikan ESP32-S3, dua E22, BQ25185, TPS63020, TLV70233, TPL5010 dan CH340. Mapping radio/profile firmware...","textChars":208,"textLines":1,"bbox":[188,492,908,67]}
+{"kind":"textbox","id":"sh/329gnud0","slide":16,"text":"Batas klaim: alur hardware/board source; tidak menyatakan keberhasilan komunikasi RF, relay CH, gateway, atau server di lapangan.","textPreview":"Batas klaim: alur hardware/board source; tidak menyatakan keberhasilan komunikasi RF, relay CH, gateway, atau server di lapangan.","textChars":129,"textLines":1,"bbox":[100,625,1080,28]}
+{"kind":"notes","id":"nt/lc51ea","slide":16,"text":"Sources: docs/wiring/gld-project-ver2-2026-07-01/GLD2-nulling-live-findings-2026-08-19.md; docs/wiring/ch-dual-radio-e220-ver4-2026-07-21/README.md; docs/wiring/ch-dual-radio-e220-ver4-2026-07-21/1-PCB_PCB_dualRadioCH_E220Ver4.json."}
+{"kind":"slide","id":"sl/oizejr","slide":17,"title":"Perbandingan CH V1–V3","textShapes":3}
+{"kind":"shape","id":"sh/x4jy5oji","slide":17,"bbox":[0,0,1280,720]}
+{"kind":"textbox","id":"sh/a1sfu907","slide":17,"text":"Perbandingan CH V1–V3","textPreview":"Perbandingan CH V1–V3","textChars":21,"textLines":1,"bbox":[70,34,1140,45]}
+{"kind":"textbox","id":"sh/b21g3e1s","slide":17,"text":"Peran CH terhadap sensor: menerima paket LoRa dari GLD; tidak berfungsi sebagai ADC/board sensor module.","textPreview":"Peran CH terhadap sensor: menerima paket LoRa dari GLD; tidak berfungsi sebagai ADC/board sensor module.","textChars":104,"textLines":1,"bbox":[70,79,1140,28]}
+{"kind":"shape","id":"sh/l83y98ju","slide":17,"bbox":[90,630,1100,46]}
+{"kind":"textbox","id":"sh/y5cfyt03","slide":17,"text":"Agar perbandingan CH V1–V3 menjadi pasti, diperlukan source EasyEDA/PCB JSON atau BOM yang secara eksplisit menyebut masing-masing versi tersebut.","textPreview":"Agar perbandingan CH V1–V3 menjadi pasti, diperlukan source EasyEDA/PCB JSON atau BOM yang secara eksplisit menyebut masing-masing versi ...","textChars":146,"textLines":1,"bbox":[104,638,1072,30]}
+{"kind":"table","id":"tb/pkri1ojy","slide":17,"name":"","rows":5,"cols":4,"preview":"Versi | Bukti di deck/repo | Hubungan ke sensor module | Status teknis","bbox":[55,125,1170,480]}
+{"kind":"notes","id":"nt/oizejr","slide":17,"text":"Sources: docs/wiring/ch-dual-radio-e220-ver4-2026-07-21/README.md; docs/wiring/ch-dual-radio-e220-ver4-2026-07-21/1-PCB_PCB_dualRadioCH_E220Ver4.json; docs/wiring/Source_CH_Board_Kecil/Source_CH_Board_Kecil.zip."}

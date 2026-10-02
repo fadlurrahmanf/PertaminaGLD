@@ -1,0 +1,115 @@
+{"kind":"deck","id":"pr/tg6j0y","name":"Deck"}
+{"kind":"layout","layoutId":"/ppt/slideMasters/slideMaster1.xml","name":"","type":"master","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"body","type":"body","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"dateTime","type":"dateTime","textPreview":"02/10/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout1.xml","name":"Title Slide","type":"title","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"subtitle","type":"subtitle","textPreview":"Click to edit Master subtitle style"},{"name":"dateTime","type":"dateTime","textPreview":"02/10/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout2.xml","name":"Title and Content","type":"obj","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"content placeholder 2","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"dateTime","type":"dateTime","textPreview":"02/10/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout3.xml","name":"Section Header","type":"secHead","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"body","type":"body","textPreview":"Click to edit Master text styles"},{"name":"dateTime","type":"dateTime","textPreview":"02/10/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout4.xml","name":"Two Content","type":"twoObj","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"content placeholder 2","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"content placeholder 3","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"dateTime","type":"dateTime","textPreview":"02/10/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout5.xml","name":"Comparison","type":"twoTxTwoObj","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"body","type":"body","textPreview":"Click to edit Master text styles"},{"name":"content placeholder 3","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"body","type":"body","textPreview":"Click to edit Master text styles"},{"name":"content placeholder 5","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"dateTime","type":"dateTime","textPreview":"02/10/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout6.xml","name":"Title Only","type":"titleOnly","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"dateTime","type":"dateTime","textPreview":"02/10/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout7.xml","name":"Blank","type":"blank","placeholders":[{"name":"dateTime","type":"dateTime","textPreview":"02/10/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout8.xml","name":"Content with Caption","type":"objTx","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"content placeholder 2","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"body","type":"body","textPreview":"Click to edit Master text styles"},{"name":"dateTime","type":"dateTime","textPreview":"02/10/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout9.xml","name":"Picture with Caption","type":"picTx","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"picture","type":"picture"},{"name":"body","type":"body","textPreview":"Click to edit Master text styles"},{"name":"dateTime","type":"dateTime","textPreview":"02/10/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout10.xml","name":"Title and Vertical Text","type":"vertTx","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"body","type":"body","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"dateTime","type":"dateTime","textPreview":"02/10/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"layout","layoutId":"/ppt/slideLayouts/slideLayout11.xml","name":"Vertical Title and Text","type":"vertTitleAndTx","placeholders":[{"name":"title","type":"title","textPreview":"Click to edit Master title style"},{"name":"body","type":"body","textPreview":"Click to edit Master text styles | Second level | Third level | Fourth level | Fifth level"},{"name":"dateTime","type":"dateTime","textPreview":"02/10/2026"},{"name":"footer","type":"footer"},{"name":"slideNumber","type":"slideNumber","textPreview":"‹#›"}]}
+{"kind":"slide","id":"sl/y90nupkv","slide":1,"title":"GLD","textShapes":1}
+{"kind":"textbox","id":"sh/547294r6","slide":1,"name":"Title 1","placeholder":"title","text":"GLD","textPreview":"GLD","textChars":3,"textLines":1,"bbox":[0,0,0,0]}
+{"kind":"shape","id":"sh/k3yl0zql","slide":1,"name":"Text Placeholder 2","placeholder":"body","bbox":[0,0,0,0]}
+{"kind":"notes","id":"nt/y90nupkv","slide":1,"text":""}
+{"kind":"slide","id":"sl/hwbqtkby","slide":2,"title":"GLD V1","textShapes":3}
+{"kind":"shape","id":"sh/r65knqtk","slide":2,"name":"TextBox 7","bbox":[625.81,631.25,46.48,38.78]}
+{"kind":"textbox","id":"sh/9wnqhczy","slide":2,"text":"GLD V1","textPreview":"GLD V1","textChars":6,"textLines":1,"bbox":[700,52,520,46]}
+{"kind":"shape","id":"sh/mtwrmxg7","slide":2,"bbox":[700,116,500,2]}
+{"kind":"textbox","id":"sh/nu58f2hs","slide":2,"text":"Baseline motherboard","textPreview":"Baseline motherboard","textChars":20,"textLines":1,"bbox":[700,138,500,30]}
+{"kind":"textbox","id":"sh/wjy9sry9","slide":2,"text":"ESP32, ADS1256, TCA9548, dan MCP4725 berada pada motherboard.\n\nJalur analog memakai INA333, OPA333, dan LM321. Sensor serta bridge MQ masih berada pada board utama.\n\nTPL5010 mengatur wake-up/deep-sleep dan kontrol catu 5V/3.3V board, sementara baterai dipertahankan.\n\nULN2003 mengendalikan buzzer, alarm 5V, dan DC fan.","textPreview":"ESP32, ADS1256, TCA9548, dan MCP4725 berada pada motherboard. |  | Jalur analog memakai INA333, OPA333, dan LM321. Sensor serta bridge MQ...","textChars":319,"textLines":7,"bbox":[700,178,500,470]}
+{"kind":"image","id":"im/nix0be18","slide":2,"name":"Picture 4","bbox":[22,116,320,285.7]}
+{"kind":"image","id":"im/jy5w3a14","slide":2,"name":"Picture 6","bbox":[354,116,310.5,285.7]}
+{"kind":"notes","id":"nt/hwbqtkby","slide":2,"text":""}
+{"kind":"slide","id":"sl/ofy9wn61","slide":3,"title":"GLD Low Power","textShapes":1}
+{"kind":"textbox","id":"sh/cza94vmx","slide":3,"name":"Title 1","placeholder":"title","text":"GLD Low Power","textPreview":"GLD Low Power","textChars":13,"textLines":1,"bbox":[0,0,0,0]}
+{"kind":"shape","id":"sh/d0jax03i","slide":3,"name":"Text Placeholder 2","placeholder":"body","bbox":[0,0,0,0]}
+{"kind":"notes","id":"nt/ofy9wn61","slide":3,"text":""}
+{"kind":"slide","id":"sl/jyx0ra1s","slide":4,"title":"SensorBoardMQ","textShapes":3}
+{"kind":"shape","id":"sh/3ihk3et8","slide":4,"name":"TextBox 7","bbox":[554.26,645.74,217.47,38.78]}
+{"kind":"textbox","id":"sh/5cva1cfq","slide":4,"text":"SensorBoardMQ","textPreview":"SensorBoardMQ","textChars":13,"textLines":1,"bbox":[700,52,520,46]}
+{"kind":"shape","id":"sh/i94r6xgz","slide":4,"bbox":[700,116,500,2]}
+{"kind":"textbox","id":"sh/jadsz2xk","slide":4,"text":"Bagian dari perubahan V2","textPreview":"Bagian dari perubahan V2","textChars":24,"textLines":1,"bbox":[700,138,500,30]}
+{"kind":"textbox","id":"sh/w72947yt","slide":4,"text":"INA333, MCP4725, dan rangkaian bridge sensor MQ dipisahkan dari motherboard.\n\nTPS22919 pada module mengendalikan ON/OFF daya sensor MQ.\n\nModule terhubung ke motherboard melalui socket.","textPreview":"INA333, MCP4725, dan rangkaian bridge sensor MQ dipisahkan dari motherboard. |  | TPS22919 pada module mengendalikan ON/OFF daya sensor M...","textChars":184,"textLines":5,"bbox":[700,205,500,280]}
+{"kind":"image","id":"im/z6lc7q1o","slide":4,"name":"Picture 4","bbox":[28,122,305,290]}
+{"kind":"image","id":"im/fed47q18","slide":4,"name":"Picture 6","bbox":[352,122,286,290]}
+{"kind":"notes","id":"nt/jyx0ra1s","slide":4,"text":""}
+{"kind":"slide","id":"sl/i107q5of","slide":5,"title":"GLD V2","textShapes":3}
+{"kind":"shape","id":"sh/l4bupwny","slide":5,"name":"TextBox 5","bbox":[625.81,631.25,46.48,38.78]}
+{"kind":"textbox","id":"sh/m5kbi1oj","slide":5,"text":"GLD V2","textPreview":"GLD V2","textChars":6,"textLines":1,"bbox":[700,52,520,46]}
+{"kind":"shape","id":"sh/w32dkbuh","slide":5,"bbox":[700,116,500,2]}
+{"kind":"textbox","id":"sh/x4vedgvm","slide":5,"text":"Perubahan dari V1","textPreview":"Perubahan dari V1","textChars":17,"textLines":1,"bbox":[700,138,500,30]}
+{"kind":"textbox","id":"sh/ahkvi1cb","slide":5,"text":"LM321 diganti OPA320 pada jalur analog. PCF8574 dan SHT40 juga ditambahkan.\n\nINA333, MCP4725, dan bridge MQ pindah ke SensorBoardMQ yang memakai TPS22919 untuk ON/OFF daya sensor.\n\nDC fan tidak ada. Pin Alarm menyediakan tegangan 24V.\n\nPemilih 24V/Battery/5V terhubung langsung tanpa jumper. Pada revisi awal V2, +5VA belum tersambung.","textPreview":"LM321 diganti OPA320 pada jalur analog. PCF8574 dan SHT40 juga ditambahkan. |  | INA333, MCP4725, dan bridge MQ pindah ke SensorBoardMQ y...","textChars":335,"textLines":7,"bbox":[700,178,500,470]}
+{"kind":"image","id":"im/h8juxg7q","slide":5,"name":"Picture 2","bbox":[22,116,320,259]}
+{"kind":"image","id":"im/apobah8v","slide":5,"name":"Picture 4","bbox":[358,116,278,263]}
+{"kind":"notes","id":"nt/i107q5of","slide":5,"text":""}
+{"kind":"slide","id":"sl/x8f69ofe","slide":6,"title":"GLD V3","textShapes":3}
+{"kind":"shape","id":"sh/ml07i9sv","slide":6,"name":"TextBox 5","bbox":[625.81,631.25,46.48,38.78]}
+{"kind":"textbox","id":"sh/pc76hkr2","slide":6,"text":"GLD V3","textPreview":"GLD V3","textChars":6,"textLines":1,"bbox":[700,52,520,46]}
+{"kind":"shape","id":"sh/h4bupgn6","slide":6,"bbox":[700,116,500,2]}
+{"kind":"textbox","id":"sh/w32twb6l","slide":6,"text":"Perubahan dari V2","textPreview":"Perubahan dari V2","textChars":17,"textLines":1,"bbox":[700,138,500,30]}
+{"kind":"textbox","id":"sh/v2tcn650","slide":6,"text":"Socket DC_FAN 5V sudah tersedia kembali.\n\n+5VA sudah tersambung dan diperbaiki.\n\nKonfigurasi sensor module, OPA320, ADS1256, TCA9548, PCF8574, dan SHT40 tetap dipertahankan.","textPreview":"Socket DC_FAN 5V sudah tersedia kembali. |  | +5VA sudah tersambung dan diperbaiki. |  | Konfigurasi sensor module, OPA320, ADS1256, TCA9...","textChars":173,"textLines":5,"bbox":[700,205,500,300]}
+{"kind":"image","id":"im/mxg36h47","slide":6,"name":"Picture 2","bbox":[22,116,320,279]}
+{"kind":"image","id":"im/lwn2dc3m","slide":6,"name":"Picture 4","bbox":[358,116,295,279]}
+{"kind":"notes","id":"nt/x8f69ofe","slide":6,"text":""}
+{"kind":"slide","id":"sl/gnmp4jqx","slide":7,"title":"GLD V4","textShapes":3}
+{"kind":"shape","id":"sh/kzmdova1","slide":7,"name":"TextBox 5","bbox":[625.81,631.25,46.48,38.78]}
+{"kind":"textbox","id":"sh/a9ojq5kz","slide":7,"text":"GLD V4","textPreview":"GLD V4","textChars":6,"textLines":1,"bbox":[700,52,520,46]}
+{"kind":"shape","id":"sh/xcz2l03q","slide":7,"bbox":[700,116,500,2]}
+{"kind":"textbox","id":"sh/cbq1sv25","slide":7,"text":"Perubahan dari V3","textPreview":"Perubahan dari V3","textChars":17,"textLines":1,"bbox":[700,138,500,30]}
+{"kind":"textbox","id":"sh/n6x0fqlo","slide":7,"text":"Ditambahkan lubang baut untuk pemasangan motherboard ke cover PCB.\n\nCover PCB terpisah ditambahkan untuk men-terminalkan koneksi dan menutupi motherboard.\n\nGambar kanan bawah menunjukkan Cover PCB dengan terminal berwarna hijau.","textPreview":"Ditambahkan lubang baut untuk pemasangan motherboard ke cover PCB. |  | Cover PCB terpisah ditambahkan untuk men-terminalkan koneksi dan ...","textChars":228,"textLines":5,"bbox":[700,205,500,300]}
+{"kind":"image","id":"im/4ralkf6t","slide":7,"name":"Picture 2","bbox":[20,92,315,270]}
+{"kind":"image","id":"im/rul4vapk","slide":7,"name":"Picture 4","bbox":[340,92,282,270]}
+{"kind":"image","id":"im/6tc3mpoz","slide":7,"name":"Picture 3","bbox":[20,382,310,270]}
+{"kind":"image","id":"im/wz6dk3it","slide":7,"name":"Picture 7","bbox":[340,382,282,265]}
+{"kind":"notes","id":"nt/gnmp4jqx","slide":7,"text":""}
+{"kind":"slide","id":"sl/fu1gfa1s","slide":8,"title":"GLD V5","textShapes":3}
+{"kind":"shape","id":"sh/tkby9kzm","slide":8,"name":"TextBox 5","bbox":[828.06,259.54,46.48,38.78]}
+{"kind":"shape","id":"sh/zipwbmdc","slide":8,"name":"Rectangle 16","bbox":[10,78,450,205]}
+{"kind":"shape","id":"sh/kfixwbe1","slide":8,"name":"Rectangle 17","bbox":[10,288,430,198]}
+{"kind":"shape","id":"sh/lgbepgvm","slide":8,"name":"Rectangle 18","bbox":[446,76,210,400]}
+{"kind":"textbox","id":"sh/jq5w365o","slide":8,"text":"GLD V5","textPreview":"GLD V5","textChars":6,"textLines":1,"bbox":[700,52,520,46]}
+{"kind":"shape","id":"sh/i5wva1o3","slide":8,"bbox":[700,116,500,2]}
+{"kind":"textbox","id":"sh/x4ne1wni","slide":8,"text":"Perubahan dari V4","textPreview":"Perubahan dari V4","textChars":17,"textLines":1,"bbox":[700,138,500,30]}
+{"kind":"textbox","id":"sh/w3ed8r6x","slide":8,"text":"MotherBoardAdapter mempertahankan ESP32 dan TPL5010. Konektor 16-pin PHD2.0 membawa antarmuka menuju Sensor PCB.\n\nADS1256, TCA9548, OPA320, PCF8574, SHT40, dan +5VA tidak lagi berada pada motherboard.\n\nFungsi-fungsi tersebut dipisahkan ke Sensor PCB.","textPreview":"MotherBoardAdapter mempertahankan ESP32 dan TPL5010. Konektor 16-pin PHD2.0 membawa antarmuka menuju Sensor PCB. |  | ADS1256, TCA9548, O...","textChars":250,"textLines":5,"bbox":[700,190,500,330]}
+{"kind":"image","id":"im/yp8rix47","slide":8,"name":"Picture 2","bbox":[16,85,212,196]}
+{"kind":"image","id":"im/jqhsb2ls","slide":8,"name":"Picture 4","bbox":[236,85,216,195]}
+{"kind":"image","id":"im/krqtkn2x","slide":8,"name":"Picture 9","bbox":[16,294,199,187]}
+{"kind":"image","id":"im/lszads3i","slide":8,"name":"Picture 11","bbox":[224,294,209,187]}
+{"kind":"image","id":"im/alored4v","slide":8,"name":"Picture 13","bbox":[452,85,198,181]}
+{"kind":"image","id":"im/bmxs7ilg","slide":8,"name":"Picture 15","bbox":[452,286,196,185]}
+{"kind":"notes","id":"nt/fu1gfa1s","slide":8,"text":""}
+{"kind":"slide","id":"sl/udsvah03","slide":9,"title":"CH","textShapes":1}
+{"kind":"textbox","id":"sh/1cfmhgne","slide":9,"name":"Title 1","placeholder":"title","text":"CH","textPreview":"CH","textChars":2,"textLines":1,"bbox":[0,0,0,0]}
+{"kind":"shape","id":"sh/0b65obm9","slide":9,"name":"Text Placeholder 2","placeholder":"body","bbox":[0,0,0,0]}
+{"kind":"notes","id":"nt/udsvah03","slide":9,"text":""}
+{"kind":"slide","id":"sl/m90b6t0r","slide":10,"title":"CH V1","textShapes":3}
+{"kind":"shape","id":"sh/l036l83y","slide":10,"name":"TextBox 5","bbox":[502.78,351.4,85.36,38.78]}
+{"kind":"textbox","id":"sh/m1cnetkj","slide":10,"text":"CH V1","textPreview":"CH V1","textChars":5,"textLines":1,"bbox":[700,52,520,46]}
+{"kind":"shape","id":"sh/s7yt4b21","slide":10,"bbox":[700,116,500,2]}
+{"kind":"textbox","id":"sh/d87uxg3m","slide":10,"text":"Baseline CH","textPreview":"Baseline CH","textChars":11,"textLines":1,"bbox":[700,138,500,30]}
+{"kind":"textbox","id":"sh/q5gb21kb","slide":10,"text":"Papan memanjang dengan holder baterai dan konektor antena SMA.\n\nTPL5010 sudah ada pada baseline source CH V1.\n\nArchive tidak membuktikan perubahan fungsi TPL5010 sebagai penambahan khusus versi berikutnya.","textPreview":"Papan memanjang dengan holder baterai dan konektor antena SMA. |  | TPL5010 sudah ada pada baseline source CH V1. |  | Archive tidak memb...","textChars":205,"textLines":5,"bbox":[700,210,500,300]}
+{"kind":"image","id":"im/tk7a9k3e","slide":10,"name":"Picture 2","bbox":[0,0,185.48,720]}
+{"kind":"image","id":"im/ulgr2p4z","slide":10,"name":"Picture 4","bbox":[185.48,0,174.5,720]}
+{"kind":"notes","id":"nt/m90b6t0r","slide":10,"text":""}
+{"kind":"slide","id":"sl/jetc3ut0","slide":11,"title":"CH V2","textShapes":3}
+{"kind":"shape","id":"sh/98rytw72","slide":11,"name":"TextBox 5","bbox":[575.05,647.55,85.36,38.78]}
+{"kind":"textbox","id":"sh/61kzalof","slide":11,"text":"CH V2","textPreview":"CH V2","textChars":5,"textLines":1,"bbox":[700,52,520,46]}
+{"kind":"shape","id":"sh/ofqtgnyt","slide":11,"bbox":[700,116,500,2]}
+{"kind":"textbox","id":"sh/9gza9sze","slide":11,"text":"Perubahan dari V1","textPreview":"Perubahan dari V1","textChars":17,"textLines":1,"bbox":[700,138,500,30]}
+{"kind":"textbox","id":"sh/mdobedg3","slide":11,"text":"PCB berbentuk lingkaran agar sesuai dengan casing aluminium.\n\nSocket antena diganti menjadi pin untuk sambungan ke connector antena fiberglass.\n\nTPL5010 tetap ada pada source V2, seperti baseline V1.","textPreview":"PCB berbentuk lingkaran agar sesuai dengan casing aluminium. |  | Socket antena diganti menjadi pin untuk sambungan ke connector antena f...","textChars":199,"textLines":5,"bbox":[700,210,500,300]}
+{"kind":"image","id":"im/1k3i9gz2","slide":11,"name":"Picture 2","bbox":[18,102,320,310]}
+{"kind":"image","id":"im/2lcz2l0n","slide":11,"name":"Picture 4","bbox":[345,102,331,310]}
+{"kind":"notes","id":"nt/jetc3ut0","slide":11,"text":""}
+{"kind":"slide","id":"sl/8f2psfyx","slide":12,"title":"CH V3","textShapes":3}
+{"kind":"shape","id":"sh/dcbm583y","slide":12,"name":"TextBox 5","bbox":[504.45,340.61,85.36,38.78]}
+{"kind":"textbox","id":"sh/a543mx4r","slide":12,"text":"CH V3","textPreview":"CH V3","textChars":5,"textLines":1,"bbox":[700,52,520,46]}
+{"kind":"shape","id":"sh/wvupgz6t","slide":12,"bbox":[700,116,500,2]}
+{"kind":"textbox","id":"sh/xw3q94ne","slide":12,"text":"Bentuk modifikasi V1","textPreview":"Bentuk modifikasi V1","textChars":20,"textLines":1,"bbox":[700,138,500,30]}
+{"kind":"textbox","id":"sh/atc7epon","slide":12,"text":"Kembali memakai papan memanjang dengan holder baterai.\n\nTPL5010 tetap tercantum pada source V3.\n\nKarena TPL5010 juga ada pada baseline V1, source archive tidak mendukung klaim bahwa IC ini baru ditambahkan pada V3.","textPreview":"Kembali memakai papan memanjang dengan holder baterai. |  | TPL5010 tetap tercantum pada source V3. |  | Karena TPL5010 juga ada pada bas...","textChars":214,"textLines":5,"bbox":[700,210,500,310]}
+{"kind":"image","id":"im/943a14fq","slide":12,"name":"Picture 2","bbox":[0,0,179.21,720]}
+{"kind":"image","id":"im/yxsr2pg3","slide":12,"name":"Picture 4","bbox":[179.21,0,158.43,720]}
+{"kind":"notes","id":"nt/8f2psfyx","slide":12,"text":""}

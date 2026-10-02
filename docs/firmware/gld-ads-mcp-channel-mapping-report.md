@@ -3,7 +3,7 @@
 Tanggal: 2026-07-14
 Scope: current firmware source evidence in `D:\PertaminaGLD`, live COM9
 firmware-command sweep, and EasyEDA board artifact audit from
-`docs/wiring/gld-project-ver2-2026-07-01`.
+`docs/wiring/GLD/V1`.
 
 ## Kesimpulan
 

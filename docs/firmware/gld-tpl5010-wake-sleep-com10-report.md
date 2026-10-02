@@ -10,9 +10,9 @@ showed no automatic wake for 700 seconds after the node was already off/silent.
 
 - Board under test: GLD battery board on COM10 only.
 - Explicit exclusion: COM9 was not used for this wake/sleep proof.
-- Wiring artifact: `docs/wiring/gld-project-ver2-2026-07-01/source-GLD_Project.zip`,
+- Wiring artifact: `docs/wiring/GLD/V1/source-GLD_Project.zip`,
   extracted schematic JSON
-  `docs/wiring/gld-project-ver2-2026-07-01/1-Schematic_GasLeakIntegratedVer2.json`.
+  `docs/wiring/GLD/V1/1-Schematic_GasLeakIntegratedVer2.json`.
 - Firmware evidence: current GLD firmware sources under `firmware/gld/`.
 
 ## Requirement Checklist

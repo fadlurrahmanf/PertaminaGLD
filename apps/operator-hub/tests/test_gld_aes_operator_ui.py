@@ -12,11 +12,14 @@ APP = ROOT / "apps" / "gld-operator"
 class GldAesOperatorUiTests(unittest.TestCase):
     def test_aes_device_state_is_immediately_after_battery(self):
         html = (APP / "index.html").read_text(encoding="utf-8")
+        layout = (APP / "css" / "layout.css").read_text(encoding="utf-8")
         battery = '<span class="strip-gauge"><span>Battery</span><strong id="batteryValue">Unknown</strong></span>'
         aes = '<span class="strip-gauge"><span>AES</span><strong id="aesValue">Unknown</strong></span>'
         self.assertIn(battery, html)
         self.assertIn(aes, html)
         self.assertLess(html.index(battery), html.index(aes))
+        self.assertIn("flex-wrap: nowrap", layout)
+        self.assertIn("overflow-x: auto", layout)
 
     def test_running_settings_has_confirmed_non_secret_provision_action(self):
         html = (APP / "index.html").read_text(encoding="utf-8")

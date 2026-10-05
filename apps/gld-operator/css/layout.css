@@ -36,16 +36,23 @@
 
 .strip-gauges {
   display: flex;
-  flex-wrap: wrap;
+  /* Status must remain a single operational row. On a constrained window the
+     row scrolls horizontally rather than hiding the final gauge on line two. */
+  flex-wrap: nowrap;
   align-items: center;
   gap: var(--space-2);
   min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
+
+.strip-gauges::-webkit-scrollbar { display: none; }
 
 .strip-gauge {
   display: flex;
   align-items: baseline;
   gap: 6px;
+  flex: 0 0 auto;
   min-width: 0;
   padding: 4px 10px;
   border: 1px solid var(--hairline);

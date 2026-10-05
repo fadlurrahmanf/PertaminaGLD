@@ -55,7 +55,10 @@ function setupEvents() {
     const button = $("restartGldBtn");
     await withBusy(button, "Restarting...", () => applyAndAlert("RESTART", "RESTART", "Restart GLD"));
   });
-  $("runningSettingsBtn")?.addEventListener("click", () => setPanelOpen($("runningSettingsPanel"), true));
+  $("runningSettingsBtn")?.addEventListener("click", () => {
+    setPanelOpen($("runningSettingsPanel"), true);
+    refreshGldAesKeyStatus();
+  });
   $("bindModelToNullingProfileBtn")?.addEventListener("click", async () => {
     const profileId = state.status?.model?.activeNullingProfileId;
     const confirmed = await showConfirm(
@@ -130,6 +133,8 @@ function setupEvents() {
   });
   $("applyConfigBtn").addEventListener("click", () => withBusy($("applyConfigBtn"), "Applying...", applyGldSettings));
   $("syncAesKeyBtn").addEventListener("click", () => withBusy($("syncAesKeyBtn"), "Syncing...", syncGldAesKey));
+  $("syncRunningAesKeyBtn")?.addEventListener("click", () => withBusy($("syncRunningAesKeyBtn"), "Provisioning...", syncGldAesKey));
+  $("refreshRunningAesKeyBtn")?.addEventListener("click", () => withBusy($("refreshRunningAesKeyBtn"), "Refreshing...", refreshGldAesKeyStatus));
   $("applyNullingConfigBtn").addEventListener("click", applyNullingConfig);
   $("refreshNullingConfigBtn").addEventListener("click", () => sendCommand("GET_STATUS"));
   $("retryNullingBtn")?.addEventListener("click", async () => {

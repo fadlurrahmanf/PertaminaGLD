@@ -23,6 +23,7 @@
           <span class="strip-gauge"><span>Power</span><strong id="powerMode">Unknown</strong></span>
           <span class="strip-gauge"><span>LoRa</span><strong id="loraValue">Unknown</strong></span>
           <span class="strip-gauge"><span>Battery</span><strong id="batteryValue">Unknown</strong></span>
+          <span class="strip-gauge"><span>AES</span><strong id="aesValue">Unknown</strong></span>
         </div>
 
         <div class="strip-actions">
@@ -449,6 +450,16 @@
           <p class="status-line">This records the latest complete Nulling profile for the currently installed model and scaler. A newer Nulling profile requires a new explicit bind.</p>
 
           <div class="module-head module-head--inner">
+            <h3>LoRa AES Security</h3>
+            <div class="toolbar">
+              <button id="syncRunningAesKeyBtn" type="button">Provision AES Key to GLD</button>
+              <button id="refreshRunningAesKeyBtn" type="button">Refresh AES Source</button>
+            </div>
+          </div>
+          <p id="runningAesKeyStatus" class="status-line">AES source: checking. Device state appears in the AES indicator beside Battery.</p>
+          <p class="status-line">Provision memakai key lokal dari bridge dan me-reboot GLD. Konfirmasi diperlukan; nilai key tidak pernah ditampilkan. Status Ready di indikator AES hanya berasal dari read-back firmware setelah reboot.</p>
+
+          <div class="module-head module-head--inner">
             <h3>Device Identity</h3>
             <div class="toolbar">
               <button id="injectIdBtn" type="button" disabled title="Unlock Expert Terminal first">Inject ID</button>
@@ -719,6 +730,6 @@
       </div>
     </div>
 
-  <script type="module" src="./js/main.js?v=20260825-alarm-auto-manual-1"></script>
+  <script type="module" src="./js/main.js?v=20261005-aes-running-1"></script>
   </body>
 </html>

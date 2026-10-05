@@ -3,7 +3,7 @@
 
 import { $, elements, state, SENSOR_NAMES, DATASET_RUNTIME_READY_TIMEOUT_MS, DATASET_WAITING_STUCK_MS, DATASET_WIZARD_LABELS, initialDatasetSession } from "./state.js";
 import { requestFullNulling } from "./nulling.js";
-import { appendLog, getField, numberField, saveForm, downloadText, csvCell, stamp, nowText, switchTab, showConfirm, showBanner, wait, setPanelOpen } from "./ui.js";
+import { appendLog, getField, numberField, saveForm, downloadText, csvCell, stamp, nowText, switchTab, showConfirm, showBanner, wait, setPanelOpen, setText } from "./ui.js";
 import { bridgeFetch } from "./bridge-client.js";
 import { tokenValue, handleLine, sendCommand, applyAndAlert, sendCommandAndWaitAck } from "./serial-protocol.js";
 import { emitMockInfo, emitMockStatus } from "./mock.js";
@@ -822,16 +822,21 @@ function renderDatasetRows() {
 // Reflects the local provisioning source read by the bridge. It intentionally
 // does not claim that the running Node-RED process has been deployed/restarted
 // with the same environment.
+function setGldAesSourceStatus(message) {
+  ["gldAesKeyStatus", "runningAesKeyStatus"].forEach((id) => {
+    const el = $(id);
+    if (el) el.textContent = message;
+  });
+}
+
 export async function refreshGldAesKeyStatus() {
-  const el = $("gldAesKeyStatus");
-  if (!el) return;
   try {
     const status = await bridgeFetch("/api/gld-key-status");
-    el.textContent = status?.configured
+    setGldAesSourceStatus(status?.configured
       ? `AES source siap (key ID ${status.keyId}). Provision hanya mengirim key ke GLD; Node-RED live belum diverifikasi.`
-      : "AES source belum tersedia pada bridge. GLD tidak akan diprovision.";
+      : "AES source belum tersedia pada bridge. GLD tidak akan diprovision.");
   } catch {
-    el.textContent = "AES key sync: unavailable (could not reach the bridge).";
+    setGldAesSourceStatus("AES key sync: unavailable (could not reach the bridge).");
   }
 }
 
@@ -890,9 +895,9 @@ export async function syncGldAesKey() {
   }
   const ack = await applyAndAlert(`SET_APP_CONFIG_JSON ${JSON.stringify({ reboot: true })}`, "SET_APP_CONFIG", "Provision AES Key to GLD");
   if (ack?.status === "ok") {
-    const line = "AES key diprovision ke GLD. GLD sedang reboot; status Node-RED live belum diverifikasi.";
-    const el = $("gldAesKeyStatus");
-    if (el) el.textContent = line;
+    const line = "Perintah provisioning AES diterima. GLD sedang reboot; tunggu read-back firmware sebelum menyatakan AES Ready. Node-RED live belum diverifikasi.";
+    setGldAesSourceStatus(line);
+    setText("aesValue", "Rebooting...");
     appendLog("AES_KEY_PROVISION=OK sent from bridge source to GLD; Node-RED deployment unverified", "in");
   }
   return ack;

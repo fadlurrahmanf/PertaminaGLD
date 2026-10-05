@@ -64,6 +64,11 @@ class DowngradeUploadTests(unittest.TestCase):
                 raise subprocess.TimeoutExpired(cmd, 45)
             return subprocess.CompletedProcess(cmd, self.erase_exit, "NVS erased\n")
         self.patches = [
+            mock.patch.object(
+                child,
+                "load_canonical_gld_aes_key",
+                return_value={"aesKeyHex": "00" * 16, "keyId": 1},
+            ),
             mock.patch.object(child, "get_serial_bridge", return_value=self.serial),
             mock.patch.object(child, "slot_holding_port", return_value=None),
             mock.patch.object(child, "probe_port", side_effect=AssertionError("no hardware")),
@@ -75,6 +80,23 @@ class DowngradeUploadTests(unittest.TestCase):
         for patch in self.patches:
             patch.start()
             self.addCleanup(patch.stop)
+
+    def test_reset_nvs_without_local_aes_is_rejected_before_hardware(self):
+        with mock.patch.object(child, "load_canonical_gld_aes_key", return_value=None):
+            with self.assertRaisesRegex(RuntimeError, "provisioning AES lokal"):
+                child._firmware_upload_reserved(payload_for("gld_v2"))
+        self.serial.disconnect.assert_not_called()
+        self.assertEqual(self.history, [])
+        self.assertEqual(self.events, [])
+
+    def test_upload_without_nvs_reset_does_not_require_local_aes(self):
+        request = payload_for("gld_v2")
+        request.update(resetNvs=False, resetNvsConfirmation="")
+        with mock.patch.object(child, "load_canonical_gld_aes_key", return_value=None):
+            result = child._firmware_upload_reserved(request)
+        self.assertFalse(result["nvsReset"])
+        self.assertEqual(len(self.history), 1)
+        self.assertIn("write_flash", self.history[0][1])
 
     def test_exact_guard_scope(self):
         for env in ("gld", "gld_model_1", "gld_v2", "gld_v3", "gld_model_2", "gld_model_3", "gldFieldtest"):

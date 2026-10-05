@@ -1139,6 +1139,15 @@ def _firmware_upload_reserved(payload: dict[str, Any], slot: int = 1) -> dict[st
     manifest, verified_files = validate_firmware_package(
         payload.get("manifest"), payload.get("packageFiles"), env, target_id
     )
+    # Reset NVS removes the device-specific LoRa AES configuration. Refuse the
+    # destructive operation before touching the serial port unless this PC has
+    # a valid local provisioning source to restore it after the upload. The
+    # source is deliberately outside Git and the error must not disclose it.
+    if reset_nvs and load_canonical_gld_aes_key() is None:
+        raise RuntimeError(
+            "Reset NVS diblokir: provisioning AES lokal tidak tersedia atau tidak valid; "
+            "sinkronkan server/nodered/.env yang sah pada PC ini lalu ulangi"
+        )
     preerase_nvs = requires_gld1_nvs_reset_before_boot(manifest)
     if preerase_nvs:
         if payload.get("resetNvs") is not True or payload.get("resetNvsConfirmation") != "RESET NVS":

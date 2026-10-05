@@ -214,6 +214,7 @@ export function resetDeviceSnapshot() {
   setText("powerMode", "Unknown");
   setText("batteryValue", "Unknown");
   setText("loraValue", "Unknown");
+  setText("aesValue", "Unknown");
   renderDetectedBoardProfile(null, null);
   updateAlarmState(false);
   // Do not leave GLD2-only module-power controls visible while a board is
@@ -234,6 +235,7 @@ function updateInfo(info) {
   setText("modeValue", info.mode);
   setText("firmwareValue", info.firmwareVersion || info.firmwareName);
   setBadge(elements.protocolLabel, info.protocolVersion || "app serial", "ok");
+  renderAesSecurity(info.security || info.lora);
   renderDetectedBoardProfile(info, state.status);
   syncLoraConfigFields(info.starLora);
   syncDeviceSummary();
@@ -244,6 +246,23 @@ function updateInfo(info) {
     setField("mqttUser", info.appConfig.mqttUser || getField("mqttUser"));
     setField("topicRoot", info.appConfig.topicRoot || getField("topicRoot"));
   }
+}
+
+function renderAesSecurity(security) {
+  if (!security || typeof security !== "object") {
+    setText("aesValue", "Unknown");
+    return;
+  }
+  const keyId = Number(security.keyId);
+  const hasUsableKeyId = Number.isInteger(keyId) && keyId >= 1 && keyId <= 255;
+  if (security.aesKeyPresent === true && security.aesKeyProvisioned === true &&
+      security.aesKeySource === "nvs" && hasUsableKeyId) {
+    setText("aesValue", `Ready #${keyId}`);
+    return;
+  }
+  // A self-test fallback is intentionally not reported as Ready: production
+  // LoRa requires a key provisioned to NVS from the local bridge.
+  setText("aesValue", "Blocked");
 }
 
 function updateStatus(status) {
@@ -283,6 +302,7 @@ function updateStatus(status) {
   }
 
   const lora = status.lora || {};
+  renderAesSecurity(status.security || lora);
   const loraOk = lora.lastTxOk === true || lora.beginState === 0;
   setText("loraValue", loraOk ? "OK" : Number.isFinite(lora.beginState) ? `state ${lora.beginState}` : "Unknown");
   syncLoraConfigFields(lora);

@@ -197,6 +197,7 @@ function startBridgeEvents() {
     if (!payload.connected) {
       clearSerialResponseWatch();
       clearSerialCommandQueue();
+      resetDeviceSnapshot();
     }
     updateConnectionUi(payload.connected ? "connected" : "bridge ready", "ok");
     if (payload.port) elements.portLabel.textContent = payload.port;
@@ -207,6 +208,7 @@ function startBridgeEvents() {
     clearSerialResponseWatch();
     clearSerialCommandQueue();
     state.connected = false;
+    resetDeviceSnapshot();
     appendLog(`SERIAL_ERROR ${payload.message}`, "in");
     setBadge(elements.connectionBadge, "serial error", "error");
     updateConnectionUi("serial error", "error");
@@ -450,11 +452,13 @@ export async function disconnectSerial() {
       appendLog(`DISCONNECT_ERROR ${error.message}`, "in");
     });
     state.connected = false;
+    resetDeviceSnapshot();
     updateConnectionUi("bridge ready", "ok");
     return;
   }
 
   state.connected = false;
+  resetDeviceSnapshot();
   try {
     if (state.reader) await state.reader.cancel();
   } catch {}

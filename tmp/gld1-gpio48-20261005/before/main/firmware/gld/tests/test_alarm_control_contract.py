@@ -73,13 +73,13 @@ def main() -> None:
         require(runtime, marker, runtime_path)
 
     board_pins = read("firmware/gld/include/BoardPins.h")
-    require(board_pins, "#define PGL_GLD_PIN_ALARM_LAMP 48", "firmware/gld/include/BoardPins.h")
+    require(board_pins, "#define PGL_GLD_PIN_ALARM_LAMP 17", "firmware/gld/include/BoardPins.h")
     require(board_pins, "#define PGL_GLD_PIN_BUZZER -1", "firmware/gld/include/BoardPins.h")
-    require(runtime, 'alarmControl["outputDrive"] = "active_high_gpio48_steady"', runtime_path)
+    require(runtime, 'alarmControl["outputDrive"] = "active_high_gpio17_steady"', runtime_path)
     require(runtime, 'alarmControl["externalDevicePattern"] = "steady_high_while_alarm"', runtime_path)
     require(runtime, 'alarmControl["requiresExternalPullup"] = false', runtime_path)
     require(runtime, "alarmActive ? HIGH : LOW", runtime_path)
-    require(runtime, "GLD1_ALARM_OUTPUT gpio48Command=%s reason=inference_invalid", runtime_path)
+    require(runtime, "GLD1_ALARM_OUTPUT gpio17Command=%s reason=inference_invalid", runtime_path)
     setup = runtime.split("void setup() {", 1)[1].split("void loop()", 1)[0]
     if setup.index("beginGld1AlarmOutput();") > setup.index("Serial.begin(115200);"):
         raise AssertionError("GLD1 normal output must be established before serial startup")

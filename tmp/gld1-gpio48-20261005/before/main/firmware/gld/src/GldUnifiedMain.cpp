@@ -1776,7 +1776,7 @@ void emitStatusJson() {
     addSensorPowerJson(doc.as<JsonObject>());
     JsonObject alarmControl = doc.createNestedObject("alarmControl");
     // AUTO/MANUAL is a common Operator Hub contract. The physical drive is
-    // board-specific: GLD1 uses a direct active-HIGH GPIO48 trigger, while
+    // board-specific: GLD1 uses a direct active-HIGH GPIO17 trigger, while
     // GLD2 uses EN_BOOST followed by its ALARM output.
     alarmControl["available"] = true;
     alarmControl["mode"] = pgl::gld::gldAlarmControlModeName(alarmControlMode);
@@ -1795,13 +1795,13 @@ void emitStatusJson() {
     alarmControl["outputDrive"] = "steady_24v";
     alarmControl["externalDevicePattern"] = "self_pulsed_1s_on_1s_off";
 #elif PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8
-    alarmControl["outputDrive"] = "active_high_gpio48_steady";
+    alarmControl["outputDrive"] = "active_high_gpio17_steady";
     alarmControl["externalDevicePattern"] = "steady_high_while_alarm";
     alarmControl["singleTrigger"] = true;
     alarmControl["requiresExternalPullup"] = false;
     // Direct GPIO command only; not a measured voltage or the old J2 output.
     alarmControl["outputPin"] = pgl::gld::board::PIN_ALARM_LAMP;
-    alarmControl["gpio48CommandLevel"] = physicalAlarmCommanded ? "HIGH" : "LOW";
+    alarmControl["gpio17CommandLevel"] = physicalAlarmCommanded ? "HIGH" : "LOW";
 #else
     alarmControl["outputDrive"] = "active_low_lamp_buzzer_led";
     alarmControl["externalDevicePattern"] = "board_outputs_follow_command";
@@ -3374,7 +3374,7 @@ void optionalDigitalWrite(int pin, uint8_t value) {
 
 void setGld1AlarmOutput(bool alarmActive) {
 #if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
-    // GLD1 direct GPIO48 trigger: steady HIGH during alarm, LOW otherwise.
+    // GLD1 direct GPIO17 trigger: steady HIGH during alarm, LOW otherwise.
     optionalDigitalWrite(pgl::gld::board::PIN_ALARM_LAMP, alarmActive ? HIGH : LOW);
 #else
     (void)alarmActive;
@@ -3383,7 +3383,7 @@ void setGld1AlarmOutput(bool alarmActive) {
 
 void beginGld1AlarmOutput() {
 #if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
-    // Preload LOW/OFF before enabling the GPIO48 output driver. Reset-time
+    // Preload LOW/OFF before enabling the GPIO17 output driver. Reset-time
     // levels before setup executes remain a hardware responsibility.
     setGld1AlarmOutput(false);
     optionalPinMode(pgl::gld::board::PIN_ALARM_LAMP, OUTPUT);
@@ -3404,7 +3404,7 @@ void setupPins() {
     optionalPinMode(pgl::gld::board::PIN_ALARM_LAMP, OUTPUT);
     optionalDigitalWrite(pgl::gld::board::PIN_ALARM_LAMP, LOW);
 #elif PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8
-    // GLD1 GPIO48 stays LOW while normal.
+    // GLD1 GPIO17 stays LOW while normal.
     beginGld1AlarmOutput();
 #else
     optionalPinMode(pgl::gld::board::PIN_ALARM_LAMP, OUTPUT);
@@ -5542,7 +5542,7 @@ void drivePhysicalAlarmOutputs(bool enabled) {
     }
 #elif PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8
     // One external device owns both lamp and buzzer, triggered directly by
-    // GPIO48 HIGH for the full alarm. GPIO17, GPIO40 and GPIO41 are not alarm outputs.
+    // GPIO17 HIGH for the full alarm. GPIO40 and GPIO41 are not alarm outputs.
     setGld1AlarmOutput(enabled);
     optionalDigitalWrite(pgl::gld::board::PIN_STATUS_LED,
                          enabled ? ACTIVE_LOW_OUTPUT_ON : ACTIVE_LOW_OUTPUT_OFF);
@@ -5577,7 +5577,7 @@ bool updateAlarmOutputs(bool alarm) {
     // It is deliberately not persisted or replayed at the next boot.
     lastAlarm = alarm;
     driveAlarmOutputs(alarm);
-    logPrintf("GLD1_ALARM_OUTPUT gpio48Command=%s mode=%s physicalCommanded=%u\n",
+    logPrintf("GLD1_ALARM_OUTPUT gpio17Command=%s mode=%s physicalCommanded=%u\n",
               physicalAlarmCommanded ? "HIGH" : "LOW",
               pgl::gld::gldAlarmControlModeName(alarmControlMode),
               physicalAlarmCommanded ? 1u : 0u);
@@ -5776,7 +5776,7 @@ bool runScan(bool requireCompleteBatch = false) {
 #if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
         lastAlarm = false;
         driveAlarmOutputs(false);
-        logPrintf("GLD1_ALARM_OUTPUT gpio48Command=%s reason=inference_invalid\n",
+        logPrintf("GLD1_ALARM_OUTPUT gpio17Command=%s reason=inference_invalid\n",
                   physicalAlarmCommanded ? "HIGH" : "LOW");
 #else
         logPrintf("GLD_ALARM_OUTPUT held=%u reason=sensor_or_inference_fault\n",
@@ -6492,7 +6492,7 @@ void runDatasetStateMachine() {
 
 void setup() {
 #if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
-    // Establish normal GPIO48 LOW before serial startup and its 1 s wait.
+    // Establish normal GPIO17 LOW before serial startup and its 1 s wait.
     beginGld1AlarmOutput();
 #endif
     Serial.begin(115200);
@@ -6529,7 +6529,7 @@ void setup() {
                                   pgl::gld::board::PIN_RS485_TX);
 #endif
 #if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
-    // GLD1 holds GPIO48 LOW until a fresh valid inference.
+    // GLD1 holds GPIO17 LOW until a fresh valid inference.
     (void)pgl::gld::writeGldAlarmLatched(false);
     lastAlarm = false;
     driveAlarmOutputs(false);

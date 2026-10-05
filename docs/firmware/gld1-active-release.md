@@ -1,8 +1,8 @@
-# GLD1 active release: v0.8.38 / 69a493c + GPIO17 alarm + Models 1, 2 and 3
+# GLD1 active release: v0.8.38 / 69a493c + GPIO48 alarm + Models 1, 2 and 3
 
 Baseline activated 2026-09-16 18:24 WIB. Board 1 / Model 1 refreshed 2026-09-21 17:28 WIB from the user-supplied `BOARD GLD 1.zip`.
 
-The installed Operator Hub packages are **v0.8.38** for `gld/latest`, `gld_model_1/latest`, `gld_model_2/latest`, and `gld_model_3/latest`. Model 1/3 were rebuilt on **2026-09-30 for direct GPIO17 alarm**; Model 2 was aligned on **2026-10-01** to its supplied ZIP. Source baseline is `69a493c32d2500134a21e029820cd4addea1794a` (18 August 2026). Nulling retains original **5 ms settle and no 30-second nulling warm-up**; ADC/DAC/runtime code remains the baseline. Settle is not total nulling duration. Version stays 0.8.38 to preserve the exact-baseline NVS migration guard.
+The installed Operator Hub packages are **v0.8.38** for `gld/latest`, `gld_model_1/latest`, `gld_model_2/latest`, and `gld_model_3/latest`, rebuilt on **2026-10-05 for direct GPIO48 alarm**. Source baseline is `69a493c32d2500134a21e029820cd4addea1794a` (18 August 2026). Nulling retains original **5 ms settle and no 30-second nulling warm-up**; ADC/DAC/runtime and model artifacts are unchanged. Settle is not total nulling duration. Version stays 0.8.38 to preserve the exact-baseline NVS migration guard.
 
 Model 3 / Board 3 was published on 2026-09-29 from `BOARD GLD 3.zip`, with explicit user approval for this baseline and inference for board testing after nulling/bind. Model 1 and all other packages were unchanged by that refresh. See [Model 3 release and verification](gld-model-3-release.md); it has two classes and profile `cnn-dualbranch-board-3-2class-v1`.
 
@@ -34,9 +34,9 @@ The original unversioned 92-byte nulling profile can accept a newer 92-byte prof
 
 ## Alarm
 
-GPIO17 is a direct logic trigger: **HIGH continuously during alarm, LOW normally**. Firmware preloads LOW before enabling OUTPUT at startup. GPIO40/41 are no longer alarm outputs. AUTO follows current valid inference; MANUAL remains session-only. Neither a stored boot latch nor retry of an old radio alarm replays a stale physical alarm. In the archived original GLD1 PCB, GPIO17 is U49 pad10 and is not routed to J2; the trigger wire must be connected to GPIO17, not the old ULN2003 J2 output. Actual voltage, load compatibility and levels before firmware starts remain unverified hardware checks.
+GPIO48 is a direct logic trigger: **HIGH continuously during alarm, LOW normally**. Firmware preloads LOW before enabling OUTPUT at startup. GPIO17/40/41 are no longer alarm outputs. AUTO follows current valid inference; MANUAL remains session-only. Neither a stored boot latch nor retry of an old radio alarm replays a stale physical alarm. In the archived original GLD1 PCB, GPIO48 is U49 pad25 and is not routed to J2; the trigger wire must be connected to GPIO48, not the old ULN2003 J2 output. Actual voltage, load compatibility and levels before firmware starts remain unverified hardware checks.
 
-The GPIO17 firmware packages are ready for the existing upload route. Operator Hub/Expert application files have not been changed: the Simple Hub manual-alarm validator does not yet recognize `active_high_gpio17_steady`, and Expert's legacy fallback description is not valid for this new output. UI alignment awaits explicit scope approval; AUTO inference alarm operation does not depend on those controls.
+The GPIO48 firmware packages are ready for the existing upload route. Operator Hub/Expert application files have not been changed: the Simple Hub manual-alarm validator does not yet recognize `active_high_gpio48_steady`, and Expert's legacy fallback description is not valid for this new output. UI alignment awaits explicit scope approval; AUTO inference alarm operation does not depend on those controls.
 
 2026-09-30 verification: all three GLD1 builds passed (1,021,168-byte application binaries); startup, steady output, AUTO/MANUAL and invalid-inference host tests passed. Non-GLD1 preprocessed source remained identical. Strict upload validators accepted the manifest/four flash files, package binaries matched build output, unchanged model provenance/embedded model matched, and NVS migration guard remained active. No COM, physical upload, reset or hardware test. Task-start source/package backups: `tmp/gld1-gpio17-20260930/before/`. Repeat package checks: `C:/Users/MSI/.platformio/penv/Scripts/python.exe tmp/gld1-gpio17-20260930/verify_release.py --published`.
 

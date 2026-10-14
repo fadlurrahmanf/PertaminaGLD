@@ -252,15 +252,23 @@
   padding: var(--space-4);
   background: linear-gradient(135deg, rgba(22, 59, 72, .26), var(--surface));
 }
+.qc-lora-activity { display:flex; flex-direction:column; min-height:0; }
 .qc-lora-card-head { display:flex; align-items:center; justify-content:space-between; gap:var(--space-2); border-bottom:1px solid var(--hairline); padding-bottom:var(--space-3); margin-bottom:var(--space-3); }
 .qc-lora-card-head h3 { margin:0; }
 .qc-lora-card-head > span { color:var(--text-muted); font-size:11px; letter-spacing:.14em; text-transform:uppercase; }
+.qc-lora-live { display:flex; align-items:center; gap:8px; color:var(--text-muted); font:12px var(--font-mono); white-space:nowrap; }
+.qc-lora-tx-status { display:inline-flex; align-items:center; gap:7px; flex:0 0 auto; }
+.qc-lora-live strong { flex:0 0 12ch; margin-left:10px; color:var(--text); font:600 18px/1 var(--font-mono); font-variant-numeric:tabular-nums; text-align:left; }
+.qc-lora-tx-pulse { width:18px; height:18px; border:1px solid #4b6570; border-radius:50%; background:#173038; box-shadow:0 0 0 transparent; }
+.qc-lora-tx-pulse.flash { background:#43e8a3; border-color:#d0ffe9; animation:qc-lora-tx-flash 1.1s ease-out; }
+@keyframes qc-lora-tx-flash { 0% { box-shadow:0 0 0 0 rgba(67,232,163,1), 0 0 18px rgba(67,232,163,.95); } 100% { box-shadow:0 0 0 28px rgba(67,232,163,0), 0 0 0 rgba(67,232,163,0); } }
 .qc-lora-fields { display:grid; gap:var(--space-2); }
 .qc-lora-fields label { display:grid; grid-template-columns: 155px minmax(120px, 1fr) 64px; align-items:center; gap:var(--space-2); color:var(--text); font-weight:600; }
 .qc-lora-fields input { min-height:34px; padding:4px 10px; font-family:var(--font-mono); }
 .qc-lora-fields span { color:var(--text-muted); font-size:13px; font-weight:400; }
 .qc-lora-switch { display:grid; grid-template-columns:155px 48px 1fr; align-items:center; gap:var(--space-2); margin-top:var(--space-3); color:var(--text); font-weight:600; }
-.qc-lora-switch input, .qc-lora-target input { position:absolute; opacity:0; pointer-events:none; }
+.qc-lora-switch input { position:relative; grid-column:2; grid-row:1; width:46px; height:26px; margin:0; opacity:0; z-index:2; cursor:pointer; }
+.qc-lora-target input { position:absolute; opacity:0; pointer-events:none; }
 .qc-lora-switch i { width:46px; height:26px; border:1px solid var(--hairline-strong); border-radius:999px; background:var(--surface); position:relative; }
 .qc-lora-switch i::after { content:""; position:absolute; width:18px; height:18px; top:3px; left:4px; border-radius:50%; background:var(--text-muted); transition:transform .15s ease, background .15s ease; }
 .qc-lora-switch.on i { border-color:#317f8d; background:#173c49; }
@@ -273,9 +281,13 @@
 .qc-lora-target button:last-child { border-radius:0 var(--radius) var(--radius) 0; margin-left:-1px; }
 .qc-lora-target button.active { background:var(--accent); border-color:var(--accent); color:#fff8f0; }
 .qc-lora-actions { display:flex; align-items:center; gap:var(--space-3); margin-top:var(--space-4); }
-.qc-lora-begin { margin-left:auto; border-radius:50%; width:94px; height:94px; line-height:1.2; border-color:var(--accent); background:var(--accent); color:#fff8f0; font-weight:700; }
+.qc-lora-begin { margin-left:auto; display:grid; place-items:center; border-radius:50%; width:112px; height:112px; padding:14px; line-height:1.15; white-space:normal; overflow-wrap:anywhere; border-color:var(--accent); background:var(--accent); color:#fff8f0; font-size:12px; font-weight:700; }
 .qc-lora-begin:hover:not(:disabled) { color:#fff8f0; }
-.qc-lora-activity .terminal { min-height:390px; max-height:390px; background:rgba(4, 18, 24, .72); }
+/* This selector deliberately outranks the later generic `.terminal.compact-log`
+   rule. A zero flex basis/minimum prevents growing log content from enlarging
+   the grid row; overflow remains inside this terminal instead. */
+.qc-lora-activity pre.terminal.compact-log { flex:1 1 0; min-height:0; max-height:none; background:rgba(4, 18, 24, .72); }
+@media (max-width: 980px) { .qc-lora-card-head { align-items:flex-start; } .qc-lora-live { flex-wrap:wrap; justify-content:flex-end; } }
 @media (max-width: 760px) { .qc-lora-layout { grid-template-columns: 1fr; } }
 
 /* ---- Workspace ---- */
@@ -447,6 +459,8 @@
   z-index: 30;
   visibility: hidden;
   pointer-events: none;
+  /* Closed, transformed panels must not enlarge the document width. */
+  overflow: hidden;
 }
 
 .drawer.open {
@@ -588,6 +602,21 @@
 
   .strip-gauges {
     order: 3;
+  }
+}
+
+/* The operator header has a deliberately non-wrapping status row.  At laptop
+   widths, move that row below the brand/actions rather than making the whole
+   page wider than the viewport (which used to clip the LoRa QC cards). */
+@media (min-width: 901px) and (max-width: 1380px) {
+  .strip {
+    grid-template-columns: minmax(180px, 1fr) max-content;
+  }
+
+  .strip-gauges {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: 100%;
   }
 }
 

@@ -16,6 +16,11 @@ import { renderNullingChannels, DAC_CODE_MAX, requestFullNulling } from "./nulli
 // longer than the app's default serial-ack timeout, so it gets its own
 // generous timeout instead of SERIAL_RESPONSE_TIMEOUT_MS.
 const SINGLE_NULLING_TIMEOUT_MS = 30000;
+// A real SX1262 re-begin can take longer than the generic 5 s serial ACK
+// budget while the board reconfigures the radio.  The command is idempotent
+// at the UI layer, so wait for its actual firmware ACK instead of reporting a
+// false failure while the new configuration is already becoming active.
+const LORA_BEGIN_ACK_TIMEOUT_MS = 15000;
 
 // A full-scale sweep steps the DAC across every single code from 0 to 4095
 // (see GldNullingService::runFullScaleSweep), each step doing a settle + 8x
@@ -285,14 +290,82 @@ const TPL_LOG_LINE_PATTERN = /INJECT_TPL_DONE|INJECT_TPL_CLR/;
 // ---- LoRa Focus group: GLD1 certification controls, intentionally kept
 // separate from production Expert LoRa settings.  No local setting is treated
 // as applied until the GLD replies through the serial command contract.
-const loraFocus = { logLines: [], lastReadback: null };
+const loraFocus = {
+  logLines: [], lastReadback: null, formDirty: false, awaitingReadback: false,
+  autoBeginTimer: null, autoBusy: false,
+  activeIntervalMs: null, nextTxAtMs: null, countdownTimer: null, flashTimer: null,
+  logPaused: false, logPausedCount: 0
+};
+
+function loraTimestamp() {
+  const now = new Date();
+  return `${now.toLocaleTimeString([], { hour12: false })}.${String(now.getMilliseconds()).padStart(3, "0")}`;
+}
 
 function loraFocusLog(title, lines = []) {
-  const time = new Date().toLocaleTimeString();
-  loraFocus.logLines.push(`${time}  ${title}\n${lines.join("\n")}`);
+  loraFocus.logLines.push(`[${loraTimestamp()}] ${title}\n${lines.join("\n")}`);
   if (loraFocus.logLines.length > 80) loraFocus.logLines.splice(0, loraFocus.logLines.length - 80);
+  if (loraFocus.logPaused) {
+    loraFocus.logPausedCount += 1;
+    renderLoraLogPause();
+    return;
+  }
+  renderLoraLog();
+}
+
+function renderLoraLog() {
   const el = $("qcLoraLog");
   if (el) { el.textContent = loraFocus.logLines.join("\n\n"); el.scrollTop = el.scrollHeight; }
+}
+
+function renderLoraLogPause() {
+  const button = $("qcLoraPause");
+  if (!button) return;
+  button.textContent = loraFocus.logPaused
+    ? `Resume${loraFocus.logPausedCount ? ` (${loraFocus.logPausedCount} baru)` : ""}`
+    : "Pause";
+  button.classList.toggle("primary", loraFocus.logPaused);
+}
+
+function toggleLoraLogPause() {
+  loraFocus.logPaused = !loraFocus.logPaused;
+  if (!loraFocus.logPaused) {
+    loraFocus.logPausedCount = 0;
+    renderLoraLog();
+  }
+  renderLoraLogPause();
+}
+
+function renderLoraCountdown() {
+  const el = $("qcLoraCountdown");
+  if (!el) return;
+  if (!Number.isFinite(loraFocus.nextTxAtMs)) {
+    el.textContent = "—.--- detik";
+    return;
+  }
+  const remainingSeconds = Math.max(0, loraFocus.nextTxAtMs - Date.now()) / 1000;
+  el.textContent = `${remainingSeconds.toFixed(3)} detik`;
+}
+
+function armLoraCountdown(intervalMs) {
+  const parsed = Number(intervalMs);
+  if (!Number.isFinite(parsed) || parsed < 1) return;
+  loraFocus.activeIntervalMs = parsed;
+  loraFocus.nextTxAtMs = Date.now() + parsed;
+  if (loraFocus.countdownTimer == null) {
+    loraFocus.countdownTimer = window.setInterval(renderLoraCountdown, 50);
+  }
+  renderLoraCountdown();
+}
+
+function flashLoraTxSuccess() {
+  const el = $("qcLoraTxPulse");
+  if (!el) return;
+  el.classList.remove("flash");
+  void el.offsetWidth;
+  el.classList.add("flash");
+  clearTimeout(loraFocus.flashTimer);
+  loraFocus.flashTimer = window.setTimeout(() => el.classList.remove("flash"), 1100);
 }
 
 function loraFocusPayload() {
@@ -304,9 +377,17 @@ function loraFocusPayload() {
     txPowerDbm: Number($("qcLoraPower")?.value),
     txIntervalMs: Number($("qcLoraInterval")?.value) * 1000,
     transmitFocus: Boolean($("qcLoraFocus")?.checked),
-    txTarget: $("qcLoraTarget")?.checked ? "radio_only" : "ch",
-    autoApply: Boolean($("qcLoraAutoApply")?.checked)
+    txTarget: $("qcLoraTarget")?.checked ? "radio_only" : "ch"
   };
+}
+
+function loraPayloadLabel(payload) {
+  if (payload.txTarget === "radio_only") return "frame test";
+  return payload.transmitFocus ? "CH dummy" : "CH normal";
+}
+
+function loraConfigSummary(payload) {
+  return `${payload.freqMHz} MHz | BW ${payload.bwKHz} kHz | SF ${payload.sf} | CR ${payload.cr} | ${payload.txPowerDbm} dBm | Interval ${payload.txIntervalMs / 1000} s | Focus ${payload.transmitFocus ? "ON" : "OFF"} | Target ${payload.txTarget === "radio_only" ? "Transmit saja" : "Ke CH"} | Payload ${loraPayloadLabel(payload)}`;
 }
 
 function renderLoraFocusConstraint() {
@@ -314,14 +395,13 @@ function renderLoraFocusConstraint() {
   const targetOnly = Boolean($("qcLoraTarget")?.checked);
   const input = $("qcLoraInterval");
   const hint = $("qcLoraHint");
-  if (input) input.min = focus && targetOnly ? "1" : "3";
-  if (input && Number(input.value) < Number(input.min)) input.value = input.min;
+  if (input) input.min = focus ? "1" : "3";
   if (hint) hint.textContent = focus && targetOnly
-    ? "Focus aktif: interval dapat sampai 1 detik; frame uji tidak dikirim ke CH."
-    : "Jalur CH normal: minimum 3 detik; AES, sensor, dan inference tetap berlaku.";
+    ? "Focus aktif: interval dapat sampai 1 detik. Ke CH memakai payload dummy tanpa gate non-radio."
+    : "Focus OFF: minimum 3 detik. Ke CH memakai AES, sensor, dan inference; Transmit saja memakai frame uji.";
   $("qcLoraCh")?.classList.toggle("active", !targetOnly);
   $("qcLoraDirect")?.classList.toggle("active", targetOnly);
-  [["qcLoraFocus", focus], ["qcLoraAutoApply", Boolean($("qcLoraAutoApply")?.checked)]].forEach(([id, on]) => {
+  [["qcLoraFocus", focus], ["qcLoraAutoBegin", Boolean($("qcLoraAutoBegin")?.checked)]].forEach(([id, on]) => {
     const toggle = $(id)?.parentElement;
     toggle?.classList.toggle("on", on);
     const label = toggle?.querySelector("b");
@@ -345,49 +425,118 @@ function syncLoraFocusForm(lora) {
 
 export function updateQcLoraFromDevice(info, status) {
   const lora = info?.starLora || status?.lora;
-  syncLoraFocusForm(lora);
+  // Routine status polling must never overwrite parameters an operator is
+  // still editing.  Only the initial form and an explicit Begin
+  // read-back synchronize values from the device.
+  if (!loraFocus.formDirty || loraFocus.awaitingReadback) {
+    syncLoraFocusForm(lora);
+    if (loraFocus.awaitingReadback) {
+      loraFocus.awaitingReadback = false;
+      loraFocus.formDirty = false;
+    }
+  }
   const live = status?.lora;
+  if (Number.isFinite(Number(live?.txIntervalMs))) armLoraCountdown(Number(live.txIntervalMs));
   if (live && loraFocus.lastReadback !== `${live.txIntervalMs}/${live.transmitFocus}/${live.txTarget}/${live.lastBeginState}`) {
     loraFocus.lastReadback = `${live.txIntervalMs}/${live.transmitFocus}/${live.txTarget}/${live.lastBeginState}`;
     const statusEl = $("qcLoraStatus");
-    if (statusEl) statusEl.textContent = `Read-back: ${live.ready ? "radio ready" : "radio not ready"} | interval ${Number(live.txIntervalMs || 0) / 1000}s | Focus ${live.transmitFocus ? "ON" : "OFF"} | ${live.txTarget === "radio_only" ? "Transmit saja" : "Ke CH"}.`;
+    if (statusEl) {
+      const payload = live.txMode === "ch_dummy" ? "CH dummy" : live.txMode === "test" ? "frame test" : "CH normal";
+      statusEl.textContent = `Read-back aktif dari GLD: ${live.ready ? "radio ready" : "radio not ready"} | interval ${Number(live.txIntervalMs || 0) / 1000}s | Focus ${live.transmitFocus ? "ON" : "OFF"} | ${live.txTarget === "radio_only" ? "Transmit saja" : "Ke CH"} | ${payload}.`;
+    }
   }
 }
 
-async function applyLoraFocus() {
-  const payload = loraFocusPayload();
+export function appendQcLoraEvent(event) {
+  if (!event || typeof event !== "object") return;
+  const number = String(Number(event.sequence || 0)).padStart(4, "0");
+  const target = event.target === "radio_only" ? "Transmit saja" : "Ke CH";
+  const payload = event.payload === "ch_normal" ? "CH normal"
+    : event.payload === "ch_dummy" ? "CH dummy" : "frame test";
+  const delta = Number.isFinite(Number(event.deltaMs))
+    ? ` | delta ${(Number(event.deltaMs) / 1000).toFixed(3)} s` : "";
+  // Device TX timestamps are monotonic device-time, so use receipt time for
+  // the visual countdown.  A received attempt (success or failure) starts
+  // the next cadence window; only a successful attempt flashes green.
+  armLoraCountdown(loraFocus.activeIntervalMs);
+  if (event.ok) {
+    flashLoraTxSuccess();
+    const contract = event.payload === "ch_dummy"
+      ? ` | CH ID ${event.chId ?? "-"} | frame ${event.frameLength ?? "?"} B | RX off`
+      : event.payload === "ch_normal" ? " | RX window" : " | RX off";
+    loraFocusLog(`TX #${number} SUCCESS | ${target} | ${payload}${delta}${contract}`);
+  } else {
+    loraFocusLog(`TX #${number} GAGAL`, [event.reason || "radio tidak siap"]);
+  }
+}
+
+function validateLoraPayload(payload) {
   if (!payload.transmitFocus && payload.txIntervalMs < 3000) {
-    loraFocusLog("APPLY DITOLAK", ["Interval di bawah 3 detik hanya saat Transmit Focus ON dan target Transmit saja."]);
+    return "Interval di bawah 3 detik hanya saat Transmit Focus ON.";
+  }
+  if (payload.txIntervalMs < 1000 || payload.txIntervalMs > 600000) {
+    return "Interval harus 1 sampai 600 detik.";
+  }
+  return "";
+}
+
+async function beginLoraFocus(source = "Manual") {
+  const payload = loraFocusPayload();
+  const rejected = validateLoraPayload(payload);
+  if (rejected) {
+    loraFocusLog("KONFIGURASI DITOLAK", [rejected]);
     return;
   }
   try {
+    loraFocus.awaitingReadback = true;
     const ack = await sendCommandAndWaitAck(`SET_LORA_CONFIG_JSON ${JSON.stringify(payload)}`, "SET_LORA_CONFIG");
     if (ack.status !== "ok") throw new Error(ack.message || ack.status);
-    const p = loraFocusPayload();
-    loraFocusLog("APPLY OK", [
-      `Freq ${p.freqMHz} MHz | BW ${p.bwKHz} kHz | SF ${p.sf} | CR ${p.cr} | Power ${p.txPowerDbm} dBm`,
-      `Interval ${p.txIntervalMs / 1000} s | Focus ${p.transmitFocus ? "ON" : "OFF"} | Target ${p.txTarget === "radio_only" ? "Transmit saja" : "Ke CH"} | Auto Apply ${p.autoApply ? "ON" : "OFF"}`
-    ]);
+    const beginAck = await sendCommandAndWaitAck("BEGIN_LORA", "BEGIN_LORA", LORA_BEGIN_ACK_TIMEOUT_MS);
+    if (beginAck.status !== "ok") throw new Error(beginAck.message || beginAck.status);
+    loraFocusLog(`LORA BEGIN SUCCESS | ${source}`, [loraConfigSummary(payload)]);
+    armLoraCountdown(payload.txIntervalMs);
     await sendCommand("GET_INFO"); await sendCommand("GET_STATUS");
-  } catch (error) { loraFocusLog("APPLY GAGAL", [error.message]); }
+  } catch (error) {
+    loraFocus.awaitingReadback = false;
+    loraFocusLog(`LORA BEGIN GAGAL | ${source}`, [error.message]);
+  }
 }
 
-async function beginLoraFocus() {
-  try {
-    const ack = await sendCommandAndWaitAck("BEGIN_LORA", "BEGIN_LORA");
-    if (ack.status !== "ok") throw new Error(ack.message || ack.status);
-    loraFocusLog("LORA BEGIN SUCCESS", ["Radio menerima konfigurasi aktif. Read-back diminta."]);
-    await sendCommand("GET_INFO"); await sendCommand("GET_STATUS");
-  } catch (error) { loraFocusLog("LORA BEGIN GAGAL", [error.message]); }
+function scheduleAutoBegin() {
+  clearTimeout(loraFocus.autoBeginTimer);
+  if (!$("qcLoraAutoBegin")?.checked) return;
+  loraFocus.autoBeginTimer = setTimeout(async () => {
+    if (loraFocus.autoBusy || !$("qcLoraAutoBegin")?.checked) return;
+    loraFocus.autoBusy = true;
+    try { await beginLoraFocus("Auto Begin"); } finally { loraFocus.autoBusy = false; }
+  }, 2000);
+}
+
+function loraFormChanged() {
+  loraFocus.formDirty = true;
+  renderLoraFocusConstraint();
+  scheduleAutoBegin();
 }
 
 function setLoraFocusDefaults() {
   [["qcLoraFreq", 920], ["qcLoraBw", 125], ["qcLoraSf", 7], ["qcLoraCr", 5], ["qcLoraPower", 22], ["qcLoraInterval", 10]].forEach(([id, value]) => { const el = $(id); if (el) el.value = value; });
   if ($("qcLoraFocus")) $("qcLoraFocus").checked = false;
   if ($("qcLoraTarget")) $("qcLoraTarget").checked = false;
-  if ($("qcLoraAutoApply")) $("qcLoraAutoApply").checked = false;
-  renderLoraFocusConstraint();
-  loraFocusLog("DEFAULT DIISI", ["Belum diterapkan ke GLD. Tekan Apply lalu LoRa Begin, atau aktifkan Auto Apply."]);
+  if ($("qcLoraAutoBegin")) $("qcLoraAutoBegin").checked = false;
+  loraFormChanged();
+}
+
+async function loadLoraFocusFromDevice() {
+  loraFocus.awaitingReadback = true;
+  loraFocus.formDirty = false;
+  try {
+    await sendCommand("GET_INFO");
+    await sendCommand("GET_STATUS");
+    loraFocusLog("PARAMETER DIMUAT", ["Read-back parameter aktif diminta dari GLD."]);
+  } catch (error) {
+    loraFocus.awaitingReadback = false;
+    loraFocusLog("LOAD GAGAL", [error.message]);
+  }
 }
 
 function buildLoraFocusPanel() {
@@ -405,12 +554,11 @@ function buildLoraFocusPanel() {
       </div>
       <label class="qc-lora-switch"><span>Transmit Focus</span><input id="qcLoraFocus" type="checkbox"><i></i><b>OFF</b></label>
       <div class="qc-lora-target"><span>Target TX</span><div><button id="qcLoraCh" class="active" type="button">Ke CH</button><button id="qcLoraDirect" type="button">Transmit saja</button></div><input id="qcLoraTarget" type="checkbox" tabindex="-1"></div>
-      <label class="qc-lora-switch"><span>Auto Apply</span><input id="qcLoraAutoApply" type="checkbox"><i></i><b>OFF</b></label>
       <p id="qcLoraHint" class="status-line"></p>
-      <div class="qc-lora-actions"><button id="qcLoraDefault" type="button">Set Default</button><button id="qcLoraApply" class="primary" type="button">Apply</button><button id="qcLoraBegin" class="qc-lora-begin" type="button">▶<br>LoRa Begin</button></div>
+      <div class="qc-lora-actions"><button id="qcLoraDefault" type="button">Set Default</button><button id="qcLoraLoad" type="button">Load</button><button id="qcLoraBegin" class="qc-lora-begin" type="button">▶<br>LoRa Begin</button></div>
       <div id="qcLoraStatus" class="status-line">Belum ada read-back dari GLD.</div>
     </section>
-    <section class="qc-lora-activity"><div class="qc-lora-card-head"><h3>LoRa Activity</h3><button id="qcLoraClear" type="button">Clear</button></div><pre id="qcLoraLog" class="terminal compact-log"></pre></section>`;
+    <section class="qc-lora-activity"><div class="qc-lora-card-head"><h3>LoRa Activity</h3><div class="qc-lora-live"><span class="qc-lora-tx-status"><span id="qcLoraTxPulse" class="qc-lora-tx-pulse" aria-label="TX success indicator"></span><span>TX</span></span><strong id="qcLoraCountdown">—.--- detik</strong><button id="qcLoraPause" type="button">Pause</button><button id="qcLoraClear" type="button">Clear</button></div></div><pre id="qcLoraLog" class="terminal compact-log"></pre></section>`;
   return panel;
 }
 
@@ -1197,14 +1345,18 @@ export function initQcTab() {
   if (loraGroup) {
     loraGroup.innerHTML = "";
     loraGroup.append(buildLoraFocusPanel());
-    ["qcLoraFocus", "qcLoraTarget", "qcLoraAutoApply"].forEach((id) => $(id)?.addEventListener("change", renderLoraFocusConstraint));
+    ["qcLoraFocus", "qcLoraTarget"].forEach((id) => $(id)?.addEventListener("change", loraFormChanged));
+    document.querySelectorAll("#qcLoraGroup input[type=number]").forEach((input) => input.addEventListener("input", loraFormChanged));
     $("qcLoraCh")?.addEventListener("click", () => { $("qcLoraTarget").checked = false; $("qcLoraTarget").dispatchEvent(new Event("change")); });
     $("qcLoraDirect")?.addEventListener("click", () => { $("qcLoraTarget").checked = true; $("qcLoraTarget").dispatchEvent(new Event("change")); });
     $("qcLoraDefault")?.addEventListener("click", setLoraFocusDefaults);
-    $("qcLoraApply")?.addEventListener("click", () => withBusy($("qcLoraApply"), "Applying...", applyLoraFocus));
-    $("qcLoraBegin")?.addEventListener("click", () => withBusy($("qcLoraBegin"), "Beginning...", beginLoraFocus));
-    $("qcLoraClear")?.addEventListener("click", () => { loraFocus.logLines = []; const log = $("qcLoraLog"); if (log) log.textContent = ""; });
+    $("qcLoraLoad")?.addEventListener("click", () => withBusy($("qcLoraLoad"), "Loading...", loadLoraFocusFromDevice));
+    $("qcLoraBegin")?.addEventListener("click", () => withBusy($("qcLoraBegin"), "Beginning...", () => beginLoraFocus("Manual")));
+    $("qcLoraPause")?.addEventListener("click", toggleLoraLogPause);
+    $("qcLoraClear")?.addEventListener("click", () => { loraFocus.logLines = []; loraFocus.logPausedCount = 0; renderLoraLog(); renderLoraLogPause(); });
     renderLoraFocusConstraint();
+    renderLoraLogPause();
+    renderLoraLog();
     updateQcLoraFromDevice(state.info, state.status);
   }
 

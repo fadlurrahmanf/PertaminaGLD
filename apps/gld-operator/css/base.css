@@ -6,6 +6,8 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  /* Off-canvas drawers are fixed overlays, never page content. */
+  overflow-x: hidden;
   color: var(--text);
   background: var(--ink);
   font-family: var(--font-body);

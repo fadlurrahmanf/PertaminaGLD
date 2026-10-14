@@ -350,6 +350,11 @@ async function bootstrap() {
   await initBridge();
   startBridgeHealthPoll();
   await restoreSession(session);
+  // Local visual/device-contract simulation.  It is opt-in by URL and never
+  // opens a COM port or sends a command to a physical GLD.
+  if (new URLSearchParams(window.location.search).get("mock") === "1" && !state.mock) {
+    toggleMock();
+  }
   if (!window.isSecureContext) {
     console.info("WEB_SERIAL_NOTE Serve this page from http://127.0.0.1 or HTTPS for Web Serial.");
   }

@@ -300,12 +300,17 @@ uint32_t lastTxMs        = 0;
 // GLD1 certification focus is explicitly session-only.  A boot therefore
 // always returns to the normal authenticated GLD-to-CH path.
 bool loraTransmitFocus = false;
-bool loraTransmitOnly = false;
+// Target is independent of Focus: all four Focus/target combinations are
+// meaningful on GLD1.  Both controls are session-only and default to CH.
+bool loraTargetTransmitOnly = false;
 uint32_t loraTxIntervalMs = DEFAULT_TX_INTERVAL_MS;
 uint32_t loraFocusTxAttemptCount = 0;
 uint32_t loraFocusTxPassCount = 0;
 uint32_t loraFocusTxFailCount = 0;
 uint32_t lastLoraFocusSummaryMs = 0;
+uint32_t loraTxEventSequence = 0;
+uint32_t lastLoraTxEventMs = 0;
+bool lastLoraRxWindowOpened = false;
 uint32_t lastMqttAttemptMs = 0;
 uint32_t lastStatusMs    = 0;
 uint32_t nextNullingRetryMs = 0;
@@ -373,6 +378,12 @@ bool     debugEnabled    = true;
 int16_t  lastLoraBeginState = 0;
 int16_t  lastLoraTxState = 0;
 bool     lastLoraTxOk = false;
+#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
+// A TX success is a short operator-visible indication only. Alarm owns the
+// same LED whenever active, so this timer is never allowed to override it.
+constexpr uint32_t GLD1_TX_STATUS_LED_FLASH_MS = 120;
+uint32_t gld1TxStatusLedFlashUntilMs = 0;
+#endif
 int      lastBootAdsDrdyLevel = -1;
 int      lastBootAdsDrdyPulldownLevel = -1;
 int      lastBootAdsDrdyPullupLevel = -1;
@@ -1143,21 +1154,20 @@ bool applyRuntimeLoraPatch(JsonDocument& doc, char* reason, size_t reasonSize) {
         return false;
     }
     const bool requestedFocus = doc["transmitFocus"] | loraTransmitFocus;
-    const char* requestedTarget = doc["txTarget"] | (loraTransmitOnly ? "radio_only" : "ch");
+    const char* requestedTarget = doc["txTarget"] | (loraTargetTransmitOnly ? "radio_only" : "ch");
     const bool requestedTransmitOnly = strcmp(requestedTarget, "radio_only") == 0;
     if (strcmp(requestedTarget, "ch") != 0 && !requestedTransmitOnly) {
         setRejectReason(reason, reasonSize, "txTarget must be ch or radio_only");
         return false;
     }
-#if !PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8
+#if !(PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2)
     if (!doc["transmitFocus"].isNull() || !doc["txTarget"].isNull()) {
         setRejectReason(reason, reasonSize, "LoRa Focus is available on GLD1 only");
         return false;
     }
 #endif
-    if (txIntervalMs < LORA_CH_MIN_INTERVAL_MS &&
-        !(requestedFocus && requestedTransmitOnly)) {
-        setRejectReason(reason, reasonSize, "interval below 3 s requires Focus ON and target radio_only");
+    if (txIntervalMs < LORA_CH_MIN_INTERVAL_MS && !requestedFocus) {
+        setRejectReason(reason, reasonSize, "interval below 3 s requires Focus ON");
         return false;
     }
     runtimeConfig.loraFreqMHz = updated.loraFreqMHz;
@@ -1171,7 +1181,7 @@ bool applyRuntimeLoraPatch(JsonDocument& doc, char* reason, size_t reasonSize) {
     runtimeConfig.loraXtalVoltage = updated.loraXtalVoltage;
     loraTxIntervalMs = static_cast<uint32_t>(txIntervalMs);
     loraTransmitFocus = requestedFocus;
-    loraTransmitOnly = requestedFocus && requestedTransmitOnly;
+    loraTargetTransmitOnly = requestedTransmitOnly;
     lastTxMs = millis();
     return true;
 }
@@ -1594,8 +1604,8 @@ void emitInfoJson() {
     starLora["xtalVoltage"] = runtimeConfig.loraXtalVoltage;
     starLora["txIntervalMs"] = loraTxIntervalMs;
     starLora["transmitFocus"] = loraTransmitFocus;
-    starLora["txTarget"] = loraTransmitOnly ? "radio_only" : "ch";
-    starLora["autoApplySupported"] = true;
+    starLora["txTarget"] = loraTargetTransmitOnly ? "radio_only" : "ch";
+    starLora["manualBeginSupported"] = true;
     starLora["runtime"] = true;
     doc["radioReady"] = radioReady;
     JsonObject appConfig = doc.createNestedObject("appConfig");
@@ -1755,7 +1765,10 @@ void emitStatusJson() {
     lora["ready"] = radioReady;
     lora["txIntervalMs"] = loraTxIntervalMs;
     lora["transmitFocus"] = loraTransmitFocus;
-    lora["txTarget"] = loraTransmitOnly ? "radio_only" : "ch";
+    lora["txTarget"] = loraTargetTransmitOnly ? "radio_only" : "ch";
+    lora["txMode"] = !loraTransmitFocus && !loraTargetTransmitOnly ? "ch_normal"
+        : loraTargetTransmitOnly ? "test" : "ch_dummy";
+    lora["rxWindowOpened"] = lastLoraRxWindowOpened;
     lora["focusTxAttempts"] = loraFocusTxAttemptCount;
     lora["focusTxPass"] = loraFocusTxPassCount;
     lora["focusTxFail"] = loraFocusTxFailCount;
@@ -2026,7 +2039,7 @@ void logRuntimeLoraConfig(const char* marker, bool reboot, bool liveApplied) {
               runtimeConfig.loraTxPowerDbm,
               static_cast<unsigned long>(loraTxIntervalMs),
               loraTransmitFocus ? 1 : 0,
-              loraTransmitOnly ? "radio_only" : "ch",
+              loraTargetTransmitOnly ? "radio_only" : "ch",
               reboot ? 1 : 0,
               liveApplied ? 1 : 0,
               static_cast<int>(lastLoraBeginState));
@@ -5616,6 +5629,10 @@ void drivePhysicalAlarmOutputs(bool enabled) {
     // One external device owns both lamp and buzzer, triggered directly by
     // GPIO48 HIGH for the full alarm. GPIO17, GPIO40 and GPIO41 are not alarm outputs.
     setGld1AlarmOutput(enabled);
+    if (enabled) {
+        // A steady alarm indication has priority over any pending TX flash.
+        gld1TxStatusLedFlashUntilMs = 0;
+    }
     optionalDigitalWrite(pgl::gld::board::PIN_STATUS_LED,
                          enabled ? ACTIVE_LOW_OUTPUT_ON : ACTIVE_LOW_OUTPUT_OFF);
 #else
@@ -5627,6 +5644,29 @@ void drivePhysicalAlarmOutputs(bool enabled) {
                          enabled ? ACTIVE_LOW_OUTPUT_ON : ACTIVE_LOW_OUTPUT_OFF);
 #endif
     physicalAlarmCommanded = enabled;
+}
+
+void armGld1TxStatusLedFlash() {
+#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
+    if (physicalAlarmCommanded) return;
+    optionalDigitalWrite(pgl::gld::board::PIN_STATUS_LED, ACTIVE_LOW_OUTPUT_ON);
+    gld1TxStatusLedFlashUntilMs = millis() + GLD1_TX_STATUS_LED_FLASH_MS;
+#endif
+}
+
+void serviceGld1TxStatusLedFlash(uint32_t now) {
+#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
+    if (gld1TxStatusLedFlashUntilMs == 0 ||
+        static_cast<int32_t>(now - gld1TxStatusLedFlashUntilMs) < 0) {
+        return;
+    }
+    gld1TxStatusLedFlashUntilMs = 0;
+    if (!physicalAlarmCommanded) {
+        optionalDigitalWrite(pgl::gld::board::PIN_STATUS_LED, ACTIVE_LOW_OUTPUT_OFF);
+    }
+#else
+    (void)now;
+#endif
 }
 
 void driveAlarmOutputs(bool inferenceAlarm) {
@@ -5733,7 +5773,7 @@ bool runInference(const float mavVoltage[8]) {
     }
     lastResult = {modelClassToGasClass(predicted),
                   static_cast<uint8_t>(confidenceFloat * 100.0f)};
-    if (!(loraTransmitFocus && loraTransmitOnly)) {
+    if (!(loraTransmitFocus || loraTargetTransmitOnly)) {
         logPrintf("GLD_ML_RESULT predictedClass=%d gasClass=%u(%s) confidence=%u\n",
                   predicted, lastResult.gasClass,
                   pgl::gld::gldGasClassName(lastResult.gasClass),
@@ -5838,7 +5878,7 @@ bool runScan(bool requireCompleteBatch = false) {
     const bool classifierAlarm = lastInferenceValid &&
                                  lastResult.gasClass != pgl::protocol::GLD_GAS_CLEAR;
     const bool alarm = FIELDTEST_MODEL_UNVERIFIED ? false : classifierAlarm;
-    if (!(loraTransmitFocus && loraTransmitOnly)) logPrintf("GLD_SENSOR_SCAN seq=%lu allValid=%u primed=%u inferenceValid=%u sensorFault=%u gasClass=%u(%s) confidence=%u alarm=%u\n",
+    if (!(loraTransmitFocus || loraTargetTransmitOnly)) logPrintf("GLD_SENSOR_SCAN seq=%lu allValid=%u primed=%u inferenceValid=%u sensorFault=%u gasClass=%u(%s) confidence=%u alarm=%u\n",
               static_cast<unsigned long>(txCounter),
               allValid ? 1 : 0, primed ? 1 : 0,
               lastInferenceValid ? 1 : 0, sensorFaultActive ? 1 : 0,
@@ -6022,8 +6062,31 @@ bool persistAlarmSnapshot(const pgl::gld::GldClassifyResult& result,
     return true;
 }
 
+const char* loraTxPayloadKind() {
+    if (loraTargetTransmitOnly) return "test";
+    return loraTransmitFocus ? "ch_dummy" : "ch_normal";
+}
+
+void emitLoraTxEvent(bool ok, const char* reason) {
+    const uint32_t now = millis();
+    const uint32_t deltaMs = lastLoraTxEventMs == 0 ? 0 : now - lastLoraTxEventMs;
+    lastLoraTxEventMs = now;
+    StaticJsonDocument<320> doc;
+    doc["sequence"] = ++loraTxEventSequence;
+    doc["timestampMs"] = now;
+    doc["deltaMs"] = deltaMs;
+    doc["target"] = loraTargetTransmitOnly ? "radio_only" : "ch";
+    doc["payload"] = loraTxPayloadKind();
+    doc["ok"] = ok;
+    doc["reason"] = reason ? reason : "";
+    doc["chId"] = loraTargetTransmitOnly ? 0 : runtimeConfig.chId;
+    doc["rxWindowOpened"] = lastLoraRxWindowOpened;
+    rawJsonLine("GLD_LORA_EVENT_JSON", doc);
+}
+
 bool transmitSnapshot(const GldTxSnapshot& snapshot,
                       bool expectAlarmAck = false) {
+    lastLoraRxWindowOpened = false;
     if (FIELDTEST_MODEL_UNVERIFIED && (snapshot.alarm || expectAlarmAck)) {
         lastLoraTxState = -32763;
         lastLoraTxOk = false;
@@ -6054,7 +6117,9 @@ bool transmitSnapshot(const GldTxSnapshot& snapshot,
               snapshot.alarm ? 1u : 0u);
     logPrintln(txState == RADIOLIB_ERR_NONE ? "GLD_LORA_TX_RESULT=PASS" : "GLD_LORA_TX_RESULT=FAIL");
 
-    // Class A RX window for downlink commands
+    // Class A RX window for downlink commands. TX success is retained in
+    // lastLoraTxOk even if no downlink is received in the window.
+    lastLoraRxWindowOpened = lastLoraTxOk;
     return openLoRaRxWindow(expectAlarmAck, snapshot.sequence);
 }
 
@@ -6076,7 +6141,8 @@ bool transmitOnce(bool expectAlarmAck = false) {
 // report.  It intentionally omits AES/inference/sensor gates and the Class-A
 // RX window; those remain mandatory in transmitOnce()/transmitSnapshot().
 bool transmitFocusTestFrame() {
-#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8
+#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
+    lastLoraRxWindowOpened = false;
     if (!radioReady || loraRadio == nullptr) {
         lastLoraTxState = -32764;
         lastLoraTxOk = false;
@@ -6102,6 +6168,56 @@ bool transmitFocusTestFrame() {
                   static_cast<unsigned long>(loraFocusTxFailCount),
                   static_cast<unsigned long>(loraTxIntervalMs));
     }
+    return lastLoraTxOk;
+#else
+    return false;
+#endif
+}
+
+// Focus + Ke CH uses a structurally valid AppFrame with the actual GLD/CH
+// addresses and the normal encrypted-payload length, but a deterministic
+// dummy body.  It is deliberately not AES-authenticated: this proves radio
+// framing/timing without opening RX or requiring AES, ADS, model, or inference.
+// A CH may recognize the envelope but must still reject unauthenticated data.
+bool transmitFocusChDummyFrame() {
+#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
+    lastLoraRxWindowOpened = false;
+    if (!radioReady || loraRadio == nullptr) {
+        lastLoraTxState = -32764;
+        lastLoraTxOk = false;
+        ++loraFocusTxFailCount;
+        return false;
+    }
+    uint8_t sequence = 0;
+    if (!pgl::gld::reserveGldTxSequence(sequence)) {
+        lastLoraTxState = -32766;
+        lastLoraTxOk = false;
+        ++loraFocusTxFailCount;
+        return false;
+    }
+    txSeq = sequence;
+    uint8_t dummy[pgl::protocol::GLD_ENCRYPTED_PAYLOAD_SIZE]{};
+    dummy[0] = 'P'; dummy[1] = 'G'; dummy[2] = 'L'; dummy[3] = 'D';
+    dummy[4] = 'D'; dummy[5] = 'U'; dummy[6] = 'M'; dummy[7] = 'Y';
+    dummy[sizeof(dummy) - 1] = sequence;
+    uint8_t frame[pgl::protocol::APPFRAME_OVERHEAD + pgl::protocol::GLD_ENCRYPTED_PAYLOAD_SIZE]{};
+    const pgl::protocol::FrameEncodeResult encoded = pgl::protocol::encodeAppFrame(
+        pgl::protocol::makeGldSensorTypeFlags(false, true), runtimeConfig.nodeId,
+        runtimeConfig.chId, sequence, dummy, sizeof(dummy), frame, sizeof(frame),
+        pgl::protocol::STAR_MAX_PAYLOAD);
+    if (encoded.status != pgl::protocol::FrameStatus::Ok) {
+        lastLoraTxState = -32765;
+        lastLoraTxOk = false;
+        ++loraFocusTxFailCount;
+        return false;
+    }
+    ++loraFocusTxAttemptCount;
+    digitalWrite(pgl::gld::board::PIN_ADS1256_CS, HIGH);
+    lastLoraTxState = loraRadio->transmit(frame, encoded.size);
+    lastLoraTxOk = lastLoraTxState == RADIOLIB_ERR_NONE;
+    digitalWrite(pgl::gld::board::PIN_LORA_RXEN, LOW);
+    digitalWrite(pgl::gld::board::PIN_LORA_TXEN, LOW);
+    if (lastLoraTxOk) ++loraFocusTxPassCount; else ++loraFocusTxFailCount;
     return lastLoraTxOk;
 #else
     return false;
@@ -6926,6 +7042,7 @@ void setup() {
 void loop() {
     firmwareServiceTick();
     reconcileRuntimePowerMode();
+    serviceGld1TxStatusLedFlash(millis());
     // SHT40 has its own cached global values. Status/telemetry serialization
     // only snapshots this cache; it never starts a measurement itself.
     serviceSht40();
@@ -6977,21 +7094,37 @@ void loop() {
             lastScanMs = now;
             runScan();
         }
-        if (loraTransmitFocus) {
-            if (radioReady && now - lastTxMs >= loraTxIntervalMs) {
-                lastTxMs = now;
-                if (loraTransmitOnly) {
-                    transmitFocusTestFrame();
-                } else {
-                    transmitOnce();
-                }
+#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
+        // GLD1 has four explicit operator-selected LoRa modes.  Every mode
+        // keeps the radio-ready gate; only normal CH telemetry keeps the
+        // AES/sensor/inference gates and the Class-A RX window.
+        if (now - lastTxMs >= loraTxIntervalMs) {
+            lastTxMs = now;
+            lastLoraRxWindowOpened = false;
+            if (loraTargetTransmitOnly) {
+                (void)transmitFocusTestFrame();
+            } else if (loraTransmitFocus) {
+                (void)transmitFocusChDummyFrame();
+            } else {
+                (void)transmitOnce();
             }
-        } else if (radioReady && now - lastTxMs >= DEFAULT_TX_INTERVAL_MS) {
-            // Production GLD-to-CH cadence remains byte-for-byte independent
-            // of the volatile LoRa Focus test controls.
+            const char* reason = lastLoraTxOk ? ""
+                : (!radioReady || loraRadio == nullptr) ? "SX1262/SPI/radio tidak siap"
+                : (!loraTransmitFocus && !lastInferenceValid) ? "inference tidak valid"
+                : (!loraTransmitFocus && !runtimeConfig.aesKeyPresent) ? "AES tidak siap"
+                : "radio transmit gagal";
+            emitLoraTxEvent(lastLoraTxOk, reason);
+            if (lastLoraTxOk) {
+                armGld1TxStatusLedFlash();
+            }
+        }
+#else
+        // GLD2/other profiles retain their existing fixed production cadence.
+        if (radioReady && now - lastTxMs >= DEFAULT_TX_INTERVAL_MS) {
             lastTxMs = now;
             transmitOnce();
         }
+#endif
 
     } else if (currentMode == pgl::gld::GldMode::DATASET) {
         maintainWifi();

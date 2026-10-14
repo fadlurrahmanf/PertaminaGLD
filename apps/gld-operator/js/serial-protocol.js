@@ -10,7 +10,7 @@ import {
   updateDatasetFromStatus, maybeCaptureDatasetTelemetry, trackDatasetRuntimeLine, handleDatasetSerialLine
 } from "./dataset.js";
 import { handleMockCommand } from "./mock.js";
-import { updateQcStatus, resetQcStatus, drawQcCharts, appendFullScaleSweep, updateQcLoraFromDevice } from "./qc.js";
+import { updateQcStatus, resetQcStatus, drawQcCharts, appendFullScaleSweep, updateQcLoraFromDevice, appendQcLoraEvent } from "./qc.js";
 import { bridgeFetch, connectBridgeSerialOnly } from "./bridge-client.js";
 
 // ---- generic parse helpers ----
@@ -1636,6 +1636,12 @@ export function handleLine(rawLine) {
     if (qcStatus) {
       recordSerialResponse("qc");
       updateQcStatus(qcStatus);
+      return;
+    }
+
+    const loraEvent = parseJsonAfter("GLD_LORA_EVENT_JSON", line);
+    if (loraEvent) {
+      appendQcLoraEvent(loraEvent);
       return;
     }
 

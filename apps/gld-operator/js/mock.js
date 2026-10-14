@@ -14,6 +14,7 @@ import { DAC_CODE_MAX } from "./nulling.js";
 const FULLSCALE_SWEEP_STEP = 1;
 const FULLSCALE_SWEEP_CODES_PER_TICK = 16;
 const FULLSCALE_SWEEP_INTERVAL_MS = 20;
+const MOCK_LORA_TICK_MS = 25;
 
 function safeJson(text) {
   try { return JSON.parse(text); } catch { return null; }
@@ -34,22 +35,81 @@ function mockAck(cmd, status, rebootExpected) {
 }
 
 function mockLoraConfig() {
+  const focus = state.mockLoraFocus || {};
+  // A LoRa Focus Apply carries the complete working configuration.  Prefer it
+  // in the simulator so the QC read-back mirrors the fields the operator just
+  // applied, instead of reverting to values from the separate Expert form.
+  const configured = (key, fallback) => Number.isFinite(Number(focus[key])) ? Number(focus[key]) : fallback;
   const syncText = String(getField("loraSyncWord") || "0x12").trim();
   const syncBase = /^0x/i.test(syncText) || /[a-f]/i.test(syncText) ? 16 : 10;
   const syncWord = Number.parseInt(syncText.replace(/^0x/i, ""), syncBase);
   const tcxoVoltage = numberField("loraTcxoVoltage");
   const xtalVoltage = numberField("loraXtalVoltage");
   return {
-    freqMHz: numberField("loraFreqMHz") || 920,
-    bwKHz: numberField("loraBwKHz") || 125,
-    sf: numberField("loraSf") || 7,
-    cr: numberField("loraCr") || 5,
+    freqMHz: configured("freqMHz", numberField("loraFreqMHz") || 920),
+    bwKHz: configured("bwKHz", numberField("loraBwKHz") || 125),
+    sf: configured("sf", numberField("loraSf") || 7),
+    cr: configured("cr", numberField("loraCr") || 5),
     syncWord: Number.isFinite(syncWord) ? syncWord : 0x12,
-    txPowerDbm: numberField("loraTxPowerDbm") || 17,
+    // 22 dBm is the documented GLD1 LoRa QC default.  This must not inherit
+    // the unrelated Expert-form default during an offline simulation.
+    txPowerDbm: configured("txPowerDbm", 22),
     preamble: numberField("loraPreamble") || 8,
     tcxoVoltage: Number.isFinite(tcxoVoltage) ? tcxoVoltage : 1.6,
-    xtalVoltage: Number.isFinite(xtalVoltage) ? xtalVoltage : 0
+    xtalVoltage: Number.isFinite(xtalVoltage) ? xtalVoltage : 0,
+    txIntervalMs: Number.isFinite(Number(focus.txIntervalMs)) ? Number(focus.txIntervalMs) : 10000,
+    transmitFocus: focus.transmitFocus === true,
+    txTarget: focus.txTarget === "radio_only" ? "radio_only" : "ch"
   };
+}
+
+function mockLoraMode(config) {
+  if (config.txTarget === "radio_only") return "test";
+  return config.transmitFocus ? "ch_dummy" : "ch_normal";
+}
+
+function stopMockLoraTx() {
+  if (state.mockLoraTxTimer) clearInterval(state.mockLoraTxTimer);
+  state.mockLoraTxTimer = null;
+}
+
+function emitMockLoraTx() {
+  const config = mockLoraConfig();
+  const now = Date.now();
+  const interval = Number(config.txIntervalMs) || 10000;
+  if (!state.mockLoraLastTxAt || now - state.mockLoraLastTxAt >= interval) {
+    const deltaMs = state.mockLoraLastTxAt ? now - state.mockLoraLastTxAt : 0;
+    state.mockLoraLastTxAt = now;
+    state.mockLoraTxSequence = (state.mockLoraTxSequence || 0) + 1;
+    const mode = mockLoraMode(config);
+    const gatesRequired = mode === "ch_normal";
+    const gatesReady = state.mockLoraGatesReady !== false;
+    const radioReady = state.mockLoraTxRadioReady !== false;
+    const ok = radioReady && (!gatesRequired || gatesReady);
+    const reason = !radioReady ? "SX1262/SPI/radio tidak siap"
+      : gatesRequired && !gatesReady ? "AES/sensor/model/inference tidak siap" : "";
+    handleLine(`GLD_LORA_EVENT_JSON ${JSON.stringify({
+      sequence: state.mockLoraTxSequence,
+      timestampMs: now,
+      deltaMs,
+      target: config.txTarget,
+      payload: mode,
+      ok,
+      reason,
+      chId: config.txTarget === "ch" ? (state.info?.targetChId || "0064") : null,
+      frameLength: mode === "ch_dummy" ? 39 : mode === "ch_normal" ? 39 : 9,
+      rxWindowOpened: mode === "ch_normal"
+    })}`);
+    state.mockLoraLastTxOk = ok;
+  }
+}
+
+function startMockLoraTx() {
+  stopMockLoraTx();
+  state.mockLoraLastTxAt = 0;
+  state.mockLoraTxSequence = 0;
+  state.mockLoraLastTxOk = true;
+  state.mockLoraTxTimer = setInterval(emitMockLoraTx, MOCK_LORA_TICK_MS);
 }
 
 export function emitMockInfo() {
@@ -135,8 +195,8 @@ function createMockStatus() {
         },
     uptimeMs: Math.floor(performance.now()),
     power: { mode: "24v", externalPower: true, batteryMv: 3560, batteryValid: true },
-    bootHealth: { adsReady: true, mcpOkCount: 8, dacReady: true, mlReady: true },
-    lora: { beginState: 0, lastTxOk: true, ...lora },
+    bootHealth: { adsReady: state.mockLoraGatesReady !== false, mcpOkCount: 8, dacReady: true, mlReady: state.mockLoraGatesReady !== false },
+    lora: { ready: state.mockLoraRadioReady !== false, beginState: 0, lastBeginState: 0, lastTxOk: state.mockLoraLastTxOk !== false, txMode: mockLoraMode(lora), ...lora },
     runtimeMcpCode,
     nulling: {
       running: state.mode === "nulling" && state.mockNullingStep < 48,
@@ -268,9 +328,20 @@ export function handleMockCommand(command) {
     handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("SET_APP_CONFIG", "ok", true))}`);
   }
   if (command.startsWith("SET_LORA_CONFIG_JSON ")) {
+    const payload = safeJson(command.slice("SET_LORA_CONFIG_JSON ".length));
+    if (payload) state.mockLoraPending = { ...(state.mockLoraPending || state.mockLoraFocus || {}), ...payload };
     handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("SET_LORA_CONFIG", "ok", false))}`);
+  }
+  if (command === "BEGIN_LORA") {
+    if (state.mockLoraBeginReady === false) {
+      handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify({ ...mockAck("BEGIN_LORA", "error", false), message: "SX1262/SPI/radio tidak siap" })}`);
+      return;
+    }
+    state.mockLoraFocus = { ...(state.mockLoraFocus || {}), ...(state.mockLoraPending || {}) };
+    handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("BEGIN_LORA", "ok", false))}`);
     emitMockInfo();
     emitMockStatus();
+    startMockLoraTx();
   }
   if (command.startsWith("SET_ALARM_MODE_JSON ")) {
     const payload = safeJson(command.slice("SET_ALARM_MODE_JSON ".length));
@@ -422,6 +493,7 @@ function emitMockQcStatus() {
 export function toggleMock() {
   if (state.mock) {
     clearInterval(state.mockTimer);
+    stopMockLoraTx();
     state.mockTimer = null;
     state.mock = false;
     state.connected = false;
@@ -433,6 +505,13 @@ export function toggleMock() {
   // must not survive the prior mock session.
   state.mockAlarmMode = "auto";
   state.mockManualAlarmCommanded = false;
+  const search = new URLSearchParams(location.search);
+  state.mockLoraBeginReady = search.get("mockBeginFail") !== "1";
+  state.mockLoraRadioReady = state.mockLoraBeginReady;
+  state.mockLoraTxRadioReady = search.get("mockRadioFail") !== "1";
+  state.mockLoraGatesReady = search.get("mockGates") !== "off";
+  state.mockLoraFocus = { txIntervalMs: 10000, transmitFocus: false, txTarget: "ch" };
+  state.mockLoraPending = { ...state.mockLoraFocus };
   state.mock = true;
   state.connected = false;
   updateConnectionUi("mock", "ok");

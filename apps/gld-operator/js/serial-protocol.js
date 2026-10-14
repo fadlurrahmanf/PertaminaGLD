@@ -10,7 +10,7 @@ import {
   updateDatasetFromStatus, maybeCaptureDatasetTelemetry, trackDatasetRuntimeLine, handleDatasetSerialLine
 } from "./dataset.js";
 import { handleMockCommand } from "./mock.js";
-import { updateQcStatus, resetQcStatus, drawQcCharts, appendFullScaleSweep } from "./qc.js";
+import { updateQcStatus, resetQcStatus, drawQcCharts, appendFullScaleSweep, updateQcLoraFromDevice } from "./qc.js";
 import { bridgeFetch, connectBridgeSerialOnly } from "./bridge-client.js";
 
 // ---- generic parse helpers ----
@@ -1610,6 +1610,7 @@ export function handleLine(rawLine) {
       state.info = info;
       state.mode = info.mode || state.mode;
       updateInfo(info);
+      updateQcLoraFromDevice(info, state.status);
       return;
     }
 
@@ -1619,6 +1620,7 @@ export function handleLine(rawLine) {
       state.status = status;
       state.mode = status.mode || state.mode;
       updateStatus(status);
+      updateQcLoraFromDevice(state.info, status);
       maybeAppendTelemetry(status);
       return;
     }

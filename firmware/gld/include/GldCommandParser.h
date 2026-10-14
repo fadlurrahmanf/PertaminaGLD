@@ -27,6 +27,7 @@ enum class GldSerialCommandType : uint8_t {
     SetDeviceIdJson,
     SetChAddressJson,
     SetLoraConfigJson,
+    BeginLora,
     SetNullingConfigJson,
     SetSessionMcpJson,
     SetSensorPowerJson,
@@ -73,6 +74,7 @@ struct GldSerialCommand {
 // - SET_DEVICE_ID_JSON {...}
 // - SET_CH_ADDRESS_JSON {"chId":"0010","reboot":true}
 // - SET_LORA_CONFIG_JSON {"freqMHz":920.0,"bwKHz":125,"sf":7,"cr":5,"syncWord":18}
+// - BEGIN_LORA  (apply the currently configured LoRa parameters to the radio)
 // - SET_NULLING_CONFIG_JSON {"thresholdV":0.00001,"minFinalV":0.0}
 // - SET_SESSION_MCP_JSON {"channel":0,"code":123}  (volatile Running DAC adjustment; never saved)
 // - SET_SENSOR_POWER_JSON {"channel":0,"enabled":true} or {"all":true,"enabled":false}

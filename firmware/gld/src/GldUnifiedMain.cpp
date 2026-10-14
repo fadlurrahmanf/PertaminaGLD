@@ -94,7 +94,10 @@ constexpr float    STAR_RUNTIME_MAX_FREQ_MHZ = 923.0f;
 // ---------------------------------------------------------------------------
 constexpr uint32_t SCAN_INTERVAL_MS   = GLD_SCAN_INTERVAL_MS;
 constexpr uint32_t DATASET_MIN_SAMPLE_INTERVAL_MS = GLD_DATASET_MIN_SAMPLE_INTERVAL_MS;
-constexpr uint32_t TX_INTERVAL_MS     = GLD_TX_INTERVAL_MS;
+constexpr uint32_t DEFAULT_TX_INTERVAL_MS = GLD_TX_INTERVAL_MS;
+constexpr uint32_t LORA_FOCUS_MIN_INTERVAL_MS = 1000;
+constexpr uint32_t LORA_CH_MIN_INTERVAL_MS = 3000;
+constexpr uint32_t LORA_MAX_INTERVAL_MS = 600000;
 constexpr uint32_t WIFI_TIMEOUT_MS    = GLD_WIFI_TIMEOUT_MS;
 constexpr uint32_t MQTT_RETRY_MS      = GLD_MQTT_RETRY_MS;
 constexpr uint32_t STATUS_INTERVAL_MS = GLD_STATUS_INTERVAL_MS;
@@ -294,6 +297,15 @@ uint8_t  txSeq           = 0;
 uint32_t txCounter       = 0;
 uint32_t lastScanMs      = 0;
 uint32_t lastTxMs        = 0;
+// GLD1 certification focus is explicitly session-only.  A boot therefore
+// always returns to the normal authenticated GLD-to-CH path.
+bool loraTransmitFocus = false;
+bool loraTransmitOnly = false;
+uint32_t loraTxIntervalMs = DEFAULT_TX_INTERVAL_MS;
+uint32_t loraFocusTxAttemptCount = 0;
+uint32_t loraFocusTxPassCount = 0;
+uint32_t loraFocusTxFailCount = 0;
+uint32_t lastLoraFocusSummaryMs = 0;
 uint32_t lastMqttAttemptMs = 0;
 uint32_t lastStatusMs    = 0;
 uint32_t nextNullingRetryMs = 0;
@@ -1071,12 +1083,17 @@ bool hasRuntimeLoraPatch(JsonDocument& doc) {
            !findConfigField(doc, "txPowerDbm", "txPower", "powerDbm").isNull() ||
            !findConfigField(doc, "preamble", "preambleLength", "loraPreamble").isNull() ||
            !findConfigField(doc, "tcxoVoltage", "tcxoV", "loraTcxoVoltage").isNull() ||
-           !findConfigField(doc, "xtalVoltage", "xtalTcxoVoltage", "loraXtalVoltage").isNull();
+           !findConfigField(doc, "xtalVoltage", "xtalTcxoVoltage", "loraXtalVoltage").isNull() ||
+           !findConfigField(doc, "txIntervalMs", "loraTxIntervalMs", nullptr).isNull() ||
+           !doc["transmitFocus"].isNull() || !doc["txTarget"].isNull();
 }
 
 bool applyRuntimeLoraPatch(JsonDocument& doc, char* reason, size_t reasonSize) {
     RuntimeConfig updated = runtimeConfig;
     bool sawField = false;
+    // The GLD1 Focus/target controls are valid LoRa runtime fields even when
+    // the RF parameters themselves were left unchanged.
+    sawField = !doc["transmitFocus"].isNull() || !doc["txTarget"].isNull();
     if (!readFloatConfigField(doc, "freqMHz", "loraFreqMHz", "frequencyMHz",
                               updated.loraFreqMHz, sawField, reason, reasonSize)) return false;
     if (!readFloatConfigField(doc, "bwKHz", "loraBwKHz", "bandwidthKHz",
@@ -1091,6 +1108,7 @@ bool applyRuntimeLoraPatch(JsonDocument& doc, char* reason, size_t reasonSize) {
     long syncWord = updated.loraSyncWord;
     long txPower = updated.loraTxPowerDbm;
     long preamble = updated.loraPreamble;
+    long txIntervalMs = loraTxIntervalMs;
     if (!readLongConfigField(doc, "sf", "loraSf", "spreadingFactor",
                              sf, sawField, reason, reasonSize)) return false;
     if (!readLongConfigField(doc, "cr", "loraCr", "codingRate",
@@ -1101,12 +1119,15 @@ bool applyRuntimeLoraPatch(JsonDocument& doc, char* reason, size_t reasonSize) {
                              txPower, sawField, reason, reasonSize)) return false;
     if (!readLongConfigField(doc, "preamble", "preambleLength", "loraPreamble",
                              preamble, sawField, reason, reasonSize)) return false;
+    if (!readLongConfigField(doc, "txIntervalMs", "loraTxIntervalMs", nullptr,
+                             txIntervalMs, sawField, reason, reasonSize)) return false;
     if (!sawField) {
         setRejectReason(reason, reasonSize, "no LoRa fields provided");
         return false;
     }
     if (sf < 0 || sf > 255 || cr < 0 || cr > 255 || syncWord < 0 || syncWord > 255 ||
-        txPower < -128 || txPower > 127 || preamble < 0 || preamble > 65535) {
+        txPower < -128 || txPower > 127 || preamble < 0 || preamble > 65535 ||
+        txIntervalMs < 0 || txIntervalMs > static_cast<long>(LORA_MAX_INTERVAL_MS)) {
         setRejectReason(reason, reasonSize, "LoRa integer field is out of storage range");
         return false;
     }
@@ -1116,6 +1137,29 @@ bool applyRuntimeLoraPatch(JsonDocument& doc, char* reason, size_t reasonSize) {
     updated.loraTxPowerDbm = static_cast<int8_t>(txPower);
     updated.loraPreamble = static_cast<uint16_t>(preamble);
     if (!validateRuntimeLoraConfig(updated, reason, reasonSize)) return false;
+    if (txIntervalMs < static_cast<long>(LORA_FOCUS_MIN_INTERVAL_MS) ||
+        txIntervalMs > static_cast<long>(LORA_MAX_INTERVAL_MS)) {
+        setRejectReason(reason, reasonSize, "txIntervalMs must be 1000..600000");
+        return false;
+    }
+    const bool requestedFocus = doc["transmitFocus"] | loraTransmitFocus;
+    const char* requestedTarget = doc["txTarget"] | (loraTransmitOnly ? "radio_only" : "ch");
+    const bool requestedTransmitOnly = strcmp(requestedTarget, "radio_only") == 0;
+    if (strcmp(requestedTarget, "ch") != 0 && !requestedTransmitOnly) {
+        setRejectReason(reason, reasonSize, "txTarget must be ch or radio_only");
+        return false;
+    }
+#if !PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8
+    if (!doc["transmitFocus"].isNull() || !doc["txTarget"].isNull()) {
+        setRejectReason(reason, reasonSize, "LoRa Focus is available on GLD1 only");
+        return false;
+    }
+#endif
+    if (txIntervalMs < LORA_CH_MIN_INTERVAL_MS &&
+        !(requestedFocus && requestedTransmitOnly)) {
+        setRejectReason(reason, reasonSize, "interval below 3 s requires Focus ON and target radio_only");
+        return false;
+    }
     runtimeConfig.loraFreqMHz = updated.loraFreqMHz;
     runtimeConfig.loraBwKHz = updated.loraBwKHz;
     runtimeConfig.loraSf = updated.loraSf;
@@ -1125,6 +1169,10 @@ bool applyRuntimeLoraPatch(JsonDocument& doc, char* reason, size_t reasonSize) {
     runtimeConfig.loraPreamble = updated.loraPreamble;
     runtimeConfig.loraTcxoVoltage = updated.loraTcxoVoltage;
     runtimeConfig.loraXtalVoltage = updated.loraXtalVoltage;
+    loraTxIntervalMs = static_cast<uint32_t>(txIntervalMs);
+    loraTransmitFocus = requestedFocus;
+    loraTransmitOnly = requestedFocus && requestedTransmitOnly;
+    lastTxMs = millis();
     return true;
 }
 
@@ -1544,6 +1592,10 @@ void emitInfoJson() {
     starLora["preamble"] = runtimeConfig.loraPreamble;
     starLora["tcxoVoltage"] = runtimeConfig.loraTcxoVoltage;
     starLora["xtalVoltage"] = runtimeConfig.loraXtalVoltage;
+    starLora["txIntervalMs"] = loraTxIntervalMs;
+    starLora["transmitFocus"] = loraTransmitFocus;
+    starLora["txTarget"] = loraTransmitOnly ? "radio_only" : "ch";
+    starLora["autoApplySupported"] = true;
     starLora["runtime"] = true;
     doc["radioReady"] = radioReady;
     JsonObject appConfig = doc.createNestedObject("appConfig");
@@ -1700,6 +1752,13 @@ void emitStatusJson() {
     lora["preamble"] = runtimeConfig.loraPreamble;
     lora["tcxoVoltage"] = runtimeConfig.loraTcxoVoltage;
     lora["xtalVoltage"] = runtimeConfig.loraXtalVoltage;
+    lora["ready"] = radioReady;
+    lora["txIntervalMs"] = loraTxIntervalMs;
+    lora["transmitFocus"] = loraTransmitFocus;
+    lora["txTarget"] = loraTransmitOnly ? "radio_only" : "ch";
+    lora["focusTxAttempts"] = loraFocusTxAttemptCount;
+    lora["focusTxPass"] = loraFocusTxPassCount;
+    lora["focusTxFail"] = loraFocusTxFailCount;
 
     JsonObject dataset = doc.createNestedObject("dataset");
     dataset["state"] = datasetStateName();
@@ -1807,7 +1866,6 @@ void emitStatusJson() {
     alarmControl["externalDevicePattern"] = "board_outputs_follow_command";
 #endif
     doc["alarmLatched"] = pgl::gld::readGldAlarmLatched();
-
     if (doc.overflowed()) {
         logPrintln("GLD_STATUS_JSON_OVERFLOW capacity=8192");
     }
@@ -1959,17 +2017,16 @@ void onUnknownSerialCommand(const char* commandText) {
 }
 
 void logRuntimeLoraConfig(const char* marker, bool reboot, bool liveApplied) {
-    logPrintf("%s freqMHz=%.3f bwKHz=%.2f sf=%u cr=%u sync=0x%02X power=%d preamble=%u tcxo=%.1f xtal=%.1f reboot=%u liveApplied=%u beginState=%d\n",
+    logPrintf("%s freqMHz=%.3f bwKHz=%.2f sf=%u cr=%u power=%d intervalMs=%lu focus=%u target=%s reboot=%u liveApplied=%u beginState=%d\n",
               marker,
               runtimeConfig.loraFreqMHz,
               runtimeConfig.loraBwKHz,
               runtimeConfig.loraSf,
               runtimeConfig.loraCr,
-              runtimeConfig.loraSyncWord,
               runtimeConfig.loraTxPowerDbm,
-              runtimeConfig.loraPreamble,
-              runtimeConfig.loraTcxoVoltage,
-              runtimeConfig.loraXtalVoltage,
+              static_cast<unsigned long>(loraTxIntervalMs),
+              loraTransmitFocus ? 1 : 0,
+              loraTransmitOnly ? "radio_only" : "ch",
               reboot ? 1 : 0,
               liveApplied ? 1 : 0,
               static_cast<int>(lastLoraBeginState));
@@ -1990,6 +2047,7 @@ void onSetLoraConfigJson(const char* payload) {
         return;
     }
     const bool reboot = doc["reboot"] | false;
+    const bool autoApply = doc["autoApply"] | false;
     char reason[160]{};
     if (!applyRuntimeLoraPatch(doc, reason, sizeof(reason))) {
         emitCommandAck("SET_LORA_CONFIG", "rejected", reason, false);
@@ -2000,7 +2058,7 @@ void onSetLoraConfigJson(const char* payload) {
         return;
     }
     bool liveApplied = false;
-    const bool liveOk = applyLoraRuntimeNowIfNeeded(reboot, liveApplied);
+    const bool liveOk = autoApply ? applyLoraRuntimeNowIfNeeded(reboot, liveApplied) : true;
     logRuntimeLoraConfig("GLD_LORA_CONFIG_SAVE=OK", reboot, liveApplied);
     if (!liveOk) {
         emitCommandAck("SET_LORA_CONFIG", "error", "lora config saved but radio reinit failed", false);
@@ -2008,9 +2066,20 @@ void onSetLoraConfigJson(const char* payload) {
     }
     const char* message = reboot
         ? "lora config saved; rebooting"
-        : liveApplied ? "lora config saved; radio reapplied" : "lora config saved; applies on next running init";
+        : liveApplied ? "lora config saved; radio reapplied" : "lora config saved; run BEGIN_LORA to apply";
     emitCommandAck("SET_LORA_CONFIG", "ok", message, reboot);
     rebootAfterAckIfRequested(reboot);
+}
+
+void onBeginLoraFromSerialCommand() {
+    if (currentMode != pgl::gld::GldMode::INFERENCE) {
+        emitCommandAck("BEGIN_LORA", "rejected", "LoRa Begin requires Running mode", false);
+        return;
+    }
+    radioReady = beginLoraRadio();
+    lastTxMs = millis();
+    emitCommandAck("BEGIN_LORA", radioReady ? "ok" : "error",
+                   radioReady ? "LoRa Begin success" : "LoRa Begin failed", false);
 }
 
 void onSetAppConfigJson(const char* payload) {
@@ -2847,6 +2916,9 @@ void handleSerialCommand(const pgl::gld::GldSerialCommand& command) {
             break;
         case pgl::gld::GldSerialCommandType::SetLoraConfigJson:
             onSetLoraConfigJson(command.payload);
+            break;
+        case pgl::gld::GldSerialCommandType::BeginLora:
+            onBeginLoraFromSerialCommand();
             break;
         case pgl::gld::GldSerialCommandType::SetNullingConfigJson:
             onSetNullingConfigJson(command.payload);
@@ -5661,10 +5733,12 @@ bool runInference(const float mavVoltage[8]) {
     }
     lastResult = {modelClassToGasClass(predicted),
                   static_cast<uint8_t>(confidenceFloat * 100.0f)};
-    logPrintf("GLD_ML_RESULT predictedClass=%d gasClass=%u(%s) confidence=%u\n",
-              predicted, lastResult.gasClass,
-              pgl::gld::gldGasClassName(lastResult.gasClass),
-              lastResult.confidence);
+    if (!(loraTransmitFocus && loraTransmitOnly)) {
+        logPrintf("GLD_ML_RESULT predictedClass=%d gasClass=%u(%s) confidence=%u\n",
+                  predicted, lastResult.gasClass,
+                  pgl::gld::gldGasClassName(lastResult.gasClass),
+                  lastResult.confidence);
+    }
     return true;
 }
 
@@ -5764,7 +5838,7 @@ bool runScan(bool requireCompleteBatch = false) {
     const bool classifierAlarm = lastInferenceValid &&
                                  lastResult.gasClass != pgl::protocol::GLD_GAS_CLEAR;
     const bool alarm = FIELDTEST_MODEL_UNVERIFIED ? false : classifierAlarm;
-    logPrintf("GLD_SENSOR_SCAN seq=%lu allValid=%u primed=%u inferenceValid=%u sensorFault=%u gasClass=%u(%s) confidence=%u alarm=%u\n",
+    if (!(loraTransmitFocus && loraTransmitOnly)) logPrintf("GLD_SENSOR_SCAN seq=%lu allValid=%u primed=%u inferenceValid=%u sensorFault=%u gasClass=%u(%s) confidence=%u alarm=%u\n",
               static_cast<unsigned long>(txCounter),
               allValid ? 1 : 0, primed ? 1 : 0,
               lastInferenceValid ? 1 : 0, sensorFaultActive ? 1 : 0,
@@ -5995,6 +6069,43 @@ bool transmitOnce(bool expectAlarmAck = false) {
         return false;
     }
     return transmitSnapshot(snapshot, expectAlarmAck);
+}
+
+// GLD1-only certification frame.  This deliberately does not use AppFrame
+// magic or telemetry fields, so a CH cannot decode it as a production GLD
+// report.  It intentionally omits AES/inference/sensor gates and the Class-A
+// RX window; those remain mandatory in transmitOnce()/transmitSnapshot().
+bool transmitFocusTestFrame() {
+#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8
+    if (!radioReady || loraRadio == nullptr) {
+        lastLoraTxState = -32764;
+        lastLoraTxOk = false;
+        ++loraFocusTxFailCount;
+        return false;
+    }
+    uint8_t frame[] = {'P', 'G', 'L', 'F', 'T', 'X', '1',
+                       static_cast<uint8_t>((loraFocusTxAttemptCount >> 8) & 0xFFu),
+                       static_cast<uint8_t>(loraFocusTxAttemptCount & 0xFFu)};
+    ++loraFocusTxAttemptCount;
+    digitalWrite(pgl::gld::board::PIN_ADS1256_CS, HIGH);
+    lastLoraTxState = loraRadio->transmit(frame, sizeof(frame));
+    lastLoraTxOk = lastLoraTxState == RADIOLIB_ERR_NONE;
+    digitalWrite(pgl::gld::board::PIN_LORA_RXEN, LOW);
+    digitalWrite(pgl::gld::board::PIN_LORA_TXEN, LOW);
+    if (lastLoraTxOk) ++loraFocusTxPassCount; else ++loraFocusTxFailCount;
+    const uint32_t now = millis();
+    if (lastLoraFocusSummaryMs == 0 || now - lastLoraFocusSummaryMs >= 10000) {
+        lastLoraFocusSummaryMs = now;
+        logPrintf("GLD_LORA_FOCUS_TX attempts=%lu pass=%lu fail=%lu intervalMs=%lu\n",
+                  static_cast<unsigned long>(loraFocusTxAttemptCount),
+                  static_cast<unsigned long>(loraFocusTxPassCount),
+                  static_cast<unsigned long>(loraFocusTxFailCount),
+                  static_cast<unsigned long>(loraTxIntervalMs));
+    }
+    return lastLoraTxOk;
+#else
+    return false;
+#endif
 }
 
 bool prepareAndPersistAlarmDelivery(const pgl::gld::GldClassifyResult& result) {
@@ -6866,7 +6977,18 @@ void loop() {
             lastScanMs = now;
             runScan();
         }
-        if (radioReady && now - lastTxMs >= TX_INTERVAL_MS) {
+        if (loraTransmitFocus) {
+            if (radioReady && now - lastTxMs >= loraTxIntervalMs) {
+                lastTxMs = now;
+                if (loraTransmitOnly) {
+                    transmitFocusTestFrame();
+                } else {
+                    transmitOnce();
+                }
+            }
+        } else if (radioReady && now - lastTxMs >= DEFAULT_TX_INTERVAL_MS) {
+            // Production GLD-to-CH cadence remains byte-for-byte independent
+            // of the volatile LoRa Focus test controls.
             lastTxMs = now;
             transmitOnce();
         }

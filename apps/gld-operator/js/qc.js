@@ -294,12 +294,12 @@ const loraFocus = {
   logLines: [], lastReadback: null, formDirty: false, awaitingReadback: false,
   autoBeginTimer: null, autoBusy: false,
   activeIntervalMs: null, nextTxAtMs: null, countdownTimer: null, flashTimer: null,
-  logPaused: false, logPausedCount: 0
+  logPaused: false, logPausedCount: 0, lastPayload: null
 };
 
 function loraTimestamp() {
   const now = new Date();
-  return `${now.toLocaleTimeString([], { hour12: false })}.${String(now.getMilliseconds()).padStart(3, "0")}`;
+  return now.toLocaleTimeString([], { hour12: false });
 }
 
 function loraFocusLog(title, lines = []) {
@@ -316,6 +316,30 @@ function loraFocusLog(title, lines = []) {
 function renderLoraLog() {
   const el = $("qcLoraLog");
   if (el) { el.textContent = loraFocus.logLines.join("\n\n"); el.scrollTop = el.scrollHeight; }
+}
+
+function normalizeLoraPayloadHex(value) {
+  const hex = String(value || "").replace(/[^0-9a-f]/gi, "").toUpperCase();
+  return hex.length >= 2 && hex.length % 2 === 0 ? hex : "";
+}
+
+function renderLoraPayloadPreview() {
+  const data = loraFocus.lastPayload;
+  const raw = $("qcLoraPayloadRaw");
+  const meta = $("qcLoraPayloadMeta");
+  if (!raw || !meta) return;
+  if (!data?.hex) {
+    raw.textContent = "Menunggu TX dari GLD…";
+    meta.textContent = "Ukuran: — byte";
+    return;
+  }
+  const bytes = data.hex.match(/.{1,2}/g) || [];
+  const rows = [];
+  for (let index = 0; index < bytes.length; index += 16) {
+    rows.push(bytes.slice(index, index + 16).join(" "));
+  }
+  raw.textContent = rows.join("\n");
+  meta.textContent = `TX #${String(data.sequence).padStart(4, "0")} | ${data.byteLength} byte | ${data.payload}`;
 }
 
 function renderLoraLogPause() {
@@ -345,6 +369,16 @@ function renderLoraCountdown() {
   }
   const remainingSeconds = Math.max(0, loraFocus.nextTxAtMs - Date.now()) / 1000;
   el.textContent = `${remainingSeconds.toFixed(3)} detik`;
+}
+
+function disarmLoraCountdown() {
+  loraFocus.nextTxAtMs = null;
+  if (loraFocus.countdownTimer != null) {
+    window.clearInterval(loraFocus.countdownTimer);
+    loraFocus.countdownTimer = null;
+  }
+  const el = $("qcLoraCountdown");
+  if (el) el.textContent = "Manual";
 }
 
 function armLoraCountdown(intervalMs) {
@@ -401,7 +435,10 @@ function renderLoraFocusConstraint() {
     : "Focus OFF: minimum 3 detik. Ke CH memakai AES, sensor, dan inference; Transmit saja memakai frame uji.";
   $("qcLoraCh")?.classList.toggle("active", !targetOnly);
   $("qcLoraDirect")?.classList.toggle("active", targetOnly);
-  [["qcLoraFocus", focus], ["qcLoraAutoBegin", Boolean($("qcLoraAutoBegin")?.checked)]].forEach(([id, on]) => {
+  const autoTransmit = Boolean($("qcLoraAutoTransmit")?.checked);
+  $("qcLoraManualTransmit")?.toggleAttribute("hidden", autoTransmit);
+  if (!autoTransmit) disarmLoraCountdown();
+  [["qcLoraFocus", focus], ["qcLoraAutoTransmit", autoTransmit]].forEach(([id, on]) => {
     const toggle = $(id)?.parentElement;
     toggle?.classList.toggle("on", on);
     const label = toggle?.querySelector("b");
@@ -420,6 +457,7 @@ function syncLoraFocusForm(lora) {
   if (Number.isFinite(Number(lora.txIntervalMs))) set("qcLoraInterval", Number(lora.txIntervalMs) / 1000);
   const focus = $("qcLoraFocus"); if (focus && typeof lora.transmitFocus === "boolean") focus.checked = lora.transmitFocus;
   const target = $("qcLoraTarget"); if (target && typeof lora.txTarget === "string") target.checked = lora.txTarget === "radio_only";
+  const autoTransmit = $("qcLoraAutoTransmit"); if (autoTransmit && typeof lora.autoTransmit === "boolean") autoTransmit.checked = lora.autoTransmit;
   renderLoraFocusConstraint();
 }
 
@@ -436,13 +474,14 @@ export function updateQcLoraFromDevice(info, status) {
     }
   }
   const live = status?.lora;
-  if (Number.isFinite(Number(live?.txIntervalMs))) armLoraCountdown(Number(live.txIntervalMs));
-  if (live && loraFocus.lastReadback !== `${live.txIntervalMs}/${live.transmitFocus}/${live.txTarget}/${live.lastBeginState}`) {
-    loraFocus.lastReadback = `${live.txIntervalMs}/${live.transmitFocus}/${live.txTarget}/${live.lastBeginState}`;
+  if (live?.autoTransmit === false) disarmLoraCountdown();
+  else if (Number.isFinite(Number(live?.txIntervalMs))) armLoraCountdown(Number(live.txIntervalMs));
+  if (live && loraFocus.lastReadback !== `${live.txIntervalMs}/${live.transmitFocus}/${live.txTarget}/${live.autoTransmit}/${live.lastBeginState}`) {
+    loraFocus.lastReadback = `${live.txIntervalMs}/${live.transmitFocus}/${live.txTarget}/${live.autoTransmit}/${live.lastBeginState}`;
     const statusEl = $("qcLoraStatus");
     if (statusEl) {
       const payload = live.txMode === "ch_dummy" ? "CH dummy" : live.txMode === "test" ? "frame test" : "CH normal";
-      statusEl.textContent = `Read-back aktif dari GLD: ${live.ready ? "radio ready" : "radio not ready"} | interval ${Number(live.txIntervalMs || 0) / 1000}s | Focus ${live.transmitFocus ? "ON" : "OFF"} | ${live.txTarget === "radio_only" ? "Transmit saja" : "Ke CH"} | ${payload}.`;
+      statusEl.textContent = `Read-back aktif dari GLD: ${live.ready ? "radio ready" : "radio not ready"} | interval ${Number(live.txIntervalMs || 0) / 1000}s | Auto TX ${live.autoTransmit === false ? "OFF" : "ON"} | Focus ${live.transmitFocus ? "ON" : "OFF"} | ${live.txTarget === "radio_only" ? "Transmit saja" : "Ke CH"} | ${payload}.`;
     }
   }
 }
@@ -455,10 +494,26 @@ export function appendQcLoraEvent(event) {
     : event.payload === "ch_dummy" ? "CH dummy" : "frame test";
   const delta = Number.isFinite(Number(event.deltaMs))
     ? ` | delta ${(Number(event.deltaMs) / 1000).toFixed(3)} s` : "";
+  const payloadHex = normalizeLoraPayloadHex(event.payloadHex);
+  if (payloadHex) {
+    loraFocus.lastPayload = {
+      hex: payloadHex,
+      byteLength: Number.isFinite(Number(event.payloadByteLength))
+        ? Number(event.payloadByteLength) : payloadHex.length / 2,
+      sequence: Number(event.sequence || 0),
+      payload
+    };
+    renderLoraPayloadPreview();
+  } else if (Object.hasOwn(event, "payloadHex") || Object.hasOwn(event, "payloadByteLength")) {
+    // A failed/blocked GLD1 attempt explicitly carries an empty preview.
+    // Clear the old bytes so the UI can never imply that stale data was sent.
+    loraFocus.lastPayload = null;
+    renderLoraPayloadPreview();
+  }
   // Device TX timestamps are monotonic device-time, so use receipt time for
   // the visual countdown.  A received attempt (success or failure) starts
   // the next cadence window; only a successful attempt flashes green.
-  armLoraCountdown(loraFocus.activeIntervalMs);
+  if ($("qcLoraAutoTransmit")?.checked !== false) armLoraCountdown(loraFocus.activeIntervalMs);
   if (event.ok) {
     flashLoraTxSuccess();
     const contract = event.payload === "ch_dummy"
@@ -499,6 +554,38 @@ async function beginLoraFocus(source = "Manual") {
   } catch (error) {
     loraFocus.awaitingReadback = false;
     loraFocusLog(`LORA BEGIN GAGAL | ${source}`, [error.message]);
+  }
+}
+
+async function manualLoraTransmit() {
+  if ($("qcLoraAutoTransmit")?.checked) {
+    loraFocusLog("MANUAL TX DITOLAK", ["Nonaktifkan Auto Transmit terlebih dahulu."]);
+    return;
+  }
+  try {
+    const ack = await sendCommandAndWaitAck("MANUAL_LORA_TX", "MANUAL_LORA_TX", LORA_BEGIN_ACK_TIMEOUT_MS);
+    if (ack.status !== "ok") throw new Error(ack.message || ack.status);
+    loraFocusLog("MANUAL TX SUCCESS", ["TX satu kali memakai konfigurasi aktif; interval berikutnya dimulai ulang."]);
+    await sendCommand("GET_STATUS");
+  } catch (error) { loraFocusLog("MANUAL TX GAGAL", [error.message]); }
+}
+
+async function setLoraAutoTransmit() {
+  const input = $("qcLoraAutoTransmit");
+  if (!input) return;
+  const enabled = input.checked;
+  renderLoraFocusConstraint();
+  try {
+    const ack = await sendCommandAndWaitAck(
+      `SET_LORA_AUTO_TRANSMIT_JSON ${JSON.stringify({ enabled })}`,
+      "SET_LORA_AUTO_TRANSMIT"
+    );
+    if (ack.status !== "ok") throw new Error(ack.message || ack.status);
+    await sendCommand("GET_STATUS");
+  } catch (error) {
+    input.checked = !enabled;
+    renderLoraFocusConstraint();
+    loraFocusLog("AUTO TX GAGAL", [error.message]);
   }
 }
 
@@ -554,11 +641,13 @@ function buildLoraFocusPanel() {
       </div>
       <label class="qc-lora-switch"><span>Transmit Focus</span><input id="qcLoraFocus" type="checkbox"><i></i><b>OFF</b></label>
       <div class="qc-lora-target"><span>Target TX</span><div><button id="qcLoraCh" class="active" type="button">Ke CH</button><button id="qcLoraDirect" type="button">Transmit saja</button></div><input id="qcLoraTarget" type="checkbox" tabindex="-1"></div>
+      <label class="qc-lora-switch"><span>Auto Transmit</span><input id="qcLoraAutoTransmit" type="checkbox" checked><i></i><b>ON</b></label>
       <p id="qcLoraHint" class="status-line"></p>
-      <div class="qc-lora-actions"><button id="qcLoraDefault" type="button">Set Default</button><button id="qcLoraLoad" type="button">Load</button><button id="qcLoraBegin" class="qc-lora-begin" type="button">▶<br>LoRa Begin</button></div>
+      <div class="qc-lora-actions"><button id="qcLoraDefault" type="button">Set Default</button><button id="qcLoraLoad" type="button">Load</button><button id="qcLoraManualTransmit" class="primary" type="button" hidden>Manual TX</button><button id="qcLoraBegin" class="qc-lora-begin" type="button">▶<br>LoRa Begin</button></div>
       <div id="qcLoraStatus" class="status-line">Belum ada read-back dari GLD.</div>
     </section>
-    <section class="qc-lora-activity"><div class="qc-lora-card-head"><h3>LoRa Activity</h3><div class="qc-lora-live"><span class="qc-lora-tx-status"><span id="qcLoraTxPulse" class="qc-lora-tx-pulse" aria-label="TX success indicator"></span><span>TX</span></span><strong id="qcLoraCountdown">—.--- detik</strong><button id="qcLoraPause" type="button">Pause</button><button id="qcLoraClear" type="button">Clear</button></div></div><pre id="qcLoraLog" class="terminal compact-log"></pre></section>`;
+    <section class="qc-lora-activity"><div class="qc-lora-card-head"><h3>LoRa Activity</h3><div class="qc-lora-live"><span class="qc-lora-tx-status"><span id="qcLoraTxPulse" class="qc-lora-tx-pulse" aria-label="TX success indicator"></span><span>TX</span></span><strong id="qcLoraCountdown">—.--- detik</strong><button id="qcLoraPause" type="button">Pause</button><button id="qcLoraClear" type="button">Clear</button></div></div><pre id="qcLoraLog" class="terminal compact-log"></pre></section>
+    <section class="qc-lora-preview"><div class="qc-lora-card-head"><h3>Data Preview</h3><span>RAW LORA PAYLOAD</span></div><pre id="qcLoraPayloadRaw" class="terminal compact-log">Menunggu TX dari GLD…</pre><div id="qcLoraPayloadMeta" class="qc-lora-payload-meta">Ukuran: — byte</div></section>`;
   return panel;
 }
 
@@ -1346,11 +1435,13 @@ export function initQcTab() {
     loraGroup.innerHTML = "";
     loraGroup.append(buildLoraFocusPanel());
     ["qcLoraFocus", "qcLoraTarget"].forEach((id) => $(id)?.addEventListener("change", loraFormChanged));
+    $("qcLoraAutoTransmit")?.addEventListener("change", setLoraAutoTransmit);
     document.querySelectorAll("#qcLoraGroup input[type=number]").forEach((input) => input.addEventListener("input", loraFormChanged));
     $("qcLoraCh")?.addEventListener("click", () => { $("qcLoraTarget").checked = false; $("qcLoraTarget").dispatchEvent(new Event("change")); });
     $("qcLoraDirect")?.addEventListener("click", () => { $("qcLoraTarget").checked = true; $("qcLoraTarget").dispatchEvent(new Event("change")); });
     $("qcLoraDefault")?.addEventListener("click", setLoraFocusDefaults);
     $("qcLoraLoad")?.addEventListener("click", () => withBusy($("qcLoraLoad"), "Loading...", loadLoraFocusFromDevice));
+    $("qcLoraManualTransmit")?.addEventListener("click", () => withBusy($("qcLoraManualTransmit"), "Sending...", manualLoraTransmit));
     $("qcLoraBegin")?.addEventListener("click", () => withBusy($("qcLoraBegin"), "Beginning...", () => beginLoraFocus("Manual")));
     $("qcLoraPause")?.addEventListener("click", toggleLoraLogPause);
     $("qcLoraClear")?.addEventListener("click", () => { loraFocus.logLines = []; loraFocus.logPausedCount = 0; renderLoraLog(); renderLoraLogPause(); });

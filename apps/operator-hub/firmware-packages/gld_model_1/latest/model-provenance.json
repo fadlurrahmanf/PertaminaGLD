@@ -3,10 +3,7 @@
   "firmwareSha256": "65520898d28740a88773e381158b896658ab6dc877f2f9b06f6e788c8a10a5ae",
   "slot": "model_1",
   "profileId": "cnn-dualbranch-board-1-2class-v2",
-  "classes": [
-    "Clean_Air",
-    "LPG"
-  ],
+  "classes": ["Clean_Air","LPG"],
   "sha256": "6de1521a995163fcdb1aab31dbb2cad234af6c18c36bdaa1761fd5cc339d4f37",
   "size": 9632,
   "sourceArchiveSha256": "c25536cd250e71cf7afd661a3bd47721a77d2a7c9fc6de2dc810121450943c16",

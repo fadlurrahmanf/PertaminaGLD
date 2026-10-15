@@ -303,6 +303,9 @@ bool loraTransmitFocus = false;
 // Target is independent of Focus: all four Focus/target combinations are
 // meaningful on GLD1.  Both controls are session-only and default to CH.
 bool loraTargetTransmitOnly = false;
+// GLD1 QC cadence is session-only. Automatic scheduling is the safe default;
+// when disabled, one explicit serial command queues exactly one transmit.
+bool loraAutoTransmit = true;
 uint32_t loraTxIntervalMs = DEFAULT_TX_INTERVAL_MS;
 uint32_t loraFocusTxAttemptCount = 0;
 uint32_t loraFocusTxPassCount = 0;
@@ -311,6 +314,17 @@ uint32_t lastLoraFocusSummaryMs = 0;
 uint32_t loraTxEventSequence = 0;
 uint32_t lastLoraTxEventMs = 0;
 bool lastLoraRxWindowOpened = false;
+#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
+// GLD1 QC mirrors the exact byte buffer handed to RadioLib for its most
+// recent LoRa attempt.  This is deliberately session-only diagnostic state:
+// it is neither persisted nor used by the radio path itself.
+struct GldLoraTxPreview {
+    bool valid = false;
+    uint8_t length = 0;
+    uint8_t bytes[pgl::protocol::APPFRAME_OVERHEAD + pgl::protocol::STAR_MAX_PAYLOAD]{};
+};
+GldLoraTxPreview lastGld1LoraTxPreview{};
+#endif
 uint32_t lastMqttAttemptMs = 0;
 uint32_t lastStatusMs    = 0;
 uint32_t nextNullingRetryMs = 0;
@@ -1364,6 +1378,10 @@ void addCapabilities(JsonObject caps) {
     caps["serialChAddress"] = "SET_CH_ADDRESS_JSON chId";
     caps["serialLoraConfig"] = "SET_LORA_CONFIG_JSON freqMHz,bwKHz,sf,cr,syncWord,txPowerDbm,preamble,tcxoVoltage,xtalVoltage";
     caps["liveLoraReinit"] = true;
+#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
+    caps["loraAutoTransmit"] = "SET_LORA_AUTO_TRANSMIT_JSON enabled (session-only)";
+    caps["manualLoraTransmit"] = "MANUAL_LORA_TX (Auto Transmit OFF)";
+#endif
     caps["runBootCheck"] = true;
     caps["i2cScan"] = "RUN_I2C_SCAN (manual only)";
     caps["tcaChannelScan"] = "RUN_TCA_CHANNEL_SCAN (manual only)";
@@ -1605,6 +1623,9 @@ void emitInfoJson() {
     starLora["txIntervalMs"] = loraTxIntervalMs;
     starLora["transmitFocus"] = loraTransmitFocus;
     starLora["txTarget"] = loraTargetTransmitOnly ? "radio_only" : "ch";
+#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
+    starLora["autoTransmit"] = loraAutoTransmit;
+#endif
     starLora["manualBeginSupported"] = true;
     starLora["runtime"] = true;
     doc["radioReady"] = radioReady;
@@ -1766,6 +1787,9 @@ void emitStatusJson() {
     lora["txIntervalMs"] = loraTxIntervalMs;
     lora["transmitFocus"] = loraTransmitFocus;
     lora["txTarget"] = loraTargetTransmitOnly ? "radio_only" : "ch";
+#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
+    lora["autoTransmit"] = loraAutoTransmit;
+#endif
     lora["txMode"] = !loraTransmitFocus && !loraTargetTransmitOnly ? "ch_normal"
         : loraTargetTransmitOnly ? "test" : "ch_dummy";
     lora["rxWindowOpened"] = lastLoraRxWindowOpened;
@@ -2093,6 +2117,52 @@ void onBeginLoraFromSerialCommand() {
     lastTxMs = millis();
     emitCommandAck("BEGIN_LORA", radioReady ? "ok" : "error",
                    radioReady ? "LoRa Begin success" : "LoRa Begin failed", false);
+}
+
+void runGld1LoraTxAttempt();
+
+void onSetLoraAutoTransmitJson(const char* payload) {
+#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
+    StaticJsonDocument<96> doc;
+    if (deserializeJson(doc, payload) || !doc["enabled"].is<bool>()) {
+        emitCommandAck("SET_LORA_AUTO_TRANSMIT", "rejected", "enabled must be boolean", false);
+        return;
+    }
+    loraAutoTransmit = doc["enabled"].as<bool>();
+    lastTxMs = millis();
+    emitCommandAck("SET_LORA_AUTO_TRANSMIT", "ok",
+                   loraAutoTransmit ? "auto transmit enabled; interval restarted"
+                                    : "auto transmit disabled", false);
+#else
+    (void)payload;
+    emitCommandAck("SET_LORA_AUTO_TRANSMIT", "rejected", "Auto Transmit is available on GLD1 only", false);
+#endif
+}
+
+void onManualLoraTxFromSerialCommand() {
+#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
+    if (currentMode != pgl::gld::GldMode::INFERENCE) {
+        emitCommandAck("MANUAL_LORA_TX", "rejected", "Manual Transmit requires Running mode", false);
+        return;
+    }
+    if (loraAutoTransmit) {
+        emitCommandAck("MANUAL_LORA_TX", "rejected", "disable Auto Transmit first", false);
+        return;
+    }
+    if (!radioReady || loraRadio == nullptr) {
+        emitCommandAck("MANUAL_LORA_TX", "rejected", "LoRa Begin/radio not ready", false);
+        return;
+    }
+    runGld1LoraTxAttempt();
+    // The interval starts after the physical TX/RX attempt completes, so
+    // re-enabling Auto Transmit cannot immediately fire another packet.
+    lastTxMs = millis();
+    emitCommandAck("MANUAL_LORA_TX", lastLoraTxOk ? "ok" : "error",
+                   lastLoraTxOk ? "manual transmit complete; interval restarted"
+                                : "manual transmit failed; interval restarted", false);
+#else
+    emitCommandAck("MANUAL_LORA_TX", "rejected", "Manual Transmit is available on GLD1 only", false);
+#endif
 }
 
 void onSetAppConfigJson(const char* payload) {
@@ -2932,6 +3002,12 @@ void handleSerialCommand(const pgl::gld::GldSerialCommand& command) {
             break;
         case pgl::gld::GldSerialCommandType::BeginLora:
             onBeginLoraFromSerialCommand();
+            break;
+        case pgl::gld::GldSerialCommandType::SetLoraAutoTransmitJson:
+            onSetLoraAutoTransmitJson(command.payload);
+            break;
+        case pgl::gld::GldSerialCommandType::ManualLoraTx:
+            onManualLoraTxFromSerialCommand();
             break;
         case pgl::gld::GldSerialCommandType::SetNullingConfigJson:
             onSetNullingConfigJson(command.payload);
@@ -6067,11 +6143,44 @@ const char* loraTxPayloadKind() {
     return loraTransmitFocus ? "ch_dummy" : "ch_normal";
 }
 
+#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
+void clearGld1LoraTxPreview() {
+    lastGld1LoraTxPreview.valid = false;
+    lastGld1LoraTxPreview.length = 0;
+}
+
+void captureGld1LoraTxPreview(const uint8_t* bytes, size_t length) {
+    clearGld1LoraTxPreview();
+    if (bytes == nullptr || length == 0 || length > sizeof(lastGld1LoraTxPreview.bytes)) {
+        return;
+    }
+    memcpy(lastGld1LoraTxPreview.bytes, bytes, length);
+    lastGld1LoraTxPreview.length = static_cast<uint8_t>(length);
+    lastGld1LoraTxPreview.valid = true;
+}
+
+void writeGld1LoraTxPreviewHex(char* out, size_t outSize) {
+    if (out == nullptr || outSize == 0) return;
+    out[0] = '\0';
+    if (!lastGld1LoraTxPreview.valid ||
+        outSize < static_cast<size_t>(lastGld1LoraTxPreview.length) * 2U + 1U) {
+        return;
+    }
+    static constexpr char kHex[] = "0123456789ABCDEF";
+    for (uint8_t index = 0; index < lastGld1LoraTxPreview.length; ++index) {
+        const uint8_t value = lastGld1LoraTxPreview.bytes[index];
+        out[index * 2U] = kHex[(value >> 4U) & 0x0FU];
+        out[index * 2U + 1U] = kHex[value & 0x0FU];
+    }
+    out[static_cast<size_t>(lastGld1LoraTxPreview.length) * 2U] = '\0';
+}
+#endif
+
 void emitLoraTxEvent(bool ok, const char* reason) {
     const uint32_t now = millis();
     const uint32_t deltaMs = lastLoraTxEventMs == 0 ? 0 : now - lastLoraTxEventMs;
     lastLoraTxEventMs = now;
-    StaticJsonDocument<320> doc;
+    StaticJsonDocument<640> doc;
     doc["sequence"] = ++loraTxEventSequence;
     doc["timestampMs"] = now;
     doc["deltaMs"] = deltaMs;
@@ -6081,6 +6190,12 @@ void emitLoraTxEvent(bool ok, const char* reason) {
     doc["reason"] = reason ? reason : "";
     doc["chId"] = loraTargetTransmitOnly ? 0 : runtimeConfig.chId;
     doc["rxWindowOpened"] = lastLoraRxWindowOpened;
+#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
+    char payloadHex[sizeof(lastGld1LoraTxPreview.bytes) * 2U + 1U]{};
+    writeGld1LoraTxPreviewHex(payloadHex, sizeof(payloadHex));
+    doc["payloadHex"] = payloadHex;
+    doc["payloadByteLength"] = lastGld1LoraTxPreview.length;
+#endif
     rawJsonLine("GLD_LORA_EVENT_JSON", doc);
 }
 
@@ -6107,6 +6222,9 @@ bool transmitSnapshot(const GldTxSnapshot& snapshot,
     }
 
     digitalWrite(pgl::gld::board::PIN_ADS1256_CS, HIGH);
+#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
+    captureGld1LoraTxPreview(snapshot.frame, snapshot.frameLen);
+#endif
     const int16_t txState = loraRadio->transmit(snapshot.frame, snapshot.frameLen);
     lastLoraTxState = txState;
     lastLoraTxOk = txState == RADIOLIB_ERR_NONE;
@@ -6154,6 +6272,7 @@ bool transmitFocusTestFrame() {
                        static_cast<uint8_t>(loraFocusTxAttemptCount & 0xFFu)};
     ++loraFocusTxAttemptCount;
     digitalWrite(pgl::gld::board::PIN_ADS1256_CS, HIGH);
+    captureGld1LoraTxPreview(frame, sizeof(frame));
     lastLoraTxState = loraRadio->transmit(frame, sizeof(frame));
     lastLoraTxOk = lastLoraTxState == RADIOLIB_ERR_NONE;
     digitalWrite(pgl::gld::board::PIN_LORA_RXEN, LOW);
@@ -6213,6 +6332,7 @@ bool transmitFocusChDummyFrame() {
     }
     ++loraFocusTxAttemptCount;
     digitalWrite(pgl::gld::board::PIN_ADS1256_CS, HIGH);
+    captureGld1LoraTxPreview(frame, encoded.size);
     lastLoraTxState = loraRadio->transmit(frame, encoded.size);
     lastLoraTxOk = lastLoraTxState == RADIOLIB_ERR_NONE;
     digitalWrite(pgl::gld::board::PIN_LORA_RXEN, LOW);
@@ -6221,6 +6341,32 @@ bool transmitFocusChDummyFrame() {
     return lastLoraTxOk;
 #else
     return false;
+#endif
+}
+
+// This is shared by the GLD1 interval scheduler and the explicit manual
+// command so both paths retain identical radio gates, frame selection, event
+// logging, and PCB TX-success blink behavior.
+void runGld1LoraTxAttempt() {
+#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
+    lastLoraRxWindowOpened = false;
+    clearGld1LoraTxPreview();
+    if (loraTargetTransmitOnly) {
+        (void)transmitFocusTestFrame();
+    } else if (loraTransmitFocus) {
+        (void)transmitFocusChDummyFrame();
+    } else {
+        (void)transmitOnce();
+    }
+    const char* reason = lastLoraTxOk ? ""
+        : (!radioReady || loraRadio == nullptr) ? "SX1262/SPI/radio tidak siap"
+        : (!loraTransmitFocus && !lastInferenceValid) ? "inference tidak valid"
+        : (!loraTransmitFocus && !runtimeConfig.aesKeyPresent) ? "AES tidak siap"
+        : "radio transmit gagal";
+    emitLoraTxEvent(lastLoraTxOk, reason);
+    if (lastLoraTxOk) {
+        armGld1TxStatusLedFlash();
+    }
 #endif
 }
 
@@ -7098,25 +7244,9 @@ void loop() {
         // GLD1 has four explicit operator-selected LoRa modes.  Every mode
         // keeps the radio-ready gate; only normal CH telemetry keeps the
         // AES/sensor/inference gates and the Class-A RX window.
-        if (now - lastTxMs >= loraTxIntervalMs) {
+        if (loraAutoTransmit && now - lastTxMs >= loraTxIntervalMs) {
             lastTxMs = now;
-            lastLoraRxWindowOpened = false;
-            if (loraTargetTransmitOnly) {
-                (void)transmitFocusTestFrame();
-            } else if (loraTransmitFocus) {
-                (void)transmitFocusChDummyFrame();
-            } else {
-                (void)transmitOnce();
-            }
-            const char* reason = lastLoraTxOk ? ""
-                : (!radioReady || loraRadio == nullptr) ? "SX1262/SPI/radio tidak siap"
-                : (!loraTransmitFocus && !lastInferenceValid) ? "inference tidak valid"
-                : (!loraTransmitFocus && !runtimeConfig.aesKeyPresent) ? "AES tidak siap"
-                : "radio transmit gagal";
-            emitLoraTxEvent(lastLoraTxOk, reason);
-            if (lastLoraTxOk) {
-                armGld1TxStatusLedFlash();
-            }
+            runGld1LoraTxAttempt();
         }
 #else
         // GLD2/other profiles retain their existing fixed production cadence.

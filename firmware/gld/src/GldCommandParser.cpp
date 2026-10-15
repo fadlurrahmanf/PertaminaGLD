@@ -109,6 +109,16 @@ bool decodeLine(const char* line, GldSerialCommand& outCommand) {
         outCommand.type = GldSerialCommandType::BeginLora;
         return true;
     }
+  if (strncmp(line, "SET_LORA_AUTO_TRANSMIT_JSON ", 28) == 0) {
+        outCommand.type = GldSerialCommandType::SetLoraAutoTransmitJson;
+    strncpy(outCommand.payload, line + 28, sizeof(outCommand.payload) - 1);
+        outCommand.payload[sizeof(outCommand.payload) - 1] = '\0';
+        return true;
+    }
+    if (strcmp(line, "MANUAL_LORA_TX") == 0) {
+        outCommand.type = GldSerialCommandType::ManualLoraTx;
+        return true;
+    }
     if (strncmp(line, "SET_NULLING_CONFIG_JSON ", 24) == 0) {
         outCommand.type = GldSerialCommandType::SetNullingConfigJson;
         strncpy(outCommand.payload, line + 24, sizeof(outCommand.payload) - 1);

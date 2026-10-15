@@ -59,7 +59,8 @@ function mockLoraConfig() {
     xtalVoltage: Number.isFinite(xtalVoltage) ? xtalVoltage : 0,
     txIntervalMs: Number.isFinite(Number(focus.txIntervalMs)) ? Number(focus.txIntervalMs) : 10000,
     transmitFocus: focus.transmitFocus === true,
-    txTarget: focus.txTarget === "radio_only" ? "radio_only" : "ch"
+    txTarget: focus.txTarget === "radio_only" ? "radio_only" : "ch",
+    autoTransmit: focus.autoTransmit !== false
   };
 }
 
@@ -68,16 +69,34 @@ function mockLoraMode(config) {
   return config.transmitFocus ? "ch_dummy" : "ch_normal";
 }
 
+function mockLoraPayloadBytes(mode, sequence, config) {
+  // This is the exact byte buffer exposed by the mock TX event.  It stays
+  // separate from the firmware's real encoder; hardware Data Preview is
+  // always supplied by the GLD_LORA_EVENT_JSON payloadHex contract.
+  const bytes = mode === "test"
+    ? [0x54, 0x53, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+    : [0x47, 0x4c, 0x44, 0x01, 0x00, 0x64, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
+  bytes[3] = sequence & 0xff;
+  bytes[4] = (sequence >>> 8) & 0xff;
+  bytes[5] = mode === "test" ? (config.txPowerDbm & 0xff) : 0x64;
+  bytes[bytes.length - 2] = config.sf & 0xff;
+  bytes[bytes.length - 1] = config.cr & 0xff;
+  return bytes;
+}
+
 function stopMockLoraTx() {
   if (state.mockLoraTxTimer) clearInterval(state.mockLoraTxTimer);
   state.mockLoraTxTimer = null;
 }
 
-function emitMockLoraTx() {
+function emitMockLoraTx(force = false) {
   const config = mockLoraConfig();
   const now = Date.now();
   const interval = Number(config.txIntervalMs) || 10000;
-  if (!state.mockLoraLastTxAt || now - state.mockLoraLastTxAt >= interval) {
+  if (force || (config.autoTransmit && (!state.mockLoraLastTxAt || now - state.mockLoraLastTxAt >= interval))) {
     const deltaMs = state.mockLoraLastTxAt ? now - state.mockLoraLastTxAt : 0;
     state.mockLoraLastTxAt = now;
     state.mockLoraTxSequence = (state.mockLoraTxSequence || 0) + 1;
@@ -88,6 +107,7 @@ function emitMockLoraTx() {
     const ok = radioReady && (!gatesRequired || gatesReady);
     const reason = !radioReady ? "SX1262/SPI/radio tidak siap"
       : gatesRequired && !gatesReady ? "AES/sensor/model/inference tidak siap" : "";
+    const payloadBytes = mockLoraPayloadBytes(mode, state.mockLoraTxSequence, config);
     handleLine(`GLD_LORA_EVENT_JSON ${JSON.stringify({
       sequence: state.mockLoraTxSequence,
       timestampMs: now,
@@ -97,7 +117,9 @@ function emitMockLoraTx() {
       ok,
       reason,
       chId: config.txTarget === "ch" ? (state.info?.targetChId || "0064") : null,
-      frameLength: mode === "ch_dummy" ? 39 : mode === "ch_normal" ? 39 : 9,
+      frameLength: payloadBytes.length,
+      payloadByteLength: payloadBytes.length,
+      payloadHex: payloadBytes.map((value) => value.toString(16).padStart(2, "0")).join(""),
       rxWindowOpened: mode === "ch_normal"
     })}`);
     state.mockLoraLastTxOk = ok;
@@ -343,6 +365,27 @@ export function handleMockCommand(command) {
     emitMockStatus();
     startMockLoraTx();
   }
+  if (command.startsWith("SET_LORA_AUTO_TRANSMIT_JSON ")) {
+    const payload = safeJson(command.slice("SET_LORA_AUTO_TRANSMIT_JSON ".length));
+    if (typeof payload?.enabled !== "boolean") {
+      handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify({ ...mockAck("SET_LORA_AUTO_TRANSMIT", "rejected", false), message: "enabled must be boolean" })}`);
+    } else {
+      state.mockLoraFocus = { ...(state.mockLoraFocus || {}), autoTransmit: payload.enabled };
+      state.mockLoraLastTxAt = Date.now();
+      handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("SET_LORA_AUTO_TRANSMIT", "ok", false))}`);
+      emitMockInfo();
+      emitMockStatus();
+    }
+  }
+  if (command === "MANUAL_LORA_TX") {
+    if (mockLoraConfig().autoTransmit) {
+      handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify({ ...mockAck("MANUAL_LORA_TX", "rejected", false), message: "disable Auto Transmit first" })}`);
+    } else {
+      emitMockLoraTx(true);
+      handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("MANUAL_LORA_TX", "ok", false))}`);
+      emitMockStatus();
+    }
+  }
   if (command.startsWith("SET_ALARM_MODE_JSON ")) {
     const payload = safeJson(command.slice("SET_ALARM_MODE_JSON ".length));
     if (state.mockLegacyAlarmContract === true) {
@@ -510,7 +553,7 @@ export function toggleMock() {
   state.mockLoraRadioReady = state.mockLoraBeginReady;
   state.mockLoraTxRadioReady = search.get("mockRadioFail") !== "1";
   state.mockLoraGatesReady = search.get("mockGates") !== "off";
-  state.mockLoraFocus = { txIntervalMs: 10000, transmitFocus: false, txTarget: "ch" };
+  state.mockLoraFocus = { txIntervalMs: 10000, transmitFocus: false, txTarget: "ch", autoTransmit: true };
   state.mockLoraPending = { ...state.mockLoraFocus };
   state.mock = true;
   state.connected = false;

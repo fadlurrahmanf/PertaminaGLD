@@ -68,12 +68,18 @@ const NULLING_FAIL_REASON_TEXT = {
   dac_final_write_failed: "Could not write the final DAC code",
   after_read_invalid: "Final voltage read was invalid",
   after_threshold_not_met: "Final voltage did not reconfirm the baseline-relative threshold",
+  crossing_unstable_or_invalid: "Penulisan DAC gagal atau pembacaan cek ulang crossing tidak stabil / tidak valid",
+  verify_unstable_or_invalid: "Pembacaan verifikasi kandidat tidak stabil atau tidak valid setelah 3 percobaan",
+  final_unstable_or_invalid: "Pembacaan akhir tidak stabil setelah 3 percobaan; profil tidak diluluskan",
+  baseline_incomplete: "Baseline tidak lengkap: pembacaan sensor atau penulisan DAC gagal",
+  dac_search_write_failed: "Penulisan DAC gagal selama pencarian; kanal dihentikan",
+  adc_search_read_invalid: "Pembacaan ADC tidak valid selama pencarian; kanal dihentikan",
   after_voltage_negative: "Final voltage was below the configured minimum",
   none: "Unknown failure"
 };
 
 function nullingStageLabel(stage) {
-  const labels = { zero: "Start", baseline: "Baseline", exponential: "Exponential", binary: "Binary", confirm: "Confirm", final_write: "Final write", after_read: "After-read", final_check: "Final check" };
+  const labels = { zero: "Start", baseline: "Baseline", exponential: "Exponential", exp_recheck: "Cek ulang crossing", binary: "Binary", confirm: "Confirm", final_write: "Final write", after_read: "After-read", final_check: "Final check", final_bump: "Koreksi akhir", final_bump_verify: "Verifikasi akhir" };
   return labels[stage] || stage || "Unknown";
 }
 

@@ -297,14 +297,16 @@ uint8_t  txSeq           = 0;
 uint32_t txCounter       = 0;
 uint32_t lastScanMs      = 0;
 uint32_t lastTxMs        = 0;
-// GLD1 certification focus is explicitly session-only.  A boot therefore
-// always returns to the normal authenticated GLD-to-CH path.
+// GLD1 QC LoRa state is kept separately from the normal runtime radio fields.
+// Unlike the QC event counters/preview, the operator-selected configuration is
+// deliberately persistent so a restart restores the intended certification
+// setup before the Operator Hub issues its next GET_STATUS.
 bool loraTransmitFocus = false;
 // Target is independent of Focus: all four Focus/target combinations are
-// meaningful on GLD1.  Both controls are session-only and default to CH.
+// meaningful on GLD1.
 bool loraTargetTransmitOnly = false;
-// GLD1 QC cadence is session-only. Automatic scheduling is the safe default;
-// when disabled, one explicit serial command queues exactly one transmit.
+// Automatic scheduling is the safe default; when disabled, one explicit
+// serial command queues exactly one transmit.
 bool loraAutoTransmit = true;
 uint32_t loraTxIntervalMs = DEFAULT_TX_INTERVAL_MS;
 uint32_t loraFocusTxAttemptCount = 0;
@@ -324,6 +326,39 @@ struct GldLoraTxPreview {
     uint8_t bytes[pgl::protocol::APPFRAME_OVERHEAD + pgl::protocol::STAR_MAX_PAYLOAD]{};
 };
 GldLoraTxPreview lastGld1LoraTxPreview{};
+
+bool runtimeDacVerificationReady();
+
+// GET_STATUS exposes this compact snapshot only on GLD1.  It records the
+// latest production inference preconditions without changing the inference or
+// LoRa gates themselves, so the Operator UI can explain a blocked TX without
+// asking the operator to decode serial logs.
+struct Gld1InferenceReadinessSnapshot {
+    bool scanObserved = false;
+    bool allSensorsValid = false;
+    bool sensorsPrimed = false;
+    bool executionAttempted = false;
+    bool executionSucceeded = false;
+};
+Gld1InferenceReadinessSnapshot lastGld1InferenceReadiness{};
+
+const char* gld1InferenceBlockerName() {
+    if (!lastGld1InferenceReadiness.scanObserved) return "awaiting_sensor_scan";
+    if (!lastGld1InferenceReadiness.allSensorsValid) return "sensor_data_invalid";
+    if (!lastGld1InferenceReadiness.sensorsPrimed) return "sensors_not_primed";
+    if (!mlReady) return "ml_not_ready";
+    if (!nullingProfileApplied) return "nulling_profile_not_applied";
+    if (!modelBindingLoaded) return "model_binding_missing";
+    const uint32_t compiledFingerprint = pgl::gld::modelBindingFingerprint(
+        pgl::gld::model::PROFILE_ID, pgl::gld::model::SCALER_PROFILE_ID);
+    if (modelBinding.modelFingerprint != compiledFingerprint) return "model_binding_mismatch";
+    if (!modelProfileReady) return "model_profile_not_ready";
+    if (!runtimeDacVerificationReady()) return "dac_verification_not_ready";
+    if (!lastGld1InferenceReadiness.executionAttempted) return "inference_not_executed";
+    if (!lastGld1InferenceReadiness.executionSucceeded) return "inference_execution_failed";
+    if (!lastInferenceValid) return "inference_result_invalid";
+    return "none";
+}
 #endif
 uint32_t lastMqttAttemptMs = 0;
 uint32_t lastStatusMs    = 0;
@@ -823,6 +858,14 @@ void resetRuntimeConfigDefaults() {
     alarmControlMode = pgl::gld::GldAlarmControlMode::Auto;
     manualAlarmCommanded = false;
     resetRuntimeLoraDefaults();
+#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
+    // QC controls are persisted only on GLD1.  Reset first so missing/corrupt
+    // old NVS entries fail safe to the documented normal defaults.
+    loraTxIntervalMs = DEFAULT_TX_INTERVAL_MS;
+    loraTransmitFocus = false;
+    loraTargetTransmitOnly = false;
+    loraAutoTransmit = true;
+#endif
     buildRuntimeTopics();
 }
 
@@ -860,6 +903,12 @@ void loadRuntimeConfig() {
     runtimeConfig.loraPreamble = prefs.getUShort("loraPre", runtimeConfig.loraPreamble);
     runtimeConfig.loraTcxoVoltage = prefs.getFloat("loraTcxo", runtimeConfig.loraTcxoVoltage);
     runtimeConfig.loraXtalVoltage = prefs.getFloat("loraXtal", runtimeConfig.loraXtalVoltage);
+#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
+    loraTxIntervalMs = prefs.getULong("loraQcInt", loraTxIntervalMs);
+    loraTransmitFocus = prefs.getBool("loraQcFocus", loraTransmitFocus);
+    loraTargetTransmitOnly = prefs.getBool("loraQcTarget", loraTargetTransmitOnly);
+    loraAutoTransmit = prefs.getBool("loraQcAutoTx", loraAutoTransmit);
+#endif
     runtimeConfig.ctrlword = static_cast<uint8_t>(prefs.getUChar("ctrlword", runtimeConfig.ctrlword));
     const String storedSchema = prefs.getString("schema", "");
     if (storedSchema.length() > 0 &&
@@ -896,6 +945,23 @@ void loadRuntimeConfig() {
         resetRuntimeLoraDefaults();
         logPrintf("GLD_LORA_CONFIG_LOAD=DEFAULT reason=%s\n", loraReason);
     }
+#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
+    if (loraTxIntervalMs < LORA_FOCUS_MIN_INTERVAL_MS ||
+        loraTxIntervalMs > LORA_MAX_INTERVAL_MS ||
+        (!loraTransmitFocus && loraTxIntervalMs < LORA_CH_MIN_INTERVAL_MS)) {
+        loraTxIntervalMs = DEFAULT_TX_INTERVAL_MS;
+        loraTransmitFocus = false;
+        loraTargetTransmitOnly = false;
+        loraAutoTransmit = true;
+        logPrintln("GLD_LORA_QC_LOAD=DEFAULT reason=invalid_persisted_qc_config");
+    } else {
+        logPrintf("GLD_LORA_QC_LOAD=OK intervalMs=%lu focus=%u target=%s autoTransmit=%u\n",
+                  static_cast<unsigned long>(loraTxIntervalMs),
+                  loraTransmitFocus ? 1 : 0,
+                  loraTargetTransmitOnly ? "radio_only" : "ch",
+                  loraAutoTransmit ? 1 : 0);
+    }
+#endif
     buildRuntimeTopics();
     logPrintf("GLD_APP_CONFIG_LOAD=%s deviceId=%s nodeId=0x%04X chId=0x%04X ssid=%s mqttHost=%s mqttPort=%u topicRoot=%s aesKey=%u aesKeySource=%s keyId=%u lastCmdId=%u lora=%.3f/%.2f/SF%u/CR%u sync=0x%02X power=%d preamble=%u alarmMode=%s alarmModeSessionOnly=1\n",
               runtimeConfigValid() ? "OK" : "DEFAULT_UNCONFIGURED",
@@ -956,6 +1022,12 @@ bool saveRuntimeConfig() {
     ok = prefs.putUShort("loraPre", runtimeConfig.loraPreamble) == sizeof(uint16_t) && ok;
     ok = prefs.putFloat("loraTcxo", runtimeConfig.loraTcxoVoltage) == sizeof(float) && ok;
     ok = prefs.putFloat("loraXtal", runtimeConfig.loraXtalVoltage) == sizeof(float) && ok;
+#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
+    ok = prefs.putULong("loraQcInt", loraTxIntervalMs) == sizeof(uint32_t) && ok;
+    ok = prefs.putBool("loraQcFocus", loraTransmitFocus) == sizeof(uint8_t) && ok;
+    ok = prefs.putBool("loraQcTarget", loraTargetTransmitOnly) == sizeof(uint8_t) && ok;
+    ok = prefs.putBool("loraQcAutoTx", loraAutoTransmit) == sizeof(uint8_t) && ok;
+#endif
     if (runtimeConfig.aesKeyPresent && runtimeConfig.aesKeyId != 0) {
         ok = prefs.putBool("aesKeySet", true) == sizeof(uint8_t) && ok;
         ok = prefs.putUChar("aesKeyId", runtimeConfig.aesKeyId) == sizeof(uint8_t) && ok;
@@ -1379,7 +1451,7 @@ void addCapabilities(JsonObject caps) {
     caps["serialLoraConfig"] = "SET_LORA_CONFIG_JSON freqMHz,bwKHz,sf,cr,syncWord,txPowerDbm,preamble,tcxoVoltage,xtalVoltage";
     caps["liveLoraReinit"] = true;
 #if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
-    caps["loraAutoTransmit"] = "SET_LORA_AUTO_TRANSMIT_JSON enabled (session-only)";
+    caps["loraAutoTransmit"] = "SET_LORA_AUTO_TRANSMIT_JSON enabled (persisted on GLD1)";
     caps["manualLoraTransmit"] = "MANUAL_LORA_TX (Auto Transmit OFF)";
 #endif
     caps["runBootCheck"] = true;
@@ -1761,6 +1833,24 @@ void emitStatusJson() {
     modelStatus["profileReady"] = modelProfileReady;
     modelStatus["inferenceValid"] = lastInferenceValid;
     modelStatus["sensorFault"] = sensorFaultActive;
+#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
+    JsonObject readiness = modelStatus.createNestedObject("readiness");
+    readiness["scanObserved"] = lastGld1InferenceReadiness.scanObserved;
+    readiness["allSensorsValid"] = lastGld1InferenceReadiness.allSensorsValid;
+    readiness["sensorsPrimed"] = lastGld1InferenceReadiness.sensorsPrimed;
+    readiness["mlReady"] = mlReady;
+    readiness["nullingProfileApplied"] = nullingProfileApplied;
+    readiness["bindingValid"] = modelBindingLoaded;
+    readiness["bindingModelMatches"] = modelBindingLoaded &&
+        modelBinding.modelFingerprint == pgl::gld::modelBindingFingerprint(
+            pgl::gld::model::PROFILE_ID, pgl::gld::model::SCALER_PROFILE_ID);
+    readiness["profileReady"] = modelProfileReady;
+    readiness["dacVerificationReady"] = runtimeDacVerificationReady();
+    readiness["executionAttempted"] = lastGld1InferenceReadiness.executionAttempted;
+    readiness["executionSucceeded"] = lastGld1InferenceReadiness.executionSucceeded;
+    readiness["inferenceValid"] = lastInferenceValid;
+    readiness["blocker"] = gld1InferenceBlockerName();
+#endif
 
     JsonObject lora = doc.createNestedObject("lora");
     lora["beginState"] = lastLoraBeginState;
@@ -2128,7 +2218,13 @@ void onSetLoraAutoTransmitJson(const char* payload) {
         emitCommandAck("SET_LORA_AUTO_TRANSMIT", "rejected", "enabled must be boolean", false);
         return;
     }
+    const bool previous = loraAutoTransmit;
     loraAutoTransmit = doc["enabled"].as<bool>();
+    if (!saveRuntimeConfig()) {
+        loraAutoTransmit = previous;
+        emitCommandAck("SET_LORA_AUTO_TRANSMIT", "error", "failed to save auto transmit", false);
+        return;
+    }
     lastTxMs = millis();
     emitCommandAck("SET_LORA_AUTO_TRANSMIT", "ok",
                    loraAutoTransmit ? "auto transmit enabled; interval restarted"
@@ -2804,11 +2900,10 @@ void onRunNullingSingleJson(const char* payload) {
         return;
     }
 
-    const pgl::gld::GldNullingSingleResult result = pgl::gld::runNullingServiceSingleChannel(
-        ads, dac, static_cast<uint8_t>(channel), nullingLogLine, firmwareServiceTick, nullingConfig);
-
-    // A single-channel service may update only an already-complete production
-    // profile. Never promote a partial/failing result into a valid profile.
+#if defined(PGL_GLD1_FAST_NULLING) && PGL_GLD1_FAST_NULLING && \
+    PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
+    // The single-channel scan changes the DAC immediately. Do not start it
+    // without a saved code to restore if the new stability checks fail.
     pgl::gld::GldNullingProfile existing{};
     const bool hadExisting = pgl::gld::loadNullingProfile(existing);
     if (!hadExisting) {
@@ -2816,9 +2911,46 @@ void onRunNullingSingleJson(const char* payload) {
                        "complete nulling profile required before single-channel update", false);
         return;
     }
+    if (existing.profileId == UINT8_MAX) {
+        emitCommandAck("RUN_NULLING_SINGLE", "rejected",
+                       "nulling profile id exhausted; maintenance reset required", false);
+        return;
+    }
+#endif
+    const pgl::gld::GldNullingSingleResult result = pgl::gld::runNullingServiceSingleChannel(
+        ads, dac, static_cast<uint8_t>(channel), nullingLogLine, firmwareServiceTick, nullingConfig);
+
+    // A single-channel service may update only an already-complete production
+    // profile. Never promote a partial/failing result into a valid profile.
+#if !(defined(PGL_GLD1_FAST_NULLING) && PGL_GLD1_FAST_NULLING && \
+      PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2)
+    pgl::gld::GldNullingProfile existing{};
+    const bool hadExisting = pgl::gld::loadNullingProfile(existing);
+#endif
+    if (!hadExisting) {
+        emitCommandAck("RUN_NULLING_SINGLE", "rejected",
+                       "complete nulling profile required before single-channel update", false);
+        return;
+    }
     if (!result.success) {
+#if defined(PGL_GLD1_FAST_NULLING) && PGL_GLD1_FAST_NULLING && \
+    PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
+        const bool restored = dac.writeDac(static_cast<uint8_t>(channel), existing.dacCode[channel]);
+        // Until a full saved-profile restore/readback, do not trust the
+        // runtime calibration even if the attempted restore ACKed.
+        nullingProfileApplied = false;
+        lastInferenceValid = false;
+        if (!restored) dacReady = false;
+        logPrintf("GLD_NULLING_SINGLE_RESTORE channel=%d writeOk=%u runtimeInvalidated=1\n", channel, restored ? 1u : 0u);
+#endif
+#if defined(PGL_GLD1_FAST_NULLING) && PGL_GLD1_FAST_NULLING && \
+    PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
+        emitCommandAck("RUN_NULLING_SINGLE", "failed",
+                       "channel nulling failed; restore saved profile before running", false);
+#else
         emitCommandAck("RUN_NULLING_SINGLE", "failed",
                        "channel nulling failed; active profile unchanged", false);
+#endif
         return;
     }
     if (existing.profileId == UINT8_MAX) {
@@ -2835,15 +2967,32 @@ void onRunNullingSingleJson(const char* payload) {
     toSave.channelOk[channel] = 1u;
 
     if (!pgl::gld::isNullingProfileValid(toSave)) {
+#if defined(PGL_GLD1_FAST_NULLING) && PGL_GLD1_FAST_NULLING && \
+    PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
+        (void)dac.writeDac(static_cast<uint8_t>(channel), existing.dacCode[channel]);
+        nullingProfileApplied = false;
+        lastInferenceValid = false;
+#endif
         emitCommandAck("RUN_NULLING_SINGLE", "error", "updated profile validation failed", false);
         return;
     }
     if (!dac.writeDac(static_cast<uint8_t>(channel), result.dacCode)) {
+#if defined(PGL_GLD1_FAST_NULLING) && PGL_GLD1_FAST_NULLING && \
+    PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
+        nullingProfileApplied = false;
+        lastInferenceValid = false;
+        dacReady = false;
+#endif
         emitCommandAck("RUN_NULLING_SINGLE", "error", "DAC apply failed; active profile unchanged", false);
         return;
     }
     if (!pgl::gld::saveNullingProfile(toSave)) {
         (void)dac.writeDac(static_cast<uint8_t>(channel), existing.dacCode[channel]);
+#if defined(PGL_GLD1_FAST_NULLING) && PGL_GLD1_FAST_NULLING && \
+    PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
+        nullingProfileApplied = false;
+        lastInferenceValid = false;
+#endif
         emitCommandAck("RUN_NULLING_SINGLE", "error", "nulling result computed but failed to save profile", false);
         return;
     }
@@ -5905,6 +6054,13 @@ bool runScan(bool requireCompleteBatch = false) {
     }
 
     const bool primed = primedChannels >= pgl::gld::board::SENSOR_COUNT;
+#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
+    lastGld1InferenceReadiness.scanObserved = true;
+    lastGld1InferenceReadiness.allSensorsValid = allValid;
+    lastGld1InferenceReadiness.sensorsPrimed = primed;
+    lastGld1InferenceReadiness.executionAttempted = false;
+    lastGld1InferenceReadiness.executionSucceeded = false;
+#endif
     modelProfileReady = modelProfileMatchesActiveNulling();
     if (FIELDTEST_MODEL_UNVERIFIED) {
         // Payload is intentionally dummy/safe: it proves the authenticated
@@ -5942,9 +6098,20 @@ bool runScan(bool requireCompleteBatch = false) {
                   lastResult.confidence);
 #endif
     } else {
+#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
+        const bool inferencePreconditions = allValid && primed && mlReady &&
+            nullingProfileApplied && modelProfileReady && runtimeDacVerificationReady();
+        lastGld1InferenceReadiness.executionAttempted = inferencePreconditions;
+        if (inferencePreconditions) {
+            lastGld1InferenceReadiness.executionSucceeded = runInference(mavVoltage);
+        }
+        lastInferenceValid = inferencePreconditions &&
+            lastGld1InferenceReadiness.executionSucceeded;
+#else
         lastInferenceValid = allValid && primed && mlReady && nullingProfileApplied &&
                              modelProfileReady && runtimeDacVerificationReady() &&
                              runInference(mavVoltage);
+#endif
     }
     sensorFaultActive = FIELDTEST_MODEL_UNVERIFIED ? !(allValid && primed)
                                                    : !lastInferenceValid;

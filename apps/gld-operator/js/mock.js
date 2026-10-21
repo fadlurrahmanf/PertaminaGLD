@@ -217,7 +217,41 @@ function createMockStatus() {
         },
     uptimeMs: Math.floor(performance.now()),
     power: { mode: "24v", externalPower: true, batteryMv: 3560, batteryValid: true },
-    bootHealth: { adsReady: state.mockLoraGatesReady !== false, mcpOkCount: 8, dacReady: true, mlReady: state.mockLoraGatesReady !== false },
+    bootHealth: {
+      adsReady: state.mockLoraGatesReady !== false,
+      mcpOkCount: 8,
+      dacReady: true,
+      dacVerificationReady: true,
+      mlReady: state.mockLoraGatesReady !== false,
+      nullingProfileApplied: true
+    },
+    model: {
+      allSensorsValid: state.mockLoraGatesReady !== false,
+      sensorsPrimed: state.mockLoraGatesReady !== false,
+      mlReady: state.mockLoraGatesReady !== false,
+      nullingProfileApplied: true,
+      bindingValid: true,
+      bindingModelMatches: true,
+      dacVerificationReady: true,
+      inferenceEngineOk: state.mockLoraGatesReady !== false,
+      inferenceValid: state.mockLoraGatesReady !== false,
+      sensorFault: state.mockLoraGatesReady === false,
+      readiness: {
+        scanObserved: true,
+        allSensorsValid: state.mockLoraGatesReady !== false,
+        sensorsPrimed: state.mockLoraGatesReady !== false,
+        mlReady: state.mockLoraGatesReady !== false,
+        nullingProfileApplied: true,
+        bindingValid: true,
+        bindingModelMatches: true,
+        profileReady: true,
+        dacVerificationReady: true,
+        executionAttempted: state.mockLoraGatesReady !== false,
+        executionSucceeded: state.mockLoraGatesReady !== false,
+        inferenceValid: state.mockLoraGatesReady !== false,
+        blocker: state.mockLoraGatesReady !== false ? "none" : "sensor_data_invalid"
+      }
+    },
     lora: { ready: state.mockLoraRadioReady !== false, beginState: 0, lastBeginState: 0, lastTxOk: state.mockLoraLastTxOk !== false, txMode: mockLoraMode(lora), ...lora },
     runtimeMcpCode,
     nulling: {

@@ -12,6 +12,7 @@ import {
 import { handleMockCommand } from "./mock.js";
 import { updateQcStatus, resetQcStatus, drawQcCharts, appendFullScaleSweep, updateQcLoraFromDevice, appendQcLoraEvent } from "./qc.js";
 import { bridgeFetch, connectBridgeSerialOnly } from "./bridge-client.js";
+import { renderExpertStatus, resetExpertStatus } from "./expert.js";
 
 // ---- generic parse helpers ----
 
@@ -225,6 +226,7 @@ export function resetDeviceSnapshot() {
   renderManualAlarmControls(null);
   renderControlAvailability(null, null);
   renderSensorCheck();
+  resetExpertStatus();
   resetQcStatus();
   syncDeviceSummary();
 }
@@ -311,6 +313,7 @@ function updateStatus(status) {
   updateNullingMeta();
   renderSensorCheck();
   renderNullingChannels();
+  renderExpertStatus(status);
 }
 
 function maybeAppendTelemetry(status) {

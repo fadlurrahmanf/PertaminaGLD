@@ -317,6 +317,14 @@
               <input id="rawCommand" placeholder="GET_STATUS" disabled>
               <button id="sendRawBtn" type="button" disabled>Send</button>
             </div>
+            <section class="expert-status-panel" aria-live="polite" aria-label="Hasil GET_STATUS inference">
+              <div class="expert-status-head">
+                <h3>Hasil GET_STATUS — Inference</h3>
+                <strong id="expertStatusSummary" class="expert-status-summary is-unknown">Menunggu GET_STATUS dari GLD.</strong>
+              </div>
+              <div id="expertStatusRows" class="expert-status-rows"></div>
+              <p id="expertStatusHint" class="expert-status-hint">Ketik GET_STATUS lalu Send untuk membaca kondisi inference yang aktif di GLD.</p>
+            </section>
           </div>
           <div class="module">
             <div class="module-head module-head--wrap">

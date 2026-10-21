@@ -1,17 +1,17 @@
 # GLD1 — Restorasi algoritma nulling deterministik
 
-Last tracker heartbeat: 2026-10-21 11:26:00 +07:00  
-Last evidence update: 2026-10-21 11:26:00 +07:00
+Last tracker heartbeat: 2026-10-21 12:25:00 +07:00  
+Last evidence update: 2026-10-21 12:25:00 +07:00
 
 ## Progress dashboard
 
 | Scope | Progress | Status | Note |
 |---|---:|---|---|
-| **Overall goal** | **100%** | Complete | Koreksi target positif terbukti, raw capture 8/8 terbaru selesai, dan workbook pengganti tervalidasi. |
+| **Overall goal** | **100%** | Complete | Alur nulling deterministik tersedia untuk seluruh paket GLD1 Model 1–3; bukti fisik tersedia pada Model 1. |
 | Phase 1. Audit dan isolasi | 100% | Done | Guard GLD1 dan pemeriksaan profil terlindungi tersedia. |
 | Phase 2. Implementasi GLD1 | 100% | Done | Jalur deterministik GLD1 telah lulus seluruh bukti unit/mock yang diminta. |
 | Phase 3. Bukti build dan regresi | 100% | Done | Native GLD1, compile/run GLD2/GLD3, build GLD1, dan audit diff selesai. |
-| Phase 4. Paket GLD1 dan bukti COM7 | 100% | Done | Full run ulang menghasilkan profil ID 5 dan workbook raw baru dengan 8 sheet. |
+| Phase 4. Paket GLD1 dan bukti COM7 | 100% | Done | Paket Model 1–3 diperbarui; Model 1 terbukti 8/8 di COM7. |
 
 ## Progress calculation
 
@@ -48,6 +48,7 @@ Last evidence update: 2026-10-21 11:26:00 +07:00
 | 2.2 | Exponential dan binary GLD1 | 100% | Done | Langkah sampai 2048 serta crossing terendah diuji | Native harness mencapai code 4095 memakai increment maksimum 2048 dan memilih crossing terendah. |
 | 2.3 | Confirm dan pemilihan hasil GLD1 | 100% | Done | 10/20 kandidat, 10 sampel, overshoot terendah diuji | Native harness membuktikan confirm 10/20 dengan tepat 10 read, tanpa verify/final bump. |
 | 2.4 | Ketahanan profil 8/8 | 100% | Done | Kanal gagal tidak menghasilkan profil valid/simpan | Kanal ketiga dibuat ADC-invalid; hasil 7/8 dan `isNullingProfileValid` false. |
+| 2.5 | Terapkan jalur GLD1 pada Model 2 dan 3 | 100% | Done | Guard build GLD1 sama untuk Model 1–3 | `PGL_GLD1_FAST_NULLING=1` ditambahkan hanya pada env `gld_model_2` dan `gld_model_3`; guard sumber tetap mengecualikan GLD2/ATEX. |
 
 ### Phase 3 work items
 
@@ -62,7 +63,7 @@ Last evidence update: 2026-10-21 11:26:00 +07:00
 
 | ID | Work item | Progress | Status | Next gate | Last update |
 |---|---|---:|---|---|---|
-| 4.1 | Paket firmware GLD1 | 100% | Done | Hanya artefak `gld_model_1` berubah dan valid | Build terbaru dan hook paket `gld_model_1` sukses; paket ditulis ulang tanpa menyentuh paket lain. |
+| 4.1 | Paket firmware GLD1 Model 1–3 | 100% | Done | Ketiga paket GLD1 berubah dan valid | Build `gld_model_1`, `gld_model_2`, dan `gld_model_3`, termasuk hook paket, lulus. |
 | 4.2 | Bukti COM7 pasca-koreksi target | 100% | Done | Full raw capture 8/8, profil tersimpan, dan workbook baru diverifikasi | `NULLING_RUNTIME_RESULT=PASS`, `NULLING_NVS_SAVE=OK profileId=5`; GET_STATUS menampilkan 8/8 MCP read-back cocok/verified. |
 
 ## Protected baseline
@@ -79,6 +80,7 @@ Tidak disentuh: GLD2, GLD3, profile selain GLD1, alarm, LoRa, AES/provisioning, 
 
 - 2026-10-21 11:25 +07:00 — User meminta pengulangan seluruh nulling COM7 dan workbook pengganti dari data baru agar MQ2 juga memiliki penanda X=MCP yang berasal dari run yang sama. Run akan direkam penuh ke file; tidak ada perubahan firmware atau profil non-GLD1.
 - 2026-10-21 11:26 +07:00 — Full nulling raw capture selesai `Ok successCount=8/8`, lalu firmware menyimpan profil ID 5. GET_STATUS pasca-run membuktikan runtime MCP code/readback/verified sama untuk semua kanal: MQ8=537, MQ135=636, MQ3=922, MQ5=841, MQ4=794, MQ7=1003, MQ6=841, MQ2=169. Workbook pengganti dibuat dari 384 titik raw baseline/exponential/binary/confirm; MQ2 memuat confirm MCP 169 pada `0.016575884 V` melampaui target `0.016091408 V`, sehingga garis X ungu memiliki titik sumber pada run yang sama.
+- 2026-10-21 12:25 +07:00 — Atas persetujuan user, flag deterministik GLD1 diperluas dari paket Model 1 ke GLD1 Model 2 dan Model 3. Guard sumber tetap mengharuskan board GLD1 dan secara eksplisit mengecualikan GLD2/ATEX. Native nulling test, build tiga paket, dan 20 test paket/profile lulus. Paket Operator Hub untuk Model 1–3 diperbarui. Bukti perangkat fisik 8/8 tetap hanya dari Model 1 COM7; belum mengklaim hasil fisik Model 2 atau 3.
 
 - 2026-10-21 11:15 +07:00 — Koreksi GLD1-only dibuat agar baseline negatif memakai `0 + threshold` sebagai target positif. Harness native lulus untuk target positif, kandidat confirm, dan gate profil 8/8; build `gld_model_1` serta paket GLD1 terbaru lulus. COM7 dikenali sebagai CH340, tetapi sesudah flash awal yang memakai parameter flash eksplisit perangkat menampilkan reset ROM berulang sebelum aplikasi merespons. Tidak ada nulling dijalankan dalam kondisi itu; pemulihan boot sedang dilakukan menggunakan urutan flash yang sama seperti Operator Hub dan tanpa reset NVS.
 - 2026-10-21 11:11 +07:00 — Reflash ulang yang mengikuti urutan `write_flash` Operator Hub memverifikasi seluruh hash dan memulihkan boot aplikasi. Full nulling GLD1 dimulai setelah konfirmasi clean-air yang telah diotorisasi pengguna; MQ8 membuktikan target baru: baseline `-0.001166046`, target positif `+0.000583023`, MCP 539 pada `+0.003858960`. Run 8 kanal masih berjalan; belum ada klaim untuk kanal lain maupun profil 8/8.

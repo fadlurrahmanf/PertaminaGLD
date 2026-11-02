@@ -1,0 +1,23 @@
+{
+  "path": "D:/Github/PertaminaGLD/tmp/pdfs/gld-wireless-manual/screenshots/03-ready.jpg",
+  "width": 1234,
+  "height": 730,
+  "boxes": [
+    {
+      "n": 1,
+      "h": 21,
+      "w": 1098,
+      "x": 83.5,
+      "y": 505.5,
+      "title": "Pastikan status ready sebelum memulai sesi"
+    },
+    {
+      "n": 2,
+      "h": 36,
+      "w": 116.921875,
+      "x": 312.578125,
+      "y": 455.5,
+      "title": "Klik Start Wireless untuk memulai rekaman"
+    }
+  ]
+}

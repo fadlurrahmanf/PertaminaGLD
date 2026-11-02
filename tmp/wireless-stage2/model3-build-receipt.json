@@ -1,0 +1,58 @@
+{
+  "environment": "gld_model_3_dataset_replay_wifi",
+  "status": "success",
+  "pid": 39464,
+  "startUtc": "2026-11-02T08:53:57.532993Z",
+  "endUtc": "2026-11-02T09:02:13.0416176Z",
+  "startWib": "2026-11-02 15:53:57",
+  "endWib": "2026-11-02 16:02:13",
+  "elapsedSeconds": 495.5086246,
+  "exitCode": 0,
+  "binaryPath": "D:/Github/PertaminaGLD/firmware/.pio/build-wireless-stage2-model3/gld_model_3_dataset_replay_wifi/firmware.bin",
+  "sha256": "F3F5CC924CE1CE4E439E53908E4EC9651DFDC1219CE2AD9FD35029C577619F12",
+  "sizeBytes": 1047024,
+  "sourceFingerprint": "FA4E1A1A6622259B0B37E9A6EBD97302CE593870F4A337D563B8BA66D841B0B3",
+  "sourceFiles": [
+    {
+      "path": "platformio.ini",
+      "sha256": "E512A2682692FCCAED55E35BFE2E9B50E2AFCDE28BEBFD3751846071FBCB8994"
+    },
+    {
+      "path": "gld/src/GldDatasetReplayWifi.cpp",
+      "sha256": "D1DEB165FA11C36A55E9857DCCA6693361BF6855DAC1EF9083016A6F951B63E8"
+    },
+    {
+      "path": "gld/include/GldDatasetReplayBuffer.h",
+      "sha256": "34E578BBB4A54817B74033DAFDEF2990D727947EEEF1FAB2641BC05C0585B1E3"
+    },
+    {
+      "path": "gld/src/GldUnifiedMain.cpp",
+      "sha256": "AAC17595BF681407136DE9A20EEDCAD23E8FB7D4EA5665F277C748886EE942A3"
+    },
+    {
+      "path": "gld/models/model_3/ModelMetadata.h",
+      "sha256": "FCA98602FE7C47D4F008A87D682628705DB04137BBABB3F7D8DFDF8E5032BB89"
+    },
+    {
+      "path": "gld/models/model_3/model_data.cpp",
+      "sha256": "BEE3702F67FF8776E2D0472287D0C1E5962CD83486DF4B6C26994CDEBB71A663"
+    },
+    {
+      "path": "gld/models/model_3/model_data.h",
+      "sha256": "03D4C301FCC0C2BDDD4632C5576B6205427E6D99DF693E32929480D64934B4AB"
+    }
+  ],
+  "memorySummary": [
+    "RAM:   [=====     ]  49.7% (used 162912 bytes from 327680 bytes)",
+    "Flash: [==        ]  16.0% (used 1046641 bytes from 6553600 bytes)"
+  ],
+  "warnings": [
+    "Obsolete PIO Core v6.1.19 is used (previous was 6.2.0)"
+  ],
+  "fullLog": "D:/Github/PertaminaGLD/tmp/wireless-stage2/compile-model3.log",
+  "pioPid": 12664,
+  "artifactDirectory": "D:/Github/PertaminaGLD/firmware/.pio/artifacts/gld-dataset-replay-wifi-20261102/gld_model_3_dataset_replay_wifi",
+  "artifactHashesVerified": true,
+  "sourceUnchangedDuringBuild": true,
+  "sourceFingerprintScope": "Selected platformio/replay/Unified/Model3 source files explicitly listed in sourceFiles; excludes private generated credentials."
+}

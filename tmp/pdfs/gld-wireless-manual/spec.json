@@ -1,0 +1,365 @@
+{
+  "date": "2 November 2026",
+  "privacy_checked": true,
+  "device": {
+    "device_id": "1002",
+    "ssid": "GLD-DATASET-1002",
+    "model": "Model 1",
+    "firmware": "0.8.36"
+  },
+  "screenshots": {
+    "hub": {
+      "path": "D:/Github/PertaminaGLD/tmp/pdfs/gld-wireless-manual/screenshots/01-hub.jpg",
+      "kind": "actual",
+      "privacy_checked": true,
+      "crop": {
+        "x": 0,
+        "y": 0,
+        "w": 1234,
+        "h": 130
+      },
+      "annotations": [
+        {
+          "n": 1,
+          "h": 34.296875,
+          "w": 136.875,
+          "x": 1070.625,
+          "y": 31.5625,
+          "title": "Buka Expert Console",
+          "body": "Pada halaman GLD di Operator Hub, klik Expert Console. Di console GLD pilih tab Dataset."
+        }
+      ]
+    },
+    "setup": {
+      "path": "D:/Github/PertaminaGLD/tmp/pdfs/gld-wireless-manual/screenshots/02-setup.jpg",
+      "kind": "actual",
+      "privacy_checked": true,
+      "crop": {
+        "x": 20,
+        "y": 170,
+        "w": 1214,
+        "h": 390
+      },
+      "annotations": [
+        {
+          "n": 1,
+          "h": 36,
+          "w": 200.6875,
+          "x": 41,
+          "y": 340,
+          "title": "Pilih mode buffer",
+          "body": "Pilih Buffer 5 menit - tahap 2. Mode Langsung - tahap 1 tidak memulihkan data lima menit."
+        },
+        {
+          "n": 2,
+          "h": 36,
+          "w": 200.703125,
+          "x": 253.6875,
+          "y": 340,
+          "title": "Isi password",
+          "body": "Gunakan password hotspot yang diberikan untuk GLD ini. Panduan tidak mencantumkan password."
+        },
+        {
+          "n": 3,
+          "h": 36,
+          "w": 200.703125,
+          "x": 466.390625,
+          "y": 340,
+          "title": "Beri label sesi",
+          "body": "Isi nama pengujian, misalnya clear_air_test. Label membantu mengenali isi CSV."
+        },
+        {
+          "n": 4,
+          "h": 36,
+          "w": 112.96875,
+          "x": 679.09375,
+          "y": 340,
+          "title": "Klik Connect GLD",
+          "body": "Pastikan laptop sudah masuk hotspot GLD-DATASET-1002. Klik Connect GLD dan tunggu ready."
+        }
+      ]
+    },
+    "ready": {
+      "path": "D:/Github/PertaminaGLD/tmp/pdfs/gld-wireless-manual/screenshots/03-ready.jpg",
+      "kind": "recorded_actual",
+      "privacy_checked": true,
+      "crop": {
+        "x": 40,
+        "y": 330,
+        "w": 1160,
+        "h": 310
+      },
+      "annotations": [
+        {
+          "n": 1,
+          "h": 21,
+          "w": 1098,
+          "x": 67.5,
+          "y": 505.5,
+          "title": "Periksa ready",
+          "body": "Pastikan ID 1002 dan status ready. Jika belum siap, periksa catu 24 V dan profil nulling dengan teknisi."
+        },
+        {
+          "n": 2,
+          "h": 36,
+          "w": 116.921875,
+          "x": 296.578125,
+          "y": 455.5,
+          "title": "Mulai sesi baru",
+          "body": "Klik Start Wireless satu kali. File CSV baru dibuat setelah GLD menerima Start."
+        }
+      ],
+      "recorded_source": "D:\\Github\\PertaminaGLD\\firmware\\.pio\\gld-real-test-20261102\\stage2\\output\\20261102T093208Z-1334ef\\real-evidence.json",
+      "archive_banner_visible": true,
+      "archive_banner": "TAMPILAN ULANG LOG UJI GLD ASLI - bukan koneksi langsung"
+    },
+    "recording": {
+      "path": "D:/Github/PertaminaGLD/tmp/pdfs/gld-wireless-manual/screenshots/04-recording.jpg",
+      "kind": "recorded_actual",
+      "privacy_checked": true,
+      "crop": {
+        "x": 40,
+        "y": 440,
+        "w": 1160,
+        "h": 600
+      },
+      "annotations": [
+        {
+          "n": 1,
+          "h": 21,
+          "w": 1098,
+          "x": 67.5,
+          "y": 505.5,
+          "title": "Periksa recording",
+          "body": "Pastikan status recording. Hitungan sampel tersimpan bertambah saat koneksi aktif."
+        },
+        {
+          "n": 2,
+          "h": 18,
+          "w": 1098,
+          "x": 67.5,
+          "y": 562,
+          "title": "Catat file utama",
+          "body": "CSV ditulis otomatis oleh backend. Tab browser boleh ditutup, tetapi proses aplikasi harus tetap hidup."
+        },
+        {
+          "n": 3,
+          "h": 380,
+          "w": 1098,
+          "x": 67.5,
+          "y": 649,
+          "title": "Amati delapan sensor",
+          "body": "Setiap warna adalah satu sensor. Waktu pada grafik mengikuti pembacaan asli GLD."
+        },
+        {
+          "n": 4,
+          "x": 424,
+          "y": 456,
+          "w": 57,
+          "h": 36,
+          "title": "Akhiri dengan Stop",
+          "body": "Klik Stop satu kali saat pengujian selesai. Tunggu status complete sebelum menganggap sesi lengkap."
+        }
+      ],
+      "recorded_source": "D:\\Github\\PertaminaGLD\\firmware\\.pio\\gld-real-test-20261102\\stage2\\output\\20261102T093208Z-1334ef\\real-evidence.json",
+      "archive_banner_visible": true,
+      "archive_banner": "TAMPILAN ULANG LOG UJI GLD ASLI - bukan koneksi langsung"
+    },
+    "recovering": {
+      "path": "D:/Github/PertaminaGLD/tmp/pdfs/gld-wireless-manual/screenshots/05-recovering.jpg",
+      "kind": "actual",
+      "privacy_checked": true,
+      "crop": {
+        "x": 20,
+        "y": 300,
+        "w": 1214,
+        "h": 240
+      },
+      "annotations": [
+        {
+          "n": 1,
+          "h": 21,
+          "w": 1183,
+          "x": 41,
+          "y": 390,
+          "title": "Kenali recovering",
+          "body": "Koneksi sedang pulih. Jangan Start lagi dan jangan mematikan atau reboot GLD."
+        },
+        {
+          "n": 2,
+          "h": 19.5,
+          "w": 1183,
+          "x": 41,
+          "y": 500,
+          "title": "Kembali ke hotspot",
+          "body": "Sambungkan Wi-Fi laptop ke GLD-DATASET-1002. Backend akan memulihkan sesi otomatis."
+        },
+        {
+          "n": 3,
+          "h": 18,
+          "w": 1183,
+          "x": 41,
+          "y": 446.5,
+          "title": "Pertahankan satu file",
+          "body": "Nama CSV tidak berganti. Data tertunda akan ditambahkan ke file sesi yang sama."
+        }
+      ]
+    },
+    "replaying": {
+      "path": "D:/Github/PertaminaGLD/tmp/pdfs/gld-wireless-manual/screenshots/06-replaying.jpg",
+      "kind": "recorded_actual",
+      "privacy_checked": true,
+      "crop": {
+        "x": 40,
+        "y": 440,
+        "w": 1160,
+        "h": 225
+      },
+      "annotations": [
+        {
+          "n": 1,
+          "h": 21,
+          "w": 1098,
+          "x": 67.5,
+          "y": 505.5,
+          "title": "Kenali replaying",
+          "body": "Hitungan dapat naik cepat saat rekaman tertunda sedang ditulis sesuai urutannya."
+        },
+        {
+          "n": 2,
+          "h": 19.5,
+          "w": 1098,
+          "x": 67.5,
+          "y": 615.5,
+          "title": "Tunggu sampai selesai",
+          "body": "Biarkan pengiriman buffer berjalan. Status kembali recording setelah data menyusul."
+        },
+        {
+          "n": 3,
+          "h": 18,
+          "w": 1098,
+          "x": 67.5,
+          "y": 562,
+          "title": "Periksa file yang sama",
+          "body": "File CSV tetap sama, termasuk waktu asli pembacaan sensor sebelum koneksi putus."
+        }
+      ],
+      "recorded_source": "D:\\Github\\PertaminaGLD\\firmware\\.pio\\gld-real-test-20261102\\stage2\\output\\20261102T093208Z-1334ef\\real-evidence.json",
+      "archive_banner_visible": true,
+      "archive_banner": "TAMPILAN ULANG LOG UJI GLD ASLI - bukan koneksi langsung"
+    },
+    "complete": {
+      "path": "D:/Github/PertaminaGLD/tmp/pdfs/gld-wireless-manual/screenshots/07-complete.jpg",
+      "kind": "actual",
+      "privacy_checked": true,
+      "crop": {
+        "x": 20,
+        "y": 290,
+        "w": 1214,
+        "h": 230
+      },
+      "annotations": [
+        {
+          "n": 1,
+          "h": 21,
+          "w": 1183,
+          "x": 41,
+          "y": 390,
+          "title": "Pastikan sesi lengkap",
+          "body": "Setelah klik Stop sekali, tunggu complete / sesi lengkap. Incomplete tidak boleh dianggap lengkap."
+        },
+        {
+          "n": 2,
+          "h": 36,
+          "w": 123.90625,
+          "x": 1100.09375,
+          "y": 340,
+          "title": "Unduh CSV",
+          "body": "Klik Download CSV untuk menyimpan salinan hasil. File utama di backend tetap tersedia."
+        },
+        {
+          "n": 3,
+          "h": 18,
+          "w": 1183,
+          "x": 41,
+          "y": 446.5,
+          "title": "Simpan lokasi file",
+          "body": "Catat lokasi CSV dan label pengujian. Periksa delapan kolom tegangan sensor pada salinan hasil."
+        }
+      ]
+    },
+    "incomplete": {
+      "path": "D:/Github/PertaminaGLD/tmp/pdfs/gld-wireless-manual/screenshots/08-limit.jpg",
+      "kind": "actual",
+      "privacy_checked": true,
+      "crop": {
+        "x": 20,
+        "y": 290,
+        "w": 1214,
+        "h": 210
+      },
+      "annotations": [
+        {
+          "n": 1,
+          "h": 21,
+          "w": 1183,
+          "x": 41,
+          "y": 390,
+          "title": "Kenali incomplete",
+          "body": "Pada uji 305 detik, 600 sampel tertahan berhasil dipulihkan, tetapi sampling telah berhenti."
+        },
+        {
+          "n": 2,
+          "h": 19.5,
+          "w": 1183,
+          "x": 41,
+          "y": 419,
+          "title": "Arti retention_limit",
+          "body": "Batas putus lima menit tercapai. Ini tidak berarti semua data hilang; simpan CSV yang tersedia."
+        },
+        {
+          "n": 3,
+          "h": 36,
+          "w": 123.90625,
+          "x": 1100.09375,
+          "y": 340,
+          "title": "Unduh dan beri catatan",
+          "body": "Unduh hasil dan tandai sesi tidak lengkap. Tidak ada pengukuran setelah sampling berhenti."
+        }
+      ]
+    }
+  },
+  "test_results": {
+    "kind": "actual",
+    "verified": true,
+    "outage_seconds": 260,
+    "total_rows": 559,
+    "replayed_rows": 528,
+    "missing_rows": 0,
+    "csv_match": true,
+    "cases": [
+      {
+        "kind": "actual",
+        "verified": true,
+        "outage_seconds": 260,
+        "total_rows": 559,
+        "replayed_rows": 528,
+        "missing_rows": 0,
+        "complete": true,
+        "reason": "",
+        "csv_match": true
+      },
+      {
+        "kind": "actual",
+        "verified": true,
+        "outage_seconds": 305,
+        "total_rows": 613,
+        "replayed_rows": 600,
+        "missing_rows": 0,
+        "complete": false,
+        "reason": "retention_limit",
+        "csv_match": true
+      }
+    ]
+  }
+}

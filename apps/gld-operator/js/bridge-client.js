@@ -169,6 +169,13 @@ async function initDatasetOutputDir() {
 function startBridgeEvents() {
   if (state.eventSource) state.eventSource.close();
   const source = new EventSource(bridgeUrl(`/api/events?token=${encodeURIComponent(bridgeToken)}`));
+  source.addEventListener("open", () => window.dispatchEvent(new Event("gld-bridge-events-open")));
+  source.addEventListener("wireless_dataset", (event) => {
+    window.dispatchEvent(new CustomEvent("gld-wireless-dataset", { detail: JSON.parse(event.data) }));
+  });
+  source.addEventListener("wireless_dataset_replay", (event) => {
+    window.dispatchEvent(new CustomEvent("gld-wireless-dataset-replay", { detail: JSON.parse(event.data) }));
+  });
   source.onerror = () => {
     if (!state.bridgeAvailable) return;
     setBadge(elements.connectionBadge, "bridge event lost", "warn");

@@ -106,9 +106,21 @@ GLD_FIRMWARE_MODELS = (
     {"value": "model_1", "label": "Model 1 - Board 1", "environment": "gld_model_1"},
     {"value": "model_2", "label": "Model 2 - Board 2", "environment": "gld_model_2"},
     {"value": "model_3", "label": "Model 3 - Board 3", "environment": "gld_model_3"},
+    {"value": "model_1_dataset_wifi", "label": "GLD1 Model 1 - Hotspot Dataset 500 ms (mode khusus)", "environment": "gld_model_1_dataset_wifi"},
+    {"value": "model_2_dataset_wifi", "label": "GLD1 Model 2 - Hotspot Dataset 500 ms (mode khusus)", "environment": "gld_model_2_dataset_wifi"},
+    {"value": "model_3_dataset_wifi", "label": "GLD1 Model 3 - Hotspot Dataset 500 ms (mode khusus)", "environment": "gld_model_3_dataset_wifi"},
+    {"value": "model_1_dataset_replay_wifi", "label": "GLD1 Model 1 - Hotspot buffer 5 menit (tahap 2)", "environment": "gld_model_1_dataset_replay_wifi"},
+    {"value": "model_2_dataset_replay_wifi", "label": "GLD1 Model 2 - Hotspot buffer 5 menit (tahap 2)", "environment": "gld_model_2_dataset_replay_wifi"},
+    {"value": "model_3_dataset_replay_wifi", "label": "GLD1 Model 3 - Hotspot buffer 5 menit (tahap 2)", "environment": "gld_model_3_dataset_replay_wifi"},
     {"value": "gld_v2", "label": "GasleakDetector - Board V2", "environment": "gld_v2"},
     {"value": "gld_atex", "label": "GasleakDetector - GLD ATEX (GPIO7 fan)", "environment": "gld_atex"},
 )
+GLD_DATASET_WIFI_ENVIRONMENTS = frozenset({
+    "gld_model_1_dataset_wifi", "gld_model_2_dataset_wifi", "gld_model_3_dataset_wifi",
+})
+GLD_DATASET_REPLAY_ENVIRONMENTS = frozenset({
+    "gld_model_1_dataset_replay_wifi", "gld_model_2_dataset_replay_wifi", "gld_model_3_dataset_replay_wifi",
+})
 FIRMWARE_ENVIRONMENTS = {
     "ch": {
         "small": "ch_small",
@@ -1465,6 +1477,12 @@ class Handler(SimpleHTTPRequestHandler):
             env = str(selection["environment"])
         initial_firmware = bool(payload.get("initialFirmware"))
         reset_nvs = True if initial_firmware else bool(payload.get("resetNvs"))
+        if device == "gld" and env in GLD_DATASET_WIFI_ENVIRONMENTS | GLD_DATASET_REPLAY_ENVIRONMENTS and (initial_firmware or reset_nvs):
+            raise ValueError(
+                "Hotspot Dataset memerlukan GLD yang sudah memiliki profil nulling valid. "
+                "Gunakan firmware normal untuk setup/nulling terlebih dahulu; pilih upload biasa "
+                "dengan Reset NVS OFF agar profil dipertahankan."
+            )
         if reset_nvs and payload.get("resetNvsConfirmation") != "RESET NVS":
             raise ValueError("Reset NVS requires the explicit confirmation RESET NVS")
         local_package = package_manifest_summary(env)
@@ -1495,6 +1513,31 @@ class Handler(SimpleHTTPRequestHandler):
         # used for status/configuration calls. Keep this bounded, but do not mark a
         # legitimate flash as failed after only 12 seconds.
         result = child_request(host, device, "POST", "/api/firmware/upload", request, timeout=240.0)
+        if device == "gld" and env in GLD_DATASET_WIFI_ENVIRONMENTS | GLD_DATASET_REPLAY_ENVIRONMENTS:
+            # This dedicated image intentionally has no serial command loop.
+            # The child only proves the flash tool returned successfully, not
+            # device identity, RF connectivity, or Dataset readiness after boot.
+            package_version = str(manifest.get("firmwareVersion") or "unknown")
+            next_step = (
+                "Flash tool selesai; perangkat belum diverifikasi. Gunakan catu eksternal/24 V, "
+                "sambungkan Wi-Fi laptop ke GLD-DATASET-..., lalu buka GLD Operator > "
+                "Dataset Wireless dan Connect GLD untuk verifikasi hotspot. "
+                "Firmware ini memakai mode Dataset khusus dan tidak memakai reconnect COM."
+            )
+            if env in GLD_DATASET_REPLAY_ENVIRONMENTS:
+                next_step += " Pada Mode rekaman, pilih Buffer 5 menit · tahap 2 sebelum Connect GLD."
+            add_activity(device, "Hotspot firmware flash tool completed",
+                         f"{port}; {env} v{package_version}; device verification pending hotspot; NVS {'reset' if reset_nvs else 'preserved'}")
+            json_response(self, {
+                "upload": result, "readback": None, "initialFirmware": initial_firmware,
+                "flashToolCompleted": True, "deviceVerified": False,
+                "verificationPending": "hotspot", "nextStep": next_step,
+                "aesKeyRestored": False, "identityResetToDefault": reset_nvs,
+                "expectedIdentity": expected_identifier, "selectedEnvironment": env,
+                "selectedFirmwareVersion": package_version,
+                "boardFormFactor": None, "mqttTransport": None,
+            })
+            return
         readback = wait_for_readback(host, device, port, timeout=35.0)
         expected_version = manifest.get("firmwareVersion")
         actual_version = (readback.get("info") or {}).get("firmwareVersion")

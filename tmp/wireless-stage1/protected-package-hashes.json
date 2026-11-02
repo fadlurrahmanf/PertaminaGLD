@@ -1,0 +1,14 @@
+[
+  {
+    "Path": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\firmware-packages\\gld_model_1\\latest\\firmware.bin",
+    "Hash": "6FF1DDEC033E9FA08391A8E3D4CAD54D9E2FD6B059100E78D698CCAA6366B324"
+  },
+  {
+    "Path": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\firmware-packages\\gld_model_2\\latest\\firmware.bin",
+    "Hash": "6D865201CB81C1261BC16ED15EEDA806D7CD56F09690D4C1096E7B06E9C802FE"
+  },
+  {
+    "Path": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\firmware-packages\\gld_model_3\\latest\\firmware.bin",
+    "Hash": "5027FD0FD986820B84C6DF799F266D4518575BDD39EC6D1364273160C2503067"
+  }
+]

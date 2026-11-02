@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>GLD Operator</title>
     <link rel="stylesheet" href="./style.css?v=20261015-lora-three-cards-row-1">
+    <link rel="stylesheet" href="./css/wireless-dataset.css?v=20261102-stage1">
   </head>
   <body>
     <div class="shell">
@@ -134,6 +135,36 @@
         </section>
 
         <section id="dataset" class="view">
+          <div id="wirelessDataset" class="module wireless-dataset">
+            <div class="module-head module-head--wrap">
+              <h2>Dataset Wireless · Hotspot GLD1</h2>
+              <span class="tag">500 ms · Model 1 / 2 / 3</span>
+            </div>
+            <p class="wireless-description">Sambungkan Wi-Fi laptop ke <strong>GLD-DATASET-…</strong>, lalu Connect dan Start. Gunakan catu eksternal/24 V dan firmware Hotspot khusus. CSV direkam oleh backend selama Operator Hub tetap berjalan, termasuk saat halaman ini ditutup.</p>
+            <div class="wireless-fields">
+              <label>Mode rekaman<select id="wirelessMode"><option value="direct" selected>Langsung · tahap 1</option><option id="wirelessReplayOption" value="replay">Buffer 5 menit · tahap 2</option></select></label>
+              <label>Password hotspot<input id="wirelessPassword" type="password" autocomplete="off" spellcheck="false" placeholder="Password dari paket firmware Hotspot"></label>
+              <label>Label sesi<input id="wirelessLabel" value="clear_air_test" maxlength="31" autocomplete="off"></label>
+              <div class="toolbar">
+                <button id="wirelessConnectBtn" type="button">Connect GLD</button>
+                <button id="wirelessDisconnectBtn" type="button" disabled>Disconnect</button>
+                <button id="wirelessStartBtn" type="button" disabled>Start Wireless</button>
+                <button id="wirelessStopBtn" type="button" disabled>Stop</button>
+                <button id="wirelessExportBtn" type="button" disabled>Download CSV</button>
+              </div>
+            </div>
+            <p id="wirelessState" class="wireless-status" aria-live="polite">Disconnected · 0 sampel</p>
+            <p id="wirelessMessage" class="status-line" aria-live="polite"></p>
+            <p id="wirelessFile" class="wireless-file"></p>
+            <p id="wirelessTiming" class="status-line"></p>
+            <p id="wirelessRecovery" class="status-line" aria-live="polite"></p>
+            <div class="wireless-canvas-wrap"><canvas id="wirelessChart" role="img" aria-label="Grafik delapan tegangan sensor wireless selama 60 detik terakhir"></canvas></div>
+            <div id="wirelessLegend" class="wireless-legend"></div>
+            <p id="wirelessPolicy" class="status-line">Tahap 1: putus koneksi menghentikan sesi dan menandainya tidak lengkap.</p>
+            <div class="wireless-table-wrap">
+              <table><thead><tr><th>Seq</th><th>Waktu GLD</th><th>MQ8 (V)</th><th>MQ135 (V)</th><th>MQ3 (V)</th><th>MQ5 (V)</th><th>MQ4 (V)</th><th>MQ7 (V)</th><th>MQ6 (V)</th><th>MQ2 (V)</th></tr></thead><tbody id="wirelessRows"><tr><td colspan="10">Belum ada sampel wireless.</td></tr></tbody></table>
+            </div>
+          </div>
           <div class="module">
             <div class="module-head module-head--wrap">
               <h2>Dataset Session</h2>
@@ -675,7 +706,7 @@
             <select id="firmwareUploadEnv" aria-label="Firmware environment"><option value="gld">GLD1</option><option value="gld_v2">GLD2 - Board GLD V2</option><option value="gld_atex">GLD ATEX - MotherBoardGLDVer2 (GPIO7 fan)</option><option value="gldFieldtest">GLD Fieldtest</option></select>
           </label>
           <label class="upload-dialog-field">Model yang di-inject
-            <select id="firmwareUploadModel" aria-label="Model yang di-inject"><option value="model_1">Model 1 — Board 1</option><option value="model_2">Model 2 — Board 2</option><option value="model_3">Model 3 — Board 3</option><option value="model_4" disabled>Model 4 — artefak belum tersedia</option></select>
+            <select id="firmwareUploadModel" aria-label="Model yang di-inject"><option value="model_1">Model 1 — Board 1</option><option value="model_2">Model 2 — Board 2</option><option value="model_3">Model 3 — Board 3</option><option value="model_1_dataset_wifi">GLD1 Model 1 — Hotspot Dataset 500 ms (mode khusus)</option><option value="model_2_dataset_wifi">GLD1 Model 2 — Hotspot Dataset 500 ms (mode khusus)</option><option value="model_3_dataset_wifi">GLD1 Model 3 — Hotspot Dataset 500 ms (mode khusus)</option><option value="model_1_dataset_replay_wifi">GLD1 Model 1 — Hotspot buffer 5 menit (tahap 2)</option><option value="model_2_dataset_replay_wifi">GLD1 Model 2 — Hotspot buffer 5 menit (tahap 2)</option><option value="model_3_dataset_replay_wifi">GLD1 Model 3 — Hotspot buffer 5 menit (tahap 2)</option><option value="model_4" disabled>Model 4 — artefak belum tersedia</option></select>
           </label>
           <p id="firmwareUploadModelStatus" class="status-line">Pilih model yang sesuai dengan board dan paket firmware yang akan diprogram.</p>
           <label class="upload-dialog-field">Target COM
@@ -739,6 +770,6 @@
       </div>
     </div>
 
-  <script type="module" src="./js/main.js?v=20261005-aes-running-1"></script>
+    <script type="module" src="./js/main.js?v=20261102-replay-stage2"></script>
   </body>
 </html>

@@ -1,0 +1,35 @@
+{
+  "status": "PASS",
+  "kind": "recorded_actual_archive",
+  "live_connection": false,
+  "pid": 36860,
+  "port": 57308,
+  "source_sha256": "b4625df3e1bcf8167b457e3472929f57e08fd98d07f0d6af533abf31c6d7f5f0",
+  "scenes": [
+    {
+      "scene": "ready",
+      "state": "ready",
+      "count": 0,
+      "snapshot_sha256": "5525d07220541bb832834db2feddb4a0a4cddafb41a58224cce784069a476267"
+    },
+    {
+      "scene": "recording",
+      "state": "recording",
+      "count": 12,
+      "snapshot_sha256": "c2b88f6480c4eed04472ced1479341f1749511f9471829365ed448527d85e59a"
+    },
+    {
+      "scene": "replaying",
+      "state": "replaying",
+      "count": 308,
+      "snapshot_sha256": "1fe2a2f032b97ea4edfb12fbf7efc7bb047784af6b194ce49efe30d39abe34fe"
+    }
+  ],
+  "all_post_blocked": true,
+  "production_origin_removed": true,
+  "ui_source_sha256": {
+    "index.html": "f5a0ae1f4d9aba116c4f0417b5b73c4c7a1becb5982fd30708792d67b719b156",
+    "js/bridge-client.js": "f1303db94a913394919ee58fc39e516daba4131459d65870993685d296d73ddf",
+    "js/wireless-dataset.js": "d7edcabb4758c73dce510eda2062e2514204b24b2ebbe530821c173da30741bf"
+  }
+}

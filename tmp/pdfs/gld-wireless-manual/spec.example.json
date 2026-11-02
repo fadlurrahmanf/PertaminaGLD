@@ -1,0 +1,33 @@
+{
+  "date": "2 November 2026",
+  "privacy_checked": false,
+  "device": {
+    "device_id": "1002",
+    "ssid": "GLD-DATASET-1002",
+    "model": "Model 1",
+    "firmware": "0.8.36"
+  },
+  "screenshots": {
+    "hub": {
+      "path": "screenshots/01-hub.jpg",
+      "kind": "actual",
+      "annotations": [
+        {
+          "n": 1,
+          "x": 1070.625,
+          "y": 31.5625,
+          "w": 136.875,
+          "h": 34.296875,
+          "title": "Buka Expert Console",
+          "body": "Buka console GLD dari halaman GLD di Operator Hub."
+        }
+      ]
+    },
+    "setup": {"path": "screenshots/02-setup.jpg", "kind": "actual", "annotations": []},
+    "ready": {"path": "screenshots/03-ready.jpg", "kind": "actual", "annotations": []},
+    "recording": {"path": "screenshots/04-recording.jpg", "kind": "actual", "annotations": []},
+    "recovering": {"path": "screenshots/05-recovering.jpg", "kind": "actual", "annotations": []},
+    "replaying": {"path": "screenshots/06-replaying.jpg", "kind": "actual", "annotations": []},
+    "complete": {"path": "screenshots/07-complete.jpg", "kind": "actual", "annotations": []}
+  }
+}

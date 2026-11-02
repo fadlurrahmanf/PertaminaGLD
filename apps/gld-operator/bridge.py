@@ -58,6 +58,22 @@ else:
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 try:
+    from wireless_dataset import WirelessDatasetCollector
+except Exception as exc:  # Optional feature must never block existing consoles.
+    WirelessDatasetCollector = None  # type: ignore[assignment]
+    WIRELESS_DATASET_IMPORT_ERROR = type(exc).__name__
+else:
+    WIRELESS_DATASET_IMPORT_ERROR = ""
+
+try:
+    from wireless_dataset_replay import WirelessDatasetReplayCollector as WirelessReplayCollector
+except Exception as exc:  # Replay is optional; Stage1 and other consoles stay available.
+    WirelessReplayCollector = None  # type: ignore[assignment]
+    WIRELESS_REPLAY_IMPORT_ERROR = type(exc).__name__
+else:
+    WIRELESS_REPLAY_IMPORT_ERROR = ""
+
+try:
     from local_mqtt_broker import LocalMqttBroker
 except Exception as exc:  # pragma: no cover - surfaced in /api/health
     LocalMqttBroker = None  # type: ignore[assignment]
@@ -99,6 +115,12 @@ SEMVER_RE = re.compile(r"^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$")
 GLD_ID_MIN = 0x1001
 GLD_ID_MAX = 0xFEFF
 DEFAULT_GLD_ID = "1001"
+GLD_DATASET_WIFI_ENVIRONMENTS = frozenset({
+    "gld_model_1_dataset_wifi", "gld_model_2_dataset_wifi", "gld_model_3_dataset_wifi",
+})
+GLD_DATASET_REPLAY_ENVIRONMENTS = frozenset({
+    "gld_model_1_dataset_replay_wifi", "gld_model_2_dataset_replay_wifi", "gld_model_3_dataset_replay_wifi",
+})
 AES_KEY_HEX_RE = re.compile(r"^[0-9A-Fa-f]{32}$")
 
 
@@ -368,6 +390,61 @@ class SerialBridge:
 MAX_SLOTS = 8
 
 events = EventHub()
+wireless_dataset_collector: Any = None
+wireless_dataset_lock = threading.Lock()
+wireless_replay_collector: Any = None
+wireless_replay_lock = threading.Lock()
+# Admission spans identity checks and connection creation across HTTP threads.
+dataset_transport_admission = threading.RLock()
+
+
+def get_wireless_dataset_collector() -> Any:
+    global wireless_dataset_collector
+    if WirelessDatasetCollector is None:
+        raise RuntimeError("Wireless Dataset is unavailable in this installation")
+    with wireless_dataset_lock:
+        if wireless_dataset_collector is None:
+            wireless_dataset_collector = WirelessDatasetCollector(
+                DATASET_OUTPUT_DIR,
+                lambda payload: events.emit("wireless_dataset", payload),
+            )
+        return wireless_dataset_collector
+
+
+def get_wireless_replay_collector() -> Any:
+    global wireless_replay_collector
+    if WirelessReplayCollector is None:
+        raise RuntimeError("Wireless replay is unavailable in this installation")
+    with wireless_replay_lock:
+        if wireless_replay_collector is None:
+            wireless_replay_collector = WirelessReplayCollector(
+                DATASET_OUTPUT_DIR,
+                lambda payload: events.emit("wireless_dataset_replay", payload),
+            )
+        return wireless_replay_collector
+
+
+def wireless_collector_in_use(collector: Any) -> bool:
+    if collector is None:
+        return False
+    state = collector.snapshot()
+    return bool(state.get("connected") or state.get("recovery_active") or
+                state.get("stop_requested") and state.get("state") not in {"complete", "incomplete", "disconnected"} or
+                state.get("state") in {"connecting", "starting", "recording", "recovering",
+                                       "reconnecting", "resuming", "replaying", "stopping", "stop_pending"})
+
+
+def connect_wireless_dataset(password: str, *, replay: bool = False) -> Any:
+    with dataset_transport_admission:
+        other = wireless_dataset_collector if replay else wireless_replay_collector
+        if wireless_collector_in_use(other):
+            raise RuntimeError("Disconnect the other Wireless Dataset mode first")
+        if any(item.status().get("connected") for item in serial_bridges.values()):
+            raise RuntimeError("Disconnect COM before connecting Wireless Dataset")
+        collector = get_wireless_replay_collector() if replay else get_wireless_dataset_collector()
+        return collector.connect(password)
+
+
 serial_bridges: dict[int, "SerialBridge"] = {}
 flash_port_lock = threading.Lock()
 flash_ports: set[str] = set()
@@ -1139,6 +1216,10 @@ def _firmware_upload_reserved(payload: dict[str, Any], slot: int = 1) -> dict[st
     manifest, verified_files = validate_firmware_package(
         payload.get("manifest"), payload.get("packageFiles"), env, target_id
     )
+    if env in GLD_DATASET_WIFI_ENVIRONMENTS | GLD_DATASET_REPLAY_ENVIRONMENTS and reset_nvs:
+        raise RuntimeError(
+            "Hotspot Dataset requires an existing saved nulling profile; Reset NVS must be OFF"
+        )
     # Reset NVS removes the device-specific LoRa AES configuration. Refuse the
     # destructive operation before touching the serial port unless this PC has
     # a valid local provisioning source to restore it after the upload. The
@@ -1391,6 +1472,8 @@ class Handler(SimpleHTTPRequestHandler):
                         "datasetMonitor": mqtt is not None,
                         "mqttBroker": broker_running,
                         "datasetOutput": True,
+                        "wirelessDataset": WirelessDatasetCollector is not None,
+                        "wirelessReplay": WirelessReplayCollector is not None,
                         "networkInfo": os.name == "nt",
                         "firmwareUpload": True,
                         "firmwareGld1DowngradeGuard": True,
@@ -1405,6 +1488,8 @@ class Handler(SimpleHTTPRequestHandler):
                         "serial": SERIAL_IMPORT_ERROR,
                         "mqtt": MQTT_IMPORT_ERROR,
                         "mqttBroker": local_mqtt_broker_error or MQTT_BROKER_IMPORT_ERROR,
+                        "wirelessDataset": WIRELESS_DATASET_IMPORT_ERROR,
+                        "wirelessReplay": WIRELESS_REPLAY_IMPORT_ERROR,
                     },
                     "maxSlots": MAX_SLOTS,
                     "slots": connected_slots_summary(),
@@ -1412,6 +1497,10 @@ class Handler(SimpleHTTPRequestHandler):
                 )
             if path == "/api/ports":
                 return json_response(self, {"ports": get_serial_bridge(1).list_ports()})
+            if path == "/api/wireless-dataset/state":
+                return json_response(self, get_wireless_dataset_collector().snapshot())
+            if path == "/api/wireless-replay/state":
+                return json_response(self, get_wireless_replay_collector().snapshot())
             if path == "/api/serial/status":
                 slot = parse_slot((parse_qs(urlparse(self.path).query).get("slot") or [1])[0])
                 return json_response(self, get_serial_bridge(slot).status())
@@ -1452,7 +1541,10 @@ class Handler(SimpleHTTPRequestHandler):
             if path == "/api/serial/port-status":
                 query = parse_qs(urlparse(self.path).query)
                 port = (query.get("port") or [""])[0]
-                return json_response(self, probe_port(port))
+                with dataset_transport_admission:
+                    if wireless_collector_in_use(wireless_replay_collector):
+                        raise RuntimeError("Disconnect Wireless replay before probing COM")
+                    return json_response(self, probe_port(port))
             if path == "/api/events":
                 return self._serve_events()
             return super().do_GET()
@@ -1468,12 +1560,37 @@ class Handler(SimpleHTTPRequestHandler):
             limit = FIRMWARE_JSON_BODY_LIMIT if path == "/api/firmware/upload" else DEFAULT_JSON_BODY_LIMIT
             payload = read_json(self, limit)
             slot = parse_slot(payload.get("slot"))
-            if path == "/api/serial/connect":
-                port = str(payload.get("port") or "")
-                holder = slot_holding_port(port)
-                if holder is not None and holder != slot:
-                    raise RuntimeError(f"{port} is already connected on slot {holder}")
-                result = get_serial_bridge(slot).connect(port, int(payload.get("baud") or 115200))
+            if path == "/api/wireless-dataset/connect":
+                result = connect_wireless_dataset(payload.get("password", ""))
+            elif path == "/api/wireless-dataset/start":
+                result = get_wireless_dataset_collector().start(
+                    payload.get("label", ""), payload.get("interval_ms", 500)
+                )
+            elif path == "/api/wireless-dataset/stop":
+                result = get_wireless_dataset_collector().stop()
+            elif path == "/api/wireless-dataset/disconnect":
+                result = get_wireless_dataset_collector().disconnect()
+            elif path == "/api/wireless-dataset/export":
+                result = get_wireless_dataset_collector().export_csv()
+            elif path == "/api/wireless-replay/connect":
+                result = connect_wireless_dataset(payload.get("password", ""), replay=True)
+            elif path == "/api/wireless-replay/start":
+                result = get_wireless_replay_collector().start(payload.get("label", ""), payload.get("interval_ms", 500))
+            elif path == "/api/wireless-replay/stop":
+                result = get_wireless_replay_collector().stop()
+            elif path == "/api/wireless-replay/disconnect":
+                result = get_wireless_replay_collector().disconnect()
+            elif path == "/api/wireless-replay/export":
+                result = get_wireless_replay_collector().export_csv()
+            elif path == "/api/serial/connect":
+                with dataset_transport_admission:
+                    if wireless_collector_in_use(wireless_dataset_collector) or wireless_collector_in_use(wireless_replay_collector):
+                        raise RuntimeError("Disconnect Wireless Dataset before connecting COM")
+                    port = str(payload.get("port") or "")
+                    holder = slot_holding_port(port)
+                    if holder is not None and holder != slot:
+                        raise RuntimeError(f"{port} is already connected on slot {holder}")
+                    result = get_serial_bridge(slot).connect(port, int(payload.get("baud") or 115200))
             elif path == "/api/serial/disconnect":
                 result = get_serial_bridge(slot).disconnect()
             elif path == "/api/serial/write":
@@ -1498,7 +1615,10 @@ class Handler(SimpleHTTPRequestHandler):
             elif path == "/api/dataset/open-folder":
                 result = open_dataset_folder()
             elif path == "/api/firmware/upload":
-                result = firmware_upload(payload, slot)
+                with dataset_transport_admission:
+                    if wireless_collector_in_use(wireless_replay_collector):
+                        raise RuntimeError("Disconnect Wireless replay before firmware upload")
+                    result = firmware_upload(payload, slot)
             else:
                 return json_response(self, {"error": "not found"}, HTTPStatus.NOT_FOUND)
             return json_response(self, result)
@@ -1571,6 +1691,10 @@ def main() -> int:
     except KeyboardInterrupt:
         pass
     finally:
+        if wireless_replay_collector is not None:
+            wireless_replay_collector.disconnect()
+        if wireless_dataset_collector is not None:
+            wireless_dataset_collector.disconnect()
         for monitor in dataset_monitors.values():
             monitor.stop(emit=False)
         for bridge in serial_bridges.values():

@@ -1,0 +1,598 @@
+// Mock GLD simulator: fake telemetry/nulling/command responses so the UI
+// can be exercised without hardware. Kept for feature parity; this
+// rebuild's own verification uses real hardware per user instruction.
+
+import { state, SENSOR_NAMES } from "./state.js";
+import { getField, numberField } from "./ui.js";
+import { handleLine, resetDeviceSnapshot } from "./serial-protocol.js";
+import { updateConnectionUi } from "./bridge-client.js";
+import { DAC_CODE_MAX } from "./nulling.js";
+
+// Matches the firmware's real step size (every code, 0..4095) - batched a
+// few codes per timer tick purely so the mock animation doesn't take minutes
+// to finish; real hardware still emits one FULLSCALE_STEP line per code.
+const FULLSCALE_SWEEP_STEP = 1;
+const FULLSCALE_SWEEP_CODES_PER_TICK = 16;
+const FULLSCALE_SWEEP_INTERVAL_MS = 20;
+const MOCK_LORA_TICK_MS = 25;
+
+function safeJson(text) {
+  try { return JSON.parse(text); } catch { return null; }
+}
+
+function mockAck(cmd, status, rebootExpected) {
+  return {
+    deviceId: state.info?.deviceId || "F001",
+    nodeId: 0xF001,
+    cmd,
+    status,
+    message: "mock",
+    rebootExpected,
+    mode: state.mode === "unknown" ? "inference" : state.mode,
+    alarmLatched: state.mockAlarmLatched === true,
+    uptimeMs: Math.floor(performance.now())
+  };
+}
+
+function mockLoraConfig() {
+  const focus = state.mockLoraFocus || {};
+  // A LoRa Focus Apply carries the complete working configuration.  Prefer it
+  // in the simulator so the QC read-back mirrors the fields the operator just
+  // applied, instead of reverting to values from the separate Expert form.
+  const configured = (key, fallback) => Number.isFinite(Number(focus[key])) ? Number(focus[key]) : fallback;
+  const syncText = String(getField("loraSyncWord") || "0x12").trim();
+  const syncBase = /^0x/i.test(syncText) || /[a-f]/i.test(syncText) ? 16 : 10;
+  const syncWord = Number.parseInt(syncText.replace(/^0x/i, ""), syncBase);
+  const tcxoVoltage = numberField("loraTcxoVoltage");
+  const xtalVoltage = numberField("loraXtalVoltage");
+  return {
+    freqMHz: configured("freqMHz", numberField("loraFreqMHz") || 920),
+    bwKHz: configured("bwKHz", numberField("loraBwKHz") || 125),
+    sf: configured("sf", numberField("loraSf") || 7),
+    cr: configured("cr", numberField("loraCr") || 5),
+    syncWord: Number.isFinite(syncWord) ? syncWord : 0x12,
+    // 22 dBm is the documented GLD1 LoRa QC default.  This must not inherit
+    // the unrelated Expert-form default during an offline simulation.
+    txPowerDbm: configured("txPowerDbm", 22),
+    preamble: numberField("loraPreamble") || 8,
+    tcxoVoltage: Number.isFinite(tcxoVoltage) ? tcxoVoltage : 1.6,
+    xtalVoltage: Number.isFinite(xtalVoltage) ? xtalVoltage : 0,
+    txIntervalMs: Number.isFinite(Number(focus.txIntervalMs)) ? Number(focus.txIntervalMs) : 10000,
+    transmitFocus: focus.transmitFocus === true,
+    txTarget: focus.txTarget === "radio_only" ? "radio_only" : "ch",
+    autoTransmit: focus.autoTransmit !== false
+  };
+}
+
+function mockLoraMode(config) {
+  if (config.txTarget === "radio_only") return "test";
+  return config.transmitFocus ? "ch_dummy" : "ch_normal";
+}
+
+function mockLoraPayloadBytes(mode, sequence, config) {
+  // This is the exact byte buffer exposed by the mock TX event.  It stays
+  // separate from the firmware's real encoder; hardware Data Preview is
+  // always supplied by the GLD_LORA_EVENT_JSON payloadHex contract.
+  const bytes = mode === "test"
+    ? [0x54, 0x53, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+    : [0x47, 0x4c, 0x44, 0x01, 0x00, 0x64, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
+  bytes[3] = sequence & 0xff;
+  bytes[4] = (sequence >>> 8) & 0xff;
+  bytes[5] = mode === "test" ? (config.txPowerDbm & 0xff) : 0x64;
+  bytes[bytes.length - 2] = config.sf & 0xff;
+  bytes[bytes.length - 1] = config.cr & 0xff;
+  return bytes;
+}
+
+function stopMockLoraTx() {
+  if (state.mockLoraTxTimer) clearInterval(state.mockLoraTxTimer);
+  state.mockLoraTxTimer = null;
+}
+
+function emitMockLoraTx(force = false) {
+  const config = mockLoraConfig();
+  const now = Date.now();
+  const interval = Number(config.txIntervalMs) || 10000;
+  if (force || (config.autoTransmit && (!state.mockLoraLastTxAt || now - state.mockLoraLastTxAt >= interval))) {
+    const deltaMs = state.mockLoraLastTxAt ? now - state.mockLoraLastTxAt : 0;
+    state.mockLoraLastTxAt = now;
+    state.mockLoraTxSequence = (state.mockLoraTxSequence || 0) + 1;
+    const mode = mockLoraMode(config);
+    const gatesRequired = mode === "ch_normal";
+    const gatesReady = state.mockLoraGatesReady !== false;
+    const radioReady = state.mockLoraTxRadioReady !== false;
+    const ok = radioReady && (!gatesRequired || gatesReady);
+    const reason = !radioReady ? "SX1262/SPI/radio tidak siap"
+      : gatesRequired && !gatesReady ? "AES/sensor/model/inference tidak siap" : "";
+    const payloadBytes = mockLoraPayloadBytes(mode, state.mockLoraTxSequence, config);
+    handleLine(`GLD_LORA_EVENT_JSON ${JSON.stringify({
+      sequence: state.mockLoraTxSequence,
+      timestampMs: now,
+      deltaMs,
+      target: config.txTarget,
+      payload: mode,
+      ok,
+      reason,
+      chId: config.txTarget === "ch" ? (state.info?.targetChId || "0064") : null,
+      frameLength: payloadBytes.length,
+      payloadByteLength: payloadBytes.length,
+      payloadHex: payloadBytes.map((value) => value.toString(16).padStart(2, "0")).join(""),
+      rxWindowOpened: mode === "ch_normal"
+    })}`);
+    state.mockLoraLastTxOk = ok;
+  }
+}
+
+function startMockLoraTx() {
+  stopMockLoraTx();
+  state.mockLoraLastTxAt = 0;
+  state.mockLoraTxSequence = 0;
+  state.mockLoraLastTxOk = true;
+  state.mockLoraTxTimer = setInterval(emitMockLoraTx, MOCK_LORA_TICK_MS);
+}
+
+export function emitMockInfo() {
+  const lora = mockLoraConfig();
+  const info = {
+    deviceId: state.info?.deviceId || "F001",
+    nodeId: 0xF001,
+    targetChId: state.info?.targetChId || "0064",
+    firmwareVersion: "0.8.13",
+    protocolVersion: "0.1.0",
+    boardProfile: "GLDW-WROOM-1U-N16R8",
+    mode: state.mode === "unknown" ? "inference" : state.mode,
+    baud: 115200,
+    starLora: { ...lora, runtime: true },
+    appConfig: {
+      wifiSsid: getField("wifiSsid"),
+      mqttHost: getField("mqttHost"),
+      mqttPort: numberField("mqttPort"),
+      mqttUser: getField("mqttUser"),
+      topicRoot: getField("topicRoot")
+    },
+    capabilities: {
+      appPing: true,
+      getInfo: true,
+      getStatus: true,
+      lightweightTelemetry: "GET_TELEMETRY",
+      serialAppConfig: true,
+      serialDeviceId: true,
+      serialChAddress: "SET_CH_ADDRESS_JSON chId",
+      serialLoraConfig: "SET_LORA_CONFIG_JSON freqMHz,bwKHz,sf,cr,syncWord,txPowerDbm,preamble,tcxoVoltage,xtalVoltage",
+      sessionMcp: "SET_SESSION_MCP_JSON channel,code (volatile inference-only)",
+      alarmControlMode: "SET_ALARM_MODE_JSON mode=auto|manual (volatile; boot default auto)",
+      manualAlarm: "SET_MANUAL_ALARM_JSON enabled (manual mode only)",
+      liveLoraReinit: true
+    }
+  };
+  if (state.mockLegacyAlarmContract === true) {
+    // Developer-facing compatibility fixture for firmware that predates the
+    // explicit AUTO/MANUAL command. Its status exposes only manualOnly and
+    // manualCommanded, matching that legacy wire contract.
+    delete info.capabilities.alarmControlMode;
+    info.capabilities.manualAlarm = "SET_MANUAL_ALARM_JSON enabled (legacy manual-only)";
+  }
+  handleLine(`GLD_INFO_JSON ${JSON.stringify(info)}`);
+}
+
+function createMockStatus() {
+  const t = Date.now() / 1000;
+  const voltage = Array.from({ length: 8 }, (_, index) => {
+    return 0.08 * Math.sin(t * (0.35 + index * 0.04) + index) + index * 0.012;
+  });
+  const alarm = Math.random() > 0.98;
+  const legacyAlarmContract = state.mockLegacyAlarmContract === true;
+  const alarmMode = state.mockAlarmMode === "manual" ? "manual" : "auto";
+  const manualCommanded = state.mockManualAlarmCommanded === true;
+  const physicalCommanded = legacyAlarmContract || alarmMode === "manual" ? manualCommanded : alarm;
+  const lora = mockLoraConfig();
+  const runtimeMcpCode = state.mockRuntimeMcpCode || Array.from({ length: 8 }, (_, index) => 132 + index * 4);
+  const status = {
+    deviceId: state.info?.deviceId || "F001",
+    nodeId: 0xF001,
+    mode: state.mode === "unknown" ? "inference" : state.mode,
+    alarmLatched: state.mockAlarmLatched === true,
+    alarmControl: legacyAlarmContract
+      ? { manualOnly: true, manualCommanded }
+      : {
+          available: true,
+          mode: alarmMode,
+          defaultMode: "auto",
+          modePersisted: false,
+          sessionOnly: true,
+          resetsToAutoOnBoot: true,
+          manualOnly: alarmMode === "manual",
+          manualCommanded,
+          inferenceAlarm: alarm,
+          physicalCommanded,
+          outputDrive: "active_low_gpio41_uln2003_pullup",
+          externalDevicePattern: "steady_high_while_alarm",
+          singleTrigger: true,
+          requiresExternalPullup: true,
+          gpio41CommandLevel: physicalCommanded ? "LOW" : "HIGH",
+          j2LampExpectedLevel: physicalCommanded ? "HIGH" : "LOW"
+        },
+    uptimeMs: Math.floor(performance.now()),
+    power: { mode: "24v", externalPower: true, batteryMv: 3560, batteryValid: true },
+    bootHealth: {
+      adsReady: state.mockLoraGatesReady !== false,
+      mcpOkCount: 8,
+      dacReady: true,
+      dacVerificationReady: true,
+      mlReady: state.mockLoraGatesReady !== false,
+      nullingProfileApplied: true
+    },
+    model: {
+      allSensorsValid: state.mockLoraGatesReady !== false,
+      sensorsPrimed: state.mockLoraGatesReady !== false,
+      mlReady: state.mockLoraGatesReady !== false,
+      nullingProfileApplied: true,
+      bindingValid: true,
+      bindingModelMatches: true,
+      dacVerificationReady: true,
+      inferenceEngineOk: state.mockLoraGatesReady !== false,
+      inferenceValid: state.mockLoraGatesReady !== false,
+      sensorFault: state.mockLoraGatesReady === false,
+      readiness: {
+        scanObserved: true,
+        allSensorsValid: state.mockLoraGatesReady !== false,
+        sensorsPrimed: state.mockLoraGatesReady !== false,
+        mlReady: state.mockLoraGatesReady !== false,
+        nullingProfileApplied: true,
+        bindingValid: true,
+        bindingModelMatches: true,
+        profileReady: true,
+        dacVerificationReady: true,
+        executionAttempted: state.mockLoraGatesReady !== false,
+        executionSucceeded: state.mockLoraGatesReady !== false,
+        inferenceValid: state.mockLoraGatesReady !== false,
+        blocker: state.mockLoraGatesReady !== false ? "none" : "sensor_data_invalid"
+      }
+    },
+    lora: { ready: state.mockLoraRadioReady !== false, beginState: 0, lastBeginState: 0, lastTxOk: state.mockLoraLastTxOk !== false, txMode: mockLoraMode(lora), ...lora },
+    runtimeMcpCode,
+    nulling: {
+      running: state.mode === "nulling" && state.mockNullingStep < 48,
+      done: state.mockNullingStep >= 48,
+      retryArmed: false,
+      attemptCount: 0,
+      thresholdV: state.mockNullingConfig?.thresholdV ?? 0.00001,
+      minFinalV: state.mockNullingConfig?.minFinalV ?? 0
+    },
+    telemetry: {
+      valid: true,
+      sampleMs: Math.floor(performance.now()),
+      gasClass: 0,
+      gasName: alarm ? "methane" : "Clean_Air",
+      confidence: alarm ? 87 : 99,
+      alarm,
+      inferenceAlarm: alarm,
+      alarmControlMode: alarmMode,
+      manualAlarmCommanded: manualCommanded,
+      physicalAlarmCommanded: physicalCommanded,
+      sensorVoltage: voltage,
+      sensorGain: [64, 64, 64, 64, 64, 32, 64, 64],
+      sensorStatus: [0, 0, 0, 0, 0, 0, 0, 0],
+      featureOrder: ["MQ8", "MQ135", "MQ3", "MQ5", "MQ4", "MQ7", "MQ6", "MQ2"]
+    }
+  };
+  return status;
+}
+
+export function emitMockStatus() {
+  const status = createMockStatus();
+  handleLine(`GLD_STATUS_JSON ${JSON.stringify(status)}`);
+  if (state.mode === "nulling") emitMockNullingProgress();
+}
+
+export function emitMockTelemetry() {
+  const status = createMockStatus();
+  const telemetry = {
+    deviceId: status.deviceId,
+    mode: status.mode,
+    uptimeMs: status.uptimeMs,
+    alarmLatched: status.alarmLatched,
+    model: { inferenceValid: true, sensorFault: false },
+    telemetry: status.telemetry
+  };
+  handleLine(`GLD_TELEMETRY_JSON ${JSON.stringify(telemetry)}`);
+}
+
+function startMockNulling() {
+  state.mockNullingStep = 0;
+  handleLine("NULLING_SERVICE_START profileId=1 retryArmed=0 attempts=0");
+}
+
+function emitMockNullingProgress() {
+  if (state.mockNullingStep >= 48) return;
+  const channel = Math.floor(state.mockNullingStep / 6);
+  const stage = state.mockNullingStep % 6;
+  const sensor = SENSOR_NAMES[channel] || `MQ${channel + 1}`;
+  const baseCode = 132 + channel * 4;
+  const baseline = 0.294 + channel * 0.002;
+  const threshold = Math.max(Math.abs(baseline) * 0.5, state.mockNullingConfig?.thresholdV ?? 0.00001);
+  const target = baseline + threshold;
+  const voltage = (baseline + stage * threshold * 0.35).toFixed(9);
+  const delta = (Number(voltage) - baseline).toFixed(6);
+
+  state.mockNullingChannelOk = state.mockNullingChannelOk || Array(8).fill(false);
+
+  if (stage === 0) {
+    handleLine(`NULLING_CH_START ch=${channel} sensor=${sensor}`);
+  } else if (stage === 1) {
+    handleLine(`NULLING_BASELINE_START ch=${channel} sensor=${sensor}`);
+    handleLine(`NULLING_BASELINE_STEP ch=${channel} sensor=${sensor} sample=10 code=${baseCode} voltage=${voltage} valid=1`);
+  } else if (stage === 2) {
+    handleLine(`NULLING_EXP_START ch=${channel} sensor=${sensor} baseline=${baseline.toFixed(6)} threshold=${threshold.toFixed(6)} minThreshold=${state.mockNullingConfig?.thresholdV ?? 0.00001} ratio=0.500000 target=${target.toFixed(6)}`);
+    handleLine(`NULLING_EXP_STEP ch=${channel} sensor=${sensor} low=${baseCode - 24} high=${baseCode + 24} code=${baseCode + 8} voltage=${voltage} delta=${delta} valid=1 write=1`);
+    handleLine(`NULLING_EXP_RANGE ch=${channel} sensor=${sensor} low=${baseCode - 16} high=${baseCode + 16}`);
+  } else if (stage === 3) {
+    handleLine(`NULLING_BIN_START ch=${channel} sensor=${sensor}`);
+    handleLine(`NULLING_BIN_STEP ch=${channel} sensor=${sensor} low=${baseCode - 16} high=${baseCode + 16} mid=${baseCode} voltage=${voltage} delta=${delta} valid=1 write=1`);
+    handleLine(`NULLING_BIN_DONE ch=${channel} sensor=${sensor} selected=${baseCode}`);
+  } else if (stage === 4) {
+    handleLine(`NULLING_CONFIRM_START ch=${channel} sensor=${sensor} start=${baseCode - 5} end=${baseCode + 4} threshold=${threshold.toFixed(6)} target=${target.toFixed(6)} wide=0`);
+    handleLine(`NULLING_CONFIRM_STEP ch=${channel} sensor=${sensor} code=${baseCode} voltage=${target.toFixed(9)} delta=${threshold.toFixed(6)} valid=1 aboveMin=1 crossed=1 write=1`);
+    handleLine(`NULLING_CONFIRM_OK ch=${channel} sensor=${sensor} code=${baseCode} voltage=${target.toFixed(9)} delta=${threshold.toFixed(6)} threshold=${threshold.toFixed(6)} target=${target.toFixed(6)} mode=baseline_threshold_verified`);
+  } else {
+    handleLine(`NULLING_CH_OK ch=${channel} sensor=${sensor} dac=${baseCode} baseline=${(Number(voltage) - 0.0009).toFixed(6)} after=${voltage}`);
+    state.mockNullingChannelOk[channel] = true;
+  }
+
+  state.mockNullingStep += 1;
+  if (state.mockNullingStep >= 48) {
+    handleLine("NULLING_SERVICE_DONE status=Ok successCount=8/8");
+    handleLine("NULLING_RUN_DONE status=Ok successCount=8");
+    handleLine("NULLING_RUNTIME_RESULT=PASS");
+    handleLine("NULLING_AUTO_MODE_SWITCH target=running mode=inference profileId=1 delayMs=800");
+    state.mode = "inference";
+    emitMockInfo();
+  }
+}
+
+export function handleMockCommand(command) {
+  if (command === "GET_INFO" || command === "APP_PING") emitMockInfo();
+  if (command === "GET_STATUS" || command === "RUN_BOOT_CHECK") emitMockStatus();
+  if (command === "GET_TELEMETRY") emitMockTelemetry();
+  if (command === "RESTART") {
+    handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("RESTART", "ok", true))}`);
+    state.mode = "inference";
+    emitMockInfo();
+  }
+  if (command.startsWith("SET_MODE ")) {
+    state.mode = command.slice("SET_MODE ".length);
+    handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("SET_MODE", "ok", true))}`);
+    emitMockInfo();
+    if (state.mode === "nulling") startMockNulling();
+  }
+  if (command.startsWith("SET_DEVICE_ID_JSON ")) {
+    const payload = safeJson(command.slice("SET_DEVICE_ID_JSON ".length));
+    if (payload?.deviceId) state.info = { ...(state.info || {}), deviceId: payload.deviceId };
+    handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("SET_DEVICE_ID", "ok", Boolean(payload?.reboot)))}`);
+    emitMockInfo();
+  }
+  if (command.startsWith("SET_CH_ADDRESS_JSON ")) {
+    const payload = safeJson(command.slice("SET_CH_ADDRESS_JSON ".length));
+    if (payload?.chId) state.info = { ...(state.info || {}), targetChId: payload.chId };
+    handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify({ ...mockAck("SET_CH_ADDRESS", "ok", Boolean(payload?.reboot)), chId: payload?.chId })}`);
+    emitMockInfo();
+  }
+  if (command.startsWith("SET_APP_CONFIG_JSON ")) {
+    handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("SET_APP_CONFIG", "ok", true))}`);
+  }
+  if (command.startsWith("SET_LORA_CONFIG_JSON ")) {
+    const payload = safeJson(command.slice("SET_LORA_CONFIG_JSON ".length));
+    if (payload) state.mockLoraPending = { ...(state.mockLoraPending || state.mockLoraFocus || {}), ...payload };
+    handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("SET_LORA_CONFIG", "ok", false))}`);
+  }
+  if (command === "BEGIN_LORA") {
+    if (state.mockLoraBeginReady === false) {
+      handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify({ ...mockAck("BEGIN_LORA", "error", false), message: "SX1262/SPI/radio tidak siap" })}`);
+      return;
+    }
+    state.mockLoraFocus = { ...(state.mockLoraFocus || {}), ...(state.mockLoraPending || {}) };
+    handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("BEGIN_LORA", "ok", false))}`);
+    emitMockInfo();
+    emitMockStatus();
+    startMockLoraTx();
+  }
+  if (command.startsWith("SET_LORA_AUTO_TRANSMIT_JSON ")) {
+    const payload = safeJson(command.slice("SET_LORA_AUTO_TRANSMIT_JSON ".length));
+    if (typeof payload?.enabled !== "boolean") {
+      handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify({ ...mockAck("SET_LORA_AUTO_TRANSMIT", "rejected", false), message: "enabled must be boolean" })}`);
+    } else {
+      state.mockLoraFocus = { ...(state.mockLoraFocus || {}), autoTransmit: payload.enabled };
+      state.mockLoraLastTxAt = Date.now();
+      handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("SET_LORA_AUTO_TRANSMIT", "ok", false))}`);
+      emitMockInfo();
+      emitMockStatus();
+    }
+  }
+  if (command === "MANUAL_LORA_TX") {
+    if (mockLoraConfig().autoTransmit) {
+      handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify({ ...mockAck("MANUAL_LORA_TX", "rejected", false), message: "disable Auto Transmit first" })}`);
+    } else {
+      emitMockLoraTx(true);
+      handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("MANUAL_LORA_TX", "ok", false))}`);
+      emitMockStatus();
+    }
+  }
+  if (command.startsWith("SET_ALARM_MODE_JSON ")) {
+    const payload = safeJson(command.slice("SET_ALARM_MODE_JSON ".length));
+    if (state.mockLegacyAlarmContract === true) {
+      handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("SET_ALARM_MODE", "rejected", false))}`);
+    } else if (payload?.mode === "auto" || payload?.mode === "manual") {
+      state.mockAlarmMode = payload.mode;
+      state.mockManualAlarmCommanded = false;
+      handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("SET_ALARM_MODE", "ok", false))}`);
+      emitMockStatus();
+    } else {
+      handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("SET_ALARM_MODE", "rejected", false))}`);
+    }
+  }
+  if (command.startsWith("SET_MANUAL_ALARM_JSON ")) {
+    const payload = safeJson(command.slice("SET_MANUAL_ALARM_JSON ".length));
+    const manualOutputAvailable = state.mockLegacyAlarmContract === true || state.mockAlarmMode === "manual";
+    if (manualOutputAvailable && typeof payload?.enabled === "boolean") {
+      state.mockManualAlarmCommanded = payload.enabled;
+      handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("SET_MANUAL_ALARM", "ok", false))}`);
+      emitMockStatus();
+    } else {
+      handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("SET_MANUAL_ALARM", "rejected", false))}`);
+    }
+  }
+  if (command.startsWith("SET_NULLING_CONFIG_JSON ")) {
+    const payload = safeJson(command.slice("SET_NULLING_CONFIG_JSON ".length));
+    state.mockNullingConfig = {
+      thresholdV: payload?.thresholdV ?? state.mockNullingConfig?.thresholdV ?? 0.00001,
+      minFinalV: payload?.minFinalV ?? state.mockNullingConfig?.minFinalV ?? 0
+    };
+    handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("SET_NULLING_CONFIG", "ok", false))}`);
+  }
+  if (command.startsWith("SET_SESSION_MCP_JSON ")) {
+    const payload = safeJson(command.slice("SET_SESSION_MCP_JSON ".length));
+    const channel = Number(payload?.channel);
+    const code = Number(payload?.code);
+    if (state.mode === "inference" && Number.isInteger(channel) && channel >= 0 && channel < 8 && Number.isInteger(code) && code >= 0 && code <= DAC_CODE_MAX) {
+      state.mockRuntimeMcpCode = state.mockRuntimeMcpCode || Array.from({ length: 8 }, (_, index) => 132 + index * 4);
+      state.mockRuntimeMcpCode[channel] = code;
+      handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify({ ...mockAck("SET_SESSION_MCP", "ok", false), code, message: "session MCP applied; not saved" })}`);
+      emitMockStatus();
+    } else {
+      handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("SET_SESSION_MCP", "rejected", false))}`);
+    }
+  }
+  if (command === "VERIFY_CLEAN_AIR_FOR_NULLING") {
+    state.mockAlarmLatched = false;
+    handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("VERIFY_CLEAN_AIR_FOR_NULLING", "ok", false))}`);
+  }
+  if (command === "GET_QC_STATUS") emitMockQcStatus();
+  if (command.startsWith("RUN_NULLING_SINGLE_JSON ")) {
+    const payload = safeJson(command.slice("RUN_NULLING_SINGLE_JSON ".length));
+    const channel = Number(payload?.channel);
+    if (Number.isInteger(channel) && channel >= 0 && channel < 8) {
+      const sensor = SENSOR_NAMES[channel] || `MQ${channel + 1}`;
+      state.mockNullingChannelOk = state.mockNullingChannelOk || Array(8).fill(false);
+      handleLine(`NULLING_CH_START ch=${channel} sensor=${sensor}`);
+      handleLine(`NULLING_CH_OK ch=${channel} sensor=${sensor} dac=140 baseline=0.294000 after=0.294500`);
+      state.mockNullingChannelOk[channel] = true;
+      handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("RUN_NULLING_SINGLE", "ok", false))}`);
+    } else {
+      handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("RUN_NULLING_SINGLE", "rejected", false))}`);
+    }
+  }
+  if (command.startsWith("RESET_QC_RESULT_JSON ")) {
+    const payload = safeJson(command.slice("RESET_QC_RESULT_JSON ".length));
+    const channel = Number(payload?.channel);
+    if (Number.isInteger(channel) && channel >= 0 && channel < 8) {
+      state.mockQcProfile = state.mockQcProfile || mockQcProfileDefault();
+      state.mockQcProfile[channel] = { tested: false, pass: false, timestamp: "" };
+      handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("RESET_QC_RESULT", "ok", false))}`);
+    } else {
+      handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("RESET_QC_RESULT", "rejected", false))}`);
+    }
+  }
+  if (command === "RESET_QC_ALL") {
+    state.mockQcProfile = mockQcProfileDefault();
+    handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("RESET_QC_ALL", "ok", false))}`);
+  }
+  if (command.startsWith("RUN_FULLSCALE_SWEEP_JSON ")) {
+    const payload = safeJson(command.slice("RUN_FULLSCALE_SWEEP_JSON ".length));
+    const channel = Number(payload?.channel);
+    if (Number.isInteger(channel) && channel >= 0 && channel < 8) {
+      handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("RUN_FULLSCALE_SWEEP", "ok", false))}`);
+      runMockFullScaleSweep(channel);
+    } else {
+      handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("RUN_FULLSCALE_SWEEP", "rejected", false))}`);
+    }
+  }
+  if (command.startsWith("SET_QC_RESULT_JSON ")) {
+    const payload = safeJson(command.slice("SET_QC_RESULT_JSON ".length));
+    const channel = Number(payload?.channel);
+    if (Number.isInteger(channel) && channel >= 0 && channel < 8) {
+      state.mockQcProfile = state.mockQcProfile || mockQcProfileDefault();
+      state.mockQcProfile[channel] = { tested: true, pass: Boolean(payload.pass), timestamp: payload.timestamp || "" };
+      handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("SET_QC_RESULT", "ok", false))}`);
+    } else {
+      handleLine(`GLD_CMD_ACK_JSON ${JSON.stringify(mockAck("SET_QC_RESULT", "rejected", false))}`);
+    }
+  }
+}
+
+// Streams FULLSCALE_STEP lines on a timer (instead of all at once) so the
+// popup's chart/table visibly build up code-by-code in mock mode, the same
+// way they would from real serial data arriving line-by-line.
+function runMockFullScaleSweep(channel) {
+  const sensor = SENSOR_NAMES[channel] || `MQ${channel + 1}`;
+  const codes = [];
+  for (let code = 0; code <= DAC_CODE_MAX; code += FULLSCALE_SWEEP_STEP) codes.push(code);
+  if (codes[codes.length - 1] !== DAC_CODE_MAX) codes.push(DAC_CODE_MAX);
+  const restoreCode = 140 + channel * 4;
+
+  handleLine(`FULLSCALE_START ch=${channel} sensor=${sensor} codeMin=0 codeMax=${DAC_CODE_MAX} step=${FULLSCALE_SWEEP_STEP} avgCount=8`);
+
+  let i = 0;
+  const timer = setInterval(() => {
+    for (let n = 0; n < FULLSCALE_SWEEP_CODES_PER_TICK && i < codes.length; n += 1, i += 1) {
+      const code = codes[i];
+      // Rough MQ-sensor-like response curve: flat near the rail floor at low
+      // codes, rising sharply through mid-range, saturating near the top.
+      const x = code / DAC_CODE_MAX;
+      const voltage = 0.03 + 2.9 / (1 + Math.exp(-12 * (x - 0.45))) + (Math.random() - 0.5) * 0.004;
+      handleLine(`FULLSCALE_STEP ch=${channel} sensor=${sensor} code=${code} voltage=${voltage.toFixed(6)} valid=1 write=1`);
+    }
+    if (i >= codes.length) {
+      clearInterval(timer);
+      handleLine(`FULLSCALE_DONE ch=${channel} sensor=${sensor} status=Ok restoreCode=${restoreCode} restoreOk=1`);
+    }
+  }, FULLSCALE_SWEEP_INTERVAL_MS);
+}
+
+function mockQcProfileDefault() {
+  return Array.from({ length: 8 }, () => ({ tested: false, pass: false, timestamp: "" }));
+}
+
+function emitMockQcStatus() {
+  state.mockQcProfile = state.mockQcProfile || mockQcProfileDefault();
+  state.mockNullingChannelOk = state.mockNullingChannelOk || Array(8).fill(false);
+  const channels = SENSOR_NAMES.map((sensor, index) => ({
+    channel: index,
+    sensor,
+    nullingOk: state.mockNullingChannelOk[index],
+    ...state.mockQcProfile[index]
+  }));
+  handleLine(`GLD_QC_STATUS_JSON ${JSON.stringify({ deviceId: state.info?.deviceId || "F001", nodeId: 0xF001, chId: "0064", channels })}`);
+}
+
+export function toggleMock() {
+  if (state.mock) {
+    clearInterval(state.mockTimer);
+    stopMockLoraTx();
+    state.mockTimer = null;
+    state.mock = false;
+    state.connected = false;
+    resetDeviceSnapshot();
+    updateConnectionUi("disconnected", "");
+    return;
+  }
+  // Starting mock mode represents a fresh device boot: commissioning state
+  // must not survive the prior mock session.
+  state.mockAlarmMode = "auto";
+  state.mockManualAlarmCommanded = false;
+  const search = new URLSearchParams(location.search);
+  state.mockLoraBeginReady = search.get("mockBeginFail") !== "1";
+  state.mockLoraRadioReady = state.mockLoraBeginReady;
+  state.mockLoraTxRadioReady = search.get("mockRadioFail") !== "1";
+  state.mockLoraGatesReady = search.get("mockGates") !== "off";
+  state.mockLoraFocus = { txIntervalMs: 10000, transmitFocus: false, txTarget: "ch", autoTransmit: true };
+  state.mockLoraPending = { ...state.mockLoraFocus };
+  state.mock = true;
+  state.connected = false;
+  updateConnectionUi("mock", "ok");
+  emitMockInfo();
+  emitMockQcStatus();
+  state.mockTimer = setInterval(emitMockStatus, 1000);
+}

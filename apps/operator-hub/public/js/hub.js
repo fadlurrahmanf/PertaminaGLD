@@ -20,6 +20,7 @@ let uploadEventsReady = false;
 let uploadFlashDone = false;
 let uploadReadbackVerified = false;
 let uploadSuccessShown = false;
+let hotspotUploadReceipt = null;
 let testDeviceRunning = false;
 let alarmActionBusy = false;
 const simulationMode = new URLSearchParams(location.search).get("simulate");
@@ -116,6 +117,22 @@ function markReadbackVerified() {
   renderUploadProgress({ percent: 99, stage: "Read-back identitas selesai. Menunggu konfirmasi flash...", line: "READBACK verified; waiting for UPLOAD_DONE" });
 }
 
+function isPendingHotspotUpload(result) {
+  return ["gld_model_1_dataset_wifi", "gld_model_2_dataset_wifi", "gld_model_3_dataset_wifi",
+    "gld_model_1_dataset_replay_wifi", "gld_model_2_dataset_replay_wifi", "gld_model_3_dataset_replay_wifi"].includes(result?.selectedEnvironment)
+    && result?.flashToolCompleted === true && result?.deviceVerified === false
+    && result?.verificationPending === "hotspot";
+}
+
+function showHotspotUploadNextStep(result) {
+  renderUploadProgress({ percent: 100, stage: "Pemrograman selesai; verifikasi perangkat melalui hotspot masih diperlukan.", line: "FLASH_TOOL_COMPLETED; device verification pending hotspot" });
+  show(result.nextStep || "Sambungkan Wi-Fi laptop ke GLD-DATASET-..., lalu buka GLD Operator > Dataset Wireless dan Connect GLD untuk verifikasi.");
+  const link = document.createElement("a");
+  link.href = "http://127.0.0.1:5174/";
+  link.textContent = " Buka GLD Operator untuk verifikasi hotspot";
+  notice.append(link);
+}
+
 async function openUploadEvents(device) {
   if (!token || !window.EventSource) return;
   const source = new EventSource(`/api/simple/upload-events?device=${encodeURIComponent(device)}&token=${encodeURIComponent(token)}`);
@@ -127,6 +144,7 @@ async function openUploadEvents(device) {
     }
     if (type === "upload_done") {
       uploadFlashDone = true;
+      if (hotspotUploadReceipt) return showHotspotUploadNextStep(hotspotUploadReceipt);
       if (uploadReadbackVerified) return completeUploadProgress();
       return renderUploadProgress({ percent: 99, stage: "Flash selesai. Menunggu reboot dan read-back...", line: `UPLOAD_DONE code=${payload.code ?? 0}` });
     }
@@ -161,6 +179,7 @@ async function runFirmwareUpload(payload) {
   uploadFlashDone = false;
   uploadReadbackVerified = false;
   uploadSuccessShown = false;
+  hotspotUploadReceipt = null;
   $("uploadProgress").classList.remove("error");
   $("uploadSuccessToast").hidden = true;
   renderUploadProgress({ percent: 1, stage: "Menyiapkan upload..." });
@@ -168,6 +187,17 @@ async function runFirmwareUpload(payload) {
   await openUploadEvents(payload.device);
   try {
     const result = await api("/api/simple/firmware/upload", payload);
+    if (isPendingHotspotUpload(result)) {
+      hotspotUploadReceipt = result;
+      // A pre-flash Test Device result cannot verify this dedicated image.
+      testReportsByDevice.gld = null;
+      if (active === "gld") lastTestReport = null;
+      if (overview.devices?.gld) {
+        overview.devices.gld = { ...overview.devices.gld, connected: false, info: null };
+      }
+      showHotspotUploadNextStep(result);
+      return result;
+    }
     markReadbackVerified();
     return result;
   } catch (error) {
@@ -229,7 +259,10 @@ function requestFirmwareUploadOptions({ device, port, initialFirmware = false })
       <select id="firmwareUploadModel"><option value="">Pilih package GLD</option>${(packageOptions.models || []).map((option) => {
         const item = packageCatalog[option.environment];
         const detail = item?.available ? `v${item.firmwareVersion}` : "package tidak tersedia";
-        return `<option value="${option.value}"${item?.available ? "" : " disabled"}>${option.label} — ${detail}</option>`;
+        const hotspot = ["gld_model_1_dataset_wifi", "gld_model_2_dataset_wifi", "gld_model_3_dataset_wifi",
+          "gld_model_1_dataset_replay_wifi", "gld_model_2_dataset_replay_wifi", "gld_model_3_dataset_replay_wifi"].includes(option.environment);
+        const disabled = item?.available !== true || (initialFirmware && hotspot);
+        return `<option value="${option.value}"${disabled ? " disabled" : ""}>${option.label} — ${detail}${initialFirmware && hotspot ? " / memerlukan profil nulling tersimpan" : ""}</option>`;
       }).join("")}<option disabled>Model 4 - artefak belum tersedia</option></select>
       <small>Pilih package sesuai board yang akan di-flash.</small>
     </label>` : "";
@@ -338,11 +371,19 @@ function requestFirmwareUploadOptions({ device, port, initialFirmware = false })
         transport?.focus();
         return;
       }
-      if (!updatePackageSelection()) {
+      const selectedEnvironment = updatePackageSelection();
+      if (!selectedEnvironment) {
         if (error.hidden) {
           error.textContent = "Environment firmware untuk pilihan ini tidak tersedia.";
           error.hidden = false;
         }
+        return;
+      }
+      if (["gld_model_1_dataset_wifi", "gld_model_2_dataset_wifi", "gld_model_3_dataset_wifi",
+        "gld_model_1_dataset_replay_wifi", "gld_model_2_dataset_replay_wifi", "gld_model_3_dataset_replay_wifi"].includes(selectedEnvironment) && (initialFirmware || reset.checked)) {
+        error.textContent = "Hotspot Dataset memerlukan GLD dengan profil nulling tersimpan valid. Gunakan upload biasa dengan Reset NVS OFF; setup/nulling melalui firmware normal terlebih dahulu.";
+        error.hidden = false;
+        reset.focus();
         return;
       }
       if (resetRequired && reset.checked !== true) {
@@ -825,7 +866,8 @@ async function initialFirmwareUpload() {
   if (!options) return show("Upload firmware awal dibatalkan.");
   try {
     show("Mengunggah firmware awal; progres dan log flash ditampilkan di bawah.");
-    await runFirmwareUpload({ device: active, port, initialFirmware: true, ...options });
+    const result = await runFirmwareUpload({ device: active, port, initialFirmware: true, ...options });
+    if (isPendingHotspotUpload(result)) return result;
     initialFirmwareRequired = false;
     await refresh(true);
     show("Firmware awal terverifikasi. Menjalankan Test Device...");
@@ -842,7 +884,8 @@ async function manualFirmwareUpload() {
   if (!options) return show("Upload firmware dibatalkan.");
   try {
     show("Mengunggah firmware; progres dan log flash ditampilkan di bawah.");
-    await runFirmwareUpload({ device: active, port, ...options });
+    const result = await runFirmwareUpload({ device: active, port, ...options });
+    if (isPendingHotspotUpload(result)) return result;
     await refresh(true);
     show("Firmware terverifikasi. Menjalankan Test Device ulang...");
     await testDevice();

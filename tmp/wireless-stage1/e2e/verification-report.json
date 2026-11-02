@@ -1,0 +1,82 @@
+{
+  "status": "PASS",
+  "scope": "PC simulation only; no RF/firmware/hardware proof",
+  "sessions": [
+    {
+      "scenario": "clean",
+      "status": "PASS",
+      "session_id": "87582378b6b948899adc29bf180e640a",
+      "emitted": 153,
+      "persisted": 153,
+      "gap_count": 0,
+      "duplicate_count": 0,
+      "csv_sha256": "e8968c76d45d93bd9df1af3181fdd4c2e181feefd8e5b2bb384cb3e64c5c1bd3",
+      "csv_path": "D:\\Github\\PertaminaGLD\\tmp\\wireless-stage1\\e2e\\output\\wireless_1001_87582378b6b948899adc29bf180e640a.csv",
+      "device_timestamp_interval_ms": {
+        "interval_count": 152,
+        "min": 500,
+        "median": 500.0,
+        "max": 500
+      },
+      "host_emission_interval_s": {
+        "interval_count": 152,
+        "min": 0.4529999999995198,
+        "median": 0.5,
+        "max": 0.5470000000004802
+      },
+      "host_arrival_interval_s": {
+        "interval_count": 0
+      },
+      "browser_download": {
+        "verified": true,
+        "rows": 153,
+        "path": "D:\\Github\\PertaminaGLD\\tmp\\wireless-stage1\\e2e\\downloads\\clean.csv",
+        "sha256": "e484849064e0a2fbccd2792e143d059eef1daa8d20a19cac83cf0783746e8811"
+      },
+      "checkpoint_counts": {
+        "before_browser_close": 24,
+        "while_browser_closed": 59,
+        "after_browser_reopen": 119,
+        "clean_stopped_and_downloaded": 153
+      }
+    },
+    {
+      "scenario": "drop",
+      "status": "PASS",
+      "session_id": "5885e7b85e7d4aaea22abe989dd9f8d2",
+      "emitted": 53,
+      "persisted": 53,
+      "gap_count": 0,
+      "duplicate_count": 0,
+      "csv_sha256": "94e8a1ae3b87924cd5e7b61979d426bc4b80ab35f75a1102c360ede92cbd1b96",
+      "csv_path": "D:\\Github\\PertaminaGLD\\tmp\\wireless-stage1\\e2e\\output\\wireless_1001_5885e7b85e7d4aaea22abe989dd9f8d2.csv",
+      "device_timestamp_interval_ms": {
+        "interval_count": 52,
+        "min": 500,
+        "median": 500.0,
+        "max": 500
+      },
+      "host_emission_interval_s": {
+        "interval_count": 52,
+        "min": 0.4529999999995198,
+        "median": 0.5,
+        "max": 0.5470000000004802
+      },
+      "host_arrival_interval_s": {
+        "interval_count": 0
+      },
+      "browser_download": {
+        "verified": true,
+        "rows": 53,
+        "path": "D:\\Github\\PertaminaGLD\\tmp\\wireless-stage1\\e2e\\downloads\\drop.csv",
+        "sha256": "0c83212836c505b23f47ccaceabcc2427272ee907d6f3958379b85324e5a61ab"
+      },
+      "checkpoint_counts": {
+        "before_forced_drop": 52,
+        "after_drop": 53,
+        "after_drop_wait": 53,
+        "drop_downloaded_final": 53
+      }
+    }
+  ]
+}

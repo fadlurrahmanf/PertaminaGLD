@@ -1,0 +1,17 @@
+[
+  {
+    "environment": "gld_model_1_dataset_replay_wifi",
+    "directory": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\firmware-packages\\gld_model_1_dataset_replay_wifi\\latest",
+    "firmware_sha256": "491e060eefb30b5db51b2801332fc4e3803fef9fdcf185be6de0a9e2ab698166"
+  },
+  {
+    "environment": "gld_model_2_dataset_replay_wifi",
+    "directory": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\firmware-packages\\gld_model_2_dataset_replay_wifi\\latest",
+    "firmware_sha256": "84106875d725aa60a978f8fedcd19499b42a82ad24d48be491d07f07e4daf954"
+  },
+  {
+    "environment": "gld_model_3_dataset_replay_wifi",
+    "directory": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\firmware-packages\\gld_model_3_dataset_replay_wifi\\latest",
+    "firmware_sha256": "f3f5cc924ce1ce4e439e53908e4ec9651dfdc1219ce2ad9fd35029c577619f12"
+  }
+]

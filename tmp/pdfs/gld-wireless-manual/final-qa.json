@@ -1,0 +1,28 @@
+{
+  "created_at": "2026-11-02T17:10:42.523024+07:00",
+  "pages": 10,
+  "bytes": 1645014,
+  "sha256": "155131567631caa228449bc139832dccf3873aa7b6ea8dc18f9980cf9d065545",
+  "required_text_pass": true,
+  "visual_qa": "All ten rendered pages inspected; final page5 box includes all eight sensor names without crossing legend text.",
+  "actual_app_screenshots": 5,
+  "recorded_actual_screenshots": 3,
+  "recorded_screens_banner_and_caption": true,
+  "original_rasters_unedited": true,
+  "final_bridge_state": {
+    "state": "incomplete",
+    "connected": false,
+    "sampling": false,
+    "recovery_active": false,
+    "complete": false,
+    "terminal_reason": "retention_limit",
+    "device_id": "1002"
+  },
+  "archive_pid36860_stopped": true,
+  "archive_port57308_closed": true,
+  "original_wifi_restored": true,
+  "production_services_kept": [
+    21752,
+    36360
+  ]
+}

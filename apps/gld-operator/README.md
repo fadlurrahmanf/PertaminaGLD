@@ -5,6 +5,10 @@ features are provided by a small local Python bridge instead of Electron.
 
 ## Recommended Run (zero-install)
 
+Dataset Wireless tahap 1 untuk GLD1 Model 1/2/3 memakai panel tambahan di tab
+Dataset dan firmware hotspot terpisah. Ketiga varian sudah compile SUCCESS; upload dan uji
+board belum dilakukan. Lihat [alur operator dan gate compile](../../docs/firmware/gld-dataset-wireless-stage1.md).
+
 Copy the whole `apps/gld-operator` folder to the target Windows PC (including
 `python-embed/`, which bundles Python 3.12 with `pyserial` and `paho-mqtt`
 already installed) and double-click:
@@ -90,6 +94,14 @@ The bridge verifies schema, source identity, every binary size/hash, flash-set
 hash and offset, then invokes packaged esptool against those exact bytes. It
 never rebuilds or uploads the current working tree. Privileged bridge requests
 also require the same-origin per-run token returned by `/api/health`.
+
+## Dataset Wireless tahap 2
+
+Dataset Wireless tahap 2 menambah pilihan **Buffer 5 menit · tahap 2**, dengan
+collector/API terpisah dan varian firmware replay khusus. Source dan simulasi
+PC sudah diuji; build/upload serta pembuktian replay pada GLD asli masih
+memerlukan persetujuan. Mode tahap 1 tetap tersedia sebagai default. Lihat
+[panduan dan bukti tahap 2](../../docs/firmware/gld-dataset-wireless-stage2.md).
 
 ## Fallback HTML-Only Run
 

@@ -12,10 +12,21 @@ const GLD_MODEL_SLOTS = {
   model_1: { label: "Model 1", available: true, environment: "gld_model_1", detail: "Board 1 — Kelas: Clean Air, LPG." },
   model_2: { label: "Model 2", available: true, environment: "gld_model_2", detail: "Board 2 — Kelas: Clean Air, LPG." },
   model_3: { label: "Model 3", available: true, environment: "gld_model_3", detail: "Board 3 — Kelas: Clean Air, LPG." },
+  model_1_dataset_wifi: { label: "Model 1 Hotspot Dataset 500 ms", available: true, environment: "gld_model_1_dataset_wifi", detail: "GLD1 Board 1 — Mode Dataset khusus; catu eksternal/24 V dan profil nulling tersimpan valid. Pertahankan NVS." },
+  model_2_dataset_wifi: { label: "Model 2 Hotspot Dataset 500 ms", available: true, environment: "gld_model_2_dataset_wifi", detail: "GLD1 Board 2 — Mode Dataset khusus; catu eksternal/24 V dan profil nulling tersimpan valid. Pertahankan NVS." },
+  model_3_dataset_wifi: { label: "Model 3 Hotspot Dataset 500 ms", available: true, environment: "gld_model_3_dataset_wifi", detail: "GLD1 Board 3 — Mode Dataset khusus; catu eksternal/24 V dan profil nulling tersimpan valid. Pertahankan NVS." },
+  model_1_dataset_replay_wifi: { label: "Model 1 Hotspot buffer 5 menit", available: true, environment: "gld_model_1_dataset_replay_wifi", detail: "GLD1 Board 1 — Tahap 2, RAM replay 5 menit. Memerlukan paket replay yang sudah dibuild; pertahankan NVS." },
+  model_2_dataset_replay_wifi: { label: "Model 2 Hotspot buffer 5 menit", available: true, environment: "gld_model_2_dataset_replay_wifi", detail: "GLD1 Board 2 — Tahap 2, RAM replay 5 menit. Memerlukan paket replay yang sudah dibuild; pertahankan NVS." },
+  model_3_dataset_replay_wifi: { label: "Model 3 Hotspot buffer 5 menit", available: true, environment: "gld_model_3_dataset_replay_wifi", detail: "GLD1 Board 3 — Tahap 2, RAM replay 5 menit. Memerlukan paket replay yang sudah dibuild; pertahankan NVS." },
   model_4: { label: "Model 4", available: false, detail: "Artefak dan package Model 4 belum tersedia." }
 };
 
 let builtinPackageRequestId = 0;
+
+function isDatasetWifiEnvironment(environment) {
+  return ["gld_model_1_dataset_wifi", "gld_model_2_dataset_wifi", "gld_model_3_dataset_wifi",
+    "gld_model_1_dataset_replay_wifi", "gld_model_2_dataset_replay_wifi", "gld_model_3_dataset_replay_wifi"].includes(environment);
+}
 
 function requiresGld1DowngradeReset(manifest) {
   return ["gld", "gld_model_1", "gld_model_2", "gld_model_3"].includes(manifest?.environment) &&
@@ -278,6 +289,11 @@ async function performFirmwareUpload() {
   const manifest = state.manifest;
   const resetRequired = requiresGld1DowngradeReset(manifest);
   const resetNvs = $("firmwareResetNvs").checked === true;
+  if (isDatasetWifiEnvironment(env) && resetNvs) {
+    setUploadDialogStatus("Hotspot Dataset memerlukan profil nulling tersimpan valid. Matikan Reset NVS; gunakan firmware normal untuk setup/nulling terlebih dahulu jika profil belum tersedia.", "warn");
+    $("firmwareResetNvs").focus();
+    return;
+  }
   if (resetRequired && !resetNvs) {
     updateFirmwareResetGuard();
     setUploadDialogStatus("Upload ditahan: paket downgrade ini wajib Reset NVS. Centang secara eksplisit setelah membaca peringatan.", "warn");
@@ -303,6 +319,15 @@ async function performFirmwareUpload() {
       body: JSON.stringify({ env, port, targetDeviceId, resetNvs, ...(resetNvs ? { resetNvsConfirmation: "RESET NVS" } : {}), manifest, packageFiles, slot: state.activeSlot })
     });
     setUploadProgress(100, "Upload firmware selesai.");
+    if (isDatasetWifiEnvironment(env)) {
+      setUploadDialogStatus(
+        "Flash tool selesai; perangkat belum diverifikasi. Gunakan catu eksternal/24 V, sambungkan Wi-Fi laptop ke GLD-DATASET-..., lalu buka Dataset Wireless dan Connect GLD untuk verifikasi hotspot. Mode khusus ini tidak memakai reconnect COM."
+        + (env.endsWith("_dataset_replay_wifi") ? " Pada Mode rekaman, pilih Buffer 5 menit · tahap 2 sebelum Connect GLD." : "")
+        + (result.nvsReset ? " NVS telah direset; profil nulling valid harus dipulihkan melalui firmware normal sebelum Dataset dapat dimulai." : " Parameter dan profil nulling NVS dipertahankan."),
+        "warn",
+      );
+      return;
+    }
     setUploadDialogStatus(result.nvsReset
       ? `NVS direset. Connecting to ${port} dengan default firmware…`
       : `Upload berhasil. Parameter NVS dipertahankan. Connecting to ${port}…`, "success");

@@ -24,6 +24,12 @@
 #include "GldCommandParser.h"
 #include "GldDacMux.h"
 #include "GldDatasetValidator.h"
+#if defined(PGL_GLD_DATASET_WIFI) && PGL_GLD_DATASET_WIFI
+#include "GldDatasetWifi.h"
+#if defined(PGL_GLD_DATASET_REPLAY) && PGL_GLD_DATASET_REPLAY
+#include "GldDatasetReplayWifi.h"
+#endif
+#endif
 #include "GldFrameBuilder.h"
 #include "GldModeManager.h"
 #include "GldModbusRtu.h"
@@ -7024,6 +7030,30 @@ void runDatasetStateMachine() {
     }
 }
 
+#if defined(PGL_GLD_DATASET_WIFI) && PGL_GLD_DATASET_WIFI
+bool datasetWifiReady() {
+    // Stage 1 is explicitly for the externally powered GLD1 bench. A battery
+    // session never silently enables service hold or takes the CLR path.
+    return !batteryPowerMode && pgl::gld::readGldExternalPower() &&
+           adsReady && dacReady && nullingProfileApplied && nullingProfileId > 0;
+}
+
+bool captureDatasetWifi(pgl::gld::datasetwifi::Sample& sample) {
+    pgl::gld::GldDatasetChannelSample validationSamples[8]{};
+    for (size_t channel = 0; channel < pgl::gld::GLD_DATASET_FEATURE_COUNT; ++channel) {
+        const auto reading = ads.readChannel(channel);
+        sample.voltage[channel] = reading.voltage;
+        sample.gain[channel] = reading.gain;
+        sample.status[channel] = static_cast<uint8_t>(reading.status);
+        validationSamples[channel] = pgl::gld::GldDatasetChannelSample{
+            pgl::gld::board::SENSOR_NAMES[channel], sample.status[channel],
+            reading.voltage, reading.gain, reading.saturated};
+    }
+    return pgl::gld::validateGldDatasetSample(validationSamples, 8,
+                                             nullingProfileApplied, nullingProfileId).accepted;
+}
+#endif
+
 }  // namespace
 
 // ---------------------------------------------------------------------------
@@ -7082,7 +7112,12 @@ void setup() {
     beginServiceHoldButton();
     movingAvg.reset();
 
+#if defined(PGL_GLD_DATASET_WIFI) && PGL_GLD_DATASET_WIFI
+    // Dedicated image only: do not consume or write the stored boot intent.
+    currentMode = pgl::gld::GldMode::DATASET;
+#else
     currentMode = pgl::gld::readGldMode();
+#endif
 
     logPrintln("");
     logPrintln("Pertamina GLD unified firmware");
@@ -7135,6 +7170,7 @@ void setup() {
     powerModeCandidateBattery = batteryPowerMode;
     powerModeCandidateCount = 0;
     lastPowerReconcileMs = millis();
+#if !defined(PGL_GLD_DATASET_WIFI) || !PGL_GLD_DATASET_WIFI
     if (batteryPowerMode && !TFBG_CONTINUOUS_BATTERY &&
         currentMode != pgl::gld::GldMode::INFERENCE) {
         const pgl::gld::GldMode rejectedMode = currentMode;
@@ -7143,6 +7179,7 @@ void setup() {
         logPrintf("MODE_BATTERY_REJECTED requested=%s fallback=inference persisted=%u\n",
                   pgl::gld::gldModeName(rejectedMode), persisted ? 1u : 0u);
     }
+#endif
     if (batteryPowerMode && serviceHoldActive) {
         logPrintln("GLD_SERVICE_HOLD state=ON source=nvs persisted=1");
         blinkServiceHoldEnabled();
@@ -7256,12 +7293,24 @@ void setup() {
                                           false, false,
                                           false, false);
             pulseWdtKeepaliveNow();
+#if defined(PGL_GLD_DATASET_WIFI) && PGL_GLD_DATASET_WIFI
+#if defined(PGL_GLD_DATASET_REPLAY) && PGL_GLD_DATASET_REPLAY
+            const bool wifiDatasetStarted = pgl::gld::datasetreplaywifi::begin(
+                runtimeConfig.deviceId, nullingProfileId, datasetWifiReady, captureDatasetWifi);
+#else
+            const bool wifiDatasetStarted = pgl::gld::datasetwifi::begin(
+                runtimeConfig.deviceId, nullingProfileId, datasetWifiReady, captureDatasetWifi);
+#endif
+            logPrintf("DATASET_WIFI_SERVER ready=%u endpoint=192.168.4.1:81/dataset auth=basic privatePassword=1\n",
+                      wifiDatasetStarted ? 1u : 0u);
+#else
             connectWifi();
             pulseWdtKeepaliveNow();
             mqtt.setBufferSize(MQTT_BUFFER_SIZE);
             mqttConnect();
             pulseWdtKeepaliveNow();
             lastStatusMs = millis();
+#endif
 
         } else {
             // NULLING mode: run calibration first (blocking)
@@ -7353,6 +7402,18 @@ void setup() {
 }
 
 void loop() {
+#if defined(PGL_GLD_DATASET_WIFI) && PGL_GLD_DATASET_WIFI
+    // ADS is exclusively owned by the sampler task after setup. Do not run
+    // serial commands, boot recovery reads, inference, radio, or nulling here.
+    maintainWdtKeepalive();
+#if defined(PGL_GLD_DATASET_REPLAY) && PGL_GLD_DATASET_REPLAY
+    pgl::gld::datasetreplaywifi::poll();
+#else
+    pgl::gld::datasetwifi::poll();
+#endif
+    delay(5);
+    return;
+#endif
     firmwareServiceTick();
     reconcileRuntimePowerMode();
     serviceGld1TxStatusLedFlash(millis());

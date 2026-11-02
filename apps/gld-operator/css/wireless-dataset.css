@@ -1,0 +1,16 @@
+.wireless-dataset { border: 1px solid var(--accent, #29b6a7); }
+.wireless-dataset .wireless-description { margin: 0 0 16px; line-height: 1.5; }
+.wireless-fields { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
+.wireless-fields label { flex: 1 1 180px; }
+.wireless-dataset .wireless-status { margin: 14px 0 8px; overflow-wrap: anywhere; }
+.wireless-file { overflow-wrap: anywhere; font-size: .85rem; margin: 8px 0; }
+.wireless-canvas-wrap { width: 100%; height: 340px; margin: 14px 0; }
+.wireless-canvas-wrap canvas { width: 100%; height: 100%; }
+.wireless-legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: .85rem; }
+.wireless-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.wireless-legend i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.wireless-dataset [data-wireless-error='true'] { color: var(--danger, #e85a65); }
+.wireless-dataset .wireless-table-wrap { overflow-x: auto; }
+.wireless-dataset table { min-width: 760px; width: 100%; }
+.wireless-dataset th, .wireless-dataset td { text-align: right; white-space: nowrap; }
+.wireless-dataset th:first-child, .wireless-dataset td:first-child { text-align: left; }

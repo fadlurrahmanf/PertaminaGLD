@@ -1,0 +1,38 @@
+{
+  "status": "PASS",
+  "scope": "synthetic protocol2 wire/UI/CSV only; not firmware or RF proof",
+  "sessions": [
+    {
+      "scenario": "recover_over_600_same_csv",
+      "status": "PASS",
+      "session_id": "cd1c9f94c3cd45c3baffcb2b09cd6af4",
+      "rows": 814,
+      "replayed_count": 608,
+      "complete": true,
+      "gap_count": 0,
+      "duplicate_count": 0,
+      "resume_commands": 1,
+      "all_fields_match_original": true,
+      "durable_ack_order": true,
+      "csv_path": "D:\\Github\\PertaminaGLD\\tmp\\wireless-stage2\\e2e\\output\\wireless_replay_1002_cd1c9f94c3cd45c3baffcb2b09cd6af4.csv",
+      "csv_sha256": "6c9cdece0f5cdb4ca36becc3a75ff2b535b018a113cc5a4c53b2084d57b8bb06",
+      "browser_download": "C:\\Users\\MSI\\Downloads\\wireless_replay_1002_cd1c9f94c3cd45c3baffcb2b09cd6af4.csv"
+    },
+    {
+      "scenario": "capacity_pressure_no_overwrite",
+      "status": "PASS",
+      "session_id": "defe3b69ac394561afcc386f778a8a3d",
+      "rows": 660,
+      "replayed_count": 649,
+      "complete": false,
+      "gap_count": 0,
+      "duplicate_count": 0,
+      "resume_commands": 2,
+      "all_fields_match_original": true,
+      "durable_ack_order": true,
+      "csv_path": "D:\\Github\\PertaminaGLD\\tmp\\wireless-stage2\\e2e\\output\\wireless_replay_1002_defe3b69ac394561afcc386f778a8a3d.csv",
+      "csv_sha256": "6e212e387fce644ab81d4b56d27fc2461547a6a433076aec20d7ae114cc93f27",
+      "browser_download": "C:\\Users\\MSI\\Downloads\\wireless_replay_1002_defe3b69ac394561afcc386f778a8a3d.csv"
+    }
+  ]
+}

@@ -1,0 +1,2 @@
+# Optional, isolated wireless Dataset transport. Bundled offline in vendor/wireless.
+websocket-client==1.8.0

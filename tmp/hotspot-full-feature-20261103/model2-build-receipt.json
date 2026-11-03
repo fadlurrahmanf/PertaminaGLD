@@ -1,0 +1,91 @@
+{
+  "environment": "gld_model_2_dataset_workflow_wifi",
+  "status": "success",
+  "command": [
+    "C:/Users/MSI/.platformio/penv/Scripts/python.exe",
+    "-m",
+    "platformio",
+    "run",
+    "-d",
+    "firmware",
+    "-e",
+    "gld_model_2_dataset_workflow_wifi",
+    "-j",
+    "1"
+  ],
+  "sourceHashesBefore": {
+    "firmware/gld/src/GldUnifiedMain.cpp": "2b93d489b873d173faa008474c7d307aa83af21ed80c9dca3e129a93ebd7c0a6",
+    "firmware/gld/src/GldDatasetWorkflowWifi.cpp": "71493a20a62233a8ce7e3e3168ac1573c84039a03a8b3d2f4051606899a808c5",
+    "firmware/gld/include/GldDatasetWorkflowWifi.h": "b8222a17ffb3bf3b0d39d4b2b5271366bd2b2f1ea88a53891a4c5ff4d8213888"
+  },
+  "buildDirectory": "D:\\Github\\PertaminaGLD\\firmware\\.pio\\workflow-build-model2\\gld_model_2_dataset_workflow_wifi",
+  "libdepsDirectory": "D:\\Github\\PertaminaGLD\\firmware\\.pio\\workflow-libdeps-model2",
+  "startUtc": "2026-11-03T07:22:14.919026+00:00",
+  "pid": 34588,
+  "endUtc": "2026-11-03T07:22:50.095309+00:00",
+  "exitCode": 0,
+  "sourceHashesAfter": {
+    "firmware/gld/src/GldUnifiedMain.cpp": "2b93d489b873d173faa008474c7d307aa83af21ed80c9dca3e129a93ebd7c0a6",
+    "firmware/gld/src/GldDatasetWorkflowWifi.cpp": "71493a20a62233a8ce7e3e3168ac1573c84039a03a8b3d2f4051606899a808c5",
+    "firmware/gld/include/GldDatasetWorkflowWifi.h": "b8222a17ffb3bf3b0d39d4b2b5271366bd2b2f1ea88a53891a4c5ff4d8213888"
+  },
+  "warnings": [],
+  "errors": [],
+  "memorySummary": [
+    "RAM:   [======    ]  57.4% (used 188032 bytes from 327680 bytes)",
+    "Flash: [==        ]  17.2% (used 1127045 bytes from 6553600 bytes)"
+  ],
+  "artifactDirectory": "D:\\Github\\PertaminaGLD\\firmware\\.pio\\artifacts\\gld-dataset-workflow-wifi-20261103-native-features\\gld_model_2_dataset_workflow_wifi",
+  "files": [
+    {
+      "name": "bootloader.bin",
+      "path": "D:\\Github\\PertaminaGLD\\firmware\\.pio\\artifacts\\gld-dataset-workflow-wifi-20261103-native-features\\gld_model_2_dataset_workflow_wifi\\bootloader.bin",
+      "buildPath": "D:\\Github\\PertaminaGLD\\firmware\\.pio\\workflow-build-model2\\gld_model_2_dataset_workflow_wifi\\bootloader.bin",
+      "size": 15104,
+      "sha256": "2a71d69b471e20c2bac7fb469f3c6a807b3ebee780e348e5889db0da849ca363"
+    },
+    {
+      "name": "partitions.bin",
+      "path": "D:\\Github\\PertaminaGLD\\firmware\\.pio\\artifacts\\gld-dataset-workflow-wifi-20261103-native-features\\gld_model_2_dataset_workflow_wifi\\partitions.bin",
+      "buildPath": "D:\\Github\\PertaminaGLD\\firmware\\.pio\\workflow-build-model2\\gld_model_2_dataset_workflow_wifi\\partitions.bin",
+      "size": 3072,
+      "sha256": "bd0f7954aca2ef7d925ee21aaa1f3dc8822d1d6ce5cbbd26a135e5886bfff6ce"
+    },
+    {
+      "name": "boot_app0.bin",
+      "path": "D:\\Github\\PertaminaGLD\\firmware\\.pio\\artifacts\\gld-dataset-workflow-wifi-20261103-native-features\\gld_model_2_dataset_workflow_wifi\\boot_app0.bin",
+      "buildPath": "C:\\Users\\MSI\\.platformio\\packages\\framework-arduinoespressif32\\tools\\partitions\\boot_app0.bin",
+      "size": 8192,
+      "sha256": "f94c5d786a7a8fab06ac5d10e33bf37711a6697636dc037559ea19cc410a17f0"
+    },
+    {
+      "name": "firmware.bin",
+      "path": "D:\\Github\\PertaminaGLD\\firmware\\.pio\\artifacts\\gld-dataset-workflow-wifi-20261103-native-features\\gld_model_2_dataset_workflow_wifi\\firmware.bin",
+      "buildPath": "D:\\Github\\PertaminaGLD\\firmware\\.pio\\workflow-build-model2\\gld_model_2_dataset_workflow_wifi\\firmware.bin",
+      "size": 1127424,
+      "sha256": "4fe021b9f1381402b146f85985ce22dd8f9f95a9df108dcafa57a34af53e12de"
+    }
+  ],
+  "firmwareSha256": "4fe021b9f1381402b146f85985ce22dd8f9f95a9df108dcafa57a34af53e12de",
+  "log": "D:\\Github\\PertaminaGLD\\tmp\\hotspot-full-feature-20261103\\model2-build.log",
+  "additionalPublicInputsAfterBuild": {
+    "capturedAtUtc": "2026-11-03T07:23:07.213072+00:00",
+    "captureStage": "after compiler process completed, timestamp retained",
+    "hashes": {
+      "firmware/platformio.ini": "0a4561ff5f38eff2d449eb36114a2b845648bc22d60c910dd6b6a6984bca0305",
+      "firmware/tools/prepare_dataset_workflow_wifi.py": "b3d4fd71ff8e913caed70fcdab1a3c0d0cd3728b9e2d25c32d9026f7f823178e",
+      "firmware/gld/include/GldDatasetWorkflowBuffer.h": "1c003f7195c1685a3507ea07b4ec17b0d344b2c5a93de506e7288d8939c9c0ea",
+      "firmware/gld/include/Gld1FirmwareVersion.h": "9ebd91698db49754651da08cd54c99d999d68d9f1e9b11727d6a3749bce9bf37",
+      "firmware/gld/models/model_2/cnn_gas_datasheet_model_data.h": "08b1ca9c19d5e0203a3431d67ed137b5f898a23a37432f1d46e2d31955191b7b",
+      "firmware/gld/models/model_2/cnn_gas_datasheet_normalize_params.h": "9c1e401c2861d940d921e1e083ecd5fe07fd0610b31b890afe3df3cac58fba97",
+      "firmware/gld/models/model_2/cnn_gas_sensitivity_table.h": "6f8bf32caaff031cf422b42db4889b34a2a9d211977fd47e1ee6eb48f134cefd",
+      "firmware/gld/models/model_2/model.json": "e42dea46d91e5411e44ad87bf6bea9148bbc8adee3bb51b03e4dfbb6d0a6b29d",
+      "firmware/gld/models/model_2/model_data.cpp": "bee3702f67ff8776e2d0472287d0c1e5962cd83486df4b6c26994cdebb71a663",
+      "firmware/gld/models/model_2/model_data.h": "03d4c301fcc0c2bddd4632c5576b6205427e6d99df693e32929480d64934b4ab",
+      "firmware/gld/models/model_2/ModelMetadata.h": "5fc1196663f8995f0f42d7d1759b64545f74cc3f3c435d4c53115a768cf15224",
+      "firmware/gld/models/model_2/NeuralNetwork.cpp": "585093205d2ef6453a6b7f9cf91464750fe11dbbecbe07deaa9453bccd6a517a",
+      "firmware/gld/models/model_2/NeuralNetwork.h": "46a34c70b3b689288835060599f3c1304bbc701ad7ab9f1a29238e2e96b1a6b7"
+    }
+  },
+  "receiptFinalizedAtUtc": "2026-11-03T07:23:18.073842+00:00"
+}

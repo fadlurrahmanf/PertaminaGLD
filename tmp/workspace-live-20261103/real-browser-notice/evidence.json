@@ -1,0 +1,1177 @@
+{
+  "hardware": true,
+  "simulation": false,
+  "native_file_dialog": false,
+  "csv_chooser": "Unique isolated path supplied by QA wrapper; all radio/data/control/storage/UI real",
+  "sessions": [],
+  "screenshots": [
+    {
+      "key": "workspace-initial",
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\workspace-live-20261103\\real-browser-notice\\workspace-initial.png",
+      "width": 1584,
+      "height": 1005,
+      "boxes": [
+        {
+          "n": 1,
+          "selector": "#wfScan",
+          "x": 258.5,
+          "y": 321.5,
+          "w": 236,
+          "h": 34
+        },
+        {
+          "n": 2,
+          "selector": "#wfDevice",
+          "x": 258.5,
+          "y": 385.5,
+          "w": 236,
+          "h": 36
+        },
+        {
+          "n": 3,
+          "selector": "#wfConnect",
+          "x": 258.5,
+          "y": 429.5,
+          "w": 114.5,
+          "h": 34
+        }
+      ]
+    },
+    {
+      "key": "connected-replay",
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\workspace-live-20261103\\real-browser-notice\\connected-replay.png",
+      "width": 1584,
+      "height": 1005,
+      "boxes": [
+        {
+          "n": 1,
+          "selector": "#wfConnection",
+          "x": 1176.75,
+          "y": 149.34375,
+          "w": 150.75,
+          "h": 16
+        },
+        {
+          "n": 2,
+          "selector": "#wfDevice",
+          "x": 258.5,
+          "y": 385.5,
+          "w": 236,
+          "h": 36
+        },
+        {
+          "n": 3,
+          "selector": "#wfChooseFile",
+          "x": 258.5,
+          "y": 631.75,
+          "w": 236,
+          "h": 34
+        }
+      ]
+    },
+    {
+      "key": "settings-replay",
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\workspace-live-20261103\\real-browser-notice\\settings-replay.png",
+      "width": 1584,
+      "height": 1005,
+      "boxes": [
+        {
+          "n": 1,
+          "selector": "#wfPrediction",
+          "x": 258.5,
+          "y": 365.21875,
+          "w": 15,
+          "h": 15
+        },
+        {
+          "n": 2,
+          "selector": "#wfMode",
+          "x": 258.5,
+          "y": 596,
+          "w": 236,
+          "h": 42.15625
+        },
+        {
+          "n": 3,
+          "selector": "#wfLabelStamp",
+          "x": 258.5,
+          "y": 755.84375,
+          "w": 236,
+          "h": 13
+        },
+        {
+          "n": 4,
+          "selector": "#wfLabel",
+          "x": 258.5,
+          "y": 774.84375,
+          "w": 236,
+          "h": 36
+        },
+        {
+          "n": 5,
+          "selector": "#wfLock",
+          "x": 258.5,
+          "y": 864.40625,
+          "w": 34,
+          "h": 20
+        }
+      ]
+    },
+    {
+      "key": "replay-disconnected",
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\workspace-live-20261103\\real-browser-notice\\replay-disconnected.png",
+      "width": 1584,
+      "height": 1005,
+      "boxes": [
+        {
+          "n": 1,
+          "selector": "#wfState",
+          "x": 546.5,
+          "y": 245.5,
+          "w": 175.578125,
+          "h": 20
+        },
+        {
+          "n": 2,
+          "selector": "#wfMessage",
+          "x": 546.5,
+          "y": 324.5,
+          "w": 764,
+          "h": 18.421875
+        },
+        {
+          "n": 3,
+          "selector": "#wfCount",
+          "x": 1182.25,
+          "y": 248.5,
+          "w": 128.25,
+          "h": 14
+        }
+      ]
+    }
+  ],
+  "downloads": [],
+  "errors": [
+    "Error: Timed out: notice real recovery\n    at eventually (D:\\Github\\PertaminaGLD\\tmp\\workspace-live-20261103\\browser-client.cjs:10:9)\n    at async waitState (D:\\Github\\PertaminaGLD\\tmp\\workspace-live-20261103\\live-browser.cjs:17:62)\n    at async D:\\Github\\PertaminaGLD\\tmp\\workspace-live-20261103\\live-browser.cjs:80:31"
+  ],
+  "model": {
+    "profile_id": "cnn-dualbranch-board-1-2class-v2",
+    "scaler_profile_id": "cnn-dualbranch-board-1-2class-v2",
+    "runtime_version": "0.8.36",
+    "production_approved": true,
+    "output_elements": 2,
+    "class_map": [
+      0,
+      1
+    ]
+  },
+  "nulling_profile_id": 1,
+  "ok": false,
+  "final_state": {
+    "revision": 35,
+    "devices": [
+      {
+        "ssid": "GLD-DATASET-1002",
+        "device_id": "1002",
+        "name": "GLD-1002"
+      }
+    ],
+    "scanned": true,
+    "selected_device_id": "1002",
+    "selected_ssid": "GLD-DATASET-1002",
+    "device_id": "1002",
+    "boot_id": "b80fcf827a1204029ce14279cf92ee5d",
+    "session_id": "fb60fb017ebf45b586fc7ee222ba2c71",
+    "nulling_profile_id": 1,
+    "model": {
+      "profile_id": "cnn-dualbranch-board-1-2class-v2",
+      "scaler_profile_id": "cnn-dualbranch-board-1-2class-v2",
+      "runtime_version": "0.8.36",
+      "production_approved": true,
+      "output_elements": 2,
+      "class_map": [
+        0,
+        1
+      ]
+    },
+    "connected": false,
+    "ready": false,
+    "prediction_available": true,
+    "locked": true,
+    "state": "recovering",
+    "state_message": "memulihkan",
+    "csv_path": "D:\\Github\\PertaminaGLD\\tmp\\workspace-live-20261103\\real-device\\gld1002-1d7e11070f.csv",
+    "ledger_path": "D:\\Github\\PertaminaGLD\\tmp\\workspace-live-20261103\\real-device\\private\\workflow_860afe7fcec54c819d85825700cb1b16.jsonl",
+    "label": "live_replay_workspace",
+    "mode": "replay",
+    "fields": {
+      "prediction": true,
+      "gain": true,
+      "status": true,
+      "timing": false
+    },
+    "label_timestamp": "12:49 Selasa 03/11/26",
+    "display_label": "12:49 Selasa 03/11/26 live_replay_workspace",
+    "configured": true,
+    "steps": {
+      "scan": true,
+      "device": true,
+      "connection": true,
+      "file": true,
+      "fields": true,
+      "mode": true,
+      "label": true
+    },
+    "wizard_steps": {
+      "connection": true,
+      "file": true,
+      "fields": true,
+      "mode": true,
+      "label": true
+    },
+    "count": 12,
+    "configuration_frozen": true,
+    "segment_id": 1,
+    "verification": {
+      "verified": false,
+      "count": 0,
+      "sha256": "",
+      "message": "Rekaman berjalan; belum diverifikasi."
+    },
+    "error": "",
+    "cleanup_pending": false,
+    "cleanup_active": false,
+    "cleanup_paused": false,
+    "cleanup_confirmed": false,
+    "cleanup_error": "",
+    "cleanup_ledger_path": "",
+    "cleanup_next_seq": 12,
+    "can_continue": false,
+    "complete": false,
+    "paused": false,
+    "recovery_active": true,
+    "stop_pending": false,
+    "next_seq": 12,
+    "replayed_count": 0,
+    "gap_count": 0,
+    "duplicate_count": 0,
+    "total_samples": 12,
+    "buffered_samples": 0,
+    "reason": "",
+    "transition_seq": 0,
+    "history": [
+      {
+        "device_id": "1002",
+        "session_id": "fb60fb017ebf45b586fc7ee222ba2c71",
+        "seq": 0,
+        "timestamp_ms": 1023823,
+        "scan_end_ms": 1024004,
+        "mode": "DATASET",
+        "label": "live_replay_workspace",
+        "nulling_profile_id": 1,
+        "overrun_count": 0,
+        "sensor_voltage": [
+          -0.001578353,
+          0.006377467,
+          0.005244979,
+          -0.001086238,
+          0.033617191,
+          0.011013636,
+          0.017472366,
+          0.007287514
+        ],
+        "sensor_gain": [
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64
+        ],
+        "sensor_status": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "feature_order": [
+          "MQ8",
+          "MQ135",
+          "MQ3",
+          "MQ5",
+          "MQ4",
+          "MQ7",
+          "MQ6",
+          "MQ2"
+        ],
+        "prediction": {
+          "enabled": true,
+          "valid": false,
+          "status": "warmup",
+          "predicted_class": null,
+          "gas_class": null,
+          "confidence": null,
+          "inference_duration_ms": 0
+        },
+        "row_id": 0,
+        "segment_id": 1,
+        "boot_id": "b80fcf827a1204029ce14279cf92ee5d",
+        "model": {
+          "profile_id": "cnn-dualbranch-board-1-2class-v2",
+          "scaler_profile_id": "cnn-dualbranch-board-1-2class-v2",
+          "runtime_version": "0.8.36",
+          "production_approved": true,
+          "output_elements": 2,
+          "class_map": [
+            0,
+            1
+          ]
+        },
+        "label_timestamp": "12:49 Selasa 03/11/26",
+        "display_label": "12:49 Selasa 03/11/26 live_replay_workspace"
+      },
+      {
+        "device_id": "1002",
+        "session_id": "fb60fb017ebf45b586fc7ee222ba2c71",
+        "seq": 1,
+        "timestamp_ms": 1024324,
+        "scan_end_ms": 1024515,
+        "mode": "DATASET",
+        "label": "live_replay_workspace",
+        "nulling_profile_id": 1,
+        "overrun_count": 0,
+        "sensor_voltage": [
+          -0.001576214,
+          0.008394263,
+          0.00519006,
+          0.008571662,
+          0.035519857,
+          0.002959466,
+          0.01615113,
+          -0.003388923
+        ],
+        "sensor_gain": [
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64
+        ],
+        "sensor_status": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "feature_order": [
+          "MQ8",
+          "MQ135",
+          "MQ3",
+          "MQ5",
+          "MQ4",
+          "MQ7",
+          "MQ6",
+          "MQ2"
+        ],
+        "prediction": {
+          "enabled": true,
+          "valid": false,
+          "status": "warmup",
+          "predicted_class": null,
+          "gas_class": null,
+          "confidence": null,
+          "inference_duration_ms": 0
+        },
+        "row_id": 1,
+        "segment_id": 1,
+        "boot_id": "b80fcf827a1204029ce14279cf92ee5d",
+        "model": {
+          "profile_id": "cnn-dualbranch-board-1-2class-v2",
+          "scaler_profile_id": "cnn-dualbranch-board-1-2class-v2",
+          "runtime_version": "0.8.36",
+          "production_approved": true,
+          "output_elements": 2,
+          "class_map": [
+            0,
+            1
+          ]
+        },
+        "label_timestamp": "12:49 Selasa 03/11/26",
+        "display_label": "12:49 Selasa 03/11/26 live_replay_workspace"
+      },
+      {
+        "device_id": "1002",
+        "session_id": "fb60fb017ebf45b586fc7ee222ba2c71",
+        "seq": 2,
+        "timestamp_ms": 1024825,
+        "scan_end_ms": 1025014,
+        "mode": "DATASET",
+        "label": "live_replay_workspace",
+        "nulling_profile_id": 1,
+        "overrun_count": 0,
+        "sensor_voltage": [
+          -0.001543619,
+          0.004653164,
+          0.005239193,
+          -0.00275337,
+          0.037335619,
+          0.000088676,
+          0.027764115,
+          -0.008994766
+        ],
+        "sensor_gain": [
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64
+        ],
+        "sensor_status": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "feature_order": [
+          "MQ8",
+          "MQ135",
+          "MQ3",
+          "MQ5",
+          "MQ4",
+          "MQ7",
+          "MQ6",
+          "MQ2"
+        ],
+        "prediction": {
+          "enabled": true,
+          "valid": false,
+          "status": "warmup",
+          "predicted_class": null,
+          "gas_class": null,
+          "confidence": null,
+          "inference_duration_ms": 0
+        },
+        "row_id": 2,
+        "segment_id": 1,
+        "boot_id": "b80fcf827a1204029ce14279cf92ee5d",
+        "model": {
+          "profile_id": "cnn-dualbranch-board-1-2class-v2",
+          "scaler_profile_id": "cnn-dualbranch-board-1-2class-v2",
+          "runtime_version": "0.8.36",
+          "production_approved": true,
+          "output_elements": 2,
+          "class_map": [
+            0,
+            1
+          ]
+        },
+        "label_timestamp": "12:49 Selasa 03/11/26",
+        "display_label": "12:49 Selasa 03/11/26 live_replay_workspace"
+      },
+      {
+        "device_id": "1002",
+        "session_id": "fb60fb017ebf45b586fc7ee222ba2c71",
+        "seq": 3,
+        "timestamp_ms": 1025324,
+        "scan_end_ms": 1025511,
+        "mode": "DATASET",
+        "label": "live_replay_workspace",
+        "nulling_profile_id": 1,
+        "overrun_count": 0,
+        "sensor_voltage": [
+          0.011351766,
+          0.019110391,
+          0.003645445,
+          0.019666646,
+          0.037399068,
+          0.013023688,
+          0.024081789,
+          -0.001694834
+        ],
+        "sensor_gain": [
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64
+        ],
+        "sensor_status": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "feature_order": [
+          "MQ8",
+          "MQ135",
+          "MQ3",
+          "MQ5",
+          "MQ4",
+          "MQ7",
+          "MQ6",
+          "MQ2"
+        ],
+        "prediction": {
+          "enabled": true,
+          "valid": false,
+          "status": "warmup",
+          "predicted_class": null,
+          "gas_class": null,
+          "confidence": null,
+          "inference_duration_ms": 0
+        },
+        "row_id": 3,
+        "segment_id": 1,
+        "boot_id": "b80fcf827a1204029ce14279cf92ee5d",
+        "model": {
+          "profile_id": "cnn-dualbranch-board-1-2class-v2",
+          "scaler_profile_id": "cnn-dualbranch-board-1-2class-v2",
+          "runtime_version": "0.8.36",
+          "production_approved": true,
+          "output_elements": 2,
+          "class_map": [
+            0,
+            1
+          ]
+        },
+        "label_timestamp": "12:49 Selasa 03/11/26",
+        "display_label": "12:49 Selasa 03/11/26 live_replay_workspace"
+      },
+      {
+        "device_id": "1002",
+        "session_id": "fb60fb017ebf45b586fc7ee222ba2c71",
+        "seq": 4,
+        "timestamp_ms": 1025826,
+        "scan_end_ms": 1026018,
+        "mode": "DATASET",
+        "label": "live_replay_workspace",
+        "nulling_profile_id": 1,
+        "overrun_count": 0,
+        "sensor_voltage": [
+          -0.001603376,
+          0.004046503,
+          0.005473577,
+          0.016702592,
+          0.036741842,
+          0.012955281,
+          0.016018817,
+          0.001311301
+        ],
+        "sensor_gain": [
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64
+        ],
+        "sensor_status": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "feature_order": [
+          "MQ8",
+          "MQ135",
+          "MQ3",
+          "MQ5",
+          "MQ4",
+          "MQ7",
+          "MQ6",
+          "MQ2"
+        ],
+        "prediction": {
+          "enabled": true,
+          "valid": false,
+          "status": "warmup",
+          "predicted_class": null,
+          "gas_class": null,
+          "confidence": null,
+          "inference_duration_ms": 0
+        },
+        "row_id": 4,
+        "segment_id": 1,
+        "boot_id": "b80fcf827a1204029ce14279cf92ee5d",
+        "model": {
+          "profile_id": "cnn-dualbranch-board-1-2class-v2",
+          "scaler_profile_id": "cnn-dualbranch-board-1-2class-v2",
+          "runtime_version": "0.8.36",
+          "production_approved": true,
+          "output_elements": 2,
+          "class_map": [
+            0,
+            1
+          ]
+        },
+        "label_timestamp": "12:49 Selasa 03/11/26",
+        "display_label": "12:49 Selasa 03/11/26 live_replay_workspace"
+      },
+      {
+        "device_id": "1002",
+        "session_id": "fb60fb017ebf45b586fc7ee222ba2c71",
+        "seq": 5,
+        "timestamp_ms": 1026323,
+        "scan_end_ms": 1026507,
+        "mode": "DATASET",
+        "label": "live_replay_workspace",
+        "nulling_profile_id": 1,
+        "overrun_count": 0,
+        "sensor_voltage": [
+          0.011518812,
+          0.017396657,
+          0.005353395,
+          0.016595071,
+          0.037066333,
+          0.007399799,
+          0.028411521,
+          0.001527155
+        ],
+        "sensor_gain": [
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64
+        ],
+        "sensor_status": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "feature_order": [
+          "MQ8",
+          "MQ135",
+          "MQ3",
+          "MQ5",
+          "MQ4",
+          "MQ7",
+          "MQ6",
+          "MQ2"
+        ],
+        "prediction": {
+          "enabled": true,
+          "valid": false,
+          "status": "warmup",
+          "predicted_class": null,
+          "gas_class": null,
+          "confidence": null,
+          "inference_duration_ms": 0
+        },
+        "row_id": 5,
+        "segment_id": 1,
+        "boot_id": "b80fcf827a1204029ce14279cf92ee5d",
+        "model": {
+          "profile_id": "cnn-dualbranch-board-1-2class-v2",
+          "scaler_profile_id": "cnn-dualbranch-board-1-2class-v2",
+          "runtime_version": "0.8.36",
+          "production_approved": true,
+          "output_elements": 2,
+          "class_map": [
+            0,
+            1
+          ]
+        },
+        "label_timestamp": "12:49 Selasa 03/11/26",
+        "display_label": "12:49 Selasa 03/11/26 live_replay_workspace"
+      },
+      {
+        "device_id": "1002",
+        "session_id": "fb60fb017ebf45b586fc7ee222ba2c71",
+        "seq": 6,
+        "timestamp_ms": 1026827,
+        "scan_end_ms": 1027014,
+        "mode": "DATASET",
+        "label": "live_replay_workspace",
+        "nulling_profile_id": 1,
+        "overrun_count": 0,
+        "sensor_voltage": [
+          -0.00158759,
+          0.00927367,
+          0.005171763,
+          -0.001959784,
+          0.036363572,
+          -0.000881685,
+          0.020452974,
+          0.005822265
+        ],
+        "sensor_gain": [
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64
+        ],
+        "sensor_status": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "feature_order": [
+          "MQ8",
+          "MQ135",
+          "MQ3",
+          "MQ5",
+          "MQ4",
+          "MQ7",
+          "MQ6",
+          "MQ2"
+        ],
+        "prediction": {
+          "enabled": true,
+          "valid": false,
+          "status": "warmup",
+          "predicted_class": null,
+          "gas_class": null,
+          "confidence": null,
+          "inference_duration_ms": 0
+        },
+        "row_id": 6,
+        "segment_id": 1,
+        "boot_id": "b80fcf827a1204029ce14279cf92ee5d",
+        "model": {
+          "profile_id": "cnn-dualbranch-board-1-2class-v2",
+          "scaler_profile_id": "cnn-dualbranch-board-1-2class-v2",
+          "runtime_version": "0.8.36",
+          "production_approved": true,
+          "output_elements": 2,
+          "class_map": [
+            0,
+            1
+          ]
+        },
+        "label_timestamp": "12:49 Selasa 03/11/26",
+        "display_label": "12:49 Selasa 03/11/26 live_replay_workspace"
+      },
+      {
+        "device_id": "1002",
+        "session_id": "fb60fb017ebf45b586fc7ee222ba2c71",
+        "seq": 7,
+        "timestamp_ms": 1027324,
+        "scan_end_ms": 1027515,
+        "mode": "DATASET",
+        "label": "live_replay_workspace",
+        "nulling_profile_id": 1,
+        "overrun_count": 0,
+        "sensor_voltage": [
+          -0.001743446,
+          0.015930466,
+          0.00545062,
+          0.016580326,
+          0.036292728,
+          -0.001684601,
+          0.032477893,
+          0.00158239
+        ],
+        "sensor_gain": [
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64
+        ],
+        "sensor_status": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "feature_order": [
+          "MQ8",
+          "MQ135",
+          "MQ3",
+          "MQ5",
+          "MQ4",
+          "MQ7",
+          "MQ6",
+          "MQ2"
+        ],
+        "prediction": {
+          "enabled": true,
+          "valid": false,
+          "status": "warmup",
+          "predicted_class": null,
+          "gas_class": null,
+          "confidence": null,
+          "inference_duration_ms": 0
+        },
+        "row_id": 7,
+        "segment_id": 1,
+        "boot_id": "b80fcf827a1204029ce14279cf92ee5d",
+        "model": {
+          "profile_id": "cnn-dualbranch-board-1-2class-v2",
+          "scaler_profile_id": "cnn-dualbranch-board-1-2class-v2",
+          "runtime_version": "0.8.36",
+          "production_approved": true,
+          "output_elements": 2,
+          "class_map": [
+            0,
+            1
+          ]
+        },
+        "label_timestamp": "12:49 Selasa 03/11/26",
+        "display_label": "12:49 Selasa 03/11/26 live_replay_workspace"
+      },
+      {
+        "device_id": "1002",
+        "session_id": "fb60fb017ebf45b586fc7ee222ba2c71",
+        "seq": 8,
+        "timestamp_ms": 1027825,
+        "scan_end_ms": 1028013,
+        "mode": "DATASET",
+        "label": "live_replay_workspace",
+        "nulling_profile_id": 1,
+        "overrun_count": 0,
+        "sensor_voltage": [
+          -0.001625245,
+          0.01930207,
+          0.005316679,
+          -0.002291653,
+          0.034871254,
+          0.00137555,
+          0.016110526,
+          0.006836839
+        ],
+        "sensor_gain": [
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64
+        ],
+        "sensor_status": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "feature_order": [
+          "MQ8",
+          "MQ135",
+          "MQ3",
+          "MQ5",
+          "MQ4",
+          "MQ7",
+          "MQ6",
+          "MQ2"
+        ],
+        "prediction": {
+          "enabled": true,
+          "valid": false,
+          "status": "warmup",
+          "predicted_class": null,
+          "gas_class": null,
+          "confidence": null,
+          "inference_duration_ms": 0
+        },
+        "row_id": 8,
+        "segment_id": 1,
+        "boot_id": "b80fcf827a1204029ce14279cf92ee5d",
+        "model": {
+          "profile_id": "cnn-dualbranch-board-1-2class-v2",
+          "scaler_profile_id": "cnn-dualbranch-board-1-2class-v2",
+          "runtime_version": "0.8.36",
+          "production_approved": true,
+          "output_elements": 2,
+          "class_map": [
+            0,
+            1
+          ]
+        },
+        "label_timestamp": "12:49 Selasa 03/11/26",
+        "display_label": "12:49 Selasa 03/11/26 live_replay_workspace"
+      },
+      {
+        "device_id": "1002",
+        "session_id": "fb60fb017ebf45b586fc7ee222ba2c71",
+        "seq": 9,
+        "timestamp_ms": 1028323,
+        "scan_end_ms": 1028510,
+        "mode": "DATASET",
+        "label": "live_replay_workspace",
+        "nulling_profile_id": 1,
+        "overrun_count": 0,
+        "sensor_voltage": [
+          0.009264358,
+          0.016097244,
+          0.005047525,
+          0.009736539,
+          0.03631153,
+          -0.005954884,
+          0.025287893,
+          0.006493538
+        ],
+        "sensor_gain": [
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64
+        ],
+        "sensor_status": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "feature_order": [
+          "MQ8",
+          "MQ135",
+          "MQ3",
+          "MQ5",
+          "MQ4",
+          "MQ7",
+          "MQ6",
+          "MQ2"
+        ],
+        "prediction": {
+          "enabled": true,
+          "valid": true,
+          "status": "valid",
+          "predicted_class": 0,
+          "gas_class": 0,
+          "confidence": 0.99609375,
+          "inference_duration_ms": 1
+        },
+        "row_id": 9,
+        "segment_id": 1,
+        "boot_id": "b80fcf827a1204029ce14279cf92ee5d",
+        "model": {
+          "profile_id": "cnn-dualbranch-board-1-2class-v2",
+          "scaler_profile_id": "cnn-dualbranch-board-1-2class-v2",
+          "runtime_version": "0.8.36",
+          "production_approved": true,
+          "output_elements": 2,
+          "class_map": [
+            0,
+            1
+          ]
+        },
+        "label_timestamp": "12:49 Selasa 03/11/26",
+        "display_label": "12:49 Selasa 03/11/26 live_replay_workspace"
+      },
+      {
+        "device_id": "1002",
+        "session_id": "fb60fb017ebf45b586fc7ee222ba2c71",
+        "seq": 10,
+        "timestamp_ms": 1028826,
+        "scan_end_ms": 1029013,
+        "mode": "DATASET",
+        "label": "live_replay_workspace",
+        "nulling_profile_id": 1,
+        "overrun_count": 0,
+        "sensor_voltage": [
+          -0.001668127,
+          0.006361356,
+          0.005113867,
+          0.014934087,
+          0.037603881,
+          0.015957424,
+          0.024970312,
+          -0.007360396
+        ],
+        "sensor_gain": [
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64
+        ],
+        "sensor_status": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "feature_order": [
+          "MQ8",
+          "MQ135",
+          "MQ3",
+          "MQ5",
+          "MQ4",
+          "MQ7",
+          "MQ6",
+          "MQ2"
+        ],
+        "prediction": {
+          "enabled": true,
+          "valid": true,
+          "status": "valid",
+          "predicted_class": 0,
+          "gas_class": 0,
+          "confidence": 0.99609375,
+          "inference_duration_ms": 1
+        },
+        "row_id": 10,
+        "segment_id": 1,
+        "boot_id": "b80fcf827a1204029ce14279cf92ee5d",
+        "model": {
+          "profile_id": "cnn-dualbranch-board-1-2class-v2",
+          "scaler_profile_id": "cnn-dualbranch-board-1-2class-v2",
+          "runtime_version": "0.8.36",
+          "production_approved": true,
+          "output_elements": 2,
+          "class_map": [
+            0,
+            1
+          ]
+        },
+        "label_timestamp": "12:49 Selasa 03/11/26",
+        "display_label": "12:49 Selasa 03/11/26 live_replay_workspace"
+      },
+      {
+        "device_id": "1002",
+        "session_id": "fb60fb017ebf45b586fc7ee222ba2c71",
+        "seq": 11,
+        "timestamp_ms": 1029324,
+        "scan_end_ms": 1029515,
+        "mode": "DATASET",
+        "label": "live_replay_workspace",
+        "nulling_profile_id": 1,
+        "overrun_count": 0,
+        "sensor_voltage": [
+          -0.001513667,
+          0.016097922,
+          0.005453745,
+          0.009892767,
+          0.035051428,
+          0.00023203,
+          0.026034269,
+          -0.001951524
+        ],
+        "sensor_gain": [
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64,
+          64
+        ],
+        "sensor_status": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "feature_order": [
+          "MQ8",
+          "MQ135",
+          "MQ3",
+          "MQ5",
+          "MQ4",
+          "MQ7",
+          "MQ6",
+          "MQ2"
+        ],
+        "prediction": {
+          "enabled": true,
+          "valid": true,
+          "status": "valid",
+          "predicted_class": 0,
+          "gas_class": 0,
+          "confidence": 0.99609375,
+          "inference_duration_ms": 1
+        },
+        "row_id": 11,
+        "segment_id": 1,
+        "boot_id": "b80fcf827a1204029ce14279cf92ee5d",
+        "model": {
+          "profile_id": "cnn-dualbranch-board-1-2class-v2",
+          "scaler_profile_id": "cnn-dualbranch-board-1-2class-v2",
+          "runtime_version": "0.8.36",
+          "production_approved": true,
+          "output_elements": 2,
+          "class_map": [
+            0,
+            1
+          ]
+        },
+        "label_timestamp": "12:49 Selasa 03/11/26",
+        "display_label": "12:49 Selasa 03/11/26 live_replay_workspace"
+      }
+    ]
+  }
+}

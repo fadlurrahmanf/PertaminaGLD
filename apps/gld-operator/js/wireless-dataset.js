@@ -25,13 +25,13 @@ function apiPrefix(selected = mode) {
 }
 
 function inUse(value = snapshot) {
-  return Boolean(value.connected || value.recovery_active ||
+  return Boolean(value.connected || value.recovery_active || value.cleanup_pending ||
     ['connecting', 'starting', 'running', 'capturing', 'recording', 'recovering',
       'reconnecting', 'resuming', 'replaying', 'stopping', 'stop_pending'].includes(value.state));
 }
 
 function isRecording() {
-  return Boolean(snapshot.recovery_active || ['starting', 'running', 'capturing', 'recording',
+  return Boolean(snapshot.recovery_active || snapshot.cleanup_pending || ['starting', 'running', 'capturing', 'recording',
     'recovering', 'reconnecting', 'resuming', 'replaying', 'stopping', 'stop_pending'].includes(String(snapshot.state).toLowerCase()));
 }
 
@@ -49,16 +49,20 @@ function selectMode(selected) {
 function render() {
   const active = isRecording();
   const replay = mode === 'replay';
+  const cleanup = snapshot.cleanup_pending === true;
+  const cleanupPaused = cleanup && snapshot.cleanup_paused === true;
   if ($('wirelessReplayOption')) $('wirelessReplayOption').disabled = !replayAvailable();
   if ($('wirelessMode')) $('wirelessMode').disabled = busy || inUse();
-  $('wirelessConnectBtn').disabled = busy || snapshot.connected || active;
-  $('wirelessDisconnectBtn').disabled = busy || !(snapshot.connected || replay && active);
+  $('wirelessConnectBtn').disabled = busy || snapshot.connected || active && !cleanupPaused;
+  $('wirelessConnectBtn').textContent = cleanupPaused ? 'Selesaikan sesi' : 'Connect GLD';
+  $('wirelessDisconnectBtn').disabled = busy || !(snapshot.connected || replay && active || cleanup && !cleanupPaused);
+  $('wirelessDisconnectBtn').textContent = cleanup && !cleanupPaused ? 'Batal menunggu' : 'Disconnect';
   $('wirelessStartBtn').disabled = busy || !snapshot.connected || !snapshot.ready || active;
-  $('wirelessStopBtn').disabled = busy || !active || (replay
+  $('wirelessStopBtn').disabled = busy || cleanup || !active || (replay
     ? !snapshot.session_id || snapshot.stop_requested
     : !snapshot.connected);
   $('wirelessExportBtn').disabled = busy || !snapshot.filename || !snapshot.count;
-  $('wirelessPassword').disabled = busy || inUse();
+  $('wirelessPassword').disabled = busy || inUse() && !cleanupPaused;
   $('wirelessLabel').disabled = busy || active;
   const completion = snapshot.complete ? ' · sesi lengkap' : snapshot.filename && !active ? ' · sesi tidak lengkap' : '';
   $('wirelessState').textContent = `${snapshot.device_id || 'GLD'} · ${snapshot.state || 'disconnected'} · ${snapshot.count || 0} sampel tersimpan · ${snapshot.gap_count || 0} sampel hilang${completion}`;
@@ -68,17 +72,21 @@ function render() {
     : 'Sambungkan Wi-Fi laptop ke GLD-DATASET-…, lalu masukkan password hotspot.');
   status.dataset.wirelessError = Boolean(message || syncMessage || snapshot.error) ? 'true' : 'false';
   if ($('wirelessRecovery')) {
-    $('wirelessRecovery').textContent = !replay ? '' : snapshot.stop_requested && active
+    $('wirelessRecovery').textContent = cleanup
+      ? cleanupPaused
+        ? 'Rekaman sudah berhenti. Sambungkan kembali ke hotspot, isi password, lalu klik Selesaikan sesi sebelum mulai rekaman baru. CSV tetap sama.'
+        : 'Rekaman sudah berhenti dan CSV tidak ditambah. Hub sedang menyelesaikan sesi di GLD. Sambungkan kembali ke hotspot agar sesi berikutnya bisa dimulai.'
+      : !replay ? '' : snapshot.stop_requested && active
       ? 'Stop menunggu konfirmasi GLD. Backend akan memulihkan koneksi dan menyelesaikan CSV yang sama.'
       : snapshot.state === 'replaying'
-          ? `Mengirim ulang ke CSV yang sama. Buffer terakhir diketahui: ${snapshot.buffered_samples ?? '—'} sampel.`
+          ? `Memulihkan data ke CSV yang sama. Data yang masih tertahan di GLD, terakhir diketahui: ${snapshot.buffered_samples ?? '—'} sampel.`
         : snapshot.recovery_active || snapshot.state === 'recovering'
           ? `Menunggu koneksi ke hotspot GLD; sampel ditahan di GLD selama tetap menyala. Percobaan koneksi: ${snapshot.reconnect_attempt || 0}.`
-          : `Buffer terakhir diketahui: ${snapshot.buffered_samples ?? 0} sampel · kapasitas 640 · batas putus 5 menit.`;
+          : `Data yang masih tertahan di GLD, terakhir diketahui: ${snapshot.buffered_samples ?? 0} sampel · batas terputus 5 menit.`;
   }
   if ($('wirelessPolicy')) $('wirelessPolicy').textContent = replay
-    ? 'Buffer lima menit memerlukan firmware tahap 2. Selama GLD tetap menyala, rekaman dilanjutkan ke CSV yang sama setelah Wi-Fi tersambung kembali. Melewati batas akan menghentikan akuisisi dan menandai sesi tidak lengkap.'
-    : 'Tahap 1: putus koneksi menghentikan sesi dan menandainya tidak lengkap.';
+    ? 'Saat Wi-Fi terputus, GLD tetap merekam hingga 5 menit. Setelah tersambung, data otomatis masuk ke CSV yang sama. Biarkan GLD menyala. Jika batas terlewati, rekaman berhenti dan sesi ditandai tidak lengkap.'
+    : 'Rekaman berhenti jika Wi-Fi terputus. Data selama terputus tidak dapat dipulihkan.';
   $('wirelessFile').textContent = snapshot.path ? `CSV: ${snapshot.path}` : 'CSV akan dibuat oleh backend saat Start diterima GLD.';
   const last = snapshot.history.at(-1);
   $('wirelessTiming').textContent = last

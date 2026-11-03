@@ -1,0 +1,27 @@
+{
+  "revision": 3,
+  "time": "2026-11-03T12:10:14.199488+07:00",
+  "status": "implemented_and_inert_tests_passed",
+  "files": [
+    "apps/gld-operator/workflow_platform.py",
+    "apps/gld-operator/tests/test_workflow_platform.py"
+  ],
+  "hashes": {
+    "apps/gld-operator/workflow_platform.py": "f14fef94a221268e93395db7259284d47d8e0992da2de9233e6f95c711b1c4bd",
+    "apps/gld-operator/tests/test_workflow_platform.py": "fc74dd2bdc261ec0b5f0fc6c18685b6adbf3a20737442e9c02408e007d4181e8"
+  },
+  "evidence": {
+    "platform_tests": 21,
+    "workflow_tests": 76,
+    "diff_check": "pass",
+    "real_native_calls_by_worker": false
+  },
+  "change": "Read WlanGetProfileList metadata on selected adapter before single profile write. Preserve exact target existing scope0/all-user or2/per-user. Default new profiles2. Reject group-policy, unknown, duplicate target metadata. If profile race still returns183, fail without delete, scope retry, or Connect. No profile XML/key read. No other profile touched.",
+  "cause": "Microsoft documents ERROR_ALREADY_EXISTS when overwriteTRUE but existing and requested profile types differ; root observed all-user target and old hardcoded per-user2.",
+  "references": [
+    "https://learn.microsoft.com/en-us/windows/win32/api/wlanapi/nf-wlanapi-wlangetprofilelist",
+    "https://learn.microsoft.com/en-us/windows/win32/api/wlanapi/nf-wlanapi-wlansetprofile",
+    "https://learn.microsoft.com/en-us/windows/win32/api/wlanapi/ns-wlanapi-wlan_profile_info"
+  ],
+  "next_gate": "Parent real native probe on already confirmed exact GLD profile; no hardware success claimed by worker."
+}

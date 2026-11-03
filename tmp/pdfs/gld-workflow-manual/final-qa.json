@@ -1,0 +1,25 @@
+{
+  "checked_at_wib": "2026-11-02T23:30:53.981227",
+  "pages": 10,
+  "sha256": "150ad3779118589ef341725cf5be18fbfcbf0753d216ee1c3a468b436c28bba5",
+  "bytes": 1073402,
+  "visual_review": "All10latestPoppler-renderedpagesinspected; ResetoccludedbyheaderboxomittedratherthanpointingtoFirmwareUpload; exactIDlegends; all8sensorlegendvisible.",
+  "simulation_disclosure_every_page": true,
+  "original_screenshots_unchanged": true,
+  "raster_sha256": {
+    "01-wizard-empty": "2afbe4fd4d4ca767f40da3c9f0b107436a290f1a6c230e4e9fbccb48e5a9a342",
+    "02-device-connected": "0cfe952e7b3c6194ad5caf9c869b3c11410a6ff41b57627a9f2f66fff54b227e",
+    "03-options-ready": "6b8b6a5ef2374343eb301904a906cc09ae47dfbec9f9cf1ce9560b19deb75762",
+    "04-locked": "6e6659047e15c312bf512ffddb32ff0c85c46a40110efb7b17621d64a8d52836",
+    "05-recording": "f4579be1a0e773bb4259a5bfbad80c6464baec06482b5ef9d90f3aa7417871e7",
+    "06-paused": "d628c2c4a1330e1ca0b139c504c9ac40896f740efff3de536e196a57e32bfa84",
+    "07-stop-verified": "74b9c116674aed1e2afc91802e87a3e2f1702bd25d26ee6d4ea844fe1302b04d",
+    "08-continue-ready": "127c65df379e40cad809170c00bdcaff70cbd228c80000b6ac85af0c8e5dfd51",
+    "09-direct-link-lost": "50307c675f619680dc6bb6651685151a6fa7dc7408c795797509cb9339f2cea8",
+    "10-replay-link-lost": "198459f3bee93ad9648c0b448a5fcbd5ca39f04fbfb7936a28e754d2de26f064",
+    "11-replay-complete": "4af680a4103837c33841916b4d43e1c64d0d475f9617a844e8f4718a7d8fe6d7"
+  },
+  "builder_sha256": "f427d5457b7a83a120362138c570482c5ad3e6c271bb8ac837f487239ec43ee5",
+  "artifact_marker": "create expected1 pdf executed once before firstauthoring; subsequentiterationssameoutput",
+  "renderer": "bundledPoppler pdftoppm110dpi"
+}

@@ -1,0 +1,45 @@
+{
+  "mode": "in-turn subagents",
+  "scope": "3 parallel builds, final hotspot packages only, no upload",
+  "source": {
+    "firmware/gld/src/GldUnifiedMain.cpp": "2b93d489b873d173faa008474c7d307aa83af21ed80c9dca3e129a93ebd7c0a6",
+    "firmware/gld/src/GldDatasetWorkflowWifi.cpp": "71493a20a62233a8ce7e3e3168ac1573c84039a03a8b3d2f4051606899a808c5",
+    "firmware/gld/include/GldDatasetWorkflowWifi.h": "b8222a17ffb3bf3b0d39d4b2b5271366bd2b2f1ea88a53891a4c5ff4d8213888",
+    "firmware/platformio.ini": "0a4561ff5f38eff2d449eb36114a2b845648bc22d60c910dd6b6a6984bca0305"
+  },
+  "tasks": [
+    {
+      "id": "compile-model1",
+      "revision": 1,
+      "state": "success",
+      "worker": "/root/compile_model1_native",
+      "started_at": "2026-11-03T07:22:02.437923+00:00",
+      "model": 1,
+      "pid": 14492
+    },
+    {
+      "id": "compile-model2",
+      "revision": 1,
+      "state": "success",
+      "worker": "/root/compile_model2_native",
+      "started_at": "2026-11-03T07:22:14.919026+00:00",
+      "model": 2,
+      "pid": 34588
+    },
+    {
+      "id": "compile-model3",
+      "revision": 1,
+      "state": "success",
+      "worker": "/root/compile_model3_native",
+      "started_at": "2026-11-03T07:22:29.624010+00:00",
+      "model": 3,
+      "pid": null
+    }
+  ],
+  "deployment": {
+    "packagesInstalled": true,
+    "backendActivationPending": true,
+    "automaticRestartRejected": true,
+    "hardwareUploaded": false
+  }
+}

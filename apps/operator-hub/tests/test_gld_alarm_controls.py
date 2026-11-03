@@ -318,6 +318,7 @@ class AlarmUiContractTests(unittest.TestCase):
 
     def test_mock_pullup_levels_follow_auto_and_manual_commands(self) -> None:
         source = js_function(HUB_DIR.parent / "gld-operator" / "js" / "mock.js", "createMockStatus")
+        source += js_function(HUB_DIR.parent / "gld-operator" / "js" / "mock.js", "mockLoraMode")
         source += "\nconst state = {mode:'inference'}; const mockLoraConfig = () => ({}); const rows = [];"
         source += """
 for (const mode of ['auto', 'manual']) {

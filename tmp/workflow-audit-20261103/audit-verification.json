@@ -1,0 +1,89 @@
+{
+  "status": "PASS_PC_SCOPE",
+  "checked_at": "2026-11-03 07:11:57 Asia/Jakarta",
+  "python_tests": {
+    "gld": 137,
+    "hub": 90,
+    "firmware_source_credentials": 37,
+    "total": 264
+  },
+  "node_test_files": 6,
+  "http_ws_scenarios": 7,
+  "browser_downloads": 4,
+  "browser_screenshots": 12,
+  "chart": {
+    "legend": 8,
+    "width": 1098,
+    "height": 340,
+    "strokes": 8,
+    "rows": 10
+  },
+  "wire_summary": {
+    "sessions": 13,
+    "all_canonical_rows": 798,
+    "public_prefix_rows_verified": 770,
+    "private_cleanup_rows": 28,
+    "wire_ack_checks": 798,
+    "ack_before_durable_violation": false
+  },
+  "narrow_layout": {
+    "viewport": 700,
+    "document": 685,
+    "wrapper": 603,
+    "table": 800,
+    "scrollWidth": 800,
+    "overflow": "auto"
+  },
+  "firmware_changes": false,
+  "compile": false,
+  "hardware": false,
+  "native_wlan_or_dialog": false,
+  "upload": false,
+  "live_services": {
+    "startedWib": "2026-11-03 07:06:08",
+    "gldPid": 21280,
+    "portsPreviouslyClosed": true,
+    "hubPid": 6204,
+    "noHardware": true,
+    "health_ok": true,
+    "datasetWorkflow": true,
+    "state": "disconnected",
+    "configuration_frozen": false,
+    "packages": [
+      {
+        "environment": "gld_model_1_dataset_workflow_wifi",
+        "api_accessible": true
+      },
+      {
+        "environment": "gld_model_2_dataset_workflow_wifi",
+        "api_accessible": true
+      },
+      {
+        "environment": "gld_model_3_dataset_workflow_wifi",
+        "api_accessible": true
+      }
+    ],
+    "hubHealthy": true,
+    "source_sha256": {
+      "apps/gld-operator/dataset_workflow.py": "aaa18e69f0db24fdd9a6fe8f02e1bab5955457fd8617f609c24937b8b2f932d2",
+      "apps/gld-operator/js/dataset-workflow.js": "031b7d100772b1f254e8f909ec9a6b7afa5782c7a4300a33cbfdb2743cde4c0d"
+    }
+  },
+  "fixture_shutdown": {
+    "pid": 2072,
+    "ports_closed": {
+      "50893": true,
+      "50892": true
+    },
+    "device_action": false
+  },
+  "source_sha256": {
+    "apps/gld-operator/dataset_workflow.py": "aaa18e69f0db24fdd9a6fe8f02e1bab5955457fd8617f609c24937b8b2f932d2",
+    "apps/gld-operator/js/dataset-workflow.js": "031b7d100772b1f254e8f909ec9a6b7afa5782c7a4300a33cbfdb2743cde4c0d",
+    "apps/gld-operator/css/dataset-workflow.css": "baccaea57393034c31596d8456238690b264d5a3c4852c5c63fd690f0890871c",
+    "apps/gld-operator/index.html": "ae80eed9f4fd8ca15e5bd0ae87deed5d1c7d4f257b765fe3409c1f8c825bb8fa",
+    "apps/gld-operator/js/main.js": "6cdefb21135e8f56b497c3e158db859516cb4c80202daea97e1422a532bcc166",
+    "apps/gld-operator/tests/test_dataset_workflow.py": "4c30e2abb8085cff4f67ecedb6d44b04aafdac21a4c385a0536977872f115fe7",
+    "apps/gld-operator/tests/test_workflow_ui.cjs": "9c25b33de04ea1093f0c13b288576d3f9ba0e2e2d4e549bdbb287848309ee486"
+  }
+}

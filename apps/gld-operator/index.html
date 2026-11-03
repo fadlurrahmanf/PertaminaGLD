@@ -6,6 +6,7 @@
     <title>GLD Operator</title>
     <link rel="stylesheet" href="./style.css?v=20261015-lora-three-cards-row-1">
     <link rel="stylesheet" href="./css/wireless-dataset.css?v=20261102-stage1">
+      <link rel="stylesheet" href="./css/dataset-workflow.css?v=20261103-final-hotspot-choices">
   </head>
   <body>
     <div class="shell">
@@ -135,6 +136,104 @@
         </section>
 
         <section id="dataset" class="view">
+          <div id="datasetWorkflow" class="module dataset-workflow">
+            <header class="wf-heading"><div><p class="eyebrow">AKUISISI WIRELESS</p><h2>Dataset GLD</h2><p>Pemantauan 8 sensor dan rekaman CSV.</p></div><div class="wf-device-status"><span id="wfConnection" class="wf-indicator" role="status">Belum terhubung</span><small>Wi-Fi lokal · interval 500 ms</small></div></header>
+            <div class="wf-workspace">
+              <aside class="wf-setup" aria-label="Lima langkah pengaturan sesi">
+                <div class="wf-panel-heading"><h3>Pengaturan sesi</h3></div>
+                <article class="wf-step" data-wf-step="connection"><div class="wf-step-heading"><span class="wf-number">1</span><h3>Hubungkan GLD</h3></div><button id="wfScan" type="button">Scan Nearby GLD</button><label class="wf-field" for="wfDevice">Perangkat<select id="wfDevice"><option value="">Scan untuk mencari GLD…</option></select></label><div class="wf-two-actions"><button id="wfConnect" type="button" disabled>Connect</button><button id="wfDisconnect" type="button" disabled>Disconnect</button></div><small id="wfScanInfo">Belum melakukan scan.</small><small>Gunakan catu eksternal/24 V. Hotspot GLD tidak menyediakan Internet.</small></article>
+                <article class="wf-step" data-wf-step="file"><div class="wf-step-heading"><span class="wf-number">2</span><h3>Lokasi CSV</h3></div><output id="wfPath">Belum ada lokasi dipilih.</output><button id="wfChooseFile" type="button" disabled>Pilih file CSV…</button><small>Gunakan nama baru. File lama tidak ditimpa.</small></article>
+                <article class="wf-step" data-wf-step="fields"><div class="wf-step-heading"><span class="wf-number">3</span><h3>Kolom tambahan</h3></div><div class="wf-checks"><label><input id="wfPrediction" type="checkbox" disabled> Predicted Class + Confidence</label><label><input id="wfGain" type="checkbox" disabled> Gain</label><label><input id="wfSensorStatus" type="checkbox" disabled> Status sensor</label></div><small>CSV utama berisi 12 kolom. Gain dan status opsional; metadata teknis disimpan internal.</small><small id="wfPredictionInfo">Hubungkan GLD dan pilih file CSV terlebih dahulu.</small></article>
+                <article class="wf-step" data-wf-step="mode"><div class="wf-step-heading"><span class="wf-number">4</span><h3>Saat koneksi putus</h3></div><fieldset id="wfMode" class="wf-radio-group" disabled><legend class="wf-visually-hidden">Mode rekaman</legend><label><input id="wfModeDirect" type="radio" name="wf-recording-mode" value="direct" checked> Rekam langsung</label><label><input id="wfModeReplay" type="radio" name="wf-recording-mode" value="replay"> Pulih otomatis</label></fieldset><small id="wfModeHelp">CSV berhenti bertambah saat putus. Sesi berikutnya tersedia setelah penutupan sesi selesai.</small></article>
+                <article class="wf-step" data-wf-step="label"><div class="wf-step-heading"><span class="wf-number">5</span><h3>Label pengujian</h3></div><label class="wf-label-entry" for="wfLabel"><span id="wfLabelStamp">--:-- Hari dd/mm/yy</span><input id="wfLabel" aria-label="Kondisi atau jenis pengujian" value="clear_air_test" maxlength="31" autocomplete="off" disabled></label><small id="wfLabelPreview">Timestamp dibuat setelah lokasi CSV dipilih. Label terpisah dari hasil prediksi.</small></article>
+                <div class="wf-lockbar"><label class="wf-lock"><input id="wfLock" type="checkbox" role="switch"><span>Lock pengaturan</span></label><small id="wfLockInfo">Lengkapi lima langkah sebelum mengunci.</small></div>
+              </aside>
+              <div class="wf-monitor">
+                <section class="wf-recording-panel" aria-label="Kontrol perekaman"><div class="wf-summary"><strong id="wfState">Memuat status…</strong><span id="wfCount">0 sampel tersimpan</span></div><div class="wf-controls-row"><div id="wfControls" class="wf-controls" hidden><button id="wfPrimary" class="primary" type="button" aria-label="Start rekaman"><span id="wfPrimaryPlay" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m8 5 11 7-11 7Z"/></svg></span><span id="wfPrimaryPause" aria-hidden="true" hidden><svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg></span><span id="wfPrimaryLabel">Start</span></button><button id="wfStop" class="wf-stop" type="button" aria-label="Stop dan verifikasi CSV" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1"/></svg><span>Stop</span></button></div><button id="wfReset" class="wf-reset" type="button">Reset sesi</button></div><p id="wfMessage" class="wf-message" role="status" aria-live="polite"></p></section>
+                <section class="wf-chart-panel" aria-label="Grafik delapan sensor dan hasil inferensi"><div class="wf-chart-heading"><div class="wf-prediction"><span>Predicted Class</span><strong id="wfPredictedClass">Menunggu sampel</strong></div><div class="wf-confidence"><span>Confidence Score</span><output id="wfConfidenceScore">—</output></div><label class="wf-range" for="wfRange"><span>Rentang <output id="wfRangeValue">1 min</output></span><input id="wfRange" type="range" min="60" max="3600" step="60" value="60" aria-label="Rentang grafik Dataset"></label></div><div class="wf-chart-caption"><span>TEGANGAN SENSOR · V</span><small id="wfPredictionState">Prediksi mengikuti sampel yang tersimpan.</small></div><div class="wf-chart-wrap"><canvas id="wfChart" width="1200" height="340" role="img" aria-label="Grafik delapan sensor Dataset GLD"></canvas></div><div id="wfReadings" class="wf-readings" aria-label="Delapan nilai sensor"></div></section>
+                <section class="wf-sample-panel" aria-label="Tabel sampel dan export"><div class="wf-table-heading"><h3>Sampel terbaru</h3><small>10 baris terakhir</small></div><div class="wireless-table-wrap"><table><thead><tr id="wfHeaders"><th>Baris</th><th>Waktu GLD</th><th>MQ8</th><th>MQ135</th><th>MQ3</th><th>MQ5</th><th>MQ4</th><th>MQ7</th><th>MQ6</th><th>MQ2</th></tr></thead><tbody id="wfRows"><tr><td colspan="10">Belum ada sampel.</td></tr></tbody></table></div><div class="wf-export"><div><span id="wfVerification">CSV belum direkam.</span><small>Unduh salinan CSV dari lokasi pilihan Anda.</small></div><button id="wfExport" type="button" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></svg>Export CSV</button></div></section>
+              </div>
+            </div>
+          </div>
+
+        </section>
+
+        <section id="nulling" class="view">
+          <div class="module">
+            <div class="module-head module-head--wrap">
+              <div class="nulling-heading-with-status">
+                <h2>Nulling Process</h2>
+                <span id="nullingTcaIndicator" class="environment-tca nulling-tca-indicator is-unknown" aria-live="polite">
+                  <span class="environment-tca__dot" aria-hidden="true"></span>
+                  <span>TCA9548A · 0x71: menunggu telemetry</span>
+                </span>
+                <span id="nullingMcpIndicator" class="environment-tca nulling-mcp-indicator is-unknown" aria-live="polite">
+                  <span class="environment-tca__dot" aria-hidden="true"></span>
+                  <span>MCP4725 · 0x60: menunggu channel Nulling</span>
+                </span>
+              </div>
+              <div class="toolbar">
+                <button data-mode="nulling" type="button">Switch to Nulling</button>
+                <button id="retryFailedNullingBtn" type="button" hidden disabled>Retry Failed</button>
+                <button id="retryNullingBtn" class="primary" type="button" hidden disabled>Retry All</button>
+                <button id="clearNullingBtn" type="button">Clear</button>
+                <button id="nullingSettingsBtn" class="gear-btn" type="button" title="Nulling settings" aria-label="Nulling settings">&#9881;</button>
+              </div>
+            </div>
+            <div id="nullingSummary" class="status-line">No nulling activity.</div>
+            <div id="nullingMeta" class="status-line">Retry armed: no - Attempts: 0</div>
+            <div id="nullingChannels" class="channel-grid" aria-label="Nulling channel progress"></div>
+            <div class="module-head module-head--inner">
+              <h3>Raw Nulling Log</h3>
+              <div class="toolbar">
+                <button id="pauseNullingLogBtn" type="button">Pause</button>
+                <button id="copyNullingLogBtn" type="button">Copy Log</button>
+                <button id="downloadNullingLogBtn" type="button">Export Log</button>
+              </div>
+            </div>
+            <pre id="nullingLog" class="terminal compact-log"></pre>
+          </div>
+        </section>
+
+        <section id="qc" class="view">
+          <div class="module">
+            <div class="module-head module-head--wrap">
+              <h2>Quality Control</h2>
+              <div class="toolbar">
+                <button id="qcLatchBtn" type="button" title="Show live sensor graphs for the operator to judge PASS/FAIL by eye">QC-OFF</button>
+              </div>
+            </div>
+            <nav class="segmented-nav qc-groupnav" aria-label="QC category">
+              <div class="segmented-nav-track" id="qcGroupNavTrack"></div>
+            </nav>
+            <div id="qcMqGroup" class="qc-group active">
+              <nav class="segmented-nav qc-subnav" aria-label="QC channel views">
+                <div class="segmented-nav-track" id="qcSubnavTrack"></div>
+              </nav>
+              <div id="qcPanels"></div>
+            </div>
+            <div id="qcTplGroup" class="qc-group"></div>
+            <div id="qcLoraGroup" class="qc-group"></div>
+          </div>
+        </section>
+
+        <section id="log" class="view">
+          <div class="module">
+            <div class="module-head module-head--wrap">
+              <h2>Serial Log</h2>
+              <div class="toolbar">
+                <button id="pauseLogBtn" type="button">Pause</button>
+                <button id="downloadLogBtn" type="button">Download Log</button>
+                <button id="saveSessionLogBtn" type="button">Save Log to Disk</button>
+                <button id="clearLogBtn" type="button">Clear</button>
+              </div>
+            </div>
+            <pre id="serialLog" class="terminal tall"></pre>
+          </div>
+        </section>
+
+        <section id="expert" class="view">
+          <details id="datasetLegacyExpert" class="module"><summary>Dataset lama · serial, MQTT dan hotspot</summary>
           <div id="wirelessDataset" class="module wireless-dataset">
             <div class="module-head module-head--wrap">
               <h2>Dataset Wireless · Hotspot GLD1</h2>
@@ -142,7 +241,7 @@
             </div>
             <p class="wireless-description">Sambungkan Wi-Fi laptop ke <strong>GLD-DATASET-…</strong>, lalu Connect dan Start. Gunakan catu eksternal/24 V dan firmware Hotspot khusus. CSV direkam oleh backend selama Operator Hub tetap berjalan, termasuk saat halaman ini ditutup.</p>
             <div class="wireless-fields">
-              <label>Mode rekaman<select id="wirelessMode"><option value="direct" selected>Langsung · tahap 1</option><option id="wirelessReplayOption" value="replay">Buffer 5 menit · tahap 2</option></select></label>
+              <label>Mode rekaman<select id="wirelessMode"><option value="direct" selected>Rekam langsung</option><option id="wirelessReplayOption" value="replay">Pulih otomatis</option></select></label>
               <label>Password hotspot<input id="wirelessPassword" type="password" autocomplete="off" spellcheck="false" placeholder="Password dari paket firmware Hotspot"></label>
               <label>Label sesi<input id="wirelessLabel" value="clear_air_test" maxlength="31" autocomplete="off"></label>
               <div class="toolbar">
@@ -160,7 +259,7 @@
             <p id="wirelessRecovery" class="status-line" aria-live="polite"></p>
             <div class="wireless-canvas-wrap"><canvas id="wirelessChart" role="img" aria-label="Grafik delapan tegangan sensor wireless selama 60 detik terakhir"></canvas></div>
             <div id="wirelessLegend" class="wireless-legend"></div>
-            <p id="wirelessPolicy" class="status-line">Tahap 1: putus koneksi menghentikan sesi dan menandainya tidak lengkap.</p>
+            <p id="wirelessPolicy" class="status-line">Rekaman berhenti jika Wi-Fi terputus. Data selama terputus tidak dapat dipulihkan.</p>
             <div class="wireless-table-wrap">
               <table><thead><tr><th>Seq</th><th>Waktu GLD</th><th>MQ8 (V)</th><th>MQ135 (V)</th><th>MQ3 (V)</th><th>MQ5 (V)</th><th>MQ4 (V)</th><th>MQ7 (V)</th><th>MQ6 (V)</th><th>MQ2 (V)</th></tr></thead><tbody id="wirelessRows"><tr><td colspan="10">Belum ada sampel wireless.</td></tr></tbody></table>
             </div>
@@ -260,83 +359,8 @@
               </table>
             </div>
           </div>
-        </section>
 
-        <section id="nulling" class="view">
-          <div class="module">
-            <div class="module-head module-head--wrap">
-              <div class="nulling-heading-with-status">
-                <h2>Nulling Process</h2>
-                <span id="nullingTcaIndicator" class="environment-tca nulling-tca-indicator is-unknown" aria-live="polite">
-                  <span class="environment-tca__dot" aria-hidden="true"></span>
-                  <span>TCA9548A · 0x71: menunggu telemetry</span>
-                </span>
-                <span id="nullingMcpIndicator" class="environment-tca nulling-mcp-indicator is-unknown" aria-live="polite">
-                  <span class="environment-tca__dot" aria-hidden="true"></span>
-                  <span>MCP4725 · 0x60: menunggu channel Nulling</span>
-                </span>
-              </div>
-              <div class="toolbar">
-                <button data-mode="nulling" type="button">Switch to Nulling</button>
-                <button id="retryFailedNullingBtn" type="button" hidden disabled>Retry Failed</button>
-                <button id="retryNullingBtn" class="primary" type="button" hidden disabled>Retry All</button>
-                <button id="clearNullingBtn" type="button">Clear</button>
-                <button id="nullingSettingsBtn" class="gear-btn" type="button" title="Nulling settings" aria-label="Nulling settings">&#9881;</button>
-              </div>
-            </div>
-            <div id="nullingSummary" class="status-line">No nulling activity.</div>
-            <div id="nullingMeta" class="status-line">Retry armed: no - Attempts: 0</div>
-            <div id="nullingChannels" class="channel-grid" aria-label="Nulling channel progress"></div>
-            <div class="module-head module-head--inner">
-              <h3>Raw Nulling Log</h3>
-              <div class="toolbar">
-                <button id="pauseNullingLogBtn" type="button">Pause</button>
-                <button id="copyNullingLogBtn" type="button">Copy Log</button>
-                <button id="downloadNullingLogBtn" type="button">Export Log</button>
-              </div>
-            </div>
-            <pre id="nullingLog" class="terminal compact-log"></pre>
-          </div>
-        </section>
-
-        <section id="qc" class="view">
-          <div class="module">
-            <div class="module-head module-head--wrap">
-              <h2>Quality Control</h2>
-              <div class="toolbar">
-                <button id="qcLatchBtn" type="button" title="Show live sensor graphs for the operator to judge PASS/FAIL by eye">QC-OFF</button>
-              </div>
-            </div>
-            <nav class="segmented-nav qc-groupnav" aria-label="QC category">
-              <div class="segmented-nav-track" id="qcGroupNavTrack"></div>
-            </nav>
-            <div id="qcMqGroup" class="qc-group active">
-              <nav class="segmented-nav qc-subnav" aria-label="QC channel views">
-                <div class="segmented-nav-track" id="qcSubnavTrack"></div>
-              </nav>
-              <div id="qcPanels"></div>
-            </div>
-            <div id="qcTplGroup" class="qc-group"></div>
-            <div id="qcLoraGroup" class="qc-group"></div>
-          </div>
-        </section>
-
-        <section id="log" class="view">
-          <div class="module">
-            <div class="module-head module-head--wrap">
-              <h2>Serial Log</h2>
-              <div class="toolbar">
-                <button id="pauseLogBtn" type="button">Pause</button>
-                <button id="downloadLogBtn" type="button">Download Log</button>
-                <button id="saveSessionLogBtn" type="button">Save Log to Disk</button>
-                <button id="clearLogBtn" type="button">Clear</button>
-              </div>
-            </div>
-            <pre id="serialLog" class="terminal tall"></pre>
-          </div>
-        </section>
-
-        <section id="expert" class="view">
+          </details>
           <div class="module">
             <div class="module-head module-head--wrap">
               <h2>Expert Terminal</h2>
@@ -706,7 +730,7 @@
             <select id="firmwareUploadEnv" aria-label="Firmware environment"><option value="gld">GLD1</option><option value="gld_v2">GLD2 - Board GLD V2</option><option value="gld_atex">GLD ATEX - MotherBoardGLDVer2 (GPIO7 fan)</option><option value="gldFieldtest">GLD Fieldtest</option></select>
           </label>
           <label class="upload-dialog-field">Model yang di-inject
-            <select id="firmwareUploadModel" aria-label="Model yang di-inject"><option value="model_1">Model 1 — Board 1</option><option value="model_2">Model 2 — Board 2</option><option value="model_3">Model 3 — Board 3</option><option value="model_1_dataset_wifi">GLD1 Model 1 — Hotspot Dataset 500 ms (mode khusus)</option><option value="model_2_dataset_wifi">GLD1 Model 2 — Hotspot Dataset 500 ms (mode khusus)</option><option value="model_3_dataset_wifi">GLD1 Model 3 — Hotspot Dataset 500 ms (mode khusus)</option><option value="model_1_dataset_replay_wifi">GLD1 Model 1 — Hotspot buffer 5 menit (tahap 2)</option><option value="model_2_dataset_replay_wifi">GLD1 Model 2 — Hotspot buffer 5 menit (tahap 2)</option><option value="model_3_dataset_replay_wifi">GLD1 Model 3 — Hotspot buffer 5 menit (tahap 2)</option><option value="model_4" disabled>Model 4 — artefak belum tersedia</option></select>
+            <select id="firmwareUploadModel" aria-label="Model yang di-inject"><option value="model_1">Model 1 — Board 1</option><option value="model_2">Model 2 — Board 2</option><option value="model_3">Model 3 — Board 3</option><option value="model_1_dataset_workflow_wifi">GLD1 Model 1 — Hotspot Wizard Dataset</option><option value="model_2_dataset_workflow_wifi">GLD1 Model 2 — Hotspot Wizard Dataset</option><option value="model_3_dataset_workflow_wifi">GLD1 Model 3 — Hotspot Wizard Dataset</option><option value="model_4" disabled>Model 4 — artefak belum tersedia</option></select>
           </label>
           <p id="firmwareUploadModelStatus" class="status-line">Pilih model yang sesuai dengan board dan paket firmware yang akan diprogram.</p>
           <label class="upload-dialog-field">Target COM
@@ -770,6 +794,6 @@
       </div>
     </div>
 
-    <script type="module" src="./js/main.js?v=20261102-replay-stage2"></script>
+    <script type="module" src="./js/main.js?v=20261103-native-hotspot-serial"></script>
   </body>
 </html>

@@ -1,0 +1,38 @@
+{
+  "production_changed": false,
+  "hardware": false,
+  "checks": [
+    "One icon+label primary: Pause\u00e2\u2020\u2019Resume\u00e2\u2020\u2019Pause; separate Stop fromPause verifies; Continue appends sameCSV/count",
+    "Reset/start flow and cumulativegreen numbers, without any Siap badges/counters/text",
+    "1024/736/320 nohorizontaloverflow; light/dark; icons update aftereachaction"
+  ],
+  "layouts": [
+    {
+      "width": 1024,
+      "docWidth": 1024,
+      "appWidth": 1022,
+      "scrollWidth": 1022
+    },
+    {
+      "width": 736,
+      "docWidth": 736,
+      "appWidth": 734,
+      "scrollWidth": 734
+    },
+    {
+      "width": 320,
+      "docWidth": 320,
+      "appWidth": 318,
+      "scrollWidth": 318
+    }
+  ],
+  "ok": true,
+  "fragment": "C:\\Users\\MSI\\.codex\\visualizations\\2026\\11\\02\\01a19aac-9b4c-7530-a14c-9553b8e7a929\\gld-dataset-workspace.html",
+  "fragment_sha256": "19bd9fe3bab23211152c984915fff4ed4aef03c3f2198373be8a12c77db4743d",
+  "one_workspace_only": true,
+  "siap_badges_removed": true,
+  "stateful_primary_control": true,
+  "stop_separate": true,
+  "production_sources_match_previous_baseline": true,
+  "visual_review": "Recording/Start states inspected, both icons clear, no Siap text; no app/firmware/hardware edits."
+}

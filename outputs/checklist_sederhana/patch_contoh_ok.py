@@ -1,0 +1,22 @@
+from pathlib import Path
+p=Path(r'D:/Github/PertaminaGLD/outputs/checklist_sederhana/tabel-terpisah.mjs')
+s=p.read_text(encoding='utf-8-sig')
+a=s.index(' function table(label,records,isHardware){'); b=s.index('\n let franges=',a)
+new=''' function table(label,records,isHardware){
+  const lastcol=isHardware?'H':'F';s.getRange(`A${row}:${lastcol}${row}`).merge();s.getRange(`A${row}`).values=[[label.toUpperCase()]];s.getRange(`A${row}:${lastcol}${row}`).format.fill='#DCE9F0';s.getRange(`A${row}:${lastcol}${row}`).format.font.bold=true;row++;
+  const h=s.getRange(`A${row}:${lastcol}${row}`);h.values=[isHardware?['No','Item','Contoh OK','Butuh','Terpasang','Kondisi / catatan','Status','Verifikator']:['No','Yang dicek','Contoh OK','Hasil / nilai','Status','Verifikator']];h.format.fill='#244761';h.format.font.color='#FFFFFF';h.format.font.bold=true;row++;
+  const from=row;function example(label){const q=label.toLowerCase();if(q.includes('nulling (v)'))return 'mis. 0,05 V';if(q.includes('tegangan')&&q.includes('input'))return 'mis. 24 VDC';if(q.includes('tegangan'))return 'mis. 3,30 V';if(q.includes('arus / daya'))return 'mis. 0,25 A / 6 W';if(q.includes('lama uji'))return '2 jam; tidak restart';if(q.includes('panjang'))return 'mis. 5 m';if(q.includes('foto'))return 'foto_GLD1.jpg';if(q.includes('form')||q.includes('dokumen'))return 'Form GLD-01';if(q.includes('firmware'))return 'mis. v1.2.3';if(q.includes('konfigurasi lora'))return 'mis. 921 MHz; SF7';if(q.includes('tujuan'))return 'mis. CH-01';if(q.includes('id sensor'))return 'mis. SB-001';if(q.includes('inferensi'))return 'Berjalan; hasil normal';if(q.includes('responsif'))return 'Nilai berubah saat diuji';if(q.includes('terbaca'))return 'Terbaca';if(q.includes('boot'))return 'Boot normal';if(q.includes('kontinuitas'))return 'Terhubung; buzzer';return 'Baik / berfungsi';}
+  const vals=records.map((x,j)=>isHardware?[j+1,x[1],'Jumlah sesuai; baik',null,null,null,null,null]:[j+1,x[1],example(x[1]),null,null,null]);const to=row+vals.length-1;s.getRange(`A${from}:${lastcol}${to}`).values=vals;s.getRange(`A${from}:${lastcol}${to}`).format.rowHeight=30;s.getRange(`B${from}:C${to}`).format.wrapText=true;s.getRange(`C${from}:C${to}`).format.fill='#E9F2E7';s.getRange(`D${from}:${lastcol}${to}`).format.fill='#FFF4D6';
+  const col=isHardware?'G':'E';s.getRange(`${col}${from}:${col}${to}`).dataValidation={rule:{type:'list',values:['OK','Belum OK','Belum dicek','N.A.']}};row=to+3;return {from,to};
+ }'''
+s=s[:a]+new+s[b:]
+s=s.replace("Titik ukur, durasi dan kriteria uji mengikuti prosedur yang disepakati.","Contoh OK hanya ilustrasi; kriteria dan nilai sesuai prosedur yang disepakati.")
+s=s.replace("s.getRange(`A1:G${row}`).format.font.name='Arial';s.getRange(`A1:G${row}`).format.font.size=10;", "s.getRange(`A1:H${row}`).format.font.name='Arial';s.getRange(`A1:H${row}`).format.font.size=10;")
+s=s.replace("{A:9,B:50,C:34,D:15,E:22,F:16,G:22}","{A:8,B:48,C:29,D:22,E:16,F:23,G:16,H:22}")
+s=s.replace("const d=`'${name}'!D${first}:D${fend}`,c=`'${name}'!C${first}:C${fend}`,e=`'${name}'!E${first}:E${fend}`;", "const d=`'${name}'!E${first}:E${fend}`,c=`'${name}'!D${first}:D${fend}`,e=`'${name}'!F${first}:F${fend}`;")
+s=s.replace("const f=`'${name}'!F${hs}:F${he}`,hc=`'${name}'!C${hs}:C${he}`,hd=`'${name}'!D${hs}:D${he}`,hcond=`'${name}'!E${hs}:E${he}`,hv=`'${name}'!G${hs}:G${he}`;", "const f=`'${name}'!G${hs}:G${he}`,hc=`'${name}'!D${hs}:D${he}`,hd=`'${name}'!E${hs}:E${he}`,hcond=`'${name}'!F${hs}:F${he}`,hv=`'${name}'!H${hs}:H${he}`;")
+s=s.replace("trial.getRange(`D${trialRow}`)","trial.getRange(`E${trialRow}`)").replace("trial.getRange(`F${hardwareTrialRow}`)","trial.getRange(`G${hardwareTrialRow}`)")
+s=s.replace("trial.getRange(`C${trialRow}`).values", "trial.getRange(`D${trialRow}`).values").replace("trial.getRange(`E${trialRow}`).values=[['test']]", "trial.getRange(`F${trialRow}`).values=[['test']]")
+s=s.replace("trial.getRange(`C${hardwareTrialRow}:G${hardwareTrialRow}`)","trial.getRange(`D${hardwareTrialRow}:H${hardwareTrialRow}`)").replace("trial.getRange(`C${trialRow}:E${trialRow}`)","trial.getRange(`D${trialRow}:F${trialRow}`)")
+s=s.replace("['GLD 1','A1:G25']","['GLD 1','A1:H25']").replace('tabel-terpisah.png','contoh-sebelum-hasil.png').replace('Checklist_Internal_3_GLD_Tabel_Terpisah.xlsx','Checklist_Internal_3_GLD_Contoh_OK.xlsx')
+Path(r'D:/Github/PertaminaGLD/outputs/checklist_sederhana/contoh-ok.mjs').write_text(s,encoding='utf-8')

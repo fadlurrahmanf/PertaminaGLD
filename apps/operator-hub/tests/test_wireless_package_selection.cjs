@@ -70,8 +70,11 @@ async function expert(number, hotspot) {
   if(hotspot){
     assert.match(nodes.firmwareUploadStatus.textContent,/perangkat belum diverifikasi/);
     assert.match(nodes.firmwareUploadStatus.textContent,/Dataset Wireless dan Connect GLD/);
-    const title = datasetSuffix === '_dataset_replay_wifi' ? 'Hotspot buffer 5 menit (tahap 2)' : 'Hotspot Dataset 500 ms (mode khusus)';
-    assert(read('apps/gld-operator/index.html').includes(`value="${value}">GLD1 Model ${number} — ${title}`));
+    const page = read('apps/gld-operator/index.html');
+    // Legacy packages still route correctly but the approved picker shows
+    // only the three final Workflow variants, avoiding nine hotspot choices.
+    assert(!page.includes(`value="${value}"`));
+    assert(page.includes(`value="model_${number}_dataset_workflow_wifi">GLD1 Model ${number} — Hotspot Wizard Dataset`));
   }
 }
 async function hubUpload(hotspot) {
@@ -132,8 +135,8 @@ async function hotspotSelector(initial) {
   accept.onclick({preventDefault(){}});
   assert.equal(dialog.closed,undefined);
   assert.match(dialog.querySelector('#firmwareUploadError').textContent,/Reset NVS OFF/);
+  assert(!dialog.html.includes(`value="${value}"`),'legacy hotspot is hidden in the picker');
   if(initial){
-    assert(dialog.html.includes(`value="${value}" disabled`));
     dialog.oncancel({preventDefault(){}});
     assert.equal(await result,null);
   } else {

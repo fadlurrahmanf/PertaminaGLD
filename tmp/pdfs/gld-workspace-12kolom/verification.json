@@ -1,0 +1,11 @@
+{
+  "pages": 14,
+  "bytes": 1652667,
+  "sha256": "ed393da07647591e747b2efddd2fcd27ad41978e9fec3d90369dd2aae97f04de",
+  "rendered_pages": 14,
+  "source": "UI latest firmware/CSV selectors; prior real GLD1002 controls/charts",
+  "hardware_actions": false,
+  "firmware_pending": true,
+  "visual_review": "individual final pages 1/4/5/12 and all-page contact sheet",
+  "boot_note": "Wait normal boot completion before Scan"
+}

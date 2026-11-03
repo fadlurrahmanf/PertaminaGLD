@@ -1,0 +1,314 @@
+{
+  "hardware": true,
+  "simulation": false,
+  "native_file_dialog": false,
+  "csv_chooser": "Unique isolated path supplied by QA wrapper; all radio/data/control/storage/UI real",
+  "sessions": [
+    {
+      "case": "recovery_notice_real_radio",
+      "csv": "D:\\Github\\PertaminaGLD\\tmp\\workspace-live-20261103\\real-device\\gld1002-c67e1ee7c3.csv",
+      "count": 76,
+      "replayed": 61,
+      "verified": {
+        "verified": true,
+        "count": 76,
+        "sha256": "3968260022ab9fa935db9330919eb4d847fb975fe3e921c1194338a84ae91b27",
+        "message": "Seluruh baris/kolom CSV cocok dengan ledger. Rekaman selesai lengkap."
+      }
+    }
+  ],
+  "screenshots": [
+    {
+      "key": "workspace-initial",
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\workspace-live-20261103\\real-browser-notice-confirmed\\workspace-initial.png",
+      "width": 1584,
+      "height": 1005,
+      "boxes": [
+        {
+          "n": 1,
+          "selector": "#wfScan",
+          "x": 258.5,
+          "y": 321.5,
+          "w": 236,
+          "h": 34
+        },
+        {
+          "n": 2,
+          "selector": "#wfDevice",
+          "x": 258.5,
+          "y": 385.5,
+          "w": 236,
+          "h": 36
+        },
+        {
+          "n": 3,
+          "selector": "#wfConnect",
+          "x": 258.5,
+          "y": 429.5,
+          "w": 114.5,
+          "h": 34
+        }
+      ]
+    },
+    {
+      "key": "connected-replay",
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\workspace-live-20261103\\real-browser-notice-confirmed\\connected-replay.png",
+      "width": 1584,
+      "height": 1005,
+      "boxes": [
+        {
+          "n": 1,
+          "selector": "#wfConnection",
+          "x": 1176.75,
+          "y": 149.34375,
+          "w": 150.75,
+          "h": 16
+        },
+        {
+          "n": 2,
+          "selector": "#wfDevice",
+          "x": 258.5,
+          "y": 385.5,
+          "w": 236,
+          "h": 36
+        },
+        {
+          "n": 3,
+          "selector": "#wfChooseFile",
+          "x": 258.5,
+          "y": 631.75,
+          "w": 236,
+          "h": 34
+        }
+      ]
+    },
+    {
+      "key": "settings-replay",
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\workspace-live-20261103\\real-browser-notice-confirmed\\settings-replay.png",
+      "width": 1584,
+      "height": 1005,
+      "boxes": [
+        {
+          "n": 1,
+          "selector": "#wfPrediction",
+          "x": 258.5,
+          "y": 365.21875,
+          "w": 15,
+          "h": 15
+        },
+        {
+          "n": 2,
+          "selector": "#wfMode",
+          "x": 258.5,
+          "y": 596,
+          "w": 236,
+          "h": 42.15625
+        },
+        {
+          "n": 3,
+          "selector": "#wfLabelStamp",
+          "x": 258.5,
+          "y": 755.84375,
+          "w": 236,
+          "h": 13
+        },
+        {
+          "n": 4,
+          "selector": "#wfLabel",
+          "x": 258.5,
+          "y": 774.84375,
+          "w": 236,
+          "h": 36
+        },
+        {
+          "n": 5,
+          "selector": "#wfLock",
+          "x": 258.5,
+          "y": 864.40625,
+          "w": 34,
+          "h": 20
+        }
+      ]
+    },
+    {
+      "key": "replay-disconnected",
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\workspace-live-20261103\\real-browser-notice-confirmed\\replay-disconnected.png",
+      "width": 1584,
+      "height": 1005,
+      "boxes": [
+        {
+          "n": 1,
+          "selector": "#wfState",
+          "x": 546.5,
+          "y": 245.5,
+          "w": 175.578125,
+          "h": 20
+        },
+        {
+          "n": 2,
+          "selector": "#wfMessage",
+          "x": 546.5,
+          "y": 324.5,
+          "w": 764,
+          "h": 18.421875
+        },
+        {
+          "n": 3,
+          "selector": "#wfCount",
+          "x": 1182.25,
+          "y": 248.5,
+          "w": 128.25,
+          "h": 14
+        }
+      ]
+    },
+    {
+      "key": "stop-verified-0",
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\workspace-live-20261103\\real-browser-notice-confirmed\\stop-verified-0.png",
+      "width": 1584,
+      "height": 1005,
+      "boxes": [
+        {
+          "n": 1,
+          "selector": "#appModalTitle",
+          "x": 599.5079345703125,
+          "y": 422.0206298828125,
+          "w": 369.984130859375,
+          "h": 19.9991455078125
+        },
+        {
+          "n": 2,
+          "selector": "#appModalMessage",
+          "x": 599.5079345703125,
+          "y": 450.0194091796875,
+          "w": 369.984130859375,
+          "h": 80.99652099609375
+        },
+        {
+          "n": 3,
+          "selector": "#appModalOkBtn",
+          "x": 920.3535766601562,
+          "y": 547.0152587890625,
+          "w": 49.13848876953125,
+          "h": 35.99847412109375
+        }
+      ]
+    },
+    {
+      "key": "replay-recovered",
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\workspace-live-20261103\\real-browser-notice-confirmed\\replay-recovered.png",
+      "width": 1584,
+      "height": 1005,
+      "boxes": [
+        {
+          "n": 1,
+          "selector": "#wfCount",
+          "x": 1182.25,
+          "y": 248.5,
+          "w": 128.25,
+          "h": 14
+        }
+      ]
+    }
+  ],
+  "downloads": [
+    {
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\workspace-live-20261103\\real-browser-notice-confirmed\\downloads\\gld1002-c67e1ee7c3.csv",
+      "source_csv": "D:\\Github\\PertaminaGLD\\tmp\\workspace-live-20261103\\real-device\\gld1002-c67e1ee7c3.csv",
+      "count": 76,
+      "sha256": "b5b7edb6bb8812fd830f5f8483d32e558d6ee0e65fccf16425ae00baa7209575"
+    }
+  ],
+  "errors": [],
+  "model": {
+    "profile_id": "cnn-dualbranch-board-1-2class-v2",
+    "scaler_profile_id": "cnn-dualbranch-board-1-2class-v2",
+    "runtime_version": "0.8.36",
+    "production_approved": true,
+    "output_elements": 2,
+    "class_map": [
+      0,
+      1
+    ]
+  },
+  "nulling_profile_id": 1,
+  "ok": true,
+  "final_state": {
+    "revision": 527,
+    "devices": [],
+    "scanned": false,
+    "selected_device_id": "",
+    "selected_ssid": "",
+    "device_id": "",
+    "boot_id": "",
+    "session_id": "",
+    "nulling_profile_id": 0,
+    "model": {},
+    "connected": false,
+    "ready": false,
+    "prediction_available": false,
+    "locked": false,
+    "state": "disconnected",
+    "state_message": "belum_terhubung",
+    "csv_path": "",
+    "ledger_path": "",
+    "label": "clear_air_test",
+    "mode": "direct",
+    "fields": {
+      "prediction": false,
+      "gain": true,
+      "status": true,
+      "timing": false
+    },
+    "label_timestamp": "",
+    "display_label": "clear_air_test",
+    "configured": false,
+    "steps": {
+      "scan": false,
+      "device": false,
+      "connection": false,
+      "file": false,
+      "fields": false,
+      "mode": false,
+      "label": false
+    },
+    "wizard_steps": {
+      "connection": false,
+      "file": false,
+      "fields": false,
+      "mode": false,
+      "label": false
+    },
+    "count": 0,
+    "configuration_frozen": false,
+    "segment_id": 0,
+    "verification": {
+      "verified": false,
+      "count": 0,
+      "sha256": "",
+      "message": "Belum ada rekaman yang diverifikasi."
+    },
+    "error": "",
+    "cleanup_pending": false,
+    "cleanup_active": false,
+    "cleanup_paused": false,
+    "cleanup_confirmed": false,
+    "cleanup_error": "",
+    "cleanup_ledger_path": "",
+    "cleanup_next_seq": 0,
+    "can_continue": false,
+    "complete": false,
+    "paused": false,
+    "recovery_active": false,
+    "stop_pending": false,
+    "next_seq": 0,
+    "replayed_count": 0,
+    "gap_count": 0,
+    "duplicate_count": 0,
+    "total_samples": 0,
+    "buffered_samples": 0,
+    "reason": "",
+    "transition_seq": 0,
+    "history": []
+  }
+}

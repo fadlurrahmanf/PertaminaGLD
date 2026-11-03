@@ -1,0 +1,63 @@
+{
+  "status": "PASS_READONLY_PC_PREFLIGHT_REVISION2",
+  "time_wib": "2026-11-03 12:02:10 Asia/Jakarta",
+  "models": [
+    {
+      "model": 1,
+      "environment": "gld_model_1_dataset_workflow_wifi",
+      "profile_id": "cnn-dualbranch-board-1-2class-v2",
+      "firmware_sha256": "74e822e4cff5f65918281e2f926b7be96f454b879461da1cb72023a18ff032fe",
+      "bytes": 1103984,
+      "manifest_sha256": "81dc478deedbb1f29ad76b9a43a3894b0c88454ceb2e125fbec5583d649376cf",
+      "build_receipt_matches_current_source": true,
+      "all_four_images_match_artifacts": true,
+      "all_seven_hub_files_match_artifacts": true,
+      "private_config_header_image_match": true,
+      "private_secret_absent_from_plaintext_metadata_logs": true,
+      "production_approved": true
+    },
+    {
+      "model": 2,
+      "environment": "gld_model_2_dataset_workflow_wifi",
+      "profile_id": "cnn-dualbranch-board-2-2class-v2",
+      "firmware_sha256": "83c54872a7595726c446ead51382dfa78bb812d7765ebfe9544e132b99562704",
+      "bytes": 1103024,
+      "manifest_sha256": "530c83b1d063a235dfd4d7e99aef59ed3ad9b4879e796711eb972af44f2b176e",
+      "build_receipt_matches_current_source": true,
+      "all_four_images_match_artifacts": true,
+      "all_seven_hub_files_match_artifacts": true,
+      "private_config_header_image_match": true,
+      "private_secret_absent_from_plaintext_metadata_logs": true,
+      "production_approved": false
+    },
+    {
+      "model": 3,
+      "environment": "gld_model_3_dataset_workflow_wifi",
+      "profile_id": "cnn-dualbranch-board-3-2class-v1",
+      "firmware_sha256": "fae547808d233ef241c6d03e8d7b456b2a3897cf1fa7829ac90cb98f692ebf19",
+      "bytes": 1103984,
+      "manifest_sha256": "2fc79b961cfe16a156c53a7f2e1c170d441944f71614d4a204d56015714b370e",
+      "build_receipt_matches_current_source": true,
+      "all_four_images_match_artifacts": true,
+      "all_seven_hub_files_match_artifacts": true,
+      "private_config_header_image_match": true,
+      "private_secret_absent_from_plaintext_metadata_logs": true,
+      "production_approved": true
+    }
+  ],
+  "tests": {
+    "workflow_source": 12,
+    "credential_preparer": 7,
+    "operator_package_provenance": 1,
+    "credential_resolver": 5,
+    "total": 25
+  },
+  "automatic_resolver_available": true,
+  "build": false,
+  "upload": false,
+  "hardware": false,
+  "network_action": false,
+  "secret_disclosed": false,
+  "serial_get_status_supported_in_workflow": false,
+  "physical_evidence_required": true
+}

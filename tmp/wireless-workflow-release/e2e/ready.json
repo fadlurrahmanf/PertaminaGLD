@@ -1,0 +1,17 @@
+{
+  "mode": "pc-simulation",
+  "device_validation": false,
+  "pid": 20248,
+  "origin": "http://127.0.0.1:55265",
+  "app_url": "http://127.0.0.1:55265/gld/",
+  "http_port": 55265,
+  "ws_port": 55264,
+  "password": "stage2-simulation-only",
+  "output": "D:\\Github\\PertaminaGLD\\tmp\\wireless-workflow-release\\e2e\\output\\20261102T231559-d8631b",
+  "evidence": "D:\\Github\\PertaminaGLD\\tmp\\wireless-workflow-release\\e2e\\evidence.json",
+  "loaded_source_sha256": {
+    "apps/gld-operator/dataset_workflow.py": "f10997f3f18ebbefbbac744b0cd55c06f18883f41440555564aa1d8eff5a39a8",
+    "apps/gld-operator/wireless_dataset_workflow.py": "fe606f103a6b23e9bdb5b4140cfa7e5464d24c1540f84f11cffdb52e14f131d4",
+    "apps/gld-operator/bridge.py": "c473b3938e5d44aefe4db8e0fe004d3ad014b20f151c1b0fe9f263eca561cfd8"
+  }
+}

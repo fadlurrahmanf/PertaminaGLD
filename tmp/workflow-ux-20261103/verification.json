@@ -1,0 +1,88 @@
+{
+  "status": "PASS_PC_SCOPE",
+  "verified_at": "2026-11-03 07:54:29 Asia/Jakarta",
+  "tests": {
+    "python": 274,
+    "gld": 147,
+    "hub": 90,
+    "firmware": 37,
+    "node_files": 7,
+    "http_ws_scenarios": 7
+  },
+  "wire": {
+    "sessions": 22,
+    "all_canonical_rows": 901,
+    "public_prefix_rows_verified": 865,
+    "private_cleanup_rows": 36,
+    "wire_ack_checks": 901,
+    "ack_before_durable_violation": false
+  },
+  "browser": {
+    "downloads": 4,
+    "chart": {
+      "legend": 8,
+      "width": 724,
+      "height": 735,
+      "strokes": 8,
+      "rows": 10
+    },
+    "five_cumulative_steps": true,
+    "password_input": false,
+    "radio_modes": true,
+    "timestamp": true,
+    "export_below_table": true
+  },
+  "app": {
+    "timeWib": "2026-11-03 07:36:50",
+    "gldPid": 12940,
+    "hubPid": 6204,
+    "previousGldPid": 21280,
+    "idleVerified": true,
+    "noDeviceAction": true,
+    "health_ok": true,
+    "wizard_steps": {
+      "connection": false,
+      "file": false,
+      "fields": false,
+      "mode": false,
+      "label": false
+    },
+    "state": "disconnected",
+    "count": 0,
+    "password_in_snapshot": false
+  },
+  "manual": {
+    "pages": 10,
+    "sha256": "3243a058dd6468d31b9e126ed70ecce5339603994f68c70ae1631bef59c91aaf",
+    "all_pages_rendered": true,
+    "visual_review": "All10pages reviewed; final07/09/10 re-reviewed after freshscreenshots; otherunchangedPNGrenderhasheschecked. No falsehiddenResetcallouts; exactDOMtargets; vectorboxes only.",
+    "simulation_disclosure_every_page": true,
+    "original_screenshots_unchanged": true
+  },
+  "hardware": false,
+  "native_wlan_or_dialog": false,
+  "firmware_changed": false,
+  "compile": false,
+  "upload": false,
+  "fixture_closed": {
+    "pid": 26540,
+    "ports_closed": {
+      "63140": true,
+      "63139": true
+    }
+  },
+  "source_sha256": {
+    "apps/gld-operator/dataset_workflow.py": "7af054810b446f67f12f28338e54867ba3ec51843d511ec7a0b7191dcefa2db5",
+    "apps/gld-operator/workflow_credentials.py": "dd994d5a559fb1f76e8b59ffe81cdbca29a22c0ac1590bd787f5777d602df709",
+    "apps/gld-operator/bridge.py": "15b18e69acb3f56ef6a089611d78baefc1850667c2b2bd16b4ccdaa5164bf065",
+    "apps/gld-operator/js/chart.js": "8b83931115d0a434f02c790b0e206d8f224e4f6d6f82ebdc44fae4409b7fd3f5",
+    "apps/gld-operator/js/dataset-workflow.js": "2115107a62ce887801bc1d6b5f8c7e240d47bf8625fcc3c7c7e7779970b47af9",
+    "apps/gld-operator/css/dataset-workflow.css": "ca3038e525752464dac134e139a8736fb69a9f6030de9ffa3a096ecf4dd858c6",
+    "apps/gld-operator/index.html": "eb27e33b879431efd7c1f5ec4472a0f559655950d5a93561271f9cd75352279d",
+    "apps/gld-operator/js/main.js": "a361afa6a93be726160e885138b9e03cd074d71d542327f8188a8f6c0dceedf1",
+    "apps/gld-operator/tests/test_dataset_workflow.py": "3c37e54879d7265ffe10b91acdc8932560011717d781d5b287ca177f30ad0ea2",
+    "apps/gld-operator/tests/test_workflow_credentials.py": "a1ea0c6e7c97497990e3de58f7d51bbbdef28bc406f6b9106f5f527584216e87",
+    "apps/gld-operator/tests/test_workflow_chart.cjs": "b638e11b117d429df90ae0952dfe8a37b29134286be495954a52b7def9d15423",
+    "apps/gld-operator/tests/test_workflow_ui.cjs": "5f3098e165ad0cb142911cbaee55bd34407c9b2b0e4a09b5b47c2aaf6fbc0650"
+  }
+}

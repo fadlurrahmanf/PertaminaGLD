@@ -40,7 +40,7 @@ if str(HUB_DIR) not in sys.path:
     # directory from sys.path, so add this local module directory explicitly.
     sys.path.insert(0, str(HUB_DIR))
 
-from preflight import print_report, run_preflight
+from preflight import _port_available, print_report, run_preflight
 
 APPS_DIR = HUB_DIR.parent
 ARCHIVE_APPS_DIR = APPS_DIR.parent / "archive" / "apps"
@@ -113,6 +113,9 @@ GLD_FIRMWARE_MODELS = (
     {"value": "model_2_dataset_replay_wifi", "label": "GLD1 Model 2 - Hotspot buffer 5 menit (tahap 2)", "environment": "gld_model_2_dataset_replay_wifi"},
     {"value": "model_3_dataset_replay_wifi", "label": "GLD1 Model 3 - Hotspot buffer 5 menit (tahap 2)", "environment": "gld_model_3_dataset_replay_wifi"},
     {"value": "gld_v2", "label": "GasleakDetector - Board V2", "environment": "gld_v2"},
+    {"value": "model_1_dataset_workflow_wifi", "label": "GLD1 Model 1 - Hotspot Wizard Dataset", "environment": "gld_model_1_dataset_workflow_wifi"},
+    {"value": "model_2_dataset_workflow_wifi", "label": "GLD1 Model 2 - Hotspot Wizard Dataset", "environment": "gld_model_2_dataset_workflow_wifi"},
+    {"value": "model_3_dataset_workflow_wifi", "label": "GLD1 Model 3 - Hotspot Wizard Dataset", "environment": "gld_model_3_dataset_workflow_wifi"},
     {"value": "gld_atex", "label": "GasleakDetector - GLD ATEX (GPIO7 fan)", "environment": "gld_atex"},
 )
 GLD_DATASET_WIFI_ENVIRONMENTS = frozenset({
@@ -121,6 +124,7 @@ GLD_DATASET_WIFI_ENVIRONMENTS = frozenset({
 GLD_DATASET_REPLAY_ENVIRONMENTS = frozenset({
     "gld_model_1_dataset_replay_wifi", "gld_model_2_dataset_replay_wifi", "gld_model_3_dataset_replay_wifi",
 })
+GLD_DATASET_WORKFLOW_ENVIRONMENTS = frozenset(f"gld_model_{model}_dataset_workflow_wifi" for model in (1, 2, 3))
 FIRMWARE_ENVIRONMENTS = {
     "ch": {
         "small": "ch_small",
@@ -976,11 +980,24 @@ def load_or_create_broker_config(host_override: str = "") -> dict[str, object] |
     return result
 
 
-def launch_children(host: str, broker: dict[str, object] | None) -> None:
+def launch_children(host: str, broker: dict[str, object] | None) -> list[str]:
+    unavailable: list[str] = []
     for name, cfg in CHILD_APPS.items():
         app_dir: Path = cfg["dir"]
         if not (app_dir / "bridge.py").exists():
             print(f"HUB_SKIP {name}: {app_dir} has no bridge.py")
+            unavailable.append(name)
+            continue
+        existing = check_health(host, cfg["port"], cfg["appId"])
+        if existing.get("identityOk"):
+            # Reused bridges are deliberately not owned/stopped by this Hub.
+            print(f"HUB_REUSED {cfg['label']} pid={existing.get('processId') or 'unknown'} port={cfg['port']}")
+            if name == "gld" and not existing.get("features", {}).get("firmwarePackageCapabilities"):
+                print("HUB_REUSED_GLD_UPDATE_REQUIRED existing bridge lacks final-package capability validation; close it gracefully and restart before uploading a final Hotspot package")
+            continue
+        if existing.get("up") or not _port_available(host, cfg["port"]):
+            print(f"HUB_CHILD_PORT_CONFLICT {name} {host}:{cfg['port']}: occupied by an unverified service; no second bridge was launched")
+            unavailable.append(name)
             continue
         python_exe = _python_for(app_dir)
         extra_args = list(cfg["extra_args"])
@@ -1020,6 +1037,8 @@ def launch_children(host: str, broker: dict[str, object] | None) -> None:
             print(f"HUB_LAUNCHED {cfg['label']} pid={proc.pid} port={cfg['port']}")
         except Exception as exc:
             print(f"HUB_LAUNCH_FAILED {name}: {exc}")
+            unavailable.append(name)
+    return unavailable
 
 
 def shutdown_children() -> None:
@@ -1059,7 +1078,19 @@ def check_health(host: str, port: int, expected_app_id: str) -> dict[str, object
         "identityOk": app_id == expected_app_id,
         "appId": app_id,
         "version": payload.get("version"),
+        "processId": payload.get("processId"),
+        "features": payload.get("features") if isinstance(payload.get("features"), dict) else {},
     }
+
+
+class ExclusiveThreadingHTTPServer(ThreadingHTTPServer):
+    """Refuse a second Hub listener instead of sharing its Windows address."""
+    allow_reuse_address = False
+
+    def server_bind(self) -> None:
+        if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        super().server_bind()
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -1477,7 +1508,7 @@ class Handler(SimpleHTTPRequestHandler):
             env = str(selection["environment"])
         initial_firmware = bool(payload.get("initialFirmware"))
         reset_nvs = True if initial_firmware else bool(payload.get("resetNvs"))
-        if device == "gld" and env in GLD_DATASET_WIFI_ENVIRONMENTS | GLD_DATASET_REPLAY_ENVIRONMENTS and (initial_firmware or reset_nvs):
+        if device == "gld" and env in GLD_DATASET_WIFI_ENVIRONMENTS | GLD_DATASET_REPLAY_ENVIRONMENTS | GLD_DATASET_WORKFLOW_ENVIRONMENTS and (initial_firmware or reset_nvs):
             raise ValueError(
                 "Hotspot Dataset memerlukan GLD yang sudah memiliki profil nulling valid. "
                 "Gunakan firmware normal untuk setup/nulling terlebih dahulu; pilih upload biasa "
@@ -1513,7 +1544,13 @@ class Handler(SimpleHTTPRequestHandler):
         # used for status/configuration calls. Keep this bounded, but do not mark a
         # legitimate flash as failed after only 12 seconds.
         result = child_request(host, device, "POST", "/api/firmware/upload", request, timeout=240.0)
-        if device == "gld" and env in GLD_DATASET_WIFI_ENVIRONMENTS | GLD_DATASET_REPLAY_ENVIRONMENTS:
+        capabilities = manifest.get("capabilities")
+        native_workflow = (
+            env in GLD_DATASET_WORKFLOW_ENVIRONMENTS
+            and isinstance(capabilities, dict)
+            and capabilities.get("nativeSerial") is True
+        )
+        if device == "gld" and env in GLD_DATASET_WIFI_ENVIRONMENTS | GLD_DATASET_REPLAY_ENVIRONMENTS | GLD_DATASET_WORKFLOW_ENVIRONMENTS and not native_workflow:
             # This dedicated image intentionally has no serial command loop.
             # The child only proves the flash tool returned successfully, not
             # device identity, RF connectivity, or Dataset readiness after boot.
@@ -1525,7 +1562,9 @@ class Handler(SimpleHTTPRequestHandler):
                 "Firmware ini memakai mode Dataset khusus dan tidak memakai reconnect COM."
             )
             if env in GLD_DATASET_REPLAY_ENVIRONMENTS:
-                next_step += " Pada Mode rekaman, pilih Buffer 5 menit · tahap 2 sebelum Connect GLD."
+                next_step += " Di Expert, buka Dataset lama lalu pilih Pulih otomatis."
+            if env in GLD_DATASET_WORKFLOW_ENVIRONMENTS:
+                next_step += " Buka tab Dataset, klik Scan Nearby GLD, lalu ikuti wizard."
             add_activity(device, "Hotspot firmware flash tool completed",
                          f"{port}; {env} v{package_version}; device verification pending hotspot; NVS {'reset' if reset_nvs else 'preserved'}")
             json_response(self, {
@@ -1712,9 +1751,14 @@ def _wait_for_children_health(host: str, timeout: float = 10.0) -> list[str]:
     pending = set(child_processes.keys())
     while pending and time.monotonic() < deadline:
         for name in list(pending):
+            if child_processes[name].poll() is not None:
+                continue
             cfg = CHILD_APPS[name]
             health = check_health(host, cfg["port"], cfg["appId"])
-            if health.get("identityOk"):
+            # GLD advertises its PID so an old responder cannot certify a
+            # different newly-launched validator as ready.
+            owned_gld = name != "gld" or health.get("processId") == child_processes[name].pid
+            if health.get("identityOk") and owned_gld:
                 pending.discard(name)
         if pending:
             time.sleep(0.25)
@@ -1754,7 +1798,7 @@ def main() -> int:
     # 2. Bind the Hub itself before touching anything else, so a failure here
     #    never leaves an orphaned child process behind.
     try:
-        httpd = ThreadingHTTPServer((host, args.port), Handler)
+        httpd = ExclusiveThreadingHTTPServer((host, args.port), Handler)
     except OSError as exc:
         print(f"HUB_BIND_FAILED {host}:{args.port}: {exc}")
         return 2
@@ -1776,9 +1820,9 @@ def main() -> int:
                 print(f"HUB_MQTT_BROKER host={broker['host']} port={broker['port']} user={broker['username']} auth=1")
             else:
                 print("HUB_MQTT_DEGRADED no LAN IPv4 detected; Gateway/MQTT is unavailable, GLD/CH serial still work")
-            launch_children(host, broker)
+            launch_failures = launch_children(host, broker)
             # 4. Wait for health before opening the browser.
-            unavailable = _wait_for_children_health(host)
+            unavailable = sorted(set(launch_failures) | set(_wait_for_children_health(host)))
             if unavailable:
                 labels = ", ".join(CHILD_APPS[name]["label"] for name in unavailable)
                 print(f"HUB_CHILDREN_NOT_READY {labels}")

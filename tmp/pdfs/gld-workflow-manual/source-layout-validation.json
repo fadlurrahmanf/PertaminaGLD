@@ -1,0 +1,3635 @@
+{
+  "schema": "gld-workflow-manual-layout/1",
+  "pages": 10,
+  "page_size": "A4 landscape",
+  "fonts": "Arial",
+  "plan_valid": true,
+  "ready_to_author": true,
+  "missing_screenshots": [],
+  "source_evidence": "D:\\Github\\PertaminaGLD\\tmp\\wireless-workflow-release\\browser-output\\browser-evidence.json",
+  "screenshots_checked": 11,
+  "pdf_written": false,
+  "simulation_disclosure": "SIMULASI PC - sensor contoh; platform Windows diinjeksi untuk uji. Bukan pengoperasian GLD fisik.",
+  "layout": [
+    {
+      "number": 1,
+      "key": "overview",
+      "title": "Dataset GLD: tujuh langkah sebelum Start",
+      "rectangles": [
+        {
+          "role": "eyebrow",
+          "x": 28.0,
+          "y": 566.76,
+          "w": 785.89,
+          "h": 11.52
+        },
+        {
+          "role": "simulation_disclosure",
+          "x": 28.0,
+          "y": 551.78,
+          "w": 785.89,
+          "h": 10.5
+        },
+        {
+          "role": "title",
+          "x": 28.0,
+          "y": 508.84,
+          "w": 785.89,
+          "h": 29.44
+        },
+        {
+          "role": "subtitle",
+          "x": 28.0,
+          "y": 489.48,
+          "w": 785.89,
+          "h": 12.8
+        },
+        {
+          "role": "footer",
+          "x": 28.0,
+          "y": 11.14,
+          "w": 711.89,
+          "h": 9.86
+        },
+        {
+          "role": "flow_card",
+          "x": 28.0,
+          "y": 375,
+          "w": 187.47,
+          "h": 87
+        },
+        {
+          "role": "flow_title",
+          "x": 39.0,
+          "y": 436.92,
+          "w": 165.47,
+          "h": 14.08
+        },
+        {
+          "role": "flow_body",
+          "x": 39.0,
+          "y": 400.91,
+          "w": 165.47,
+          "h": 25.09
+        },
+        {
+          "role": "flow_card",
+          "x": 227.47,
+          "y": 375,
+          "w": 187.47,
+          "h": 87
+        },
+        {
+          "role": "flow_title",
+          "x": 238.47,
+          "y": 436.92,
+          "w": 165.47,
+          "h": 14.08
+        },
+        {
+          "role": "flow_body",
+          "x": 238.47,
+          "y": 388.37,
+          "w": 165.47,
+          "h": 37.63
+        },
+        {
+          "role": "flow_card",
+          "x": 426.94,
+          "y": 375,
+          "w": 187.47,
+          "h": 87
+        },
+        {
+          "role": "flow_title",
+          "x": 437.94,
+          "y": 436.92,
+          "w": 165.47,
+          "h": 14.08
+        },
+        {
+          "role": "flow_body",
+          "x": 437.94,
+          "y": 400.91,
+          "w": 165.47,
+          "h": 25.09
+        },
+        {
+          "role": "flow_card",
+          "x": 626.42,
+          "y": 375,
+          "w": 187.47,
+          "h": 87
+        },
+        {
+          "role": "flow_title",
+          "x": 637.42,
+          "y": 436.92,
+          "w": 165.47,
+          "h": 14.08
+        },
+        {
+          "role": "flow_body",
+          "x": 637.42,
+          "y": 400.91,
+          "w": 165.47,
+          "h": 25.09
+        },
+        {
+          "role": "prerequisites",
+          "x": 28.0,
+          "y": 62,
+          "w": 366,
+          "h": 288
+        },
+        {
+          "role": "prerequisites_title",
+          "x": 41.0,
+          "y": 319.36,
+          "w": 340,
+          "h": 16.64
+        },
+        {
+          "role": "prereq_step",
+          "x": 41.0,
+          "y": 288.56,
+          "w": 340,
+          "h": 13.44
+        },
+        {
+          "role": "prereq_body",
+          "x": 41.0,
+          "y": 241.6,
+          "w": 340,
+          "h": 38.4
+        },
+        {
+          "role": "prereq_step",
+          "x": 41.0,
+          "y": 216.56,
+          "w": 340,
+          "h": 13.44
+        },
+        {
+          "role": "prereq_body",
+          "x": 41.0,
+          "y": 169.6,
+          "w": 340,
+          "h": 38.4
+        },
+        {
+          "role": "prereq_step",
+          "x": 41.0,
+          "y": 144.56,
+          "w": 340,
+          "h": 13.44
+        },
+        {
+          "role": "prereq_body",
+          "x": 41.0,
+          "y": 110.4,
+          "w": 340,
+          "h": 25.6
+        },
+        {
+          "role": "screenshot_frame",
+          "x": 406.0,
+          "y": 113,
+          "w": 407.89,
+          "h": 234
+        },
+        {
+          "role": "image_border",
+          "x": 403.0,
+          "y": 110,
+          "w": 413.89,
+          "h": 240
+        },
+        {
+          "role": "vector_callout",
+          "x": 416.59,
+          "y": 221.64,
+          "w": 53.07,
+          "h": 13.62
+        },
+        {
+          "role": "number_bubble",
+          "x": 406.0,
+          "y": 229.26,
+          "w": 18,
+          "h": 18
+        },
+        {
+          "role": "vector_callout",
+          "x": 626.59,
+          "y": 224.74,
+          "w": 176.7,
+          "h": 13.62
+        },
+        {
+          "role": "number_bubble",
+          "x": 614.59,
+          "y": 232.36,
+          "w": 18,
+          "h": 18
+        },
+        {
+          "role": "overview_caption",
+          "x": 406.0,
+          "y": 75.96,
+          "w": 407.89,
+          "h": 23.04
+        },
+        {
+          "role": "overview_limit",
+          "x": 28.0,
+          "y": 37.86,
+          "w": 785.89,
+          "h": 11.14
+        }
+      ],
+      "text": [
+        {
+          "role": "eyebrow",
+          "font_size": 9,
+          "measured_height": 11.52,
+          "allocated_height": 13,
+          "content": "PANDUAN OPERATOR  /  WIZARD DATASET GLD"
+        },
+        {
+          "role": "simulation_disclosure",
+          "font_size": 8.2,
+          "measured_height": 10.5,
+          "allocated_height": 16,
+          "content": "SIMULASI PC - sensor contoh; platform Windows diinjeksi untuk uji. Bukan pengoperasian GLD fisik."
+        },
+        {
+          "role": "title",
+          "font_size": 23,
+          "measured_height": 29.44,
+          "allocated_height": 33,
+          "content": "Dataset GLD: tujuh langkah sebelum Start"
+        },
+        {
+          "role": "subtitle",
+          "font_size": 10,
+          "measured_height": 12.8,
+          "allocated_height": 28,
+          "content": "Panduan Wizard Dataset - Wi-Fi, delapan sensor, target 500 ms"
+        },
+        {
+          "role": "footer",
+          "font_size": 7.7,
+          "measured_height": 9.86,
+          "allocated_height": 12,
+          "content": "SIMULASI PC | Sensor contoh | Platform Windows diinjeksi | 2 November 2026"
+        },
+        {
+          "role": "flow_title",
+          "font_size": 11,
+          "measured_height": 14.08,
+          "allocated_height": 18,
+          "content": "GLD 24 V"
+        },
+        {
+          "role": "flow_body",
+          "font_size": 9.8,
+          "measured_height": 25.09,
+          "allocated_height": 43,
+          "content": "Firmware Wizard Dataset, profil nulling valid dan delapan sensor siap."
+        },
+        {
+          "role": "flow_title",
+          "font_size": 11,
+          "measured_height": 14.08,
+          "allocated_height": 18,
+          "content": "Wi-Fi GLD"
+        },
+        {
+          "role": "flow_body",
+          "font_size": 9.8,
+          "measured_height": 37.63,
+          "allocated_height": 43,
+          "content": "Pilih GLD-DATASET-xxxx. Hotspot perangkat tidak menyediakan Internet."
+        },
+        {
+          "role": "flow_title",
+          "font_size": 11,
+          "measured_height": 14.08,
+          "allocated_height": 18,
+          "content": "7 langkah + Lock"
+        },
+        {
+          "role": "flow_body",
+          "font_size": 9.8,
+          "measured_height": 25.09,
+          "allocated_height": 43,
+          "content": "Perangkat, koneksi, file, kolom, mode dan label harus siap sebelum Start."
+        },
+        {
+          "role": "flow_title",
+          "font_size": 11,
+          "measured_height": 14.08,
+          "allocated_height": 18,
+          "content": "Grafik + CSV"
+        },
+        {
+          "role": "flow_body",
+          "font_size": 9.8,
+          "measured_height": 25.09,
+          "allocated_height": 43,
+          "content": "Backend laptop menyimpan data. Stop menunggu verifikasi seluruh file."
+        },
+        {
+          "role": "prerequisites_title",
+          "font_size": 13,
+          "measured_height": 16.64,
+          "allocated_height": 22,
+          "content": "Sebelum memakai GLD fisik"
+        },
+        {
+          "role": "prereq_step",
+          "font_size": 10.5,
+          "measured_height": 13.44,
+          "allocated_height": 18,
+          "content": "1. Paket yang sesuai"
+        },
+        {
+          "role": "prereq_body",
+          "font_size": 10,
+          "measured_height": 38.4,
+          "allocated_height": 58,
+          "content": "Administrator memilih Hotspot Wizard Dataset untuk Model 1/2/3 yang sesuai board. Paket Hotspot/Buffer lama tidak menyediakan seluruh kontrol Wizard."
+        },
+        {
+          "role": "prereq_step",
+          "font_size": 10.5,
+          "measured_height": 13.44,
+          "allocated_height": 18,
+          "content": "2. Pertahankan kalibrasi"
+        },
+        {
+          "role": "prereq_body",
+          "font_size": 10,
+          "measured_height": 38.4,
+          "allocated_height": 58,
+          "content": "Gunakan profil nulling valid dan catu eksternal 24 V. Untuk pemasangan pada perangkat yang sudah dikalibrasi, Reset NVS harus OFF sesuai prosedur administrator."
+        },
+        {
+          "role": "prereq_step",
+          "font_size": 10.5,
+          "measured_height": 13.44,
+          "allocated_height": 18,
+          "content": "3. Simpan proses backend"
+        },
+        {
+          "role": "prereq_body",
+          "font_size": 10,
+          "measured_height": 25.6,
+          "allocated_height": 58,
+          "content": "Browser dapat ditutup, tetapi proses Operator Hub/backend harus tetap berjalan. Restart backend/laptop bukan pemulihan sesi yang dijamin."
+        },
+        {
+          "role": "overview_caption",
+          "font_size": 9,
+          "measured_height": 23.04,
+          "allocated_height": 34,
+          "content": "Orientasi layar Wizard: kotak menunjuk kontrol yang benar-benar ada pada tangkapan browser simulasi."
+        },
+        {
+          "role": "overview_limit",
+          "font_size": 8.7,
+          "measured_height": 11.14,
+          "allocated_height": 13,
+          "content": "Contoh di seluruh panduan adalah simulasi PC, bukan bukti pengukuran gas atau uji GLD fisik."
+        }
+      ],
+      "screenshots": [
+        {
+          "key": "01-wizard-empty",
+          "path": "D:\\Github\\PertaminaGLD\\tmp\\wireless-workflow-release\\browser-output\\01-wizard-empty.png",
+          "source_sha256": "2afbe4fd4d4ca767f40da3c9f0b107436a290f1a6c230e4e9fbccb48e5a9a342",
+          "original_png_unedited": true,
+          "source_viewport": {
+            "x": 266.5,
+            "y": 28.47160099996148,
+            "w": 1078.0,
+            "h": 618.431798000077
+          },
+          "scale": 0.37838,
+          "boxes": [
+            {
+              "n": 1,
+              "selector": "#wfScan",
+              "source_clipped": false,
+              "pdf": {
+                "role": "vector_callout",
+                "x": 416.59,
+                "y": 221.64,
+                "w": 53.07,
+                "h": 13.62
+              }
+            },
+            {
+              "n": 2,
+              "selector": "#wfDevice",
+              "source_clipped": false,
+              "pdf": {
+                "role": "vector_callout",
+                "x": 626.59,
+                "y": 224.74,
+                "w": 176.7,
+                "h": 13.62
+              }
+            }
+          ],
+          "skipped_offscreen_boxes": []
+        }
+      ]
+    },
+    {
+      "number": 2,
+      "key": "connect",
+      "title": "1-3. Temukan dan hubungkan GLD",
+      "rectangles": [
+        {
+          "role": "eyebrow",
+          "x": 28.0,
+          "y": 566.76,
+          "w": 785.89,
+          "h": 11.52
+        },
+        {
+          "role": "simulation_disclosure",
+          "x": 28.0,
+          "y": 551.78,
+          "w": 785.89,
+          "h": 10.5
+        },
+        {
+          "role": "title",
+          "x": 28.0,
+          "y": 508.84,
+          "w": 785.89,
+          "h": 29.44
+        },
+        {
+          "role": "subtitle",
+          "x": 28.0,
+          "y": 489.48,
+          "w": 785.89,
+          "h": 12.8
+        },
+        {
+          "role": "footer",
+          "x": 28.0,
+          "y": 11.14,
+          "w": 711.89,
+          "h": 9.86
+        },
+        {
+          "role": "screenshot_frame",
+          "x": 31.0,
+          "y": 170,
+          "w": 779.89,
+          "h": 299.28
+        },
+        {
+          "role": "image_border",
+          "x": 28.0,
+          "y": 167,
+          "w": 785.89,
+          "h": 305.28
+        },
+        {
+          "role": "vector_callout",
+          "x": 371.91,
+          "y": 395.57,
+          "w": 414.15,
+          "h": 31.93
+        },
+        {
+          "role": "number_bubble",
+          "x": 359.91,
+          "y": 421.49,
+          "w": 18,
+          "h": 18
+        },
+        {
+          "role": "vector_callout",
+          "x": 55.83,
+          "y": 211.78,
+          "w": 126.26,
+          "h": 15.08
+        },
+        {
+          "role": "number_bubble",
+          "x": 43.83,
+          "y": 220.86,
+          "w": 18,
+          "h": 18
+        },
+        {
+          "role": "vector_callout",
+          "x": 371.91,
+          "y": 264.55,
+          "w": 106.3,
+          "h": 31.93
+        },
+        {
+          "role": "number_bubble",
+          "x": 359.91,
+          "y": 290.48,
+          "w": 18,
+          "h": 18
+        },
+        {
+          "role": "image_caption",
+          "x": 28.0,
+          "y": 149.63,
+          "w": 785.89,
+          "h": 10.37
+        },
+        {
+          "role": "instruction_card",
+          "x": 28.0,
+          "y": 43,
+          "w": 253.96,
+          "h": 100
+        },
+        {
+          "role": "card_title",
+          "x": 57.0,
+          "y": 122.2,
+          "w": 214.96,
+          "h": 12.8
+        },
+        {
+          "role": "card_body",
+          "x": 39.0,
+          "y": 82.68,
+          "w": 231.96,
+          "h": 24.32
+        },
+        {
+          "role": "instruction_card",
+          "x": 293.96,
+          "y": 43,
+          "w": 253.96,
+          "h": 100
+        },
+        {
+          "role": "card_title",
+          "x": 322.96,
+          "y": 122.2,
+          "w": 214.96,
+          "h": 12.8
+        },
+        {
+          "role": "card_body",
+          "x": 304.96,
+          "y": 82.68,
+          "w": 231.96,
+          "h": 24.32
+        },
+        {
+          "role": "instruction_card",
+          "x": 559.93,
+          "y": 43,
+          "w": 253.96,
+          "h": 100
+        },
+        {
+          "role": "card_title",
+          "x": 588.93,
+          "y": 122.2,
+          "w": 214.96,
+          "h": 12.8
+        },
+        {
+          "role": "card_body",
+          "x": 570.93,
+          "y": 70.52,
+          "w": 231.96,
+          "h": 36.48
+        }
+      ],
+      "text": [
+        {
+          "role": "eyebrow",
+          "font_size": 9,
+          "measured_height": 11.52,
+          "allocated_height": 13,
+          "content": "PANDUAN OPERATOR  /  WIZARD DATASET GLD"
+        },
+        {
+          "role": "simulation_disclosure",
+          "font_size": 8.2,
+          "measured_height": 10.5,
+          "allocated_height": 16,
+          "content": "SIMULASI PC - sensor contoh; platform Windows diinjeksi untuk uji. Bukan pengoperasian GLD fisik."
+        },
+        {
+          "role": "title",
+          "font_size": 23,
+          "measured_height": 29.44,
+          "allocated_height": 33,
+          "content": "1-3. Temukan dan hubungkan GLD"
+        },
+        {
+          "role": "subtitle",
+          "font_size": 10,
+          "measured_height": 12.8,
+          "allocated_height": 28,
+          "content": "Klik Scan Nearby GLD, pilih ID, isi password hotspot, lalu Connect. Tunggu indikator koneksi terverifikasi."
+        },
+        {
+          "role": "footer",
+          "font_size": 7.7,
+          "measured_height": 9.86,
+          "allocated_height": 12,
+          "content": "SIMULASI PC | Sensor contoh | Platform Windows diinjeksi | 2 November 2026"
+        },
+        {
+          "role": "image_caption",
+          "font_size": 8.1,
+          "measured_height": 10.37,
+          "allocated_height": 13,
+          "content": "Tangkapan browser simulasi PC asli. PNG tidak diubah; kotak dan angka adalah anotasi vektor panduan."
+        },
+        {
+          "role": "card_title",
+          "font_size": 10,
+          "measured_height": 12.8,
+          "allocated_height": 27,
+          "content": "Pilih perangkat"
+        },
+        {
+          "role": "card_body",
+          "font_size": 9.5,
+          "measured_height": 24.32,
+          "allocated_height": 56,
+          "content": "Pilih ID GLD yang benar. Nama hotspot mengikuti GLD-DATASET-xxxx; jangan pilih jaringan lain."
+        },
+        {
+          "role": "card_title",
+          "font_size": 10,
+          "measured_height": 12.8,
+          "allocated_height": 27,
+          "content": "Connect satu kali"
+        },
+        {
+          "role": "card_body",
+          "font_size": 9.5,
+          "measured_height": 24.32,
+          "allocated_height": 56,
+          "content": "Klik Connect. Tunggu Windows tersambung dan identitas serta kesiapan GLD dikonfirmasi aplikasi."
+        },
+        {
+          "role": "card_title",
+          "font_size": 10,
+          "measured_height": 12.8,
+          "allocated_height": 27,
+          "content": "Pilih file CSV"
+        },
+        {
+          "role": "card_body",
+          "font_size": 9.5,
+          "measured_height": 36.48,
+          "allocated_height": 56,
+          "content": "Tentukan folder dan nama CSV baru pada pemilih file Windows. Aplikasi tidak menimpa CSV yang sudah ada."
+        }
+      ],
+      "screenshots": [
+        {
+          "key": "02-device-connected",
+          "path": "D:\\Github\\PertaminaGLD\\tmp\\wireless-workflow-release\\browser-output\\02-device-connected.png",
+          "source_sha256": "0cfe952e7b3c6194ad5caf9c869b3c11410a6ff41b57627a9f2f66fff54b227e",
+          "original_png_unedited": true,
+          "source_viewport": {
+            "x": 465.09375,
+            "y": 120.47886982437453,
+            "w": 879.40625,
+            "h": 337.46413535125095
+          },
+          "scale": 0.88684,
+          "boxes": [
+            {
+              "n": 1,
+              "selector": "#wfDevice",
+              "source_clipped": false,
+              "pdf": {
+                "role": "vector_callout",
+                "x": 371.91,
+                "y": 395.57,
+                "w": 414.15,
+                "h": 31.93
+              }
+            },
+            {
+              "n": 2,
+              "selector": "#wfConnection",
+              "source_clipped": false,
+              "pdf": {
+                "role": "vector_callout",
+                "x": 55.83,
+                "y": 211.78,
+                "w": 126.26,
+                "h": 15.08
+              }
+            },
+            {
+              "n": 3,
+              "selector": "#wfChooseFile",
+              "source_clipped": false,
+              "pdf": {
+                "role": "vector_callout",
+                "x": 371.91,
+                "y": 264.55,
+                "w": 106.3,
+                "h": 31.93
+              }
+            }
+          ],
+          "skipped_offscreen_boxes": []
+        }
+      ]
+    },
+    {
+      "number": 3,
+      "key": "file_fields",
+      "title": "4-5. Pilih file dan kolom CSV",
+      "rectangles": [
+        {
+          "role": "eyebrow",
+          "x": 28.0,
+          "y": 566.76,
+          "w": 785.89,
+          "h": 11.52
+        },
+        {
+          "role": "simulation_disclosure",
+          "x": 28.0,
+          "y": 551.78,
+          "w": 785.89,
+          "h": 10.5
+        },
+        {
+          "role": "title",
+          "x": 28.0,
+          "y": 508.84,
+          "w": 785.89,
+          "h": 29.44
+        },
+        {
+          "role": "subtitle",
+          "x": 28.0,
+          "y": 476.68,
+          "w": 785.89,
+          "h": 25.6
+        },
+        {
+          "role": "footer",
+          "x": 28.0,
+          "y": 11.14,
+          "w": 711.89,
+          "h": 9.86
+        },
+        {
+          "role": "screenshot_frame",
+          "x": 31.0,
+          "y": 170,
+          "w": 779.89,
+          "h": 299.28
+        },
+        {
+          "role": "image_border",
+          "x": 28.0,
+          "y": 167,
+          "w": 785.89,
+          "h": 305.28
+        },
+        {
+          "role": "vector_callout",
+          "x": 127.08,
+          "y": 421.37,
+          "w": 9.6,
+          "h": 9.6
+        },
+        {
+          "role": "number_bubble",
+          "x": 115.08,
+          "y": 424.97,
+          "w": 18,
+          "h": 18
+        },
+        {
+          "role": "vector_callout",
+          "x": 459.93,
+          "y": 430.89,
+          "w": 280.07,
+          "h": 21.59
+        },
+        {
+          "role": "number_bubble",
+          "x": 447.93,
+          "y": 446.48,
+          "w": 18,
+          "h": 18
+        },
+        {
+          "role": "vector_callout",
+          "x": 127.08,
+          "y": 256.09,
+          "w": 280.07,
+          "h": 21.59
+        },
+        {
+          "role": "number_bubble",
+          "x": 115.08,
+          "y": 271.68,
+          "w": 18,
+          "h": 18
+        },
+        {
+          "role": "vector_callout",
+          "x": 101.89,
+          "y": 186.79,
+          "w": 23.99,
+          "h": 13.19
+        },
+        {
+          "role": "number_bubble",
+          "x": 89.89,
+          "y": 193.99,
+          "w": 18,
+          "h": 18
+        },
+        {
+          "role": "image_caption",
+          "x": 28.0,
+          "y": 149.63,
+          "w": 785.89,
+          "h": 10.37
+        },
+        {
+          "role": "instruction_card",
+          "x": 28.0,
+          "y": 43,
+          "w": 187.47,
+          "h": 100
+        },
+        {
+          "role": "card_title",
+          "x": 57.0,
+          "y": 122.2,
+          "w": 148.47,
+          "h": 12.8
+        },
+        {
+          "role": "card_body",
+          "x": 39.0,
+          "y": 58.36,
+          "w": 165.47,
+          "h": 48.64
+        },
+        {
+          "role": "instruction_card",
+          "x": 227.47,
+          "y": 43,
+          "w": 187.47,
+          "h": 100
+        },
+        {
+          "role": "card_title",
+          "x": 256.47,
+          "y": 122.2,
+          "w": 148.47,
+          "h": 12.8
+        },
+        {
+          "role": "card_body",
+          "x": 238.47,
+          "y": 58.36,
+          "w": 165.47,
+          "h": 48.64
+        },
+        {
+          "role": "instruction_card",
+          "x": 426.94,
+          "y": 43,
+          "w": 187.47,
+          "h": 100
+        },
+        {
+          "role": "card_title",
+          "x": 455.94,
+          "y": 122.2,
+          "w": 148.47,
+          "h": 12.8
+        },
+        {
+          "role": "card_body",
+          "x": 437.94,
+          "y": 70.52,
+          "w": 165.47,
+          "h": 36.48
+        },
+        {
+          "role": "instruction_card",
+          "x": 626.42,
+          "y": 43,
+          "w": 187.47,
+          "h": 100
+        },
+        {
+          "role": "card_title",
+          "x": 655.42,
+          "y": 122.2,
+          "w": 148.47,
+          "h": 12.8
+        },
+        {
+          "role": "card_body",
+          "x": 637.42,
+          "y": 70.52,
+          "w": 165.47,
+          "h": 36.48
+        }
+      ],
+      "text": [
+        {
+          "role": "eyebrow",
+          "font_size": 9,
+          "measured_height": 11.52,
+          "allocated_height": 13,
+          "content": "PANDUAN OPERATOR  /  WIZARD DATASET GLD"
+        },
+        {
+          "role": "simulation_disclosure",
+          "font_size": 8.2,
+          "measured_height": 10.5,
+          "allocated_height": 16,
+          "content": "SIMULASI PC - sensor contoh; platform Windows diinjeksi untuk uji. Bukan pengoperasian GLD fisik."
+        },
+        {
+          "role": "title",
+          "font_size": 23,
+          "measured_height": 29.44,
+          "allocated_height": 33,
+          "content": "4-5. Pilih file dan kolom CSV"
+        },
+        {
+          "role": "subtitle",
+          "font_size": 10,
+          "measured_height": 25.6,
+          "allocated_height": 28,
+          "content": "Delapan tegangan, timestamp dan identitas selalu disimpan. Gain/status opsional; Durasi hanya menambah scan_end/overrun. Prediksi warmup/error/not_ready memakai nilai kosong."
+        },
+        {
+          "role": "footer",
+          "font_size": 7.7,
+          "measured_height": 9.86,
+          "allocated_height": 12,
+          "content": "SIMULASI PC | Sensor contoh | Platform Windows diinjeksi | 2 November 2026"
+        },
+        {
+          "role": "image_caption",
+          "font_size": 8.1,
+          "measured_height": 10.37,
+          "allocated_height": 13,
+          "content": "Tangkapan browser simulasi PC asli. PNG tidak diubah; kotak dan angka adalah anotasi vektor panduan."
+        },
+        {
+          "role": "card_title",
+          "font_size": 10,
+          "measured_height": 12.8,
+          "allocated_height": 27,
+          "content": "Prediksi opsional"
+        },
+        {
+          "role": "card_body",
+          "font_size": 9.5,
+          "measured_height": 48.64,
+          "allocated_height": 56,
+          "content": "Aktifkan bila model tersedia. Warmup/error/not_ready menyimpan kelas dan confidence kosong, bukan angka nol pengganti."
+        },
+        {
+          "role": "card_title",
+          "font_size": 10,
+          "measured_height": 12.8,
+          "allocated_height": 27,
+          "content": "Pilih kebijakan putus"
+        },
+        {
+          "role": "card_body",
+          "font_size": 9.5,
+          "measured_height": 48.64,
+          "allocated_height": 56,
+          "content": "Rekam langsung membekukan CSV saat putus. Pulih otomatis memulihkan data tertunda ke sesi dan CSV yang sama."
+        },
+        {
+          "role": "card_title",
+          "font_size": 10,
+          "measured_height": 12.8,
+          "allocated_height": 27,
+          "content": "Label pengujian"
+        },
+        {
+          "role": "card_body",
+          "font_size": 9.5,
+          "measured_height": 36.48,
+          "allocated_height": 56,
+          "content": "Isi kondisi yang benar, misalnya clear_air_test. Label adalah ground truth, bukan hasil prediksi model."
+        },
+        {
+          "role": "card_title",
+          "font_size": 10,
+          "measured_height": 12.8,
+          "allocated_height": 27,
+          "content": "Lock setelah 7 langkah"
+        },
+        {
+          "role": "card_body",
+          "font_size": 9.5,
+          "measured_height": 36.48,
+          "allocated_height": 56,
+          "content": "Pastikan tujuh langkah siap/hijau, lalu Lock. Pengaturan dikunci; kontrol Start/Pause/Stop tersedia."
+        }
+      ],
+      "screenshots": [
+        {
+          "key": "03-options-ready",
+          "path": "D:\\Github\\PertaminaGLD\\tmp\\wireless-workflow-release\\browser-output\\03-options-ready.png",
+          "source_sha256": "6b8b6a5ef2374343eb301904a906cc09ae47dfbec9f9cf1ce9560b19deb75762",
+          "original_png_unedited": true,
+          "source_viewport": {
+            "x": 134.30133664294362,
+            "y": 139.875,
+            "w": 1300.3973267141128,
+            "h": 499.015625
+          },
+          "scale": 0.59973,
+          "boxes": [
+            {
+              "n": 1,
+              "selector": "#wfPrediction",
+              "source_clipped": false,
+              "pdf": {
+                "role": "vector_callout",
+                "x": 127.08,
+                "y": 421.37,
+                "w": 9.6,
+                "h": 9.6
+              }
+            },
+            {
+              "n": 2,
+              "selector": "#wfMode",
+              "source_clipped": false,
+              "pdf": {
+                "role": "vector_callout",
+                "x": 459.93,
+                "y": 430.89,
+                "w": 280.07,
+                "h": 21.59
+              }
+            },
+            {
+              "n": 3,
+              "selector": "#wfLabel",
+              "source_clipped": false,
+              "pdf": {
+                "role": "vector_callout",
+                "x": 127.08,
+                "y": 256.09,
+                "w": 280.07,
+                "h": 21.59
+              }
+            },
+            {
+              "n": 4,
+              "selector": "#wfLock",
+              "source_clipped": false,
+              "pdf": {
+                "role": "vector_callout",
+                "x": 101.89,
+                "y": 186.79,
+                "w": 23.99,
+                "h": 13.19
+              }
+            }
+          ],
+          "skipped_offscreen_boxes": []
+        }
+      ]
+    },
+    {
+      "number": 4,
+      "key": "lock",
+      "title": "6-7. Mode, label, lalu Lock",
+      "rectangles": [
+        {
+          "role": "eyebrow",
+          "x": 28.0,
+          "y": 566.76,
+          "w": 785.89,
+          "h": 11.52
+        },
+        {
+          "role": "simulation_disclosure",
+          "x": 28.0,
+          "y": 551.78,
+          "w": 785.89,
+          "h": 10.5
+        },
+        {
+          "role": "title",
+          "x": 28.0,
+          "y": 508.84,
+          "w": 785.89,
+          "h": 29.44
+        },
+        {
+          "role": "subtitle",
+          "x": 28.0,
+          "y": 489.48,
+          "w": 785.89,
+          "h": 12.8
+        },
+        {
+          "role": "footer",
+          "x": 28.0,
+          "y": 11.14,
+          "w": 711.89,
+          "h": 9.86
+        },
+        {
+          "role": "screenshot_frame",
+          "x": 31.0,
+          "y": 170,
+          "w": 779.89,
+          "h": 299.28
+        },
+        {
+          "role": "image_border",
+          "x": 28.0,
+          "y": 167,
+          "w": 785.89,
+          "h": 305.28
+        },
+        {
+          "role": "vector_callout",
+          "x": 318.6,
+          "y": 353.76,
+          "w": 48.74,
+          "h": 26.81
+        },
+        {
+          "role": "number_bubble",
+          "x": 306.6,
+          "y": 374.57,
+          "w": 18,
+          "h": 18
+        },
+        {
+          "role": "vector_callout",
+          "x": 297.89,
+          "y": 258.71,
+          "w": 73.4,
+          "h": 43.87
+        },
+        {
+          "role": "number_bubble",
+          "x": 285.89,
+          "y": 296.58,
+          "w": 18,
+          "h": 18
+        },
+        {
+          "role": "vector_callout",
+          "x": 381.04,
+          "y": 258.71,
+          "w": 81.32,
+          "h": 43.87
+        },
+        {
+          "role": "number_bubble",
+          "x": 369.04,
+          "y": 296.58,
+          "w": 18,
+          "h": 18
+        },
+        {
+          "role": "vector_callout",
+          "x": 472.11,
+          "y": 258.71,
+          "w": 71.9,
+          "h": 43.87
+        },
+        {
+          "role": "number_bubble",
+          "x": 460.11,
+          "y": 296.58,
+          "w": 18,
+          "h": 18
+        },
+        {
+          "role": "image_caption",
+          "x": 28.0,
+          "y": 149.63,
+          "w": 785.89,
+          "h": 10.37
+        },
+        {
+          "role": "instruction_card",
+          "x": 28.0,
+          "y": 43,
+          "w": 187.47,
+          "h": 100
+        },
+        {
+          "role": "card_title",
+          "x": 57.0,
+          "y": 122.2,
+          "w": 148.47,
+          "h": 12.8
+        },
+        {
+          "role": "card_body",
+          "x": 39.0,
+          "y": 70.52,
+          "w": 165.47,
+          "h": 36.48
+        },
+        {
+          "role": "instruction_card",
+          "x": 227.47,
+          "y": 43,
+          "w": 187.47,
+          "h": 100
+        },
+        {
+          "role": "card_title",
+          "x": 256.47,
+          "y": 122.2,
+          "w": 148.47,
+          "h": 12.8
+        },
+        {
+          "role": "card_body",
+          "x": 238.47,
+          "y": 58.36,
+          "w": 165.47,
+          "h": 48.64
+        },
+        {
+          "role": "instruction_card",
+          "x": 426.94,
+          "y": 43,
+          "w": 187.47,
+          "h": 100
+        },
+        {
+          "role": "card_title",
+          "x": 455.94,
+          "y": 122.2,
+          "w": 148.47,
+          "h": 12.8
+        },
+        {
+          "role": "card_body",
+          "x": 437.94,
+          "y": 58.36,
+          "w": 165.47,
+          "h": 48.64
+        },
+        {
+          "role": "instruction_card",
+          "x": 626.42,
+          "y": 43,
+          "w": 187.47,
+          "h": 100
+        },
+        {
+          "role": "card_title",
+          "x": 655.42,
+          "y": 122.2,
+          "w": 148.47,
+          "h": 12.8
+        },
+        {
+          "role": "card_body",
+          "x": 637.42,
+          "y": 58.36,
+          "w": 165.47,
+          "h": 48.64
+        }
+      ],
+      "text": [
+        {
+          "role": "eyebrow",
+          "font_size": 9,
+          "measured_height": 11.52,
+          "allocated_height": 13,
+          "content": "PANDUAN OPERATOR  /  WIZARD DATASET GLD"
+        },
+        {
+          "role": "simulation_disclosure",
+          "font_size": 8.2,
+          "measured_height": 10.5,
+          "allocated_height": 16,
+          "content": "SIMULASI PC - sensor contoh; platform Windows diinjeksi untuk uji. Bukan pengoperasian GLD fisik."
+        },
+        {
+          "role": "title",
+          "font_size": 23,
+          "measured_height": 29.44,
+          "allocated_height": 33,
+          "content": "6-7. Mode, label, lalu Lock"
+        },
+        {
+          "role": "subtitle",
+          "font_size": 10,
+          "measured_height": 12.8,
+          "allocated_height": 28,
+          "content": "Semua tujuh langkah harus siap. Pengaturan tidak berubah selama sesi aktif."
+        },
+        {
+          "role": "footer",
+          "font_size": 7.7,
+          "measured_height": 9.86,
+          "allocated_height": 12,
+          "content": "SIMULASI PC | Sensor contoh | Platform Windows diinjeksi | 2 November 2026"
+        },
+        {
+          "role": "image_caption",
+          "font_size": 8.1,
+          "measured_height": 10.37,
+          "allocated_height": 13,
+          "content": "Tangkapan browser simulasi PC asli. PNG tidak diubah; kotak dan angka adalah anotasi vektor panduan."
+        },
+        {
+          "role": "card_title",
+          "font_size": 10,
+          "measured_height": 12.8,
+          "allocated_height": 27,
+          "content": "Lock setelah 7 langkah"
+        },
+        {
+          "role": "card_body",
+          "font_size": 9.5,
+          "measured_height": 36.48,
+          "allocated_height": 56,
+          "content": "Pastikan tujuh langkah siap/hijau, lalu Lock. Pengaturan dikunci; kontrol Start/Pause/Stop tersedia."
+        },
+        {
+          "role": "card_title",
+          "font_size": 10,
+          "measured_height": 12.8,
+          "allocated_height": 27,
+          "content": "Start / Continue"
+        },
+        {
+          "role": "card_body",
+          "font_size": 9.5,
+          "measured_height": 48.64,
+          "allocated_height": 56,
+          "content": "Sebelum rekaman pertama tombolnya Start. Setelah Stop terverifikasi, Continue menambah segmen baru dalam CSV yang sama."
+        },
+        {
+          "role": "card_title",
+          "font_size": 10,
+          "measured_height": 12.8,
+          "allocated_height": 27,
+          "content": "Pause / Resume"
+        },
+        {
+          "role": "card_body",
+          "font_size": 9.5,
+          "measured_height": 48.64,
+          "allocated_height": 56,
+          "content": "Pause menghentikan akuisisi di GLD setelah dikonfirmasi. Resume melanjutkan sesi yang sama; waktu jeda tidak diisi ulang."
+        },
+        {
+          "role": "card_title",
+          "font_size": 10,
+          "measured_height": 12.8,
+          "allocated_height": 27,
+          "content": "Stop satu kali"
+        },
+        {
+          "role": "card_body",
+          "font_size": 9.5,
+          "measured_height": 48.64,
+          "allocated_height": 56,
+          "content": "Klik Stop dan tunggu konfirmasi perangkat serta verifikasi semua baris CSV. Respons tombol saja belum berarti selesai."
+        }
+      ],
+      "screenshots": [
+        {
+          "key": "04-locked",
+          "path": "D:\\Github\\PertaminaGLD\\tmp\\wireless-workflow-release\\browser-output\\04-locked.png",
+          "source_sha256": "6e6659047e15c312bf512ffddb32ff0c85c46a40110efb7b17621d64a8d52836",
+          "original_png_unedited": true,
+          "source_viewport": {
+            "x": 16.484375,
+            "y": 516.0935408168932,
+            "w": 640,
+            "h": 245.5941683662137
+          },
+          "scale": 1.21858,
+          "boxes": [
+            {
+              "n": 1,
+              "selector": "#wfLock",
+              "source_clipped": false,
+              "pdf": {
+                "role": "vector_callout",
+                "x": 318.6,
+                "y": 353.76,
+                "w": 48.74,
+                "h": 26.81
+              }
+            },
+            {
+              "n": 2,
+              "selector": "#wfStart",
+              "source_clipped": false,
+              "pdf": {
+                "role": "vector_callout",
+                "x": 297.89,
+                "y": 258.71,
+                "w": 73.4,
+                "h": 43.87
+              }
+            },
+            {
+              "n": 3,
+              "selector": "#wfPause",
+              "source_clipped": false,
+              "pdf": {
+                "role": "vector_callout",
+                "x": 381.04,
+                "y": 258.71,
+                "w": 81.32,
+                "h": 43.87
+              }
+            },
+            {
+              "n": 4,
+              "selector": "#wfStop",
+              "source_clipped": false,
+              "pdf": {
+                "role": "vector_callout",
+                "x": 472.11,
+                "y": 258.71,
+                "w": 71.9,
+                "h": 43.87
+              }
+            }
+          ],
+          "skipped_offscreen_boxes": []
+        }
+      ]
+    },
+    {
+      "number": 5,
+      "key": "recording",
+      "title": "Start dan pantau delapan kurva",
+      "rectangles": [
+        {
+          "role": "eyebrow",
+          "x": 28.0,
+          "y": 566.76,
+          "w": 785.89,
+          "h": 11.52
+        },
+        {
+          "role": "simulation_disclosure",
+          "x": 28.0,
+          "y": 551.78,
+          "w": 785.89,
+          "h": 10.5
+        },
+        {
+          "role": "title",
+          "x": 28.0,
+          "y": 508.84,
+          "w": 785.89,
+          "h": 29.44
+        },
+        {
+          "role": "subtitle",
+          "x": 28.0,
+          "y": 489.48,
+          "w": 785.89,
+          "h": 12.8
+        },
+        {
+          "role": "footer",
+          "x": 28.0,
+          "y": 11.14,
+          "w": 711.89,
+          "h": 9.86
+        },
+        {
+          "role": "screenshot_frame",
+          "x": 31.0,
+          "y": 170,
+          "w": 779.89,
+          "h": 299.28
+        },
+        {
+          "role": "image_border",
+          "x": 28.0,
+          "y": 167,
+          "w": 785.89,
+          "h": 305.28
+        },
+        {
+          "role": "vector_callout",
+          "x": 141.29,
+          "y": 432.05,
+          "w": 38.82,
+          "h": 20.94
+        },
+        {
+          "role": "number_bubble",
+          "x": 129.29,
+          "y": 446.99,
+          "w": 18,
+          "h": 18
+        },
+        {
+          "role": "vector_callout",
+          "x": 184.76,
+          "y": 432.05,
+          "w": 34.32,
+          "h": 20.94
+        },
+        {
+          "role": "number_bubble",
+          "x": 172.76,
+          "y": 446.99,
+          "w": 18,
+          "h": 18
+        },
+        {
+          "role": "vector_callout",
+          "x": 158.5,
+          "y": 410.23,
+          "w": 72.57,
+          "h": 10.47
+        },
+        {
+          "role": "number_bubble",
+          "x": 146.5,
+          "y": 414.71,
+          "w": 18,
+          "h": 18
+        },
+        {
+          "role": "vector_callout",
+          "x": 101.6,
+          "y": 186.29,
+          "w": 638.69,
+          "h": 197.77
+        },
+        {
+          "role": "number_bubble",
+          "x": 89.6,
+          "y": 378.06,
+          "w": 18,
+          "h": 18
+        },
+        {
+          "role": "image_caption",
+          "x": 28.0,
+          "y": 149.63,
+          "w": 785.89,
+          "h": 10.37
+        },
+        {
+          "role": "instruction_card",
+          "x": 28.0,
+          "y": 43,
+          "w": 187.47,
+          "h": 100
+        },
+        {
+          "role": "card_title",
+          "x": 57.0,
+          "y": 122.2,
+          "w": 148.47,
+          "h": 12.8
+        },
+        {
+          "role": "card_body",
+          "x": 39.0,
+          "y": 58.36,
+          "w": 165.47,
+          "h": 48.64
+        },
+        {
+          "role": "instruction_card",
+          "x": 227.47,
+          "y": 43,
+          "w": 187.47,
+          "h": 100
+        },
+        {
+          "role": "card_title",
+          "x": 256.47,
+          "y": 122.2,
+          "w": 148.47,
+          "h": 12.8
+        },
+        {
+          "role": "card_body",
+          "x": 238.47,
+          "y": 58.36,
+          "w": 165.47,
+          "h": 48.64
+        },
+        {
+          "role": "instruction_card",
+          "x": 426.94,
+          "y": 43,
+          "w": 187.47,
+          "h": 100
+        },
+        {
+          "role": "card_title",
+          "x": 455.94,
+          "y": 122.2,
+          "w": 148.47,
+          "h": 12.8
+        },
+        {
+          "role": "card_body",
+          "x": 437.94,
+          "y": 58.36,
+          "w": 165.47,
+          "h": 48.64
+        },
+        {
+          "role": "instruction_card",
+          "x": 626.42,
+          "y": 43,
+          "w": 187.47,
+          "h": 100
+        },
+        {
+          "role": "card_title",
+          "x": 655.42,
+          "y": 122.2,
+          "w": 148.47,
+          "h": 12.8
+        },
+        {
+          "role": "card_body",
+          "x": 637.42,
+          "y": 58.36,
+          "w": 165.47,
+          "h": 48.64
+        }
+      ],
+      "text": [
+        {
+          "role": "eyebrow",
+          "font_size": 9,
+          "measured_height": 11.52,
+          "allocated_height": 13,
+          "content": "PANDUAN OPERATOR  /  WIZARD DATASET GLD"
+        },
+        {
+          "role": "simulation_disclosure",
+          "font_size": 8.2,
+          "measured_height": 10.5,
+          "allocated_height": 16,
+          "content": "SIMULASI PC - sensor contoh; platform Windows diinjeksi untuk uji. Bukan pengoperasian GLD fisik."
+        },
+        {
+          "role": "title",
+          "font_size": 23,
+          "measured_height": 29.44,
+          "allocated_height": 33,
+          "content": "Start dan pantau delapan kurva"
+        },
+        {
+          "role": "subtitle",
+          "font_size": 10,
+          "measured_height": 12.8,
+          "allocated_height": 28,
+          "content": "Klik satu kali; tunggu status merekam dan hitungan sampel tersimpan bertambah."
+        },
+        {
+          "role": "footer",
+          "font_size": 7.7,
+          "measured_height": 9.86,
+          "allocated_height": 12,
+          "content": "SIMULASI PC | Sensor contoh | Platform Windows diinjeksi | 2 November 2026"
+        },
+        {
+          "role": "image_caption",
+          "font_size": 8.1,
+          "measured_height": 10.37,
+          "allocated_height": 13,
+          "content": "Tangkapan browser simulasi PC asli. PNG tidak diubah; kotak dan angka adalah anotasi vektor panduan."
+        },
+        {
+          "role": "card_title",
+          "font_size": 10,
+          "measured_height": 12.8,
+          "allocated_height": 27,
+          "content": "Pause / Resume"
+        },
+        {
+          "role": "card_body",
+          "font_size": 9.5,
+          "measured_height": 48.64,
+          "allocated_height": 56,
+          "content": "Pause menghentikan akuisisi di GLD setelah dikonfirmasi. Resume melanjutkan sesi yang sama; waktu jeda tidak diisi ulang."
+        },
+        {
+          "role": "card_title",
+          "font_size": 10,
+          "measured_height": 12.8,
+          "allocated_height": 27,
+          "content": "Stop satu kali"
+        },
+        {
+          "role": "card_body",
+          "font_size": 9.5,
+          "measured_height": 48.64,
+          "allocated_height": 56,
+          "content": "Klik Stop dan tunggu konfirmasi perangkat serta verifikasi semua baris CSV. Respons tombol saja belum berarti selesai."
+        },
+        {
+          "role": "card_title",
+          "font_size": 10,
+          "measured_height": 12.8,
+          "allocated_height": 27,
+          "content": "Hitungan tersimpan"
+        },
+        {
+          "role": "card_body",
+          "font_size": 9.5,
+          "measured_height": 48.64,
+          "allocated_height": 56,
+          "content": "Hitungan bertambah setelah data disimpan aplikasi. Target pembacaan lengkap delapan sensor adalah setiap 500 ms."
+        },
+        {
+          "role": "card_title",
+          "font_size": 10,
+          "measured_height": 12.8,
+          "allocated_height": 27,
+          "content": "Grafik delapan sensor"
+        },
+        {
+          "role": "card_body",
+          "font_size": 9.5,
+          "measured_height": 48.64,
+          "allocated_height": 56,
+          "content": "Amati MQ8, MQ135, MQ3, MQ5, MQ4, MQ7, MQ6 dan MQ2. Grafik menampilkan contoh data pada simulasi ini."
+        }
+      ],
+      "screenshots": [
+        {
+          "key": "05-recording",
+          "path": "D:\\Github\\PertaminaGLD\\tmp\\wireless-workflow-release\\browser-output\\05-recording.png",
+          "source_sha256": "f4579be1a0e773bb4259a5bfbad80c6464baec06482b5ef9d90f3aa7417871e7",
+          "original_png_unedited": true,
+          "source_viewport": {
+            "x": 114.125776152389,
+            "y": 66.890625,
+            "w": 1340.748447695222,
+            "h": 514.5
+          },
+          "scale": 0.58168,
+          "boxes": [
+            {
+              "n": 1,
+              "selector": "#wfPause",
+              "source_clipped": false,
+              "pdf": {
+                "role": "vector_callout",
+                "x": 141.29,
+                "y": 432.05,
+                "w": 38.82,
+                "h": 20.94
+              }
+            },
+            {
+              "n": 2,
+              "selector": "#wfStop",
+              "source_clipped": false,
+              "pdf": {
+                "role": "vector_callout",
+                "x": 184.76,
+                "y": 432.05,
+                "w": 34.32,
+                "h": 20.94
+              }
+            },
+            {
+              "n": 3,
+              "selector": "#wfCount",
+              "source_clipped": false,
+              "pdf": {
+                "role": "vector_callout",
+                "x": 158.5,
+                "y": 410.23,
+                "w": 72.57,
+                "h": 10.47
+              }
+            },
+            {
+              "n": 4,
+              "selector": "#wfChart",
+              "source_clipped": false,
+              "pdf": {
+                "role": "vector_callout",
+                "x": 101.6,
+                "y": 186.29,
+                "w": 638.69,
+                "h": 197.77
+              }
+            }
+          ],
+          "skipped_offscreen_boxes": []
+        }
+      ]
+    },
+    {
+      "number": 6,
+      "key": "paused",
+      "title": "Pause adalah jeda pengukuran di GLD",
+      "rectangles": [
+        {
+          "role": "eyebrow",
+          "x": 28.0,
+          "y": 566.76,
+          "w": 785.89,
+          "h": 11.52
+        },
+        {
+          "role": "simulation_disclosure",
+          "x": 28.0,
+          "y": 551.78,
+          "w": 785.89,
+          "h": 10.5
+        },
+        {
+          "role": "title",
+          "x": 28.0,
+          "y": 508.84,
+          "w": 785.89,
+          "h": 29.44
+        },
+        {
+          "role": "subtitle",
+          "x": 28.0,
+          "y": 489.48,
+          "w": 785.89,
+          "h": 12.8
+        },
+        {
+          "role": "footer",
+          "x": 28.0,
+          "y": 11.14,
+          "w": 711.89,
+          "h": 9.86
+        },
+        {
+          "role": "screenshot_frame",
+          "x": 31.0,
+          "y": 170,
+          "w": 779.89,
+          "h": 299.28
+        },
+        {
+          "role": "image_border",
+          "x": 28.0,
+          "y": 167,
+          "w": 785.89,
+          "h": 305.28
+        },
+        {
+          "role": "vector_callout",
+          "x": 51.43,
+          "y": 373.76,
+          "w": 58.25,
+          "h": 26.27
+        },
+        {
+          "role": "number_bubble",
+          "x": 39.43,
+          "y": 394.03,
+          "w": 18,
+          "h": 18
+        },
+        {
+          "role": "vector_callout",
+          "x": 115.52,
+          "y": 373.76,
+          "w": 43.05,
+          "h": 26.27
+        },
+        {
+          "role": "number_bubble",
+          "x": 103.52,
+          "y": 394.03,
+          "w": 18,
+          "h": 18
+        },
+        {
+          "role": "vector_callout",
+          "x": 723.8,
+          "y": 425.57,
+          "w": 66.65,
+          "h": 26.27
+        },
+        {
+          "role": "number_bubble",
+          "x": 711.8,
+          "y": 445.84,
+          "w": 18,
+          "h": 18
+        },
+        {
+          "role": "image_caption",
+          "x": 28.0,
+          "y": 149.63,
+          "w": 785.89,
+          "h": 10.37
+        },
+        {
+          "role": "instruction_card",
+          "x": 28.0,
+          "y": 43,
+          "w": 253.96,
+          "h": 100
+        },
+        {
+          "role": "card_title",
+          "x": 57.0,
+          "y": 122.2,
+          "w": 214.96,
+          "h": 12.8
+        },
+        {
+          "role": "card_body",
+          "x": 39.0,
+          "y": 70.52,
+          "w": 231.96,
+          "h": 36.48
+        },
+        {
+          "role": "instruction_card",
+          "x": 293.96,
+          "y": 43,
+          "w": 253.96,
+          "h": 100
+        },
+        {
+          "role": "card_title",
+          "x": 322.96,
+          "y": 122.2,
+          "w": 214.96,
+          "h": 12.8
+        },
+        {
+          "role": "card_body",
+          "x": 304.96,
+          "y": 70.52,
+          "w": 231.96,
+          "h": 36.48
+        },
+        {
+          "role": "instruction_card",
+          "x": 559.93,
+          "y": 43,
+          "w": 253.96,
+          "h": 100
+        },
+        {
+          "role": "card_title",
+          "x": 588.93,
+          "y": 122.2,
+          "w": 214.96,
+          "h": 12.8
+        },
+        {
+          "role": "card_body",
+          "x": 570.93,
+          "y": 70.52,
+          "w": 231.96,
+          "h": 36.48
+        }
+      ],
+      "text": [
+        {
+          "role": "eyebrow",
+          "font_size": 9,
+          "measured_height": 11.52,
+          "allocated_height": 13,
+          "content": "PANDUAN OPERATOR  /  WIZARD DATASET GLD"
+        },
+        {
+          "role": "simulation_disclosure",
+          "font_size": 8.2,
+          "measured_height": 10.5,
+          "allocated_height": 16,
+          "content": "SIMULASI PC - sensor contoh; platform Windows diinjeksi untuk uji. Bukan pengoperasian GLD fisik."
+        },
+        {
+          "role": "title",
+          "font_size": 23,
+          "measured_height": 29.44,
+          "allocated_height": 33,
+          "content": "Pause adalah jeda pengukuran di GLD"
+        },
+        {
+          "role": "subtitle",
+          "font_size": 10,
+          "measured_height": 12.8,
+          "allocated_height": 28,
+          "content": "Setelah terkonfirmasi, sensor tidak membuat baris baru sampai Resume."
+        },
+        {
+          "role": "footer",
+          "font_size": 7.7,
+          "measured_height": 9.86,
+          "allocated_height": 12,
+          "content": "SIMULASI PC | Sensor contoh | Platform Windows diinjeksi | 2 November 2026"
+        },
+        {
+          "role": "image_caption",
+          "font_size": 8.1,
+          "measured_height": 10.37,
+          "allocated_height": 13,
+          "content": "Tangkapan browser simulasi PC asli. PNG tidak diubah; kotak dan angka adalah anotasi vektor panduan."
+        },
+        {
+          "role": "card_title",
+          "font_size": 10,
+          "measured_height": 12.8,
+          "allocated_height": 27,
+          "content": "Pause / Resume"
+        },
+        {
+          "role": "card_body",
+          "font_size": 9.5,
+          "measured_height": 36.48,
+          "allocated_height": 56,
+          "content": "Pause menghentikan akuisisi di GLD setelah dikonfirmasi. Resume melanjutkan sesi yang sama; waktu jeda tidak diisi ulang."
+        },
+        {
+          "role": "card_title",
+          "font_size": 10,
+          "measured_height": 12.8,
+          "allocated_height": 27,
+          "content": "Stop satu kali"
+        },
+        {
+          "role": "card_body",
+          "font_size": 9.5,
+          "measured_height": 36.48,
+          "allocated_height": 56,
+          "content": "Klik Stop dan tunggu konfirmasi perangkat serta verifikasi semua baris CSV. Respons tombol saja belum berarti selesai."
+        },
+        {
+          "role": "card_title",
+          "font_size": 10,
+          "measured_height": 12.8,
+          "allocated_height": 27,
+          "content": "Reset mempertahankan file"
+        },
+        {
+          "role": "card_body",
+          "font_size": 9.5,
+          "measured_height": 36.48,
+          "allocated_height": 56,
+          "content": "Reset membersihkan form, bukan menghapus CSV/NVS. Jika sedang Pause, aplikasi harus Stop dan verifikasi lebih dahulu."
+        }
+      ],
+      "screenshots": [
+        {
+          "key": "06-paused",
+          "path": "D:\\Github\\PertaminaGLD\\tmp\\wireless-workflow-release\\browser-output\\06-paused.png",
+          "source_sha256": "d628c2c4a1330e1ca0b139c504c9ac40896f740efff3de536e196a57e32bfa84",
+          "original_png_unedited": true,
+          "source_viewport": {
+            "x": 275.734375,
+            "y": 0,
+            "w": 1068.765625,
+            "h": 410.1290700785494
+          },
+          "scale": 0.72971,
+          "boxes": [
+            {
+              "n": 1,
+              "selector": "#wfPause",
+              "source_clipped": false,
+              "pdf": {
+                "role": "vector_callout",
+                "x": 51.43,
+                "y": 373.76,
+                "w": 58.25,
+                "h": 26.27
+              }
+            },
+            {
+              "n": 2,
+              "selector": "#wfStop",
+              "source_clipped": false,
+              "pdf": {
+                "role": "vector_callout",
+                "x": 115.52,
+                "y": 373.76,
+                "w": 43.05,
+                "h": 26.27
+              }
+            },
+            {
+              "n": 3,
+              "selector": "#wfReset",
+              "source_clipped": false,
+              "pdf": {
+                "role": "vector_callout",
+                "x": 723.8,
+                "y": 425.57,
+                "w": 66.65,
+                "h": 26.27
+              }
+            }
+          ],
+          "skipped_offscreen_boxes": []
+        }
+      ]
+    },
+    {
+      "number": 7,
+      "key": "verified",
+      "title": "Stop: tunggu verifikasi, lalu OK",
+      "rectangles": [
+        {
+          "role": "eyebrow",
+          "x": 28.0,
+          "y": 566.76,
+          "w": 785.89,
+          "h": 11.52
+        },
+        {
+          "role": "simulation_disclosure",
+          "x": 28.0,
+          "y": 551.78,
+          "w": 785.89,
+          "h": 10.5
+        },
+        {
+          "role": "title",
+          "x": 28.0,
+          "y": 508.84,
+          "w": 785.89,
+          "h": 29.44
+        },
+        {
+          "role": "subtitle",
+          "x": 28.0,
+          "y": 489.48,
+          "w": 785.89,
+          "h": 12.8
+        },
+        {
+          "role": "footer",
+          "x": 28.0,
+          "y": 11.14,
+          "w": 711.89,
+          "h": 9.86
+        },
+        {
+          "role": "screenshot_frame",
+          "x": 31.0,
+          "y": 170,
+          "w": 779.89,
+          "h": 299.28
+        },
+        {
+          "role": "image_border",
+          "x": 28.0,
+          "y": 167,
+          "w": 785.89,
+          "h": 305.28
+        },
+        {
+          "role": "vector_callout",
+          "x": 195.51,
+          "y": 405.7,
+          "w": 450.87,
+          "h": 24.37
+        },
+        {
+          "role": "number_bubble",
+          "x": 183.51,
+          "y": 424.07,
+          "w": 18,
+          "h": 18
+        },
+        {
+          "role": "vector_callout",
+          "x": 195.51,
+          "y": 272.57,
+          "w": 450.87,
+          "h": 123.38
+        },
+        {
+          "role": "number_bubble",
+          "x": 183.51,
+          "y": 389.95,
+          "w": 18,
+          "h": 18
+        },
+        {
+          "role": "vector_callout",
+          "x": 586.5,
+          "y": 209.2,
+          "w": 59.88,
+          "h": 43.87
+        },
+        {
+          "role": "number_bubble",
+          "x": 574.5,
+          "y": 247.07,
+          "w": 18,
+          "h": 18
+        },
+        {
+          "role": "image_caption",
+          "x": 28.0,
+          "y": 149.63,
+          "w": 785.89,
+          "h": 10.37
+        },
+        {
+          "role": "instruction_card",
+          "x": 28.0,
+          "y": 43,
+          "w": 253.96,
+          "h": 100
+        },
+        {
+          "role": "card_title",
+          "x": 57.0,
+          "y": 122.2,
+          "w": 214.96,
+          "h": 12.8
+        },
+        {
+          "role": "card_body",
+          "x": 39.0,
+          "y": 70.52,
+          "w": 231.96,
+          "h": 36.48
+        },
+        {
+          "role": "instruction_card",
+          "x": 293.96,
+          "y": 43,
+          "w": 253.96,
+          "h": 100
+        },
+        {
+          "role": "card_title",
+          "x": 322.96,
+          "y": 122.2,
+          "w": 214.96,
+          "h": 12.8
+        },
+        {
+          "role": "card_body",
+          "x": 304.96,
+          "y": 70.52,
+          "w": 231.96,
+          "h": 36.48
+        },
+        {
+          "role": "instruction_card",
+          "x": 559.93,
+          "y": 43,
+          "w": 253.96,
+          "h": 100
+        },
+        {
+          "role": "card_title",
+          "x": 588.93,
+          "y": 122.2,
+          "w": 214.96,
+          "h": 12.8
+        },
+        {
+          "role": "card_body",
+          "x": 570.93,
+          "y": 70.52,
+          "w": 231.96,
+          "h": 36.48
+        }
+      ],
+      "text": [
+        {
+          "role": "eyebrow",
+          "font_size": 9,
+          "measured_height": 11.52,
+          "allocated_height": 13,
+          "content": "PANDUAN OPERATOR  /  WIZARD DATASET GLD"
+        },
+        {
+          "role": "simulation_disclosure",
+          "font_size": 8.2,
+          "measured_height": 10.5,
+          "allocated_height": 16,
+          "content": "SIMULASI PC - sensor contoh; platform Windows diinjeksi untuk uji. Bukan pengoperasian GLD fisik."
+        },
+        {
+          "role": "title",
+          "font_size": 23,
+          "measured_height": 29.44,
+          "allocated_height": 33,
+          "content": "Stop: tunggu verifikasi, lalu OK"
+        },
+        {
+          "role": "subtitle",
+          "font_size": 10,
+          "measured_height": 12.8,
+          "allocated_height": 28,
+          "content": "Notifikasi selesai tampil setelah file nyata dibandingkan dengan seluruh ledger."
+        },
+        {
+          "role": "footer",
+          "font_size": 7.7,
+          "measured_height": 9.86,
+          "allocated_height": 12,
+          "content": "SIMULASI PC | Sensor contoh | Platform Windows diinjeksi | 2 November 2026"
+        },
+        {
+          "role": "image_caption",
+          "font_size": 8.1,
+          "measured_height": 10.37,
+          "allocated_height": 13,
+          "content": "Tangkapan browser simulasi PC asli. PNG tidak diubah; kotak dan angka adalah anotasi vektor panduan."
+        },
+        {
+          "role": "card_title",
+          "font_size": 10,
+          "measured_height": 12.8,
+          "allocated_height": 27,
+          "content": "Judul hasil rekaman"
+        },
+        {
+          "role": "card_body",
+          "font_size": 9.5,
+          "measured_height": 36.48,
+          "allocated_height": 56,
+          "content": "Notifikasi ini muncul setelah verifikasi selesai. Bedakan hasil lengkap dari rekaman tidak lengkap; jangan hanya melihat tombol Stop."
+        },
+        {
+          "role": "card_title",
+          "font_size": 10,
+          "measured_height": 12.8,
+          "allocated_height": 27,
+          "content": "Periksa hasil verifikasi"
+        },
+        {
+          "role": "card_body",
+          "font_size": 9.5,
+          "measured_height": 36.48,
+          "allocated_height": 56,
+          "content": "Tunggu pesan seluruh baris/kolom cocok. Jika incomplete, data yang tersimpan tetap berguna tetapi sesi tidak boleh disebut lengkap."
+        },
+        {
+          "role": "card_title",
+          "font_size": 10,
+          "measured_height": 12.8,
+          "allocated_height": 27,
+          "content": "OK, lalu unduh CSV"
+        },
+        {
+          "role": "card_body",
+          "font_size": 9.5,
+          "measured_height": 36.48,
+          "allocated_height": 56,
+          "content": "Klik OK setelah membaca hasil. Setelah notifikasi ditutup, gunakan Download CSV untuk mengambil salinan file yang sama."
+        }
+      ],
+      "screenshots": [
+        {
+          "key": "07-stop-verified",
+          "path": "D:\\Github\\PertaminaGLD\\tmp\\wireless-workflow-release\\browser-output\\07-stop-verified.png",
+          "source_sha256": "74b9c116674aed1e2afc91802e87a3e2f1702bd25d26ee6d4ea844fe1302b04d",
+          "original_png_unedited": true,
+          "source_viewport": {
+            "x": 464.5,
+            "y": 379.70291581689315,
+            "w": 640,
+            "h": 245.5941683662137
+          },
+          "scale": 1.21858,
+          "boxes": [
+            {
+              "n": 1,
+              "selector": "#appModalTitle",
+              "source_clipped": false,
+              "pdf": {
+                "role": "vector_callout",
+                "x": 195.51,
+                "y": 405.7,
+                "w": 450.87,
+                "h": 24.37
+              }
+            },
+            {
+              "n": 2,
+              "selector": "#appModalMessage",
+              "source_clipped": false,
+              "pdf": {
+                "role": "vector_callout",
+                "x": 195.51,
+                "y": 272.57,
+                "w": 450.87,
+                "h": 123.38
+              }
+            },
+            {
+              "n": 3,
+              "selector": "#appModalOkBtn",
+              "source_clipped": false,
+              "pdf": {
+                "role": "vector_callout",
+                "x": 586.5,
+                "y": 209.2,
+                "w": 59.88,
+                "h": 43.87
+              }
+            }
+          ],
+          "skipped_offscreen_boxes": []
+        }
+      ]
+    },
+    {
+      "number": 8,
+      "key": "continue",
+      "title": "Continue: file sama, segmen baru",
+      "rectangles": [
+        {
+          "role": "eyebrow",
+          "x": 28.0,
+          "y": 566.76,
+          "w": 785.89,
+          "h": 11.52
+        },
+        {
+          "role": "simulation_disclosure",
+          "x": 28.0,
+          "y": 551.78,
+          "w": 785.89,
+          "h": 10.5
+        },
+        {
+          "role": "title",
+          "x": 28.0,
+          "y": 508.84,
+          "w": 785.89,
+          "h": 29.44
+        },
+        {
+          "role": "subtitle",
+          "x": 28.0,
+          "y": 489.48,
+          "w": 785.89,
+          "h": 12.8
+        },
+        {
+          "role": "footer",
+          "x": 28.0,
+          "y": 11.14,
+          "w": 711.89,
+          "h": 9.86
+        },
+        {
+          "role": "screenshot_frame",
+          "x": 31.0,
+          "y": 170,
+          "w": 779.89,
+          "h": 299.28
+        },
+        {
+          "role": "image_border",
+          "x": 28.0,
+          "y": 167,
+          "w": 785.89,
+          "h": 305.28
+        },
+        {
+          "role": "vector_callout",
+          "x": 50.21,
+          "y": 379.5,
+          "w": 60.17,
+          "h": 24.69
+        },
+        {
+          "role": "number_bubble",
+          "x": 38.21,
+          "y": 398.19,
+          "w": 18,
+          "h": 18
+        },
+        {
+          "role": "vector_callout",
+          "x": 254.53,
+          "y": 353.77,
+          "w": 105.44,
+          "h": 12.35
+        },
+        {
+          "role": "number_bubble",
+          "x": 242.53,
+          "y": 360.12,
+          "w": 18,
+          "h": 18
+        },
+        {
+          "role": "vector_callout",
+          "x": 729.03,
+          "y": 428.2,
+          "w": 62.65,
+          "h": 24.69
+        },
+        {
+          "role": "number_bubble",
+          "x": 717.03,
+          "y": 446.89,
+          "w": 18,
+          "h": 18
+        },
+        {
+          "role": "image_caption",
+          "x": 28.0,
+          "y": 149.63,
+          "w": 785.89,
+          "h": 10.37
+        },
+        {
+          "role": "instruction_card",
+          "x": 28.0,
+          "y": 43,
+          "w": 253.96,
+          "h": 100
+        },
+        {
+          "role": "card_title",
+          "x": 57.0,
+          "y": 122.2,
+          "w": 214.96,
+          "h": 12.8
+        },
+        {
+          "role": "card_body",
+          "x": 39.0,
+          "y": 70.52,
+          "w": 231.96,
+          "h": 36.48
+        },
+        {
+          "role": "instruction_card",
+          "x": 293.96,
+          "y": 43,
+          "w": 253.96,
+          "h": 100
+        },
+        {
+          "role": "card_title",
+          "x": 322.96,
+          "y": 122.2,
+          "w": 214.96,
+          "h": 12.8
+        },
+        {
+          "role": "card_body",
+          "x": 304.96,
+          "y": 70.52,
+          "w": 231.96,
+          "h": 36.48
+        },
+        {
+          "role": "instruction_card",
+          "x": 559.93,
+          "y": 43,
+          "w": 253.96,
+          "h": 100
+        },
+        {
+          "role": "card_title",
+          "x": 588.93,
+          "y": 122.2,
+          "w": 214.96,
+          "h": 12.8
+        },
+        {
+          "role": "card_body",
+          "x": 570.93,
+          "y": 70.52,
+          "w": 231.96,
+          "h": 36.48
+        }
+      ],
+      "text": [
+        {
+          "role": "eyebrow",
+          "font_size": 9,
+          "measured_height": 11.52,
+          "allocated_height": 13,
+          "content": "PANDUAN OPERATOR  /  WIZARD DATASET GLD"
+        },
+        {
+          "role": "simulation_disclosure",
+          "font_size": 8.2,
+          "measured_height": 10.5,
+          "allocated_height": 16,
+          "content": "SIMULASI PC - sensor contoh; platform Windows diinjeksi untuk uji. Bukan pengoperasian GLD fisik."
+        },
+        {
+          "role": "title",
+          "font_size": 23,
+          "measured_height": 29.44,
+          "allocated_height": 33,
+          "content": "Continue: file sama, segmen baru"
+        },
+        {
+          "role": "subtitle",
+          "font_size": 10,
+          "measured_height": 12.8,
+          "allocated_height": 28,
+          "content": "Continue setelah Stop berbeda dari Resume setelah Pause."
+        },
+        {
+          "role": "footer",
+          "font_size": 7.7,
+          "measured_height": 9.86,
+          "allocated_height": 12,
+          "content": "SIMULASI PC | Sensor contoh | Platform Windows diinjeksi | 2 November 2026"
+        },
+        {
+          "role": "image_caption",
+          "font_size": 8.1,
+          "measured_height": 10.37,
+          "allocated_height": 13,
+          "content": "Tangkapan browser simulasi PC asli. PNG tidak diubah; kotak dan angka adalah anotasi vektor panduan."
+        },
+        {
+          "role": "card_title",
+          "font_size": 10,
+          "measured_height": 12.8,
+          "allocated_height": 27,
+          "content": "Continue setelah Stop"
+        },
+        {
+          "role": "card_body",
+          "font_size": 9.5,
+          "measured_height": 36.48,
+          "allocated_height": 56,
+          "content": "Tetap memakai file dan konfigurasi yang sama. GLD mendapat SID baru dan seq mulai 0; row_id global terus bertambah."
+        },
+        {
+          "role": "card_title",
+          "font_size": 10,
+          "measured_height": 12.8,
+          "allocated_height": 27,
+          "content": "Verifikasi seluruh CSV"
+        },
+        {
+          "role": "card_body",
+          "font_size": 9.5,
+          "measured_height": 36.48,
+          "allocated_height": 56,
+          "content": "Tunggu status verifikasi cocok: semua baris dan kolom file diperiksa terhadap ledger lengkap, bukan hanya grafik."
+        },
+        {
+          "role": "card_title",
+          "font_size": 10,
+          "measured_height": 12.8,
+          "allocated_height": 27,
+          "content": "Reset mempertahankan file"
+        },
+        {
+          "role": "card_body",
+          "font_size": 9.5,
+          "measured_height": 36.48,
+          "allocated_height": 56,
+          "content": "Reset membersihkan form, bukan menghapus CSV/NVS. Jika sedang Pause, aplikasi harus Stop dan verifikasi lebih dahulu."
+        }
+      ],
+      "screenshots": [
+        {
+          "key": "08-continue-ready",
+          "path": "D:\\Github\\PertaminaGLD\\tmp\\wireless-workflow-release\\browser-output\\08-continue-ready.png",
+          "source_sha256": "127c65df379e40cad809170c00bdcaff70cbd228c80000b6ac85af0c8e5dfd51",
+          "original_png_unedited": true,
+          "source_viewport": {
+            "x": 207.5,
+            "y": 0,
+            "w": 1137.0,
+            "h": 436.31338973810153
+          },
+          "scale": 0.68592,
+          "boxes": [
+            {
+              "n": 1,
+              "selector": "#wfStart",
+              "source_clipped": false,
+              "pdf": {
+                "role": "vector_callout",
+                "x": 50.21,
+                "y": 379.5,
+                "w": 60.17,
+                "h": 24.69
+              }
+            },
+            {
+              "n": 2,
+              "selector": "#wfVerification",
+              "source_clipped": false,
+              "pdf": {
+                "role": "vector_callout",
+                "x": 254.53,
+                "y": 353.77,
+                "w": 105.44,
+                "h": 12.35
+              }
+            },
+            {
+              "n": 3,
+              "selector": "#wfReset",
+              "source_clipped": false,
+              "pdf": {
+                "role": "vector_callout",
+                "x": 729.03,
+                "y": 428.2,
+                "w": 62.65,
+                "h": 24.69
+              }
+            }
+          ],
+          "skipped_offscreen_boxes": []
+        }
+      ]
+    },
+    {
+      "number": 9,
+      "key": "loss_modes",
+      "title": "Saat putus: dua kebijakan yang berbeda",
+      "rectangles": [
+        {
+          "role": "eyebrow",
+          "x": 28.0,
+          "y": 566.76,
+          "w": 785.89,
+          "h": 11.52
+        },
+        {
+          "role": "simulation_disclosure",
+          "x": 28.0,
+          "y": 551.78,
+          "w": 785.89,
+          "h": 10.5
+        },
+        {
+          "role": "title",
+          "x": 28.0,
+          "y": 508.84,
+          "w": 785.89,
+          "h": 29.44
+        },
+        {
+          "role": "subtitle",
+          "x": 28.0,
+          "y": 489.48,
+          "w": 785.89,
+          "h": 12.8
+        },
+        {
+          "role": "footer",
+          "x": 28.0,
+          "y": 11.14,
+          "w": 711.89,
+          "h": 9.86
+        },
+        {
+          "role": "mode_title",
+          "x": 28.0,
+          "y": 452.92,
+          "w": 785.89,
+          "h": 14.08
+        },
+        {
+          "role": "screenshot_frame",
+          "x": 31.0,
+          "y": 355,
+          "w": 779.89,
+          "h": 90
+        },
+        {
+          "role": "image_border",
+          "x": 28.0,
+          "y": 352,
+          "w": 785.89,
+          "h": 96
+        },
+        {
+          "role": "vector_callout",
+          "x": 49.92,
+          "y": 400.84,
+          "w": 106.12,
+          "h": 16.9
+        },
+        {
+          "role": "number_bubble",
+          "x": 37.92,
+          "y": 411.74,
+          "w": 18,
+          "h": 18
+        },
+        {
+          "role": "vector_callout",
+          "x": 166.86,
+          "y": 403.21,
+          "w": 79.37,
+          "h": 12.16
+        },
+        {
+          "role": "number_bubble",
+          "x": 154.86,
+          "y": 409.37,
+          "w": 18,
+          "h": 18
+        },
+        {
+          "role": "vector_callout",
+          "x": 49.92,
+          "y": 382.26,
+          "w": 742.04,
+          "h": 13.18
+        },
+        {
+          "role": "number_bubble",
+          "x": 37.92,
+          "y": 389.44,
+          "w": 18,
+          "h": 18
+        },
+        {
+          "role": "comparison_legend",
+          "x": 28.0,
+          "y": 335.99,
+          "w": 785.89,
+          "h": 11.01
+        },
+        {
+          "role": "mode_title",
+          "x": 28.0,
+          "y": 303.92,
+          "w": 785.89,
+          "h": 14.08
+        },
+        {
+          "role": "screenshot_frame",
+          "x": 31.0,
+          "y": 204,
+          "w": 779.89,
+          "h": 90
+        },
+        {
+          "role": "image_border",
+          "x": 28.0,
+          "y": 201,
+          "w": 785.89,
+          "h": 96
+        },
+        {
+          "role": "vector_callout",
+          "x": 49.92,
+          "y": 249.84,
+          "w": 151.63,
+          "h": 16.9
+        },
+        {
+          "role": "number_bubble",
+          "x": 37.92,
+          "y": 260.74,
+          "w": 18,
+          "h": 18
+        },
+        {
+          "role": "vector_callout",
+          "x": 49.92,
+          "y": 231.26,
+          "w": 742.04,
+          "h": 13.18
+        },
+        {
+          "role": "number_bubble",
+          "x": 37.92,
+          "y": 238.44,
+          "w": 18,
+          "h": 18
+        },
+        {
+          "role": "comparison_legend",
+          "x": 28.0,
+          "y": 184.99,
+          "w": 785.89,
+          "h": 11.01
+        },
+        {
+          "role": "instruction_card",
+          "x": 28.0,
+          "y": 43,
+          "w": 253.96,
+          "h": 129
+        },
+        {
+          "role": "card_title",
+          "x": 57.0,
+          "y": 151.2,
+          "w": 214.96,
+          "h": 12.8
+        },
+        {
+          "role": "card_body",
+          "x": 39.0,
+          "y": 99.52,
+          "w": 231.96,
+          "h": 36.48
+        },
+        {
+          "role": "instruction_card",
+          "x": 293.96,
+          "y": 43,
+          "w": 253.96,
+          "h": 129
+        },
+        {
+          "role": "card_title",
+          "x": 322.96,
+          "y": 151.2,
+          "w": 214.96,
+          "h": 12.8
+        },
+        {
+          "role": "card_body",
+          "x": 304.96,
+          "y": 99.52,
+          "w": 231.96,
+          "h": 36.48
+        },
+        {
+          "role": "instruction_card",
+          "x": 559.93,
+          "y": 43,
+          "w": 253.96,
+          "h": 129
+        },
+        {
+          "role": "card_title",
+          "x": 588.93,
+          "y": 151.2,
+          "w": 214.96,
+          "h": 12.8
+        },
+        {
+          "role": "card_body",
+          "x": 570.93,
+          "y": 99.52,
+          "w": 231.96,
+          "h": 36.48
+        }
+      ],
+      "text": [
+        {
+          "role": "eyebrow",
+          "font_size": 9,
+          "measured_height": 11.52,
+          "allocated_height": 13,
+          "content": "PANDUAN OPERATOR  /  WIZARD DATASET GLD"
+        },
+        {
+          "role": "simulation_disclosure",
+          "font_size": 8.2,
+          "measured_height": 10.5,
+          "allocated_height": 16,
+          "content": "SIMULASI PC - sensor contoh; platform Windows diinjeksi untuk uji. Bukan pengoperasian GLD fisik."
+        },
+        {
+          "role": "title",
+          "font_size": 23,
+          "measured_height": 29.44,
+          "allocated_height": 33,
+          "content": "Saat putus: dua kebijakan yang berbeda"
+        },
+        {
+          "role": "subtitle",
+          "font_size": 10,
+          "measured_height": 12.8,
+          "allocated_height": 28,
+          "content": "GLD harus tetap menyala. Kedua mode menyelesaikan hanya sesi yang dimiliki aplikasi."
+        },
+        {
+          "role": "footer",
+          "font_size": 7.7,
+          "measured_height": 9.86,
+          "allocated_height": 12,
+          "content": "SIMULASI PC | Sensor contoh | Platform Windows diinjeksi | 2 November 2026"
+        },
+        {
+          "role": "mode_title",
+          "font_size": 11,
+          "measured_height": 14.08,
+          "allocated_height": 18,
+          "content": "A. REKAM LANGSUNG"
+        },
+        {
+          "role": "comparison_legend",
+          "font_size": 8.6,
+          "measured_height": 11.01,
+          "allocated_height": 15,
+          "content": "A1: Baca status sesi; A2: Hitungan tersimpan; A3: Ikuti pesan aplikasi. Tampilan browser simulasi PC."
+        },
+        {
+          "role": "mode_title",
+          "font_size": 11,
+          "measured_height": 14.08,
+          "allocated_height": 18,
+          "content": "B. PULIH OTOMATIS"
+        },
+        {
+          "role": "comparison_legend",
+          "font_size": 8.6,
+          "measured_height": 11.01,
+          "allocated_height": 15,
+          "content": "B1: Baca status sesi; B2: Ikuti pesan aplikasi. Tampilan browser simulasi PC."
+        },
+        {
+          "role": "card_title",
+          "font_size": 10,
+          "measured_height": 12.8,
+          "allocated_height": 27,
+          "content": "A. Rekam langsung"
+        },
+        {
+          "role": "card_body",
+          "font_size": 9.5,
+          "measured_height": 36.48,
+          "allocated_height": 85,
+          "content": "CSV/hitungan/grafik sesi dibekukan dan ditandai tidak lengkap. Aplikasi hanya menutup serta menguras sesi lama ke ledger privat."
+        },
+        {
+          "role": "card_title",
+          "font_size": 10,
+          "measured_height": 12.8,
+          "allocated_height": 27,
+          "content": "B. Pulih otomatis"
+        },
+        {
+          "role": "card_body",
+          "font_size": 9.5,
+          "measured_height": 36.48,
+          "allocated_height": 85,
+          "content": "Sesi dan CSV tetap sama. Data tertunda disalin dengan timestamp aslinya; transport reconnect tidak membatalkan Pause."
+        },
+        {
+          "role": "card_title",
+          "font_size": 10,
+          "measured_height": 12.8,
+          "allocated_height": 27,
+          "content": "Tunggu penyelesaian"
+        },
+        {
+          "role": "card_body",
+          "font_size": 9.5,
+          "measured_height": 36.48,
+          "allocated_height": 85,
+          "content": "Jangan Start lagi atau pindah perangkat saat cleanup/pemulihan. Jika dibatalkan, hubungkan GLD yang sama untuk menyelesaikan sesi."
+        }
+      ],
+      "screenshots": [
+        {
+          "key": "09-direct-link-lost",
+          "path": "D:\\Github\\PertaminaGLD\\tmp\\wireless-workflow-release\\browser-output\\09-direct-link-lost.png",
+          "source_sha256": "50307c675f619680dc6bb6651685151a6fa7dc7408c795797509cb9339f2cea8",
+          "original_png_unedited": true,
+          "source_viewport": {
+            "x": 207.5,
+            "y": 161.55429137723888,
+            "w": 1154.0,
+            "h": 133.17266724552226
+          },
+          "scale": 0.67581,
+          "boxes": [
+            {
+              "n": 1,
+              "selector": "#wfState",
+              "source_clipped": false,
+              "pdf": {
+                "role": "vector_callout",
+                "x": 49.92,
+                "y": 400.84,
+                "w": 106.12,
+                "h": 16.9
+              }
+            },
+            {
+              "n": 2,
+              "selector": "#wfCount",
+              "source_clipped": false,
+              "pdf": {
+                "role": "vector_callout",
+                "x": 166.86,
+                "y": 403.21,
+                "w": 79.37,
+                "h": 12.16
+              }
+            },
+            {
+              "n": 3,
+              "selector": "#wfMessage",
+              "source_clipped": false,
+              "pdf": {
+                "role": "vector_callout",
+                "x": 49.92,
+                "y": 382.26,
+                "w": 742.04,
+                "h": 13.18
+              }
+            }
+          ],
+          "skipped_offscreen_boxes": []
+        },
+        {
+          "key": "10-replay-link-lost",
+          "path": "D:\\Github\\PertaminaGLD\\tmp\\wireless-workflow-release\\browser-output\\10-replay-link-lost.png",
+          "source_sha256": "198459f3bee93ad9648c0b448a5fcbd5ca39f04fbfb7936a28e754d2de26f064",
+          "original_png_unedited": true,
+          "source_viewport": {
+            "x": 207.5,
+            "y": 161.55429137723888,
+            "w": 1154.0,
+            "h": 133.17266724552226
+          },
+          "scale": 0.67581,
+          "boxes": [
+            {
+              "n": 1,
+              "selector": "#wfState",
+              "source_clipped": false,
+              "pdf": {
+                "role": "vector_callout",
+                "x": 49.92,
+                "y": 249.84,
+                "w": 151.63,
+                "h": 16.9
+              }
+            },
+            {
+              "n": 2,
+              "selector": "#wfMessage",
+              "source_clipped": false,
+              "pdf": {
+                "role": "vector_callout",
+                "x": 49.92,
+                "y": 231.26,
+                "w": 742.04,
+                "h": 13.18
+              }
+            }
+          ],
+          "skipped_offscreen_boxes": []
+        }
+      ]
+    },
+    {
+      "number": 10,
+      "key": "recovered",
+      "title": "Selesai pulih: simpan hasil dan batasnya",
+      "rectangles": [
+        {
+          "role": "eyebrow",
+          "x": 28.0,
+          "y": 566.76,
+          "w": 785.89,
+          "h": 11.52
+        },
+        {
+          "role": "simulation_disclosure",
+          "x": 28.0,
+          "y": 551.78,
+          "w": 785.89,
+          "h": 10.5
+        },
+        {
+          "role": "title",
+          "x": 28.0,
+          "y": 508.84,
+          "w": 785.89,
+          "h": 29.44
+        },
+        {
+          "role": "subtitle",
+          "x": 28.0,
+          "y": 489.48,
+          "w": 785.89,
+          "h": 12.8
+        },
+        {
+          "role": "footer",
+          "x": 28.0,
+          "y": 11.14,
+          "w": 711.89,
+          "h": 9.86
+        },
+        {
+          "role": "screenshot_frame",
+          "x": 31.0,
+          "y": 270,
+          "w": 779.89,
+          "h": 199.28
+        },
+        {
+          "role": "image_border",
+          "x": 28.0,
+          "y": 267,
+          "w": 785.89,
+          "h": 205.28
+        },
+        {
+          "role": "vector_callout",
+          "x": 308.67,
+          "y": 449.3,
+          "w": 66.74,
+          "h": 7.81
+        },
+        {
+          "role": "number_bubble",
+          "x": 296.67,
+          "y": 451.12,
+          "w": 18,
+          "h": 18
+        },
+        {
+          "role": "vector_callout",
+          "x": 247.56,
+          "y": 449.3,
+          "w": 54.17,
+          "h": 7.81
+        },
+        {
+          "role": "number_bubble",
+          "x": 235.56,
+          "y": 451.12,
+          "w": 18,
+          "h": 18
+        },
+        {
+          "role": "vector_callout",
+          "x": 179.34,
+          "y": 282.16,
+          "w": 476.7,
+          "h": 147.61
+        },
+        {
+          "role": "number_bubble",
+          "x": 167.34,
+          "y": 423.77,
+          "w": 18,
+          "h": 18
+        },
+        {
+          "role": "image_caption",
+          "x": 28.0,
+          "y": 249.63,
+          "w": 785.89,
+          "h": 10.37
+        },
+        {
+          "role": "instruction_card",
+          "x": 28.0,
+          "y": 143,
+          "w": 253.96,
+          "h": 102
+        },
+        {
+          "role": "card_title",
+          "x": 57.0,
+          "y": 224.2,
+          "w": 214.96,
+          "h": 12.8
+        },
+        {
+          "role": "card_body",
+          "x": 39.0,
+          "y": 173.29,
+          "w": 231.96,
+          "h": 35.71
+        },
+        {
+          "role": "instruction_card",
+          "x": 293.96,
+          "y": 143,
+          "w": 253.96,
+          "h": 102
+        },
+        {
+          "role": "card_title",
+          "x": 322.96,
+          "y": 224.2,
+          "w": 214.96,
+          "h": 12.8
+        },
+        {
+          "role": "card_body",
+          "x": 304.96,
+          "y": 173.29,
+          "w": 231.96,
+          "h": 35.71
+        },
+        {
+          "role": "instruction_card",
+          "x": 559.93,
+          "y": 143,
+          "w": 253.96,
+          "h": 102
+        },
+        {
+          "role": "card_title",
+          "x": 588.93,
+          "y": 224.2,
+          "w": 214.96,
+          "h": 12.8
+        },
+        {
+          "role": "card_body",
+          "x": 570.93,
+          "y": 173.29,
+          "w": 231.96,
+          "h": 35.71
+        },
+        {
+          "role": "boundary_note",
+          "x": 28.0,
+          "y": 43,
+          "w": 253.96,
+          "h": 89
+        },
+        {
+          "role": "boundary_title",
+          "x": 38.0,
+          "y": 109.46,
+          "w": 233.96,
+          "h": 12.54
+        },
+        {
+          "role": "boundary_body",
+          "x": 38.0,
+          "y": 65.21,
+          "w": 233.96,
+          "h": 33.79
+        },
+        {
+          "role": "boundary_note",
+          "x": 293.96,
+          "y": 43,
+          "w": 253.96,
+          "h": 89
+        },
+        {
+          "role": "boundary_title",
+          "x": 303.96,
+          "y": 109.46,
+          "w": 233.96,
+          "h": 12.54
+        },
+        {
+          "role": "boundary_body",
+          "x": 303.96,
+          "y": 65.21,
+          "w": 233.96,
+          "h": 33.79
+        },
+        {
+          "role": "boundary_note",
+          "x": 559.93,
+          "y": 43,
+          "w": 253.96,
+          "h": 89
+        },
+        {
+          "role": "boundary_title",
+          "x": 569.93,
+          "y": 109.46,
+          "w": 233.96,
+          "h": 12.54
+        },
+        {
+          "role": "boundary_body",
+          "x": 569.93,
+          "y": 65.21,
+          "w": 233.96,
+          "h": 33.79
+        }
+      ],
+      "text": [
+        {
+          "role": "eyebrow",
+          "font_size": 9,
+          "measured_height": 11.52,
+          "allocated_height": 13,
+          "content": "PANDUAN OPERATOR  /  WIZARD DATASET GLD"
+        },
+        {
+          "role": "simulation_disclosure",
+          "font_size": 8.2,
+          "measured_height": 10.5,
+          "allocated_height": 16,
+          "content": "SIMULASI PC - sensor contoh; platform Windows diinjeksi untuk uji. Bukan pengoperasian GLD fisik."
+        },
+        {
+          "role": "title",
+          "font_size": 23,
+          "measured_height": 29.44,
+          "allocated_height": 33,
+          "content": "Selesai pulih: simpan hasil dan batasnya"
+        },
+        {
+          "role": "subtitle",
+          "font_size": 10,
+          "measured_height": 12.8,
+          "allocated_height": 28,
+          "content": "Verifikasi file tetap wajib, termasuk sesudah reconnect atau penghentian karena batas buffer."
+        },
+        {
+          "role": "footer",
+          "font_size": 7.7,
+          "measured_height": 9.86,
+          "allocated_height": 12,
+          "content": "SIMULASI PC | Sensor contoh | Platform Windows diinjeksi | 2 November 2026"
+        },
+        {
+          "role": "image_caption",
+          "font_size": 8.1,
+          "measured_height": 10.37,
+          "allocated_height": 13,
+          "content": "Tangkapan browser simulasi PC asli. PNG tidak diubah; kotak dan angka adalah anotasi vektor panduan."
+        },
+        {
+          "role": "card_title",
+          "font_size": 10,
+          "measured_height": 12.8,
+          "allocated_height": 27,
+          "content": "Verifikasi seluruh CSV"
+        },
+        {
+          "role": "card_body",
+          "font_size": 9.3,
+          "measured_height": 35.71,
+          "allocated_height": 58,
+          "content": "Tunggu status verifikasi cocok: semua baris dan kolom file diperiksa terhadap ledger lengkap, bukan hanya grafik."
+        },
+        {
+          "role": "card_title",
+          "font_size": 10,
+          "measured_height": 12.8,
+          "allocated_height": 27,
+          "content": "Hitungan tersimpan"
+        },
+        {
+          "role": "card_body",
+          "font_size": 9.3,
+          "measured_height": 35.71,
+          "allocated_height": 58,
+          "content": "Hitungan bertambah setelah data disimpan aplikasi. Target pembacaan lengkap delapan sensor adalah setiap 500 ms."
+        },
+        {
+          "role": "card_title",
+          "font_size": 10,
+          "measured_height": 12.8,
+          "allocated_height": 27,
+          "content": "Grafik delapan sensor"
+        },
+        {
+          "role": "card_body",
+          "font_size": 9.3,
+          "measured_height": 35.71,
+          "allocated_height": 58,
+          "content": "Amati MQ8, MQ135, MQ3, MQ5, MQ4, MQ7, MQ6 dan MQ2. Grafik menampilkan contoh data pada simulasi ini."
+        },
+        {
+          "role": "boundary_title",
+          "font_size": 9.8,
+          "measured_height": 12.54,
+          "allocated_height": 15,
+          "content": "Lima menit adalah batas RAM"
+        },
+        {
+          "role": "boundary_body",
+          "font_size": 8.8,
+          "measured_height": 33.79,
+          "allocated_height": 48,
+          "content": "Pada 300 detik tanpa kemajuan ACK, sampling dihentikan incomplete. Data yang masih ditahan dapat diambil selama GLD tetap menyala."
+        },
+        {
+          "role": "boundary_title",
+          "font_size": 9.8,
+          "measured_height": 12.54,
+          "allocated_height": 15,
+          "content": "Mati/reboot bukan pemulihan"
+        },
+        {
+          "role": "boundary_body",
+          "font_size": 8.8,
+          "measured_height": 33.79,
+          "allocated_height": 48,
+          "content": "Power loss menghapus RAM. Restart proses backend/laptop juga tidak menjamin lanjut sesi. Pertahankan CSV yang sudah tersimpan."
+        },
+        {
+          "role": "boundary_title",
+          "font_size": 9.8,
+          "measured_height": 12.54,
+          "allocated_height": 15,
+          "content": "Jika Connect/Continue gagal"
+        },
+        {
+          "role": "boundary_body",
+          "font_size": 8.8,
+          "measured_height": 33.79,
+          "allocated_height": 48,
+          "content": "Periksa 24 V, hotspot/password dan profil. Jika file berubah/model berbeda, jangan paksa append: simpan file lalu Reset dan pilih file baru."
+        }
+      ],
+      "screenshots": [
+        {
+          "key": "11-replay-complete",
+          "path": "D:\\Github\\PertaminaGLD\\tmp\\wireless-workflow-release\\browser-output\\11-replay-complete.png",
+          "source_sha256": "4af680a4103837c33841916b4d43e1c64d0d475f9617a844e8f4718a7d8fe6d7",
+          "original_png_unedited": true,
+          "source_viewport": {
+            "x": 0,
+            "y": 122.390625,
+            "w": 1584,
+            "h": 459.0
+          },
+          "scale": 0.43415,
+          "boxes": [
+            {
+              "n": 1,
+              "selector": "#wfVerification",
+              "source_clipped": false,
+              "pdf": {
+                "role": "vector_callout",
+                "x": 308.67,
+                "y": 449.3,
+                "w": 66.74,
+                "h": 7.81
+              }
+            },
+            {
+              "n": 2,
+              "selector": "#wfCount",
+              "source_clipped": false,
+              "pdf": {
+                "role": "vector_callout",
+                "x": 247.56,
+                "y": 449.3,
+                "w": 54.17,
+                "h": 7.81
+              }
+            },
+            {
+              "n": 3,
+              "selector": "#wfChart",
+              "source_clipped": false,
+              "pdf": {
+                "role": "vector_callout",
+                "x": 179.34,
+                "y": 282.16,
+                "w": 476.7,
+                "h": 147.61
+              }
+            }
+          ],
+          "skipped_offscreen_boxes": []
+        }
+      ]
+    }
+  ]
+}

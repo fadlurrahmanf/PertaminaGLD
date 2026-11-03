@@ -66,12 +66,26 @@ else:
     WIRELESS_DATASET_IMPORT_ERROR = ""
 
 try:
+    from wireless_dataset_direct import WirelessDatasetDirectCollector
+except Exception:  # Keep legacy recording available in older/partial installations.
+    WirelessDatasetDirectCollector = None  # type: ignore[assignment]
+
+try:
     from wireless_dataset_replay import WirelessDatasetReplayCollector as WirelessReplayCollector
 except Exception as exc:  # Replay is optional; Stage1 and other consoles stay available.
     WirelessReplayCollector = None  # type: ignore[assignment]
     WIRELESS_REPLAY_IMPORT_ERROR = type(exc).__name__
 else:
     WIRELESS_REPLAY_IMPORT_ERROR = ""
+
+try:
+    from dataset_workflow import DatasetWorkflowService
+    from workflow_platform import WindowsWorkflowPlatform
+except Exception as exc:
+    DatasetWorkflowService = WindowsWorkflowPlatform = None
+    WORKFLOW_IMPORT_ERROR = type(exc).__name__
+else:
+    WORKFLOW_IMPORT_ERROR = ""
 
 try:
     from local_mqtt_broker import LocalMqttBroker
@@ -121,6 +135,7 @@ GLD_DATASET_WIFI_ENVIRONMENTS = frozenset({
 GLD_DATASET_REPLAY_ENVIRONMENTS = frozenset({
     "gld_model_1_dataset_replay_wifi", "gld_model_2_dataset_replay_wifi", "gld_model_3_dataset_replay_wifi",
 })
+GLD_DATASET_WORKFLOW_ENVIRONMENTS = frozenset(f"gld_model_{model}_dataset_workflow_wifi" for model in (1, 2, 3))
 AES_KEY_HEX_RE = re.compile(r"^[0-9A-Fa-f]{32}$")
 
 
@@ -396,15 +411,63 @@ wireless_replay_collector: Any = None
 wireless_replay_lock = threading.Lock()
 # Admission spans identity checks and connection creation across HTTP threads.
 dataset_transport_admission = threading.RLock()
+dataset_workflow_service = None
+dataset_workflow_lock = threading.Lock()
+
+
+def get_dataset_workflow_service():
+    global dataset_workflow_service
+    if DatasetWorkflowService is None:
+        raise RuntimeError("Dataset wizard belum tersedia. Jalankan ulang backend setelah pembaruan aplikasi.")
+    with dataset_workflow_lock:
+        if dataset_workflow_service is None:
+            dataset_workflow_service = DatasetWorkflowService(
+                DATASET_OUTPUT_DIR, WindowsWorkflowPlatform(),
+                lambda payload: events.emit("dataset_workflow", payload))
+        return dataset_workflow_service
+
+
+def workflow_in_use():
+    if dataset_workflow_service is None:
+        return False
+    state = dataset_workflow_service.snapshot()
+    return bool(state.get("connected") or state.get("cleanup_pending") or
+                state.get("state") in {"connecting", "starting", "recording", "pausing", "paused", "resuming", "continuing",
+                    "recovering", "replaying", "stopping", "stop_pending", "cleanup_wait", "cleanup_pending"})
+
+
+def workflow_action(action, payload):
+    service = get_dataset_workflow_service()
+    with dataset_transport_admission:
+        if action in {"connect", "start", "continue", "resume"}:
+            if wireless_collector_in_use(wireless_dataset_collector) or wireless_collector_in_use(wireless_replay_collector):
+                raise RuntimeError("Disconnect Dataset lama sebelum menggunakan wizard.")
+            if any(item.status().get("connected") for item in serial_bridges.values()):
+                raise RuntimeError("Disconnect COM sebelum menghubungkan Dataset Wireless.")
+        operations = {
+            "scan": service.scan,
+            "select": lambda: service.select(payload.get("device_id", "")),
+            "connect": lambda: service.connect(payload.get("device_id", ""), payload.get("password")),
+            "choose-file": service.choose_file,
+            "configure": lambda: service.configure(payload),
+            "lock": lambda: service.lock(payload.get("locked")),
+            "start": service.start, "pause": service.pause, "resume": service.resume,
+            "stop": service.stop, "continue": service.continue_recording,
+            "reset": service.reset, "disconnect": service.disconnect, "export": service.export_csv,
+        }
+        if action not in operations:
+            raise ValueError("Aksi Dataset tidak dikenal.")
+        return operations[action]()
 
 
 def get_wireless_dataset_collector() -> Any:
     global wireless_dataset_collector
-    if WirelessDatasetCollector is None:
+    collector_type = WirelessDatasetDirectCollector or WirelessDatasetCollector
+    if collector_type is None:
         raise RuntimeError("Wireless Dataset is unavailable in this installation")
     with wireless_dataset_lock:
         if wireless_dataset_collector is None:
-            wireless_dataset_collector = WirelessDatasetCollector(
+            wireless_dataset_collector = collector_type(
                 DATASET_OUTPUT_DIR,
                 lambda payload: events.emit("wireless_dataset", payload),
             )
@@ -428,14 +491,16 @@ def wireless_collector_in_use(collector: Any) -> bool:
     if collector is None:
         return False
     state = collector.snapshot()
-    return bool(state.get("connected") or state.get("recovery_active") or
-                state.get("stop_requested") and state.get("state") not in {"complete", "incomplete", "disconnected"} or
+    return bool(state.get("connected") or state.get("recovery_active") or state.get("cleanup_pending") or
+                state.get("stop_requested") and state.get("state") not in {"complete", "incomplete", "disconnected", "ready", "not_ready"} or
                 state.get("state") in {"connecting", "starting", "recording", "recovering",
                                        "reconnecting", "resuming", "replaying", "stopping", "stop_pending"})
 
 
 def connect_wireless_dataset(password: str, *, replay: bool = False) -> Any:
     with dataset_transport_admission:
+        if workflow_in_use():
+            raise RuntimeError("Selesaikan dan Disconnect Dataset wizard terlebih dahulu.")
         other = wireless_dataset_collector if replay else wireless_replay_collector
         if wireless_collector_in_use(other):
             raise RuntimeError("Disconnect the other Wireless Dataset mode first")
@@ -981,13 +1046,21 @@ def validate_firmware_package(
         "firmwareVersion", "protocolVersion", "configSchemaVersion", "chip", "baud",
         "createdAtUtc", "source", "flashSetSha256", "flashFiles",
     }
-    allowed_top = required_top
+    allowed_top = required_top | {"capabilities"}
     missing = sorted(required_top - set(manifest))
     unknown = sorted(set(manifest) - allowed_top)
     if missing:
         raise RuntimeError(f"manifest missing required fields: {', '.join(missing)}")
     if unknown:
         raise RuntimeError(f"manifest has unsupported schema-v2 fields: {', '.join(unknown)}")
+    if "capabilities" in manifest:
+        capabilities = manifest["capabilities"]
+        if (env not in GLD_DATASET_WORKFLOW_ENVIRONMENTS or
+                not isinstance(capabilities, dict) or
+                set(capabilities) != {"nativeSerial", "datasetWifi"} or
+                capabilities.get("nativeSerial") is not True or
+                capabilities.get("datasetWifi") is not True):
+            raise RuntimeError("manifest capabilities must identify a final native-serial Dataset Wi-Fi package")
     if manifest.get("schemaVersion") != 2:
         raise RuntimeError("manifest schemaVersion must be 2")
     if manifest.get("packageType") != "pertamina-gld-prebuilt-firmware":
@@ -1216,7 +1289,7 @@ def _firmware_upload_reserved(payload: dict[str, Any], slot: int = 1) -> dict[st
     manifest, verified_files = validate_firmware_package(
         payload.get("manifest"), payload.get("packageFiles"), env, target_id
     )
-    if env in GLD_DATASET_WIFI_ENVIRONMENTS | GLD_DATASET_REPLAY_ENVIRONMENTS and reset_nvs:
+    if env in GLD_DATASET_WIFI_ENVIRONMENTS | GLD_DATASET_REPLAY_ENVIRONMENTS | GLD_DATASET_WORKFLOW_ENVIRONMENTS and reset_nvs:
         raise RuntimeError(
             "Hotspot Dataset requires an existing saved nulling profile; Reset NVS must be OFF"
         )
@@ -1386,6 +1459,16 @@ def firmware_upload(payload: dict[str, Any], slot: int = 1) -> dict[str, Any]:
         release_flash_port(port)
 
 
+class ExclusiveThreadingHTTPServer(ThreadingHTTPServer):
+    """One bridge owns a Windows address; never share an active listener."""
+    allow_reuse_address = False
+
+    def server_bind(self) -> None:
+        if hasattr(socket, "SO_EXCLUSIVEADDRUSE"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        super().server_bind()
+
+
 class Handler(SimpleHTTPRequestHandler):
     server_version = "GLDOperatorLiteBridge/0.2"
     extensions_map = {
@@ -1465,6 +1548,7 @@ class Handler(SimpleHTTPRequestHandler):
                     "ok": True,
                     "appId": APP_ID,
                     "version": VERSION,
+                    "processId": os.getpid(),
                     "csrfToken": BRIDGE_CSRF_TOKEN,
                     "features": {
                         "serial": serial is not None,
@@ -1472,10 +1556,13 @@ class Handler(SimpleHTTPRequestHandler):
                         "datasetMonitor": mqtt is not None,
                         "mqttBroker": broker_running,
                         "datasetOutput": True,
-                        "wirelessDataset": WirelessDatasetCollector is not None,
+                        "wirelessDataset": WirelessDatasetDirectCollector is not None or WirelessDatasetCollector is not None,
+                        "wirelessDirectCompatible": WirelessDatasetDirectCollector is not None,
                         "wirelessReplay": WirelessReplayCollector is not None,
+                        "datasetWorkflow": DatasetWorkflowService is not None,
                         "networkInfo": os.name == "nt",
                         "firmwareUpload": True,
+                        "firmwarePackageCapabilities": True,
                         "firmwareGld1DowngradeGuard": True,
                     },
                     "mqttBroker": {
@@ -1499,6 +1586,8 @@ class Handler(SimpleHTTPRequestHandler):
                 return json_response(self, {"ports": get_serial_bridge(1).list_ports()})
             if path == "/api/wireless-dataset/state":
                 return json_response(self, get_wireless_dataset_collector().snapshot())
+            if path == "/api/dataset-workflow/state":
+                return json_response(self, get_dataset_workflow_service().snapshot())
             if path == "/api/wireless-replay/state":
                 return json_response(self, get_wireless_replay_collector().snapshot())
             if path == "/api/serial/status":
@@ -1542,8 +1631,8 @@ class Handler(SimpleHTTPRequestHandler):
                 query = parse_qs(urlparse(self.path).query)
                 port = (query.get("port") or [""])[0]
                 with dataset_transport_admission:
-                    if wireless_collector_in_use(wireless_replay_collector):
-                        raise RuntimeError("Disconnect Wireless replay before probing COM")
+                    if workflow_in_use() or wireless_collector_in_use(wireless_replay_collector) or wireless_collector_in_use(wireless_dataset_collector):
+                        raise RuntimeError("Disconnect Wireless Dataset before probing COM")
                     return json_response(self, probe_port(port))
             if path == "/api/events":
                 return self._serve_events()
@@ -1560,7 +1649,9 @@ class Handler(SimpleHTTPRequestHandler):
             limit = FIRMWARE_JSON_BODY_LIMIT if path == "/api/firmware/upload" else DEFAULT_JSON_BODY_LIMIT
             payload = read_json(self, limit)
             slot = parse_slot(payload.get("slot"))
-            if path == "/api/wireless-dataset/connect":
+            if path.startswith("/api/dataset-workflow/"):
+                result = workflow_action(path.removeprefix("/api/dataset-workflow/"), payload)
+            elif path == "/api/wireless-dataset/connect":
                 result = connect_wireless_dataset(payload.get("password", ""))
             elif path == "/api/wireless-dataset/start":
                 result = get_wireless_dataset_collector().start(
@@ -1584,7 +1675,7 @@ class Handler(SimpleHTTPRequestHandler):
                 result = get_wireless_replay_collector().export_csv()
             elif path == "/api/serial/connect":
                 with dataset_transport_admission:
-                    if wireless_collector_in_use(wireless_dataset_collector) or wireless_collector_in_use(wireless_replay_collector):
+                    if workflow_in_use() or wireless_collector_in_use(wireless_dataset_collector) or wireless_collector_in_use(wireless_replay_collector):
                         raise RuntimeError("Disconnect Wireless Dataset before connecting COM")
                     port = str(payload.get("port") or "")
                     holder = slot_holding_port(port)
@@ -1616,8 +1707,8 @@ class Handler(SimpleHTTPRequestHandler):
                 result = open_dataset_folder()
             elif path == "/api/firmware/upload":
                 with dataset_transport_admission:
-                    if wireless_collector_in_use(wireless_replay_collector):
-                        raise RuntimeError("Disconnect Wireless replay before firmware upload")
+                    if workflow_in_use() or wireless_collector_in_use(wireless_replay_collector) or wireless_collector_in_use(wireless_dataset_collector):
+                        raise RuntimeError("Disconnect Wireless Dataset before firmware upload")
                     result = firmware_upload(payload, slot)
             else:
                 return json_response(self, {"error": "not found"}, HTTPStatus.NOT_FOUND)
@@ -1665,6 +1756,12 @@ def main() -> int:
     args = parser.parse_args()
 
     _register_allowed_origins(args.host, args.port)
+    # Establish sole HTTP ownership before starting the optional MQTT broker.
+    try:
+        httpd = ExclusiveThreadingHTTPServer((args.host, args.port), Handler)
+    except OSError as exc:
+        print(f"GLD_BIND_FAILED {args.host}:{args.port}: {exc}")
+        return 2
     if args.mqtt_broker_port:
         if LocalMqttBroker is None:
             local_mqtt_broker_error = f"local MQTT broker unavailable: {MQTT_BROKER_IMPORT_ERROR}"
@@ -1682,7 +1779,6 @@ def main() -> int:
                 local_mqtt_broker = None
                 local_mqtt_broker_error = str(exc)
                 print(f"MQTT_BROKER_START_FAILED {local_mqtt_broker_error}")
-    httpd = ThreadingHTTPServer((args.host, args.port), Handler)
     url = f"http://{args.host}:{args.port}/"
     print(f"GLD Operator Lite bridge: {url}")
     print("Press Ctrl+C to stop.")

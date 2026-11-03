@@ -76,7 +76,8 @@ class Routes(unittest.TestCase):
             headers["X-GLD-Bridge-Token"] = bridge.BRIDGE_CSRF_TOKEN
         if origin:
             headers["Origin"] = origin
-        req = Request(self.url + path, data=None if body is None else json.dumps(body).encode(), headers=headers)
+        data = body if body is None or isinstance(body, bytes) else json.dumps(body).encode()
+        req = Request(self.url + path, data=data, headers=headers)
         with urlopen(req, timeout=3) as response:
             return json.load(response)
 
@@ -91,7 +92,9 @@ class Routes(unittest.TestCase):
         self.assertEqual([row[0] for row in self.collector.calls], ["connect", "start", "stop", "export", "disconnect"])
 
     def test_missing_token_blocks_read_and_write(self):
-        for path, body in [("state", None), ("connect", {"password": "test-only-pass"}), ("export", {})]:
+        # Authorization is rejected before reading a body. Empty POSTs avoid
+        # Windows resetting urllib's separate header/body writes after that close.
+        for path, body in [("state", None), ("connect", b""), ("export", b"")]:
             with self.assertRaises(HTTPError) as caught:
                 self.request("/api/wireless-dataset/" + path, body, token=False)
             self.assertEqual(caught.exception.code, 403)
@@ -99,7 +102,7 @@ class Routes(unittest.TestCase):
 
     def test_foreign_origin_blocks_connect(self):
         with self.assertRaises(HTTPError) as caught:
-            self.request("/api/wireless-dataset/connect", {}, origin="https://untrusted.invalid")
+            self.request("/api/wireless-dataset/connect", b"", origin="https://untrusted.invalid")
         self.assertEqual(caught.exception.code, 403)
         self.assertEqual(self.collector.calls, [])
 

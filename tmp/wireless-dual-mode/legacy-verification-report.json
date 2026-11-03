@@ -1,0 +1,24 @@
+{
+  "status": "PASS",
+  "mode": "pc-simulation",
+  "hardware": false,
+  "protocol": "gld-dataset-wifi/1",
+  "authenticated_rfc6455": true,
+  "handshakes": 1,
+  "starts": 1,
+  "complete": true,
+  "integrity": {
+    "count": 8,
+    "contiguous": true,
+    "eight_sensor_fields": true,
+    "timestamp_delta_min_ms": 500,
+    "timestamp_delta_max_ms": 500,
+    "timestamp_delta_median_ms": 500,
+    "achieved_hz": 2.0,
+    "max_scan_duration_ms": 400,
+    "max_overrun_count": 0,
+    "exact_original_fields": true
+  },
+  "reference_source_sha256": "7ef7ab3face2983187ba55de5d7b57db2a79f3b8edc8d96bf2bdb7aa43f7e0f2",
+  "fixture_adaptation": "Increase synthetic2-row count to8 only; original source unchanged"
+}

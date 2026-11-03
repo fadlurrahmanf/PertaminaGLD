@@ -275,14 +275,16 @@ function renderRunningAnalysisTable() {
 // `channelIndices` (default all 8) restricts which sensor series get drawn -
 // the QC tab's per-sensor sub-tabs pass a single-element array so only that
 // channel's line appears, while its "All Sensor" view passes all 8.
-export function drawOneChart(canvas, rangeSelect, legendEl, markers = [], channelIndices = null) {
+export function drawOneChart(canvas, rangeSelect, legendEl, markers = [], channelIndices = null, dataSource = null) {
   if (!canvas || !rangeSelect) return;
   const parent = canvas.parentElement;
   const dpr = window.devicePixelRatio || 1;
   const cssWidth = Math.max(320, parent.clientWidth);
   // 0.7x of the previous 700-1050 range (which was itself 2.5x the
   // original 280-420), dialed back down after the chart read as too tall.
-  const cssHeight = Math.max(490, Math.min(735, Math.round(window.innerHeight * 0.84)));
+  const cssHeight = Number.isFinite(dataSource?.height)
+    ? Math.max(240, Math.min(735, Math.round(dataSource.height)))
+    : Math.max(490, Math.min(735, Math.round(window.innerHeight * 0.84)));
   canvas.width = Math.round(cssWidth * dpr);
   canvas.height = Math.round(cssHeight * dpr);
   canvas.style.height = `${cssHeight}px`;
@@ -297,10 +299,12 @@ export function drawOneChart(canvas, rangeSelect, legendEl, markers = [], channe
   const pad = { left: 58, right: 58, top: 18, bottom: 34 };
   const width = cssWidth - pad.left - pad.right;
   const height = cssHeight - pad.top - pad.bottom;
-  const now = Date.now();
+  // An explicit feed lets the wireless wizard use this renderer without
+  // replacing Running's history, clock or channel selection.
+  const now = dataSource?.now ?? Date.now();
   const rangeMs = Number(rangeSelect.value) * 1000;
   const rangeStart = now - rangeMs;
-  const visible = state.history.filter((point) => point.ts >= rangeStart);
+  const visible = (dataSource?.history ?? state.history).filter((point) => point.ts >= rangeStart);
 
   drawGrid(ctx, pad, width, height);
 
@@ -394,6 +398,8 @@ export function drawOneChart(canvas, rangeSelect, legendEl, markers = [], channe
         started = true;
         firstValue = value;
         firstY = y;
+      } else if (dataSource && point.breakBefore) {
+        ctx.moveTo(x, y);
       } else {
         ctx.lineTo(x, y);
       }

@@ -29,6 +29,10 @@
 #if defined(PGL_GLD_DATASET_REPLAY) && PGL_GLD_DATASET_REPLAY
 #include "GldDatasetReplayWifi.h"
 #endif
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+#include "GldDatasetWorkflowWifi.h"
+#include <new>
+#endif
 #endif
 #include "GldFrameBuilder.h"
 #include "GldModeManager.h"
@@ -3093,7 +3097,79 @@ void onCancelFullScaleSweep() {
     emitCommandAck("CANCEL_FULLSCALE_SWEEP", "ok", "full scale sweep cancellation requested", false);
 }
 
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+// Native commands keep their original implementation. A wireless session owns
+// configuration until Stop is delivered and Disconnect releases the lease.
+bool workflowReadOnlyCommand(pgl::gld::GldSerialCommandType type) {
+    using Type = pgl::gld::GldSerialCommandType;
+    switch (type) {
+        case Type::None: case Type::Unknown:
+        case Type::DebugOn: case Type::DebugOff:
+        case Type::AppPing: case Type::GetInfo: case Type::GetStatus:
+        case Type::GetTelemetry: case Type::GetQcStatus: return true;
+        default: return false;
+    }
+}
+
+const char* workflowCommandName(pgl::gld::GldSerialCommandType type) {
+    using Type = pgl::gld::GldSerialCommandType;
+    switch (type) {
+        case Type::SetMode: return "SET_MODE";
+        case Type::Restart: return "RESTART";
+        case Type::RunBootCheck: return "RUN_BOOT_CHECK";
+        case Type::RunCurrentStateCheck: return "RUN_CURRENT_STATE_CHECK";
+        case Type::RunI2cScan: return "RUN_I2C_SCAN";
+        case Type::RunTcaChannelScan: return "RUN_TCA_CHANNEL_SCAN";
+        case Type::RunAdsMcpSweep: return "RUN_ADS_MCP_SWEEP";
+        case Type::SleepNow: return "SLEEP_NOW";
+        case Type::ServiceHoldOff: return "SERVICE_HOLD_OFF";
+        case Type::SetAppConfigJson: return "SET_APP_CONFIG";
+        case Type::SetDeviceIdJson: return "SET_DEVICE_ID";
+        case Type::SetChAddressJson: return "SET_CH_ADDRESS";
+        case Type::SetLoraConfigJson: return "SET_LORA_CONFIG";
+        case Type::BeginLora: return "BEGIN_LORA";
+        case Type::SetLoraAutoTransmitJson: return "SET_LORA_AUTO_TRANSMIT";
+        case Type::ManualLoraTx: return "MANUAL_LORA_TX";
+        case Type::SetNullingConfigJson: return "SET_NULLING_CONFIG";
+        case Type::SetSessionMcpJson: return "SET_SESSION_MCP";
+        case Type::SetSensorPowerJson: return "SET_SENSOR_POWER";
+        case Type::SetAlarmModeJson: return "SET_ALARM_MODE";
+        case Type::SetManualAlarmJson: return "SET_MANUAL_ALARM";
+        case Type::VerifyCleanAirForNulling: return "VERIFY_CLEAN_AIR_FOR_NULLING";
+        case Type::RetryNulling: return "RETRY_NULLING";
+        case Type::RetryFailedNulling: return "RETRY_FAILED_NULLING";
+        case Type::BindModelToActiveNullingProfile: return "BIND_MODEL_TO_ACTIVE_NULLING_PROFILE";
+        case Type::SetQcResultJson: return "SET_QC_RESULT";
+        case Type::RunNullingSingleJson: return "RUN_NULLING_SINGLE";
+        case Type::ResetQcResultJson: return "RESET_QC_RESULT";
+        case Type::ResetQcAll: return "RESET_QC_ALL";
+        case Type::RunFullScaleSweepJson: return "RUN_FULLSCALE_SWEEP";
+        case Type::CancelFullScaleSweep: return "CANCEL_FULLSCALE_SWEEP";
+        case Type::InjectTplDone: return "INJECT_TPL_DONE";
+        case Type::InjectTplClr: return "INJECT_TPL_CLR";
+        default: return "SERIAL_COMMAND";
+    }
+}
+
+bool rejectWorkflowMutation(const pgl::gld::GldSerialCommand& command) {
+    if (!pgl::gld::datasetworkflowwifi::ownsSession() || workflowReadOnlyCommand(command.type)) return false;
+    emitCommandAck(workflowCommandName(command.type), "busy",
+                   "Stop Dataset, finish CSV delivery, then Disconnect before changing GLD", false);
+    return true;
+}
+
+struct WorkflowNativeOperation {
+    bool previous;
+    WorkflowNativeOperation() : previous(pgl::gld::datasetworkflowwifi::exchangeNativeBusy(true)) {}
+    ~WorkflowNativeOperation() { pgl::gld::datasetworkflowwifi::exchangeNativeBusy(previous); }
+};
+#endif
+
 void handleSerialCommand(const pgl::gld::GldSerialCommand& command) {
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+    if (rejectWorkflowMutation(command)) return;
+    WorkflowNativeOperation nativeOperation;
+#endif
     switch (command.type) {
         case pgl::gld::GldSerialCommandType::Unknown:
             onUnknownSerialCommand(command.payload);
@@ -3248,6 +3324,10 @@ void checkSerial() {
 
     pgl::gld::GldSerialCommand parsed{};
     if (pgl::gld::parseSerialCommand(parsed)) {
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+        // Also protect the priority RESTART/CANCEL path outside normal dispatch.
+        if (rejectWorkflowMutation(parsed)) return;
+#endif
         if (parsed.type == pgl::gld::GldSerialCommandType::Restart) {
             restartFromSerialCommand();
             return;  // unreachable in practice - ESP.restart() reboots immediately
@@ -4752,21 +4832,42 @@ void printBootIcReport(const pgl::gld::GldPowerReading& power,
 void disableNetworkForOfflineMode(const char* reason) {
     if (mqtt.connected()) mqtt.disconnect();
     wifiClient.stop();
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+    if (pgl::gld::datasetworkflowwifi::available()) {
+        WiFi.disconnect(false);  // Station only; never tear down Dataset AP.
+        WiFi.mode(WIFI_AP);
+    } else {
+        WiFi.disconnect(true);
+        WiFi.mode(WIFI_OFF);
+    }
+#else
     WiFi.disconnect(true);
     WiFi.mode(WIFI_OFF);
+#endif
     logPrintf("WIFI_OFF mode=%s reason=%s\n",
               pgl::gld::gldModeName(currentMode),
               reason != nullptr ? reason : "offline_mode");
 }
 
 bool connectWifi() {
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+    WorkflowNativeOperation nativeOperation;
+#endif
     ++wifiReconnectCount;
     setRecoveryReason("wifi_connect");
     logPrintf("WIFI_CONNECT ssid=%s\n", runtimeConfig.wifiSsid);
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+    WiFi.mode(pgl::gld::datasetworkflowwifi::available() ? WIFI_AP_STA : WIFI_STA);
+#else
     WiFi.mode(WIFI_STA);
+#endif
     WiFi.begin(runtimeConfig.wifiSsid, runtimeConfig.wifiPassword);
     const uint32_t t0 = millis();
     while (WiFi.status() != WL_CONNECTED && millis() - t0 < WIFI_TIMEOUT_MS) {
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+        // A standalone AP client must not wait for the optional native router.
+        if (pgl::gld::datasetworkflowwifi::clientConnected()) break;
+#endif
         serviceDelay(50);
     }
     const bool ok = WiFi.status() == WL_CONNECTED;
@@ -4788,6 +4889,10 @@ bool mqttConnect();
 void mqttCallback(char* topic, byte* payload, unsigned int length);
 
 bool mqttConnect() {
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+    if (pgl::gld::datasetworkflowwifi::clientConnected() || WiFi.status() != WL_CONNECTED) return false;
+    WorkflowNativeOperation nativeOperation;
+#endif
     if (mqtt.connected()) return true;
     const uint32_t now = millis();
     if (now - lastMqttAttemptMs < MQTT_RETRY_MS) return false;
@@ -7035,6 +7140,10 @@ bool datasetWifiReady() {
     // Stage 1 is explicitly for the externally powered GLD1 bench. A battery
     // session never silently enables service hold or takes the CLR path.
     return !batteryPowerMode && pgl::gld::readGldExternalPower() &&
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+           !nullingRetryArmed && !fullScaleSweepActive && !powerTransitionShutdownPending &&
+           currentMode != pgl::gld::GldMode::NULLING && datasetState == DatasetState::Idle &&
+#endif
            adsReady && dacReady && nullingProfileApplied && nullingProfileId > 0;
 }
 
@@ -7052,6 +7161,121 @@ bool captureDatasetWifi(pgl::gld::datasetwifi::Sample& sample) {
     return pgl::gld::validateGldDatasetSample(validationSamples, 8,
                                              nullingProfileApplied, nullingProfileId).accepted;
 }
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+bool datasetWorkflowPredictionReady() {
+    // No field-test/simulated-output bypass is admitted for workflow predictions.
+    const uint32_t fingerprint = pgl::gld::modelBindingFingerprint(
+        pgl::gld::model::PROFILE_ID, pgl::gld::model::SCALER_PROFILE_ID);
+    return datasetWifiReady() && mlReady && network != nullptr && network->isInitialized() &&
+           pgl::gld::model::PRODUCTION_APPROVED && !FIELDTEST_MODEL_UNVERIFIED &&
+           !SIMULATED_MODEL_OUTPUT && !TFBG_CONTINUOUS_BATTERY &&
+           modelBindingLoaded && pgl::gld::isModelBindingValid(modelBinding) &&
+           modelBinding.modelFingerprint == fingerprint &&
+           modelBinding.nullingProfileId == nullingProfileId && runtimeDacVerificationReady();
+}
+
+void resetDatasetWorkflowPrediction() {
+    movingAvg.reset();  // Invalid acquisition or an actual profile discontinuity.
+    latestTelemetryValid = false;
+    lastInferenceValid = false;
+    sensorFaultActive = true;
+    lastGld1InferenceReadiness = Gld1InferenceReadinessSnapshot{};
+    lastAlarm = false;
+    driveAlarmOutputs(false);  // Same invalid-inference policy as native GLD1.
+}
+
+void predictDatasetWorkflow(const pgl::gld::datasetworkflowwifi::RawSample& sample,
+                            pgl::gld::datasetworkflowwifi::Prediction& result) {
+    using pgl::gld::datasetworkflowwifi::PredictionStatus;
+    result = pgl::gld::datasetworkflowwifi::Prediction{};
+    result.status = PredictionStatus::NotReady;
+    lastInferenceValid = false;
+    latestTelemetryValid = false;
+    sensorFaultActive = true;
+    lastGld1InferenceReadiness.scanObserved = true;
+    lastGld1InferenceReadiness.allSensorsValid = false;
+    lastGld1InferenceReadiness.sensorsPrimed = false;
+    lastGld1InferenceReadiness.executionAttempted = false;
+    lastGld1InferenceReadiness.executionSucceeded = false;
+    // Do not pulse a valid steady alarm LOW before each successful prediction.
+    // Apply the native invalid-inference policy only on a failed exit.
+    struct InvalidInferenceGuard {
+        ~InvalidInferenceGuard() {
+            if (!lastInferenceValid) {
+                lastAlarm = false;
+                driveAlarmOutputs(false);
+            }
+        }
+    } invalidInferenceGuard;
+    for (uint8_t channel = 0; channel < 8; ++channel) {
+        latestSensorGain[channel] = sample.gain[channel];
+        latestSensorStatus[channel] = sample.status[channel];
+        if (sample.status[channel] != static_cast<uint8_t>(pgl::gld::GldAds1256Status::Ok) ||
+            !std::isfinite(sample.voltage[channel])) {
+            result.status = PredictionStatus::Error;
+            return;
+        }
+    }
+    latestTelemetryValid = true;
+    lastGld1InferenceReadiness.allSensorsValid = true;
+    float averaged[8]{};
+    bool primed = true;
+    for (uint8_t channel = 0; channel < 8; ++channel) {
+        averaged[channel] = movingAvg.add(channel, sample.voltage[channel]);
+        latestSensorVoltage[channel] = averaged[channel];
+        primed = primed && movingAvg.count(channel) >= MIN_PRIMED_COUNT;
+    }
+    lastGld1InferenceReadiness.sensorsPrimed = primed;
+    if (!primed) { result.status = PredictionStatus::Warmup; return; }
+    modelProfileReady = modelProfileMatchesActiveNulling();
+    if (!datasetWorkflowPredictionReady()) return;
+    lastGld1InferenceReadiness.executionAttempted = true;
+    // Production preprocessing consumes this same frame, regardless of the CSV
+    // column checkbox. No second ADS read or radio operation belongs here.
+    float confidence = 0.0f;
+    const int predicted = network->predict(averaged, confidence);
+    if (predicted < 0 || predicted >= pgl::gld::model::EXPECTED_OUTPUT_ELEMENTS ||
+        !std::isfinite(confidence) || confidence < 0.0f || confidence > 1.0f ||
+        !pgl::protocol::isValidGasClass(pgl::gld::model::CLASS_MAP[predicted])) {
+        result.status = PredictionStatus::Error;
+        return;
+    }
+    result.predictedClass = static_cast<int16_t>(predicted);
+    result.gasClass = modelClassToGasClass(predicted);
+    result.confidence = confidence;
+    result.status = PredictionStatus::Valid;
+    lastResult = {result.gasClass, static_cast<uint8_t>(confidence * 100.0f)};
+    lastInferenceValid = true;
+    sensorFaultActive = false;
+    lastGld1InferenceReadiness.executionSucceeded = true;
+    (void)updateAlarmOutputs(lastResult.gasClass != pgl::protocol::GLD_GAS_CLEAR);
+}
+
+void beginDatasetWorkflowIfNeeded() {
+    if (pgl::gld::datasetworkflowwifi::available() || batteryPowerMode ||
+        !pgl::gld::readGldExternalPower()) return;
+    // Optional ML allocation cannot disable otherwise valid raw Dataset.
+    if (network == nullptr) network = new (std::nothrow) NeuralNetwork();
+    // getInputSize() counts both ADC and derived evidence tensors.
+    mlReady = network != nullptr && network->isInitialized() &&
+        network->getInputSize() == (pgl::gld::model::EXPECTED_ADC_INPUT_ELEMENTS +
+                                   pgl::gld::model::EXPECTED_EVIDENCE_INPUT_ELEMENTS) &&
+        network->getOutputSize() == pgl::gld::model::EXPECTED_OUTPUT_ELEMENTS;
+    pgl::gld::datasetworkflowwifi::ModelInfo workflowModel;
+    workflowModel.profileId = pgl::gld::model::PROFILE_ID;
+    workflowModel.scalerProfileId = pgl::gld::model::SCALER_PROFILE_ID;
+    workflowModel.runtimeVersion = GLD_RUNTIME_FIRMWARE_VERSION;
+    workflowModel.classMap = pgl::gld::model::CLASS_MAP;
+    workflowModel.outputElements = static_cast<uint8_t>(pgl::gld::model::EXPECTED_OUTPUT_ELEMENTS);
+    workflowModel.productionApproved = pgl::gld::model::PRODUCTION_APPROVED;
+    const bool started = pgl::gld::datasetworkflowwifi::begin(
+        runtimeConfig.deviceId, nullingProfileId, datasetWifiReady, captureDatasetWifi,
+        datasetWorkflowPredictionReady, predictDatasetWorkflow,
+        resetDatasetWorkflowPrediction, workflowModel);
+    logPrintf("DATASET_WIFI_SERVER ready=%u endpoint=192.168.4.1:81/dataset auth=basic privatePassword=1\n",
+              started ? 1u : 0u);
+}
+#endif
 #endif
 
 }  // namespace
@@ -7112,7 +7336,10 @@ void setup() {
     beginServiceHoldButton();
     movingAvg.reset();
 
-#if defined(PGL_GLD_DATASET_WIFI) && PGL_GLD_DATASET_WIFI
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+    // Final hotspot is additive: keep the ordinary stored boot intent.
+    currentMode = pgl::gld::readGldMode();
+#elif defined(PGL_GLD_DATASET_WIFI) && PGL_GLD_DATASET_WIFI
     // Dedicated image only: do not consume or write the stored boot intent.
     currentMode = pgl::gld::GldMode::DATASET;
 #else
@@ -7170,6 +7397,16 @@ void setup() {
     powerModeCandidateBattery = batteryPowerMode;
     powerModeCandidateCount = 0;
     lastPowerReconcileMs = millis();
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+    if (batteryPowerMode && !TFBG_CONTINUOUS_BATTERY &&
+        currentMode != pgl::gld::GldMode::INFERENCE) {
+        const pgl::gld::GldMode rejectedMode = currentMode;
+        currentMode = pgl::gld::GldMode::INFERENCE;
+        const bool persisted = pgl::gld::writeGldMode(currentMode);
+        logPrintf("MODE_BATTERY_REJECTED requested=%s fallback=inference persisted=%u\n",
+                  pgl::gld::gldModeName(rejectedMode), persisted ? 1u : 0u);
+    }
+#else
 #if !defined(PGL_GLD_DATASET_WIFI) || !PGL_GLD_DATASET_WIFI
     if (batteryPowerMode && !TFBG_CONTINUOUS_BATTERY &&
         currentMode != pgl::gld::GldMode::INFERENCE) {
@@ -7179,6 +7416,7 @@ void setup() {
         logPrintf("MODE_BATTERY_REJECTED requested=%s fallback=inference persisted=%u\n",
                   pgl::gld::gldModeName(rejectedMode), persisted ? 1u : 0u);
     }
+#endif
 #endif
     if (batteryPowerMode && serviceHoldActive) {
         logPrintln("GLD_SERVICE_HOLD state=ON source=nvs persisted=1");
@@ -7197,8 +7435,13 @@ void setup() {
     if (currentMode == pgl::gld::GldMode::INFERENCE) {
         // --- INFERENCE mode init ---
         disableNetworkForOfflineMode("inference_mode");
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+        network = new (std::nothrow) NeuralNetwork();
+        mlReady = network != nullptr && network->isInitialized();
+#else
         network = new NeuralNetwork();
         mlReady = network->isInitialized();
+#endif
         const int mlInputSize = mlReady ? network->getInputSize() : -1;
         const int mlOutputSize = mlReady ? network->getOutputSize() : -1;
         logPrintf("GLD_ML_INIT initialized=%u inputSize=%d outputSize=%d\n",
@@ -7293,6 +7536,14 @@ void setup() {
                                           false, false,
                                           false, false);
             pulseWdtKeepaliveNow();
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+            connectWifi();
+            pulseWdtKeepaliveNow();
+            mqtt.setBufferSize(MQTT_BUFFER_SIZE);
+            mqttConnect();
+            pulseWdtKeepaliveNow();
+            lastStatusMs = millis();
+#else
 #if defined(PGL_GLD_DATASET_WIFI) && PGL_GLD_DATASET_WIFI
 #if defined(PGL_GLD_DATASET_REPLAY) && PGL_GLD_DATASET_REPLAY
             const bool wifiDatasetStarted = pgl::gld::datasetreplaywifi::begin(
@@ -7310,6 +7561,7 @@ void setup() {
             mqttConnect();
             pulseWdtKeepaliveNow();
             lastStatusMs = millis();
+#endif
 #endif
 
         } else {
@@ -7399,17 +7651,27 @@ void setup() {
             }
         }
     }
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+    beginDatasetWorkflowIfNeeded();
+#endif
 }
 
 void loop() {
-#if defined(PGL_GLD_DATASET_WIFI) && PGL_GLD_DATASET_WIFI
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+    pgl::gld::datasetworkflowwifi::refreshRuntime(nullingProfileId);
+    pgl::gld::datasetworkflowwifi::poll();
+#elif defined(PGL_GLD_DATASET_WIFI) && PGL_GLD_DATASET_WIFI
     // ADS is exclusively owned by the sampler task after setup. Do not run
     // serial commands, boot recovery reads, inference, radio, or nulling here.
     maintainWdtKeepalive();
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+    pgl::gld::datasetworkflowwifi::poll();
+#else
 #if defined(PGL_GLD_DATASET_REPLAY) && PGL_GLD_DATASET_REPLAY
     pgl::gld::datasetreplaywifi::poll();
 #else
     pgl::gld::datasetwifi::poll();
+#endif
 #endif
     delay(5);
     return;
@@ -7435,6 +7697,23 @@ void loop() {
         completeBatterySessionAndPowerOff("unsupported_mode_power_transition");
         return;
     }
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+    beginDatasetWorkflowIfNeeded();
+    static bool workflowHadLease = false;
+    const bool workflowLease = pgl::gld::datasetworkflowwifi::ownsSession();
+    if (workflowLease != workflowHadLease) {
+        // Same model/profile and one main-thread owner: preserve valid MAV and
+        // steady AUTO alarm through Start/Pause/Continue/Stop/Disconnect.
+        workflowHadLease = workflowLease;
+        lastScanMs = lastTxMs = millis();
+    }
+    if (workflowLease && !batteryPowerMode && pgl::gld::readGldExternalPower()) {
+        // AP transport/replay and COM status stay alive. Native ADS/radio,
+        // calibration, recovery and legacy MQTT scans wait for session release.
+        delay(5);
+        return;
+    }
+#endif
     maintainBootReportRecovery();
 
     if (currentMode == pgl::gld::GldMode::INFERENCE) {
@@ -7474,6 +7753,9 @@ void loop() {
         // AES/sensor/inference gates and the Class-A RX window.
         if (loraAutoTransmit && now - lastTxMs >= loraTxIntervalMs) {
             lastTxMs = now;
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+            WorkflowNativeOperation nativeOperation;
+#endif
             runGld1LoraTxAttempt();
         }
 #else
@@ -7485,8 +7767,19 @@ void loop() {
 #endif
 
     } else if (currentMode == pgl::gld::GldMode::DATASET) {
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+        // Retain native MQTT while unattended, without blocking standalone
+        // wireless admission on a missing station router or MQTT broker.
+        if (!pgl::gld::datasetworkflowwifi::clientConnected()) {
+            maintainWifi();
+            maintainMqtt();
+        } else if (mqtt.connected()) {
+            mqtt.loop();
+        }
+#else
         maintainWifi();
         maintainMqtt();
+#endif
         flushDatasetQueue();
         maintainAdsRecovery("dataset_ads_not_ready");
         const uint32_t now = millis();
@@ -7502,6 +7795,9 @@ void loop() {
         // NULLING mode: offline calibration; Serial commands are checked at loop start.
         if (nullingRetryArmed &&
             static_cast<int32_t>(millis() - nextNullingRetryMs) >= 0) {
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+            WorkflowNativeOperation nativeOperation;
+#endif
             runNullingRetryAttempt();
         }
         serviceDelay(100);

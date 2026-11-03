@@ -1,0 +1,36 @@
+{
+  "status": "source-prepared",
+  "checked_at_wib": "2026-11-02 22:30:48",
+  "source_checks": {
+    "total": 37,
+    "old_replay": 18,
+    "workflow_source": 12,
+    "temporary_credentials": 7,
+    "pass": true
+  },
+  "independent_source_review": "no blocking source finding",
+  "firmware_compiled": false,
+  "cpp_runtime_executed": false,
+  "hardware_access": false,
+  "uploaded": false,
+  "new_hub_wizard_implemented": false,
+  "protected_hashes_unchanged": 233,
+  "previous62_csv_unchanged": true,
+  "hashes": {
+    "firmware/gld/src/GldDatasetWorkflowWifi.cpp": "1f6389ddedb17e3d7f47657fc20f32da0cef06b356b8b8be4d0ad4e39a7cfda7",
+    "firmware/gld/include/GldDatasetWorkflowWifi.h": "fc74c8b51ee42ce40ab9092c9b9d22a8584395683312760afe184aee65a86116",
+    "firmware/gld/include/GldDatasetWorkflowBuffer.h": "1c003f7195c1685a3507ea07b4ec17b0d344b2c5a93de506e7288d8939c9c0ea",
+    "firmware/gld/src/GldUnifiedMain.cpp": "1e1d73a7b5d06c3614df3ad6894ded0c13a59f84bdb61518391fce737c9f9df8",
+    "firmware/platformio.ini": "0a4561ff5f38eff2d449eb36114a2b845648bc22d60c910dd6b6a6984bca0305",
+    "firmware/tools/prepare_dataset_workflow_wifi.py": "b3d4fd71ff8e913caed70fcdab1a3c0d0cd3728b9e2d25c32d9026f7f823178e",
+    "firmware/tests/test_dataset_workflow_source.py": "47015e2e3b46bf9e558d124383f6625cb0db142e5b7d9f1205e52339e93836f0",
+    "firmware/tests/test_dataset_workflow_credentials.py": "91db3032f63e3846d105c7954ef6d1afd2dfb656e46428048242756ddc92a34b",
+    "firmware/tests/test_dataset_replay_source.py": "8a8877fb396cbb1ed5a9b6e7d996f279b52cbce3b351ee836a2a48569bad153d"
+  },
+  "remaining": [
+    "explicit confirmation before compiling three new environments",
+    "firmware runtime/JSON/stack/RAM and500ms inference timing proof",
+    "Hub protocol3 adapter and agreedwizard implementation",
+    "authorized real-device integration"
+  ]
+}

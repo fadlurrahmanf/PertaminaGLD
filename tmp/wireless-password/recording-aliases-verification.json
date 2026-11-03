@@ -1,0 +1,16 @@
+{
+  "before": {
+    "state": "complete",
+    "session_id": "feb6bfb5caed440e81a5de6a9d57e844",
+    "count": 62,
+    "path": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\wireless_replay_1002_feb6bfb5caed440e81a5de6a9d57e844.csv",
+    "csvSha256": "ee086bcf7c1282bd7a351ed5ec4224af9f6dfcfe4b46e82c768cbf4867908741"
+  },
+  "after": {
+    "sessionAndCountUnchanged": true,
+    "csvHashUnchanged": true,
+    "uiAliasesVerified": true,
+    "fourExistingNodeSuitesPassed": true,
+    "compiledOrUploaded": false
+  }
+}

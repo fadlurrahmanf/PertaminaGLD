@@ -18,6 +18,9 @@ const GLD_MODEL_SLOTS = {
   model_1_dataset_replay_wifi: { label: "Model 1 Hotspot buffer 5 menit", available: true, environment: "gld_model_1_dataset_replay_wifi", detail: "GLD1 Board 1 — Tahap 2, RAM replay 5 menit. Memerlukan paket replay yang sudah dibuild; pertahankan NVS." },
   model_2_dataset_replay_wifi: { label: "Model 2 Hotspot buffer 5 menit", available: true, environment: "gld_model_2_dataset_replay_wifi", detail: "GLD1 Board 2 — Tahap 2, RAM replay 5 menit. Memerlukan paket replay yang sudah dibuild; pertahankan NVS." },
   model_3_dataset_replay_wifi: { label: "Model 3 Hotspot buffer 5 menit", available: true, environment: "gld_model_3_dataset_replay_wifi", detail: "GLD1 Board 3 — Tahap 2, RAM replay 5 menit. Memerlukan paket replay yang sudah dibuild; pertahankan NVS." },
+  model_1_dataset_workflow_wifi: { label: "Model 1 Hotspot Wizard Dataset", available: true, environment: "gld_model_1_dataset_workflow_wifi", detail: "GLD1 Board 1 — Wizard baru: Pause/Resume, pilihan kolom dan prediksi. Gunakan catu 24 V; pertahankan NVS." },
+  model_2_dataset_workflow_wifi: { label: "Model 2 Hotspot Wizard Dataset", available: true, environment: "gld_model_2_dataset_workflow_wifi", detail: "GLD1 Board 2 — Wizard baru: Pause/Resume, pilihan kolom dan prediksi. Gunakan catu 24 V; pertahankan NVS." },
+  model_3_dataset_workflow_wifi: { label: "Model 3 Hotspot Wizard Dataset", available: true, environment: "gld_model_3_dataset_workflow_wifi", detail: "GLD1 Board 3 — Wizard baru: Pause/Resume, pilihan kolom dan prediksi. Gunakan catu 24 V; pertahankan NVS." },
   model_4: { label: "Model 4", available: false, detail: "Artefak dan package Model 4 belum tersedia." }
 };
 
@@ -25,7 +28,31 @@ let builtinPackageRequestId = 0;
 
 function isDatasetWifiEnvironment(environment) {
   return ["gld_model_1_dataset_wifi", "gld_model_2_dataset_wifi", "gld_model_3_dataset_wifi",
-    "gld_model_1_dataset_replay_wifi", "gld_model_2_dataset_replay_wifi", "gld_model_3_dataset_replay_wifi"].includes(environment);
+    "gld_model_1_dataset_replay_wifi", "gld_model_2_dataset_replay_wifi", "gld_model_3_dataset_replay_wifi",
+    "gld_model_1_dataset_workflow_wifi", "gld_model_2_dataset_workflow_wifi", "gld_model_3_dataset_workflow_wifi"].includes(environment);
+}
+
+function hasNativeWorkflowSerial(manifest) {
+  return ["gld_model_1_dataset_workflow_wifi", "gld_model_2_dataset_workflow_wifi",
+    "gld_model_3_dataset_workflow_wifi"].includes(manifest?.environment)
+    && manifest?.capabilities?.nativeSerial === true;
+}
+
+async function verifyNativeWorkflowReadback(manifest, targetDeviceId, port) {
+  if (!state.connected) throw new Error(`Flash selesai, tetapi reconnect COM ke ${port} gagal.`);
+  const deadline = Date.now() + 35_000;
+  // connectSerial resets the old device snapshot before requesting GET_INFO.
+  while (state.connected && !state.info && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  const info = state.info;
+  if (!state.connected || !info) throw new Error(`Flash selesai, tetapi readback GET_INFO dari ${port} belum diterima.`);
+  if (info.firmwareVersion !== manifest.firmwareVersion) {
+    throw new Error(`Flash selesai, tetapi versi readback berbeda: expected ${manifest.firmwareVersion}, got ${info.firmwareVersion || "unknown"}.`);
+  }
+  if (String(info.deviceId || "").toUpperCase() !== targetDeviceId) {
+    throw new Error(`Flash selesai, tetapi ID readback berbeda: expected ${targetDeviceId}, got ${info.deviceId || "unknown"}.`);
+  }
 }
 
 function requiresGld1DowngradeReset(manifest) {
@@ -178,7 +205,10 @@ export function handleFirmwareUploadProgress(payload) {
 }
 
 function selectedModelSlot() {
-  return GLD_MODEL_SLOTS[$("firmwareUploadModel")?.value] || GLD_MODEL_SLOTS.model_1;
+  return GLD_MODEL_SLOTS[$("firmwareUploadModel")?.value] || {
+    label: "Pilih model", available: false,
+    detail: "Pilih model biasa atau salah satu dari tiga Hotspot Wizard Dataset yang sesuai board."
+  };
 }
 
 function updateModelSelection() {
@@ -319,10 +349,12 @@ async function performFirmwareUpload() {
       body: JSON.stringify({ env, port, targetDeviceId, resetNvs, ...(resetNvs ? { resetNvsConfirmation: "RESET NVS" } : {}), manifest, packageFiles, slot: state.activeSlot })
     });
     setUploadProgress(100, "Upload firmware selesai.");
-    if (isDatasetWifiEnvironment(env)) {
+    const nativeWorkflow = hasNativeWorkflowSerial(manifest);
+    if (isDatasetWifiEnvironment(env) && !nativeWorkflow) {
       setUploadDialogStatus(
         "Flash tool selesai; perangkat belum diverifikasi. Gunakan catu eksternal/24 V, sambungkan Wi-Fi laptop ke GLD-DATASET-..., lalu buka Dataset Wireless dan Connect GLD untuk verifikasi hotspot. Mode khusus ini tidak memakai reconnect COM."
-        + (env.endsWith("_dataset_replay_wifi") ? " Pada Mode rekaman, pilih Buffer 5 menit · tahap 2 sebelum Connect GLD." : "")
+        + (env.endsWith("_dataset_workflow_wifi") ? " Buka tab Dataset dan gunakan Scan Nearby GLD untuk memulai wizard." : "")
+        + (env.endsWith("_dataset_replay_wifi") ? " Di Expert, buka Dataset lama lalu pilih Pulih otomatis." : "")
         + (result.nvsReset ? " NVS telah direset; profil nulling valid harus dipulihkan melalui firmware normal sebelum Dataset dapat dimulai." : " Parameter dan profil nulling NVS dipertahankan."),
         "warn",
       );
@@ -332,6 +364,10 @@ async function performFirmwareUpload() {
       ? `NVS direset. Connecting to ${port} dengan default firmware…`
       : `Upload berhasil. Parameter NVS dipertahankan. Connecting to ${port}…`, "success");
     await connectSerial();
+    if (nativeWorkflow) {
+      setUploadDialogStatus(`Flash selesai. Memverifikasi versi dan ID GLD melalui ${port}…`, "loading");
+      await verifyNativeWorkflowReadback(manifest, targetDeviceId, port);
+    }
     setUploadDialogStatus(state.connected
       ? `Upload berhasil. Connected to ${port}.`
       : `Upload berhasil, tetapi reconnect ke ${port} gagal. Periksa Port Setup.`, state.connected ? "success" : "warn");

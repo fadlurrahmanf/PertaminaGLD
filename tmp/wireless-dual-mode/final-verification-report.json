@@ -1,0 +1,75 @@
+{
+  "status": "PASS",
+  "mode": "pc-simulation",
+  "device_validation": false,
+  "loaded_source_sha256": {
+    "apps/gld-operator/wireless_dataset_direct.py": "b0843ab897abf3856ecda5f98d445a6144d192cfb9445df0fb59fc7ff9a95ab1",
+    "apps/gld-operator/wireless_dataset_replay.py": "057e1ef21c6085ef6787ddde2e1614fbe319ac53e30f70b80d6a8bd0e2d27745",
+    "apps/gld-operator/wireless_dataset.py": "7b371765307121c21953eafa414fb3fa4b87af4db76d759a473e48b03cf4e03e",
+    "apps/gld-operator/bridge.py": "38da20e8c6dcfe0fbbd96577b3bba4fa569f8cdd34c31bcf11c76a860ee542b3"
+  },
+  "all_sessions": 8,
+  "public_rows": 117,
+  "total_durable_rows": 145,
+  "actual_browser_downloads": [
+    {
+      "scenario": "direct clean",
+      "session_id": "ef9da6e570dd431883e06a8d6b6b28c5",
+      "rows": 12,
+      "complete": true,
+      "actual_browser_download": "D:\\Github\\PertaminaGLD\\tmp\\wireless-dual-mode\\browser-output\\downloads\\wireless_replay_1002_ef9da6e570dd431883e06a8d6b6b28c5.csv",
+      "download_sha256": "b0bd765622e289c196fff6f72be8c4197e244b005a2cce1e4e068a8e4099e78f",
+      "backend_csv": "D:\\Github\\PertaminaGLD\\tmp\\wireless-dual-mode\\fixture-output\\20261102T213511-598acf\\wireless_replay_1002_ef9da6e570dd431883e06a8d6b6b28c5.csv",
+      "backend_sha256": "756720e32de84022d163fe9bbfcb149e58df78435a120d167b7677f3cac722c9",
+      "parsed_all_fields_equal": true,
+      "exact_synthetic_originals": true
+    },
+    {
+      "scenario": "direct loss + pause + manual cleanup resume",
+      "session_id": "c88612a8f6814903bbe891cdbd2bff22",
+      "rows": 8,
+      "complete": false,
+      "actual_browser_download": "D:\\Github\\PertaminaGLD\\tmp\\wireless-dual-mode\\browser-output\\downloads\\wireless_replay_1002_c88612a8f6814903bbe891cdbd2bff22.csv",
+      "download_sha256": "ef4f2e573d01d8f5f7079f207b2b4684e71c973b62a14d02b6153e18d907507b",
+      "backend_csv": "D:\\Github\\PertaminaGLD\\tmp\\wireless-dual-mode\\fixture-output\\20261102T213511-598acf\\wireless_replay_1002_c88612a8f6814903bbe891cdbd2bff22.csv",
+      "backend_sha256": "fa159c8c082b914bda1f84e47af0b7f78b657b4ddfbe78e0bca5e1ed380ffb88",
+      "parsed_all_fields_equal": true,
+      "exact_synthetic_originals": true
+    },
+    {
+      "scenario": "next direct after cleanup",
+      "session_id": "42bb567443c94e709c238b15382ca472",
+      "rows": 8,
+      "complete": true,
+      "actual_browser_download": "D:\\Github\\PertaminaGLD\\tmp\\wireless-dual-mode\\browser-output\\downloads\\wireless_replay_1002_42bb567443c94e709c238b15382ca472.csv",
+      "download_sha256": "0c0b6772561b003e1493aea819140cb5e89f39cc0a1695de9a47f07c1debea7c",
+      "backend_csv": "D:\\Github\\PertaminaGLD\\tmp\\wireless-dual-mode\\fixture-output\\20261102T213511-598acf\\wireless_replay_1002_42bb567443c94e709c238b15382ca472.csv",
+      "backend_sha256": "a91a182633b1997ed4debe96dace20c95d272e785f05b99d7d3d04d60f27ee04",
+      "parsed_all_fields_equal": true,
+      "exact_synthetic_originals": true
+    },
+    {
+      "scenario": "replay loss and same CSV recovery",
+      "session_id": "2292781bd2114683b935cac93d9bb03c",
+      "rows": 49,
+      "complete": true,
+      "actual_browser_download": "D:\\Github\\PertaminaGLD\\tmp\\wireless-dual-mode\\browser-output\\downloads\\wireless_replay_1002_2292781bd2114683b935cac93d9bb03c.csv",
+      "download_sha256": "72de3be781154efa17c929e589ffc092e89d44dc80121bb7738242bf497e61ef",
+      "backend_csv": "D:\\Github\\PertaminaGLD\\tmp\\wireless-dual-mode\\fixture-output\\20261102T213511-598acf\\wireless_replay_1002_2292781bd2114683b935cac93d9bb03c.csv",
+      "backend_sha256": "5c1fbdfd62f87d9e0d08a9aa95b11151f28ec581cd6cb8b9900ea144410d81d0",
+      "parsed_all_fields_equal": true,
+      "exact_synthetic_originals": true
+    }
+  ],
+  "browser_evidence_sha256": "ae8d7ff1ab4a56474d3d73bb7bc381ed7444d17965390b0bfab46275ba137842",
+  "screenshots_recorded": 5,
+  "screenshot_visual_review": "Root-owned browser evidence; this verifier checks CSV data only",
+  "fixture_shutdown": {
+    "pid": 24624,
+    "http_port": 56584,
+    "ws_port": 56583,
+    "requested": true,
+    "http_closed": true,
+    "ws_closed": true
+  }
+}

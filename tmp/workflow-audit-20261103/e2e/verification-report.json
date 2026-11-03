@@ -1,0 +1,183 @@
+{
+  "status": "PASS",
+  "mode": "pc-simulation",
+  "device_validation": false,
+  "loaded_source_sha256": {
+    "apps/gld-operator/dataset_workflow.py": "aaa18e69f0db24fdd9a6fe8f02e1bab5955457fd8617f609c24937b8b2f932d2",
+    "apps/gld-operator/wireless_dataset_workflow.py": "fe606f103a6b23e9bdb5b4140cfa7e5464d24c1540f84f11cffdb52e14f131d4",
+    "apps/gld-operator/bridge.py": "c473b3938e5d44aefe4db8e0fe004d3ad014b20f151c1b0fe9f263eca561cfd8"
+  },
+  "sessions": 13,
+  "all_canonical_rows": 798,
+  "private_cleanup_rows": 28,
+  "public_prefix_rows_verified": 770,
+  "positive_public_rows": 762,
+  "expected_tamper_controls": 1,
+  "files": [
+    {
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\workflow-audit-20261103\\e2e\\output\\20261103T070547-135420\\public\\simulation-recording-1.csv",
+      "sha256": "d841db93e08281c8d0a820e7ee070d173a39d354e2c6ca14987b27bb1dd270b4",
+      "expected_tamper_control": false,
+      "rows": 16,
+      "segments": 2,
+      "all_fields_exact": true,
+      "eight_sensor_values": true,
+      "unique_session_seq": true
+    },
+    {
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\workflow-audit-20261103\\e2e\\output\\20261103T070547-135420\\public\\simulation-recording-10.csv",
+      "sha256": "42a96806b9270efa28ab443bab922e6da4705a8e73eb4f29309951e193f531fc",
+      "expected_tamper_control": false,
+      "rows": 50,
+      "segments": 1,
+      "all_fields_exact": true,
+      "eight_sensor_values": true,
+      "unique_session_seq": true
+    },
+    {
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\workflow-audit-20261103\\e2e\\output\\20261103T070547-135420\\public\\simulation-recording-2.csv",
+      "sha256": "08c32c8526bdb08d1e451db85b4ba3429697ccb8f43e2e0f250c44bff6b05112",
+      "expected_tamper_control": false,
+      "rows": 16,
+      "segments": 2,
+      "all_fields_exact": true,
+      "eight_sensor_values": true,
+      "unique_session_seq": true
+    },
+    {
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\workflow-audit-20261103\\e2e\\output\\20261103T070547-135420\\public\\simulation-recording-3.csv",
+      "sha256": "64b4d6e56de4b1e87b3072c4df4ddf7886d20011ce5a4e69d8e3a64509902c45",
+      "expected_tamper_control": false,
+      "rows": 21,
+      "segments": 1,
+      "all_fields_exact": true,
+      "eight_sensor_values": true,
+      "unique_session_seq": true
+    },
+    {
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\workflow-audit-20261103\\e2e\\output\\20261103T070547-135420\\public\\simulation-recording-4.csv",
+      "sha256": "bfbb7467c204adfa52668aa1925f3924ef71cb55938976990cfae5dea450afb9",
+      "expected_tamper_control": false,
+      "rows": 607,
+      "segments": 1,
+      "all_fields_exact": true,
+      "eight_sensor_values": true,
+      "unique_session_seq": true
+    },
+    {
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\workflow-audit-20261103\\e2e\\output\\20261103T070547-135420\\public\\simulation-recording-5.csv",
+      "sha256": "1bb24e6f8e784862a0fd7437f57dad0da3b99d173fb740bdf1db7f5747ebe471",
+      "expected_tamper_control": false,
+      "rows": 8,
+      "segments": 1,
+      "all_fields_exact": true,
+      "eight_sensor_values": true,
+      "unique_session_seq": true
+    },
+    {
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\workflow-audit-20261103\\e2e\\output\\20261103T070547-135420\\public\\simulation-recording-6.csv",
+      "sha256": "00bd12316420b1b74b8857b25131e3b1a63de8919550a3b1d2b323462cc99c6d",
+      "expected_tamper_control": false,
+      "rows": 8,
+      "segments": 1,
+      "all_fields_exact": true,
+      "eight_sensor_values": true,
+      "unique_session_seq": true
+    },
+    {
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\workflow-audit-20261103\\e2e\\output\\20261103T070547-135420\\public\\simulation-recording-7.csv",
+      "sha256": "26198e032cf69537933f0883e943bcfcc9edea3bcfe4e283ac25390424ceb92c",
+      "expected_tamper_control": true,
+      "rows": 8,
+      "segments": 1,
+      "all_fields_exact": true,
+      "eight_sensor_values": true,
+      "unique_session_seq": true
+    },
+    {
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\workflow-audit-20261103\\e2e\\output\\20261103T070547-135420\\public\\simulation-recording-8.csv",
+      "sha256": "9ff3f93e0ecdcddd2f21fdd300088827f78f2924dd3f9acded799be20a27fb9f",
+      "expected_tamper_control": false,
+      "rows": 28,
+      "segments": 2,
+      "all_fields_exact": true,
+      "eight_sensor_values": true,
+      "unique_session_seq": true
+    },
+    {
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\workflow-audit-20261103\\e2e\\output\\20261103T070547-135420\\public\\simulation-recording-9.csv",
+      "sha256": "17c32bb3136bd153cc8dac2eec451ee0b325142519d3767760e7004624cdce31",
+      "expected_tamper_control": false,
+      "rows": 8,
+      "segments": 1,
+      "all_fields_exact": true,
+      "eight_sensor_values": true,
+      "unique_session_seq": true
+    }
+  ],
+  "prediction_statuses": [
+    "disabled",
+    "error",
+    "not_ready",
+    "valid",
+    "warmup"
+  ],
+  "ack_before_durable_violation": false,
+  "actual_fsync_calls": 1624,
+  "wire_ack_checks": 798,
+  "actual_browser_downloads": [
+    {
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\workflow-audit-20261103\\browser-output-final\\downloads\\1-simulation-recording-8.csv",
+      "source_csv": "D:\\Github\\PertaminaGLD\\tmp\\workflow-audit-20261103\\e2e\\output\\20261103T070547-135420\\public\\simulation-recording-8.csv",
+      "sha256": "16328905c06078dcee067e9fc101b373209357d216274b36946a3af5a77058c8",
+      "rows": 20,
+      "final_source_rows": 28,
+      "historical_prefix": true,
+      "exact_originals": true,
+      "segments": 1,
+      "all_fields_exact": true,
+      "eight_sensor_values": true,
+      "unique_session_seq": true
+    },
+    {
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\workflow-audit-20261103\\browser-output-final\\downloads\\2-simulation-recording-8.csv",
+      "source_csv": "D:\\Github\\PertaminaGLD\\tmp\\workflow-audit-20261103\\e2e\\output\\20261103T070547-135420\\public\\simulation-recording-8.csv",
+      "sha256": "311309804dbf0dc21eece4aa52707687e52eeaa606990517224ac7fca1cb72ef",
+      "rows": 28,
+      "final_source_rows": 28,
+      "historical_prefix": false,
+      "exact_originals": true,
+      "segments": 2,
+      "all_fields_exact": true,
+      "eight_sensor_values": true,
+      "unique_session_seq": true
+    },
+    {
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\workflow-audit-20261103\\browser-output-final\\downloads\\3-simulation-recording-9.csv",
+      "source_csv": "D:\\Github\\PertaminaGLD\\tmp\\workflow-audit-20261103\\e2e\\output\\20261103T070547-135420\\public\\simulation-recording-9.csv",
+      "sha256": "b5bbc37ec8416ebb9f96464e5f839fc0ac3912a62a72fd59c57534e6e2034c2e",
+      "rows": 8,
+      "final_source_rows": 8,
+      "historical_prefix": false,
+      "exact_originals": true,
+      "segments": 1,
+      "all_fields_exact": true,
+      "eight_sensor_values": true,
+      "unique_session_seq": true
+    },
+    {
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\workflow-audit-20261103\\browser-output-final\\downloads\\4-simulation-recording-10.csv",
+      "source_csv": "D:\\Github\\PertaminaGLD\\tmp\\workflow-audit-20261103\\e2e\\output\\20261103T070547-135420\\public\\simulation-recording-10.csv",
+      "sha256": "bd24c27419e32250fd7f2d9dd4811f6b21b75d7f6f9856c7019f147910c2a85a",
+      "rows": 50,
+      "final_source_rows": 50,
+      "historical_prefix": false,
+      "exact_originals": true,
+      "segments": 1,
+      "all_fields_exact": true,
+      "eight_sensor_values": true,
+      "unique_session_seq": true
+    }
+  ],
+  "evidence": "Actual loopback RFC6455 acquisition; actual service ledger/CSV bytes and fsync instrumentation. No hardware or C++ execution claim."
+}

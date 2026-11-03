@@ -1,0 +1,5 @@
+Waktu (ms),Label pengujian,MQ8 (V),MQ135 (V),MQ3 (V),MQ5 (V),MQ4 (V),MQ7 (V),MQ6 (V),MQ2 (V),Predicted Class,Confidence,Gain MQ8,Gain MQ135,Gain MQ3,Gain MQ5,Gain MQ4,Gain MQ7,Gain MQ6,Gain MQ2,Status MQ8,Status MQ135,Status MQ3,Status MQ5,Status MQ4,Status MQ7,Status MQ6,Status MQ2
+14500,13:25 Selasa 03/11/26 clear_air_test,0.2,0.23,0.26,0.29,0.32,0.35,0.38,0.41,,,1,2,4,8,16,32,64,1,0,0,0,0,0,0,0,0
+15000,13:25 Selasa 03/11/26 clear_air_test,0.201,0.231,0.261,0.291,0.321,0.351,0.381,0.411,,,1,2,4,8,16,32,64,1,0,0,0,0,0,0,0,0
+15500,13:25 Selasa 03/11/26 clear_air_test,0.202,0.232,0.262,0.292,0.322,0.352,0.382,0.412,0,0.875,1,2,4,8,16,32,64,1,0,0,0,0,0,0,0,0
+16000,13:25 Selasa 03/11/26 clear_air_test,0.203,0.233,0.263,0.293,0.323,0.353,0.383,0.413,,,1,2,4,8,16,32,64,1,0,0,0,0,0,0,0,0

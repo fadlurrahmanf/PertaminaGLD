@@ -1,8 +1,20 @@
 # GLD Dataset Wireless — buffer dan replay lima menit
 
+Alur Wizard terbaru, firmware Model1/2/3 dan manual bergambar tersedia pada
+[release Dataset Wizard](gld-dataset-workflow-release-20261102.md). Jalur pada
+dokumen tahap2 ini tetap tersedia di **Expert > Dataset lama**; wizard baru
+memakai paket **Hotspot Wizard Dataset** yang terpisah. Uji fisik protokol3
+belum dilakukan.
+
+Pembaruan kompatibilitas 2026-11-02: **Rekam langsung dan Pulih otomatis sekarang dapat memakai firmware hotspot tahap 2 yang sama melalui Operator Hub**. Perbaikan aplikasi sudah lulus simulasi protokol, browser, grafik delapan sensor dan CSV di PC; pengujian revisi adapter ini pada GLD asli masih ditunda karena perangkat tidak tersedia. Tidak perlu compile/upload firmware untuk perubahan aplikasi ini. [Panduan dua mode dan bukti PC](gld-dataset-wireless-dual-mode-pc-20261102.md).
+
 Status 2026-11-02: **tiga model berhasil dibuild oleh tiga agent secara paralel; Model 1 sudah diupload dan diuji pada GLD asli**. Reset NVS OFF dan profil nulling 1 dipertahankan. Grafik delapan sensor, CSV, reconnect/replay, dan batas lima menit lulus. Model 2/3 baru diverifikasi melalui build dan paket, belum diuji pada board fisik.
 
 [Laporan build dan uji perangkat](gld-dataset-wireless-stage2-real-device-20261102.md) mencatat seluruh bukti dan batas pengujian. [Manual operator bergambar, 10 halaman](../../output/pdf/Manual-GLD-Dataset-Wireless.pdf) menjelaskan Connect, Start, grafik, recovery, Stop dan Download CSV dengan kotak bernomor. Hotspot GLD tanpa Internet; aplikasi lokal tetap dapat merekam.
+
+Pembaruan paket password operator: Model 1 serta [Model 2/3 yang dibuild oleh dua agent paralel](../GLD-WIRELESS-MODEL23-PASSWORD-TRACKER.md) sudah tersedia pada masing-masing Hub `latest`, memakai credential pilihan operator yang sama. Implementasi sampling/replay tetap sama; paket lama disimpan terpisah. Uji fisik di laporan sebelumnya menggunakan binary/password lama. [Laporan revisi Model 1](gld-dataset-wireless-model1-password-package-20261102.md) memisahkan build/package dari upload perangkat.
+
+Riwayat diagnosis setelah upload mandiri 17:58 WIB: POST upload tercatat HTTP200, tetapi saat diagnosis perangkat menjalankan inference/LoRa normal sehingga hotspot khusus tidak tersedia. Exact payload upload tersebut tidak disimpan. Setelah pemilihan paket diperbaiki dan pengguna mengupload ulang, sesi Pulih otomatis berhasil menghasilkan CSV lengkap 62 sampel; file tersebut dipertahankan sebagai baseline perbaikan dua mode. Ini bukti historis, bukan pengujian perangkat pada revisi adapter terbaru.
 
 ## Perilaku
 
@@ -21,9 +33,9 @@ Buffer hilang saat GLD mati/reboot. Browser boleh ditutup, tetapi proses backend
 | Dataset Wireless tahap 1 | Protokol, modul firmware, collector, credential preparer dan tiga env lama dipertahankan |
 | Dataset serial/MQTT, Running/LoRa, nulling/inference | Env, pin, konfigurasi model dan format NVS sebelumnya dipertahankan |
 | Firmware tahap 2 | Tiga env baru, modul dan private credentials terpisah; tidak memanggil production package hook |
-| Backend | Collector dan namespace API/event replay terpisah; default UI tetap tahap 1 |
+| Backend | Collector dan namespace API/event replay terpisah; default UI Rekam langsung mengenali protokol tahap 1/2 melalui adapter tambahan |
 | Upload | Target replay eksplisit; Reset NVS/initial erase ditolak; hasil flash masih memerlukan verifikasi hotspot |
-| Akses perangkat | Saat replay aktif/recovering, mode wireless lain, COM, probe port dan upload diblokir sebelum akses perangkat |
+| Akses perangkat | Saat mode wireless aktif/recovering atau penutupan sesi langsung masih tertunda, mode lain, COM, probe port dan upload diblokir sebelum akses perangkat |
 
 Environments baru: `gld_model_1_dataset_replay_wifi`, `gld_model_2_dataset_replay_wifi`, `gld_model_3_dataset_replay_wifi`. Semuanya mewarisi target tahap 1 yang sesuai, memakai `PGL_GLD_DATASET_REPLAY=1`, dan tidak mengubah paket/binary lama. Ketiga paket replay telah divalidasi dan ditempatkan hanya pada direktori env baru dalam katalog Hub.
 
@@ -33,7 +45,7 @@ Kredensial privat baru hanya dibuat saat build yang disetujui, di `firmware/.pio
 
 1. GLD memakai catu 24 V, profil nulling valid, dan firmware replay yang sesuai model. Reset NVS tetap OFF.
 2. Laptop masuk `GLD-DATASET-<id>` dan menunggu IP hotspot tersedia.
-3. Di Dataset Wireless pilih **Buffer 5 menit · tahap 2**, lalu Connect GLD dan Start Wireless.
+3. Di Dataset Wireless pilih **Pulih otomatis**, lalu Connect GLD dan Start Wireless. Nama sebelumnya pada screenshot manual adalah **Buffer 5 menit · tahap 2**. **Rekam langsung** juga dapat memakai firmware yang sama setelah perbaikan aplikasi; lihat panduan dua mode di atas untuk perbedaan perilaku ketika putus.
 4. Saat putus, status menjadi recovering; sesi, file CSV dan urutan tetap dipertahankan. Mode/Start dikunci. Stop dapat diminta dan akan menunggu koneksi serta konfirmasi GLD.
 5. Setelah tersambung, status replaying menunjukkan pengiriman backlog; setelah mengejar record terbaru, status kembali recording. Stop menunggu ACK dan summary serta mencocokkan semua record sebelum menyatakan lengkap.
 

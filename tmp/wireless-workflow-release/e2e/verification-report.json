@@ -1,0 +1,183 @@
+{
+  "status": "PASS",
+  "mode": "pc-simulation",
+  "device_validation": false,
+  "loaded_source_sha256": {
+    "apps/gld-operator/dataset_workflow.py": "f10997f3f18ebbefbbac744b0cd55c06f18883f41440555564aa1d8eff5a39a8",
+    "apps/gld-operator/wireless_dataset_workflow.py": "fe606f103a6b23e9bdb5b4140cfa7e5464d24c1540f84f11cffdb52e14f131d4",
+    "apps/gld-operator/bridge.py": "c473b3938e5d44aefe4db8e0fe004d3ad014b20f151c1b0fe9f263eca561cfd8"
+  },
+  "sessions": 14,
+  "all_canonical_rows": 305,
+  "private_cleanup_rows": 60,
+  "public_prefix_rows_verified": 245,
+  "positive_public_rows": 245,
+  "expected_tamper_controls": 0,
+  "files": [
+    {
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\wireless-workflow-release\\e2e\\output\\20261102T231559-d8631b\\public\\simulation-recording-1.csv",
+      "sha256": "e09e90482d26c5149386f6838ea0488b42f3c6022eaf65bb42437848b5b7f935",
+      "expected_tamper_control": false,
+      "rows": 28,
+      "segments": 2,
+      "all_fields_exact": true,
+      "eight_sensor_values": true,
+      "unique_session_seq": true
+    },
+    {
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\wireless-workflow-release\\e2e\\output\\20261102T231559-d8631b\\public\\simulation-recording-10.csv",
+      "sha256": "acf5fe620ee90420fdebf3c01fb72122cf3286dc9cda62f38ddce26f078b6f2f",
+      "expected_tamper_control": false,
+      "rows": 50,
+      "segments": 1,
+      "all_fields_exact": true,
+      "eight_sensor_values": true,
+      "unique_session_seq": true
+    },
+    {
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\wireless-workflow-release\\e2e\\output\\20261102T231559-d8631b\\public\\simulation-recording-2.csv",
+      "sha256": "5263bf53331d8f72af4866dd05daa982e68697dec096736c61fe490109192eac",
+      "expected_tamper_control": false,
+      "rows": 28,
+      "segments": 2,
+      "all_fields_exact": true,
+      "eight_sensor_values": true,
+      "unique_session_seq": true
+    },
+    {
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\wireless-workflow-release\\e2e\\output\\20261102T231559-d8631b\\public\\simulation-recording-3.csv",
+      "sha256": "b2a551d0f767d0d3bdb94ef75f5bc45c8f42dbb0255bfa51ed9c8c93a07ffe8b",
+      "expected_tamper_control": false,
+      "rows": 8,
+      "segments": 1,
+      "all_fields_exact": true,
+      "eight_sensor_values": true,
+      "unique_session_seq": true
+    },
+    {
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\wireless-workflow-release\\e2e\\output\\20261102T231559-d8631b\\public\\simulation-recording-4.csv",
+      "sha256": "094d97f8ebe8d13c512559bf43e7a747c995bcf0709ce4aa8dc806bf324587bb",
+      "expected_tamper_control": false,
+      "rows": 9,
+      "segments": 1,
+      "all_fields_exact": true,
+      "eight_sensor_values": true,
+      "unique_session_seq": true
+    },
+    {
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\wireless-workflow-release\\e2e\\output\\20261102T231559-d8631b\\public\\simulation-recording-5.csv",
+      "sha256": "8fd6a144d2a8dcf6af0f53c46a5a8a35fa05ba512c3dacfc2ea6d382bbcd863d",
+      "expected_tamper_control": false,
+      "rows": 28,
+      "segments": 2,
+      "all_fields_exact": true,
+      "eight_sensor_values": true,
+      "unique_session_seq": true
+    },
+    {
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\wireless-workflow-release\\e2e\\output\\20261102T231559-d8631b\\public\\simulation-recording-6.csv",
+      "sha256": "4d002dfc81e5e56a29e09daad81b0be1925e81c932286651a9e91491a219f431",
+      "expected_tamper_control": false,
+      "rows": 8,
+      "segments": 1,
+      "all_fields_exact": true,
+      "eight_sensor_values": true,
+      "unique_session_seq": true
+    },
+    {
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\wireless-workflow-release\\e2e\\output\\20261102T231559-d8631b\\public\\simulation-recording-7.csv",
+      "sha256": "b64683a773c04f5b665651ff27d002fceaa3d68589ae90fd4139813bac890630",
+      "expected_tamper_control": false,
+      "rows": 50,
+      "segments": 1,
+      "all_fields_exact": true,
+      "eight_sensor_values": true,
+      "unique_session_seq": true
+    },
+    {
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\wireless-workflow-release\\e2e\\output\\20261102T231559-d8631b\\public\\simulation-recording-8.csv",
+      "sha256": "3bc9b93a69e9458d68d9d4ac5605a0ac62325f600c10ddce4304ec87e43b337b",
+      "expected_tamper_control": false,
+      "rows": 28,
+      "segments": 2,
+      "all_fields_exact": true,
+      "eight_sensor_values": true,
+      "unique_session_seq": true
+    },
+    {
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\wireless-workflow-release\\e2e\\output\\20261102T231559-d8631b\\public\\simulation-recording-9.csv",
+      "sha256": "61ca93c592493d781e0725a6f5f39f8328d64dcfa3b7cec5ba5862b5f6364475",
+      "expected_tamper_control": false,
+      "rows": 8,
+      "segments": 1,
+      "all_fields_exact": true,
+      "eight_sensor_values": true,
+      "unique_session_seq": true
+    }
+  ],
+  "prediction_statuses": [
+    "disabled",
+    "error",
+    "not_ready",
+    "valid",
+    "warmup"
+  ],
+  "ack_before_durable_violation": false,
+  "actual_fsync_calls": 610,
+  "wire_ack_checks": 305,
+  "actual_browser_downloads": [
+    {
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\wireless-workflow-release\\browser-output\\downloads\\1-simulation-recording-8.csv",
+      "source_csv": "D:\\Github\\PertaminaGLD\\tmp\\wireless-workflow-release\\e2e\\output\\20261102T231559-d8631b\\public\\simulation-recording-8.csv",
+      "sha256": "f6937f90ba1cddbfd63e24a4ec617b7be80c9c321ec33b85dfe6cd5dbe752b7c",
+      "rows": 20,
+      "final_source_rows": 28,
+      "historical_prefix": true,
+      "exact_originals": true,
+      "segments": 1,
+      "all_fields_exact": true,
+      "eight_sensor_values": true,
+      "unique_session_seq": true
+    },
+    {
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\wireless-workflow-release\\browser-output\\downloads\\2-simulation-recording-8.csv",
+      "source_csv": "D:\\Github\\PertaminaGLD\\tmp\\wireless-workflow-release\\e2e\\output\\20261102T231559-d8631b\\public\\simulation-recording-8.csv",
+      "sha256": "3bb019a42fe943cc3248810ca54c383e9c4af208e295a98893fea42b47e7c862",
+      "rows": 28,
+      "final_source_rows": 28,
+      "historical_prefix": false,
+      "exact_originals": true,
+      "segments": 2,
+      "all_fields_exact": true,
+      "eight_sensor_values": true,
+      "unique_session_seq": true
+    },
+    {
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\wireless-workflow-release\\browser-output\\downloads\\3-simulation-recording-9.csv",
+      "source_csv": "D:\\Github\\PertaminaGLD\\tmp\\wireless-workflow-release\\e2e\\output\\20261102T231559-d8631b\\public\\simulation-recording-9.csv",
+      "sha256": "b41c8ba6c93cf759fee7846ec4cc49ff5e4b66b9eb1214e478fbb5c7bb814427",
+      "rows": 8,
+      "final_source_rows": 8,
+      "historical_prefix": false,
+      "exact_originals": true,
+      "segments": 1,
+      "all_fields_exact": true,
+      "eight_sensor_values": true,
+      "unique_session_seq": true
+    },
+    {
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\wireless-workflow-release\\browser-output\\downloads\\4-simulation-recording-10.csv",
+      "source_csv": "D:\\Github\\PertaminaGLD\\tmp\\wireless-workflow-release\\e2e\\output\\20261102T231559-d8631b\\public\\simulation-recording-10.csv",
+      "sha256": "da1f7d3e1a10603ca6cddd2aecd66880fb24d2f41a6a5f5af28c561ec03f9e07",
+      "rows": 50,
+      "final_source_rows": 50,
+      "historical_prefix": false,
+      "exact_originals": true,
+      "segments": 1,
+      "all_fields_exact": true,
+      "eight_sensor_values": true,
+      "unique_session_seq": true
+    }
+  ],
+  "evidence": "Actual loopback RFC6455 acquisition; actual service ledger/CSV bytes and fsync instrumentation. No hardware or C++ execution claim."
+}

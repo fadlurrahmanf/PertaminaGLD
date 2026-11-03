@@ -1,0 +1,3 @@
+AssertionError [ERR_ASSERTION]: fixture must be fresh/reset
+    at D:\Github\PertaminaGLD\tmp\workflow-ux-20261103\browser-e2e.cjs:54:30
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)

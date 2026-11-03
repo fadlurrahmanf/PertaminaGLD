@@ -1,0 +1,21 @@
+{
+  "open": 0,
+  "enum": 0,
+  "scans": [
+    {
+      "state": 1,
+      "result": 0
+    }
+  ],
+  "visible_ssids": [
+    "eduroam",
+    "ITB IoT",
+    "ITB Hotspot",
+    "4G-MIFI-E240",
+    "ITB Guest",
+    "Network type            : Infrastructure",
+    "Bn",
+    "W3_1242052100",
+    "GLD-DATASET-1002"
+  ]
+}

@@ -1,0 +1,78 @@
+{
+  "simulation": true,
+  "hardware": false,
+  "screenshots": [
+    {
+      "key": "08-continue-ready",
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\workflow-ux-20261103\\manual-browser\\08-continue-ready.png",
+      "width": 1584,
+      "height": 1005,
+      "boxes": [
+        {
+          "n": 1,
+          "selector": "#wfStart",
+          "x": 235.5,
+          "y": 95.171875,
+          "w": 87.71875,
+          "h": 36
+        },
+        {
+          "n": 2,
+          "selector": "#wfVerification",
+          "x": 526.0625,
+          "y": 150.671875,
+          "w": 146.375,
+          "h": 18
+        }
+      ]
+    },
+    {
+      "key": "11-replay-complete",
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\workflow-ux-20261103\\manual-browser\\11-replay-complete.png",
+      "width": 1584,
+      "height": 1005,
+      "boxes": [
+        {
+          "n": 1,
+          "selector": "#wfVerification",
+          "x": 526.0625,
+          "y": 150.671875,
+          "w": 146.375,
+          "h": 18
+        },
+        {
+          "n": 2,
+          "selector": "#wfCount",
+          "x": 392.625,
+          "y": 150.671875,
+          "w": 117.4375,
+          "h": 18
+        }
+      ]
+    },
+    {
+      "key": "13-export-table",
+      "path": "D:\\Github\\PertaminaGLD\\tmp\\workflow-ux-20261103\\manual-browser\\13-export-table.png",
+      "width": 1584,
+      "height": 1005,
+      "boxes": [
+        {
+          "n": 1,
+          "selector": "#wfRows",
+          "x": 237.5,
+          "y": 625.671875,
+          "w": 1094,
+          "h": 270
+        },
+        {
+          "n": 2,
+          "selector": "#wfExport",
+          "x": 891.703125,
+          "y": 911.671875,
+          "w": 100.859375,
+          "h": 36
+        }
+      ]
+    }
+  ]
+}

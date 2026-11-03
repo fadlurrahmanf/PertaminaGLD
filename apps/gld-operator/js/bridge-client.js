@@ -176,6 +176,9 @@ function startBridgeEvents() {
   source.addEventListener("wireless_dataset_replay", (event) => {
     window.dispatchEvent(new CustomEvent("gld-wireless-dataset-replay", { detail: JSON.parse(event.data) }));
   });
+  source.addEventListener("dataset_workflow", (event) => {
+    window.dispatchEvent(new CustomEvent("gld-dataset-workflow", { detail: JSON.parse(event.data) }));
+  });
   source.onerror = () => {
     if (!state.bridgeAvailable) return;
     setBadge(elements.connectionBadge, "bridge event lost", "warn");

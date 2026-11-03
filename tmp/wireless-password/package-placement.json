@@ -1,0 +1,22 @@
+{
+  "time": "2026-11-02T17:45:14.751862+07:00",
+  "environment": "gld_model_1_dataset_replay_wifi",
+  "directory": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\firmware-packages\\gld_model_1_dataset_replay_wifi\\latest",
+  "previousPackagePreserved": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\firmware-packages\\gld_model_1_dataset_replay_wifi\\previous-20261102-before-operator-password",
+  "files": [
+    "bootloader.bin",
+    "partitions.bin",
+    "boot_app0.bin",
+    "firmware.bin",
+    "manifest.json",
+    "manifest.sha256",
+    "model-provenance.json"
+  ],
+  "firmwareSha256": "792638eb8af70252b02b6a0887a651e01f0df58950b6c5b123bb688fa70cb2b6",
+  "manifestSha256": "ece0dda563d31df889a0bb9b6cc873d50e1a6d70c403c8951a51183a85a8f8ec",
+  "allOtherPackagesUnchanged": true,
+  "protectedRuntimeSourcesUnchanged": true,
+  "uploaded": false,
+  "firmwareVersion": "0.8.36",
+  "versionLabelCorrectedBeforeHandoff": true
+}

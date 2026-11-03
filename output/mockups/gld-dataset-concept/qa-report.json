@@ -1,0 +1,87 @@
+{
+  "hardware": false,
+  "production_changed": false,
+  "checks": [
+    "Pause/Resume/verified Stop/Continue preserves and appends mock count",
+    "Reset + cumulative five-step scan/select/connect/file/radio/Lock + Start",
+    "Local chart series toggle never changes export/sample count",
+    "CSV mock contains all8sensors/selectedfields and exactly64sample rows; export button below table",
+    "Host carousel switches complete layouts and preserves each local state",
+    "1024/736/320 responsive layouts; no page or app horizontal overflow; light/dark render"
+  ],
+  "layouts": [
+    {
+      "layout": "terpusat",
+      "width": 1024,
+      "docWidth": 1024,
+      "appWidth": 1022,
+      "scrollWidth": 1022,
+      "height": 1486.75,
+      "stageHeight": 1500,
+      "chartWidth": 942,
+      "series": 8
+    },
+    {
+      "layout": "workspace",
+      "width": 1024,
+      "docWidth": 1024,
+      "appWidth": 1022,
+      "scrollWidth": 1022,
+      "height": 1183.65625,
+      "stageHeight": 1500,
+      "chartWidth": 664,
+      "series": 8
+    },
+    {
+      "layout": "terpusat",
+      "width": 736,
+      "docWidth": 736,
+      "appWidth": 734,
+      "scrollWidth": 734,
+      "height": 1785.78125,
+      "stageHeight": 1800,
+      "chartWidth": 654,
+      "series": 8
+    },
+    {
+      "layout": "workspace",
+      "width": 736,
+      "docWidth": 736,
+      "appWidth": 734,
+      "scrollWidth": 734,
+      "height": 1768.328125,
+      "stageHeight": 1800,
+      "chartWidth": 654,
+      "series": 8
+    },
+    {
+      "layout": "terpusat",
+      "width": 320,
+      "docWidth": 320,
+      "appWidth": 318,
+      "scrollWidth": 318,
+      "height": 2446.640625,
+      "stageHeight": 2500,
+      "chartWidth": 272,
+      "series": 8
+    },
+    {
+      "layout": "workspace",
+      "width": 320,
+      "docWidth": 320,
+      "appWidth": 318,
+      "scrollWidth": 318,
+      "height": 2385.796875,
+      "stageHeight": 2500,
+      "chartWidth": 272,
+      "series": 8
+    }
+  ],
+  "ok": true,
+  "fragment": "C:\\Users\\MSI\\.codex\\visualizations\\2026\\11\\02\\01a19aac-9b4c-7530-a14c-9553b8e7a929\\gld-dataset-concepts.html",
+  "fragment_bytes": 48336,
+  "fragment_sha256": "e360f996f492a8f8f359003b98bde1e487006ae84bcfd2e7258f680fe2ae2dc2",
+  "protected_production_sources_unchanged": true,
+  "claude_consultation": "Actual ClaudeCLI text-only safe-mode/no-tools successful; review saved locally",
+  "visual_review": "Workspace light/dark, Terpusat,320px mobile reviewed; carousel stable; all inputs visible and lockedvalues legible."
+}

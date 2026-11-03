@@ -9,18 +9,18 @@
   "configSchemaVersion": "0.1.0",
   "chip": "esp32s3",
   "baud": 921600,
-  "createdAtUtc": "20261102T090711Z",
+  "createdAtUtc": "20261102T104621Z",
   "source": {
-    "gitCommit": "1d35f955ec1f294908250905bc095169540b3106",
+    "gitCommit": "74e1a2f932cb4dafb8ac393f6c7368c5f3dec965",
     "gitTreeState": "build-output",
     "gitTreeStateScope": "firmware/",
-    "firmwareTreeSnapshotSha256": "8995ad5a6c4d6e771ea8565d662cb6e3e7d5e2dac7aef3ea77705728d334aeef",
+    "firmwareTreeSnapshotSha256": "2ea02d6a1f43f2165666739eb287d3fa91762e4225778443ffcaf7c501d143e1",
     "platformioCoreVersion": "6.1.19",
     "platformioIniSha256": "e512a2682692fccaed55e35bfe2e9b50e2afcde28bebfd3751846071fbcb8994",
     "buildCommand": "pio run -e gld_model_1_dataset_replay_wifi",
-    "packagedAtUtc": "20261102T090711Z"
+    "packagedAtUtc": "20261102T104621Z"
   },
-  "flashSetSha256": "ac6ebd476c91e5c0e411cc314098d5fe0463a0a54f3f48288d64cd3da791fdf3",
+  "flashSetSha256": "ed00d2f52fbe67b742596b89958e87b013f9abbe432b0cbb1c1967e367aab140",
   "flashFiles": [
     {
       "path": "bootloader.bin",
@@ -43,8 +43,8 @@
     {
       "path": "firmware.bin",
       "offset": "0x00010000",
-      "size": 1047024,
-      "sha256": "491e060eefb30b5db51b2801332fc4e3803fef9fdcf185be6de0a9e2ab698166"
+      "size": 1047008,
+      "sha256": "792638eb8af70252b02b6a0887a651e01f0df58950b6c5b123bb688fa70cb2b6"
     }
   ]
 }

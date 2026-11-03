@@ -1,0 +1,39 @@
+{
+  "requests": [
+    {
+      "status": 500,
+      "error": "manifest has unsupported schema-v2 fields: capabilities"
+    },
+    {
+      "status": 500,
+      "error": "manifest has unsupported schema-v2 fields: capabilities"
+    },
+    {
+      "status": 500,
+      "error": "manifest has unsupported schema-v2 fields: capabilities"
+    },
+    {
+      "status": 500,
+      "error": "manifest has unsupported schema-v2 fields: capabilities"
+    },
+    {
+      "status": 500,
+      "error": "manifest has unsupported schema-v2 fields: capabilities"
+    },
+    {
+      "status": 500,
+      "error": "manifest has unsupported schema-v2 fields: capabilities"
+    },
+    {
+      "status": 500,
+      "error": "manifest has unsupported schema-v2 fields: capabilities"
+    },
+    {
+      "status": 500,
+      "error": "manifest has unsupported schema-v2 fields: capabilities"
+    }
+  ],
+  "schemaDeliberatelyInvalid": 0,
+  "port": "COM999",
+  "serialOrFlashAttempted": false
+}

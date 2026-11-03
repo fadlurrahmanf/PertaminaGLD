@@ -1,0 +1,3970 @@
+[
+  {
+    "number": 1,
+    "key": "firmware-final-choice",
+    "title": "Pilih paket hotspot yang benar",
+    "rectangles": [
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 566.76,
+        "w": 786,
+        "h": 11.52
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 549.91,
+        "w": 786,
+        "h": 10.37
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 501.84,
+        "w": 786,
+        "h": 29.44
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 483.48,
+        "w": 786,
+        "h": 12.8
+      },
+      {
+        "role": "screenshot_frame",
+        "x": 28.0,
+        "y": 345,
+        "w": 786,
+        "h": 120
+      },
+      {
+        "role": "image_border",
+        "x": 25.0,
+        "y": 342,
+        "w": 792,
+        "h": 126
+      },
+      {
+        "role": "vector_callout",
+        "x": 37.0,
+        "y": 346.85,
+        "w": 768.0,
+        "h": 66.46
+      },
+      {
+        "role": "number_bubble",
+        "x": 37.0,
+        "y": 407.31,
+        "w": 18,
+        "h": 18
+      },
+      {
+        "role": "final_model",
+        "x": 28.0,
+        "y": 298,
+        "w": 786,
+        "h": 26
+      },
+      {
+        "role": "text",
+        "x": 40.0,
+        "y": 304.92,
+        "w": 762,
+        "h": 14.08
+      },
+      {
+        "role": "final_model",
+        "x": 28.0,
+        "y": 269,
+        "w": 786,
+        "h": 26
+      },
+      {
+        "role": "text",
+        "x": 40.0,
+        "y": 275.92,
+        "w": 762,
+        "h": 14.08
+      },
+      {
+        "role": "final_model",
+        "x": 28.0,
+        "y": 240,
+        "w": 786,
+        "h": 26
+      },
+      {
+        "role": "text",
+        "x": 40.0,
+        "y": 246.92,
+        "w": 762,
+        "h": 14.08
+      },
+      {
+        "role": "instruction_card",
+        "x": 28.0,
+        "y": 43,
+        "w": 253.96,
+        "h": 171
+      },
+      {
+        "role": "card_title",
+        "x": 57.0,
+        "y": 193.2,
+        "w": 214.96,
+        "h": 12.8
+      },
+      {
+        "role": "card_body",
+        "x": 39.0,
+        "y": 142.29,
+        "w": 231.96,
+        "h": 35.71
+      },
+      {
+        "role": "instruction_card",
+        "x": 293.96,
+        "y": 43,
+        "w": 253.96,
+        "h": 171
+      },
+      {
+        "role": "card_title",
+        "x": 322.96,
+        "y": 193.2,
+        "w": 214.96,
+        "h": 12.8
+      },
+      {
+        "role": "card_body",
+        "x": 304.96,
+        "y": 130.38,
+        "w": 231.96,
+        "h": 47.62
+      },
+      {
+        "role": "instruction_card",
+        "x": 559.93,
+        "y": 43,
+        "w": 253.96,
+        "h": 171
+      },
+      {
+        "role": "card_title",
+        "x": 588.93,
+        "y": 193.2,
+        "w": 214.96,
+        "h": 12.8
+      },
+      {
+        "role": "card_body",
+        "x": 570.93,
+        "y": 118.48,
+        "w": 231.96,
+        "h": 59.52
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 11.76,
+        "w": 720,
+        "h": 10.24
+      }
+    ],
+    "text": [
+      {
+        "role": "text",
+        "font_size": 9,
+        "measured_height": 11.52,
+        "allocated_height": 16,
+        "content": "PANDUAN OPERATOR / DATASET WORKSPACE - CSV 12 KOLOM"
+      },
+      {
+        "role": "text",
+        "font_size": 8.1,
+        "measured_height": 10.37,
+        "allocated_height": 20,
+        "content": "Screenshot UI terbaru (baca saja); tidak ada upload atau pengoperasian GLD pada pengambilan gambar ini."
+      },
+      {
+        "role": "text",
+        "font_size": 23,
+        "measured_height": 29.44,
+        "allocated_height": 32,
+        "content": "Pilih paket hotspot yang benar"
+      },
+      {
+        "role": "text",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 24,
+        "content": "Tiga pilihan hotspot terbaru menggantikan enam pilihan tahap lama."
+      },
+      {
+        "role": "text",
+        "font_size": 11,
+        "measured_height": 14.08,
+        "allocated_height": 23,
+        "content": "GLD1 Model 1 - Hotspot Wizard Dataset"
+      },
+      {
+        "role": "text",
+        "font_size": 11,
+        "measured_height": 14.08,
+        "allocated_height": 23,
+        "content": "GLD1 Model 2 - Hotspot Wizard Dataset"
+      },
+      {
+        "role": "text",
+        "font_size": 11,
+        "measured_height": 14.08,
+        "allocated_height": 23,
+        "content": "GLD1 Model 3 - Hotspot Wizard Dataset"
+      },
+      {
+        "role": "card_title",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 27,
+        "content": "Pilih sesuai model board"
+      },
+      {
+        "role": "card_body",
+        "font_size": 9.3,
+        "measured_height": 35.71,
+        "allocated_height": 127,
+        "content": "Untuk GLD pertama yang diuji, pilih GLD1 Model 1 - Hotspot Wizard Dataset. Model 1 - Board 1 biasa tidak menyalakan hotspot Dataset."
+      },
+      {
+        "role": "card_title",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 27,
+        "content": "24 V dan Reset NVS OFF"
+      },
+      {
+        "role": "card_body",
+        "font_size": 9.3,
+        "measured_height": 47.62,
+        "allocated_height": 127,
+        "content": "Gunakan 24 V dan biarkan Reset NVS tidak dicentang. Jika upload sebelumnya mereset NVS, siapkan nulling dan binding model pada firmware biasa dahulu. Tunggu boot selesai sebelum Scan."
+      },
+      {
+        "role": "card_title",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 27,
+        "content": "Kontrol COM dan Dataset Wi-Fi"
+      },
+      {
+        "role": "card_body",
+        "font_size": 9.3,
+        "measured_height": 59.52,
+        "allocated_height": 127,
+        "content": "Alur yang disepakati: kontrol normal lewat COM; Dataset lewat Wi-Fi. Revisi firmware yang mempertahankan semua fitur normal masih menunggu compile dan uji, bukan otomatis tersedia karena menu diringkas."
+      },
+      {
+        "role": "text",
+        "font_size": 8,
+        "measured_height": 10.24,
+        "allocated_height": 12,
+        "content": "3 November 2026 | PNG asli; kotak dan nomor panduan berupa anotasi vektor."
+      }
+    ],
+    "screenshots": [
+      {
+        "key": "firmware-final-choice",
+        "path": "D:\\Github\\PertaminaGLD\\tmp\\pdfs\\gld-workspace-12kolom\\firmware-final-choice.png",
+        "source_sha256": "54e084460e42da968e246390fc0408388b2004eab434a4cc0888dff4a8297122",
+        "original_png_unedited": true,
+        "source_viewport": {
+          "x": 0,
+          "y": 0,
+          "w": 416,
+          "h": 65
+        },
+        "scale": 1.84615,
+        "boxes": [
+          {
+            "n": 1,
+            "selector": "#firmwareUploadModel",
+            "source_clipped": false,
+            "pdf": {
+              "role": "vector_callout",
+              "x": 37.0,
+              "y": 346.85,
+              "w": 768.0,
+              "h": 66.46
+            }
+          }
+        ],
+        "skipped_offscreen_boxes": []
+      }
+    ]
+  },
+  {
+    "number": 2,
+    "key": "workspace-initial",
+    "title": "1. Scan, pilih GLD, lalu Connect",
+    "rectangles": [
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 566.76,
+        "w": 786,
+        "h": 11.52
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 549.91,
+        "w": 786,
+        "h": 10.37
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 501.84,
+        "w": 786,
+        "h": 29.44
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 483.48,
+        "w": 786,
+        "h": 12.8
+      },
+      {
+        "role": "screenshot_frame",
+        "x": 28.0,
+        "y": 65,
+        "w": 320,
+        "h": 400
+      },
+      {
+        "role": "image_border",
+        "x": 25.0,
+        "y": 62,
+        "w": 326,
+        "h": 406
+      },
+      {
+        "role": "vector_callout",
+        "x": 44.3,
+        "y": 306.66,
+        "w": 284.98,
+        "h": 41.06
+      },
+      {
+        "role": "number_bubble",
+        "x": 32.3,
+        "y": 341.72,
+        "w": 18,
+        "h": 18
+      },
+      {
+        "role": "vector_callout",
+        "x": 44.3,
+        "y": 226.96,
+        "w": 284.98,
+        "h": 43.47
+      },
+      {
+        "role": "number_bubble",
+        "x": 32.3,
+        "y": 264.43,
+        "w": 18,
+        "h": 18
+      },
+      {
+        "role": "vector_callout",
+        "x": 44.3,
+        "y": 176.25,
+        "w": 138.26,
+        "h": 41.06
+      },
+      {
+        "role": "number_bubble",
+        "x": 32.3,
+        "y": 211.3,
+        "w": 18,
+        "h": 18
+      },
+      {
+        "role": "instruction_panel",
+        "x": 370,
+        "y": 344,
+        "w": 443.89,
+        "h": 111
+      },
+      {
+        "role": "text",
+        "x": 402,
+        "y": 429.64,
+        "w": 399.89,
+        "h": 15.36
+      },
+      {
+        "role": "text",
+        "x": 382,
+        "y": 384.35,
+        "w": 419.89,
+        "h": 27.65
+      },
+      {
+        "role": "instruction_panel",
+        "x": 370,
+        "y": 219,
+        "w": 443.89,
+        "h": 111
+      },
+      {
+        "role": "text",
+        "x": 402,
+        "y": 304.64,
+        "w": 399.89,
+        "h": 15.36
+      },
+      {
+        "role": "text",
+        "x": 382,
+        "y": 259.35,
+        "w": 419.89,
+        "h": 27.65
+      },
+      {
+        "role": "instruction_panel",
+        "x": 370,
+        "y": 94,
+        "w": 443.89,
+        "h": 111
+      },
+      {
+        "role": "text",
+        "x": 402,
+        "y": 179.64,
+        "w": 399.89,
+        "h": 15.36
+      },
+      {
+        "role": "text",
+        "x": 382,
+        "y": 134.35,
+        "w": 419.89,
+        "h": 27.65
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 11.76,
+        "w": 720,
+        "h": 10.24
+      }
+    ],
+    "text": [
+      {
+        "role": "text",
+        "font_size": 9,
+        "measured_height": 11.52,
+        "allocated_height": 16,
+        "content": "PANDUAN OPERATOR / DATASET WORKSPACE - CSV 12 KOLOM"
+      },
+      {
+        "role": "text",
+        "font_size": 8.1,
+        "measured_height": 10.37,
+        "allocated_height": 20,
+        "content": "Screenshot pengujian GLD1002 sebelumnya; alur tombol dan grafik Dataset tetap sama."
+      },
+      {
+        "role": "text",
+        "font_size": 23,
+        "measured_height": 29.44,
+        "allocated_height": 32,
+        "content": "1. Scan, pilih GLD, lalu Connect"
+      },
+      {
+        "role": "text",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 24,
+        "content": "Hubungkan USB hanya untuk daya/administrasi. Rekaman Dataset memakai Wi-Fi."
+      },
+      {
+        "role": "text",
+        "font_size": 12,
+        "measured_height": 15.36,
+        "allocated_height": 26,
+        "content": "Scan Nearby GLD"
+      },
+      {
+        "role": "text",
+        "font_size": 10.8,
+        "measured_height": 27.65,
+        "allocated_height": 62,
+        "content": "Nyalakan GLD dengan 24 V, firmware Hotspot Wizard Dataset dan profil nulling valid. Klik Scan dan tunggu daftar jaringan diperbarui."
+      },
+      {
+        "role": "text",
+        "font_size": 12,
+        "measured_height": 15.36,
+        "allocated_height": 26,
+        "content": "Pilih ID GLD"
+      },
+      {
+        "role": "text",
+        "font_size": 10.8,
+        "measured_height": 27.65,
+        "allocated_height": 62,
+        "content": "Pilih perangkat yang benar, misalnya GLD-1002. Firmware harus sesuai Model 1/2/3; saat upload, Reset NVS tetap OFF."
+      },
+      {
+        "role": "text",
+        "font_size": 12,
+        "measured_height": 15.36,
+        "allocated_height": 26,
+        "content": "Connect"
+      },
+      {
+        "role": "text",
+        "font_size": 10.8,
+        "measured_height": 27.65,
+        "allocated_height": 62,
+        "content": "Password diambil otomatis. Tunggu indikator Connected. Hotspot GLD tidak menyediakan Internet; koneksi Internet laptop akan terputus selama dipakai."
+      },
+      {
+        "role": "text",
+        "font_size": 8,
+        "measured_height": 10.24,
+        "allocated_height": 12,
+        "content": "3 November 2026 | PNG asli; kotak dan nomor panduan berupa anotasi vektor."
+      }
+    ],
+    "screenshots": [
+      {
+        "key": "workspace-initial",
+        "path": "D:\\Github\\PertaminaGLD\\tmp\\workspace-live-20261103\\real-browser-inference\\workspace-initial.png",
+        "source_sha256": "b46ad0d5e838997fb571869ccf3cd0f89546285170df3b86492974de12277577",
+        "original_png_unedited": true,
+        "source_viewport": {
+          "x": 245.0,
+          "y": 275.0,
+          "w": 265.0,
+          "h": 230.0
+        },
+        "scale": 1.20755,
+        "boxes": [
+          {
+            "n": 1,
+            "selector": "#wfScan",
+            "source_clipped": false,
+            "pdf": {
+              "role": "vector_callout",
+              "x": 44.3,
+              "y": 306.66,
+              "w": 284.98,
+              "h": 41.06
+            }
+          },
+          {
+            "n": 2,
+            "selector": "#wfDevice",
+            "source_clipped": false,
+            "pdf": {
+              "role": "vector_callout",
+              "x": 44.3,
+              "y": 226.96,
+              "w": 284.98,
+              "h": 43.47
+            }
+          },
+          {
+            "n": 3,
+            "selector": "#wfConnect",
+            "source_clipped": false,
+            "pdf": {
+              "role": "vector_callout",
+              "x": 44.3,
+              "y": 176.25,
+              "w": 138.26,
+              "h": 41.06
+            }
+          }
+        ],
+        "skipped_offscreen_boxes": []
+      }
+    ]
+  },
+  {
+    "number": 3,
+    "key": "connected-replay",
+    "title": "2. Pilih lokasi CSV",
+    "rectangles": [
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 566.76,
+        "w": 786,
+        "h": 11.52
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 549.91,
+        "w": 786,
+        "h": 10.37
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 501.84,
+        "w": 786,
+        "h": 29.44
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 483.48,
+        "w": 786,
+        "h": 12.8
+      },
+      {
+        "role": "screenshot_frame",
+        "x": 28.0,
+        "y": 65,
+        "w": 320,
+        "h": 400
+      },
+      {
+        "role": "image_border",
+        "x": 25.0,
+        "y": 62,
+        "w": 326,
+        "h": 406
+      },
+      {
+        "role": "vector_callout",
+        "x": 44.3,
+        "y": 227.87,
+        "w": 284.98,
+        "h": 41.06
+      },
+      {
+        "role": "number_bubble",
+        "x": 32.3,
+        "y": 262.92,
+        "w": 18,
+        "h": 18
+      },
+      {
+        "role": "instruction_panel",
+        "x": 370,
+        "y": 344,
+        "w": 443.89,
+        "h": 111
+      },
+      {
+        "role": "text",
+        "x": 402,
+        "y": 429.64,
+        "w": 399.89,
+        "h": 15.36
+      },
+      {
+        "role": "text",
+        "x": 382,
+        "y": 384.35,
+        "w": 419.89,
+        "h": 27.65
+      },
+      {
+        "role": "instruction_panel",
+        "x": 370,
+        "y": 219,
+        "w": 443.89,
+        "h": 111
+      },
+      {
+        "role": "text",
+        "x": 402,
+        "y": 304.64,
+        "w": 399.89,
+        "h": 15.36
+      },
+      {
+        "role": "text",
+        "x": 382,
+        "y": 259.35,
+        "w": 419.89,
+        "h": 27.65
+      },
+      {
+        "role": "instruction_panel",
+        "x": 370,
+        "y": 94,
+        "w": 443.89,
+        "h": 111
+      },
+      {
+        "role": "text",
+        "x": 402,
+        "y": 179.64,
+        "w": 399.89,
+        "h": 15.36
+      },
+      {
+        "role": "text",
+        "x": 382,
+        "y": 134.35,
+        "w": 419.89,
+        "h": 27.65
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 11.76,
+        "w": 720,
+        "h": 10.24
+      }
+    ],
+    "text": [
+      {
+        "role": "text",
+        "font_size": 9,
+        "measured_height": 11.52,
+        "allocated_height": 16,
+        "content": "PANDUAN OPERATOR / DATASET WORKSPACE - CSV 12 KOLOM"
+      },
+      {
+        "role": "text",
+        "font_size": 8.1,
+        "measured_height": 10.37,
+        "allocated_height": 20,
+        "content": "Screenshot pengujian GLD1002 sebelumnya; alur tombol dan grafik Dataset tetap sama."
+      },
+      {
+        "role": "text",
+        "font_size": 23,
+        "measured_height": 29.44,
+        "allocated_height": 32,
+        "content": "2. Pilih lokasi CSV"
+      },
+      {
+        "role": "text",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 24,
+        "content": "Lokasi rekaman dipilih setelah GLD terhubung."
+      },
+      {
+        "role": "text",
+        "font_size": 12,
+        "measured_height": 15.36,
+        "allocated_height": 26,
+        "content": "Pilih file CSV"
+      },
+      {
+        "role": "text",
+        "font_size": 10.8,
+        "measured_height": 27.65,
+        "allocated_height": 62,
+        "content": "Klik Pilih file CSV, lalu tentukan folder dan nama file baru pada dialog Windows. File lama tidak ditimpa."
+      },
+      {
+        "role": "text",
+        "font_size": 12,
+        "measured_height": 15.36,
+        "allocated_height": 26,
+        "content": "Periksa tujuan"
+      },
+      {
+        "role": "text",
+        "font_size": 10.8,
+        "measured_height": 27.65,
+        "allocated_height": 62,
+        "content": "CSV akan bertambah di lokasi tersebut selama rekaman. Export CSV nanti mengunduh salinan file yang sama."
+      },
+      {
+        "role": "text",
+        "font_size": 12,
+        "measured_height": 15.36,
+        "allocated_height": 26,
+        "content": "Urutan nomor hijau"
+      },
+      {
+        "role": "text",
+        "font_size": 10.8,
+        "measured_height": 27.65,
+        "allocated_height": 62,
+        "content": "Langkah berikutnya baru dapat hijau setelah langkah sebelumnya terpenuhi. Nilai bawaan tidak melewati pemeriksaan koneksi dan file."
+      },
+      {
+        "role": "text",
+        "font_size": 8,
+        "measured_height": 10.24,
+        "allocated_height": 12,
+        "content": "3 November 2026 | PNG asli; kotak dan nomor panduan berupa anotasi vektor."
+      }
+    ],
+    "screenshots": [
+      {
+        "key": "connected-replay",
+        "path": "D:\\Github\\PertaminaGLD\\tmp\\workspace-live-20261103\\real-browser-inference\\connected-replay.png",
+        "source_sha256": "58f71dc26d87085b6236abf2bb9777443e977c872540b3e53e99a96bd30d6702",
+        "original_png_unedited": true,
+        "source_viewport": {
+          "x": 245.0,
+          "y": 535.0,
+          "w": 265.0,
+          "h": 200.0
+        },
+        "scale": 1.20755,
+        "boxes": [
+          {
+            "n": 3,
+            "selector": "#wfChooseFile",
+            "source_clipped": false,
+            "pdf": {
+              "role": "vector_callout",
+              "x": 44.3,
+              "y": 227.87,
+              "w": 284.98,
+              "h": 41.06
+            }
+          }
+        ],
+        "skipped_offscreen_boxes": []
+      }
+    ]
+  },
+  {
+    "number": 4,
+    "key": "fields-current",
+    "title": "3. Pilih kolom CSV",
+    "rectangles": [
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 566.76,
+        "w": 786,
+        "h": 11.52
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 549.91,
+        "w": 786,
+        "h": 10.37
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 501.84,
+        "w": 786,
+        "h": 29.44
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 483.48,
+        "w": 786,
+        "h": 12.8
+      },
+      {
+        "role": "screenshot_frame",
+        "x": 28.0,
+        "y": 65,
+        "w": 320,
+        "h": 400
+      },
+      {
+        "role": "image_border",
+        "x": 25.0,
+        "y": 62,
+        "w": 326,
+        "h": 406
+      },
+      {
+        "role": "vector_callout",
+        "x": 47.1,
+        "y": 315.41,
+        "w": 17.91,
+        "h": 17.91
+      },
+      {
+        "role": "number_bubble",
+        "x": 35.1,
+        "y": 327.32,
+        "w": 18,
+        "h": 18
+      },
+      {
+        "role": "vector_callout",
+        "x": 47.1,
+        "y": 286.06,
+        "w": 17.91,
+        "h": 17.91
+      },
+      {
+        "role": "number_bubble",
+        "x": 35.1,
+        "y": 297.97,
+        "w": 18,
+        "h": 18
+      },
+      {
+        "role": "vector_callout",
+        "x": 47.1,
+        "y": 256.72,
+        "w": 17.91,
+        "h": 17.91
+      },
+      {
+        "role": "number_bubble",
+        "x": 35.1,
+        "y": 268.63,
+        "w": 18,
+        "h": 18
+      },
+      {
+        "role": "instruction_panel",
+        "x": 370,
+        "y": 344,
+        "w": 443.89,
+        "h": 111
+      },
+      {
+        "role": "text",
+        "x": 402,
+        "y": 429.64,
+        "w": 399.89,
+        "h": 15.36
+      },
+      {
+        "role": "text",
+        "x": 382,
+        "y": 370.53,
+        "w": 419.89,
+        "h": 41.47
+      },
+      {
+        "role": "instruction_panel",
+        "x": 370,
+        "y": 219,
+        "w": 443.89,
+        "h": 111
+      },
+      {
+        "role": "text",
+        "x": 402,
+        "y": 304.64,
+        "w": 399.89,
+        "h": 15.36
+      },
+      {
+        "role": "text",
+        "x": 382,
+        "y": 259.35,
+        "w": 419.89,
+        "h": 27.65
+      },
+      {
+        "role": "instruction_panel",
+        "x": 370,
+        "y": 94,
+        "w": 443.89,
+        "h": 111
+      },
+      {
+        "role": "text",
+        "x": 402,
+        "y": 179.64,
+        "w": 399.89,
+        "h": 15.36
+      },
+      {
+        "role": "text",
+        "x": 382,
+        "y": 134.35,
+        "w": 419.89,
+        "h": 27.65
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 11.76,
+        "w": 720,
+        "h": 10.24
+      }
+    ],
+    "text": [
+      {
+        "role": "text",
+        "font_size": 9,
+        "measured_height": 11.52,
+        "allocated_height": 16,
+        "content": "PANDUAN OPERATOR / DATASET WORKSPACE - CSV 12 KOLOM"
+      },
+      {
+        "role": "text",
+        "font_size": 8.1,
+        "measured_height": 10.37,
+        "allocated_height": 20,
+        "content": "Screenshot UI terbaru (baca saja); tidak ada upload atau pengoperasian GLD pada pengambilan gambar ini."
+      },
+      {
+        "role": "text",
+        "font_size": 23,
+        "measured_height": 29.44,
+        "allocated_height": 32,
+        "content": "3. Pilih kolom CSV"
+      },
+      {
+        "role": "text",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 24,
+        "content": "CSV dasar 12 kolom. Gain dan status tidak dicentang otomatis."
+      },
+      {
+        "role": "text",
+        "font_size": 12,
+        "measured_height": 15.36,
+        "allocated_height": 26,
+        "content": "Predicted Class + Confidence"
+      },
+      {
+        "role": "text",
+        "font_size": 10.8,
+        "measured_height": 41.47,
+        "allocated_height": 62,
+        "content": "Centang untuk mengisi inferensi. Kedua kolom selalu ada; nilainya kosong saat tidak dipilih atau belum valid. Checkbox menunggu Connect dan lokasi CSV. Prediksi Model 2 menunggu persetujuan model."
+      },
+      {
+        "role": "text",
+        "font_size": 12,
+        "measured_height": 15.36,
+        "allocated_height": 26,
+        "content": "Gain opsional"
+      },
+      {
+        "role": "text",
+        "font_size": 10.8,
+        "measured_height": 27.65,
+        "allocated_height": 62,
+        "content": "Biarkan tidak dicentang untuk 12 kolom. Jika dipilih, delapan kolom gain ditambahkan sehingga jumlahnya 20."
+      },
+      {
+        "role": "text",
+        "font_size": 12,
+        "measured_height": 15.36,
+        "allocated_height": 26,
+        "content": "Status sensor opsional"
+      },
+      {
+        "role": "text",
+        "font_size": 10.8,
+        "measured_height": 27.65,
+        "allocated_height": 62,
+        "content": "Status juga menambah delapan kolom. Gain dan status sekaligus menghasilkan 28 kolom. Durasi/overrun dan metadata teknis tetap tersimpan internal."
+      },
+      {
+        "role": "text",
+        "font_size": 8,
+        "measured_height": 10.24,
+        "allocated_height": 12,
+        "content": "3 November 2026 | PNG asli; kotak dan nomor panduan berupa anotasi vektor."
+      }
+    ],
+    "screenshots": [
+      {
+        "key": "fields-current",
+        "path": "D:\\Github\\PertaminaGLD\\tmp\\pdfs\\gld-workspace-12kolom\\fields-current.png",
+        "source_sha256": "511c59d9397ca31e7998528687245df7e278970edebdfb6dcff6879a8cb75aef",
+        "original_png_unedited": true,
+        "source_viewport": {
+          "x": 0,
+          "y": 0,
+          "w": 268,
+          "h": 208
+        },
+        "scale": 1.19403,
+        "boxes": [
+          {
+            "n": 1,
+            "selector": "#wfPrediction",
+            "source_clipped": false,
+            "pdf": {
+              "role": "vector_callout",
+              "x": 47.1,
+              "y": 315.41,
+              "w": 17.91,
+              "h": 17.91
+            }
+          },
+          {
+            "n": 2,
+            "selector": "#wfGain",
+            "source_clipped": false,
+            "pdf": {
+              "role": "vector_callout",
+              "x": 47.1,
+              "y": 286.06,
+              "w": 17.91,
+              "h": 17.91
+            }
+          },
+          {
+            "n": 3,
+            "selector": "#wfSensorStatus",
+            "source_clipped": false,
+            "pdf": {
+              "role": "vector_callout",
+              "x": 47.1,
+              "y": 256.72,
+              "w": 17.91,
+              "h": 17.91
+            }
+          }
+        ],
+        "skipped_offscreen_boxes": []
+      }
+    ]
+  },
+  {
+    "number": 5,
+    "key": "settings-replay",
+    "title": "4-5. Mode, label, lalu Lock",
+    "rectangles": [
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 566.76,
+        "w": 786,
+        "h": 11.52
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 549.91,
+        "w": 786,
+        "h": 10.37
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 501.84,
+        "w": 786,
+        "h": 29.44
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 483.48,
+        "w": 786,
+        "h": 12.8
+      },
+      {
+        "role": "screenshot_frame",
+        "x": 28.0,
+        "y": 65,
+        "w": 320,
+        "h": 400
+      },
+      {
+        "role": "image_border",
+        "x": 25.0,
+        "y": 62,
+        "w": 326,
+        "h": 406
+      },
+      {
+        "role": "vector_callout",
+        "x": 62.74,
+        "y": 372.2,
+        "w": 248.42,
+        "h": 44.38
+      },
+      {
+        "role": "number_bubble",
+        "x": 50.74,
+        "y": 410.58,
+        "w": 18,
+        "h": 18
+      },
+      {
+        "role": "vector_callout",
+        "x": 62.74,
+        "y": 190.43,
+        "w": 248.42,
+        "h": 37.89
+      },
+      {
+        "role": "number_bubble",
+        "x": 50.74,
+        "y": 222.32,
+        "w": 18,
+        "h": 18
+      },
+      {
+        "role": "vector_callout",
+        "x": 62.74,
+        "y": 112.99,
+        "w": 35.79,
+        "h": 21.05
+      },
+      {
+        "role": "number_bubble",
+        "x": 50.74,
+        "y": 128.05,
+        "w": 18,
+        "h": 18
+      },
+      {
+        "role": "instruction_panel",
+        "x": 370,
+        "y": 344,
+        "w": 443.89,
+        "h": 111
+      },
+      {
+        "role": "text",
+        "x": 402,
+        "y": 429.64,
+        "w": 399.89,
+        "h": 15.36
+      },
+      {
+        "role": "text",
+        "x": 382,
+        "y": 384.35,
+        "w": 419.89,
+        "h": 27.65
+      },
+      {
+        "role": "instruction_panel",
+        "x": 370,
+        "y": 219,
+        "w": 443.89,
+        "h": 111
+      },
+      {
+        "role": "text",
+        "x": 402,
+        "y": 304.64,
+        "w": 399.89,
+        "h": 15.36
+      },
+      {
+        "role": "text",
+        "x": 382,
+        "y": 259.35,
+        "w": 419.89,
+        "h": 27.65
+      },
+      {
+        "role": "instruction_panel",
+        "x": 370,
+        "y": 94,
+        "w": 443.89,
+        "h": 111
+      },
+      {
+        "role": "text",
+        "x": 402,
+        "y": 179.64,
+        "w": 399.89,
+        "h": 15.36
+      },
+      {
+        "role": "text",
+        "x": 382,
+        "y": 120.53,
+        "w": 419.89,
+        "h": 41.47
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 11.76,
+        "w": 720,
+        "h": 10.24
+      }
+    ],
+    "text": [
+      {
+        "role": "text",
+        "font_size": 9,
+        "measured_height": 11.52,
+        "allocated_height": 16,
+        "content": "PANDUAN OPERATOR / DATASET WORKSPACE - CSV 12 KOLOM"
+      },
+      {
+        "role": "text",
+        "font_size": 8.1,
+        "measured_height": 10.37,
+        "allocated_height": 20,
+        "content": "Screenshot pengujian GLD1002 sebelumnya; alur tombol dan grafik Dataset tetap sama."
+      },
+      {
+        "role": "text",
+        "font_size": 23,
+        "measured_height": 29.44,
+        "allocated_height": 32,
+        "content": "4-5. Mode, label, lalu Lock"
+      },
+      {
+        "role": "text",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 24,
+        "content": "Pilih satu tombol bulat, isi label, lalu kunci setelah lima nomor hijau."
+      },
+      {
+        "role": "text",
+        "font_size": 12,
+        "measured_height": 15.36,
+        "allocated_height": 26,
+        "content": "Pilih satu mode"
+      },
+      {
+        "role": "text",
+        "font_size": 10.8,
+        "measured_height": 27.65,
+        "allocated_height": 62,
+        "content": "Rekam langsung membekukan CSV saat putus. Pulih otomatis mengembalikan data tertunda ke CSV yang sama. Hanya satu pilihan dapat aktif."
+      },
+      {
+        "role": "text",
+        "font_size": 12,
+        "measured_height": 15.36,
+        "allocated_height": 26,
+        "content": "Label dan timestamp"
+      },
+      {
+        "role": "text",
+        "font_size": 10.8,
+        "measured_height": 27.65,
+        "allocated_height": 62,
+        "content": "Isi kondisi sebenarnya, misalnya clear_air_test. Awalan HH:mm Hari dd/mm/yy dibuat saat lokasi CSV dipilih. Label berbeda dari hasil prediksi."
+      },
+      {
+        "role": "text",
+        "font_size": 12,
+        "measured_height": 15.36,
+        "allocated_height": 26,
+        "content": "Lock pengaturan"
+      },
+      {
+        "role": "text",
+        "font_size": 10.8,
+        "measured_height": 41.47,
+        "allocated_height": 62,
+        "content": "Setelah lima nomor hijau, aktifkan Lock. Input tetap terlihat tetapi tidak dapat diedit; kontrol rekaman muncul. Untuk konfigurasi baru setelah merekam, Reset lalu pilih CSV baru."
+      },
+      {
+        "role": "text",
+        "font_size": 8,
+        "measured_height": 10.24,
+        "allocated_height": 12,
+        "content": "3 November 2026 | PNG asli; kotak dan nomor panduan berupa anotasi vektor."
+      }
+    ],
+    "screenshots": [
+      {
+        "key": "settings-replay",
+        "path": "D:\\Github\\PertaminaGLD\\tmp\\workspace-live-20261103\\real-browser-inference\\settings-replay.png",
+        "source_sha256": "694f6c5edf25e2375bc1b5f331b035d63228512e05b844bb683d56aa24e7f725",
+        "original_png_unedited": true,
+        "source_viewport": {
+          "x": 245.0,
+          "y": 550.0,
+          "w": 265.0,
+          "h": 380.0
+        },
+        "scale": 1.05263,
+        "boxes": [
+          {
+            "n": 2,
+            "selector": "#wfMode",
+            "source_clipped": false,
+            "pdf": {
+              "role": "vector_callout",
+              "x": 62.74,
+              "y": 372.2,
+              "w": 248.42,
+              "h": 44.38
+            }
+          },
+          {
+            "n": 4,
+            "selector": "#wfLabel",
+            "source_clipped": false,
+            "pdf": {
+              "role": "vector_callout",
+              "x": 62.74,
+              "y": 190.43,
+              "w": 248.42,
+              "h": 37.89
+            }
+          },
+          {
+            "n": 5,
+            "selector": "#wfLock",
+            "source_clipped": false,
+            "pdf": {
+              "role": "vector_callout",
+              "x": 62.74,
+              "y": 112.99,
+              "w": 35.79,
+              "h": 21.05
+            }
+          }
+        ],
+        "skipped_offscreen_boxes": []
+      }
+    ]
+  },
+  {
+    "number": 6,
+    "key": "recording-real",
+    "title": "Start: mulai merekam",
+    "rectangles": [
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 566.76,
+        "w": 786,
+        "h": 11.52
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 549.91,
+        "w": 786,
+        "h": 10.37
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 501.84,
+        "w": 786,
+        "h": 29.44
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 483.48,
+        "w": 786,
+        "h": 12.8
+      },
+      {
+        "role": "screenshot_frame",
+        "x": 28.0,
+        "y": 180,
+        "w": 786,
+        "h": 290
+      },
+      {
+        "role": "image_border",
+        "x": 25.0,
+        "y": 177,
+        "w": 792,
+        "h": 296
+      },
+      {
+        "role": "vector_callout",
+        "x": 39.59,
+        "y": 372.87,
+        "w": 104.8,
+        "h": 34.26
+      },
+      {
+        "role": "number_bubble",
+        "x": 28.0,
+        "y": 401.13,
+        "w": 18,
+        "h": 18
+      },
+      {
+        "role": "vector_callout",
+        "x": 154.47,
+        "y": 372.87,
+        "w": 73.42,
+        "h": 34.26
+      },
+      {
+        "role": "number_bubble",
+        "x": 142.47,
+        "y": 401.13,
+        "w": 18,
+        "h": 18
+      },
+      {
+        "role": "vector_callout",
+        "x": 680.23,
+        "y": 423.25,
+        "w": 129.24,
+        "h": 14.11
+      },
+      {
+        "role": "number_bubble",
+        "x": 668.23,
+        "y": 431.36,
+        "w": 18,
+        "h": 18
+      },
+      {
+        "role": "instruction_card",
+        "x": 28.0,
+        "y": 43,
+        "w": 253.96,
+        "h": 120
+      },
+      {
+        "role": "card_title",
+        "x": 57.0,
+        "y": 142.2,
+        "w": 214.96,
+        "h": 12.8
+      },
+      {
+        "role": "card_body",
+        "x": 39.0,
+        "y": 91.67,
+        "w": 231.96,
+        "h": 35.33
+      },
+      {
+        "role": "instruction_card",
+        "x": 293.96,
+        "y": 43,
+        "w": 253.96,
+        "h": 120
+      },
+      {
+        "role": "card_title",
+        "x": 322.96,
+        "y": 142.2,
+        "w": 214.96,
+        "h": 12.8
+      },
+      {
+        "role": "card_body",
+        "x": 304.96,
+        "y": 103.45,
+        "w": 231.96,
+        "h": 23.55
+      },
+      {
+        "role": "instruction_card",
+        "x": 559.93,
+        "y": 43,
+        "w": 253.96,
+        "h": 120
+      },
+      {
+        "role": "card_title",
+        "x": 588.93,
+        "y": 142.2,
+        "w": 214.96,
+        "h": 12.8
+      },
+      {
+        "role": "card_body",
+        "x": 570.93,
+        "y": 91.67,
+        "w": 231.96,
+        "h": 35.33
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 11.76,
+        "w": 720,
+        "h": 10.24
+      }
+    ],
+    "text": [
+      {
+        "role": "text",
+        "font_size": 9,
+        "measured_height": 11.52,
+        "allocated_height": 16,
+        "content": "PANDUAN OPERATOR / DATASET WORKSPACE - CSV 12 KOLOM"
+      },
+      {
+        "role": "text",
+        "font_size": 8.1,
+        "measured_height": 10.37,
+        "allocated_height": 20,
+        "content": "Screenshot pengujian GLD1002 sebelumnya; alur tombol dan grafik Dataset tetap sama."
+      },
+      {
+        "role": "text",
+        "font_size": 23,
+        "measured_height": 29.44,
+        "allocated_height": 32,
+        "content": "Start: mulai merekam"
+      },
+      {
+        "role": "text",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 24,
+        "content": "Satu tombol utama berganti fungsi sesuai keadaan."
+      },
+      {
+        "role": "card_title",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 27,
+        "content": "Start menjadi Pause"
+      },
+      {
+        "role": "card_body",
+        "font_size": 9.2,
+        "measured_height": 35.33,
+        "allocated_height": 76,
+        "content": "Klik Start sekali. Setelah terkonfirmasi, tombol utama menjadi Pause. Stop aktif dan hitungan sampel bertambah setelah penyimpanan."
+      },
+      {
+        "role": "card_title",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 27,
+        "content": "Stop aktif"
+      },
+      {
+        "role": "card_body",
+        "font_size": 9.2,
+        "measured_height": 23.55,
+        "allocated_height": 76,
+        "content": "Stop dapat dipakai setelah Start terkonfirmasi, termasuk ketika pengukuran dijeda."
+      },
+      {
+        "role": "card_title",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 27,
+        "content": "Hitungan tersimpan"
+      },
+      {
+        "role": "card_body",
+        "font_size": 9.2,
+        "measured_height": 35.33,
+        "allocated_height": 76,
+        "content": "Hitungan bertambah setelah data disimpan. Jangan menutup proses backend, mematikan GLD atau mematikan laptop selama merekam."
+      },
+      {
+        "role": "text",
+        "font_size": 8,
+        "measured_height": 10.24,
+        "allocated_height": 12,
+        "content": "3 November 2026 | PNG asli; kotak dan nomor panduan berupa anotasi vektor."
+      }
+    ],
+    "screenshots": [
+      {
+        "key": "recording-real",
+        "path": "D:\\Github\\PertaminaGLD\\tmp\\workspace-live-20261103\\real-browser-inference\\recording-real.png",
+        "source_sha256": "3482cb11043b45d790fb4d3883b289f40dea73c0172f17af722b192d2dad736a",
+        "original_png_unedited": true,
+        "source_viewport": {
+          "x": 535.0,
+          "y": 230.0,
+          "w": 780.0,
+          "h": 260.0
+        },
+        "scale": 1.00769,
+        "boxes": [
+          {
+            "n": 1,
+            "selector": "#wfPrimary",
+            "source_clipped": false,
+            "pdf": {
+              "role": "vector_callout",
+              "x": 39.59,
+              "y": 372.87,
+              "w": 104.8,
+              "h": 34.26
+            }
+          },
+          {
+            "n": 2,
+            "selector": "#wfStop",
+            "source_clipped": false,
+            "pdf": {
+              "role": "vector_callout",
+              "x": 154.47,
+              "y": 372.87,
+              "w": 73.42,
+              "h": 34.26
+            }
+          },
+          {
+            "n": 3,
+            "selector": "#wfCount",
+            "source_clipped": false,
+            "pdf": {
+              "role": "vector_callout",
+              "x": 680.23,
+              "y": 423.25,
+              "w": 129.24,
+              "h": 14.11
+            }
+          }
+        ],
+        "skipped_offscreen_boxes": []
+      }
+    ]
+  },
+  {
+    "number": 7,
+    "key": "recording-real",
+    "title": "Grafik dan delapan nilai sensor",
+    "rectangles": [
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 566.76,
+        "w": 786,
+        "h": 11.52
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 549.91,
+        "w": 786,
+        "h": 10.37
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 501.84,
+        "w": 786,
+        "h": 29.44
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 483.48,
+        "w": 786,
+        "h": 12.8
+      },
+      {
+        "role": "screenshot_frame",
+        "x": 28.0,
+        "y": 180,
+        "w": 786,
+        "h": 290
+      },
+      {
+        "role": "image_border",
+        "x": 25.0,
+        "y": 177,
+        "w": 792,
+        "h": 296
+      },
+      {
+        "role": "vector_callout",
+        "x": 195.21,
+        "y": 265.53,
+        "w": 455.71,
+        "h": 201.22
+      },
+      {
+        "role": "number_bubble",
+        "x": 190.18,
+        "y": 452.0,
+        "w": 18,
+        "h": 18
+      },
+      {
+        "role": "instruction_card",
+        "x": 28.0,
+        "y": 43,
+        "w": 253.96,
+        "h": 120
+      },
+      {
+        "role": "card_title",
+        "x": 57.0,
+        "y": 142.2,
+        "w": 214.96,
+        "h": 12.8
+      },
+      {
+        "role": "card_body",
+        "x": 39.0,
+        "y": 91.67,
+        "w": 231.96,
+        "h": 35.33
+      },
+      {
+        "role": "instruction_card",
+        "x": 293.96,
+        "y": 43,
+        "w": 253.96,
+        "h": 120
+      },
+      {
+        "role": "card_title",
+        "x": 322.96,
+        "y": 142.2,
+        "w": 214.96,
+        "h": 12.8
+      },
+      {
+        "role": "card_body",
+        "x": 304.96,
+        "y": 91.67,
+        "w": 231.96,
+        "h": 35.33
+      },
+      {
+        "role": "instruction_card",
+        "x": 559.93,
+        "y": 43,
+        "w": 253.96,
+        "h": 120
+      },
+      {
+        "role": "card_title",
+        "x": 588.93,
+        "y": 142.2,
+        "w": 214.96,
+        "h": 12.8
+      },
+      {
+        "role": "card_body",
+        "x": 570.93,
+        "y": 91.67,
+        "w": 231.96,
+        "h": 35.33
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 11.76,
+        "w": 720,
+        "h": 10.24
+      }
+    ],
+    "text": [
+      {
+        "role": "text",
+        "font_size": 9,
+        "measured_height": 11.52,
+        "allocated_height": 16,
+        "content": "PANDUAN OPERATOR / DATASET WORKSPACE - CSV 12 KOLOM"
+      },
+      {
+        "role": "text",
+        "font_size": 8.1,
+        "measured_height": 10.37,
+        "allocated_height": 20,
+        "content": "Screenshot pengujian GLD1002 sebelumnya; alur tombol dan grafik Dataset tetap sama."
+      },
+      {
+        "role": "text",
+        "font_size": 23,
+        "measured_height": 29.44,
+        "allocated_height": 32,
+        "content": "Grafik dan delapan nilai sensor"
+      },
+      {
+        "role": "text",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 24,
+        "content": "Renderer grafik mengikuti tab Running; CSV menyimpan seluruh data sesi."
+      },
+      {
+        "role": "card_title",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 27,
+        "content": "Delapan kanal"
+      },
+      {
+        "role": "card_body",
+        "font_size": 9.2,
+        "measured_height": 35.33,
+        "allocated_height": 76,
+        "content": "MQ8, MQ135, MQ3, MQ5, MQ4, MQ7, MQ6 dan MQ2. Nilai saat ini, gain dan status ditampilkan di bawah grafik."
+      },
+      {
+        "role": "card_title",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 27,
+        "content": "Kelas dan confidence"
+      },
+      {
+        "role": "card_body",
+        "font_size": 9.2,
+        "measured_height": 35.33,
+        "allocated_height": 76,
+        "content": "Hasil inferensi ada di atas grafik. Pemanasan membutuhkan 10 sampel, sekitar 5 detik, setelah Start atau Resume. Range hanya mengubah tampilan."
+      },
+      {
+        "role": "card_title",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 27,
+        "content": "Jeda pada grafik"
+      },
+      {
+        "role": "card_body",
+        "font_size": 9.2,
+        "measured_height": 35.33,
+        "allocated_height": 76,
+        "content": "Pause atau segmen baru dapat membuat celah. Aplikasi tidak membuat sampel pengisi untuk waktu tanpa pengukuran."
+      },
+      {
+        "role": "text",
+        "font_size": 8,
+        "measured_height": 10.24,
+        "allocated_height": 12,
+        "content": "3 November 2026 | PNG asli; kotak dan nomor panduan berupa anotasi vektor."
+      }
+    ],
+    "screenshots": [
+      {
+        "key": "recording-real",
+        "path": "D:\\Github\\PertaminaGLD\\tmp\\workspace-live-20261103\\real-browser-inference\\recording-real.png",
+        "source_sha256": "3482cb11043b45d790fb4d3883b289f40dea73c0172f17af722b192d2dad736a",
+        "original_png_unedited": true,
+        "source_viewport": {
+          "x": 535.0,
+          "y": 490.0,
+          "w": 780.0,
+          "h": 490.0
+        },
+        "scale": 0.59184,
+        "boxes": [
+          {
+            "n": 4,
+            "selector": "#wfChart",
+            "source_clipped": false,
+            "pdf": {
+              "role": "vector_callout",
+              "x": 195.21,
+              "y": 265.53,
+              "w": 455.71,
+              "h": 201.22
+            }
+          }
+        ],
+        "skipped_offscreen_boxes": []
+      }
+    ]
+  },
+  {
+    "number": 8,
+    "key": "paused-real",
+    "title": "Pause: tombol berubah menjadi Resume",
+    "rectangles": [
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 566.76,
+        "w": 786,
+        "h": 11.52
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 549.91,
+        "w": 786,
+        "h": 10.37
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 501.84,
+        "w": 786,
+        "h": 29.44
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 483.48,
+        "w": 786,
+        "h": 12.8
+      },
+      {
+        "role": "screenshot_frame",
+        "x": 28.0,
+        "y": 180,
+        "w": 786,
+        "h": 290
+      },
+      {
+        "role": "image_border",
+        "x": 25.0,
+        "y": 177,
+        "w": 792,
+        "h": 296
+      },
+      {
+        "role": "vector_callout",
+        "x": 39.59,
+        "y": 314.92,
+        "w": 104.8,
+        "h": 34.26
+      },
+      {
+        "role": "number_bubble",
+        "x": 28.0,
+        "y": 343.18,
+        "w": 18,
+        "h": 18
+      },
+      {
+        "role": "vector_callout",
+        "x": 154.47,
+        "y": 314.92,
+        "w": 73.42,
+        "h": 34.26
+      },
+      {
+        "role": "number_bubble",
+        "x": 142.47,
+        "y": 343.18,
+        "w": 18,
+        "h": 18
+      },
+      {
+        "role": "vector_callout",
+        "x": 39.59,
+        "y": 362.28,
+        "w": 43.6,
+        "h": 20.15
+      },
+      {
+        "role": "number_bubble",
+        "x": 28.0,
+        "y": 376.44,
+        "w": 18,
+        "h": 18
+      },
+      {
+        "role": "instruction_card",
+        "x": 28.0,
+        "y": 43,
+        "w": 253.96,
+        "h": 120
+      },
+      {
+        "role": "card_title",
+        "x": 57.0,
+        "y": 142.2,
+        "w": 214.96,
+        "h": 12.8
+      },
+      {
+        "role": "card_body",
+        "x": 39.0,
+        "y": 91.67,
+        "w": 231.96,
+        "h": 35.33
+      },
+      {
+        "role": "instruction_card",
+        "x": 293.96,
+        "y": 43,
+        "w": 253.96,
+        "h": 120
+      },
+      {
+        "role": "card_title",
+        "x": 322.96,
+        "y": 142.2,
+        "w": 214.96,
+        "h": 12.8
+      },
+      {
+        "role": "card_body",
+        "x": 304.96,
+        "y": 103.45,
+        "w": 231.96,
+        "h": 23.55
+      },
+      {
+        "role": "instruction_card",
+        "x": 559.93,
+        "y": 43,
+        "w": 253.96,
+        "h": 120
+      },
+      {
+        "role": "card_title",
+        "x": 588.93,
+        "y": 142.2,
+        "w": 214.96,
+        "h": 12.8
+      },
+      {
+        "role": "card_body",
+        "x": 570.93,
+        "y": 91.67,
+        "w": 231.96,
+        "h": 35.33
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 11.76,
+        "w": 720,
+        "h": 10.24
+      }
+    ],
+    "text": [
+      {
+        "role": "text",
+        "font_size": 9,
+        "measured_height": 11.52,
+        "allocated_height": 16,
+        "content": "PANDUAN OPERATOR / DATASET WORKSPACE - CSV 12 KOLOM"
+      },
+      {
+        "role": "text",
+        "font_size": 8.1,
+        "measured_height": 10.37,
+        "allocated_height": 20,
+        "content": "Screenshot pengujian GLD1002 sebelumnya; alur tombol dan grafik Dataset tetap sama."
+      },
+      {
+        "role": "text",
+        "font_size": 23,
+        "measured_height": 29.44,
+        "allocated_height": 32,
+        "content": "Pause: tombol berubah menjadi Resume"
+      },
+      {
+        "role": "text",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 24,
+        "content": "Jeda menghentikan pengukuran di GLD setelah dikonfirmasi."
+      },
+      {
+        "role": "card_title",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 27,
+        "content": "Pause menjadi Resume"
+      },
+      {
+        "role": "card_body",
+        "font_size": 9.2,
+        "measured_height": 35.33,
+        "allocated_height": 76,
+        "content": "Klik Pause ketika merekam. Setelah terkonfirmasi tombol menjadi Resume; klik untuk melanjutkan sesi yang sama. Inferensi melakukan pemanasan lagi."
+      },
+      {
+        "role": "card_title",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 27,
+        "content": "Stop saat Pause"
+      },
+      {
+        "role": "card_body",
+        "font_size": 9.2,
+        "measured_height": 23.55,
+        "allocated_height": 76,
+        "content": "Stop tetap dapat dipakai ketika Dijeda. Reset saat Pause harus menyelesaikan Stop dan verifikasi dahulu."
+      },
+      {
+        "role": "card_title",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 27,
+        "content": "Periksa status Dijeda"
+      },
+      {
+        "role": "card_body",
+        "font_size": 9.2,
+        "measured_height": 35.33,
+        "allocated_height": 76,
+        "content": "Hitungan dan isi CSV berhenti bertambah setelah Pause terkonfirmasi. Aplikasi tidak membuat baris pengisi selama jeda."
+      },
+      {
+        "role": "text",
+        "font_size": 8,
+        "measured_height": 10.24,
+        "allocated_height": 12,
+        "content": "3 November 2026 | PNG asli; kotak dan nomor panduan berupa anotasi vektor."
+      }
+    ],
+    "screenshots": [
+      {
+        "key": "paused-real",
+        "path": "D:\\Github\\PertaminaGLD\\tmp\\workspace-live-20261103\\real-browser-inference\\paused-real.png",
+        "source_sha256": "3398c0daee53572737e7f25f7bea7ee0ef1b651a4dd19f4b5501627c60812cae",
+        "original_png_unedited": true,
+        "source_viewport": {
+          "x": 535.0,
+          "y": 230.0,
+          "w": 780.0,
+          "h": 145.0
+        },
+        "scale": 1.00769,
+        "boxes": [
+          {
+            "n": 1,
+            "selector": "#wfPrimary",
+            "source_clipped": false,
+            "pdf": {
+              "role": "vector_callout",
+              "x": 39.59,
+              "y": 314.92,
+              "w": 104.8,
+              "h": 34.26
+            }
+          },
+          {
+            "n": 2,
+            "selector": "#wfStop",
+            "source_clipped": false,
+            "pdf": {
+              "role": "vector_callout",
+              "x": 154.47,
+              "y": 314.92,
+              "w": 73.42,
+              "h": 34.26
+            }
+          },
+          {
+            "n": 3,
+            "selector": "#wfState",
+            "source_clipped": false,
+            "pdf": {
+              "role": "vector_callout",
+              "x": 39.59,
+              "y": 362.28,
+              "w": 43.6,
+              "h": 20.15
+            }
+          }
+        ],
+        "skipped_offscreen_boxes": []
+      }
+    ]
+  },
+  {
+    "number": 9,
+    "key": "stop-verified-0",
+    "title": "Stop: tunggu verifikasi CSV, lalu OK",
+    "rectangles": [
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 566.76,
+        "w": 786,
+        "h": 11.52
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 549.91,
+        "w": 786,
+        "h": 10.37
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 501.84,
+        "w": 786,
+        "h": 29.44
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 483.48,
+        "w": 786,
+        "h": 12.8
+      },
+      {
+        "role": "screenshot_frame",
+        "x": 28.0,
+        "y": 180,
+        "w": 786,
+        "h": 290
+      },
+      {
+        "role": "image_border",
+        "x": 25.0,
+        "y": 177,
+        "w": 792,
+        "h": 296
+      },
+      {
+        "role": "vector_callout",
+        "x": 152.03,
+        "y": 409.1,
+        "w": 536.5,
+        "h": 29.0
+      },
+      {
+        "role": "number_bubble",
+        "x": 140.03,
+        "y": 432.1,
+        "w": 18,
+        "h": 18
+      },
+      {
+        "role": "vector_callout",
+        "x": 152.03,
+        "y": 280.05,
+        "w": 536.5,
+        "h": 117.45
+      },
+      {
+        "role": "number_bubble",
+        "x": 140.03,
+        "y": 391.5,
+        "w": 18,
+        "h": 18
+      },
+      {
+        "role": "vector_callout",
+        "x": 617.27,
+        "y": 204.65,
+        "w": 71.25,
+        "h": 52.2
+      },
+      {
+        "role": "number_bubble",
+        "x": 605.27,
+        "y": 250.85,
+        "w": 18,
+        "h": 18
+      },
+      {
+        "role": "instruction_card",
+        "x": 28.0,
+        "y": 43,
+        "w": 253.96,
+        "h": 120
+      },
+      {
+        "role": "card_title",
+        "x": 57.0,
+        "y": 142.2,
+        "w": 214.96,
+        "h": 12.8
+      },
+      {
+        "role": "card_body",
+        "x": 39.0,
+        "y": 91.67,
+        "w": 231.96,
+        "h": 35.33
+      },
+      {
+        "role": "instruction_card",
+        "x": 293.96,
+        "y": 43,
+        "w": 253.96,
+        "h": 120
+      },
+      {
+        "role": "card_title",
+        "x": 322.96,
+        "y": 142.2,
+        "w": 214.96,
+        "h": 12.8
+      },
+      {
+        "role": "card_body",
+        "x": 304.96,
+        "y": 91.67,
+        "w": 231.96,
+        "h": 35.33
+      },
+      {
+        "role": "instruction_card",
+        "x": 559.93,
+        "y": 43,
+        "w": 253.96,
+        "h": 120
+      },
+      {
+        "role": "card_title",
+        "x": 588.93,
+        "y": 142.2,
+        "w": 214.96,
+        "h": 12.8
+      },
+      {
+        "role": "card_body",
+        "x": 570.93,
+        "y": 103.45,
+        "w": 231.96,
+        "h": 23.55
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 11.76,
+        "w": 720,
+        "h": 10.24
+      }
+    ],
+    "text": [
+      {
+        "role": "text",
+        "font_size": 9,
+        "measured_height": 11.52,
+        "allocated_height": 16,
+        "content": "PANDUAN OPERATOR / DATASET WORKSPACE - CSV 12 KOLOM"
+      },
+      {
+        "role": "text",
+        "font_size": 8.1,
+        "measured_height": 10.37,
+        "allocated_height": 20,
+        "content": "Screenshot pengujian GLD1002 sebelumnya; alur tombol dan grafik Dataset tetap sama."
+      },
+      {
+        "role": "text",
+        "font_size": 23,
+        "measured_height": 29.44,
+        "allocated_height": 32,
+        "content": "Stop: tunggu verifikasi CSV, lalu OK"
+      },
+      {
+        "role": "text",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 24,
+        "content": "Popup muncul sesudah seluruh baris dan kolom file diperiksa."
+      },
+      {
+        "role": "card_title",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 27,
+        "content": "Notifikasi CSV terverifikasi"
+      },
+      {
+        "role": "card_body",
+        "font_size": 9.2,
+        "measured_height": 35.33,
+        "allocated_height": 76,
+        "content": "Stop meminta GLD menyelesaikan sesi dan menunggu data tersisa. Popup baru muncul setelah verifikasi. Jangan menutup backend selagi proses berlangsung."
+      },
+      {
+        "role": "card_title",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 27,
+        "content": "Periksa hasil"
+      },
+      {
+        "role": "card_body",
+        "font_size": 9.2,
+        "measured_height": 35.33,
+        "allocated_height": 76,
+        "content": "Seluruh CSV dibandingkan dengan ledger, bukan hanya 10 baris tabel. Status tidak lengkap tetap harus dibaca sebagai tidak lengkap."
+      },
+      {
+        "role": "card_title",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 27,
+        "content": "OK"
+      },
+      {
+        "role": "card_body",
+        "font_size": 9.2,
+        "measured_height": 23.55,
+        "allocated_height": 76,
+        "content": "Baca pesan verifikasi, lalu klik OK. Setelah itu Continue dapat dipakai; Pause dan Stop menjadi nonaktif."
+      },
+      {
+        "role": "text",
+        "font_size": 8,
+        "measured_height": 10.24,
+        "allocated_height": 12,
+        "content": "3 November 2026 | PNG asli; kotak dan nomor panduan berupa anotasi vektor."
+      }
+    ],
+    "screenshots": [
+      {
+        "key": "stop-verified-0",
+        "path": "D:\\Github\\PertaminaGLD\\tmp\\workspace-live-20261103\\real-browser-inference\\stop-verified-0.png",
+        "source_sha256": "f9ffb6e8f70702c3363bc505ea21bf47f56211024f7b8ed67cf40c620b494587",
+        "original_png_unedited": true,
+        "source_viewport": {
+          "x": 585.0,
+          "y": 400.0,
+          "w": 400.0,
+          "h": 200.0
+        },
+        "scale": 1.45,
+        "boxes": [
+          {
+            "n": 1,
+            "selector": "#appModalTitle",
+            "source_clipped": false,
+            "pdf": {
+              "role": "vector_callout",
+              "x": 152.03,
+              "y": 409.1,
+              "w": 536.5,
+              "h": 29.0
+            }
+          },
+          {
+            "n": 2,
+            "selector": "#appModalMessage",
+            "source_clipped": false,
+            "pdf": {
+              "role": "vector_callout",
+              "x": 152.03,
+              "y": 280.05,
+              "w": 536.5,
+              "h": 117.45
+            }
+          },
+          {
+            "n": 3,
+            "selector": "#appModalOkBtn",
+            "source_clipped": false,
+            "pdf": {
+              "role": "vector_callout",
+              "x": 617.27,
+              "y": 204.65,
+              "w": 71.25,
+              "h": 52.2
+            }
+          }
+        ],
+        "skipped_offscreen_boxes": []
+      }
+    ]
+  },
+  {
+    "number": 10,
+    "key": "continue-real",
+    "title": "Continue: lanjutkan CSV yang sama",
+    "rectangles": [
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 566.76,
+        "w": 786,
+        "h": 11.52
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 549.91,
+        "w": 786,
+        "h": 10.37
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 501.84,
+        "w": 786,
+        "h": 29.44
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 483.48,
+        "w": 786,
+        "h": 12.8
+      },
+      {
+        "role": "screenshot_frame",
+        "x": 28.0,
+        "y": 180,
+        "w": 786,
+        "h": 290
+      },
+      {
+        "role": "image_border",
+        "x": 25.0,
+        "y": 177,
+        "w": 792,
+        "h": 296
+      },
+      {
+        "role": "vector_callout",
+        "x": 39.59,
+        "y": 314.92,
+        "w": 104.8,
+        "h": 34.26
+      },
+      {
+        "role": "number_bubble",
+        "x": 28.0,
+        "y": 343.18,
+        "w": 18,
+        "h": 18
+      },
+      {
+        "role": "instruction_card",
+        "x": 28.0,
+        "y": 43,
+        "w": 253.96,
+        "h": 120
+      },
+      {
+        "role": "card_title",
+        "x": 57.0,
+        "y": 142.2,
+        "w": 214.96,
+        "h": 12.8
+      },
+      {
+        "role": "card_body",
+        "x": 39.0,
+        "y": 91.67,
+        "w": 231.96,
+        "h": 35.33
+      },
+      {
+        "role": "instruction_card",
+        "x": 293.96,
+        "y": 43,
+        "w": 253.96,
+        "h": 120
+      },
+      {
+        "role": "card_title",
+        "x": 322.96,
+        "y": 142.2,
+        "w": 214.96,
+        "h": 12.8
+      },
+      {
+        "role": "card_body",
+        "x": 304.96,
+        "y": 91.67,
+        "w": 231.96,
+        "h": 35.33
+      },
+      {
+        "role": "instruction_card",
+        "x": 559.93,
+        "y": 43,
+        "w": 253.96,
+        "h": 120
+      },
+      {
+        "role": "card_title",
+        "x": 588.93,
+        "y": 142.2,
+        "w": 214.96,
+        "h": 12.8
+      },
+      {
+        "role": "card_body",
+        "x": 570.93,
+        "y": 91.67,
+        "w": 231.96,
+        "h": 35.33
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 11.76,
+        "w": 720,
+        "h": 10.24
+      }
+    ],
+    "text": [
+      {
+        "role": "text",
+        "font_size": 9,
+        "measured_height": 11.52,
+        "allocated_height": 16,
+        "content": "PANDUAN OPERATOR / DATASET WORKSPACE - CSV 12 KOLOM"
+      },
+      {
+        "role": "text",
+        "font_size": 8.1,
+        "measured_height": 10.37,
+        "allocated_height": 20,
+        "content": "Screenshot pengujian GLD1002 sebelumnya; alur tombol dan grafik Dataset tetap sama."
+      },
+      {
+        "role": "text",
+        "font_size": 23,
+        "measured_height": 29.44,
+        "allocated_height": 32,
+        "content": "Continue: lanjutkan CSV yang sama"
+      },
+      {
+        "role": "text",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 24,
+        "content": "Continue setelah Stop berbeda dari Resume setelah Pause."
+      },
+      {
+        "role": "card_title",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 27,
+        "content": "Continue"
+      },
+      {
+        "role": "card_body",
+        "font_size": 9.2,
+        "measured_height": 35.33,
+        "allocated_height": 76,
+        "content": "Tombol utama berubah menjadi Continue setelah Stop terverifikasi. Klik untuk membuat segmen baru dalam CSV yang sama."
+      },
+      {
+        "role": "card_title",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 27,
+        "content": "File dilindungi"
+      },
+      {
+        "role": "card_body",
+        "font_size": 9.2,
+        "measured_height": 35.33,
+        "allocated_height": 76,
+        "content": "Aplikasi memeriksa konfigurasi, perangkat, profil, model dan integritas file sebelum append. Jangan mengedit CSV dari luar saat akan Continue."
+      },
+      {
+        "role": "card_title",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 27,
+        "content": "Reset sesi"
+      },
+      {
+        "role": "card_body",
+        "font_size": 9.2,
+        "measured_height": 35.33,
+        "allocated_height": 76,
+        "content": "Reset membersihkan pilihan sesi dan kembali ke langkah awal, tanpa menghapus CSV atau NVS. Reset tidak aktif selama merekam atau Resume."
+      },
+      {
+        "role": "text",
+        "font_size": 8,
+        "measured_height": 10.24,
+        "allocated_height": 12,
+        "content": "3 November 2026 | PNG asli; kotak dan nomor panduan berupa anotasi vektor."
+      }
+    ],
+    "screenshots": [
+      {
+        "key": "continue-real",
+        "path": "D:\\Github\\PertaminaGLD\\tmp\\workspace-live-20261103\\real-browser-inference\\continue-real.png",
+        "source_sha256": "197312e141498f5f5c6b37bc8cda33ff5ed63ae987d0543b76b7e8bea86c27a9",
+        "original_png_unedited": true,
+        "source_viewport": {
+          "x": 535.0,
+          "y": 230.0,
+          "w": 780.0,
+          "h": 145.0
+        },
+        "scale": 1.00769,
+        "boxes": [
+          {
+            "n": 1,
+            "selector": "#wfPrimary",
+            "source_clipped": false,
+            "pdf": {
+              "role": "vector_callout",
+              "x": 39.59,
+              "y": 314.92,
+              "w": 104.8,
+              "h": 34.26
+            }
+          }
+        ],
+        "skipped_offscreen_boxes": []
+      }
+    ]
+  },
+  {
+    "number": 11,
+    "key": "export-real",
+    "title": "Export CSV di bawah tabel",
+    "rectangles": [
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 566.76,
+        "w": 786,
+        "h": 11.52
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 549.91,
+        "w": 786,
+        "h": 10.37
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 501.84,
+        "w": 786,
+        "h": 29.44
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 483.48,
+        "w": 786,
+        "h": 12.8
+      },
+      {
+        "role": "screenshot_frame",
+        "x": 28.0,
+        "y": 180,
+        "w": 786,
+        "h": 290
+      },
+      {
+        "role": "image_border",
+        "x": 25.0,
+        "y": 177,
+        "w": 792,
+        "h": 296
+      },
+      {
+        "role": "vector_callout",
+        "x": 682.94,
+        "y": 254.72,
+        "w": 104.23,
+        "h": 32.59
+      },
+      {
+        "role": "number_bubble",
+        "x": 670.94,
+        "y": 281.31,
+        "w": 18,
+        "h": 18
+      },
+      {
+        "role": "vector_callout",
+        "x": 54.84,
+        "y": 273.68,
+        "w": 202.3,
+        "h": 14.38
+      },
+      {
+        "role": "number_bubble",
+        "x": 42.84,
+        "y": 282.06,
+        "w": 18,
+        "h": 18
+      },
+      {
+        "role": "instruction_card",
+        "x": 28.0,
+        "y": 43,
+        "w": 253.96,
+        "h": 120
+      },
+      {
+        "role": "card_title",
+        "x": 57.0,
+        "y": 142.2,
+        "w": 214.96,
+        "h": 12.8
+      },
+      {
+        "role": "card_body",
+        "x": 39.0,
+        "y": 91.67,
+        "w": 231.96,
+        "h": 35.33
+      },
+      {
+        "role": "instruction_card",
+        "x": 293.96,
+        "y": 43,
+        "w": 253.96,
+        "h": 120
+      },
+      {
+        "role": "card_title",
+        "x": 322.96,
+        "y": 142.2,
+        "w": 214.96,
+        "h": 12.8
+      },
+      {
+        "role": "card_body",
+        "x": 304.96,
+        "y": 91.67,
+        "w": 231.96,
+        "h": 35.33
+      },
+      {
+        "role": "instruction_card",
+        "x": 559.93,
+        "y": 43,
+        "w": 253.96,
+        "h": 120
+      },
+      {
+        "role": "card_title",
+        "x": 588.93,
+        "y": 142.2,
+        "w": 214.96,
+        "h": 12.8
+      },
+      {
+        "role": "card_body",
+        "x": 570.93,
+        "y": 91.67,
+        "w": 231.96,
+        "h": 35.33
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 11.76,
+        "w": 720,
+        "h": 10.24
+      }
+    ],
+    "text": [
+      {
+        "role": "text",
+        "font_size": 9,
+        "measured_height": 11.52,
+        "allocated_height": 16,
+        "content": "PANDUAN OPERATOR / DATASET WORKSPACE - CSV 12 KOLOM"
+      },
+      {
+        "role": "text",
+        "font_size": 8.1,
+        "measured_height": 10.37,
+        "allocated_height": 20,
+        "content": "Screenshot pengujian GLD1002 sebelumnya; alur tombol dan grafik Dataset tetap sama."
+      },
+      {
+        "role": "text",
+        "font_size": 23,
+        "measured_height": 29.44,
+        "allocated_height": 32,
+        "content": "Export CSV di bawah tabel"
+      },
+      {
+        "role": "text",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 24,
+        "content": "File tujuan sudah disimpan selama merekam; Export membuat salinan unduhan."
+      },
+      {
+        "role": "card_title",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 27,
+        "content": "Export CSV"
+      },
+      {
+        "role": "card_body",
+        "font_size": 9.2,
+        "measured_height": 35.33,
+        "allocated_height": 76,
+        "content": "Klik Export CSV di bawah tabel untuk mengunduh salinan file rekaman. CSV baru default berisi 12 kolom; lihat halaman format CSV setelah ini."
+      },
+      {
+        "role": "card_title",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 27,
+        "content": "Tunggu verifikasi"
+      },
+      {
+        "role": "card_body",
+        "font_size": 9.2,
+        "measured_height": 35.33,
+        "allocated_height": 76,
+        "content": "Sebaiknya Stop dan tunggu verifikasi dahulu. File asli tetap berada di lokasi pilihan. CSV lama tidak diubah oleh pembaruan format."
+      },
+      {
+        "role": "card_title",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 27,
+        "content": "Tabel dan CSV"
+      },
+      {
+        "role": "card_body",
+        "font_size": 9.2,
+        "measured_height": 35.33,
+        "allocated_height": 76,
+        "content": "Tabel menampilkan 10 sampel terakhir dan nomor baris untuk navigasi. CSV menyimpan seluruh baris; metadata teknisnya berada di catatan internal."
+      },
+      {
+        "role": "text",
+        "font_size": 8,
+        "measured_height": 10.24,
+        "allocated_height": 12,
+        "content": "3 November 2026 | PNG asli; kotak dan nomor panduan berupa anotasi vektor."
+      }
+    ],
+    "screenshots": [
+      {
+        "key": "export-real",
+        "path": "D:\\Github\\PertaminaGLD\\tmp\\workspace-live-20261103\\real-browser-inference\\export-real.png",
+        "source_sha256": "6118a43b7e45ddf736ba9f4135a39a5075e6a44cf51cc7e57bdedf73a88a9441",
+        "original_png_unedited": true,
+        "source_viewport": {
+          "x": 518.5,
+          "y": 702.4554707379134,
+          "w": 820.0,
+          "h": 302.54452926208654
+        },
+        "scale": 0.95854,
+        "boxes": [
+          {
+            "n": 2,
+            "selector": "#wfExport",
+            "source_clipped": false,
+            "pdf": {
+              "role": "vector_callout",
+              "x": 682.94,
+              "y": 254.72,
+              "w": 104.23,
+              "h": 32.59
+            }
+          },
+          {
+            "n": 3,
+            "selector": "#wfVerification",
+            "source_clipped": false,
+            "pdf": {
+              "role": "vector_callout",
+              "x": 54.84,
+              "y": 273.68,
+              "w": 202.3,
+              "h": 14.38
+            }
+          }
+        ],
+        "skipped_offscreen_boxes": []
+      }
+    ]
+  },
+  {
+    "number": 12,
+    "key": "csv-format",
+    "title": "Isi CSV: 12 kolom utama",
+    "rectangles": [
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 566.76,
+        "w": 786,
+        "h": 11.52
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 549.91,
+        "w": 786,
+        "h": 10.37
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 501.84,
+        "w": 786,
+        "h": 29.44
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 483.48,
+        "w": 786,
+        "h": 12.8
+      },
+      {
+        "role": "column_list",
+        "x": 28.0,
+        "y": 235,
+        "w": 387,
+        "h": 230
+      },
+      {
+        "role": "text",
+        "x": 68.0,
+        "y": 434.64,
+        "w": 335,
+        "h": 15.36
+      },
+      {
+        "role": "text",
+        "x": 68.0,
+        "y": 399.64,
+        "w": 335,
+        "h": 15.36
+      },
+      {
+        "role": "text",
+        "x": 68.0,
+        "y": 364.64,
+        "w": 335,
+        "h": 15.36
+      },
+      {
+        "role": "text",
+        "x": 68.0,
+        "y": 329.64,
+        "w": 335,
+        "h": 15.36
+      },
+      {
+        "role": "text",
+        "x": 68.0,
+        "y": 294.64,
+        "w": 335,
+        "h": 15.36
+      },
+      {
+        "role": "text",
+        "x": 68.0,
+        "y": 259.64,
+        "w": 335,
+        "h": 15.36
+      },
+      {
+        "role": "column_list",
+        "x": 427.0,
+        "y": 235,
+        "w": 387,
+        "h": 230
+      },
+      {
+        "role": "text",
+        "x": 467.0,
+        "y": 434.64,
+        "w": 335,
+        "h": 15.36
+      },
+      {
+        "role": "text",
+        "x": 467.0,
+        "y": 399.64,
+        "w": 335,
+        "h": 15.36
+      },
+      {
+        "role": "text",
+        "x": 467.0,
+        "y": 364.64,
+        "w": 335,
+        "h": 15.36
+      },
+      {
+        "role": "text",
+        "x": 467.0,
+        "y": 329.64,
+        "w": 335,
+        "h": 15.36
+      },
+      {
+        "role": "text",
+        "x": 467.0,
+        "y": 294.64,
+        "w": 335,
+        "h": 15.36
+      },
+      {
+        "role": "text",
+        "x": 467.0,
+        "y": 259.64,
+        "w": 335,
+        "h": 15.36
+      },
+      {
+        "role": "optional_count",
+        "x": 28.0,
+        "y": 146,
+        "w": 254,
+        "h": 73
+      },
+      {
+        "role": "text",
+        "x": 40.0,
+        "y": 188.08,
+        "w": 230,
+        "h": 17.92
+      },
+      {
+        "role": "text",
+        "x": 40.0,
+        "y": 167.2,
+        "w": 230,
+        "h": 12.8
+      },
+      {
+        "role": "optional_count",
+        "x": 294.0,
+        "y": 146,
+        "w": 254,
+        "h": 73
+      },
+      {
+        "role": "text",
+        "x": 306.0,
+        "y": 188.08,
+        "w": 230,
+        "h": 17.92
+      },
+      {
+        "role": "text",
+        "x": 306.0,
+        "y": 167.2,
+        "w": 230,
+        "h": 12.8
+      },
+      {
+        "role": "optional_count",
+        "x": 560.0,
+        "y": 146,
+        "w": 254,
+        "h": 73
+      },
+      {
+        "role": "text",
+        "x": 572.0,
+        "y": 188.08,
+        "w": 230,
+        "h": 17.92
+      },
+      {
+        "role": "text",
+        "x": 572.0,
+        "y": 167.2,
+        "w": 230,
+        "h": 12.8
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 98.12,
+        "w": 786,
+        "h": 26.88
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 46.91,
+        "w": 786,
+        "h": 25.09
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 11.76,
+        "w": 720,
+        "h": 10.24
+      }
+    ],
+    "text": [
+      {
+        "role": "text",
+        "font_size": 9,
+        "measured_height": 11.52,
+        "allocated_height": 16,
+        "content": "PANDUAN OPERATOR / DATASET WORKSPACE - CSV 12 KOLOM"
+      },
+      {
+        "role": "text",
+        "font_size": 8.1,
+        "measured_height": 10.37,
+        "allocated_height": 20,
+        "content": "Format CSV ringkas yang berlaku pada aplikasi saat ini; metadata teknis tersimpan internal."
+      },
+      {
+        "role": "text",
+        "font_size": 23,
+        "measured_height": 29.44,
+        "allocated_height": 32,
+        "content": "Isi CSV: 12 kolom utama"
+      },
+      {
+        "role": "text",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 24,
+        "content": "Gunakan sesi/file baru setelah Ctrl+F5. CSV lama tetap utuh."
+      },
+      {
+        "role": "text",
+        "font_size": 12,
+        "measured_height": 15.36,
+        "allocated_height": 24,
+        "content": "Waktu (ms)"
+      },
+      {
+        "role": "text",
+        "font_size": 12,
+        "measured_height": 15.36,
+        "allocated_height": 24,
+        "content": "Label pengujian"
+      },
+      {
+        "role": "text",
+        "font_size": 12,
+        "measured_height": 15.36,
+        "allocated_height": 24,
+        "content": "MQ8 (V)"
+      },
+      {
+        "role": "text",
+        "font_size": 12,
+        "measured_height": 15.36,
+        "allocated_height": 24,
+        "content": "MQ135 (V)"
+      },
+      {
+        "role": "text",
+        "font_size": 12,
+        "measured_height": 15.36,
+        "allocated_height": 24,
+        "content": "MQ3 (V)"
+      },
+      {
+        "role": "text",
+        "font_size": 12,
+        "measured_height": 15.36,
+        "allocated_height": 24,
+        "content": "MQ5 (V)"
+      },
+      {
+        "role": "text",
+        "font_size": 12,
+        "measured_height": 15.36,
+        "allocated_height": 24,
+        "content": "MQ4 (V)"
+      },
+      {
+        "role": "text",
+        "font_size": 12,
+        "measured_height": 15.36,
+        "allocated_height": 24,
+        "content": "MQ7 (V)"
+      },
+      {
+        "role": "text",
+        "font_size": 12,
+        "measured_height": 15.36,
+        "allocated_height": 24,
+        "content": "MQ6 (V)"
+      },
+      {
+        "role": "text",
+        "font_size": 12,
+        "measured_height": 15.36,
+        "allocated_height": 24,
+        "content": "MQ2 (V)"
+      },
+      {
+        "role": "text",
+        "font_size": 12,
+        "measured_height": 15.36,
+        "allocated_height": 24,
+        "content": "Predicted Class"
+      },
+      {
+        "role": "text",
+        "font_size": 12,
+        "measured_height": 15.36,
+        "allocated_height": 24,
+        "content": "Confidence"
+      },
+      {
+        "role": "text",
+        "font_size": 14,
+        "measured_height": 17.92,
+        "allocated_height": 23,
+        "content": "12 kolom"
+      },
+      {
+        "role": "text",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 28,
+        "content": "Gain dan Status sensor OFF."
+      },
+      {
+        "role": "text",
+        "font_size": 14,
+        "measured_height": 17.92,
+        "allocated_height": 23,
+        "content": "20 kolom"
+      },
+      {
+        "role": "text",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 28,
+        "content": "Gain saja ATAU Status sensor saja."
+      },
+      {
+        "role": "text",
+        "font_size": 14,
+        "measured_height": 17.92,
+        "allocated_height": 23,
+        "content": "28 kolom"
+      },
+      {
+        "role": "text",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 28,
+        "content": "Gain DAN Status sensor ON."
+      },
+      {
+        "role": "text",
+        "font_size": 10.5,
+        "measured_height": 26.88,
+        "allocated_height": 49,
+        "content": "Waktu adalah timestamp GLD dalam milidetik. Label memuat awalan jam/hari/tanggal. Predicted Class tetap indeks kelas model; Confidence bernilai 0..1 (misalnya 0,988 = 98,8%). Saat prediksi belum valid, kedua sel kosong."
+      },
+      {
+        "role": "text",
+        "font_size": 9.8,
+        "measured_height": 25.09,
+        "allocated_height": 29,
+        "content": "ID perangkat/sesi/boot, urutan sampel, profil, model, waktu scan, overrun dan detail inferensi tetap tersimpan internal. Continue serta verifikasi penuh tetap menggunakan catatan tersebut."
+      },
+      {
+        "role": "text",
+        "font_size": 8,
+        "measured_height": 10.24,
+        "allocated_height": 12,
+        "content": "3 November 2026 | PNG asli; kotak dan nomor panduan berupa anotasi vektor."
+      }
+    ],
+    "screenshots": []
+  },
+  {
+    "number": 13,
+    "key": "replay-disconnected",
+    "title": "Jika koneksi Wi-Fi putus",
+    "rectangles": [
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 566.76,
+        "w": 786,
+        "h": 11.52
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 549.91,
+        "w": 786,
+        "h": 10.37
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 501.84,
+        "w": 786,
+        "h": 29.44
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 483.48,
+        "w": 786,
+        "h": 12.8
+      },
+      {
+        "role": "screenshot_frame",
+        "x": 28.0,
+        "y": 180,
+        "w": 786,
+        "h": 290
+      },
+      {
+        "role": "image_border",
+        "x": 25.0,
+        "y": 177,
+        "w": 792,
+        "h": 296
+      },
+      {
+        "role": "vector_callout",
+        "x": 39.59,
+        "y": 372.36,
+        "w": 176.93,
+        "h": 20.15
+      },
+      {
+        "role": "number_bubble",
+        "x": 28.0,
+        "y": 386.52,
+        "w": 18,
+        "h": 18
+      },
+      {
+        "role": "vector_callout",
+        "x": 39.59,
+        "y": 294.34,
+        "w": 769.88,
+        "h": 18.56
+      },
+      {
+        "role": "number_bubble",
+        "x": 28.0,
+        "y": 306.91,
+        "w": 18,
+        "h": 18
+      },
+      {
+        "role": "instruction_card",
+        "x": 28.0,
+        "y": 43,
+        "w": 253.96,
+        "h": 120
+      },
+      {
+        "role": "card_title",
+        "x": 57.0,
+        "y": 142.2,
+        "w": 214.96,
+        "h": 12.8
+      },
+      {
+        "role": "card_body",
+        "x": 39.0,
+        "y": 91.67,
+        "w": 231.96,
+        "h": 35.33
+      },
+      {
+        "role": "instruction_card",
+        "x": 293.96,
+        "y": 43,
+        "w": 253.96,
+        "h": 120
+      },
+      {
+        "role": "card_title",
+        "x": 322.96,
+        "y": 142.2,
+        "w": 214.96,
+        "h": 12.8
+      },
+      {
+        "role": "card_body",
+        "x": 304.96,
+        "y": 91.67,
+        "w": 231.96,
+        "h": 35.33
+      },
+      {
+        "role": "instruction_card",
+        "x": 559.93,
+        "y": 43,
+        "w": 253.96,
+        "h": 120
+      },
+      {
+        "role": "card_title",
+        "x": 588.93,
+        "y": 142.2,
+        "w": 214.96,
+        "h": 12.8
+      },
+      {
+        "role": "card_body",
+        "x": 570.93,
+        "y": 91.67,
+        "w": 231.96,
+        "h": 35.33
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 11.76,
+        "w": 720,
+        "h": 10.24
+      }
+    ],
+    "text": [
+      {
+        "role": "text",
+        "font_size": 9,
+        "measured_height": 11.52,
+        "allocated_height": 16,
+        "content": "PANDUAN OPERATOR / DATASET WORKSPACE - CSV 12 KOLOM"
+      },
+      {
+        "role": "text",
+        "font_size": 8.1,
+        "measured_height": 10.37,
+        "allocated_height": 20,
+        "content": "Screenshot pengujian GLD1002 sebelumnya; alur tombol dan grafik Dataset tetap sama."
+      },
+      {
+        "role": "text",
+        "font_size": 23,
+        "measured_height": 29.44,
+        "allocated_height": 32,
+        "content": "Jika koneksi Wi-Fi putus"
+      },
+      {
+        "role": "text",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 24,
+        "content": "Pertahankan GLD dan backend tetap menyala."
+      },
+      {
+        "role": "card_title",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 27,
+        "content": "Pulih otomatis"
+      },
+      {
+        "role": "card_body",
+        "font_size": 9.2,
+        "measured_height": 35.33,
+        "allocated_height": 76,
+        "content": "Sambungkan laptop lagi ke GLD-DATASET dengan ID yang sama. Backend mengambil sampel tertunda ke CSV yang sama; jangan Start sesi baru."
+      },
+      {
+        "role": "card_title",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 27,
+        "content": "Ikuti pesan pemulihan"
+      },
+      {
+        "role": "card_body",
+        "font_size": 9.2,
+        "measured_height": 35.33,
+        "allocated_height": 76,
+        "content": "Tunggu data tersisa kembali. Pada mode Rekam langsung, CSV lama membeku; tunggu penutupan sesi sebelum Continue atau Reset."
+      },
+      {
+        "role": "card_title",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 27,
+        "content": "Batas 5 menit"
+      },
+      {
+        "role": "card_body",
+        "font_size": 9.2,
+        "measured_height": 35.33,
+        "allocated_height": 76,
+        "content": "Buffer berada di RAM GLD. Saat batas tercapai, sampling berhenti tidak lengkap. Mati/reboot menghapus buffer; restart backend bukan pemulihan yang dijamin."
+      },
+      {
+        "role": "text",
+        "font_size": 8,
+        "measured_height": 10.24,
+        "allocated_height": 12,
+        "content": "3 November 2026 | PNG asli; kotak dan nomor panduan berupa anotasi vektor."
+      }
+    ],
+    "screenshots": [
+      {
+        "key": "replay-disconnected",
+        "path": "D:\\Github\\PertaminaGLD\\tmp\\workspace-live-20261103\\real-browser-notice-confirmed\\replay-disconnected.png",
+        "source_sha256": "2c63e5c2ea660fd54d3f6eadb1d46d114c8c49d2d05cb99f01e322ed6524e83d",
+        "original_png_unedited": true,
+        "source_viewport": {
+          "x": 535.0,
+          "y": 230.0,
+          "w": 780.0,
+          "h": 165.0
+        },
+        "scale": 1.00769,
+        "boxes": [
+          {
+            "n": 1,
+            "selector": "#wfState",
+            "source_clipped": false,
+            "pdf": {
+              "role": "vector_callout",
+              "x": 39.59,
+              "y": 372.36,
+              "w": 176.93,
+              "h": 20.15
+            }
+          },
+          {
+            "n": 2,
+            "selector": "#wfMessage",
+            "source_clipped": false,
+            "pdf": {
+              "role": "vector_callout",
+              "x": 39.59,
+              "y": 294.34,
+              "w": 769.88,
+              "h": 18.56
+            }
+          }
+        ],
+        "skipped_offscreen_boxes": []
+      }
+    ]
+  },
+  {
+    "number": 14,
+    "key": "replay-recovered",
+    "title": "Sesudah tersambung kembali",
+    "rectangles": [
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 566.76,
+        "w": 786,
+        "h": 11.52
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 549.91,
+        "w": 786,
+        "h": 10.37
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 501.84,
+        "w": 786,
+        "h": 29.44
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 483.48,
+        "w": 786,
+        "h": 12.8
+      },
+      {
+        "role": "screenshot_frame",
+        "x": 28.0,
+        "y": 180,
+        "w": 786,
+        "h": 290
+      },
+      {
+        "role": "image_border",
+        "x": 25.0,
+        "y": 177,
+        "w": 792,
+        "h": 296
+      },
+      {
+        "role": "vector_callout",
+        "x": 680.23,
+        "y": 365.31,
+        "w": 129.24,
+        "h": 14.11
+      },
+      {
+        "role": "number_bubble",
+        "x": 668.23,
+        "y": 373.42,
+        "w": 18,
+        "h": 18
+      },
+      {
+        "role": "instruction_card",
+        "x": 28.0,
+        "y": 43,
+        "w": 253.96,
+        "h": 120
+      },
+      {
+        "role": "card_title",
+        "x": 57.0,
+        "y": 142.2,
+        "w": 214.96,
+        "h": 12.8
+      },
+      {
+        "role": "card_body",
+        "x": 39.0,
+        "y": 91.67,
+        "w": 231.96,
+        "h": 35.33
+      },
+      {
+        "role": "instruction_card",
+        "x": 293.96,
+        "y": 43,
+        "w": 253.96,
+        "h": 120
+      },
+      {
+        "role": "card_title",
+        "x": 322.96,
+        "y": 142.2,
+        "w": 214.96,
+        "h": 12.8
+      },
+      {
+        "role": "card_body",
+        "x": 304.96,
+        "y": 103.45,
+        "w": 231.96,
+        "h": 23.55
+      },
+      {
+        "role": "instruction_card",
+        "x": 559.93,
+        "y": 43,
+        "w": 253.96,
+        "h": 120
+      },
+      {
+        "role": "card_title",
+        "x": 588.93,
+        "y": 142.2,
+        "w": 214.96,
+        "h": 12.8
+      },
+      {
+        "role": "card_body",
+        "x": 570.93,
+        "y": 91.67,
+        "w": 231.96,
+        "h": 35.33
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 11.76,
+        "w": 720,
+        "h": 10.24
+      }
+    ],
+    "text": [
+      {
+        "role": "text",
+        "font_size": 9,
+        "measured_height": 11.52,
+        "allocated_height": 16,
+        "content": "PANDUAN OPERATOR / DATASET WORKSPACE - CSV 12 KOLOM"
+      },
+      {
+        "role": "text",
+        "font_size": 8.1,
+        "measured_height": 10.37,
+        "allocated_height": 20,
+        "content": "Screenshot pengujian GLD1002 sebelumnya; alur tombol dan grafik Dataset tetap sama."
+      },
+      {
+        "role": "text",
+        "font_size": 23,
+        "measured_height": 29.44,
+        "allocated_height": 32,
+        "content": "Sesudah tersambung kembali"
+      },
+      {
+        "role": "text",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 24,
+        "content": "Tunggu pemulihan selesai sebelum menutup sesi."
+      },
+      {
+        "role": "card_title",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 27,
+        "content": "Periksa hitungan"
+      },
+      {
+        "role": "card_body",
+        "font_size": 9.2,
+        "measured_height": 35.33,
+        "allocated_height": 76,
+        "content": "Data tertunda kembali dengan timestamp aslinya. Wi-Fi tersambung saja belum berarti seluruh sampel sudah tersimpan."
+      },
+      {
+        "role": "card_title",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 27,
+        "content": "Stop dan Export"
+      },
+      {
+        "role": "card_body",
+        "font_size": 9.2,
+        "measured_height": 23.55,
+        "allocated_height": 76,
+        "content": "Setelah pulih, klik Stop dan tunggu verifikasi. Unduh salinan CSV untuk analisis."
+      },
+      {
+        "role": "card_title",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 27,
+        "content": "Hasil uji dan batasnya"
+      },
+      {
+        "role": "card_body",
+        "font_size": 9.2,
+        "measured_height": 35.33,
+        "allocated_height": 76,
+        "content": "Grafik, kontrol, CSV dan putus-sambung telah diuji di GLD1002. Uji radio ini berupa putus singkat; batas penuh 300 detik diperiksa pada simulasi PC."
+      },
+      {
+        "role": "text",
+        "font_size": 8,
+        "measured_height": 10.24,
+        "allocated_height": 12,
+        "content": "3 November 2026 | PNG asli; kotak dan nomor panduan berupa anotasi vektor."
+      }
+    ],
+    "screenshots": [
+      {
+        "key": "replay-recovered",
+        "path": "D:\\Github\\PertaminaGLD\\tmp\\workspace-live-20261103\\real-browser-notice-confirmed\\replay-recovered.png",
+        "source_sha256": "e69fc230e1206704d85b165d3f4f2b6495016debe5c35f63d0dc9c5eaad46393",
+        "original_png_unedited": true,
+        "source_viewport": {
+          "x": 535.0,
+          "y": 230.0,
+          "w": 780.0,
+          "h": 145.0
+        },
+        "scale": 1.00769,
+        "boxes": [
+          {
+            "n": 1,
+            "selector": "#wfCount",
+            "source_clipped": false,
+            "pdf": {
+              "role": "vector_callout",
+              "x": 680.23,
+              "y": 365.31,
+              "w": 129.24,
+              "h": 14.11
+            }
+          }
+        ],
+        "skipped_offscreen_boxes": []
+      }
+    ]
+  }
+]

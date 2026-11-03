@@ -18,7 +18,7 @@ def prepare(project: pathlib.Path, build: pathlib.Path, name: str) -> pathlib.Pa
         password = data.get("password") if isinstance(data, dict) else None
         if (not isinstance(data, dict) or data.get("environment") != name or
                 data.get("username") != "gld" or data.get("protocol") != "gld-dataset-wifi/2" or
-                not isinstance(password, str) or not 24 <= len(password) <= 63 or
+                not isinstance(password, str) or not 8 <= len(password) <= 63 or
                 any(char not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_" for char in password)):
             raise ValueError("Invalid replay credentials; refusing silent rotation")
     else:

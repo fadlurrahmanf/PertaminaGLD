@@ -1,0 +1,31 @@
+{
+  "mode": "workflow-PC-ready-no-device",
+  "previousHub": 33672,
+  "hubPid": 25124,
+  "gldPid": 17492,
+  "startedWib": "2026-11-02 23:31:53",
+  "previousGld": 13612,
+  "healthy": true,
+  "datasetWorkflow": true,
+  "workflowState": "disconnected",
+  "nativeActionExecuted": false,
+  "deviceConnected": false,
+  "packageValidation": [
+    {
+      "environment": "gld_model_1_dataset_workflow_wifi",
+      "files_verified": 4,
+      "firmwareVersion": "0.8.36"
+    },
+    {
+      "environment": "gld_model_2_dataset_workflow_wifi",
+      "files_verified": 4,
+      "firmwareVersion": "0.8.36"
+    },
+    {
+      "environment": "gld_model_3_dataset_workflow_wifi",
+      "files_verified": 4,
+      "firmwareVersion": "0.8.36"
+    }
+  ],
+  "hubCatalogVerified": true
+}

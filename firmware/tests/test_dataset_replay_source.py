@@ -24,6 +24,54 @@ STAGE1_HASHES = {
 }
 
 
+def absent_workflow(source):
+    """Select old source when ONLY the new workflow macro is undefined.
+
+    This textual isolation guard is not a C++ preprocessor/compiler proof.
+    It handles an additive first #if workflow / #elif old chain by retaining
+    the old conditional as #if; all old conditions remain unevaluated.
+    """
+    stack, output = [], []
+    def visible():
+        return all(item[1] for item in stack)
+    for line in source.splitlines(keepends=True):
+        directive = line.strip()
+        if re.match(r"#\s*(if|ifdef|ifndef)\b", directive):
+            feature = "PGL_GLD_DATASET_WORKFLOW" in directive
+            if feature:
+                if "ifndef" in directive or re.search(r"!\s*(defined\s*\()?\s*PGL_GLD_DATASET_WORKFLOW", directive):
+                    raise AssertionError("Use positive additive workflow guards")
+                stack.append([True, False])
+                continue
+            if visible(): output.append(line)
+            stack.append([False, True])
+            continue
+        if directive.startswith("#elif") and stack:
+            feature = "PGL_GLD_DATASET_WORKFLOW" in directive
+            if feature:
+                stack[-1][1] = False
+                continue
+            if stack[-1][0]:
+                stack[-1] = [False, True]
+                line = line.replace("#elif", "#if", 1)
+            else:
+                stack[-1][1] = True
+            if visible(): output.append(line)
+            continue
+        if directive.startswith("#else") and stack:
+            stack[-1][1] = True
+            if not stack[-1][0] and visible(): output.append(line)
+            continue
+        if directive.startswith("#endif") and stack:
+            feature, _enabled = stack.pop()
+            if not feature and visible(): output.append(line)
+            continue
+        if visible(): output.append(line)
+    if stack:
+        raise AssertionError("Unbalanced workflow isolation guards")
+    return "".join(output)
+
+
 def absent_replay(source):
     stack, output = [], []
     for line in source.splitlines(keepends=True):
@@ -64,7 +112,7 @@ class ReplaySourceIsolation(unittest.TestCase):
 
     def test_unflagged_and_stage_one_unified_source_is_preserved(self):
         source = (ROOT / "firmware/gld/src/GldUnifiedMain.cpp").read_text(encoding="utf-8")
-        selected = absent_replay(source)
+        selected = absent_replay(absent_workflow(source))
         meaningful = "\n".join(line for line in selected.splitlines() if line.strip())
         self.assertEqual(hashlib.sha256(meaningful.encode()).hexdigest(),
                          "e073c2c51df93279bebf8b2dbc2e75e48ea4840d9fecb46b4810557d3d7a261e")
@@ -73,7 +121,8 @@ class ReplaySourceIsolation(unittest.TestCase):
         config = configparser.ConfigParser(interpolation=None, strict=False)
         config.read(ROOT / "firmware/platformio.ini", encoding="utf-8")
         new = {f"env:gld_model_{model}_dataset_replay_wifi" for model in (1, 2, 3)}
-        old = {name: dict(config[name]) for name in config.sections() if name not in new}
+        workflow = {f"env:gld_model_{model}_dataset_workflow_wifi" for model in (1, 2, 3)}
+        old = {name: dict(config[name]) for name in config.sections() if name not in new | workflow}
         digest = hashlib.sha256(json.dumps(old, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
         self.assertEqual(digest, "49b55f0d741884de698f2e5af6f48f26c58c53e3676f3a551444db858437a0cf")
         enabled = {name for name in config.sections()
@@ -90,7 +139,12 @@ class ReplaySourceIsolation(unittest.TestCase):
         packages = ROOT / "apps/operator-hub/firmware-packages"
         digest = hashlib.sha256()
         count = 0
+        workflow = {f"gld_model_{model}_dataset_workflow_wifi" for model in (1, 2, 3)}
         for path in sorted(packages.rglob("*")):
+            # New workflow packages are a separate namespace; the original
+            # package count/digest must remain exact for the protected set.
+            if path.relative_to(packages).parts[0] in workflow:
+                continue
             if path.is_file() and not any("dataset_replay_wifi" in part for part in path.relative_to(packages).parts):
                 digest.update(path.relative_to(packages).as_posix().encode())
                 digest.update(b"\0")
@@ -225,6 +279,39 @@ class ReplayPrivateCredentialTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 self.preparer.prepare(project, project / "build", "gld_model_1_dataset_wifi")
             self.assertFalse((project / ".pio").exists())
+
+    def test_explicit_eight_character_credential_is_preserved_across_builds(self):
+        with tempfile.TemporaryDirectory(prefix="gld-replay-credentials-test-") as directory:
+            project = Path(directory)
+            name = "gld_model_1_dataset_replay_wifi"
+            credential = project / ".pio/gld-dataset-replay-wifi" / name / "credentials.local.json"
+            credential.parent.mkdir(parents=True)
+            fixture_password = "Fixture8"
+            credential.write_text(json.dumps(dict(environment=name, username="gld", protocol="gld-dataset-wifi/2",
+                                                 password=fixture_password, note="fixture metadata retained")))
+            before = credential.read_bytes()
+            include = self.preparer.prepare(project, project / "build", name)
+            self.assertTrue(before == credential.read_bytes(), "Explicit credential was changed")
+            header = (include / "GldDatasetReplayWifiSecrets.h").read_text()
+            self.assertTrue(json.dumps(fixture_password) in header, "Explicit credential was not used in generated header")
+            self.preparer.prepare(project, project / "build", name)
+            self.assertTrue(before == credential.read_bytes(), "Incremental build rotated an explicit credential")
+            self.assertEqual(header, (include / "GldDatasetReplayWifiSecrets.h").read_text())
+
+    def test_seven_and_sixty_four_character_credentials_fail_without_replacement(self):
+        for length in (7, 64):
+            with self.subTest(length=length), tempfile.TemporaryDirectory(prefix="gld-replay-credentials-test-") as directory:
+                project = Path(directory)
+                name = "gld_model_1_dataset_replay_wifi"
+                credential = project / ".pio/gld-dataset-replay-wifi" / name / "credentials.local.json"
+                credential.parent.mkdir(parents=True)
+                credential.write_text(json.dumps(dict(environment=name, username="gld", protocol="gld-dataset-wifi/2",
+                                                     password="F" * length)))
+                before = credential.read_bytes()
+                with self.assertRaises(ValueError):
+                    self.preparer.prepare(project, project / "build", name)
+                self.assertTrue(before == credential.read_bytes(), "Invalid credential was replaced")
+                self.assertFalse((project / "build/private-dataset-replay-wifi/GldDatasetReplayWifiSecrets.h").exists())
 
     def test_existing_wrong_protocol_or_corruption_never_silently_rotates(self):
         with tempfile.TemporaryDirectory(prefix="gld-replay-credentials-test-") as directory:

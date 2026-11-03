@@ -1,0 +1,17 @@
+{
+  "mode": "pc-simulation",
+  "device_validation": false,
+  "pid": 14684,
+  "origin": "http://127.0.0.1:53318",
+  "app_url": "http://127.0.0.1:53318/gld/",
+  "http_port": 53318,
+  "ws_port": 53317,
+  "password": "stage2-simulation-only",
+  "output": "D:\\Github\\PertaminaGLD\\tmp\\workspace-live-20261103\\e2e\\output\\20261103T120333-0986f8",
+  "evidence": "D:\\Github\\PertaminaGLD\\tmp\\workspace-live-20261103\\e2e\\evidence.json",
+  "loaded_source_sha256": {
+    "apps/gld-operator/dataset_workflow.py": "7af054810b446f67f12f28338e54867ba3ec51843d511ec7a0b7191dcefa2db5",
+    "apps/gld-operator/wireless_dataset_workflow.py": "fe606f103a6b23e9bdb5b4140cfa7e5464d24c1540f84f11cffdb52e14f131d4",
+    "apps/gld-operator/bridge.py": "15b18e69acb3f56ef6a089611d78baefc1850667c2b2bd16b4ccdaa5164bf065"
+  }
+}

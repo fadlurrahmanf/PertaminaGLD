@@ -22,7 +22,7 @@ import {
   testMqttBroker, saveSessionLog, refreshDatasetWaitingState,
   beginDatasetSwitch, markDatasetWizardStarted, initDatasetWizard, refreshGldAesKeyStatus, syncGldAesKey
 } from "./dataset.js?v=20260811-aes-provision-status-1";
-import { loadManifestFile, uploadFirmware, initFirmwareUploadDialog, injectDeviceId, injectChAddress, applyLoraConfig, checkPortLock } from "./firmware.js?v=20261102-replay-selection";
+import { loadManifestFile, uploadFirmware, initFirmwareUploadDialog, injectDeviceId, injectChAddress, applyLoraConfig, checkPortLock } from "./firmware.js?v=20261103-native-hotspot-serial";
 import { syncDeviceSummary, renderFleetPanel, addFleetSlot } from "./fleet.js";
 import { toggleMock } from "./mock.js";
 import { initQcTab, switchQcTab, switchQcGroup, restoreQcLatch } from "./qc.js";
@@ -351,9 +351,12 @@ async function bootstrap() {
   startBridgeHealthPoll();
   await restoreSession(session);
   // Optional transport: its load/render failure cannot stop established flows.
-  import("./wireless-dataset.js?v=20261102-replay-stage2")
+  import("./wireless-dataset.js?v=20261102-dual-recording")
     .then(({ initWirelessDataset }) => initWirelessDataset())
     .catch((error) => appendLog(`WIRELESS_UI_UNAVAILABLE ${error.message}`, "in"));
+  import("./dataset-workflow.js?v=20261103-compact-csv")
+    .then(({ initDatasetWorkflow }) => initDatasetWorkflow())
+    .catch((error) => appendLog(`WORKFLOW_UI_UNAVAILABLE ${error.message}`, "in"));
   // Local visual/device-contract simulation.  It is opt-in by URL and never
   // opens a COM port or sends a command to a physical GLD.
   if (new URLSearchParams(window.location.search).get("mock") === "1" && !state.mock) {

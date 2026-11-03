@@ -119,9 +119,9 @@
       {
         "role": "card_body",
         "x": 39.0,
-        "y": 142.29,
+        "y": 130.38,
         "w": 231.96,
-        "h": 35.71
+        "h": 47.62
       },
       {
         "role": "instruction_card",
@@ -228,14 +228,14 @@
         "font_size": 10,
         "measured_height": 12.8,
         "allocated_height": 27,
-        "content": "Pilih sesuai model board"
+        "content": "Pilih model yang sesuai"
       },
       {
         "role": "card_body",
         "font_size": 9.3,
-        "measured_height": 35.71,
+        "measured_height": 47.62,
         "allocated_height": 127,
-        "content": "Untuk GLD pertama yang diuji, pilih GLD1 Model 1 - Hotspot Wizard Dataset. Model 1 - Board 1 biasa tidak menyalakan hotspot Dataset."
+        "content": "Pilih salah satu dari tiga paket final di bawah. GLD1002 terakhir memakai Model 2 (dipilih operator); angka ID perangkat tidak menentukan model. Paket Board biasa tidak menyalakan hotspot Dataset."
       },
       {
         "role": "card_title",
@@ -249,21 +249,21 @@
         "font_size": 9.3,
         "measured_height": 47.62,
         "allocated_height": 127,
-        "content": "Gunakan 24 V dan biarkan Reset NVS tidak dicentang. Jika upload sebelumnya mereset NVS, siapkan nulling dan binding model pada firmware biasa dahulu. Tunggu boot selesai sebelum Scan."
+        "content": "Gunakan 24 V, pilih COM GLD yang benar dan biarkan Reset NVS tidak dicentang. Tunggu upload terverifikasi dan boot selesai. Jangan kalibrasi atau bind ulang bila profil dan binding masih cocok."
       },
       {
         "role": "card_title",
         "font_size": 10,
         "measured_height": 12.8,
         "allocated_height": 27,
-        "content": "Kontrol COM dan Dataset Wi-Fi"
+        "content": "Fitur biasa ditambah hotspot"
       },
       {
         "role": "card_body",
         "font_size": 9.3,
         "measured_height": 59.52,
         "allocated_height": 127,
-        "content": "Alur yang disepakati: kontrol normal lewat COM; Dataset lewat Wi-Fi. Revisi firmware yang mempertahankan semua fitur normal masih menunggu compile dan uji, bukan otomatis tersedia karena menu diringkas."
+        "content": "Ketiga paket final sudah dibuild dan dipasang di Hub. Running, Nulling dan pengaturan tetap lewat COM; Dataset lewat Wi-Fi. Stop, verifikasi CSV dan Disconnect Dataset sebelum kembali mengubah pengaturan COM."
       },
       {
         "role": "text",
@@ -477,7 +477,7 @@
         "font_size": 8.1,
         "measured_height": 10.37,
         "allocated_height": 20,
-        "content": "Screenshot pengujian GLD1002 sebelumnya; alur tombol dan grafik Dataset tetap sama."
+        "content": "Screenshot GLD1002 terdahulu: ilustrasi kontrol/grafik, bukan uji Model 2 terbaru; format CSV lihat halaman 12."
       },
       {
         "role": "text",
@@ -743,7 +743,7 @@
         "font_size": 8.1,
         "measured_height": 10.37,
         "allocated_height": 20,
-        "content": "Screenshot pengujian GLD1002 sebelumnya; alur tombol dan grafik Dataset tetap sama."
+        "content": "Screenshot GLD1002 terdahulu: ilustrasi kontrol/grafik, bukan uji Model 2 terbaru; format CSV lihat halaman 12."
       },
       {
         "role": "text",
@@ -1041,7 +1041,7 @@
         "font_size": 10.8,
         "measured_height": 41.47,
         "allocated_height": 62,
-        "content": "Centang untuk mengisi inferensi. Kedua kolom selalu ada; nilainya kosong saat tidak dipilih atau belum valid. Checkbox menunggu Connect dan lokasi CSV. Prediksi Model 2 menunggu persetujuan model."
+        "content": "Centang untuk mengisi inferensi. Dua kolom selalu ada; kosong bila OFF atau belum valid. Checkbox menunggu Connect, lokasi CSV, serta model, binding dan nulling siap. Model 2 kini sudah disetujui operator."
       },
       {
         "role": "text",
@@ -1307,7 +1307,7 @@
         "font_size": 8.1,
         "measured_height": 10.37,
         "allocated_height": 20,
-        "content": "Screenshot pengujian GLD1002 sebelumnya; alur tombol dan grafik Dataset tetap sama."
+        "content": "Screenshot GLD1002 terdahulu: ilustrasi kontrol/grafik, bukan uji Model 2 terbaru; format CSV lihat halaman 12."
       },
       {
         "role": "text",
@@ -1601,7 +1601,7 @@
         "font_size": 8.1,
         "measured_height": 10.37,
         "allocated_height": 20,
-        "content": "Screenshot pengujian GLD1002 sebelumnya; alur tombol dan grafik Dataset tetap sama."
+        "content": "Screenshot GLD1002 terdahulu: ilustrasi kontrol/grafik, bukan uji Model 2 terbaru; format CSV lihat halaman 12."
       },
       {
         "role": "text",
@@ -1867,7 +1867,7 @@
         "font_size": 8.1,
         "measured_height": 10.37,
         "allocated_height": 20,
-        "content": "Screenshot pengujian GLD1002 sebelumnya; alur tombol dan grafik Dataset tetap sama."
+        "content": "Screenshot GLD1002 terdahulu: ilustrasi kontrol/grafik, bukan uji Model 2 terbaru; format CSV lihat halaman 12."
       },
       {
         "role": "text",
@@ -2137,7 +2137,7 @@
         "font_size": 8.1,
         "measured_height": 10.37,
         "allocated_height": 20,
-        "content": "Screenshot pengujian GLD1002 sebelumnya; alur tombol dan grafik Dataset tetap sama."
+        "content": "Screenshot GLD1002 terdahulu: ilustrasi kontrol/grafik, bukan uji Model 2 terbaru; format CSV lihat halaman 12."
       },
       {
         "role": "text",
@@ -2431,7 +2431,7 @@
         "font_size": 8.1,
         "measured_height": 10.37,
         "allocated_height": 20,
-        "content": "Screenshot pengujian GLD1002 sebelumnya; alur tombol dan grafik Dataset tetap sama."
+        "content": "Screenshot GLD1002 terdahulu: ilustrasi kontrol/grafik, bukan uji Model 2 terbaru; format CSV lihat halaman 12."
       },
       {
         "role": "text",
@@ -2697,7 +2697,7 @@
         "font_size": 8.1,
         "measured_height": 10.37,
         "allocated_height": 20,
-        "content": "Screenshot pengujian GLD1002 sebelumnya; alur tombol dan grafik Dataset tetap sama."
+        "content": "Screenshot GLD1002 terdahulu: ilustrasi kontrol/grafik, bukan uji Model 2 terbaru; format CSV lihat halaman 12."
       },
       {
         "role": "text",
@@ -2953,7 +2953,7 @@
         "font_size": 8.1,
         "measured_height": 10.37,
         "allocated_height": 20,
-        "content": "Screenshot pengujian GLD1002 sebelumnya; alur tombol dan grafik Dataset tetap sama."
+        "content": "Screenshot GLD1002 terdahulu: ilustrasi kontrol/grafik, bukan uji Model 2 terbaru; format CSV lihat halaman 12."
       },
       {
         "role": "text",
@@ -3616,7 +3616,7 @@
         "font_size": 8.1,
         "measured_height": 10.37,
         "allocated_height": 20,
-        "content": "Screenshot pengujian GLD1002 sebelumnya; alur tombol dan grafik Dataset tetap sama."
+        "content": "Screenshot GLD1002 terdahulu: ilustrasi kontrol/grafik, bukan uji Model 2 terbaru; format CSV lihat halaman 12."
       },
       {
         "role": "text",
@@ -3870,7 +3870,7 @@
         "font_size": 8.1,
         "measured_height": 10.37,
         "allocated_height": 20,
-        "content": "Screenshot pengujian GLD1002 sebelumnya; alur tombol dan grafik Dataset tetap sama."
+        "content": "Screenshot GLD1002 terdahulu: ilustrasi kontrol/grafik, bukan uji Model 2 terbaru; format CSV lihat halaman 12."
       },
       {
         "role": "text",
@@ -3966,5 +3966,309 @@
         "skipped_offscreen_boxes": []
       }
     ]
+  },
+  {
+    "number": 15,
+    "key": "connection-help",
+    "title": "Wi-Fi tersambung, tetapi Connect gagal?",
+    "rectangles": [
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 566.76,
+        "w": 786,
+        "h": 11.52
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 549.91,
+        "w": 786,
+        "h": 10.37
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 501.84,
+        "w": 786,
+        "h": 29.44
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 483.48,
+        "w": 786,
+        "h": 12.8
+      },
+      {
+        "role": "connection_help",
+        "x": 28.0,
+        "y": 344,
+        "w": 387,
+        "h": 121
+      },
+      {
+        "role": "text",
+        "x": 64.0,
+        "y": 439.64,
+        "w": 339,
+        "h": 15.36
+      },
+      {
+        "role": "text",
+        "x": 40.0,
+        "y": 383.22,
+        "w": 363,
+        "h": 38.78
+      },
+      {
+        "role": "connection_help",
+        "x": 427.0,
+        "y": 344,
+        "w": 387,
+        "h": 121
+      },
+      {
+        "role": "text",
+        "x": 463.0,
+        "y": 439.64,
+        "w": 339,
+        "h": 15.36
+      },
+      {
+        "role": "text",
+        "x": 439.0,
+        "y": 383.22,
+        "w": 363,
+        "h": 38.78
+      },
+      {
+        "role": "connection_help",
+        "x": 28.0,
+        "y": 212,
+        "w": 387,
+        "h": 121
+      },
+      {
+        "role": "text",
+        "x": 64.0,
+        "y": 307.64,
+        "w": 339,
+        "h": 15.36
+      },
+      {
+        "role": "text",
+        "x": 40.0,
+        "y": 251.22,
+        "w": 363,
+        "h": 38.78
+      },
+      {
+        "role": "connection_help",
+        "x": 427.0,
+        "y": 212,
+        "w": 387,
+        "h": 121
+      },
+      {
+        "role": "text",
+        "x": 463.0,
+        "y": 307.64,
+        "w": 339,
+        "h": 15.36
+      },
+      {
+        "role": "text",
+        "x": 439.0,
+        "y": 238.29,
+        "w": 363,
+        "h": 51.71
+      },
+      {
+        "role": "connection_help",
+        "x": 28.0,
+        "y": 80,
+        "w": 387,
+        "h": 121
+      },
+      {
+        "role": "text",
+        "x": 64.0,
+        "y": 175.64,
+        "w": 339,
+        "h": 15.36
+      },
+      {
+        "role": "text",
+        "x": 40.0,
+        "y": 119.22,
+        "w": 363,
+        "h": 38.78
+      },
+      {
+        "role": "connection_help",
+        "x": 427.0,
+        "y": 80,
+        "w": 387,
+        "h": 121
+      },
+      {
+        "role": "text",
+        "x": 463.0,
+        "y": 175.64,
+        "w": 339,
+        "h": 15.36
+      },
+      {
+        "role": "text",
+        "x": 439.0,
+        "y": 106.29,
+        "w": 363,
+        "h": 51.71
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 45.35,
+        "w": 786,
+        "h": 11.65
+      },
+      {
+        "role": "text",
+        "x": 28.0,
+        "y": 11.76,
+        "w": 720,
+        "h": 10.24
+      }
+    ],
+    "text": [
+      {
+        "role": "text",
+        "font_size": 9,
+        "measured_height": 11.52,
+        "allocated_height": 16,
+        "content": "PANDUAN OPERATOR / DATASET WORKSPACE - CSV 12 KOLOM"
+      },
+      {
+        "role": "text",
+        "font_size": 8.1,
+        "measured_height": 10.37,
+        "allocated_height": 20,
+        "content": "Panduan berdasarkan paket final dan hasil uji koneksi GLD1002 Model 2 pada 3 November 2026."
+      },
+      {
+        "role": "text",
+        "font_size": 23,
+        "measured_height": 29.44,
+        "allocated_height": 32,
+        "content": "Wi-Fi tersambung, tetapi Connect gagal?"
+      },
+      {
+        "role": "text",
+        "font_size": 10,
+        "measured_height": 12.8,
+        "allocated_height": 24,
+        "content": "Indikator Windows dan koneksi data Operator Hub adalah dua pemeriksaan berbeda."
+      },
+      {
+        "role": "text",
+        "font_size": 12,
+        "measured_height": 15.36,
+        "allocated_height": 26,
+        "content": "Hotspot tidak ditemukan"
+      },
+      {
+        "role": "text",
+        "font_size": 10.1,
+        "measured_height": 38.78,
+        "allocated_height": 73,
+        "content": "Pastikan 24 V terpasang dan boot selesai. Upload paket Hotspot Wizard Dataset sesuai Model 1/2/3, bukan paket Board biasa. Scan ulang dan pilih ID GLD yang benar."
+      },
+      {
+        "role": "text",
+        "font_size": 12,
+        "measured_height": 15.36,
+        "allocated_height": 26,
+        "content": "Windows: No Internet"
+      },
+      {
+        "role": "text",
+        "font_size": 10.1,
+        "measured_height": 38.78,
+        "allocated_height": 73,
+        "content": "Ini normal pada hotspot GLD. Tetap di jaringan GLD-DATASET-ID selama merekam. Password diambil otomatis oleh Hub. Tanda Wi-Fi tersambung belum membuktikan layanan data siap."
+      },
+      {
+        "role": "text",
+        "font_size": 12,
+        "measured_height": 15.36,
+        "allocated_height": 26,
+        "content": "Hub belum Connected"
+      },
+      {
+        "role": "text",
+        "font_size": 10.1,
+        "measured_height": 38.78,
+        "allocated_height": 73,
+        "content": "Pastikan tidak ada sesi aktif/pemulihan di tab atau aplikasi lain. Lepas koneksi COM untuk alur Dataset. Setelah sesi lama selesai, Connect sekali dan tunggu hasil; jangan menekan Start sebelum terhubung."
+      },
+      {
+        "role": "text",
+        "font_size": 12,
+        "measured_height": 15.36,
+        "allocated_height": 26,
+        "content": "Prediksi belum tersedia"
+      },
+      {
+        "role": "text",
+        "font_size": 10.1,
+        "measured_height": 51.71,
+        "allocated_height": 73,
+        "content": "Baca GET_STATUS lewat COM setelah Dataset Disconnect. Model harus disetujui, profil nulling valid dan profil bound sama dengan aktif. Jika memang mismatch, gunakan Running > Settings > Model & Nulling Profile > Use Latest Nulling Profile, lalu baca konfirmasi dan cek status lagi."
+      },
+      {
+        "role": "text",
+        "font_size": 12,
+        "measured_height": 15.36,
+        "allocated_height": 26,
+        "content": "Hub tidak bisa dibuka"
+      },
+      {
+        "role": "text",
+        "font_size": 10.1,
+        "measured_height": 38.78,
+        "allocated_height": 73,
+        "content": "Jalankan apps/operator-hub/run-operator-hub.bat pada terminal yang terlihat. Jika port sudah dipakai, buka Hub yang berjalan di http://127.0.0.1:5173. Jangan membuat proses kedua atau menutup backend ketika sesi masih aktif."
+      },
+      {
+        "role": "text",
+        "font_size": 12,
+        "measured_height": 15.36,
+        "allocated_height": 26,
+        "content": "Uji terbaru dan batasnya"
+      },
+      {
+        "role": "text",
+        "font_size": 10.1,
+        "measured_height": 51.71,
+        "allocated_height": 73,
+        "content": "3 Nov 2026: Model 2 di COM7 di-upload dengan Reset NVS OFF; profil/binding #2 utuh. Hello dan Connect Hub berhasil, prediksi tersedia. Sesudah handshake diputus, Hello kembali dalam 2,67 detik tanpa reboot. Tes ini tidak merekam grafik/CSV atau menguji putus Wi-Fi selama 5 menit."
+      },
+      {
+        "role": "text",
+        "font_size": 9.1,
+        "measured_height": 11.65,
+        "allocated_height": 28,
+        "content": "Screenshot halaman sebelumnya adalah bukti UI/pengujian terdahulu. Uji koneksi terbaru memakai API lokal Hub dan data Hello GLD asli; tidak ada screenshot rekaman baru yang dibuat."
+      },
+      {
+        "role": "text",
+        "font_size": 8,
+        "measured_height": 10.24,
+        "allocated_height": 12,
+        "content": "3 November 2026 | PNG asli; kotak dan nomor panduan berupa anotasi vektor."
+      }
+    ],
+    "screenshots": []
   }
 ]

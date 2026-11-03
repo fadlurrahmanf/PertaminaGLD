@@ -8,7 +8,7 @@ from PIL import Image
 OUTPUT=ROOT/'output/pdf/Manual-GLD-Dataset-Workspace-12-Kolom.pdf'
 PAGES=list(old.PAGES)
 field=list(PAGES[2]);field[0]='fields-current';field[1]='3. Pilih kolom CSV';field[2]='CSV dasar 12 kolom. Gain dan status tidak dicentang otomatis.';field[3]=None;field[4]=['#wfPrediction','#wfGain','#wfSensorStatus'];field[6]=[
- old.step('Predicted Class + Confidence','Centang untuk mengisi inferensi. Kedua kolom selalu ada; nilainya kosong saat tidak dipilih atau belum valid. Checkbox menunggu Connect dan lokasi CSV. Prediksi Model 2 menunggu persetujuan model.'),
+ old.step('Predicted Class + Confidence','Centang untuk mengisi inferensi. Dua kolom selalu ada; kosong bila OFF atau belum valid. Checkbox menunggu Connect, lokasi CSV, serta model, binding dan nulling siap. Model 2 kini sudah disetujui operator.'),
  old.step('Gain opsional','Biarkan tidak dicentang untuk 12 kolom. Jika dipilih, delapan kolom gain ditambahkan sehingga jumlahnya 20.'),
  old.step('Status sensor opsional','Status juga menambah delapan kolom. Gain dan status sekaligus menghasilkan 28 kolom. Durasi/overrun dan metadata teknis tetap tersimpan internal.')]
 PAGES[2]=tuple(field)
@@ -23,10 +23,11 @@ export=list(PAGES[9]);export[6]=[
  old.step('Tabel dan CSV','Tabel menampilkan 10 sampel terakhir dan nomor baris untuk navigasi. CSV menyimpan seluruh baris; metadata teknisnya berada di catatan internal.')]
 PAGES[9]=tuple(export)
 PAGES.insert(0,('firmware-final-choice','Pilih paket hotspot yang benar','Tiga pilihan hotspot terbaru menggantikan enam pilihan tahap lama.',None,['#firmwareUploadModel'],'firmware',[
- old.step('Pilih sesuai model board','Untuk GLD pertama yang diuji, pilih GLD1 Model 1 - Hotspot Wizard Dataset. Model 1 - Board 1 biasa tidak menyalakan hotspot Dataset.'),
- old.step('24 V dan Reset NVS OFF','Gunakan 24 V dan biarkan Reset NVS tidak dicentang. Jika upload sebelumnya mereset NVS, siapkan nulling dan binding model pada firmware biasa dahulu. Tunggu boot selesai sebelum Scan.'),
- old.step('Kontrol COM dan Dataset Wi-Fi','Alur yang disepakati: kontrol normal lewat COM; Dataset lewat Wi-Fi. Revisi firmware yang mempertahankan semua fitur normal masih menunggu compile dan uji, bukan otomatis tersedia karena menu diringkas.')]))
+ old.step('Pilih model yang sesuai','Pilih salah satu dari tiga paket final di bawah. GLD1002 terakhir memakai Model 2 (dipilih operator); angka ID perangkat tidak menentukan model. Paket Board biasa tidak menyalakan hotspot Dataset.'),
+ old.step('24 V dan Reset NVS OFF','Gunakan 24 V, pilih COM GLD yang benar dan biarkan Reset NVS tidak dicentang. Tunggu upload terverifikasi dan boot selesai. Jangan kalibrasi atau bind ulang bila profil dan binding masih cocok.'),
+ old.step('Fitur biasa ditambah hotspot','Ketiga paket final sudah dibuild dan dipasang di Hub. Running, Nulling dan pengaturan tetap lewat COM; Dataset lewat Wi-Fi. Stop, verifikasi CSV dan Disconnect Dataset sebelum kembali mengubah pengaturan COM.')]))
 PAGES.insert(11,('csv-format','Isi CSV: 12 kolom utama','Gunakan sesi/file baru setelah Ctrl+F5. CSV lama tetap utuh.',None,[],'schema',[]))
+PAGES.append(('connection-help','Wi-Fi tersambung, tetapi Connect gagal?','Indikator Windows dan koneksi data Operator Hub adalah dua pemeriksaan berbeda.',None,[],'connection',[]))
 
 def label(c,layout,*args,**kwargs):return pdf.label(c,layout,*args,**kwargs)
 def sources():
@@ -46,17 +47,35 @@ def schema(c,layout):
  label(c,layout,'Waktu adalah timestamp GLD dalam milidetik. Label memuat awalan jam/hari/tanggal. Predicted Class tetap indeks kelas model; Confidence bernilai 0..1 (misalnya 0,988 = 98,8%). Saat prediksi belum valid, kedua sel kosong.',pdf.MARGIN,125,786,49,10.5)
  label(c,layout,'ID perangkat/sesi/boot, urutan sampel, profil, model, waktu scan, overrun dan detail inferensi tetap tersimpan internal. Continue serta verifikasi penuh tetap menggunakan catatan tersebut.',pdf.MARGIN,72,786,29,9.8)
 
+def connection_help(c,layout):
+ items=[
+  ('Hotspot tidak ditemukan','Pastikan 24 V terpasang dan boot selesai. Upload paket Hotspot Wizard Dataset sesuai Model 1/2/3, bukan paket Board biasa. Scan ulang dan pilih ID GLD yang benar.'),
+  ('Windows: No Internet','Ini normal pada hotspot GLD. Tetap di jaringan GLD-DATASET-ID selama merekam. Password diambil otomatis oleh Hub. Tanda Wi-Fi tersambung belum membuktikan layanan data siap.'),
+  ('Hub belum Connected','Pastikan tidak ada sesi aktif/pemulihan di tab atau aplikasi lain. Lepas koneksi COM untuk alur Dataset. Setelah sesi lama selesai, Connect sekali dan tunggu hasil; jangan menekan Start sebelum terhubung.'),
+  ('Prediksi belum tersedia','Baca GET_STATUS lewat COM setelah Dataset Disconnect. Model harus disetujui, profil nulling valid dan profil bound sama dengan aktif. Jika memang mismatch, gunakan Running > Settings > Model & Nulling Profile > Use Latest Nulling Profile, lalu baca konfirmasi dan cek status lagi.'),
+  ('Hub tidak bisa dibuka','Jalankan apps/operator-hub/run-operator-hub.bat pada terminal yang terlihat. Jika port sudah dipakai, buka Hub yang berjalan di http://127.0.0.1:5173. Jangan membuat proses kedua atau menutup backend ketika sesi masih aktif.'),
+  ('Uji terbaru dan batasnya','3 Nov 2026: Model 2 di COM7 di-upload dengan Reset NVS OFF; profil/binding #2 utuh. Hello dan Connect Hub berhasil, prediksi tersedia. Sesudah handshake diputus, Hello kembali dalam 2,67 detik tanpa reboot. Tes ini tidak merekam grafik/CSV atau menguji putus Wi-Fi selama 5 menit.')]
+ for i,(title,body) in enumerate(items):
+  x=pdf.MARGIN+(i%2)*399;top=465-(i//2)*132
+  pdf.panel(c,layout,x,top-121,387,121,role='connection_help')
+  pdf.bubble(c,i+1,x+18,top-20,9)
+  label(c,layout,title,x+36,top-10,339,26,12,True)
+  label(c,layout,body,x+12,top-43,363,73,10.1)
+ label(c,layout,'Screenshot halaman sebelumnya adalah bukti UI/pengujian terdahulu. Uji koneksi terbaru memakai API lokal Hub dan data Hello GLD asli; tidak ada screenshot rekaman baru yang dibuat.',pdf.MARGIN,57,786,28,9.1)
+
 def build(author=False):
  raw=sources();pdf.fonts();layout=pdf.Layout();c=pdf.canvas.Canvas(str(OUTPUT),pagesize=(pdf.WIDTH,pdf.HEIGHT)) if author else None
  for number,(key,title,subtitle,crop,selectors,kind,notes) in enumerate(PAGES,1):
   layout.begin(dict(key=key,title=title),number)
   if c:
    c.setFillColor(pdf.PAPER);c.rect(0,0,pdf.WIDTH,pdf.HEIGHT,fill=1,stroke=0);c.setFillColor(pdf.TEAL);c.rect(0,pdf.HEIGHT-6,pdf.WIDTH,6,fill=1,stroke=0)
-  caption='Screenshot pengujian GLD1002 sebelumnya; alur tombol dan grafik Dataset tetap sama.'
+  caption='Screenshot GLD1002 terdahulu: ilustrasi kontrol/grafik, bukan uji Model 2 terbaru; format CSV lihat halaman 12.'
   if key in {'fields-current','firmware-final-choice'}:caption='Screenshot UI terbaru (baca saja); tidak ada upload atau pengoperasian GLD pada pengambilan gambar ini.'
   if kind=='schema':caption='Format CSV ringkas yang berlaku pada aplikasi saat ini; metadata teknis tersimpan internal.'
+  if kind=='connection':caption='Panduan berdasarkan paket final dan hasil uji koneksi GLD1002 Model 2 pada 3 November 2026.'
   for text,top,size,bold,height in [('PANDUAN OPERATOR / DATASET WORKSPACE - CSV 12 KOLOM',pdf.HEIGHT-17,9,True,16),(caption,pdf.HEIGHT-35,8.1,False,20),(title,pdf.HEIGHT-64,23,True,32),(subtitle,pdf.HEIGHT-99,10,False,24)]:label(c,layout,text,pdf.MARGIN,top,786,height,size,bold)
   if kind=='schema':schema(c,layout)
+  elif kind=='connection':connection_help(c,layout)
   else:
    entry=dict(raw[key]);entry['key']=key;entry['path']=Path(entry['path'])
    with Image.open(entry['path']) as im:entry['width'],entry['height']=im.size

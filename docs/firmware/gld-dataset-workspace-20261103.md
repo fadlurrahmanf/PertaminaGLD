@@ -20,7 +20,7 @@ bukan halaman mock. Grafik memakai renderer yang sama dengan Running.
    Aktifkan Predicted Class + Confidence untuk mengisi hasil inferensi.
    Pilihan ini hanya aktif ketika model, binding dan kalibrasi siap; kolom
    prediksi tetap ada tetapi kosong bila tidak dipilih atau hasil belum valid.
-   Model 2 tetap belum production-approved. Durasi/overrun dan metadata sesi
+   Pada rilis tiga model terbaru, Model 2 sudah diaktifkan berdasarkan konfirmasi validasi dan persetujuan operator. Durasi/overrun dan metadata sesi
    disimpan internal, tanpa menambah kolom Excel.
 5. Pilih satu kebijakan putus: **Rekam langsung** atau **Pulih otomatis**.
    Isi label kondisi pengujian. Timestamp otomatis memakai format
@@ -131,3 +131,21 @@ ditutup pengguna. Backend baru berhasil menerima format capabilities untuk
 ketiga model; pilihan Model 2 pada browser juga diperiksa tanpa upload.
 Pengaman port Windows kini mencegah listener ganda. Catatan restart yang
 terblokir sebelumnya adalah riwayat; backend saat ini sudah aktif.
+
+## Rilis tiga model dan sync terbaru
+
+Ketiga paket Hotspot Wizard Dataset Model1/2/3 sudah diperbarui bersama,
+dengan fitur sama dan model/scaler/kelas masing-masing. Compile memakai
+tiga agent dengan428detik overlap; seluruh paket dan byte yang disajikan
+Hub sudah diverifikasi. Model2 kini diaktifkan berdasarkan validasi
+board/gas yang dilaporkan dan disetujui operator; tidak ada uji gas baru
+oleh agent. Catatan lama tentang approvalModel2tertunda adalah riwayat.
+
+Refresh browser sebelum upload. UntukGLD1002yang memakaiModel2: upload
+Model2HotspotWizardDataset dengan24V danResetNVS OFF. Pastikan GET_STATUS
+segar menyatakan productionApproved=true dan profil aktif tetap2. Lalu
+Running→Settings→Model&NullingProfile→UseLatestNullingProfile, konfirmasi
+bindingNVS, RefreshStatus. Target: model/bindingcocok, bound==active,
+profileReady=true; inferenceValid menyusul saat sampel baru valid.
+Kalibrasi dan dataCSV lama tetap dipertahankan. Hub tidak diluncurkan
+ulang pada rilis ini; bila perlu startup, gunakan terminal yang terlihat.

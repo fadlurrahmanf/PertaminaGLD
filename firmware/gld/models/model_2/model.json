@@ -8,5 +8,12 @@
   "profileId": "cnn-dualbranch-board-2-2class-v2",
   "environment": "gld_model_2",
   "classes": ["Clean_Air", "LPG"],
-  "note": "Board 2, dua kelas dari ModelGLD. Basis rilis GLD1 v0.8.38; upload wajib Reset NVS, konfigurasi ulang dan nulling 8/8. Inferensi/bind tetap fail-closed sampai validasi board/gas dan persetujuan eksplisit."
+  "productionApproval": {
+    "status": "approved",
+    "date": "2026-11-03",
+    "validationEvidence": "operator-reported board/gas validation",
+    "operatorStatement": "Sudah divalidasi; setuju aktifkan",
+    "agentPerformedGasValidation": false
+  },
+  "note": "Board 2, dua kelas dari ModelGLD. Aktivasi disetujui eksplisit oleh operator pada 2026-11-03 berdasarkan laporan validasi board/gas operator; bukan pengujian gas oleh agent. Profil nulling lengkap yang diterapkan dan binding eksplisit yang cocok tetap wajib. Tidak ada auto-bind atau Reset NVS sebagai bagian aktivasi ini."
 }

@@ -1,0 +1,11 @@
+from pathlib import Path
+p=Path(r'D:/Github/PertaminaGLD/outputs/checklist_sederhana/ch-tiga.mjs')
+s=p.read_text(encoding='utf-8-sig')
+s=s.replace("const smallGroups={...groups,", "const smallGroups={...groups,'Board CH':['Board CH','Konektor pada board'],")
+s=s.replace("const qty={'Casing / badan':3,", "const qty={'Tutup casing':3,'Seal dan pengunci tutup':3,'Dudukan antena':6,'Casing / badan':3,")
+s=s.replace("const hints={'Casing / badan':'1 per CH',", "const hints={'Tutup casing':'1 per CH','Seal dan pengunci tutup':'1 per CH','Konektor pada board':'Kondisi baik','Dudukan antena':'2 per CH; tidak longgar','Kabel dan konektor antena':'Konektor antena baik','Casing / badan':'1 per CH',")
+s=s.replace("const wb=Workbook.create();", """const largeExamples={'Casing / badan':'Casing utuh','Tutup casing':'Tutup lengkap dan baik','Seal dan pengunci tutup':'Seal baik; tutup terkunci','Board CH':'Board tersedia; fisik baik','Baut board':'Terpasang dan kencang','Spacer board':'Terpasang dan baik','Konektor pada board':'Konektor tidak rusak / longgar','Antena LoRa':'Antena LoRa tersedia; baik','Dudukan antena':'Terpasang; tidak longgar','Kabel dan konektor antena':'Kabel baik; konektor tidak longgar','Kabel power':'Kabel ada dan tidak rusak','Konektor / terminal power':'Konektor baik; tidak longgar','Gland kabel':'Terpasang dan baik','Baterai, jika digunakan':'Tersedia; kondisi fisik baik','Panel solar cell':'Panel tersedia; kondisi baik','Kabel dan konektor panel':'Kabel dan konektor baik','Bracket panel':'Tersedia; kondisi baik','Klem CH dan baut pemasangan':'Lengkap; kondisi baik','Foto perangkat dan komponen':'Foto perangkat tersedia','ID / nomor seri perangkat':'ID tercatat, mis. CH-01','Referensi BOM / form verifikasi':'Nomor form tercatat'};
+const wb=Workbook.create();""")
+s=s.replace("name==='CH Kecil'&&hints[v]?hints[v]:(group==='Dokumentasi'?'Referensi tersedia':'Jumlah sesuai; baik')", "name==='CH Kecil'&&hints[v]?hints[v]:(name==='CH Besar'?(largeExamples[v]??'Kondisi baik'):(group==='Dokumentasi'?'Referensi tersedia':'Jumlah sesuai; baik'))")
+s=s.replace('Checklist_Hardware_CH_Kebutuhan_3_Unit.xlsx','Checklist_Hardware_CH_Revisi.xlsx').replace('${name}-3-unit-preview.png','${name}-revisi-preview.png')
+Path(r'D:/Github/PertaminaGLD/outputs/checklist_sederhana/ch-revisi.mjs').write_text(s,encoding='utf-8')

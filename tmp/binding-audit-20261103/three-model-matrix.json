@@ -1,0 +1,32 @@
+[
+  {
+    "model": 1,
+    "profile": "cnn-dualbranch-board-1-2class-v2",
+    "inferenceApprovedInSource": true,
+    "normalPackageAvailable": true,
+    "finalHotspotVersion": "0.8.36",
+    "finalHotspotNativeSerial": true,
+    "sameSharedBindHandler": true,
+    "hotspotFirmwareSha256": "10dc13e3328a3fa3ba33562d7d85906113fe23295ea3eeb6db3b86472f5bb68e"
+  },
+  {
+    "model": 2,
+    "profile": "cnn-dualbranch-board-2-2class-v2",
+    "inferenceApprovedInSource": false,
+    "normalPackageAvailable": true,
+    "finalHotspotVersion": "0.8.36",
+    "finalHotspotNativeSerial": true,
+    "sameSharedBindHandler": true,
+    "hotspotFirmwareSha256": "4fe021b9f1381402b146f85985ce22dd8f9f95a9df108dcafa57a34af53e12de"
+  },
+  {
+    "model": 3,
+    "profile": "cnn-dualbranch-board-3-2class-v1",
+    "inferenceApprovedInSource": true,
+    "normalPackageAvailable": true,
+    "finalHotspotVersion": "0.8.36",
+    "finalHotspotNativeSerial": true,
+    "sameSharedBindHandler": true,
+    "hotspotFirmwareSha256": "747c423c32fae90eed2e9f05a92b8a985a815ed49a891935c4358c4feeaffa3c"
+  }
+]

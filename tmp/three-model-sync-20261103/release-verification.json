@@ -1,0 +1,52 @@
+{
+  "status": "PASS",
+  "models": [
+    {
+      "model": 1,
+      "firmwareSha256": "a2a74b5180aa8bd38984d7fb01a9b5722e41e011d937ed3bb98740cb724c70c2",
+      "servedHashesMatch": true,
+      "capabilities": {
+        "nativeSerial": true,
+        "datasetWifi": true
+      },
+      "modelProfile": "cnn-dualbranch-board-1-2class-v2",
+      "firmwareSnapshot": "5feb56419ac1fd5a503298de0493610cacc83ba50903d5efb6bc50322695fce2"
+    },
+    {
+      "model": 2,
+      "firmwareSha256": "c1b7028ca90670f3808d091732817b56f415eac7a6823ca7d508a60e521f4228",
+      "servedHashesMatch": true,
+      "capabilities": {
+        "nativeSerial": true,
+        "datasetWifi": true
+      },
+      "modelProfile": "cnn-dualbranch-board-2-2class-v2",
+      "firmwareSnapshot": "5feb56419ac1fd5a503298de0493610cacc83ba50903d5efb6bc50322695fce2"
+    },
+    {
+      "model": 3,
+      "firmwareSha256": "21ab4674d009cf1d4d7c7e61c5a1db2a5eecd91d924145e2a504f31946c1ef76",
+      "servedHashesMatch": true,
+      "capabilities": {
+        "nativeSerial": true,
+        "datasetWifi": true
+      },
+      "modelProfile": "cnn-dualbranch-board-3-2class-v1",
+      "firmwareSnapshot": "5feb56419ac1fd5a503298de0493610cacc83ba50903d5efb6bc50322695fce2"
+    }
+  ],
+  "allThreeCompilerOverlapSeconds": 428.110326,
+  "protectedFilesUnchanged": 313,
+  "packagesInstalledTogether": true,
+  "allThreeSameFeatureMarkers": true,
+  "sourceApprovals": [
+    true,
+    true,
+    true
+  ],
+  "hubRestarted": false,
+  "hiddenHubLaunched": false,
+  "hardwareUploaded": false,
+  "nvsOrBindingChanged": false,
+  "approvalEvidence": "Model2 board/gas validation and activation explicitly confirmed by user; not independently retested by agent"
+}

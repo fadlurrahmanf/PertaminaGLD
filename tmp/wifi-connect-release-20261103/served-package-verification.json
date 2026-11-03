@@ -1,0 +1,23 @@
+[
+  {
+    "environment": "gld_model_1_dataset_workflow_wifi",
+    "servedSha256": "ec57d0a8eb600310a73f1768faff36c07cebf89af1a9d33d541746a7ff71860e",
+    "matchesInstalled": true,
+    "nativeSerial": true,
+    "datasetWifi": true
+  },
+  {
+    "environment": "gld_model_2_dataset_workflow_wifi",
+    "servedSha256": "28ea2b12f8b88d66d45ac438e3538c0bd5493b2e99143f0febf15e700a6257b7",
+    "matchesInstalled": true,
+    "nativeSerial": true,
+    "datasetWifi": true
+  },
+  {
+    "environment": "gld_model_3_dataset_workflow_wifi",
+    "servedSha256": "c7eadd2bbe8284add402fbeaa31055ba8e6347ed65ca365320f30e8811ba0a49",
+    "matchesInstalled": true,
+    "nativeSerial": true,
+    "datasetWifi": true
+  }
+]

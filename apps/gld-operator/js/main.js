@@ -11,6 +11,7 @@ import {
   updateSelectedPortDetail, connectSerial, disconnectSerial
 } from "./bridge-client.js";
 import { requireUnlock } from "./security.js";
+import { modelBindingState } from "./model-binding.js";
 import {
   sendCommand, applyAndAlert, setSensorPowerAndWait, setAlarmModeAndWait, setManualAlarmAndWait, togglePolling, stopPolling, renderSensorCheck, toggleAlarmMute, updateAlarmState, updateTelemetryCollectionProgress
 } from "./serial-protocol.js";
@@ -60,6 +61,11 @@ function setupEvents() {
     refreshGldAesKeyStatus();
   });
   $("bindModelToNullingProfileBtn")?.addEventListener("click", async () => {
+    const binding = modelBindingState(state.status);
+    if (binding.reason === "model_not_approved") {
+      await showAlert(binding.text, "error", "Bind Model to Nulling Profile");
+      return;
+    }
     const profileId = state.status?.model?.activeNullingProfileId;
     const confirmed = await showConfirm(
       `Use the latest complete Nulling profile${Number.isFinite(profileId) ? ` #${profileId}` : ""} for the installed model? This saves an explicit NVS binding. A later Nulling run will require this action again.`,

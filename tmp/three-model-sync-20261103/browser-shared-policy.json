@@ -1,0 +1,26 @@
+{
+  "ok": true,
+  "rows": [
+    {
+      "model": 1,
+      "matched": true,
+      "wrongProfile": false,
+      "notApproved": false
+    },
+    {
+      "model": 2,
+      "matched": true,
+      "wrongProfile": false,
+      "notApproved": false
+    },
+    {
+      "model": 3,
+      "matched": true,
+      "wrongProfile": false,
+      "notApproved": false
+    }
+  ],
+  "source": "live served ES module, isolated headless context",
+  "APICalls": false,
+  "hardwareActions": false
+}

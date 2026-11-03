@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 2,
+  "packageType": "pertamina-gld-prebuilt-firmware",
+  "deviceId": "ANY",
+  "boardProfile": "WROOM-1U-N16R8 / Model 1 / Dataset Wi-Fi Workflow Protocol 3",
+  "environment": "gld_model_1_dataset_workflow_wifi",
+  "firmwareVersion": "0.8.36",
+  "protocolVersion": "0.2.0",
+  "configSchemaVersion": "0.1.0",
+  "chip": "esp32s3",
+  "baud": 921600,
+  "createdAtUtc": "20261103T092323Z",
+  "source": {
+    "gitCommit": "479194a327f6ab1e9b682bc24840f54a0452ea3f",
+    "gitTreeState": "build-output",
+    "gitTreeStateScope": "firmware/",
+    "firmwareTreeSnapshotSha256": "5feb56419ac1fd5a503298de0493610cacc83ba50903d5efb6bc50322695fce2",
+    "platformioCoreVersion": "6.1.19",
+    "platformioIniSha256": "0a4561ff5f38eff2d449eb36114a2b845648bc22d60c910dd6b6a6984bca0305",
+    "buildCommand": "pio run -e gld_model_1_dataset_workflow_wifi",
+    "packagedAtUtc": "20261103T092323Z"
+  },
+  "flashSetSha256": "cda087da60167fdd1600f2e4bc5c054c17b7afa21452d1ac3eacfe83f2918511",
+  "flashFiles": [
+    {
+      "path": "bootloader.bin",
+      "offset": "0x00000000",
+      "size": 15104,
+      "sha256": "2a71d69b471e20c2bac7fb469f3c6a807b3ebee780e348e5889db0da849ca363"
+    },
+    {
+      "path": "partitions.bin",
+      "offset": "0x00008000",
+      "size": 3072,
+      "sha256": "bd0f7954aca2ef7d925ee21aaa1f3dc8822d1d6ce5cbbd26a135e5886bfff6ce"
+    },
+    {
+      "path": "boot_app0.bin",
+      "offset": "0x0000E000",
+      "size": 8192,
+      "sha256": "f94c5d786a7a8fab06ac5d10e33bf37711a6697636dc037559ea19cc410a17f0"
+    },
+    {
+      "path": "firmware.bin",
+      "offset": "0x00010000",
+      "size": 1128400,
+      "sha256": "a2a74b5180aa8bd38984d7fb01a9b5722e41e011d937ed3bb98740cb724c70c2"
+    }
+  ],
+  "capabilities": {
+    "nativeSerial": true,
+    "datasetWifi": true
+  }
+}

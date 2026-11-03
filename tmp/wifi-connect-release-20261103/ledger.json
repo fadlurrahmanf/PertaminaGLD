@@ -1,0 +1,56 @@
+{
+  "rootStartedAt": "2026-11-03T17:43:23.328758+07:00",
+  "mode": "in-turnsubagents",
+  "scope": "3parallelbuild+3hotspotpackages+Model2COM7uploadNVSoff+realtest",
+  "approved": true,
+  "tasks": [
+    {
+      "id": "compile1",
+      "worker": "/root/compile_model1_native",
+      "state": "completed",
+      "model": 1,
+      "readyUtc": "2026-11-03T17:43:47.016213+07:00"
+    },
+    {
+      "id": "compile2",
+      "worker": "/root/compile_model2_native",
+      "state": "completed",
+      "model": 2,
+      "readyUtc": "2026-11-03T17:43:58.231722+07:00"
+    },
+    {
+      "id": "compile3",
+      "worker": "/root/compile_model3_native",
+      "state": "completed",
+      "model": 3,
+      "readyUtc": "2026-11-03T17:44:08.718428+07:00"
+    }
+  ],
+  "hubVisibility": "visibleonly;existinginstancepreferred",
+  "gateReleasedAt": "2026-11-03T17:44:49.060187+07:00",
+  "upload": {
+    "status": "PASS",
+    "model": 2,
+    "COM": "COM7",
+    "nvsReset": false,
+    "profilePreserved": true
+  },
+  "physicalTest": "PASS_connection_only",
+  "realTest": {
+    "hubRestarted": false,
+    "state": "passed",
+    "pid": 39064,
+    "visible": true,
+    "report": "real-connection-result.json",
+    "postAbortElapsedMs": 2672,
+    "workspaceReady": true,
+    "disconnectedVerified": true,
+    "recordingStarted": false
+  },
+  "acceptedAt": "2026-11-03T17:59:19.572036+07:00",
+  "limits": [
+    "Graph/CSV sampling not tested in connection-only run",
+    "Original incident trigger unproven",
+    "Host new diagnostic errors source-tested; backend not reloaded"
+  ]
+}

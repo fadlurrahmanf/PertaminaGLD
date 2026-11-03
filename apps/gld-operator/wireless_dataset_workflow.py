@@ -6,6 +6,7 @@ supplies authenticated transport, bounded backoff and cumulative-prefix rules.
 from __future__ import annotations
 
 import copy
+import errno
 import json
 import math
 import re
@@ -34,6 +35,27 @@ class WorkflowCollector(WirelessDatasetReplayCollector):
         self._transition_event = threading.Event()
         self._start_attempted = False
         self.start_rejected = self.ownership_absent = self.direct_cutoff = False
+
+    def _open(self, recovering):
+        try:
+            return super()._open(recovering)
+        except Exception as exc:
+            # Initial Connect needs a safe actionable diagnosis. Recovery must
+            # keep the base supervisor's existing retry/fatal classification.
+            if recovering or isinstance(exc, ProtocolError):
+                raise
+            codes = {getattr(exc, "errno", None), getattr(exc, "winerror", None)}
+            if isinstance(exc, TimeoutError) or type(exc).__name__ == "WebSocketTimeoutException" or codes & {errno.ETIMEDOUT, 10060}:
+                code = "connection_timeout"
+            elif isinstance(exc, ConnectionRefusedError) or codes & {errno.ECONNREFUSED, 10061}:
+                code = "connection_refused"
+            elif codes & {errno.ENETUNREACH, errno.EHOSTUNREACH, 10051, 10065}:
+                code = "network_unreachable"
+            elif isinstance(exc, ConnectionResetError) or codes & {errno.ECONNRESET, 10054}:
+                code = "connection_reset"
+            else:
+                raise
+            raise ProtocolError(code) from None
 
     def _snapshot(self, history=True):
         value = super()._snapshot(history)

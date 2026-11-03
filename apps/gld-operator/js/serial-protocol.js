@@ -13,6 +13,7 @@ import { handleMockCommand } from "./mock.js";
 import { updateQcStatus, resetQcStatus, drawQcCharts, appendFullScaleSweep, updateQcLoraFromDevice, appendQcLoraEvent } from "./qc.js";
 import { bridgeFetch, connectBridgeSerialOnly } from "./bridge-client.js";
 import { renderExpertStatus, resetExpertStatus } from "./expert.js";
+import { modelBindingState } from "./model-binding.js";
 
 // ---- generic parse helpers ----
 
@@ -267,6 +268,16 @@ function renderAesSecurity(security) {
   setText("aesValue", "Blocked");
 }
 
+export function renderModelBindingStatus(status) {
+  const bindingStatus = $("modelNullingBindingStatus");
+  if (!bindingStatus) return;
+  const binding = modelBindingState(status);
+  bindingStatus.textContent = binding.text;
+  bindingStatus.dataset.bindingState = binding.value === true ? "ready" : binding.value === false ? "blocked" : "unknown";
+  bindingStatus.dataset.bindingReason = binding.reason;
+  bindingStatus.classList.toggle("error", binding.value === false);
+}
+
 function updateStatus(status) {
   setText("deviceId", status.deviceId || state.info?.deviceId);
   if (status.targetChId) setText("currentChAddress", status.targetChId);
@@ -293,15 +304,7 @@ function updateStatus(status) {
   renderManualAlarmControls(status.alarmControl);
   renderControlAvailability(status.sensorPower || status.pcf8574, status.alarmControl);
 
-  const model = status.model || {};
-  const bindingStatus = $("modelNullingBindingStatus");
-  if (bindingStatus) {
-    const bound = Number(model.boundNullingProfileId);
-    const active = Number(model.activeNullingProfileId);
-    bindingStatus.textContent = model.bindingValid && model.bindingModelMatches
-      ? `Model bound to Nulling profile #${bound}; active profile #${active}.`
-      : `Model binding is not approved for active Nulling profile #${Number.isFinite(active) ? active : "?"}; inference remains fail-closed.`;
-  }
+  renderModelBindingStatus(status);
 
   const lora = status.lora || {};
   renderAesSecurity(status.security || lora);

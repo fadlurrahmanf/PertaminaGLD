@@ -3,6 +3,7 @@
 // authoritative for every TX/inference gate.
 
 import { $, state } from "./state.js";
+import { modelBindingState } from "./model-binding.js";
 
 function knownBoolean(value) {
   return value === true || value === false ? value : null;
@@ -44,6 +45,7 @@ function asRows(status) {
   // model.readiness. Keep the older top-level aliases below it for boards
   // that have not yet been updated.
   const readiness = model.readiness || {};
+  const binding = modelBindingState(status);
   const telemetry = status?.telemetry || {};
   const sensorStatuses = Array.isArray(telemetry.sensorStatus) ? telemetry.sensorStatus : null;
   const allSensorStatusOk = sensorStatuses && sensorStatuses.length >= 8
@@ -57,12 +59,9 @@ function asRows(status) {
     { key: "nulling", label: "Profil nulling diterapkan", value: boolFrom(readiness.nullingProfileApplied, model.nullingProfileApplied, boot.nullingProfileApplied) },
     {
       key: "binding",
-      label: "Binding model / profil cocok",
-      value: readiness.bindingValid === false || readiness.bindingModelMatches === false || model.bindingValid === false || model.bindingModelMatches === false
-        ? false
-        : readiness.bindingValid === true && readiness.bindingModelMatches === true
-          ? true
-          : model.bindingValid === true && model.bindingModelMatches === true ? true : null
+      label: binding.value === true ? "Binding model / profil cocok" : `Binding · ${binding.label}`,
+      value: binding.value,
+      detail: binding.text
     },
     { key: "dac", label: "Verifikasi DAC siap", value: boolFrom(readiness.dacVerificationReady, model.dacVerificationReady, boot.dacVerificationReady, boot.dacReady) },
     { key: "engine", label: "Hasil inference valid", value: boolFrom(readiness.inferenceValid, model.inferenceEngineOk, model.inferenceValid, telemetry.inferenceValid) }
@@ -116,6 +115,7 @@ export function renderExpertStatus(status = state.status) {
   summary.className = `expert-status-summary ${problem ? "is-blocked" : unknown ? "is-unknown" : "is-ready"}`;
   rowsElement.replaceChildren(...rows.map((row) => {
     const item = document.createElement("div");
+    if (row.detail) item.title = row.detail;
     item.className = `expert-status-row ${row.value === true ? "is-ready" : row.value === false ? "is-blocked" : "is-unknown"}`;
     const label = document.createElement("span");
     label.textContent = row.label;
@@ -125,7 +125,7 @@ export function renderExpertStatus(status = state.status) {
     return item;
   }));
   const blocker = typeof status?.model?.readiness?.blocker === "string" ? status.model.readiness.blocker : "";
-  hint.textContent = problem ? `${nextAction(problem.key)}${blocker && blocker !== "none" ? ` Kode GLD: ${blocker}.` : ""}`
+  hint.textContent = problem ? `${problem.detail || nextAction(problem.key)}${blocker && blocker !== "none" ? ` Kode GLD: ${blocker}.` : ""}`
     : unknown ? "Sebagian detail belum dikirim firmware; GET_STATUS berikutnya akan memperbarui panel ini."
       : "Semua gate inference yang dilaporkan GLD siap. TX normal masih dapat gagal jika radio/SX1262 tidak siap.";
 }

@@ -1,0 +1,10 @@
+from pathlib import Path
+p=Path(r'D:/Github/PertaminaGLD/outputs/checklist_sederhana/ch-revisi.mjs')
+s=p.read_text(encoding='utf-8-sig')
+s=s.replace("'Catu daya':['Kabel power panel ke CH','Konektor paralel panel','Konektor / terminal power','Gland kabel','Baterai']", "'Catu daya':['Kabel power panel ke CH','Konektor / terminal power','Baterai']")
+s=s.replace("'Solar cell dan pemasangan':['Panel solar cell','Dudukan panel solar cell','Kabel dan konektor panel','Klem CH dan baut pemasangan']", "'Solar cell dan pemasangan':['Panel solar cell','Dudukan panel solar cell','Konektor paralel panel','Klem CH dan baut pemasangan'],'Dokumentasi':['Foto perangkat dan komponen','ID CH yang sudah OK']")
+s=s.replace("const qty={'Tutup casing':3", "const qty={'Konektor / terminal power':1,'Klem CH dan baut pemasangan':3,'Tutup casing':3")
+s=s.replace("const hints={'Tutup casing':'1 per CH'", "const hints={'Konektor / terminal power':'Konektor power baik','Klem CH dan baut pemasangan':'1 set per CH','ID CH yang sudah OK':'Catat ID CH yang OK','Tutup casing':'1 per CH'")
+s=s.replace("'Konektor paralel panel':'1 per CH'", "'Konektor paralel panel':'1 per CH; 2 panel paralel'")
+s=s.replace('Checklist_Hardware_CH_Revisi.xlsx','Checklist_Hardware_CH_Revisi_Power.xlsx').replace('${name}-revisi-preview.png','${name}-power-preview.png')
+Path(r'D:/Github/PertaminaGLD/outputs/checklist_sederhana/ch-power.mjs').write_text(s,encoding='utf-8')

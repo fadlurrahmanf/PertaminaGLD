@@ -1,0 +1,48 @@
+{
+  "scope": "three-model feature parity and Model2 explicit approval",
+  "mode": "in-turn native subagents",
+  "model2Approval": "User reports board/gas validated and explicitly authorizes activation, 2026-11-03",
+  "rootStartedAt": "2026-11-03T09:05:56.054848+00:00",
+  "tasks": [
+    {
+      "id": "approval",
+      "worker": "/root/hotspot_feature_baseline",
+      "state": "completed"
+    },
+    {
+      "id": "sharedUI",
+      "worker": "/root/hotspot_feature_integration",
+      "state": "completed"
+    },
+    {
+      "id": "compile1",
+      "worker": "/root/compile_model1_native",
+      "state": "completed",
+      "model": 1,
+      "assignedReadyUtc": "2026-11-03T09:13:36.581555+00:00"
+    },
+    {
+      "id": "compile2",
+      "worker": "/root/compile_model2_native",
+      "state": "completed",
+      "model": 2,
+      "assignedReadyUtc": "2026-11-03T09:14:00.544229+00:00"
+    },
+    {
+      "id": "compile3",
+      "worker": "/root/compile_model3_native",
+      "state": "completed",
+      "model": 3,
+      "assignedReadyUtc": "2026-11-03T09:14:02.474841+00:00"
+    }
+  ],
+  "hubLaunchPreference": "Visible terminal accessible to user; no hidden launches",
+  "gateReleasedAt": "2026-11-03T09:14:58.164540+00:00",
+  "release": {
+    "status": "complete",
+    "threePackagesInstalled": true,
+    "hardwareUploaded": false,
+    "nvsChanged": false,
+    "hubLaunched": false
+  }
+}

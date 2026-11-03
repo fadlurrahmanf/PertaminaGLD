@@ -1,0 +1,6 @@
+{
+  "outcome": "diagnostic_failed",
+  "errorClass": "ModuleNotFoundError",
+  "commandsSent": [],
+  "configurationChanged": false
+}

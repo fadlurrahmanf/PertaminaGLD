@@ -89,6 +89,24 @@ public:
         WebSocketsServer::begin();
         return static_cast<bool>(*_server);
     }
+    void loop() {
+        if (!_runnning) return;
+        WEBSOCKETS_YIELD();
+        handleNewClients();
+        // WebSockets 2.6.1 passes its millisecond timeout to ESP32
+        // WiFiClient::setTimeout(seconds). Normalize newly accepted header
+        // clients before Core::loop can call readStringUntil() on them.
+        // Keep WEBSOCKETS_TCP_TIMEOUT in milliseconds for vendor I/O loops.
+        static_assert(WEBSOCKETS_TCP_TIMEOUT > 0, "A positive TCP timeout is required");
+        constexpr uint32_t timeoutSeconds = (WEBSOCKETS_TCP_TIMEOUT + 999u) / 1000u;
+        for (auto& client : _clients) {
+            if (client.tcp != nullptr && client.status == WSC_HEADER &&
+                client.tcp->getTimeout() != timeoutSeconds * 1000u) {
+                client.tcp->setTimeout(timeoutSeconds);
+            }
+        }
+        WebSocketsServerCore::loop();
+    }
     void closeChecked() { if (_server != nullptr) WebSocketsServer::close(); }
 };
 

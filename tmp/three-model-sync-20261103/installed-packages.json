@@ -1,0 +1,26 @@
+[
+  {
+    "environment": "gld_model_1_dataset_workflow_wifi",
+    "installed": true,
+    "stagedDirectory": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\firmware-packages\\gld_model_1_dataset_workflow_wifi\\.latest-feature-parity-20261103",
+    "hubDirectory": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\firmware-packages\\gld_model_1_dataset_workflow_wifi\\latest",
+    "archiveDirectory": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\firmware-packages\\gld_model_1_dataset_workflow_wifi\\previous-20261103-before-feature-parity",
+    "firmwareSha256": "a2a74b5180aa8bd38984d7fb01a9b5722e41e011d937ed3bb98740cb724c70c2"
+  },
+  {
+    "environment": "gld_model_2_dataset_workflow_wifi",
+    "installed": true,
+    "stagedDirectory": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\firmware-packages\\gld_model_2_dataset_workflow_wifi\\.latest-feature-parity-20261103",
+    "hubDirectory": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\firmware-packages\\gld_model_2_dataset_workflow_wifi\\latest",
+    "archiveDirectory": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\firmware-packages\\gld_model_2_dataset_workflow_wifi\\previous-20261103-before-feature-parity",
+    "firmwareSha256": "c1b7028ca90670f3808d091732817b56f415eac7a6823ca7d508a60e521f4228"
+  },
+  {
+    "environment": "gld_model_3_dataset_workflow_wifi",
+    "installed": true,
+    "stagedDirectory": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\firmware-packages\\gld_model_3_dataset_workflow_wifi\\.latest-feature-parity-20261103",
+    "hubDirectory": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\firmware-packages\\gld_model_3_dataset_workflow_wifi\\latest",
+    "archiveDirectory": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\firmware-packages\\gld_model_3_dataset_workflow_wifi\\previous-20261103-before-feature-parity",
+    "firmwareSha256": "21ab4674d009cf1d4d7c7e61c5a1db2a5eecd91d924145e2a504f31946c1ef76"
+  }
+]

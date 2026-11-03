@@ -1,0 +1,13 @@
+{
+  "environment": "gld_model_3_dataset_workflow_wifi",
+  "sourceModelEnvironment": "gld_model_3",
+  "protocol": "gld-dataset-wifi/3",
+  "profileId": "cnn-dualbranch-board-3-2class-v1",
+  "sha256": "ec636bb559dec26acdf5d5ebe3a4f75dc6644023d9e483b42b1e53d9518c9890",
+  "size": 9632,
+  "sourceArchiveSha256": "ac63f96a4a375c644933c3528322df6db35acd14b57a55671e395ec551cf7602",
+  "firmwareSha256": "21ab4674d009cf1d4d7c7e61c5a1db2a5eecd91d924145e2a504f31946c1ef76",
+  "modelHeaderSha256": "e18607d4aa2ede68be4d893dcb85b50d326f95646b4b5225aaebde0d1050efa1",
+  "normalizeParamsSha256": "772d295f8c4c343c9a1d6c1a26dce5b4b567c9a267ba210c3687741db4a871aa",
+  "sensitivityTableSha256": "6f8bf32caaff031cf422b42db4889b34a2a9d211977fd47e1ee6eb48f134cefd"
+}

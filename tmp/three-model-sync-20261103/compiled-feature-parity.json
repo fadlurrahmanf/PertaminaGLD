@@ -1,0 +1,80 @@
+{
+  "allModelsShareFeatures": true,
+  "models": [
+    {
+      "model": 1,
+      "markers": {
+        "GLD_INFO_JSON": true,
+        "GLD_STATUS_JSON": true,
+        "BIND_MODEL_TO_ACTIVE_NULLING_PROFILE": true,
+        "latest nulling profile bound to model": true,
+        "binding is allowed only in inference mode": true,
+        "no stable applied nulling profile is available": true,
+        "SET_ALARM_MODE": true,
+        "SET_MANUAL_ALARM": true,
+        "SET_LORA_CONFIG": true,
+        "RUN_NULLING_SINGLE": true,
+        "RUN_FULLSCALE_SWEEP": true,
+        "gld-dataset-wifi/3": true,
+        "PAUSE_DATASET": true,
+        "CONTINUE_DATASET": true,
+        "RESUME_DATASET": true,
+        "ACK_SAMPLES": true
+      },
+      "nonProductionBindRejectionAbsent": true,
+      "compilerWarnings": 0,
+      "actualCompilerErrors": 0,
+      "decorativeBannerEntries": 2
+    },
+    {
+      "model": 2,
+      "markers": {
+        "GLD_INFO_JSON": true,
+        "GLD_STATUS_JSON": true,
+        "BIND_MODEL_TO_ACTIVE_NULLING_PROFILE": true,
+        "latest nulling profile bound to model": true,
+        "binding is allowed only in inference mode": true,
+        "no stable applied nulling profile is available": true,
+        "SET_ALARM_MODE": true,
+        "SET_MANUAL_ALARM": true,
+        "SET_LORA_CONFIG": true,
+        "RUN_NULLING_SINGLE": true,
+        "RUN_FULLSCALE_SWEEP": true,
+        "gld-dataset-wifi/3": true,
+        "PAUSE_DATASET": true,
+        "CONTINUE_DATASET": true,
+        "RESUME_DATASET": true,
+        "ACK_SAMPLES": true
+      },
+      "nonProductionBindRejectionAbsent": true,
+      "compilerWarnings": 0,
+      "actualCompilerErrors": 0,
+      "decorativeBannerEntries": 2
+    },
+    {
+      "model": 3,
+      "markers": {
+        "GLD_INFO_JSON": true,
+        "GLD_STATUS_JSON": true,
+        "BIND_MODEL_TO_ACTIVE_NULLING_PROFILE": true,
+        "latest nulling profile bound to model": true,
+        "binding is allowed only in inference mode": true,
+        "no stable applied nulling profile is available": true,
+        "SET_ALARM_MODE": true,
+        "SET_MANUAL_ALARM": true,
+        "SET_LORA_CONFIG": true,
+        "RUN_NULLING_SINGLE": true,
+        "RUN_FULLSCALE_SWEEP": true,
+        "gld-dataset-wifi/3": true,
+        "PAUSE_DATASET": true,
+        "CONTINUE_DATASET": true,
+        "RESUME_DATASET": true,
+        "ACK_SAMPLES": true
+      },
+      "nonProductionBindRejectionAbsent": true,
+      "compilerWarnings": 0,
+      "actualCompilerErrors": 0,
+      "decorativeBannerEntries": 2
+    }
+  ]
+}

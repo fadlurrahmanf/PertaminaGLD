@@ -45,7 +45,7 @@ Weights 15/45/25/15%; equal items in source phase. Phase 3 weights build40/packa
 
 |H10|Solved|OldGLD13240 and new2164 coexist; probe8/8 reachesoldvalidator|Exclusive listener + childreuse tests; manual oldprocessstop|
 
-|H11|Open|GLD1002 Model2 unapproved; binding model mismatch and boundprofile1 vs active2|Verify intended model/hardware; only approved model can explicitly bind active profile. Read-only audit complete; no NVS mutation|
+|H11|Solved|GLD1002 Model2 unapproved; binding model mismatch and boundprofile1 vs active2|Verify intended model/hardware; only approved model can explicitly bind active profile. Read-only audit complete; no NVS mutation|
 
 ## Current work / agent state
 
@@ -114,3 +114,7 @@ Tidak ada agent aktif saat ini. Backend baru dan tiga paket final aktif. Upload 
 - 15:20:48: User manually closed stale processes. Start-only standardHub launch succeeded with PID21096, GLD21584, CH19856, GW34548; authenticated broker1884 atGLD21584 running. Live schema0/COM999 probe for3models now accepts capabilities then rejectsinvalidschema BEFOREhardware, packageGEThashesmatch, headlessUIModel2+exact3choices+noJSerrorsPASS. Root105Hub+4capvalidatorPASS. ExclusiveHTTP/startupownershipguard testedactualWindows ephemeralports. H09/H10closed. No actualfirmwareupload/reset.
 
 - 15:49:49: User resumed read-only binding/profile audit. GET_INFO/GET_STATUS on alreadyconnectedCOM7; allwirelessinactive. LiveModel2 unapproved; fingerprintmismatch, bound1/active2; sensorsvalid/primed,ML,nullingapplied,DACready. GLDsource reviewer confirmsBindwouldrejectbeforeNVSwrite. No firmware,calibration,NVS,modelapproval,mode,port/restart change. Preferredcorrectmodel questionpending; audit complete, no activeworker. Reports tmp/binding-audit-20261103/live-snapshot.json and source-review.md. Overall remains93%, no new broadphysicalacceptance claimed.
+
+- 2026-11-03 16:26:31: three-model feature-parity package release complete; see docs/GLD-THREE-MODEL-SYNC-TRACKER.md. Model2 approval nowenabledinnewpackage; sharedbindingUIcomparesbound/activeIDs. H11devicebinding remainsopenuntilmanualnewfirmwareupload+explicitbind; nohardwarewriteorHublaunchperformed.
+
+- 2026-11-03 17:36:01: H11closedbyfreshUSBModel2status: productiontrue,bindingmatches,bound2active2,inferenceValidtrue. WirelessTCP81timeoutisnewseparateissue tracked docs/GLD-DATASET-CONNECTION-TRACKER.md; no calibration/binding mutation performed.

@@ -34,6 +34,26 @@ STATE_NAMES = {"disconnected": "belum_terhubung", "connecting": "menghubungkan",
     "continuing": "melanjutkan", "paused": "jeda", "recovering": "memulihkan", "replaying": "memulihkan_data",
     "stopping": "menghentikan", "stop_pending": "menunggu_berhenti", "complete": "selesai", "incomplete": "tidak_lengkap", "error": "galat"}
 
+CONNECT_DIAGNOSTICS = {
+    "connection_timeout": ("transport", "Layanan data GLD (192.168.4.1:81) tidak menjawab dalam batas waktu. Tunggu boot GLD selesai, lalu coba Connect lagi."),
+    "connection_refused": ("transport", "Layanan data GLD pada port 81 menolak koneksi. Pastikan GLD memakai paket Hotspot Wizard Dataset yang sesuai."),
+    "network_unreachable": ("transport", "Alamat data GLD tidak terjangkau. Pastikan laptop masih tersambung ke hotspot GLD yang dipilih."),
+    "connection_reset": ("transport", "Koneksi data ditutup oleh GLD saat Connect. Tunggu GLD selesai boot, lalu coba lagi."),
+    "authentication_rejected": ("authentication", "Autentikasi layanan data GLD ditolak. Pastikan firmware dan password hotspot berasal dari paket GLD yang sesuai."),
+    "incompatible_hello": ("protocol", "Protokol GLD tidak sesuai Workspace. Gunakan paket Hotspot Wizard Dataset final dengan protokol 3."),
+    "incompatible_capabilities": ("protocol", "Fitur protokol GLD belum sesuai Workspace. Gunakan paket Hotspot Wizard Dataset final yang sesuai model."),
+    "invalid_model_metadata": ("protocol", "Metadata model dari GLD tidak valid untuk Workspace. Periksa paket firmware yang diupload."),
+    "selected_device_identity_mismatch": ("identity", "Identitas GLD yang menjawab berbeda dari pilihan perangkat. Scan ulang dan pilih GLD yang benar."),
+    "invalid_profile": ("readiness", "GLD belum melaporkan profil nulling tersimpan yang valid. Periksa profil nulling melalui COM setelah Disconnect."),
+    "device_not_ready": ("readiness", "GLD menjawab, tetapi belum siap merekam. Periksa catu 24 V, sensor ADS/DAC, mode GLD dan profil nulling tersimpan."),
+    "retained_session_requires_original_backend": ("ownership", "GLD masih memiliki sesi atau data milik backend sebelumnya. Pulihkan dan selesaikan sesi lewat backend asal sebelum membuat sesi baru."),
+    "malformed_message": ("protocol", "Balasan awal layanan data GLD tidak valid. Periksa paket firmware Hotspot Wizard Dataset."),
+    "invalid_integer": ("protocol", "Metadata awal layanan data GLD tidak valid. Periksa paket firmware Hotspot Wizard Dataset."),
+    "invalid_prefix": ("protocol", "Metadata urutan sesi GLD tidak valid. Koneksi ditahan agar data sesi tetap terlindungi."),
+    "wifi_association_failed": ("wifi", "Windows belum berhasil memastikan koneksi ke hotspot GLD. Periksa adaptor, izin lokasi/Wi-Fi, jaringan yang dipilih dan password."),
+    "connection_failed_check_hotspot_and_password": ("transport", "Koneksi ke layanan data GLD gagal. Periksa hotspot GLD dan paket firmware, lalu coba Connect lagi."),
+}
+
 
 def _hash(path):
     digest = hashlib.sha256()
@@ -114,6 +134,7 @@ class DatasetWorkflowService:
         self.verification = dict(verified=False, count=0, sha256="", message="Belum ada rekaman yang diverifikasi.")
         self._complete = False
         self.error = ""
+        self.connection_diagnostic = {}
         self._engine_notice_reason = ""
 
     def _busy(self):
@@ -152,6 +173,7 @@ class DatasetWorkflowService:
             configured=all(steps.values()), steps=steps, wizard_steps=wizard_steps, count=self.count,
             configuration_frozen=bool(self.ledger_path),
             segment_id=self._segment_id, verification=copy.deepcopy(self.verification), error=self.error,
+            connection_diagnostic=copy.deepcopy(self.connection_diagnostic),
             cleanup_pending=self._cleanup_pending, cleanup_active=self._cleanup_pending and not self._cleanup_paused,
             cleanup_paused=self._cleanup_paused, cleanup_confirmed=self._cleanup_confirmed,
             cleanup_error=self._cleanup_error, cleanup_ledger_path=self._private_path,
@@ -239,24 +261,37 @@ class DatasetWorkflowService:
                 raise RuntimeError("Sesi masih aktif; tunggu penyelesaian perangkat.")
             if self._engine_state.get("connected"):
                 raise RuntimeError("GLD sudah terhubung.")
+            phase, failure_code = "wifi", ""
+            attempt_engine = None
+            self.connection_diagnostic = {}
             try:
                 self.platform.join(self.selected_ssid, password)
+                phase = "data"
                 if self._cleanup_pending:
+                    attempt_engine = self._engine
                     self._open_private()
                     self._cleanup_paused = False
                     self._engine.resume_owned(password)
                 else:
                     candidate = self._make_engine()
+                    attempt_engine = candidate
                     self._engine = candidate
                     candidate.connect(password)
                     if not candidate.ready:
+                        # Preserve the controlled readiness/ownership reason
+                        # before disconnect emits a disconnected snapshot.
+                        failure_code = candidate.error or candidate.terminal_reason or "device_not_ready"
                         candidate.disconnect()
                         raise RuntimeError("not_ready")
                 self._password = password
                 self._steps["connection"] = True
                 self.error = ""
             except Exception:
-                self.error = "GLD belum terhubung/siap. Periksa hotspot, password, 24 V, dan profil nulling."
+                code = "wifi_association_failed" if phase == "wifi" else failure_code or getattr(attempt_engine, "error", "")
+                if code not in CONNECT_DIAGNOSTICS:
+                    code = "connection_failed_check_hotspot_and_password"
+                phase, self.error = CONNECT_DIAGNOSTICS[code]
+                self.connection_diagnostic = dict(phase=phase, code=code, message=self.error)
                 self._emit()
                 raise RuntimeError(self.error) from None
             self._emit()

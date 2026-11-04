@@ -1,0 +1,32 @@
+/* Reviewer chrome for the Operator Hub mockup. Reuses the Hub palette (hub.css :root). */
+.mock-banner{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:9px max(16px,calc((100% - 1160px)/2));border-bottom:1px solid #985a28;background:#2b1b10;color:#f1c4a4;font-size:13px;line-height:1.4}
+.mock-banner b{padding:2px 8px;border-radius:999px;background:var(--orange);color:#1b1510;font:800 11px ui-monospace,Consolas,monospace;letter-spacing:.12em}
+.mock-banner-scenario{margin-left:auto;color:#d9a985;font:12px ui-monospace,Consolas,monospace}
+.mock-launcher{position:fixed;z-index:30;right:20px;bottom:20px;display:flex;align-items:center;gap:9px;padding:11px 16px;border:1px solid #985a28;border-radius:999px;background:#1d140d;color:#f1c4a4;font-weight:800;font-size:14px;box-shadow:0 14px 40px #0009}
+.mock-launcher span{padding:2px 7px;border-radius:999px;background:var(--orange);color:#1b1510;font:800 10px ui-monospace,Consolas,monospace;letter-spacing:.12em}
+.mock-launcher:hover{filter:brightness(1.15)}
+.mock-panel{position:fixed;z-index:31;top:0;right:0;bottom:0;width:min(420px,100vw);overflow-y:auto;padding:22px 22px 90px;border-left:1px solid var(--line);background:#0b181c;color:var(--ink);box-shadow:-24px 0 70px #000a}
+.mock-panel[hidden]{display:none}
+.mock-panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.mock-panel h2{margin:4px 0 0;font-size:22px}
+.mock-panel h3{margin:22px 0 10px;color:var(--teal);font:800 12px ui-monospace,Consolas,monospace;letter-spacing:.12em;text-transform:uppercase}
+.mock-icon{width:36px;height:36px;border:1px solid var(--line);border-radius:50%;background:transparent;color:var(--muted);font-size:22px;line-height:1}
+.mock-note{margin:12px 0 0;color:var(--muted);font-size:14px;line-height:1.5}
+.mock-note code{color:#ffc18c}
+.mock-presets{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mock-presets button{display:grid;gap:3px;padding:11px 12px;border:1px solid var(--line);border-radius:11px;background:var(--panel);color:var(--ink);text-align:left}
+.mock-presets button:hover{border-color:var(--orange)}
+.mock-presets b{font-size:14px}.mock-presets small{color:var(--muted);font-size:12px;line-height:1.35}
+.mock-form{display:grid;gap:11px}
+.mock-form label{display:grid;gap:6px;color:var(--muted);font-size:12px;font-weight:800;letter-spacing:.06em}
+.mock-form select{height:42px;width:100%;padding:0 11px;border:1px solid #426068;border-radius:9px;background:#071215;color:var(--ink);font:700 14px inherit}
+.mock-form-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:4px}
+.mock-form-actions button{min-height:42px;padding:10px 16px;font-size:14px}
+.mock-links{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.mock-links a{padding:8px 12px;border:1px solid var(--line);border-radius:999px;color:var(--teal);font-size:13px;font-weight:700;text-decoration:none}
+.mock-coverage{margin-top:22px;padding:12px 14px;border:1px solid var(--line);border-radius:11px;background:var(--panel)}
+.mock-coverage summary{cursor:pointer;font-weight:800;font-size:14px}
+.mock-coverage ul{margin:10px 0 0;padding-left:18px;color:#c7d8d5;font-size:13px;line-height:1.5}
+.mock-coverage li+li{margin-top:5px}
+.mock-dialog-url code{display:block;margin-top:14px;padding:10px 12px;border-radius:8px;background:#071215;color:#ffc18c;font:13px ui-monospace,Consolas,monospace;word-break:break-all}
+@media(max-width:760px){.mock-banner-scenario{margin-left:0;flex-basis:100%}.mock-presets{grid-template-columns:1fr}.mock-launcher{right:16px;bottom:16px}}

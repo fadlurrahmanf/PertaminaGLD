@@ -1,0 +1,2187 @@
+<!doctype html>
+<!--
+  GENERATED FILE - do not edit by hand.
+  Source: apps/operator-hub/public (unchanged) + apps/operator-hub/mockups/full-mockup.
+  Rebuild: python apps/operator-hub/mockups/full-mockup/build.py
+-->
+<html lang="id">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Operator Hub Mockup</title>
+  <meta name="description" content="Mockup mandiri Operator Hub Pertamina GLD: UI produksi dengan backend simulasi di browser.">
+  <style>/* css/tokens.css */
+/*
+  Design tokens - "Manifold" (see design.md for the full rationale).
+
+  Grounded in the actual subject: a Pertamina gas-pipeline instrument
+  cluster, not a generic dashboard. Deep pipeline-coating ink, a
+  safety-marking amber-orange primary accent, a pipe-marking teal secondary
+  accent, and hazard red reserved exclusively for an active gas alarm.
+
+  `:root` is the light default. `[data-theme="dark"]` (set by the in-app
+  toggle, js/theme.js) overrides it, and `prefers-color-scheme: dark`
+  provides the same override before the user has chosen explicitly.
+*/
+
+:root {
+  color-scheme: light;
+
+  /* Surfaces */
+  --ink: #f5f3ee;
+  --surface: #ffffff;
+  --surface-2: #eee9df;
+  --hairline: #ddd6c7;
+  --hairline-strong: #c7bda6;
+  --backdrop: rgba(20, 16, 8, 0.35);
+  --shadow: rgba(30, 24, 10, 0.12);
+
+  /* Accent */
+  --accent: #e0630f;
+  --accent-soft: #fbe6d5;
+  --accent-soft-hover: #f6d6b8;
+  --accent-2: #177a7c;
+  --accent-2-soft: #d9eeee;
+
+  /* Semantic status */
+  --alarm: #d5271a;
+  --alarm-soft: #fbe1de;
+  --ok: #1f8f5c;
+  --ok-soft: #e2f3e9;
+  --warn: #a15b06;
+  --warn-soft: #fbedd6;
+
+  /* Text */
+  --text: #16211f;
+  --text-muted: #5c6b66;
+  --text-faint: #8a9691;
+
+  --selection-ring: rgba(224, 99, 15, 0.25);
+
+  /* Fixed instrument-readout accent (terminal/log panels, both themes) */
+  --terminal-bg: #0b1418;
+  --terminal-border: #1c2b2e;
+  --terminal-fg: #ffb020;
+
+  /* Type */
+  --font-eyebrow: Bahnschrift, "Segoe UI Semibold", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", Consolas, "SFMono-Regular", Menlo, monospace;
+
+  /* Spacing scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  --radius: 10px;
+  --strip-height: 60px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --ink: #0b1418;
+    --surface: #121e24;
+    --surface-2: #16262d;
+    --hairline: rgba(255, 255, 255, 0.09);
+    --hairline-strong: rgba(255, 255, 255, 0.17);
+    --backdrop: rgba(0, 0, 0, 0.6);
+    --shadow: rgba(0, 0, 0, 0.4);
+
+    --accent: #ff7a1f;
+    --accent-soft: #2c1c0d;
+    --accent-soft-hover: #3a2711;
+    --accent-2: #2bb3b6;
+    --accent-2-soft: #0f2c2d;
+
+    --alarm: #ff4d3d;
+    --alarm-soft: #351210;
+    --ok: #3ecf8e;
+    --ok-soft: #0f2a20;
+    --warn: #f5b342;
+    --warn-soft: #332708;
+
+    --text: #eef2f0;
+    --text-muted: #8fa39d;
+    --text-faint: #5b6a65;
+
+    --selection-ring: rgba(255, 122, 31, 0.3);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --ink: #0b1418;
+  --surface: #121e24;
+  --surface-2: #16262d;
+  --hairline: rgba(255, 255, 255, 0.09);
+  --hairline-strong: rgba(255, 255, 255, 0.17);
+  --backdrop: rgba(0, 0, 0, 0.6);
+  --shadow: rgba(0, 0, 0, 0.4);
+
+  --accent: #ff7a1f;
+  --accent-soft: #2c1c0d;
+  --accent-soft-hover: #3a2711;
+  --accent-2: #2bb3b6;
+  --accent-2-soft: #0f2c2d;
+
+  --alarm: #ff4d3d;
+  --alarm-soft: #351210;
+  --ok: #3ecf8e;
+  --ok-soft: #0f2a20;
+  --warn: #f5b342;
+  --warn-soft: #332708;
+
+  --text: #eef2f0;
+  --text-muted: #8fa39d;
+  --text-faint: #5b6a65;
+
+  --selection-ring: rgba(255, 122, 31, 0.3);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+</style><style>/* css/hub.css */
+:root{--bg:#071215;--panel:#102126;--panel-2:#132a30;--line:#294148;--ink:#edf5f3;--muted:#93a9aa;--orange:#ff7a18;--teal:#38d7ba;--ok:#67e68d;--bad:#ff6b75}*{box-sizing:border-box}body{margin:0;min-width:320px;color:var(--ink);background:radial-gradient(circle at 50% -20%,#1a363b 0,transparent 45%),var(--bg);font:15px/1.45 Inter,"Segoe UI",Arial,sans-serif}button,input,select{font:inherit}button{cursor:pointer}.topbar{max-width:1160px;margin:auto;padding:26px 0 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}.brand{color:inherit;text-decoration:none}.brand-mark,.topbar-status{display:none}.brand small,.card-kicker{display:block;color:var(--muted);font:800 11px ui-monospace,Consolas,monospace;letter-spacing:.14em}.brand strong{display:block;font-size:19px;letter-spacing:.02em}.mode-switch{display:flex;gap:3px;padding:4px;border:1px solid var(--line);border-radius:999px;font-size:12px}.mode-switch>span,.expert-button{padding:7px 12px;border:0;border-radius:999px;background:transparent;color:var(--muted);font-weight:700}.mode-switch>span{background:var(--orange);color:#17120e}.expert-button span{color:var(--orange)}.shell{width:min(1160px,calc(100% - 48px));margin:auto;padding:0 0 54px}.simple-hero{margin:35px 0 5px}.simple-hero>span{display:none}.simple-hero h1{margin:0;font-size:33px;line-height:1.14;letter-spacing:-.04em}.simple-hero h1 em{font-style:normal}.simple-hero p{margin:5px 0 0;color:var(--muted)}.operator-flow{margin:30px 0;padding:0;overflow:visible}.operator-flow ol{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;position:relative;margin:0;padding:0;list-style:none}.operator-flow ol:before{content:"";position:absolute;top:16px;left:10%;right:10%;height:1px;background:var(--line)}.operator-flow li{z-index:1;display:grid;justify-items:center;gap:8px;text-align:center;color:var(--muted);font-size:11px;font-weight:800;letter-spacing:.07em}.operator-flow li>span{display:grid;place-items:center;width:33px;height:33px;border:1px solid var(--line);border-radius:50%;background:var(--panel);color:var(--muted);font:800 12px ui-monospace,Consolas,monospace}.operator-flow li.done>span{border-color:var(--teal);background:#123b35;color:var(--teal)}.operator-flow li.done b{color:var(--ok)}.operator-flow li.active{color:var(--ink)}.operator-flow li.active>span{border-color:var(--orange);background:var(--orange);color:#20160c;box-shadow:0 0 0 5px #ff7a1822}.operator-flow li small{display:none}.notice{margin:0 0 14px;color:var(--muted);font-size:12px}.notice.ok{color:var(--ok)}.notice.bad{color:var(--bad)}.workspace{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:18px;align-items:start}.actions-column{display:grid;gap:18px}.card{border:1px solid var(--line);border-radius:18px;background:linear-gradient(135deg,var(--panel),#0d1b1f);padding:28px}.connect-card>.card-kicker{color:var(--orange)}.device-choice{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:0 0 18px;border-bottom:1px solid var(--line);color:var(--muted);font:800 10px ui-monospace,Consolas,monospace;letter-spacing:.13em}.device-rail{display:flex;gap:4px}.device-tab{min-width:0;padding:7px 10px;border:1px solid var(--line);border-radius:999px;background:transparent;color:var(--ink)}.device-tab .glyph,.device-tab small{display:none}.device-tab strong{font:800 11px ui-monospace,Consolas,monospace;letter-spacing:.06em}.device-tab.active{border-color:var(--orange);background:var(--orange);color:#17120e}.card-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.connect-card .card-head{margin-top:20px}.card h3{margin:0;font-size:19px;letter-spacing:-.025em}.connect-card h3{font-size:24px}.card-head p:not(.card-kicker),.test-card p:not(.card-kicker),.settings-card summary p:not(.card-kicker){margin:4px 0 0;color:var(--muted);font-size:13px}.connection-indicator,.guard-badge{padding:6px 10px;border-radius:999px;background:var(--panel-2);color:var(--muted);font:800 10px ui-monospace,Consolas,monospace;letter-spacing:.07em}.connection-indicator.online{background:#123c31;color:var(--ok)}.connect-controls{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:end;margin-top:24px}.connect-controls label,.setting-grid label{display:grid;gap:6px;color:var(--muted);font:800 10px ui-monospace,Consolas,monospace;letter-spacing:.1em}.connect-controls select,.setting-grid input{height:46px;width:100%;padding:0 13px;border:1px solid #426068;border-radius:10px;background:#0b191d;color:var(--ink);font-family:ui-monospace,Consolas,monospace}.button-row{display:flex;gap:8px}.primary,.secondary,.outline-danger{padding:14px 18px;border:1px solid transparent;border-radius:10px;font-weight:800;font-size:12px}.primary{background:var(--orange);color:#1b1510}.secondary{border-color:#426068;background:transparent;color:var(--ink)}.primary:hover{filter:brightness(1.08)}button:disabled{opacity:.45;cursor:not-allowed}.test-card{display:none;gap:16px;padding:28px;background:linear-gradient(135deg,var(--panel),#0d1b1f)}.workspace.connected .connect-card{display:none}.workspace.connected .test-card{display:grid}.test-card>.card-kicker{color:var(--teal)}.test-device-heading{display:flex;justify-content:space-between;gap:15px;align-items:start}.test-device-heading h3{font-size:26px}.test-device-port{margin:22px 0;padding:14px 16px;border:1px solid #426068;border-radius:10px;background:#0b191d;font-family:ui-monospace,Consolas,monospace}.test-result{display:grid;grid-template-columns:76px 1fr;gap:16px;align-items:center;padding:20px;border:1px solid #2e806d;border-radius:13px;background:#0c2a25}.test-action{display:grid;justify-items:center}.test-score{display:grid;place-items:center;width:76px;height:76px;border-radius:14px;background:#17473d;color:var(--ok);font:900 20px ui-monospace,Consolas,monospace}.test-action .primary{width:100%;margin-top:8px;padding:9px;font-size:11px}.test-action strong{margin-top:6px;text-align:center;color:#bbd5cf;font:700 10px ui-monospace,Consolas,monospace}.test-action strong.ok{color:var(--ok)}.test-action strong.fail{color:var(--bad)}.test-result-copy h3{font-size:19px}.test-result-copy p{color:#bbd5cf!important}.continue-btn{padding:13px;border:0;border-radius:10px;background:var(--orange);color:#1b1510;font-weight:800}.continue-btn span{float:right}.test-card details{padding-top:12px;border-top:1px solid var(--line);color:#bbd5cf;font-size:12px}.test-card summary{cursor:pointer}.test-card li.fail{color:var(--bad)}.device-overview{grid-column:2;grid-row:1}.device-title{margin:12px 0 18px}.device-title .glyph{display:none}.device-title h2{margin:0;font-size:20px}.device-title p{margin:4px 0 0;color:var(--muted);font-size:12px}.status-list{margin:0}.status-list div{display:flex;justify-content:space-between;gap:10px;padding:12px 0;border-top:1px solid var(--line)}.status-list dt{color:var(--muted);font-size:12px}.status-list dd{margin:0;font:600 12px ui-monospace,Consolas,monospace;text-align:right}.last-result{display:none}.refresh-button{width:100%;margin-top:20px;padding:10px;border:1px solid #426068;border-radius:9px;background:transparent;color:var(--muted);font-size:12px}.refresh-button span{color:var(--orange)}.future-stages{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}.settings-card,.firmware-card{padding:18px;opacity:.58}.settings-card>summary{display:flex;justify-content:space-between;gap:12px;min-height:92px;cursor:pointer;list-style:none}.settings-card>summary::-webkit-details-marker{display:none}.settings-card.locked summary{cursor:not-allowed}.settings-card.locked .settings-content{display:none}.settings-card:not(.locked),.firmware-card:not(.locked){opacity:1}.settings-card:not(.locked)>summary{padding-bottom:14px;border-bottom:1px solid var(--line)}.firmware-card{display:block}.firmware-card.locked .firmware-actions{pointer-events:none}.firmware-actions{display:flex;flex-direction:column;align-items:stretch;gap:9px;margin-top:16px}.firmware-actions .primary{width:100%}.package-version{margin:7px 0 0;color:var(--orange);font:600 12px ui-monospace,Consolas,monospace}.reset{display:flex;gap:6px;align-items:center;color:var(--muted);font-size:11px}.fineprint{margin:0;color:var(--muted);font-size:11px}.setting-grid{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px 10px;align-items:end;margin-top:19px}.setting-grid .apply{height:46px}.network-settings{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}.network-settings h4{margin:0}.network-settings .setting-grid{grid-template-columns:1fr 1fr}.mesh-lock{display:flex;gap:10px;margin-top:18px;padding:12px;border-left:2px solid #ffbd3b;background:#2b2614}.mesh-lock .lock{color:#ffbd3b}.mesh-lock b,.mesh-lock small{display:block}.mesh-lock small{color:var(--muted);font-size:11px}.secondary-details{margin-top:18px;border-top:1px solid var(--line)}.secondary-details>summary{padding:14px 2px;cursor:pointer;color:var(--muted);font:800 10px ui-monospace,Consolas,monospace;letter-spacing:.12em;list-style:none}.secondary-details>summary::-webkit-details-marker{display:none}.side-column{display:grid;grid-template-columns:1fr 1fr;gap:18px}.restart-card,.history-card{padding:18px}.restart-card p:not(.card-kicker),.history-card li{color:var(--muted);font-size:12px}.outline-danger{width:100%;border-color:#864149;background:transparent;color:var(--bad)}.history-card ol{margin:14px 0 0;padding-left:16px}.sr-only,.continue-btn[hidden],.test-score[hidden]{display:none!important}@media(max-width:760px){.topbar,.shell{width:calc(100% - 28px)}.topbar{padding:20px 0 14px}.shell{padding-bottom:30px}.simple-hero{margin-top:26px}.simple-hero h1{font-size:28px}.operator-flow{overflow:auto}.operator-flow ol{grid-template-columns:repeat(5,110px);width:550px}.operator-flow ol:before{width:440px;right:auto}.workspace,.future-stages,.side-column{grid-template-columns:1fr}.connect-card{padding:20px}.device-choice{display:grid;gap:10px}.connect-controls{grid-template-columns:1fr}.button-row{display:grid;grid-template-columns:1fr 1fr}.device-overview{grid-column:auto;grid-row:auto}.network-settings .setting-grid{grid-template-columns:1fr}.test-device-heading{display:grid}.test-result{grid-template-columns:1fr}.test-action{justify-items:start}.test-action .primary{max-width:170px}}
+</style><style>/* css/alarm-controls.css */
+.alarm-control-settings {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.alarm-control-settings[hidden] {
+  display: none !important;
+}
+
+.alarm-control-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.alarm-control-heading h4 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.alarm-control-heading p,
+.alarm-safety-note,
+.alarm-control-help {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.alarm-safety-note {
+  margin-top: 13px;
+  padding: 11px 12px;
+  border-left: 3px solid var(--orange);
+  border-radius: 8px;
+  background: #2b2614;
+  line-height: 1.55;
+}
+
+.alarm-safety-note strong {
+  color: var(--ink);
+}
+
+.alarm-mode-badge {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--panel-2);
+  color: var(--muted);
+  font: 800 10px ui-monospace, Consolas, monospace;
+  letter-spacing: .06em;
+}
+
+.alarm-mode-badge[data-mode="auto"] {
+  background: #123c31;
+  color: var(--ok);
+}
+
+.alarm-mode-badge[data-mode="manual"] {
+  background: #3a2714;
+  color: #ffbd3b;
+}
+
+.alarm-mode-badge[data-mode="unavailable"] {
+  background: var(--alarm-soft);
+  color: var(--alarm);
+}
+
+.alarm-control-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+  margin-top: 14px;
+}
+
+.alarm-control-grid label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font: 800 10px ui-monospace, Consolas, monospace;
+  letter-spacing: .1em;
+}
+
+.alarm-control-grid select {
+  width: 100%;
+  height: 46px;
+  padding: 0 13px;
+  border: 1px solid #426068;
+  border-radius: 10px;
+  background: #0b191d;
+  color: var(--ink);
+  font-family: ui-monospace, Consolas, monospace;
+}
+
+.alarm-control-grid .apply {
+  height: 46px;
+}
+
+.alarm-physical-state {
+  grid-column: 1 / -1;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #0b191d;
+  color: var(--muted);
+  font: 600 11px ui-monospace, Consolas, monospace;
+}
+
+.alarm-physical-state.commanded {
+  border-color: var(--alarm);
+  background: var(--alarm-soft);
+  color: var(--alarm);
+}
+
+.alarm-test-on:not(:disabled) {
+  border-color: var(--alarm);
+  color: var(--alarm);
+}
+
+.alarm-control-help.bad {
+  color: var(--alarm);
+}
+
+@media (max-width: 760px) {
+  .alarm-control-heading,
+  .alarm-control-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .alarm-control-heading {
+    display: grid;
+  }
+
+  .alarm-mode-badge {
+    justify-self: start;
+  }
+
+  .alarm-physical-state {
+    grid-column: auto;
+  }
+}
+</style>
+  <style>html:root:not([data-theme]){--ink:#edf5f3}.workspace.single-task{grid-template-columns:minmax(0,1fr)}.workspace.single-task .device-overview,.workspace.settings-stage{display:none}#futureStages[hidden],#secondaryDetails[hidden]{display:none!important}.connect-card,.test-card{position:relative;isolation:isolate;overflow:hidden;animation:task-arrive .52s cubic-bezier(.2,.8,.2,1) both}.connect-card:before,.test-card:before{content:"";position:absolute;inset:14px 22px;border:1px solid rgba(56,215,186,.12);border-radius:inherit;pointer-events:none;z-index:-1}.connect-card:after,.test-card:after{content:"";position:absolute;width:440px;height:440px;right:-170px;top:50%;transform:translateY(-50%);border-radius:50%;background:radial-gradient(circle,#38d7ba18 0,transparent 68%);pointer-events:none;z-index:-1}.workspace.single-task .actions-column{justify-items:center}.workspace.single-task .connect-card{width:min(440px,calc(100vw - 48px));aspect-ratio:1;display:flex;flex-direction:column;justify-content:center;padding:40px;border-radius:50%}.workspace.single-task .connect-card:before{inset:18px;border-radius:50%}.workspace.single-task .connect-card:after{width:320px;height:320px;right:50%;top:50%;transform:translate(50%,-50%)}.workspace.single-task .device-choice{display:grid;justify-items:center;gap:7px;padding-bottom:10px}.workspace.single-task .connect-card .card-head{text-align:center;align-items:center;flex-direction:column;margin-top:10px}.workspace.single-task .connect-controls{grid-template-columns:1fr;margin-top:14px}.workspace.single-task .button-row{justify-content:center}.test-card{border-radius:34px}.operator-flow li.active>span{animation:step-pulse 1.8s ease-in-out infinite}@keyframes task-arrive{from{opacity:0;transform:translateY(18px) scale(.985);filter:blur(4px)}to{opacity:1;transform:translateY(0) scale(1);filter:blur(0)}}@keyframes step-pulse{0%,100%{box-shadow:0 0 0 5px #ff7a1822}50%{box-shadow:0 0 0 10px #ff7a180d}}@media(max-width:760px){.workspace.single-task .connect-card{width:100%;aspect-ratio:auto;border-radius:32px;padding:28px}.workspace.single-task .connect-card:before{inset:8px;border-radius:24px}.connect-card:after,.test-card:after{right:-250px}.test-card{border-radius:24px}}</style>
+  <style>
+    .workspace.single-task .connect-card{width:min(460px,calc(100vw - 48px));aspect-ratio:auto;display:block;padding:0;background:transparent;border:0;border-radius:0;box-shadow:none;overflow:visible}
+    .workspace.single-task .connect-card:before,.workspace.single-task .connect-card:after{display:none}
+    .workspace.single-task .actions-column{justify-items:center}
+    .workspace.single-task .device-choice{justify-items:center;padding:0 0 14px;border-bottom:0}
+    .workspace.single-task .connect-card .card-head{margin:18px 0 0}
+    .workspace.single-task .connect-card .card-head h3{font-size:24px}
+    .workspace.single-task .connect-controls{margin-top:20px}
+    .workspace.single-task .button-row{margin-top:2px}
+    @media(max-width:760px){.workspace.single-task .connect-card{width:100%;padding:0;background:transparent;border:0;border-radius:0}}
+  </style>
+  <style>
+    .operator-flow .step-button{display:grid;place-items:center;width:33px;height:33px;padding:0;border:1px solid var(--line);border-radius:50%;background:var(--panel);color:var(--muted);font:800 12px ui-monospace,Consolas,monospace}.operator-flow li.done .step-button{border-color:var(--teal);background:#123b35;color:var(--teal)}.operator-flow li.active .step-button{border-color:var(--orange);background:var(--orange);color:#20160c;box-shadow:0 0 0 5px #ff7a1822}.operator-flow .step-button:not(:disabled){cursor:pointer}.operator-flow .step-button:not(:disabled):hover{filter:brightness(1.14)}.operator-flow .step-button:disabled{opacity:1;cursor:default}.workspace.review-connect.connected .connect-card{display:block}.workspace.review-connect .test-card{display:none}.workspace.review-connect.settings-stage{display:grid}
+  </style>
+  <style>
+    .workspace.single-task .connect-controls label{font-size:12px;letter-spacing:.12em}
+    .workspace.single-task .connect-controls select{height:52px;padding:0 16px;font-size:15px;font-weight:700}
+    .workspace.single-task .connect-controls .primary,.workspace.single-task .connect-controls .secondary{min-height:48px;padding:12px 20px;font-size:14px}
+  </style>
+  <style>
+    #initialFirmwareCard[hidden]{display:none!important}
+    /* The single-task layout makes connection cards visible by default. Once a
+       board is connected, only the next stage may be shown. */
+    .workspace.connected.single-task .connect-card,.workspace.initial-firmware.single-task .connect-card{display:none}
+    .workspace.initial-firmware .initial-firmware-card{width:min(460px,calc(100vw - 48px));display:grid;justify-items:center;gap:12px;padding:0;border:0;background:transparent;box-shadow:none;text-align:center}
+    .initial-firmware-card .card-kicker{color:#ff7a18}.initial-firmware-card h3{font-size:24px}.initial-firmware-card p:not(.card-kicker):not(.package-version),.initial-firmware-card small{margin:0;color:#93a9aa}.initial-firmware-card .primary{margin-top:4px;font-size:14px}
+    #uploadProgress[hidden]{display:none!important}.upload-progress{width:min(560px,100%);margin:10px auto 0;padding:18px 20px;border:1px solid #24525a;border-radius:14px;background:#0d1d21;box-shadow:0 12px 30px #0004}.upload-progress-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px}.upload-progress-head h3{margin:0;font-size:17px}.upload-progress-head strong{color:#ff861c;font-size:18px}.upload-progress-stage{margin:7px 0 10px;color:#b8cacc;font-size:13px}.upload-progress-track{height:8px;overflow:hidden;border-radius:999px;background:#172d32}.upload-progress-track i{display:block;width:0;height:100%;border-radius:inherit;background:linear-gradient(90deg,#15d7bd,#ff861c);transition:width .28s ease}.upload-progress-log{max-height:132px;min-height:72px;overflow:auto;margin:12px 0 0;padding:10px 12px;border-radius:8px;background:#071215;color:#bad0d0;font:12px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;word-break:break-word}.upload-progress.error .upload-progress-head strong{color:#ff7474}.upload-progress.error .upload-progress-track i{background:#ff6262}
+  </style>
+  <style>
+    .confirm-dialog{width:min(430px,calc(100vw - 32px));padding:0;border:1px solid #426068;border-radius:18px;background:#102126;color:#edf5f3;box-shadow:0 28px 90px #000b}.confirm-dialog::backdrop{background:#020809bb;backdrop-filter:blur(3px)}.confirm-dialog [hidden]{display:none!important}.confirm-dialog-card{padding:26px}.confirm-dialog h2{margin:7px 0;font-size:23px}.confirm-dialog p:not(.card-kicker){margin:0;color:#b9cbc8;line-height:1.5}.confirm-dialog label{display:grid;gap:8px;margin-top:18px;color:#b9cbc8;font-size:13px}.confirm-dialog input{height:44px;padding:0 12px;border:1px solid #426068;border-radius:9px;background:#071215;color:#edf5f3;font:700 14px ui-monospace,Consolas,monospace}.confirm-dialog-error{margin-top:10px!important;color:#ff6b75!important}.confirm-dialog-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:24px}.confirm-dialog-actions button{min-width:104px}
+  </style>
+  <style>
+    /* Operator view: keep labels and values readable at normal viewing distance. */
+    .settings-card,.firmware-card{padding:24px}.settings-card .card-kicker,.firmware-card .card-kicker{font-size:12px}.settings-card h3,.firmware-card h3{font-size:22px}.settings-card .settings-header{min-height:92px;padding-bottom:14px;border-bottom:1px solid var(--line)}.settings-card .settings-header p:not(.card-kicker){font-size:15px;line-height:1.5}.guard-badge{font-size:11px;padding:8px 12px}.settings-card .setting-grid{gap:18px 12px;margin-top:22px}.settings-card .setting-grid label{gap:8px;font-size:12px;letter-spacing:.09em}.settings-card .setting-grid input{height:52px;padding:0 15px;font-size:16px;font-weight:700}.settings-card .setting-grid .apply{height:52px;font-size:14px}.mesh-lock{gap:12px;margin-top:20px;padding:16px}.mesh-lock b{font-size:16px}.mesh-lock small{font-size:13px;line-height:1.45}.firmware-card .package-version,.firmware-card .reset,.firmware-card .fineprint{font-size:13px}.firmware-card .primary{font-size:14px}.test-recovery{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center;padding:15px 16px;border:1px solid #985a28;border-radius:12px;background:#2b1b10}.test-recovery .primary{font-size:13px;white-space:nowrap}.test-recovery p{margin:0!important;color:#f1c4a4!important;font-size:13px!important;line-height:1.45}.test-recovery small{display:block;margin-top:3px;color:#d9a985;font-size:12px}
+    @media(max-width:760px){.settings-card,.firmware-card{padding:20px}.settings-card h3,.firmware-card h3{font-size:20px}.settings-card .settings-header p:not(.card-kicker){font-size:14px}}
+  </style>
+  <style>
+    #uploadSuccessToast[hidden]{display:none!important}.upload-success{position:fixed;z-index:20;left:50%;top:50%;width:min(330px,calc(100vw - 40px));padding:25px 28px;border:1px solid #38d7ba;border-radius:18px;background:#10332c;color:#edf5f3;box-shadow:0 24px 75px #0009;text-align:center;transform:translate(-50%,-50%)}.upload-success strong{display:block;color:#6ff0bf;font-size:24px}.upload-success span{display:block;margin-top:7px;color:#b9d7ce;font-size:14px}.upload-success.show{animation:upload-success-fade 2.6s ease both}@keyframes upload-success-fade{0%{opacity:0;transform:translate(-50%,-43%) scale(.94)}12%,75%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-57%) scale(.98)}}
+  </style>
+  <style>
+    .notice-card{margin:16px 0 18px;padding:13px 16px;border:1px solid #294148;border-left:3px solid #38d7ba;border-radius:10px;background:#0d1d21}.notice-card .notice{margin:0;color:#c7d8d5;font-size:13px}.notice-card .notice.ok{color:#67e68d}.notice-card .notice.bad{color:#ff8b93;border-color:#84434a}
+  </style>
+  <style>
+    /* Test Device is an asynchronous boot-report read; make the wait state visible. */
+    .notice-card:has(.notice.waiting){border-left-color:#ff9a38;background:linear-gradient(90deg,#16282b,#0d1d21)}
+    .notice-card .notice.waiting{display:flex;align-items:center;gap:10px;color:#ffd1a2}
+    .notice-card .notice.waiting:before{content:"";width:12px;height:12px;flex:0 0 12px;border:2px solid #ff9a3855;border-top-color:#ff9a38;border-radius:50%;animation:notice-wait-spin .75s linear infinite}
+    .test-card.testing .test-result{border-color:#c9823c;background:#192b28}
+    .test-card.testing .test-result-copy h3:after{content:"";display:inline-block;width:.55em;height:.55em;margin-left:.55em;border-radius:50%;background:#ff9a38;animation:notice-wait-pulse 1s ease-in-out infinite}
+    @keyframes notice-wait-spin{to{transform:rotate(360deg)}}
+    @keyframes notice-wait-pulse{50%{opacity:.25;transform:scale(.7)}}
+    @media(prefers-reduced-motion:reduce){.notice-card .notice.waiting:before,.test-card.testing .test-result-copy h3:after{animation:none}}
+  </style>
+  <style>
+    /* Short, repeatable acknowledgement for every Simple Hub action. */
+    button:not(:disabled).click-feedback{animation:button-press .22s cubic-bezier(.2,.75,.3,1);will-change:transform}
+    @keyframes button-press{0%{transform:scale(1)}42%{transform:scale(.94)}100%{transform:scale(1)}}
+    @media(prefers-reduced-motion:reduce){button:not(:disabled).click-feedback{animation:none}}
+  </style>
+  <style>
+    /* A three-step flow is a compact, centered group rather than the left half of the old five-step rail. */
+    .operator-flow ol{grid-template-columns:repeat(3,minmax(0,1fr));width:min(720px,100%);margin-inline:auto}
+    .operator-flow ol:before{left:16.667%;right:16.667%}
+    @media(max-width:760px){.operator-flow ol{grid-template-columns:repeat(3,110px);width:330px}.operator-flow ol:before{width:220px;left:55px;right:auto}}
+  </style>
+  <style>
+    /* Root Gateway belongs exclusively to Cluster Head configuration. */
+    #rootGatewayCard[hidden],#saveRootGatewayBtn[hidden]{display:none!important}
+  </style>
+  <style>
+    /* Simple Hub reading scale: raise the operational type scale by two pixels. */
+    body{font-size:17px}.brand small,.card-kicker{font-size:13px}.brand strong{font-size:21px}.mode-switch{font-size:14px}
+    .operator-flow li{font-size:13px}.operator-flow .step-button{font-size:14px}.notice-card .notice{font-size:15px}
+    .device-choice,.connect-controls label,.setting-grid label{font-size:12px}.device-tab strong{font-size:13px}.connection-indicator,.guard-badge{font-size:12px}
+    .card h3,.test-result-copy h3{font-size:21px}.connect-card h3,.test-device-heading h3{font-size:26px}.card-head p:not(.card-kicker),.test-card p:not(.card-kicker),.settings-card .settings-header p:not(.card-kicker){font-size:15px}
+    .connect-controls select,.setting-grid input{font-size:17px}.primary,.secondary,.outline-danger,.continue-btn,.settings-card .setting-grid .apply{font-size:14px}.package-version,.firmware-card .package-version,.firmware-card .reset,.firmware-card .fineprint{font-size:15px}
+    .test-device-port{font-size:16px}.test-action strong{font-size:12px}.upload-progress-stage{font-size:15px}.upload-progress-log{font-size:14px}
+    @media(max-width:760px){.simple-hero h1{font-size:30px}.settings-card h3,.firmware-card h3{font-size:22px}}
+  </style>
+  <style>
+    /* A device change must always resolve to a visible, valid workflow card. */
+    .workspace[data-simple-view="connect"] .connect-card{display:block!important}.workspace[data-simple-view="connect"] .test-card{display:none!important}
+    .workspace[data-simple-view="test"]{display:grid!important}.workspace[data-simple-view="test"] .connect-card{display:none!important}.workspace[data-simple-view="test"] .test-card{display:grid!important}
+  </style>
+  <style>
+    /* Deterministic stage visibility: a tab switch or step click can never leave the work area empty. */
+    #devicePanel[data-simple-view="connect"] .workspace:not(.initial-firmware),#devicePanel[data-simple-view="test"] .workspace{display:grid!important}
+    #devicePanel[data-simple-view="connect"] #futureStages,#devicePanel[data-simple-view="test"] #futureStages{display:none!important}
+    #devicePanel[data-simple-view="settings"] .workspace{display:none!important}
+    #devicePanel[data-simple-view="settings"] #futureStages{display:grid!important}
+  </style>
+  <style>
+    .test-upload-option{width:100%;margin-top:2px;border-color:#a8662c;color:#ffc18c}
+  </style>
+  <style>
+    .firmware-upload-dialog{width:min(520px,calc(100vw - 32px));padding:0;border:1px solid #426068;border-radius:18px;background:#102126;color:#edf5f3;box-shadow:0 28px 90px #000b}.firmware-upload-dialog::backdrop{background:#020809bb;backdrop-filter:blur(3px)}.firmware-upload-dialog form{display:grid;gap:14px;padding:27px}.firmware-upload-dialog h2{margin:0;font-size:24px}.firmware-upload-package{margin:-8px 0 3px;color:#ff9c4e;font:700 13px ui-monospace,Consolas,monospace}.firmware-upload-dialog label{display:grid;gap:7px;color:#b9cbc8;font-size:13px;font-weight:800;letter-spacing:.07em}.firmware-upload-dialog select,.firmware-upload-dialog input:not([type="checkbox"]){height:47px;width:100%;padding:0 13px;border:1px solid #426068;border-radius:9px;background:#0b191d;color:#edf5f3;font:700 15px ui-monospace,Consolas,monospace}.firmware-upload-dialog select:disabled{opacity:1;color:#edf5f3}.firmware-upload-dialog small,.firmware-upload-help{margin:0;color:#b9cbc8;font-size:13px;font-weight:400;letter-spacing:0;line-height:1.45}.firmware-upload-dialog .firmware-reset{display:flex;align-items:center;gap:8px;color:#edf5f3;font-size:15px;letter-spacing:0}.firmware-upload-dialog .firmware-reset input{width:17px;height:17px;accent-color:#ff7a18}.firmware-upload-dialog .confirm-dialog-actions{margin-top:2px}
+  </style>
+  <style>
+    .settings-card .setting-grid select,.settings-card .setting-grid textarea{width:100%;padding:0 15px;border:1px solid #426068;border-radius:10px;background:#0b191d;color:#edf5f3;font:700 16px ui-monospace,Consolas,monospace}.settings-card .setting-grid select{height:52px}.settings-card .setting-grid textarea{min-height:170px;padding-block:13px;resize:vertical;line-height:1.4}.network-settings .full-span{grid-column:1/-1}.network-settings [hidden]{display:none!important}.tls-field-note{grid-column:1/-1;margin:0;color:#b9cbc8;font-size:13px;line-height:1.45}
+  </style>
+<style>/* mockup reviewer chrome */
+/* Reviewer chrome for the Operator Hub mockup. Reuses the Hub palette (hub.css :root). */
+.mock-banner{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:9px max(16px,calc((100% - 1160px)/2));border-bottom:1px solid #985a28;background:#2b1b10;color:#f1c4a4;font-size:13px;line-height:1.4}
+.mock-banner b{padding:2px 8px;border-radius:999px;background:var(--orange);color:#1b1510;font:800 11px ui-monospace,Consolas,monospace;letter-spacing:.12em}
+.mock-banner-scenario{margin-left:auto;color:#d9a985;font:12px ui-monospace,Consolas,monospace}
+.mock-launcher{position:fixed;z-index:30;right:20px;bottom:20px;display:flex;align-items:center;gap:9px;padding:11px 16px;border:1px solid #985a28;border-radius:999px;background:#1d140d;color:#f1c4a4;font-weight:800;font-size:14px;box-shadow:0 14px 40px #0009}
+.mock-launcher span{padding:2px 7px;border-radius:999px;background:var(--orange);color:#1b1510;font:800 10px ui-monospace,Consolas,monospace;letter-spacing:.12em}
+.mock-launcher:hover{filter:brightness(1.15)}
+.mock-panel{position:fixed;z-index:31;top:0;right:0;bottom:0;width:min(420px,100vw);overflow-y:auto;padding:22px 22px 90px;border-left:1px solid var(--line);background:#0b181c;color:var(--ink);box-shadow:-24px 0 70px #000a}
+.mock-panel[hidden]{display:none}
+.mock-panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.mock-panel h2{margin:4px 0 0;font-size:22px}
+.mock-panel h3{margin:22px 0 10px;color:var(--teal);font:800 12px ui-monospace,Consolas,monospace;letter-spacing:.12em;text-transform:uppercase}
+.mock-icon{width:36px;height:36px;border:1px solid var(--line);border-radius:50%;background:transparent;color:var(--muted);font-size:22px;line-height:1}
+.mock-note{margin:12px 0 0;color:var(--muted);font-size:14px;line-height:1.5}
+.mock-note code{color:#ffc18c}
+.mock-presets{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mock-presets button{display:grid;gap:3px;padding:11px 12px;border:1px solid var(--line);border-radius:11px;background:var(--panel);color:var(--ink);text-align:left}
+.mock-presets button:hover{border-color:var(--orange)}
+.mock-presets b{font-size:14px}.mock-presets small{color:var(--muted);font-size:12px;line-height:1.35}
+.mock-form{display:grid;gap:11px}
+.mock-form label{display:grid;gap:6px;color:var(--muted);font-size:12px;font-weight:800;letter-spacing:.06em}
+.mock-form select{height:42px;width:100%;padding:0 11px;border:1px solid #426068;border-radius:9px;background:#071215;color:var(--ink);font:700 14px inherit}
+.mock-form-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:4px}
+.mock-form-actions button{min-height:42px;padding:10px 16px;font-size:14px}
+.mock-links{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.mock-links a{padding:8px 12px;border:1px solid var(--line);border-radius:999px;color:var(--teal);font-size:13px;font-weight:700;text-decoration:none}
+.mock-coverage{margin-top:22px;padding:12px 14px;border:1px solid var(--line);border-radius:11px;background:var(--panel)}
+.mock-coverage summary{cursor:pointer;font-weight:800;font-size:14px}
+.mock-coverage ul{margin:10px 0 0;padding-left:18px;color:#c7d8d5;font-size:13px;line-height:1.5}
+.mock-coverage li+li{margin-top:5px}
+.mock-dialog-url code{display:block;margin-top:14px;padding:10px 12px;border-radius:8px;background:#071215;color:#ffc18c;font:13px ui-monospace,Consolas,monospace;word-break:break-all}
+@media(max-width:760px){.mock-banner-scenario{margin-left:0;flex-basis:100%}.mock-presets{grid-template-columns:1fr}.mock-launcher{right:16px;bottom:16px}}
+</style>
+<script>/* mockup backend */
+/*
+  Operator Hub mockup backend — browser-only simulation.
+
+  This script replaces window.fetch (for /api/simple/*) and window.EventSource
+  BEFORE the unmodified production js/hub.js is executed, so every Simple Hub
+  flow runs against an in-memory model instead of bridge.py. It never opens a
+  serial port, never talks to the network, and never writes firmware, NVS,
+  MQTT, or any project data. Response shapes and validation messages mirror
+  apps/operator-hub/bridge.py so the UI behaves as it would in production.
+*/
+(() => {
+  "use strict";
+
+  // ---------------------------------------------------------------- scenario
+  const DEFAULTS = {
+    gld: "normal",       // normal | fresh | fail | pending | alarm-locked
+    ch: "normal",        // normal | fresh | fail
+    gw: "normal",        // normal | fresh | fail
+    drive: "steady_24v", // steady_24v | gpio41_high | gpio41_pullup
+    inference: "0",      // 1 = GLD inference alarm currently active
+    gwfw: "non_tls",     // non_tls | tls | legacy
+    upload: "success",   // success | error
+    speed: "normal",     // normal | fast
+    preset: ""           // optional auto-play, see mock-panel.js
+  };
+  const hashParams = new URLSearchParams(location.hash.slice(1));
+  const cfg = Object.fromEntries(Object.entries(DEFAULTS).map(([key, value]) => [key, hashParams.get(key) ?? value]));
+  const speed = cfg.speed === "fast" ? 0.25 : 1;
+  const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms * speed));
+  const clone = (value) => JSON.parse(JSON.stringify(value ?? null));
+  const TOKEN = "mockup-token";
+
+  // ----------------------------------------------------------- package catalog
+  // Versions mirror firmware-packages/<env>/latest/manifest.json at build time.
+  const GLD_MODELS = [
+    ["gld", "GasleakDetector - GLD1 (GPIO41 Lamp & Buzzer)", "gld"],
+    ["model_1", "Model 1 - Board 1", "gld_model_1"],
+    ["model_2", "Model 2 - Board 2", "gld_model_2"],
+    ["model_3", "Model 3 - Board 3", "gld_model_3"],
+    ["model_1_dataset_wifi", "GLD1 Model 1 - Hotspot Dataset 500 ms (mode khusus)", "gld_model_1_dataset_wifi"],
+    ["model_2_dataset_wifi", "GLD1 Model 2 - Hotspot Dataset 500 ms (mode khusus)", "gld_model_2_dataset_wifi"],
+    ["model_3_dataset_wifi", "GLD1 Model 3 - Hotspot Dataset 500 ms (mode khusus)", "gld_model_3_dataset_wifi"],
+    ["model_1_dataset_replay_wifi", "GLD1 Model 1 - Hotspot buffer 5 menit (tahap 2)", "gld_model_1_dataset_replay_wifi"],
+    ["model_2_dataset_replay_wifi", "GLD1 Model 2 - Hotspot buffer 5 menit (tahap 2)", "gld_model_2_dataset_replay_wifi"],
+    ["model_3_dataset_replay_wifi", "GLD1 Model 3 - Hotspot buffer 5 menit (tahap 2)", "gld_model_3_dataset_replay_wifi"],
+    ["gld_v2", "GasleakDetector - Board V2", "gld_v2"],
+    ["model_1_dataset_workflow_wifi", "GLD1 Model 1 - Hotspot Wizard Dataset", "gld_model_1_dataset_workflow_wifi"],
+    ["model_2_dataset_workflow_wifi", "GLD1 Model 2 - Hotspot Wizard Dataset", "gld_model_2_dataset_workflow_wifi"],
+    ["model_3_dataset_workflow_wifi", "GLD1 Model 3 - Hotspot Wizard Dataset", "gld_model_3_dataset_workflow_wifi"],
+    ["gld_atex", "GasleakDetector - GLD ATEX (GPIO7 fan)", "gld_atex"]
+  ].map(([value, label, environment]) => ({ value, label, environment }));
+  const VERSIONS = {
+    gld: "0.8.38", gld_model_1: "0.8.36", gld_model_2: "0.8.36", gld_model_3: "0.8.36",
+    gld_model_1_dataset_wifi: "0.8.36", gld_model_2_dataset_wifi: "0.8.36", gld_model_3_dataset_wifi: "0.8.36",
+    gld_model_1_dataset_replay_wifi: "0.8.36", gld_model_2_dataset_replay_wifi: "0.8.36", gld_model_3_dataset_replay_wifi: "0.8.36",
+    gld_model_1_dataset_workflow_wifi: "0.8.36", gld_model_2_dataset_workflow_wifi: "0.8.36", gld_model_3_dataset_workflow_wifi: "0.8.36",
+    gld_v2: "0.8.30", gld_atex: "0.8.30",
+    ch_small: "0.8.0", ch_large: "0.8.0",
+    gw_small: "0.2.0", gw_large: "0.2.0", gw_small_tls: "0.2.0", gw_large_tls: "0.2.0"
+  };
+  const HOTSPOT_ENVS = new Set(GLD_MODELS.map((m) => m.environment).filter((env) => /_dataset_(?:replay_|workflow_)?wifi$/.test(env)));
+  const pkg = (environment) => ({
+    environment, available: true, firmwareVersion: VERSIONS[environment], protocolVersion: "0.2.0",
+    // GLD1 v0.8.38 (commit 69a493c) is the downgrade that requires Reset NVS.
+    requiresNvsResetBeforeBoot: environment === "gld"
+  });
+  const BOARDS = [{ value: "small", label: "Rectangle (kecil)" }, { value: "large", label: "Circle (besar)" }];
+  const TRANSPORTS = [{ value: "non_tls", label: "MQTT non-TLS" }, { value: "tls", label: "MQTT over TLS" }];
+  const GW_ENVS = { small: { non_tls: "gw_small", tls: "gw_small_tls" }, large: { non_tls: "gw_large", tls: "gw_large_tls" } };
+  const firmwarePackageOptions = {
+    gld: {
+      models: GLD_MODELS,
+      environments: Object.fromEntries(GLD_MODELS.map((m) => [m.value, m.environment])),
+      packages: Object.fromEntries(GLD_MODELS.map((m) => [m.environment, pkg(m.environment)]))
+    },
+    ch: { boards: BOARDS, environments: { small: "ch_small", large: "ch_large" }, packages: { ch_small: pkg("ch_small"), ch_large: pkg("ch_large") } },
+    gw: {
+      boards: BOARDS, transports: TRANSPORTS, environments: GW_ENVS,
+      packages: Object.fromEntries(Object.values(GW_ENVS).flatMap((t) => Object.values(t)).map((env) => [env, pkg(env)]))
+    }
+  };
+
+  // ------------------------------------------------------------ device model
+  const PORTS = {
+    gld: [["COM10", "USB-Enhanced-SERIAL CH343 (COM10)"], ["COM9", "Silicon Labs CP210x USB to UART Bridge (COM9)"], ["COM1", "Communications Port (COM1)"]],
+    ch: [["COM39", "USB-SERIAL CH340 (COM39)"], ["COM38", "USB-SERIAL CH340 (COM38)"], ["COM5", "USB-SERIAL CH340 (COM5)"], ["COM1", "Communications Port (COM1)"]],
+    gw: [["COM3", "USB-SERIAL CH340 (COM3)"], ["COM1", "Communications Port (COM1)"]]
+  };
+
+  function syncAlarm(alarm) {
+    alarm.physicalCommanded = alarm.mode === "manual" ? alarm.manualCommanded : alarm.inferenceAlarm;
+    if (alarm.outputDrive === "active_low_gpio41_uln2003_pullup") {
+      alarm.gpio41CommandLevel = alarm.physicalCommanded ? "LOW" : "HIGH";
+      alarm.j2LampExpectedLevel = alarm.physicalCommanded ? "HIGH" : "LOW";
+    }
+    return alarm;
+  }
+
+  function alarmContract() {
+    if (cfg.gld === "alarm-locked") return { available: false };
+    const alarm = {
+      available: true, mode: "auto", modePersisted: false, sessionOnly: true, resetsToAutoOnBoot: true,
+      manualCommanded: false, inferenceAlarm: cfg.inference === "1", physicalCommanded: false
+    };
+    if (cfg.drive === "gpio41_high") {
+      Object.assign(alarm, { outputDrive: "active_high_gpio41_steady", externalDevicePattern: "steady_high_while_alarm", singleTrigger: true });
+    } else if (cfg.drive === "gpio41_pullup") {
+      Object.assign(alarm, { outputDrive: "active_low_gpio41_uln2003_pullup", externalDevicePattern: "steady_high_while_alarm", singleTrigger: true, requiresExternalPullup: true });
+    } else {
+      Object.assign(alarm, { outputDrive: "steady_24v", externalDevicePattern: "self_pulsed_1s_on_1s_off" });
+    }
+    return syncAlarm(alarm);
+  }
+
+  // `factory` = identity a freshly reset NVS reports; otherwise a configured bench unit.
+  function makeInfo(device, { factory = false, version, transport } = {}) {
+    if (device === "gld") {
+      return {
+        deviceId: factory ? "1001" : "1A2B", targetChId: factory ? "0064" : "0066",
+        firmwareVersion: version || "0.8.36", starLora: { freqMHz: factory ? 920.0 : 921.4 },
+        radioReady: true, alarmControl: alarmContract()
+      };
+    }
+    if (device === "ch") {
+      return {
+        chId: factory ? "0064" : "0066", rootGatewayId: "0001", firmwareVersion: version || "0.8.0",
+        starLora: { freqMHz: factory ? 920.0 : 921.4 },
+        radio: { starReady: 1, meshReady: cfg.ch === "fail" ? 0 : 1 }
+      };
+    }
+    const fw = transport || cfg.gwfw;
+    const info = {
+      gatewayId: "0x0001", firmwareVersion: version || "0.2.0", meshReady: 1,
+      wifi: factory ? 0 : 1, mqtt: factory || cfg.gw === "fail" ? 0 : 1
+    };
+    if (fw === "tls") Object.assign(info, { mqttTransport: "tls", tlsCapable: true });
+    if (fw === "non_tls") info.mqttTransport = "non_tls";
+    return info;
+  }
+
+  const sim = Object.fromEntries(["gld", "ch", "gw"].map((device) => [device, {
+    device, connected: false, port: null, hasFirmware: cfg[device] !== "fresh", info: null
+  }]));
+  const activity = [];
+
+  function addActivity(device, action, detail) {
+    const now = new Date();
+    const time = [now.getHours(), now.getMinutes(), now.getSeconds()].map((n) => String(n).padStart(2, "0")).join(":");
+    activity.unshift({ time, device, action, detail });
+    activity.splice(12);
+  }
+
+  function publicState(device) {
+    const s = sim[device];
+    return clone({ device, connected: s.connected, port: s.connected ? s.port : null, info: s.connected ? s.info : null });
+  }
+
+  class ApiError extends Error {
+    constructor(message, status = 400) { super(message); this.status = status; }
+  }
+  const bad = (message) => { throw new ApiError(message, 400); };
+  const fail = (message) => { throw new ApiError(message, 500); };
+
+  function deviceOf(body) {
+    const device = String(body.device || "");
+    if (!sim[device]) bad("device must be gld, ch, or gw");
+    return device;
+  }
+  function identified(device, message = "connect and identify the device first") {
+    const s = sim[device];
+    if (!s.connected || !s.info) fail(message);
+    return s;
+  }
+
+  // ------------------------------------------------------------ Boot reports
+  function gldReport() {
+    const c = (label, ok, detail) => ({ label, ok, detail });
+    const failing = cfg.gld === "fail";
+    const checks = [
+      c("ADS1256", true, "ADS1256 siap"),
+      failing ? c("MCP4725", false, "MCP4725 terdeteksi 6/8; periksa kanal TCA, alamat MCP, dan catu daya") : c("MCP4725", true, "MCP4725 terdeteksi pada semua 8 kanal"),
+      failing ? c("DAC Control", false, "Uji tulis DAC lulus 6/8") : c("DAC Control", true, "Uji tulis DAC lulus pada semua kanal"),
+      c("LoRa", true, "Radio LoRa siap"),
+      c("ML Model", true, "Model ML siap"),
+      failing ? c("Sensor Read", false, "Pembacaan sensor belum valid; selesaikan masalah ADS/MCP atau tunggu telemetri")
+        : cfg.gld === "pending" ? c("Sensor Read", null, "Belum ada telemetri sensor setelah boot check")
+          : c("Sensor Read", true, "Semua 8 pembacaan sensor valid")
+    ];
+    return summarize(checks);
+  }
+  function chReport(info) {
+    const star = info.radio?.starReady === 1, mesh = info.radio?.meshReady === 1;
+    return summarize([
+      { label: "CH identity", ok: Boolean(info.chId), detail: info.chId || "CH ID tidak terbaca" },
+      { label: "Root Gateway", ok: Boolean(info.rootGatewayId), detail: info.rootGatewayId || "Root Gateway ID tidak terbaca" },
+      { label: "Radio STAR", ok: star, detail: star ? "STAR siap" : "Radio STAR tidak siap" },
+      { label: "Radio Mesh", ok: mesh, detail: mesh ? "Mesh siap" : "Radio Mesh tidak siap" }
+    ]);
+  }
+  function gwReport(info) {
+    const yes = (v) => v === 1 || v === true;
+    return summarize([
+      { label: "Gateway identity", ok: Boolean(info.gatewayId), detail: info.gatewayId || "Gateway ID tidak terbaca" },
+      { label: "Radio Mesh", ok: yes(info.meshReady), detail: yes(info.meshReady) ? "Mesh siap" : "Mesh tidak siap" },
+      { label: "Wi-Fi", ok: yes(info.wifi), detail: yes(info.wifi) ? "Wi-Fi tersambung" : "Wi-Fi belum tersambung" },
+      { label: "MQTT", ok: yes(info.mqtt), detail: yes(info.mqtt) ? "MQTT tersambung" : "MQTT belum tersambung" }
+    ]);
+  }
+  function summarize(checks) {
+    const passed = checks.filter((x) => x.ok === true).length;
+    const failed = checks.filter((x) => x.ok === false).length;
+    return { total: checks.length, passed, failed, unknown: checks.length - passed - failed, checks };
+  }
+
+  // -------------------------------------------------------- upload event bus
+  const sources = new Set();
+  function emit(device, type, payload) {
+    sources.forEach((source) => { if (source.device === device) source.dispatch(type, payload); });
+  }
+  class MockEventSource {
+    constructor(url) {
+      this.url = url;
+      this.device = new URL(url, location.href).searchParams.get("device");
+      this.listeners = {};
+      this.readyState = 0;
+      sources.add(this);
+      setTimeout(() => { this.readyState = 1; this.dispatch("open", null); }, 120);
+    }
+    addEventListener(type, handler, options) {
+      (this.listeners[type] ||= []).push({ handler, once: Boolean(options?.once) });
+    }
+    removeEventListener(type, handler) {
+      this.listeners[type] = (this.listeners[type] || []).filter((item) => item.handler !== handler);
+    }
+    dispatch(type, payload) {
+      if (this.readyState === 2) return;
+      const event = { type, data: payload == null ? "" : JSON.stringify(payload) };
+      (this.listeners[type] || []).slice().forEach((item) => {
+        if (item.once) this.removeEventListener(type, item.handler);
+        item.handler(event);
+      });
+    }
+    close() { this.readyState = 2; sources.delete(this); }
+  }
+
+  // ------------------------------------------------------------- endpoints
+  const HEX4 = /^[0-9A-F]{4}$/;
+  const inRange = (value, lo, hi) => parseInt(value, 16) >= parseInt(lo, 16) && parseInt(value, 16) <= parseInt(hi, 16);
+  const normId = (value) => String(value || "").trim().toUpperCase().replace(/^0X/, "");
+
+  const routes = {
+    "GET /api/simple/bootstrap": () => ({ apiToken: TOKEN, activity }),
+    "GET /api/simple/overview": async () => {
+      await wait(180);
+      return {
+        devices: Object.fromEntries(Object.keys(sim).map((d) => [d, publicState(d)])),
+        firmwarePackageOptions, activity: clone(activity),
+        mesh: "Fixed by design; use Expert only to inspect."
+      };
+    },
+    "GET /api/simple/ports": async (_body, query) => {
+      const device = query.get("device");
+      if (!PORTS[device]) bad("device must be gld, ch, or gw");
+      await wait(150);
+      return { ports: PORTS[device].map(([path, description]) => ({ path, description })) };
+    },
+    "POST /api/simple/connect": async (body) => {
+      const device = deviceOf(body);
+      const port = String(body.port || "").toUpperCase();
+      if (!/^COM\d+$/.test(port)) bad("valid COM port required");
+      if (port === "COM1") { await wait(900); fail(`${port} is a system port with no operator device; choose the USB serial port`); }
+      const s = sim[device];
+      await wait(1100);
+      s.connected = true;
+      s.port = port;
+      s.info = s.hasFirmware ? (s.info || makeInfo(device)) : null;
+      const state = publicState(device);
+      state.needsInitialFirmware = Boolean(state.connected && !state.info);
+      addActivity(device, "Connect", state.info ? `${port}; connected and identified` : `${port}; connected but firmware identity was not detected`);
+      return state;
+    },
+    "POST /api/simple/disconnect": async (body) => {
+      const device = deviceOf(body);
+      const s = sim[device];
+      const port = s.port;
+      await wait(250);
+      s.connected = false;
+      addActivity(device, "Disconnect", `${port || "COM"}; serial disconnected`);
+      return { connected: false, port };
+    },
+    "POST /api/simple/refresh": async (body) => { const device = deviceOf(body); await wait(400); return publicState(device); },
+    "POST /api/simple/test-device": async (body) => {
+      const device = deviceOf(body);
+      const s = identified(device);
+      await wait(device === "gld" ? 2600 : 1300);
+      const report = device === "gld" ? gldReport() : device === "ch" ? chReport(s.info) : gwReport(s.info);
+      const result = report.failed === 0 && report.unknown === 0 ? "all checks OK" : `${report.failed} error, ${report.unknown} pending`;
+      addActivity(device, "Test Device", `${s.port}; ${report.passed}/${report.total} OK; ${result}`);
+      return { report, status: clone(s.info) };
+    },
+    "POST /api/simple/restart": async (body) => {
+      const device = deviceOf(body);
+      const s = identified(device);
+      await wait(1800);
+      // Alarm MANUAL is session-only: every reboot returns to AUTO with test output OFF.
+      if (device === "gld" && s.info.alarmControl?.available) {
+        Object.assign(s.info.alarmControl, { mode: "auto", manualCommanded: false });
+        syncAlarm(s.info.alarmControl);
+      }
+      addActivity(device, "Restart", `${s.port}; command sent`);
+      return { ok: true };
+    },
+    "POST /api/simple/config/id": async (body) => {
+      const device = deviceOf(body);
+      const value = normId(body.value);
+      if (!HEX4.test(value)) bad("ID must be 4 hexadecimal digits");
+      if (device === "gld" && !inRange(value, "1001", "FEFF")) bad("GLD ID must be 1001-FEFF");
+      if (device === "ch" && !inRange(value, "0010", "0FFF")) bad("CH ID must be 0010-0FFF");
+      if (device === "gw" && !inRange(value, "0001", "000F")) bad("Gateway ID must be 0001-000F");
+      const s = identified(device);
+      await wait(1200);
+      if (device === "gld") s.info.deviceId = value;
+      else if (device === "ch") s.info.chId = value;
+      else s.info.gatewayId = `0x${value}`;
+      addActivity(device, "Set ID", `${s.port}; ${value} saved and read back`);
+      return { ok: true, value };
+    },
+    "POST /api/simple/config/star-frequency": async (body) => {
+      const device = deviceOf(body);
+      if (device === "gw") bad("Gateway Mesh radio is fixed and cannot be edited here");
+      const raw = String(body.freqMHz ?? "").trim();
+      if (!raw) bad("frequency required");
+      const frequency = Number(raw);
+      if (!Number.isFinite(frequency)) bad("frequency required");
+      if (frequency < 920 || frequency > 923) bad("STAR frequency must be 920.0-923.0 MHz");
+      const s = identified(device);
+      await wait(1400);
+      s.info.starLora = { ...(s.info.starLora || {}), freqMHz: Math.round(frequency * 1000) / 1000 };
+      addActivity(device, "Set STAR frequency", `${s.port}; ${frequency.toFixed(3)} MHz saved and read back`);
+      return { ok: true };
+    },
+    "POST /api/simple/config/target-ch": async (body) => {
+      if (body.device !== "gld") bad("Target CH is a GLD setting");
+      const value = normId(body.value);
+      if (!HEX4.test(value) || !inRange(value, "0010", "0FFF")) bad("Target CH ID must be 0010-0FFF");
+      const s = identified("gld", "connect and identify the GLD first");
+      await wait(2200); // firmware reboots after SET_CH_ADDRESS_JSON
+      s.info.targetChId = value;
+      addActivity("gld", "Set Target CH", `${s.port}; ${value} saved and read back`);
+      return { ok: true };
+    },
+    "POST /api/simple/config/alarm-mode": async (body) => {
+      if (body.device !== "gld") bad("Alarm mode is a GLD setting");
+      if (!["auto", "manual"].includes(body.mode)) bad("alarm mode must be auto or manual");
+      const s = identified("gld", "connect and identify the GLD first");
+      if (!s.info.alarmControl?.available) fail("connected GLD did not report a complete alarm-control contract");
+      await wait(1000);
+      Object.assign(s.info.alarmControl, { mode: body.mode, manualCommanded: false });
+      syncAlarm(s.info.alarmControl);
+      addActivity("gld", "Set alarm mode", `${s.port}; ${body.mode.toUpperCase()} session-only; read back`);
+      return { ok: true, readback: publicState("gld") };
+    },
+    "POST /api/simple/config/manual-alarm": async (body) => {
+      if (body.device !== "gld") bad("Manual alarm output is a GLD setting");
+      if (typeof body.enabled !== "boolean") bad("manual alarm enabled must be boolean");
+      const s = identified("gld", "connect and identify the GLD first");
+      if (s.info.alarmControl?.mode !== "manual") fail("select and verify session-only MANUAL mode before testing the alarm output");
+      await wait(900);
+      s.info.alarmControl.manualCommanded = body.enabled;
+      syncAlarm(s.info.alarmControl);
+      addActivity("gld", "Manual alarm output", `${s.port}; test output ${body.enabled ? "ON" : "OFF"}; read back`);
+      return { ok: true, readback: publicState("gld") };
+    },
+    "POST /api/simple/config/root-gateway": async (body) => {
+      if (body.device !== "ch") bad("Root Gateway is a CH setting");
+      const value = normId(body.value);
+      if (!HEX4.test(value) || !inRange(value, "0001", "000F")) bad("Root Gateway ID must be 0001-000F");
+      const s = identified("ch", "connect and identify the CH first");
+      await wait(1300);
+      s.info.rootGatewayId = value;
+      addActivity("ch", "Set Root Gateway", `${s.port}; ${value} saved and read back`);
+      return { ok: true };
+    },
+    "POST /api/simple/config/wifi": async (body) => {
+      if (body.device !== "gw") bad("Wi-Fi is a Gateway setting");
+      const ssid = String(body.ssid || "").trim();
+      const password = String(body.password || "");
+      if (!ssid) bad("Wi-Fi SSID is required");
+      if (password && (password.length < 8 || password.length > 63)) bad("Wi-Fi password must be 8-63 characters");
+      const s = identified("gw", "connect and identify the Gateway first");
+      await wait(2600); // save, restart, TEST_WIFI
+      s.info.wifi = 1;
+      addActivity("gw", "Set Wi-Fi", `${s.port}; saved, restarted, and Wi-Fi verified`);
+      return { ok: true };
+    },
+    "POST /api/simple/config/mqtt": async (body) => {
+      if (body.device !== "gw") bad("MQTT is a Gateway setting");
+      const s = identified("gw", "connect and identify the Gateway first");
+      if (s.info.wifi !== 1) fail("Wi-Fi must pass its test before MQTT can be configured");
+      const actual = s.info.mqttTransport;
+      const requested = body.mqttTransport || "non_tls";
+      if (!["non_tls", "tls"].includes(requested)) bad("MQTT transport must be non_tls or tls");
+      const host = String(body.host || "").trim();
+      const port = Number(body.port);
+      if (!host || !String(body.port || "").trim()) bad("MQTT host and port are required");
+      if (!Number.isInteger(port) || port < 1 || port > 65535) bad("MQTT port must be 1-65535");
+      if (requested === "tls") {
+        if (actual !== "tls" || s.info.tlsCapable !== true) fail("connected Gateway does not explicitly identify as TLS-capable TLS firmware");
+        const ca = String(body.tlsCaPem || "").trim();
+        if (ca.length < 256 || ca.length > 3900) bad("Root CA PEM is required for TLS and must be 256 to 3900 bytes");
+        if (/PRIVATE KEY/.test(ca)) bad("Root CA field must not contain a private key");
+        const blocks = ca.match(/-----BEGIN CERTIFICATE-----/g) || [];
+        if (blocks.length !== 1) bad(blocks.length ? "Root CA PEM must contain exactly one CERTIFICATE block" : "Root CA PEM must contain one CERTIFICATE block");
+        const ntp = String(body.ntpHost || "").trim();
+        if (!ntp || ntp.length > 64) bad("NTP host is required for TLS and must be at most 64 ASCII bytes");
+        if (!/^[A-Za-z0-9.-]+$/.test(ntp)) bad("NTP host is not a valid hostname or IP address");
+      } else if (actual === "tls") {
+        fail("connected Gateway identifies as TLS firmware; select MQTT over TLS");
+      }
+      await wait(2600);
+      s.info.mqtt = 1;
+      addActivity("gw", "Set MQTT", `${s.port}; ${requested} saved and MQTT verified`);
+      return { ok: true, mqttTransport: requested };
+    },
+    "POST /api/simple/firmware/upload": async (body) => uploadFirmware(body)
+  };
+
+  async function uploadFirmware(body) {
+    const device = deviceOf(body);
+    const port = String(body.port || "").toUpperCase();
+    if (!/^COM\d+$/.test(port)) bad("valid COM port required");
+    let environment;
+    if (device === "gld") {
+      environment = firmwarePackageOptions.gld.environments[body.model];
+      if (!environment) bad("selected GLD model package is not available");
+    } else {
+      if (!["small", "large"].includes(body.boardFormFactor)) bad("board form factor must be small or large");
+      if (device === "ch") environment = firmwarePackageOptions.ch.environments[body.boardFormFactor];
+      else {
+        if (!["non_tls", "tls"].includes(body.mqttTransport)) bad("MQTT transport must be non_tls or tls");
+        environment = GW_ENVS[body.boardFormFactor][body.mqttTransport];
+      }
+    }
+    const pack = pkg(environment);
+    const resetNvs = body.resetNvs === true;
+    const initial = body.initialFirmware === true;
+    if (resetNvs && body.resetNvsConfirmation !== "RESET NVS") bad("Reset NVS requires the explicit confirmation RESET NVS");
+    if (HOTSPOT_ENVS.has(environment) && (initial || resetNvs)) bad("Hotspot Dataset requires an existing valid nulling profile; upload without Reset NVS");
+    if (pack.requiresNvsResetBeforeBoot && !resetNvs) bad("GLD1 v0.8.38 rollback wajib Reset NVS; konfigurasi, nulling dan binding model akan dihapus");
+    const s = sim[device];
+    if (!s.connected) fail("connect the device first");
+    if (s.port !== port) fail("selected port must match the connected device");
+    if (!initial && !s.info) fail("connect and identify the device first");
+
+    const line = (text) => emit(device, "upload_line", { line: text });
+    emit(device, "upload_start", { cmd: `esptool write_flash (${environment})` });
+    await wait(300);
+    for (const text of ["esptool.py v4.7.0", `Serial port ${port}`, "Connecting....", "Chip is ESP32-S3 (QFN56) (revision v0.2)",
+      "Features: WiFi, BLE, Embedded PSRAM 8MB (AP_3v3)", "Uploading stub...", "Changing baud rate to 921600", "Configuring flash size..."]) {
+      line(text);
+      await wait(170);
+    }
+    if (resetNvs) { line("Erasing NVS partition 0x9000 (0x5000 bytes)..."); await wait(450); }
+    for (let percent = 2; percent <= 96; percent += 3) {
+      emit(device, "upload_progress", { packagePercent: percent });
+      if (percent % 15 === 2) line(`Writing at 0x${(0x10000 + percent * 0x3a00).toString(16).padStart(8, "0")}... (${percent} %)`);
+      if (cfg.upload === "error" && percent >= 44) {
+        const message = "A fatal error occurred: Failed to write to target RAM (result was 01070000: Operation timed out)";
+        emit(device, "upload_error", { message });
+        addActivity(device, initial ? "Initial firmware upload" : "Firmware upload", `${port}; ${environment}; failed`);
+        fail(`firmware upload failed: ${message}`);
+      }
+      await wait(85);
+    }
+    line("Wrote 1572864 bytes (812314 compressed) at 0x00010000 in 9.4 seconds");
+    line("Hash of data verified.");
+    line("Hard resetting via RTS pin...");
+    emit(device, "upload_done", { code: 0 });
+    const action = initial ? "Initial firmware upload" : "Firmware upload";
+    if (HOTSPOT_ENVS.has(environment)) {
+      // Dedicated hotspot images leave the serial console; verification happens over Wi-Fi.
+      s.connected = false;
+      s.hasFirmware = true;
+      s.info = null;
+      addActivity(device, action, `${port}; ${environment} ${pack.firmwareVersion}; flash completed, verification pending hotspot`);
+      return {
+        ok: true, selectedEnvironment: environment, firmwareVersion: pack.firmwareVersion,
+        flashToolCompleted: true, deviceVerified: false, verificationPending: "hotspot",
+        nextStep: "Pemrograman selesai. Sambungkan Wi-Fi laptop ke GLD-DATASET-1A2B, lalu buka GLD Operator > Dataset Wireless dan Connect GLD untuk verifikasi."
+      };
+    }
+    await wait(1300); // reboot + identity read-back
+    const transport = device === "gw" ? body.mqttTransport : undefined;
+    if (resetNvs || initial || !s.info) {
+      s.info = makeInfo(device, { factory: true, version: pack.firmwareVersion, transport });
+    } else {
+      s.info.firmwareVersion = pack.firmwareVersion;
+      if (device === "gw") {
+        if (transport === "tls") Object.assign(s.info, { mqttTransport: "tls", tlsCapable: true });
+        else { s.info.mqttTransport = "non_tls"; delete s.info.tlsCapable; }
+      }
+      if (device === "gld" && s.info.alarmControl?.available) {
+        Object.assign(s.info.alarmControl, { mode: "auto", manualCommanded: false });
+        syncAlarm(s.info.alarmControl);
+      }
+    }
+    s.hasFirmware = true;
+    addActivity(device, action, `${port}; ${environment} ${pack.firmwareVersion}; flashed, rebooted, identity read back${resetNvs ? "; NVS reset" : ""}`);
+    return { ok: true, selectedEnvironment: environment, firmwareVersion: pack.firmwareVersion, flashToolCompleted: true, deviceVerified: true, readback: publicState(device) };
+  }
+
+  // --------------------------------------------------------- fetch override
+  const json = (data, status = 200) => new Response(JSON.stringify(data), { status, headers: { "Content-Type": "application/json" } });
+  const realFetch = window.fetch.bind(window);
+  const state = { pending: 0 }; // in-flight simulated requests (used by automated checks)
+  window.fetch = async (input, init = {}) => {
+    const url = new URL(typeof input === "string" ? input : input.url, location.href);
+    if (!url.pathname.startsWith("/api/")) return realFetch(input, init);
+    const method = (init.method || "GET").toUpperCase();
+    const route = routes[`${method} ${url.pathname}`];
+    if (!route) return json({ error: `mockup: ${method} ${url.pathname} is not simulated` }, 404);
+    if (method === "POST" && init.headers?.["X-Operator-Hub-Token"] !== TOKEN) return json({ error: "invalid API token" }, 403);
+    state.pending += 1;
+    try {
+      const body = init.body ? JSON.parse(init.body) : {};
+      return json(await route(body, url.searchParams));
+    } catch (error) {
+      return json({ error: error.message }, error.status || 500);
+    } finally {
+      state.pending -= 1;
+    }
+  };
+  window.EventSource = MockEventSource;
+  window.__operatorHubMock = { cfg, DEFAULTS, sim, activity, state };
+})();
+</script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Operator Hub home"><span class="brand-mark">P</span><span><small>PERTAMINA GLD</small><strong>Operator Hub</strong></span></a>
+    <div class="topbar-status"><span class="pulse"></span><span id="runtimeText">Simple mode</span></div>
+    <div class="mode-switch"><span>Simple</span><button id="expertBtn" class="expert-button" type="button">Expert Console <span>&nearr;</span></button></div>
+  </header>
+  <main class="shell">
+    <section class="simple-hero"><span>FIELD CONSOLE / SIMPLE MODE</span><h1>Siapkan perangkat, <em>langkah demi langkah.</em></h1><p>Operator hanya melihat tindakan yang diperlukan saat ini.</p></section>
+    <nav class="operator-flow" aria-label="Tahapan commissioning"><b id="nextAction" class="sr-only">Pilih perangkat untuk memulai.</b><ol id="operatorSteps"><li><button class="step-button" data-step="1" type="button" aria-label="Kembali ke tahap Pilih">1</button><div><b>Pilih</b><small>Perangkat</small></div></li><li><button class="step-button" data-step="2" type="button" aria-label="Kembali ke tahap Hubungkan">2</button><div><b>Hubungkan</b><small>Port COM</small></div></li><li><button class="step-button" data-step="3" type="button" aria-label="Kembali ke tahap Test Device">3</button><div><b>Test Device</b><small>Kesiapan</small></div></li><li><button class="step-button" data-step="4" type="button" aria-label="Kembali ke tahap Atur">4</button><div><b>Atur</b><small>Parameter</small></div></li><li><button class="step-button" data-step="5" type="button" aria-label="Kembali ke tahap Siap">5</button><div><b>Siap</b><small>Operasikan</small></div></li></ol></nav>
+    <section class="notice-card" aria-label="Status operasi"><p id="notice" class="notice" role="status">Memuat status perangkat...</p></section>
+    <section id="devicePanel" hidden>
+      <section class="workspace">
+        <article class="actions-column">
+          <section class="connect-card card"><p class="card-kicker">TAHAP 1-2 / PILIH &amp; HUBUNGKAN</p><div class="device-choice"><span>Pilih perangkat</span><div class="device-rail" id="deviceTabs" aria-label="Pilih perangkat"></div></div><div class="card-head"><div><h3 id="connectionTitle">Hubungkan perangkat</h3><p>Gunakan port COM yang terdeteksi pada komputer ini.</p></div><span class="connection-indicator" id="connectionIndicator">Offline</span></div><div class="connect-controls"><label>PORT COM<select id="portSelect"><option>Memuat port...</option></select></label><div class="button-row"><button id="connectBtn" class="primary" type="button">Connect</button><button id="disconnectBtn" class="secondary" type="button">Disconnect</button></div></div></section>
+          <section id="initialFirmwareCard" class="initial-firmware-card card" hidden><p class="card-kicker">FIRMWARE TIDAK TERDETEKSI</p><h3>Board baru atau belum diprogram</h3><p id="initialFirmwareCopy">Hub akan memasang firmware awal yang sesuai, lalu membaca versi dan ID default setelah board reboot.</p><p id="initialFirmwarePort" class="package-version">COM</p><button id="initialFirmwareBtn" class="primary" type="button">Upload Firmware Awal</button><small>NVS akan di-reset agar board memulai dengan konfigurasi bawaan yang bersih.</small></section>
+          <section id="uploadProgress" class="upload-progress" hidden aria-live="polite"><div class="upload-progress-head"><h3>Upload firmware</h3><strong id="uploadProgressPercent">0%</strong></div><p id="uploadProgressStage" class="upload-progress-stage">Menunggu upload dimulai.</p><div class="upload-progress-track" aria-label="Progres upload"><i id="uploadProgressBar"></i></div><pre id="uploadProgressLog" class="upload-progress-log">Menunggu log upload...</pre></section>
+          <section id="testDeviceCard" class="test-card card"><p class="card-kicker">TAHAP 3 DARI 5 / TEST DEVICE</p><div class="test-device-heading"><div><h3 id="testDeviceName">Gas Leak Detector</h3><p id="testDeviceCopy">Hubungkan perangkat lalu jalankan pemeriksaan tanpa mengubah konfigurasi.</p></div><span class="connection-indicator" id="testConnectionIndicator">Terhubung</span></div><div id="testDevicePort" class="test-device-port">COM — perangkat terhubung</div><div class="test-result"><div class="test-action"><div id="testScore" class="test-score" hidden></div><button id="testDeviceBtn" class="primary" type="button">Test Device</button><strong id="testDeviceSummary">Hubungkan perangkat dahulu</strong></div><div class="test-result-copy"><h3 id="testResultTitle">Periksa kesiapan perangkat</h3><p>Boot Report dibaca tanpa mengubah konfigurasi perangkat.</p></div></div><button id="continueBtn" class="continue-btn" type="button" hidden>Lanjutkan ke Pengaturan <span>&rarr;</span></button><details id="testDeviceDetails" hidden><summary>Lihat detail Boot Report</summary><ul id="testDeviceList"></ul></details></section>
+        </article>
+        <aside class="device-overview card"><p class="card-kicker">RINGKASAN PERANGKAT</p><div class="device-title"><span id="deviceGlyph" class="glyph">G</span><div><h2 id="deviceName">GLD</h2><p id="connectionText">Belum tersambung.</p></div></div><dl id="statusList" class="status-list"></dl><div id="lastResult" class="last-result">Belum ada tindakan pada perangkat ini.</div></aside>
+      </section>
+      <section id="futureStages" class="future-stages" hidden>
+        <section id="settingsCard" class="settings-card card locked">
+          <div class="card-head settings-header"><div><p class="card-kicker">TAHAP 4 / ATUR PERANGKAT</p><h3>Parameter yang diperlukan</h3><p>Device ID, frekuensi, dan parameter khusus tersedia setelah test lulus.</p></div><span class="guard-badge">SELESAIKAN TEST DEVICE</span></div>
+          <div class="settings-content">
+            <div class="setting-grid">
+              <label>DEVICE ID<input id="idInput" maxlength="4" placeholder="0000" autocomplete="off"></label><button id="saveIdBtn" class="secondary apply" type="button">Simpan ID</button>
+              <label id="starCard">STAR FREQUENCY <span class="unit">MHz</span><input id="freqInput" type="number" min="920" max="923" step="0.1" placeholder="920.0"></label><button id="saveFreqBtn" class="secondary apply" type="button">Simpan STAR</button>
+              <label id="targetChCard" hidden>TARGET CH ID<input id="targetChInput" maxlength="4" placeholder="0010" autocomplete="off"></label><button id="saveTargetChBtn" class="secondary apply" type="button" hidden>Simpan Target CH</button>
+              <label id="rootGatewayCard" hidden>ROOT GATEWAY ID<input id="rootGatewayInput" maxlength="4" placeholder="0001" autocomplete="off"></label><button id="saveRootGatewayBtn" class="secondary apply" type="button" hidden>Simpan Root Gateway</button>
+            </div>
+            <section id="gatewayNetworkCard" class="network-settings" hidden><h4>Network wajib Gateway</h4><div class="setting-grid"><label>WI-FI SSID<input id="wifiSsidInput" autocomplete="off"></label><label>WI-FI PASSWORD<input id="wifiPasswordInput" type="password" autocomplete="new-password"></label><button id="saveWifiBtn" class="secondary apply" type="button">Simpan &amp; Test Wi-Fi</button><span></span><label>MQTT HOST<input id="mqttHostInput" autocomplete="off"></label><label>MQTT PORT<input id="mqttPortInput" type="number" min="1" max="65535" placeholder="1884"></label><label>MQTT USERNAME<input id="mqttUsernameInput" autocomplete="off"></label><label>MQTT PASSWORD<input id="mqttPasswordInput" type="password" autocomplete="new-password"></label><label class="full-span">MQTT TRANSPORT<select id="mqttTransportSelect"><option value="non_tls">MQTT non-TLS</option><option value="tls">MQTT over TLS</option></select></label><label id="mqttNtpHostCard" class="full-span" hidden>NTP HOST<input id="mqttNtpHostInput" placeholder="pool.ntp.org" autocomplete="off"></label><label id="mqttTlsCaCard" class="full-span" hidden>ROOT CA PEM<textarea id="mqttTlsCaInput" placeholder="-----BEGIN CERTIFICATE-----&#10;...&#10;-----END CERTIFICATE-----" spellcheck="false" autocomplete="off"></textarea></label><p id="mqttTlsHelp" class="tls-field-note" hidden>TLS hanya dapat disimpan jika firmware mengidentifikasi diri sebagai TLS-capable, Root CA valid tersedia, dan sinkronisasi waktu melalui NTP dapat dilakukan. Tidak ada mode insecure TLS.</p><button id="saveMqttBtn" class="secondary apply full-span" type="button">Simpan &amp; Test MQTT</button></div></section>
+            <section id="gldAlarmControlCard" class="alarm-control-settings" hidden aria-labelledby="gldAlarmControlTitle">
+              <div class="alarm-control-heading"><div><h4 id="gldAlarmControlTitle">Alarm fisik 24 V</h4><p>AUTO adalah mode default produk. MANUAL hanya untuk pengujian.</p></div><span id="alarmControlModeBadge" class="alarm-mode-badge">Menunggu status</span></div>
+              <p class="alarm-safety-note"><strong>AUTO:</strong> default setiap boot; alarm fisik mengikuti alarm inferensi yang valid. <strong>MANUAL:</strong> mode test dan perintah output ON/OFF hanya berlaku untuk sesi berjalan. Reboot selalu kembali ke AUTO dengan test output OFF. Telemetri dan radio tetap melaporkan alarm inferensi sebenarnya.</p>
+              <div class="alarm-control-grid">
+                <label>ALARM MODE<select id="alarmModeSelect" disabled><option value="auto">AUTO — default setiap boot</option><option value="manual">MANUAL — test only / session-only</option></select></label>
+                <button id="applyAlarmModeBtn" class="secondary apply" type="button" disabled>Terapkan Mode</button>
+                <div id="alarmPhysicalState" class="alarm-physical-state">Output fisik: menunggu status firmware</div>
+                <button id="manualAlarmOnBtn" class="secondary alarm-test-on" type="button" disabled>Test Alarm ON</button>
+                <button id="manualAlarmOffBtn" class="secondary" type="button" disabled>Test Alarm OFF</button>
+              </div>
+              <p id="alarmControlHelp" class="alarm-control-help">Kontrol tetap terkunci sampai firmware melaporkan status alarm lengkap. Saat ON, firmware memberi steady 24 V; perangkat alarm eksternal membentuk pola 1 detik ON / 1 detik OFF secara internal.</p>
+            </section>
+          </div>
+        </section>
+        <section id="firmwareStage" class="firmware-card card locked"><div><p class="card-kicker">TAHAP 5 / SIAP DIGUNAKAN</p><h3>Perangkat siap digunakan</h3><p id="packageVersion" class="package-version">Firmware: memuat...</p></div><div class="firmware-actions"><p id="readyDeviceCopy" class="fineprint">Selesaikan Test Device untuk memastikan perangkat siap digunakan.</p></div></section>
+      </section>
+      <details id="secondaryDetails" class="secondary-details" hidden><summary>Detail perangkat dan aktivitas</summary><aside class="side-column"><section class="restart-card card"><p class="card-kicker">DEVICE CONTROL</p><h3>Restart perangkat</h3><p>Gunakan setelah inspeksi atau perubahan yang membutuhkan boot ulang.</p><button id="restartBtn" class="outline-danger" type="button">&#x21bb; Restart</button></section><section class="history-card card"><div class="card-head"><div><p class="card-kicker">ACTIVITY</p><h3>Aktivitas terbaru</h3></div></div><ol id="activity"></ol></section></aside></details>
+    </section>
+  </main>
+  <dialog id="confirmDialog" class="confirm-dialog" aria-labelledby="confirmDialogTitle"><div class="confirm-dialog-card"><p id="confirmDialogKicker" class="card-kicker">KONFIRMASI</p><h2 id="confirmDialogTitle">Lanjutkan tindakan?</h2><p id="confirmDialogMessage"></p><label id="confirmPhraseWrap" hidden>Ketik <b id="confirmPhraseExpected">RESET NVS</b> untuk melanjutkan<input id="confirmPhraseInput" autocomplete="off"></label><p id="confirmDialogError" class="confirm-dialog-error" hidden></p><div class="confirm-dialog-actions"><button id="confirmDialogCancel" class="secondary" type="button">Batal</button><button id="confirmDialogAccept" class="primary" type="button">Lanjutkan</button></div></div></dialog>
+  <aside id="uploadSuccessToast" class="upload-success" role="status" aria-live="polite" hidden><strong>Upload Success</strong><span>Firmware dan identitas telah terverifikasi.</span></aside>
+  <script type="module">/* js/hub.js (production, unchanged) */
+const devices = {
+  gld: { label: "GLD", name: "Gas Leak Detector", glyph: "G" },
+  ch: { label: "CH", name: "Cluster Head", glyph: "C" },
+  gw: { label: "Gateway", name: "Network Gateway", glyph: "W" }
+};
+
+let token = "";
+let active = "gld";
+let overview = {};
+let lastTestReport = null;
+const testReportsByDevice = {};
+let initialFirmwareRequired = false;
+let settingsOpened = false;
+let reviewStep = 0;
+let uploadEvents = null;
+let uploadBusy = false;
+let uploadProgress = 0;
+let uploadLines = [];
+let uploadEventsReady = false;
+let uploadFlashDone = false;
+let uploadReadbackVerified = false;
+let uploadSuccessShown = false;
+let hotspotUploadReceipt = null;
+let testDeviceRunning = false;
+let alarmActionBusy = false;
+const simulationMode = new URLSearchParams(location.search).get("simulate");
+const $ = (id) => document.getElementById(id);
+const notice = $("notice");
+
+function prepareThreeStepWorkflow() {
+  $("operatorSteps").innerHTML = `
+    <li><button class="step-button" data-step="1" type="button" aria-label="Kembali ke tahap Hubungkan">1</button><div><b>Hubungkan</b><small>Port COM</small></div></li>
+    <li><button class="step-button" data-step="2" type="button" aria-label="Kembali ke tahap Test Device">2</button><div><b>Test Device</b><small>Kesiapan</small></div></li>
+    <li><button class="step-button" data-step="3" type="button" aria-label="Kembali ke tahap Konfigurasi">3</button><div><b>Konfigurasi</b><small>Parameter</small></div></li>`;
+  $("nextAction").textContent = "Hubungkan perangkat untuk memulai.";
+  document.querySelector(".connect-card .card-kicker").textContent = "TAHAP 1 DARI 3 / HUBUNGKAN";
+  document.querySelector("#testDeviceCard .card-kicker").textContent = "TAHAP 2 DARI 3 / TEST DEVICE";
+  $("continueBtn").innerHTML = "Lanjutkan ke Konfigurasi <span>&rarr;</span>";
+  document.querySelector("#settingsCard .card-kicker").textContent = "TAHAP 3 DARI 3 / KONFIGURASI";
+  document.querySelector("#firmwareStage .card-kicker").textContent = "KONFIGURASI SELESAI";
+  $("testDeviceCard").insertAdjacentHTML("beforeend", '<button id="testUploadFirmwareBtn" class="test-upload-option secondary" type="button">Upload firmware</button>');
+  const actions = document.querySelector("#firmwareStage .firmware-actions");
+  actions.insertAdjacentHTML("beforeend", '<button id="restartWorkflowBtn" class="secondary" type="button">Kembali ke awal</button>');
+}
+
+document.addEventListener("click", (event) => {
+  const button = event.target.closest("button:not(:disabled)");
+  if (!button) return;
+  button.classList.remove("click-feedback");
+  void button.offsetWidth;
+  button.classList.add("click-feedback");
+});
+
+async function api(path, body) {
+  const response = await fetch(path, {
+    method: body ? "POST" : "GET",
+    headers: body ? { "Content-Type": "application/json", "X-Operator-Hub-Token": token } : {},
+    body: body ? JSON.stringify(body) : undefined,
+    cache: "no-store"
+  });
+  const data = await response.json();
+  if (!response.ok) throw Error(data.error || "Permintaan gagal");
+  return data;
+}
+
+function show(message, kind = "") {
+  notice.textContent = message;
+  notice.className = `notice ${kind}`;
+}
+
+function setUploadBusy(busy) {
+  uploadBusy = busy;
+  if (!busy) {
+    render();
+    return;
+  }
+  ["initialFirmwareBtn", "testUploadFirmwareBtn", "connectBtn", "disconnectBtn"].forEach((id) => { $(id).disabled = true; });
+  document.querySelectorAll("#deviceTabs button").forEach((button) => { button.disabled = true; });
+}
+
+function renderUploadProgress({ percent = uploadProgress, stage, line, error = false } = {}) {
+  uploadProgress = Math.max(uploadProgress, Math.min(100, Math.round(percent)));
+  if (line) {
+    uploadLines.push(line);
+    uploadLines = uploadLines.slice(-8);
+  }
+  $("uploadProgress").hidden = false;
+  $("uploadProgress").classList.toggle("error", error);
+  $("uploadProgressPercent").textContent = `${uploadProgress}%`;
+  $("uploadProgressStage").textContent = stage || "Mengunggah firmware...";
+  $("uploadProgressBar").style.width = `${uploadProgress}%`;
+  $("uploadProgressLog").textContent = uploadLines.join("\n") || "Menunggu log upload...";
+  $("uploadProgressLog").scrollTop = $("uploadProgressLog").scrollHeight;
+}
+
+function completeUploadProgress() {
+  if (uploadSuccessShown) return;
+  uploadSuccessShown = true;
+  renderUploadProgress({ percent: 100, stage: "Firmware, reboot, dan read-back identitas terverifikasi.", line: "VERIFIED read-back selesai" });
+  window.setTimeout(() => {
+    $("uploadProgress").hidden = true;
+    const toast = $("uploadSuccessToast");
+    toast.hidden = false;
+    toast.classList.remove("show");
+    void toast.offsetWidth;
+    toast.classList.add("show");
+    window.setTimeout(() => {
+      toast.classList.remove("show");
+      toast.hidden = true;
+    }, 2700);
+  }, 450);
+}
+
+function markReadbackVerified() {
+  uploadReadbackVerified = true;
+  if (uploadFlashDone || !uploadEventsReady) return completeUploadProgress();
+  renderUploadProgress({ percent: 99, stage: "Read-back identitas selesai. Menunggu konfirmasi flash...", line: "READBACK verified; waiting for UPLOAD_DONE" });
+}
+
+function isPendingHotspotUpload(result) {
+  return ["gld_model_1_dataset_wifi", "gld_model_2_dataset_wifi", "gld_model_3_dataset_wifi",
+    "gld_model_1_dataset_replay_wifi", "gld_model_2_dataset_replay_wifi", "gld_model_3_dataset_replay_wifi",
+    "gld_model_1_dataset_workflow_wifi", "gld_model_2_dataset_workflow_wifi", "gld_model_3_dataset_workflow_wifi"].includes(result?.selectedEnvironment)
+    && result?.flashToolCompleted === true && result?.deviceVerified === false
+    && result?.verificationPending === "hotspot";
+}
+
+function showHotspotUploadNextStep(result) {
+  renderUploadProgress({ percent: 100, stage: "Pemrograman selesai; verifikasi perangkat melalui hotspot masih diperlukan.", line: "FLASH_TOOL_COMPLETED; device verification pending hotspot" });
+  show(result.nextStep || "Sambungkan Wi-Fi laptop ke GLD-DATASET-..., lalu buka GLD Operator > Dataset Wireless dan Connect GLD untuk verifikasi.");
+  const link = document.createElement("a");
+  link.href = "http://127.0.0.1:5174/";
+  link.textContent = " Buka GLD Operator untuk verifikasi hotspot";
+  notice.append(link);
+}
+
+async function openUploadEvents(device) {
+  if (!token || !window.EventSource) return;
+  const source = new EventSource(`/api/simple/upload-events?device=${encodeURIComponent(device)}&token=${encodeURIComponent(token)}`);
+  uploadEvents = source;
+  const handle = (type, event) => {
+    const payload = JSON.parse(event.data || "{}");
+    if (type === "upload_start") {
+      return renderUploadProgress({ percent: 1, stage: "Menyiapkan firmware utama...", line: `UPLOAD_START ${payload.cmd || "flash"}` });
+    }
+    if (type === "upload_done") {
+      uploadFlashDone = true;
+      if (hotspotUploadReceipt) return showHotspotUploadNextStep(hotspotUploadReceipt);
+      if (uploadReadbackVerified) return completeUploadProgress();
+      return renderUploadProgress({ percent: 99, stage: "Flash selesai. Menunggu reboot dan read-back...", line: `UPLOAD_DONE code=${payload.code ?? 0}` });
+    }
+    if (type === "upload_error") return renderUploadProgress({ stage: "Upload gagal.", line: `UPLOAD_ERROR ${payload.message || "unknown error"}`, error: true });
+    if (type === "upload_progress") {
+      return renderUploadProgress({
+        percent: Math.min(99, Number(payload.packagePercent ?? payload.filePercent)),
+        stage: "Memprogram package firmware ke board...",
+      });
+    }
+    const line = String(payload.line || "");
+    renderUploadProgress({ percent: uploadProgress, stage: "Memprogram firmware utama ke board...", line });
+  };
+  ["upload_start", "upload_progress", "upload_done", "upload_error", "upload_line"].forEach((type) => source.addEventListener(type, (event) => handle(type, event)));
+  await new Promise((resolve) => {
+    const ready = () => { uploadEventsReady = true; resolve(); };
+    source.addEventListener("open", ready, { once: true });
+    source.addEventListener("error", ready, { once: true });
+    window.setTimeout(ready, 900);
+  });
+}
+
+function closeUploadEvents() {
+  uploadEvents?.close();
+  uploadEvents = null;
+}
+
+async function runFirmwareUpload(payload) {
+  uploadProgress = 0;
+  uploadLines = ["Menyiapkan upload dan menghubungkan log flash..."];
+  uploadEventsReady = false;
+  uploadFlashDone = false;
+  uploadReadbackVerified = false;
+  uploadSuccessShown = false;
+  hotspotUploadReceipt = null;
+  $("uploadProgress").classList.remove("error");
+  $("uploadSuccessToast").hidden = true;
+  renderUploadProgress({ percent: 1, stage: "Menyiapkan upload..." });
+  setUploadBusy(true);
+  await openUploadEvents(payload.device);
+  try {
+    const result = await api("/api/simple/firmware/upload", payload);
+    if (isPendingHotspotUpload(result)) {
+      hotspotUploadReceipt = result;
+      // A pre-flash Test Device result cannot verify this dedicated image.
+      testReportsByDevice.gld = null;
+      if (active === "gld") lastTestReport = null;
+      if (overview.devices?.gld) {
+        overview.devices.gld = { ...overview.devices.gld, connected: false, info: null };
+      }
+      showHotspotUploadNextStep(result);
+      return result;
+    }
+    markReadbackVerified();
+    return result;
+  } catch (error) {
+    renderUploadProgress({ stage: `Upload gagal: ${error.message}`, line: `ERROR ${error.message}`, error: true });
+    throw error;
+  } finally {
+    window.setTimeout(closeUploadEvents, 400);
+    setUploadBusy(false);
+  }
+}
+
+function requestConfirmation({ title, message, actionLabel = "Lanjutkan", phrase = "" }) {
+  const dialog = $("confirmDialog");
+  const phraseWrap = $("confirmPhraseWrap");
+  const phraseInput = $("confirmPhraseInput");
+  const error = $("confirmDialogError");
+  $("confirmDialogTitle").textContent = title;
+  $("confirmDialogMessage").textContent = message;
+  $("confirmDialogAccept").textContent = actionLabel;
+  $("confirmPhraseExpected").textContent = phrase;
+  phraseWrap.hidden = !phrase;
+  phraseInput.value = "";
+  error.hidden = true;
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (approved) => {
+      if (settled) return;
+      settled = true;
+      dialog.close();
+      resolve(approved);
+    };
+    $("confirmDialogCancel").onclick = () => finish(false);
+    $("confirmDialogAccept").onclick = () => {
+      if (phrase && phraseInput.value.trim() !== phrase) {
+        error.textContent = `Ketik ${phrase} dengan tepat untuk melanjutkan.`;
+        error.hidden = false;
+        phraseInput.focus();
+        return;
+      }
+      finish(true);
+    };
+    dialog.oncancel = (event) => {
+      event.preventDefault();
+      finish(false);
+    };
+    dialog.showModal();
+    if (phrase) phraseInput.focus();
+  });
+}
+
+function requestFirmwareUploadOptions({ device, port, initialFirmware = false }) {
+  const spec = devices[device];
+  const dialog = document.createElement("dialog");
+  const packageOptions = overview.firmwarePackageOptions?.[device] || {};
+  const packageCatalog = packageOptions.packages || {};
+  const requiresBoard = device === "ch" || device === "gw";
+  const modelPicker = device === "gld" ? `
+    <label>PAKET FIRMWARE GLD
+      <select id="firmwareUploadModel"><option value="">Pilih package GLD</option>${(packageOptions.models || []).filter((option) => !/^gld_model_[123]_dataset_(?:replay_)?wifi$/.test(option.environment)).map((option) => {
+        const item = packageCatalog[option.environment];
+        const detail = item?.available ? `v${item.firmwareVersion}` : "package tidak tersedia";
+        const hotspot = ["gld_model_1_dataset_wifi", "gld_model_2_dataset_wifi", "gld_model_3_dataset_wifi",
+          "gld_model_1_dataset_replay_wifi", "gld_model_2_dataset_replay_wifi", "gld_model_3_dataset_replay_wifi",
+    "gld_model_1_dataset_workflow_wifi", "gld_model_2_dataset_workflow_wifi", "gld_model_3_dataset_workflow_wifi"].includes(option.environment);
+        const disabled = item?.available !== true || (initialFirmware && hotspot);
+        return `<option value="${option.value}"${disabled ? " disabled" : ""}>${option.label} — ${detail}${initialFirmware && hotspot ? " / memerlukan profil nulling tersimpan" : ""}</option>`;
+      }).join("")}<option disabled>Model 4 - artefak belum tersedia</option></select>
+      <small>Pilih package sesuai board yang akan di-flash.</small>
+    </label>` : "";
+  const boardPicker = requiresBoard ? `
+    <label>BENTUK BOARD
+      <select id="firmwareUploadBoard"><option value="">Pilih bentuk board</option>${(packageOptions.boards || []).map((option) => `<option value="${option.value}">${option.label}</option>`).join("")}</select>
+      <small>Rectangle = board kecil. Circle = board besar.</small>
+    </label>` : "";
+  const transportPicker = device === "gw" ? `
+    <label>TRANSPORT MQTT
+      <select id="firmwareUploadTransport"><option value="">Pilih transport MQTT</option>${(packageOptions.transports || []).map((option) => `<option value="${option.value}">${option.label}</option>`).join("")}</select>
+      <small>TLS dan non-TLS adalah environment firmware terpisah.</small>
+    </label>` : "";
+  dialog.className = "firmware-upload-dialog";
+  dialog.innerHTML = `<form method="dialog">
+    <p class="card-kicker">UPLOAD FIRMWARE</p>
+    <h2>Upload Firmware ${spec.label}</h2>
+    <p id="firmwareUploadPackageLabel" class="firmware-upload-package">Package: ${spec.label} / pilihan belum lengkap</p>
+    ${modelPicker}
+    ${boardPicker}
+    ${transportPicker}
+    <label>FIRMWARE ENVIRONMENT<select id="firmwareUploadEnvironment" disabled><option>Ditentukan dari pilihan package</option></select></label>
+    <label>TARGET COM<select id="firmwareUploadPort"><option>${port}</option></select></label>
+    <label class="firmware-reset"><input type="checkbox" id="firmwareUploadReset"${initialFirmware ? " checked disabled" : ""}> Reset NVS?</label>
+    <p id="firmwareUploadResetHelp" class="firmware-upload-help">${initialFirmware ? "Firmware awal selalu mereset NVS. Identitas default akan dibaca ulang setelah board reboot." : "Unchecked: retain all NVS parameters. Checked: erase NVS, then boot with all defaults embedded in this firmware."}</p>
+    <p id="firmwareUploadResetWarning" class="firmware-upload-help" role="alert" hidden>WAJIB Reset NVS untuk GLD1 v0.8.38 berbasis 69a493c: format profil dari firmware lebih baru tidak kompatibel saat downgrade. Centang Reset NVS secara eksplisit sebelum Upload. Semua konfigurasi, hasil nulling, dan binding akan dihapus. Setelah upload, lakukan setup ulang, nulling 8/8, lalu bind model kembali.</p>
+    <p id="firmwareUploadError" class="confirm-dialog-error" hidden></p>
+    <div class="confirm-dialog-actions"><button id="firmwareUploadCancel" class="secondary" value="cancel">Batal</button><button id="firmwareUploadAccept" class="primary" value="default">Upload</button></div>
+  </form>`;
+  document.body.append(dialog);
+  return new Promise((resolve) => {
+    const reset = dialog.querySelector("#firmwareUploadReset");
+    const model = dialog.querySelector("#firmwareUploadModel");
+    const board = dialog.querySelector("#firmwareUploadBoard");
+    const transport = dialog.querySelector("#firmwareUploadTransport");
+    const environment = dialog.querySelector("#firmwareUploadEnvironment");
+    const packageLabel = dialog.querySelector("#firmwareUploadPackageLabel");
+    const error = dialog.querySelector("#firmwareUploadError");
+    const resetHelp = dialog.querySelector("#firmwareUploadResetHelp");
+    const resetWarning = dialog.querySelector("#firmwareUploadResetWarning");
+    let previousEnvironment = "";
+    let resetRequired = false;
+    const finish = (result) => { dialog.close(); dialog.remove(); resolve(result); };
+    const updatePackageSelection = () => {
+      const boardValue = board?.value || "";
+      const transportValue = transport?.value || "";
+      const modelValue = model?.value || "";
+      const selectedEnvironment = device === "gld"
+        ? packageOptions.environments?.[modelValue]
+        : device === "ch"
+          ? packageOptions.environments?.[boardValue]
+          : packageOptions.environments?.[boardValue]?.[transportValue];
+      const selectedPackage = packageCatalog[selectedEnvironment];
+      const selectedRequiresReset = device === "gld" && selectedPackage?.available === true &&
+        selectedPackage.requiresNvsResetBeforeBoot === true;
+      if ((selectedEnvironment || "") !== previousEnvironment) {
+        // A consent from another package must not silently authorize this downgrade.
+        if (resetRequired || selectedRequiresReset) reset.checked = false;
+        reset.disabled = initialFirmware && !selectedRequiresReset;
+        if (initialFirmware && !selectedRequiresReset) reset.checked = true;
+        previousEnvironment = selectedEnvironment || "";
+      }
+      resetRequired = selectedRequiresReset;
+      resetWarning.hidden = !resetRequired;
+      resetHelp.hidden = resetRequired;
+      const selectionLabel = device === "gld"
+        ? model?.selectedOptions?.[0]?.textContent?.replace(/ — v[^—]+$/, "") || ""
+        : `${board?.selectedOptions?.[0]?.textContent || ""}${transportValue ? ` / ${transport?.selectedOptions?.[0]?.textContent || ""}` : ""}`;
+      environment.replaceChildren(new Option(selectedEnvironment || "Lengkapi pilihan package", selectedEnvironment || ""));
+      if (!selectedEnvironment) {
+        packageLabel.textContent = `Package: ${spec.label} / pilihan belum lengkap`;
+        error.hidden = true;
+        return "";
+      }
+      if (selectedPackage?.available !== true) {
+        packageLabel.textContent = `Package: ${spec.label} / ${selectionLabel} / ${selectedEnvironment} / TIDAK TERSEDIA`;
+        error.textContent = `Package ${selectedEnvironment} tidak tersedia (${selectedPackage?.error || "manifest tidak ditemukan"}).`;
+        error.hidden = false;
+        return "";
+      }
+      packageLabel.textContent = `Package: ${spec.label} / ${selectionLabel} / ${selectedEnvironment} / firmware ${selectedPackage.firmwareVersion}`;
+      error.hidden = true;
+      return selectedEnvironment;
+    };
+    dialog.querySelector("#firmwareUploadCancel").onclick = () => finish(null);
+    model?.addEventListener("change", updatePackageSelection);
+    board?.addEventListener("change", updatePackageSelection);
+    transport?.addEventListener("change", updatePackageSelection);
+    dialog.querySelector("#firmwareUploadAccept").onclick = (event) => {
+      event.preventDefault();
+      if (device === "gld" && !model?.value) {
+        error.textContent = "Pilih package GLD yang sesuai dengan board.";
+        error.hidden = false;
+        model?.focus();
+        return;
+      }
+      if (requiresBoard && !board?.value) {
+        error.textContent = "Pilih bentuk board Rectangle (kecil) atau Circle (besar).";
+        error.hidden = false;
+        board?.focus();
+        return;
+      }
+      if (device === "gw" && !transport?.value) {
+        error.textContent = "Pilih transport MQTT non-TLS atau TLS.";
+        error.hidden = false;
+        transport?.focus();
+        return;
+      }
+      const selectedEnvironment = updatePackageSelection();
+      if (!selectedEnvironment) {
+        if (error.hidden) {
+          error.textContent = "Environment firmware untuk pilihan ini tidak tersedia.";
+          error.hidden = false;
+        }
+        return;
+      }
+      if (["gld_model_1_dataset_wifi", "gld_model_2_dataset_wifi", "gld_model_3_dataset_wifi",
+        "gld_model_1_dataset_replay_wifi", "gld_model_2_dataset_replay_wifi", "gld_model_3_dataset_replay_wifi",
+    "gld_model_1_dataset_workflow_wifi", "gld_model_2_dataset_workflow_wifi", "gld_model_3_dataset_workflow_wifi"].includes(selectedEnvironment) && (initialFirmware || reset.checked)) {
+        error.textContent = "Hotspot Dataset memerlukan GLD dengan profil nulling tersimpan valid. Gunakan upload biasa dengan Reset NVS OFF; setup/nulling melalui firmware normal terlebih dahulu.";
+        error.hidden = false;
+        reset.focus();
+        return;
+      }
+      if (resetRequired && reset.checked !== true) {
+        error.textContent = "Upload ditahan: paket downgrade ini wajib Reset NVS sebelum boot. Baca peringatan lalu centang Reset NVS secara eksplisit.";
+        error.hidden = false;
+        reset.focus();
+        return;
+      }
+      const resetNvs = initialFirmware || reset.checked;
+      const result = { model: model?.value || "", resetNvs, resetNvsConfirmation: resetNvs ? "RESET NVS" : "" };
+      if (requiresBoard) result.boardFormFactor = board.value;
+      if (device === "gw") result.mqttTransport = transport.value;
+      finish(result);
+    };
+    dialog.oncancel = (event) => { event.preventDefault(); finish(null); };
+    updatePackageSelection();
+    dialog.showModal();
+  });
+}
+
+function renderActivity(items = []) {
+  $("activity").innerHTML = items.length
+    ? items.map((item) => `<li><b>${item.time} / ${(devices[item.device] || {}).label || item.device}</b>${item.action}<br>${item.detail}</li>`).join("")
+    : "<li><b>Belum ada aktivitas</b>Semua tindakan perangkat akan tercatat di sini.</li>";
+}
+
+function renderLastResult(items = []) {
+  const latest = items.find((item) => item.device === active);
+  $("lastResult").textContent = latest
+    ? `${latest.action}: ${latest.detail}`
+    : "Belum ada tindakan pada perangkat ini.";
+}
+
+function renderTestReport(report) {
+  const details = $("testDeviceDetails");
+  const list = $("testDeviceList");
+  const summary = $("testDeviceSummary");
+  const score = $("testScore");
+  const testCard = $("testDeviceCard");
+  if (!report) {
+    details.hidden = true;
+    list.replaceChildren();
+    summary.textContent = "Hubungkan perangkat dahulu";
+    summary.className = "";
+    score.hidden = true;
+    testCard.classList.remove("passed", "failed");
+    return;
+  }
+  const suffix = report.failed ? ` / error ${report.failed}` : report.unknown ? ` / ${report.unknown} menunggu` : "";
+  summary.textContent = `${report.passed}/${report.total} OK${suffix}`;
+  summary.className = report.failed ? "fail" : report.unknown ? "" : "ok";
+  score.hidden = false;
+  score.textContent = `${report.passed}/${report.total}`;
+  testCard.classList.toggle("passed", report.failed === 0 && report.unknown === 0);
+  testCard.classList.toggle("failed", report.failed > 0);
+  details.hidden = false;
+  list.replaceChildren(...(report.checks || []).map((item) => {
+    const line = document.createElement("li");
+    line.className = item.ok === false ? "fail" : "";
+    line.textContent = `${item.label}: ${item.ok === true ? "OK" : item.ok === false ? "Error" : "Menunggu"} - ${item.detail}`;
+    return line;
+  }));
+}
+
+function isReady(value) {
+  return value === true || value === 1;
+}
+
+function valueInfo(info) {
+  if (!info) return [];
+  if (active === "gld") {
+    const alarmMode = info.alarmControl?.available === true && ["auto", "manual"].includes(info.alarmControl?.mode)
+      ? info.alarmControl.mode.toUpperCase()
+      : "Tidak tersedia";
+    return [
+    ["Device ID", info.deviceId], ["Target CH", info.targetChId], ["Firmware", info.firmwareVersion],
+    ["STAR", info.starLora?.freqMHz ? `${info.starLora.freqMHz} MHz` : "-"],
+    ["Radio", isReady(info.radioReady) ? "Ready" : info.radioReady === false || info.radioReady === 0 ? "Tidak siap" : "Menunggu"],
+    ["Mode alarm fisik", alarmMode]
+    ];
+  }
+  if (active === "ch") return [
+    ["CH ID", info.chId], ["Root Gateway", info.rootGatewayId], ["Firmware", info.firmwareVersion],
+    ["STAR", info.starLora?.freqMHz ? `${info.starLora.freqMHz} MHz` : "-"],
+    ["Radio STAR", isReady(info.radio?.starReady) ? "Ready" : "Tidak siap"], ["Mesh", "Fixed by design"]
+  ];
+  return [
+    ["Gateway ID", info.gatewayId], ["Firmware", info.firmwareVersion],
+    ["Radio Mesh", isReady(info.meshReady) ? "Ready" : "Tidak siap"],
+    ["MQTT transport", info.mqttTransport === "tls" ? "TLS" : info.mqttTransport === "non_tls" ? "non-TLS" : "Legacy / tidak dilaporkan"],
+    ["Wi-Fi", isReady(info.wifi) ? "Connected" : "Belum tersambung"],
+    ["MQTT", isReady(info.mqtt) ? "Connected" : "Belum tersambung"]
+  ];
+}
+
+function updateMqttTlsFields() {
+  const tlsSelected = $("mqttTransportSelect").value === "tls";
+  $("mqttNtpHostCard").hidden = !tlsSelected;
+  $("mqttTlsCaCard").hidden = !tlsSelected;
+  $("mqttTlsHelp").hidden = !tlsSelected;
+  $("mqttPortInput").placeholder = tlsSelected ? "8883" : "1884";
+}
+
+function validGldAlarmControl(info) {
+  const alarm = info?.alarmControl;
+  if (!alarm || alarm.available !== true || !["auto", "manual"].includes(alarm.mode)) return null;
+  if (!["modePersisted", "sessionOnly", "resetsToAutoOnBoot", "manualCommanded", "inferenceAlarm", "physicalCommanded"].every((field) => typeof alarm[field] === "boolean")) return null;
+  if (alarm.modePersisted !== false || alarm.sessionOnly !== true || alarm.resetsToAutoOnBoot !== true) return null;
+  const steady24v = alarm.outputDrive === "steady_24v" &&
+    alarm.externalDevicePattern === "self_pulsed_1s_on_1s_off";
+  const gld1SingleTrigger = alarm.outputDrive === "active_high_gpio41_steady" &&
+    alarm.externalDevicePattern === "steady_high_while_alarm" && alarm.singleTrigger === true;
+  const gld1Pullup = alarm.outputDrive === "active_low_gpio41_uln2003_pullup" &&
+    alarm.externalDevicePattern === "steady_high_while_alarm" && alarm.singleTrigger === true &&
+    alarm.requiresExternalPullup === true &&
+    alarm.gpio41CommandLevel === (alarm.physicalCommanded ? "LOW" : "HIGH") &&
+    alarm.j2LampExpectedLevel === (alarm.physicalCommanded ? "HIGH" : "LOW");
+  if (!steady24v && !gld1SingleTrigger && !gld1Pullup) return null;
+  return alarm;
+}
+
+function renderAlarmControls(info) {
+  const card = $("gldAlarmControlCard");
+  const select = $("alarmModeSelect");
+  const apply = $("applyAlarmModeBtn");
+  const on = $("manualAlarmOnBtn");
+  const off = $("manualAlarmOffBtn");
+  const badge = $("alarmControlModeBadge");
+  const output = $("alarmPhysicalState");
+  const help = $("alarmControlHelp");
+  const isGld = active === "gld";
+  card.hidden = !isGld;
+  if (!isGld) {
+    select.disabled = apply.disabled = on.disabled = off.disabled = true;
+    return;
+  }
+
+  const alarm = validGldAlarmControl(info);
+  const available = Boolean(alarm) && !alarmActionBusy;
+  if (!alarm) {
+    select.value = "auto";
+    select.disabled = apply.disabled = on.disabled = off.disabled = true;
+    badge.textContent = "Kontrol terkunci";
+    badge.dataset.mode = "unavailable";
+    output.textContent = "Output fisik: status firmware tidak lengkap";
+    output.classList.remove("commanded");
+    help.textContent = "Firmware yang terhubung belum melaporkan kontrak kontrol alarm lengkap. Hub tidak akan mengirim perintah alarm.";
+    help.classList.add("bad");
+    return;
+  }
+
+  select.value = alarm.mode;
+  select.disabled = !available;
+  apply.disabled = !available;
+  on.disabled = !available || alarm.mode !== "manual" || alarm.manualCommanded;
+  off.disabled = !available || alarm.mode !== "manual" || !alarm.manualCommanded;
+  badge.textContent = alarm.mode === "manual" ? "MANUAL • sesi ini" : "AUTO • default boot";
+  badge.dataset.mode = alarm.mode;
+  const gld1SingleTrigger = alarm.outputDrive === "active_high_gpio41_steady";
+  const gld1Pullup = alarm.outputDrive === "active_low_gpio41_uln2003_pullup";
+  const outputOnText = gld1SingleTrigger
+    ? "ON — GPIO41 HIGH selama alarm"
+    : "ON — steady 24 V diperintahkan";
+  output.textContent = gld1Pullup
+    ? `Perintah ${alarm.physicalCommanded ? "ON" : "OFF"}: GPIO41 ${alarm.gpio41CommandLevel} → ekspektasi J2 LAMP ${alarm.j2LampExpectedLevel} • Alarm inferensi: ${alarm.inferenceAlarm ? "AKTIF" : "tidak aktif"}`
+    : `Output fisik: ${alarm.physicalCommanded ? outputOnText : "OFF"} • Alarm inferensi: ${alarm.inferenceAlarm ? "AKTIF" : "tidak aktif"}`;
+  output.classList.toggle("commanded", alarm.physicalCommanded);
+  help.textContent = alarm.mode === "manual"
+    ? "MANUAL aktif untuk pengujian. ON/OFF bersifat volatile; telemetri dan radio tetap memakai hasil alarm inferensi sebenarnya."
+    : gld1SingleTrigger
+      ? "AUTO adalah default produk: hasil alarm inferensi valid membuat GPIO41 HIGH selama alarm aktif."
+      : "AUTO adalah default produk: hasil alarm inferensi valid mengendalikan output fisik. Perangkat eksternal membentuk pola 1 detik ON / 1 detik OFF secara internal.";
+  if (gld1Pullup) {
+    help.textContent = `${alarm.mode === "manual" ? "MANUAL untuk pengujian sesi ini; inferensi tetap dilaporkan." : "AUTO: alarm mengikuti inferensi valid."} GLD1: GPIO41 LOW saat alarm, J2 LAMP diharapkan HIGH melalui resistor pull-up eksternal yang wajib dipasang. Ini status perintah/ekspektasi, bukan pengukuran tegangan; pastikan tegangan pull-up sesuai input perangkat.`;
+  }
+  help.classList.remove("bad");
+}
+
+function setStepState(identified) {
+  const testPassed = lastTestReport && lastTestReport.failed === 0 && lastTestReport.unknown === 0;
+  const steps = [...$("operatorSteps").children];
+  steps.forEach((step) => step.classList.remove("done", "active"));
+  if (!identified) {
+    steps[0]?.classList.add("active");
+  } else if (!testPassed) {
+    steps[0]?.classList.add("done");
+    steps[1]?.classList.add("active");
+  } else if (!settingsOpened) {
+    steps[0]?.classList.add("done");
+    steps[1]?.classList.add("done");
+    steps[2]?.classList.add("active");
+  } else {
+    steps[0]?.classList.add("done");
+    steps[1]?.classList.add("done");
+    steps[2]?.classList.add("active");
+  }
+  steps.forEach((step) => {
+    const button = step.querySelector(".step-button");
+    if (!button) return;
+    const available = step.classList.contains("done") || step.classList.contains("active");
+    button.disabled = !available;
+    button.setAttribute("aria-current", step.classList.contains("active") ? "step" : "false");
+  });
+  $("settingsCard").classList.toggle("locked", !testPassed);
+  $("firmwareStage").classList.toggle("locked", !testPassed);
+  document.querySelector("#settingsCard .guard-badge").hidden = Boolean(testPassed);
+  const reviewingEarlierStep = reviewStep > 0 && reviewStep <= 2;
+  $("futureStages").hidden = !testPassed || !settingsOpened || reviewingEarlierStep;
+  $("secondaryDetails").hidden = !testPassed || !settingsOpened || reviewingEarlierStep;
+  const workspace = document.querySelector(".workspace");
+  const simpleView = !identified || reviewStep === 1 ? "connect"
+    : !testPassed || reviewStep === 2 ? "test" : "settings";
+  workspace.dataset.simpleView = simpleView;
+  $("devicePanel").dataset.simpleView = simpleView;
+  workspace.classList.toggle("single-task", !testPassed);
+  workspace.classList.toggle("review-connect", Boolean(identified && reviewStep === 1));
+  workspace.classList.toggle("settings-stage", Boolean(testPassed && settingsOpened && !reviewingEarlierStep));
+  $("continueBtn").hidden = !testPassed || settingsOpened;
+  $("testDeviceCopy").textContent = testPassed
+    ? settingsOpened ? "Test Device sudah lulus. Parameter perangkat dapat ditinjau atau diubah di tahap berikutnya." : "Perangkat lulus pemeriksaan. Tekan Lanjutkan untuk membuka tahap pengaturan."
+    : "Hubungkan perangkat lalu jalankan pemeriksaan tanpa mengubah konfigurasi.";
+  const next = !identified ? "Pilih COM lalu hubungkan perangkat; nama COM selalu mengikuti komputer saat ini."
+    : !testPassed ? "Perangkat teridentifikasi. Lanjutkan dengan Test Device."
+      : settingsOpened ? "Parameter siap ditinjau. Perangkat siap digunakan." : "Test Device lulus. Lanjutkan ke Pengaturan bila parameter perlu diubah.";
+  $("nextAction").textContent = next;
+  return Boolean(testPassed);
+}
+
+function render() {
+  const state = overview.devices?.[active] || { device: active };
+  const spec = devices[active];
+  const identified = Boolean(state.connected && state.info);
+  const needsInitialFirmware = Boolean(initialFirmwareRequired && state.connected && !state.info);
+  const info = state.info;
+  $("devicePanel").hidden = false;
+  document.querySelector(".workspace").classList.toggle("connected", identified);
+  document.querySelector(".workspace").classList.toggle("initial-firmware", needsInitialFirmware);
+  $("deviceName").textContent = spec.name;
+  $("connectionTitle").textContent = `Hubungkan ${spec.name}`;
+  $("testDeviceName").textContent = spec.name;
+  $("testDevicePort").textContent = identified
+    ? `${state.port || "COM"} — ${spec.label} terdeteksi dan terhubung.`
+    : "COM — perangkat belum terhubung";
+  $("testConnectionIndicator").textContent = identified ? "● Terhubung" : "Offline";
+  $("testConnectionIndicator").classList.toggle("online", identified);
+  $("deviceGlyph").textContent = spec.glyph;
+  $("connectionText").textContent = state.connected
+    ? identified ? `${state.port || "COM"} tersambung dan teridentifikasi.` : `${state.port || "COM"} tersambung, menunggu identitas.`
+    : "Belum tersambung. Pilih COM pada komputer ini untuk memulai.";
+  $("connectionIndicator").textContent = identified ? "Online" : state.connected ? "Membaca identitas" : "Offline";
+  $("connectionIndicator").classList.toggle("online", identified);
+  $("connectBtn").disabled = Boolean(state.connected);
+  $("disconnectBtn").disabled = !state.connected;
+  $("statusList").innerHTML = valueInfo(info).map(([key, value]) => `<div><dt>${key}</dt><dd>${value ?? "-"}</dd></div>`).join("") || "<div><dt>Status</dt><dd>Menunggu perangkat</dd></div>";
+  $("idInput").value = active === "gld" ? info?.deviceId || "" : active === "ch" ? info?.chId || "" : String(info?.gatewayId || "").replace(/^0x/i, "");
+  $("freqInput").value = info?.starLora?.freqMHz ?? "";
+  $("targetChInput").value = String(info?.targetChId || "").replace(/^0x/i, "");
+  $("rootGatewayInput").value = active === "ch" ? String(info?.rootGatewayId || "").replace(/^0x/i, "") : "";
+  $("starCard").hidden = active === "gw";
+  $("saveFreqBtn").hidden = active === "gw";
+  $("targetChCard").hidden = active !== "gld";
+  $("saveTargetChBtn").hidden = active !== "gld";
+  const isClusterHead = active === "ch";
+  $("rootGatewayCard").hidden = !isClusterHead;
+  $("saveRootGatewayBtn").hidden = !isClusterHead;
+  $("gatewayNetworkCard").hidden = active !== "gw";
+  if (active === "gw") {
+    const reportedTransport = info?.mqttTransport;
+    if (reportedTransport === "tls" || reportedTransport === "non_tls") {
+      $("mqttTransportSelect").value = reportedTransport;
+    }
+    updateMqttTlsFields();
+  }
+  renderAlarmControls(info);
+  $("testDeviceBtn").disabled = !identified || testDeviceRunning;
+  $("testDeviceBtn").textContent = testDeviceRunning ? "Memeriksa…" : "Test Device";
+  $("testDeviceCard").classList.toggle("testing", testDeviceRunning);
+  $("testUploadFirmwareBtn").disabled = !identified;
+  $("initialFirmwareCard").hidden = !needsInitialFirmware;
+  $("initialFirmwarePort").textContent = `${state.port || "COM"} — ${spec.label}`;
+  renderTestReport(lastTestReport);
+  if (identified && !lastTestReport) {
+    $("testDeviceSummary").textContent = "Siap diperiksa";
+  }
+  $("packageVersion").textContent = identified && info?.firmwareVersion
+    ? `Firmware aktif ${info.firmwareVersion} — dibaca dari perangkat ${state.port || "terhubung"}`
+    : identified
+      ? "Perangkat aktif tidak melaporkan firmwareVersion."
+      : "Versi firmware aktif belum dibaca; versi package ditampilkan setelah environment dipilih saat upload.";
+  const testPassed = setStepState(identified);
+  $("readyDeviceCopy").textContent = testPassed
+    ? "Test Device lulus. Perangkat siap digunakan."
+    : "Selesaikan Test Device untuk memastikan perangkat siap digunakan.";
+  renderActivity(overview.activity);
+  renderLastResult(overview.activity);
+}
+
+async function loadPorts() {
+  try {
+    const data = await api(`/api/simple/ports?device=${active}`);
+    const ports = Array.isArray(data.ports || data) ? data.ports || data : [];
+    $("portSelect").innerHTML = '<option value="">Pilih COM port pada komputer ini</option>' + ports.map((port) => {
+      const value = typeof port === "string" ? port : port.path || port.port;
+      const detail = typeof port === "string" ? "" : port.description || "";
+      return `<option value="${value}" title="${detail}">${value}${detail ? ` - ${detail}` : ""}</option>`;
+    }).join("");
+  } catch {
+    $("portSelect").innerHTML = '<option value="">COM tidak tersedia</option>';
+  }
+}
+
+async function refresh(query = false) {
+  overview = await api("/api/simple/overview");
+  render();
+  if (query && overview.devices?.[active]?.connected) {
+    overview.devices[active] = await api("/api/simple/refresh", { device: active });
+    render();
+  }
+}
+
+async function action(path, body, success) {
+  try {
+    show("Memproses - menunggu ACK dan read-back perangkat...");
+    await api(path, body);
+    show(success, "ok");
+    await refresh(true);
+  } catch (error) {
+    show(error.message, "bad");
+  }
+}
+
+async function runAlarmAction(path, body, success) {
+  if (alarmActionBusy) return;
+  alarmActionBusy = true;
+  renderAlarmControls(overview.devices?.gld?.info);
+  try {
+    show("Memproses kontrol alarm — menunggu ACK dan GLD_STATUS_JSON baru...");
+    const result = await api(path, body);
+    if (result?.readback) overview.devices.gld = result.readback;
+    render();
+    show(success, "ok");
+    await refresh(true);
+  } catch (error) {
+    show(error.message, "bad");
+  } finally {
+    alarmActionBusy = false;
+    renderAlarmControls(overview.devices?.gld?.info);
+  }
+}
+
+async function applyAlarmMode() {
+  const alarm = validGldAlarmControl(overview.devices?.gld?.info);
+  if (active !== "gld" || !alarm) return show("Kontrol alarm terkunci karena status firmware belum lengkap.", "bad");
+  const mode = $("alarmModeSelect").value;
+  if (mode === "manual" && alarm.mode !== "manual") {
+    const approved = await requestConfirmation({
+      title: "Aktifkan MANUAL test mode?",
+      message: "MANUAL hanya untuk pengujian dan memisahkan output fisik dari alarm inferensi. Mode ini dan perintah ON/OFF hanya berlaku selama sesi berjalan; reboot selalu mengembalikan AUTO. Telemetri/radio tetap melaporkan inferensi sebenarnya.",
+      actionLabel: "Aktifkan MANUAL",
+      phrase: "MANUAL",
+    });
+    if (!approved) {
+      $("alarmModeSelect").value = alarm.mode;
+      return;
+    }
+  }
+  await runAlarmAction(
+    "/api/simple/config/alarm-mode",
+    { device: "gld", mode },
+    `Mode alarm ${mode.toUpperCase()} diterapkan untuk sesi ini dan terverifikasi dari status baru. Reboot kembali ke AUTO.`,
+  );
+}
+
+async function setManualAlarm(enabled) {
+  const alarm = validGldAlarmControl(overview.devices?.gld?.info);
+  if (active !== "gld" || !alarm || alarm.mode !== "manual" || alarm.sessionOnly !== true) {
+    return show("Pilih dan verifikasi mode MANUAL untuk sesi ini sebelum menguji output alarm.", "bad");
+  }
+  if (enabled) {
+    const testMessage = alarm.outputDrive === "active_low_gpio41_uln2003_pullup"
+      ? "GLD1 akan memerintahkan GPIO41 LOW: J2 LAMP diharapkan HIGH melalui resistor pull-up eksternal. Pastikan resistor terpasang dan tegangan pull-up sesuai input perangkat; status bukan pengukuran tegangan. GPIO40 tidak digunakan."
+      : alarm.outputDrive === "active_high_gpio41_steady"
+        ? "GLD1 akan membuat GPIO41 HIGH selama test alarm aktif. GPIO40 tidak digunakan."
+        : "GLD akan memberi output steady 24 V. Perangkat alarm eksternal akan menjalankan pola 1 detik ON / 1 detik OFF secara internal.";
+    const approved = await requestConfirmation({
+      title: "Nyalakan test alarm fisik?",
+      message: testMessage,
+      actionLabel: "Test Alarm ON",
+    });
+    if (!approved) return;
+  }
+  await runAlarmAction(
+    "/api/simple/config/manual-alarm",
+    { device: "gld", enabled },
+    `Output test alarm ${enabled ? "ON" : "OFF"} telah di-ACK dan diverifikasi dari status baru.`,
+  );
+}
+
+function buildTabs() {
+  const tabs = $("deviceTabs");
+  tabs.innerHTML = Object.entries(devices).map(([id, device]) => `<button class="device-tab ${id === active ? "active" : ""}" data-device="${id}" type="button"><span class="glyph">${device.glyph}</span><span><strong>${device.label}</strong><small>${device.name}</small></span></button>`).join("");
+  tabs.onclick = async (event) => {
+    const selected = event.target.closest("[data-device]")?.dataset.device;
+    if (!selected) return;
+    active = selected;
+    lastTestReport = testReportsByDevice[active] || null;
+    initialFirmwareRequired = false;
+    settingsOpened = false;
+    reviewStep = 0;
+    [...tabs.children].forEach((tab) => tab.classList.toggle("active", tab.dataset.device === active));
+    await loadPorts();
+    render();
+  };
+}
+
+async function testDevice() {
+  if (testDeviceRunning) return;
+  testDeviceRunning = true;
+  try {
+    reviewStep = 2;
+    show("Memeriksa kesiapan perangkat — menunggu respons Boot Report…", "waiting");
+    render();
+    const result = await api("/api/simple/test-device", { device: active });
+    lastTestReport = result.report;
+    testReportsByDevice[active] = result.report;
+    render();
+    show(result.report.failed ? `Test Device selesai: ${result.report.passed}/${result.report.total} OK, error ${result.report.failed}.` : `Test Device selesai: ${result.report.passed}/${result.report.total} OK.`, result.report.failed ? "bad" : "ok");
+    await refresh();
+  } catch (error) {
+    show(error.message, "bad");
+  } finally {
+    testDeviceRunning = false;
+    render();
+  }
+}
+
+function navigateToStep(stepNumber) {
+  const step = $("operatorSteps").querySelector(`[data-step="${stepNumber}"]`)?.closest("li");
+  if (!step || (!step.classList.contains("done") && !step.classList.contains("active"))) return;
+  const testPassed = Boolean(lastTestReport && lastTestReport.failed === 0 && lastTestReport.unknown === 0);
+  if (stepNumber === 1) {
+    reviewStep = 1;
+  } else if (stepNumber === 2) {
+    reviewStep = 2;
+  } else if (stepNumber === 3 && testPassed) {
+    settingsOpened = true;
+    reviewStep = 3;
+  } else {
+    return;
+  }
+  render();
+  const target = stepNumber === 1 ? document.querySelector(".connect-card")
+    : stepNumber === 2 ? $("testDeviceCard") : $("settingsCard");
+  target?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+async function connectDevice() {
+  try {
+    settingsOpened = false;
+    reviewStep = 0;
+    show("Menghubungkan dan membaca identitas perangkat...");
+    const result = await api("/api/simple/connect", { device: active, port: $("portSelect").value });
+    initialFirmwareRequired = Boolean(result.needsInitialFirmware || (result.connected && !result.info));
+    await refresh();
+    if (initialFirmwareRequired) {
+      show(`${devices[active].label} terhubung, tetapi firmware tidak terdeteksi. Upload Firmware Awal diperlukan.`, "bad");
+      return;
+    }
+    show(`${devices[active].label} tersambung. Menjalankan Test Device otomatis...`);
+    await testDevice();
+  } catch (error) {
+    show(error.message, "bad");
+  }
+}
+
+async function initialFirmwareUpload() {
+  const port = overview.devices?.[active]?.port || $("portSelect").value;
+  if (!port) return show("Pilih dan hubungkan COM board baru terlebih dahulu.", "bad");
+  const options = await requestFirmwareUploadOptions({ device: active, port, initialFirmware: true });
+  if (!options) return show("Upload firmware awal dibatalkan.");
+  try {
+    show("Mengunggah firmware awal; progres dan log flash ditampilkan di bawah.");
+    const result = await runFirmwareUpload({ device: active, port, initialFirmware: true, ...options });
+    if (isPendingHotspotUpload(result)) return result;
+    initialFirmwareRequired = false;
+    await refresh(true);
+    show("Firmware awal terverifikasi. Menjalankan Test Device...");
+    await testDevice();
+  } catch (error) {
+    show(error.message, "bad");
+  }
+}
+
+async function manualFirmwareUpload() {
+  const port = overview.devices?.[active]?.port || $("portSelect").value;
+  if (!port) return show("Hubungkan dan identifikasi perangkat terlebih dahulu.", "bad");
+  const options = await requestFirmwareUploadOptions({ device: active, port });
+  if (!options) return show("Upload firmware dibatalkan.");
+  try {
+    show("Mengunggah firmware; progres dan log flash ditampilkan di bawah.");
+    const result = await runFirmwareUpload({ device: active, port, ...options });
+    if (isPendingHotspotUpload(result)) return result;
+    await refresh(true);
+    show("Firmware terverifikasi. Menjalankan Test Device ulang...");
+    await testDevice();
+  } catch (error) {
+    show(error.message, "bad");
+  }
+}
+
+async function init() {
+  prepareThreeStepWorkflow();
+  if (simulationMode === "ch-com6" || simulationMode === "ch-com6-new") {
+    const unprogrammed = simulationMode === "ch-com6-new";
+    active = "ch";
+    initialFirmwareRequired = unprogrammed;
+    overview = {
+      devices: {
+        gld: { device: "gld", connected: false },
+        ch: { device: "ch", connected: unprogrammed, port: "COM6" },
+        gw: { device: "gw", connected: false }
+      },
+      packages: { ch: { firmwareVersion: "preview", environment: "ch" } },
+      activity: []
+    };
+    buildTabs();
+    render();
+    $("portSelect").innerHTML = '<option value="COM6" selected>COM6 - USB Serial CH340 (COM6)</option>';
+    $("connectBtn").disabled = true;
+    $("disconnectBtn").disabled = true;
+    $("initialFirmwareBtn").onclick = initialFirmwareUpload;
+    $("runtimeText").textContent = unprogrammed ? "Simulasi board baru" : "Simulasi CH / COM6";
+    show(unprogrammed ? "Simulasi: CH pada COM6 terhubung, tetapi firmware belum terdeteksi. Tidak ada koneksi serial yang dibuka." : "Simulasi CH pada COM6 - tidak ada koneksi serial yang dibuka.", "ok");
+    return;
+  }
+  const boot = await api("/api/simple/bootstrap");
+  token = boot.apiToken;
+  show("Menyudahi sesi serial sebelumnya...");
+  await Promise.allSettled(Object.keys(devices).map((device) => api("/api/simple/disconnect", { device })));
+  buildTabs();
+  $("connectBtn").onclick = connectDevice;
+  $("disconnectBtn").onclick = () => action("/api/simple/disconnect", { device: active }, "Koneksi perangkat ditutup.");
+  $("restartBtn").onclick = async () => {
+    const approved = await requestConfirmation({
+      title: `Restart ${devices[active].label}?`,
+      message: "Koneksi serial akan terputus sesaat saat board melakukan boot ulang.",
+      actionLabel: "Restart board"
+    });
+    if (approved) await action("/api/simple/restart", { device: active }, "Perintah restart dikirim.");
+  };
+  $("initialFirmwareBtn").onclick = initialFirmwareUpload;
+  $("testDeviceBtn").onclick = testDevice;
+  $("testUploadFirmwareBtn").onclick = manualFirmwareUpload;
+  $("continueBtn").onclick = () => {
+    settingsOpened = true;
+    reviewStep = 3;
+    render();
+    $("settingsCard").scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+  $("restartWorkflowBtn").onclick = () => {
+    settingsOpened = false;
+    reviewStep = 1;
+    render();
+    document.querySelector(".connect-card")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+  $("operatorSteps").onclick = (event) => {
+    const stepNumber = Number(event.target.closest(".step-button")?.dataset.step);
+    if (stepNumber) navigateToStep(stepNumber);
+  };
+  $("saveIdBtn").onclick = () => action("/api/simple/config/id", { device: active, value: $("idInput").value }, "ID tersimpan dan terverifikasi.");
+  $("saveFreqBtn").onclick = () => action("/api/simple/config/star-frequency", { device: active, freqMHz: $("freqInput").value }, "STAR Frequency tersimpan dan terverifikasi.");
+  $("saveTargetChBtn").onclick = () => action("/api/simple/config/target-ch", { device: "gld", value: $("targetChInput").value }, "Target CH tersimpan dan terverifikasi.");
+  $("applyAlarmModeBtn").onclick = applyAlarmMode;
+  $("manualAlarmOnBtn").onclick = () => setManualAlarm(true);
+  $("manualAlarmOffBtn").onclick = () => setManualAlarm(false);
+  $("saveRootGatewayBtn").onclick = () => action("/api/simple/config/root-gateway", { device: "ch", value: $("rootGatewayInput").value }, "Root Gateway tersimpan dan terverifikasi.");
+  $("saveWifiBtn").onclick = () => action("/api/simple/config/wifi", { device: "gw", ssid: $("wifiSsidInput").value, password: $("wifiPasswordInput").value }, "Wi-Fi tersimpan dan terverifikasi.");
+  $("mqttTransportSelect").onchange = updateMqttTlsFields;
+  $("saveMqttBtn").onclick = () => action(
+    "/api/simple/config/mqtt",
+    {
+      device: "gw",
+      host: $("mqttHostInput").value,
+      port: $("mqttPortInput").value,
+      username: $("mqttUsernameInput").value,
+      password: $("mqttPasswordInput").value,
+      mqttTransport: $("mqttTransportSelect").value,
+      tlsCaPem: $("mqttTransportSelect").value === "tls" ? $("mqttTlsCaInput").value : "",
+      ntpHost: $("mqttTransportSelect").value === "tls" ? $("mqttNtpHostInput").value : "",
+    },
+    "MQTT tersimpan dan terverifikasi.",
+  );
+  $("expertBtn").onclick = () => location.assign(`http://${location.hostname}:${active === "gld" ? 5174 : active === "ch" ? 5273 : 5373}/`);
+  await refresh();
+  await loadPorts();
+  $("runtimeText").textContent = "Runtime siap";
+  show("Sesi baru siap. Pilih COM pada komputer ini untuk memulai.");
+}
+
+init().catch((error) => show(error.message, "bad"));
+</script>
+<script>/* mockup reviewer panel */
+/*
+  Reviewer panel for the Operator Hub mockup. Lives outside the production UI:
+  it only changes the simulated scenario (URL hash) and reloads, intercepts the
+  links that would leave the Hub (Expert Console, GLD Operator hotspot), and can
+  auto-play a preset so a reviewer lands directly on a given stage.
+*/
+(() => {
+  "use strict";
+  const mock = window.__operatorHubMock;
+  if (!mock) return;
+  const { cfg, DEFAULTS } = mock;
+  const $ = (id) => document.getElementById(id);
+
+  const OPTIONS = {
+    gld: [["normal", "Normal — firmware ada, test lulus"], ["fresh", "Board baru — tanpa firmware"], ["fail", "Test gagal — MCP4725/DAC/Sensor"], ["pending", "Test belum lengkap — Sensor menunggu"], ["alarm-locked", "Kontrak alarm tidak lengkap"]],
+    ch: [["normal", "Normal — firmware ada, test lulus"], ["fresh", "Board baru — tanpa firmware"], ["fail", "Test gagal — Radio Mesh"]],
+    gw: [["normal", "Normal — Wi-Fi & MQTT tersambung"], ["fresh", "Board baru — tanpa firmware"], ["fail", "Test gagal — MQTT belum tersambung"]],
+    gwfw: [["non_tls", "Firmware MQTT non-TLS"], ["tls", "Firmware MQTT over TLS (TLS-capable)"], ["legacy", "Firmware lama — transport tidak dilaporkan"]],
+    drive: [["steady_24v", "Steady 24 V (perangkat eksternal 1 s ON/OFF)"], ["gpio41_high", "GLD1 GPIO41 active-high"], ["gpio41_pullup", "GLD1 GPIO41 active-low + ULN2003 pull-up"]],
+    inference: [["0", "Tidak aktif"], ["1", "AKTIF"]],
+    upload: [["success", "Sukses + read-back terverifikasi"], ["error", "Gagal di tengah flash"]],
+    speed: [["normal", "Realistis"], ["fast", "Cepat (×4)"]]
+  };
+  const LABELS = {
+    gld: "Kondisi GLD", ch: "Kondisi Cluster Head", gw: "Kondisi Gateway", gwfw: "Firmware Gateway",
+    drive: "Output alarm fisik GLD", inference: "Alarm inferensi GLD", upload: "Hasil upload firmware", speed: "Kecepatan simulasi"
+  };
+  const PRESETS = [
+    ["Mulai dari awal", "Semua perangkat normal, tahap Hubungkan.", {}],
+    ["GLD → Konfigurasi", "GLD otomatis terhubung, lulus test, buka tahap 3.", { preset: "gld-config" }],
+    ["GLD test gagal", "Boot Report 3/6 dengan error MCP4725/DAC/Sensor.", { gld: "fail", preset: "gld-test" }],
+    ["GLD board baru", "COM terhubung tanpa firmware → Upload Firmware Awal.", { gld: "fresh", preset: "gld-connect" }],
+    ["GLD alarm MANUAL", "GLD1 pull-up; uji mode MANUAL dan Test Alarm ON/OFF.", { drive: "gpio41_pullup", preset: "gld-config" }],
+    ["CH → Konfigurasi", "CH lulus test; ID, STAR, Root Gateway.", { preset: "ch-config" }],
+    ["CH board baru", "CH tanpa firmware; pilih Rectangle/Circle.", { ch: "fresh", preset: "ch-connect" }],
+    ["Gateway TLS", "Gateway firmware TLS; isi Root CA + NTP.", { gwfw: "tls", preset: "gw-config" }],
+    ["Gateway MQTT gagal", "Test Gateway gagal karena MQTT belum tersambung.", { gw: "fail", preset: "gw-test" }],
+    ["Upload gagal", "GLD terhubung; upload firmware berhenti dengan error.", { upload: "error", preset: "gld-test" }]
+  ];
+
+  function hashFor(values) {
+    const merged = { ...DEFAULTS, ...values };
+    const params = new URLSearchParams();
+    Object.entries(merged).forEach(([key, value]) => { if (value !== DEFAULTS[key]) params.set(key, value); });
+    return params.toString();
+  }
+  function go(values) {
+    const target = `${location.pathname}${location.search.includes("simulate=") ? "" : location.search}#${hashFor(values)}`;
+    history.replaceState(null, "", target);
+    location.reload();
+  }
+
+  // ------------------------------------------------------------- drawer DOM
+  const panel = document.createElement("aside");
+  panel.id = "mockPanel";
+  panel.className = "mock-panel";
+  panel.setAttribute("aria-label", "Panel peninjau mockup");
+  panel.hidden = true;
+  const builtIn = new URLSearchParams(location.search).get("simulate");
+  panel.innerHTML = `
+    <div class="mock-panel-head">
+      <div><p class="card-kicker">MOCKUP / PANEL PENINJAU</p><h2>Skenario simulasi</h2></div>
+      <button id="mockPanelClose" class="mock-icon" type="button" aria-label="Tutup panel">&times;</button>
+    </div>
+    <p class="mock-note">Semua respons berasal dari simulasi di browser. Tidak ada port COM, firmware, NVS, MQTT, data, atau perangkat nyata yang disentuh.</p>
+    <section><h3>Lompat cepat</h3><div class="mock-presets">${PRESETS.map(([title, detail], i) => `<button type="button" data-preset="${i}"><b>${title}</b><small>${detail}</small></button>`).join("")}</div></section>
+    <section><h3>Kondisi kustom</h3><form id="mockForm" class="mock-form">${Object.keys(OPTIONS).map((key) => `<label>${LABELS[key]}<select name="${key}">${OPTIONS[key].map(([value, label]) => `<option value="${value}"${cfg[key] === value ? " selected" : ""}>${label}</option>`).join("")}</select></label>`).join("")}
+      <div class="mock-form-actions"><button type="button" id="mockReset" class="secondary">Reset</button><button type="submit" class="primary">Terapkan &amp; muat ulang</button></div></form></section>
+    <section><h3>Simulasi bawaan hub.js</h3><p class="mock-note">Mode <code>?simulate=</code> yang sudah ada di aplikasi produksi.</p><div class="mock-links">
+      <a href="?simulate=ch-com6">CH pada COM6</a><a href="?simulate=ch-com6-new">CH COM6 board baru</a>${builtIn ? '<a href="?">Kembali ke mockup penuh</a>' : ""}</div></section>
+    <details class="mock-coverage"><summary>Cakupan alur yang direpresentasikan</summary><ul>
+      <li>Pilih perangkat GLD / CH / Gateway, daftar COM per perangkat, Connect / Disconnect</li>
+      <li>Connect → identitas terbaca → Test Device otomatis (Boot Report GLD 6 cek, CH 4 cek, Gateway 4 cek)</li>
+      <li>Board tanpa firmware → kartu Upload Firmware Awal (NVS selalu di-reset)</li>
+      <li>Dialog Upload Firmware: paket GLD, bentuk board CH/GW, transport MQTT GW, Reset NVS, peringatan downgrade GLD1 v0.8.38, larangan Hotspot + Reset</li>
+      <li>Progres flash + log esptool, read-back, toast Upload Success, upload gagal, verifikasi hotspot tertunda</li>
+      <li>Stepper 3 tahap dengan navigasi kembali; Lanjutkan ke Konfigurasi; Kembali ke awal</li>
+      <li>Konfigurasi: Device ID, STAR frequency, Target CH (GLD), Root Gateway (CH), Wi-Fi &amp; MQTT non-TLS/TLS (Gateway) dengan validasi rentang</li>
+      <li>Alarm fisik GLD: AUTO/MANUAL (konfirmasi ketik MANUAL), Test Alarm ON/OFF, 3 varian output, kontrak terkunci</li>
+      <li>Restart perangkat (konfirmasi), aktivitas terbaru, ringkasan perangkat, Expert Console (dicegat)</li>
+    </ul></details>`;
+  const launcher = document.createElement("button");
+  launcher.type = "button";
+  launcher.className = "mock-launcher";
+  launcher.innerHTML = "<span>MOCKUP</span> Panel peninjau";
+  const banner = document.createElement("div");
+  banner.className = "mock-banner";
+  banner.setAttribute("role", "note");
+  banner.innerHTML = `<b>MOCKUP</b><span>Representasi Operator Hub — simulasi browser, tidak terhubung ke perangkat.</span><span class="mock-banner-scenario">${describe()}</span>`;
+
+  function describe() {
+    if (builtIn) return `Simulasi bawaan: ${builtIn}`;
+    const changed = Object.keys(OPTIONS).filter((key) => cfg[key] !== DEFAULTS[key]);
+    return changed.length ? changed.map((key) => `${LABELS[key]}: ${OPTIONS[key].find(([v]) => v === cfg[key])?.[1] || cfg[key]}`).join(" · ") : "Skenario: semua normal";
+  }
+
+  // --------------------------------------------------------- expert modal
+  const modal = document.createElement("dialog");
+  modal.className = "confirm-dialog mock-dialog";
+  modal.innerHTML = `<div class="confirm-dialog-card"><p class="card-kicker">MOCKUP / NAVIGASI KELUAR</p><h2 id="mockDialogTitle"></h2><p id="mockDialogBody"></p><p class="mock-dialog-url"><code id="mockDialogUrl"></code></p><div class="confirm-dialog-actions"><button type="button" class="primary" id="mockDialogOk">Mengerti</button></div></div>`;
+
+  function openExternal(title, body, url) {
+    $("mockDialogTitle").textContent = title;
+    $("mockDialogBody").textContent = body;
+    $("mockDialogUrl").textContent = url;
+    modal.showModal();
+  }
+
+  window.addEventListener("click", (event) => {
+    if (event.target.closest("#expertBtn")) {
+      event.preventDefault();
+      event.stopPropagation();
+      const device = document.querySelector("#deviceTabs .device-tab.active")?.dataset.device || "gld";
+      const port = device === "gld" ? 5174 : device === "ch" ? 5273 : 5373;
+      const name = { gld: "GLD Operator", ch: "CH Operator", gw: "Gateway Operator" }[device];
+      openExternal(`Expert Console — ${name}`, `Di aplikasi nyata tombol ini membuka konsol ${name} (bridge terpisah, mode lanjutan: serial log, perintah mentah, Mesh). Konsol tersebut di luar cakupan mockup Simple Hub ini.`, `http://127.0.0.1:${port}/`);
+      return;
+    }
+    const link = event.target.closest("#notice a");
+    if (link) {
+      event.preventDefault();
+      event.stopPropagation();
+      openExternal("Verifikasi hotspot di GLD Operator", "Di aplikasi nyata, laptop disambungkan ke Wi-Fi GLD-DATASET-…, lalu GLD Operator > Dataset Wireless > Connect GLD memverifikasi firmware hotspot.", link.href);
+    }
+  }, true);
+
+  // --------------------------------------------------------------- presets
+  const waitFor = async (check, timeout = 20000) => {
+    const end = Date.now() + timeout;
+    while (Date.now() < end) {
+      if (check()) return true;
+      await new Promise((resolve) => setTimeout(resolve, 120));
+    }
+    return false;
+  };
+  const visible = (el) => Boolean(el && !el.hidden && el.offsetParent !== null);
+
+  async function autoplay(preset) {
+    const [device, stage] = preset.split("-");
+    if (!["gld", "ch", "gw"].includes(device)) return;
+    if (!(await waitFor(() => $("runtimeText")?.textContent === "Runtime siap"))) return;
+    document.querySelector(`#deviceTabs [data-device="${device}"]`)?.click();
+    await waitFor(() => [...$("portSelect").options].some((o) => o.value && o.value !== "COM1") && $("connectionTitle").textContent.includes(
+      { gld: "Gas Leak Detector", ch: "Cluster Head", gw: "Network Gateway" }[device]));
+    const select = $("portSelect");
+    select.value = [...select.options].find((o) => o.value && o.value !== "COM1").value;
+    $("connectBtn").click();
+    if (stage !== "config") return;
+    if (await waitFor(() => visible($("continueBtn")), 30000)) $("continueBtn").click();
+  }
+
+  // ------------------------------------------------------------------ wire
+  function mount() {
+    document.body.prepend(banner);
+    document.body.append(launcher, panel, modal);
+    const toggle = (open) => { panel.hidden = !open; launcher.setAttribute("aria-expanded", String(open)); };
+    launcher.onclick = () => toggle(panel.hidden);
+    $("mockPanelClose").onclick = () => toggle(false);
+    $("mockDialogOk").onclick = () => modal.close();
+    panel.querySelectorAll("[data-preset]").forEach((button) => {
+      button.onclick = () => go(PRESETS[Number(button.dataset.preset)][2]);
+    });
+    $("mockForm").onsubmit = (event) => {
+      event.preventDefault();
+      go(Object.fromEntries(new FormData(event.target).entries()));
+    };
+    $("mockReset").onclick = () => go({});
+    document.addEventListener("keydown", (event) => { if (event.key === "Escape" && !panel.hidden) toggle(false); });
+    if (cfg.preset && !builtIn) autoplay(cfg.preset);
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", mount);
+  else mount();
+})();
+</script>
+</body>
+</html>

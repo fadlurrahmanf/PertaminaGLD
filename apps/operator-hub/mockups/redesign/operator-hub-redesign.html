@@ -1,0 +1,1143 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GLD Commissioning Redesign</title>
+<meta name="description" content="Konsep desain baru Operator Hub Pertamina GLD: semua alur Simple Hub dan Expert Console sebagai representasi, data simulasi.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* =====================================================================
+   REDESIGN CONCEPT — "Field Commissioning Desk"
+   Light, calm, instrument-panel feel. Sidebar fleet + vertical checklist.
+   Mockup only: every response is simulated in this page.
+   ===================================================================== */
+:root{
+  --bg:#eef1f5; --surface:#ffffff; --surface-2:#f6f8fb; --sunken:#e4e8ef;
+  --line:#d6dce6; --line-strong:#b9c2d0;
+  --ink:#0f1b2d; --ink-2:#3c4a5e; --muted:#6a7789;
+  --accent:#3346d3; --accent-ink:#ffffff; --accent-soft:#e6e9fb; --accent-line:#b9c1f2;
+  --ok:#147a4f; --ok-soft:#dff3e9; --warn:#9a5b00; --warn-soft:#fdf0d9; --bad:#c22f3c; --bad-soft:#fbe3e5;
+  --alarm:#d81f2a; --info:#0d6e8a; --info-soft:#dcf1f7;
+  --shadow:0 1px 2px #0f1b2d14,0 6px 20px #0f1b2d0f; --shadow-lg:0 18px 60px #0f1b2d33;
+  --radius:12px; --radius-sm:8px;
+  --sans:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0c1119; --surface:#131a25; --surface-2:#18212e; --sunken:#0f151e;
+  --line:#253042; --line-strong:#344257; --ink:#e7edf6; --ink-2:#c1cbda; --muted:#8a97aa;
+  --accent:#7d8cff; --accent-ink:#0c1119; --accent-soft:#1d2447; --accent-line:#3a4592;
+  --ok:#4fd39a; --ok-soft:#12302a; --warn:#f2b45a; --warn-soft:#33270f; --bad:#ff7883; --bad-soft:#3a1a20;
+  --alarm:#ff4d57; --info:#5cc8e6; --info-soft:#0f2b35; --shadow:0 1px 2px #0006,0 6px 20px #0005; --shadow-lg:0 18px 60px #000a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0c1119; --surface:#131a25; --surface-2:#18212e; --sunken:#0f151e;
+  --line:#253042; --line-strong:#344257; --ink:#e7edf6; --ink-2:#c1cbda; --muted:#8a97aa;
+  --accent:#7d8cff; --accent-ink:#0c1119; --accent-soft:#1d2447; --accent-line:#3a4592;
+  --ok:#4fd39a; --ok-soft:#12302a; --warn:#f2b45a; --warn-soft:#33270f; --bad:#ff7883; --bad-soft:#3a1a20;
+  --alarm:#ff4d57; --info:#5cc8e6; --info-soft:#0f2b35; --shadow:0 1px 2px #0006,0 6px 20px #0005; --shadow-lg:0 18px 60px #000a; color-scheme:dark}
+
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--sans);-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+button:disabled{cursor:not-allowed;opacity:.5}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mono{font-family:var(--mono)}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+/* ---------- app frame ---------- */
+.app{display:grid;grid-template-columns:268px minmax(0,1fr);min-height:100vh}
+.sidebar{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;gap:18px;padding:20px 16px;border-right:1px solid var(--line);background:var(--surface);overflow-y:auto}
+.brand{display:flex;align-items:center;gap:11px;padding:2px 6px}
+.brand-mark{display:grid;place-items:center;width:38px;height:38px;border-radius:10px;background:var(--ink);color:var(--surface);font:700 15px var(--mono)}
+.brand b{display:block;font-size:15px;letter-spacing:-.01em}.brand small{display:block;color:var(--muted);font-size:12px}
+.side-label{margin:0 6px;color:var(--muted);font:600 11px var(--mono);letter-spacing:.12em;text-transform:uppercase}
+.fleet{display:grid;gap:8px}
+.fleet-card{display:grid;grid-template-columns:auto 1fr auto;gap:4px 11px;align-items:center;width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);text-align:left;transition:border-color .15s,background .15s}
+.fleet-card:hover{border-color:var(--line-strong)}
+.fleet-card[aria-current="true"]{border-color:var(--accent);background:var(--accent-soft);box-shadow:inset 3px 0 0 var(--accent)}
+.fleet-icon{grid-row:span 2;display:grid;place-items:center;width:36px;height:36px;border-radius:9px;background:var(--sunken);font:600 14px var(--mono)}
+.fleet-card[aria-current="true"] .fleet-icon{background:var(--accent);color:var(--accent-ink)}
+.fleet-card b{font-size:14px}.fleet-card small{grid-column:2/4;color:var(--muted);font:12px var(--mono)}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--line-strong)}
+.dot.ok{background:var(--ok);box-shadow:0 0 0 3px var(--ok-soft)}.dot.warn{background:var(--warn);box-shadow:0 0 0 3px var(--warn-soft)}.dot.bad{background:var(--bad);box-shadow:0 0 0 3px var(--bad-soft)}
+.mode-toggle{display:grid;grid-template-columns:1fr 1fr;padding:4px;border-radius:10px;background:var(--sunken)}
+.mode-toggle button{padding:8px;border:0;border-radius:7px;background:transparent;color:var(--ink-2);font-weight:600;font-size:13px}
+.mode-toggle button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.side-foot{margin-top:auto;display:grid;gap:8px}
+.ghost{display:flex;align-items:center;gap:8px;width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:var(--radius-sm);background:transparent;font-size:13px;font-weight:600;color:var(--ink-2);text-align:left}
+.ghost:hover{background:var(--surface-2)}
+.mock-tag{display:inline-block;padding:1px 7px;border-radius:999px;background:var(--warn-soft);color:var(--warn);font:600 10px var(--mono);letter-spacing:.1em}
+
+.main{min-width:0;display:flex;flex-direction:column}
+.commandbar{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:14px 28px;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(8px)}
+.crumb{display:grid;gap:1px;min-width:0;margin-right:auto}
+.crumb small{color:var(--muted);font:12px var(--mono)}.crumb b{font-size:19px;letter-spacing:-.015em}
+.conn{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.pill{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:var(--surface);font:600 12px var(--mono);white-space:nowrap}
+.pill.ok{border-color:transparent;background:var(--ok-soft);color:var(--ok)}.pill.warn{border-color:transparent;background:var(--warn-soft);color:var(--warn)}.pill.bad{border-color:transparent;background:var(--bad-soft);color:var(--bad)}.pill.info{border-color:transparent;background:var(--info-soft);color:var(--info)}.pill.accent{border-color:transparent;background:var(--accent-soft);color:var(--accent)}
+select.port{height:38px;min-width:220px;padding:0 10px;border:1px solid var(--line-strong);border-radius:var(--radius-sm);background:var(--surface);font:500 13px var(--mono)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:38px;padding:8px 15px;border:1px solid var(--line-strong);border-radius:var(--radius-sm);background:var(--surface);font-weight:600;font-size:14px;white-space:nowrap}
+.btn:hover:not(:disabled){background:var(--surface-2)}
+.btn.primary{border-color:var(--accent);background:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover:not(:disabled){filter:brightness(1.08);background:var(--accent)}
+.btn.danger{border-color:var(--bad);color:var(--bad)}
+.btn.small{min-height:32px;padding:5px 11px;font-size:13px}
+.btn.wide{width:100%}
+.btn .spin{width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.content{padding:24px 28px 80px;display:grid;gap:18px}
+.grid-2{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(300px,1fr);gap:18px;align-items:start}
+.card{border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow)}
+.card-pad{padding:18px 20px}
+.card h2{margin:0;font-size:16px;letter-spacing:-.01em}
+.card h3{margin:0;font-size:14px}
+.eyebrow{margin:0 0 4px;color:var(--muted);font:600 11px var(--mono);letter-spacing:.12em;text-transform:uppercase}
+.sub{margin:4px 0 0;color:var(--muted);font-size:13.5px}
+.hr{height:1px;background:var(--line);margin:14px 0}
+.empty{display:grid;place-items:center;gap:8px;padding:38px 20px;color:var(--muted);text-align:center}
+
+/* ---------- commissioning checklist ---------- */
+.progress-head{display:flex;align-items:center;gap:16px;padding:16px 20px;border-bottom:1px solid var(--line)}
+.progress-bar{flex:1;height:8px;border-radius:99px;background:var(--sunken);overflow:hidden}
+.progress-bar i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--accent),var(--ok));transition:width .4s}
+.progress-head b{font:600 13px var(--mono)}
+.steps{list-style:none;margin:0;padding:6px 0}
+.step{position:relative;padding:0 20px}
+.step+.step{border-top:1px solid var(--line)}
+.step-head{display:grid;grid-template-columns:34px 1fr auto;align-items:center;gap:12px;width:100%;padding:15px 0;border:0;background:transparent;text-align:left}
+.step-num{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;border:1.5px solid var(--line-strong);background:var(--surface);font:600 13px var(--mono);color:var(--muted)}
+.step.done .step-num{border-color:var(--ok);background:var(--ok);color:#fff}
+.step.active .step-num{border-color:var(--accent);background:var(--accent);color:var(--accent-ink);box-shadow:0 0 0 5px var(--accent-soft)}
+.step.locked .step-head{cursor:not-allowed}
+.step-title b{display:block;font-size:15px}.step-title small{color:var(--muted);font-size:13px}
+.step-body{padding:0 0 20px 46px}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ---------- forms ---------- */
+.field{display:grid;gap:6px}
+.field label,.label{color:var(--ink-2);font-size:13px;font-weight:600}
+.field .hint{color:var(--muted);font-size:12px}
+.field .err{color:var(--bad);font-size:12.5px;font-weight:500}
+.input,.select,.textarea{width:100%;height:40px;padding:0 12px;border:1px solid var(--line-strong);border-radius:var(--radius-sm);background:var(--surface);font:500 14px var(--mono)}
+.textarea{height:auto;min-height:120px;padding:10px 12px;resize:vertical;font-size:12.5px;line-height:1.4}
+.input.invalid{border-color:var(--bad);box-shadow:0 0 0 3px var(--bad-soft)}
+.form-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end}
+.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.form-grid .span{grid-column:1/-1}
+.saved{display:inline-flex;align-items:center;gap:6px;color:var(--ok);font-size:12.5px;font-weight:600}
+.check{display:flex;align-items:flex-start;gap:9px;font-size:14px}
+.check input{width:17px;height:17px;margin-top:2px;accent-color:var(--accent)}
+
+/* ---------- callouts & results ---------- */
+.callout{display:grid;grid-template-columns:auto 1fr;gap:10px;padding:12px 14px;border-radius:var(--radius-sm);background:var(--surface-2);border:1px solid var(--line);font-size:13.5px}
+.callout.info{background:var(--info-soft);border-color:transparent}
+.callout.warn{background:var(--warn-soft);border-color:transparent;color:var(--ink)}
+.callout.bad{background:var(--bad-soft);border-color:transparent}
+.callout.ok{background:var(--ok-soft);border-color:transparent}
+.callout .ico{font:700 14px var(--mono)}
+.callout p{margin:0}
+.result{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center}
+.gauge{--p:0;position:relative;display:grid;place-items:center;width:96px;height:96px;border-radius:50%;background:conic-gradient(var(--c,var(--accent)) calc(var(--p)*1%),var(--sunken) 0)}
+.gauge::after{content:"";position:absolute;inset:9px;border-radius:50%;background:var(--surface)}
+.gauge span{position:relative;z-index:1;font:600 20px var(--mono)}
+.checks{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;margin-top:14px}
+.chk{display:grid;grid-template-columns:auto 1fr;gap:3px 9px;padding:10px 11px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface-2)}
+.chk i{grid-row:span 2;display:grid;place-items:center;width:20px;height:20px;border-radius:6px;font:700 12px var(--mono);font-style:normal}
+.chk.ok i{background:var(--ok-soft);color:var(--ok)}.chk.bad i{background:var(--bad-soft);color:var(--bad)}.chk.pending i{background:var(--warn-soft);color:var(--warn)}
+.chk b{font-size:13px}.chk small{color:var(--muted);font-size:12px;line-height:1.35}
+.btn-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+
+/* ---------- facts & timeline ---------- */
+.facts{display:grid;margin:0}
+.facts div{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px dashed var(--line)}
+.facts div:last-child{border-bottom:0}
+.facts dt{color:var(--muted);font-size:13px}.facts dd{margin:0;font:500 13px var(--mono);text-align:right}
+.timeline{list-style:none;margin:0;padding:0;display:grid;gap:0;max-height:360px;overflow:auto}
+.timeline li{position:relative;padding:0 0 13px 20px;font-size:13px}
+.timeline li::before{content:"";position:absolute;left:4px;top:7px;width:7px;height:7px;border-radius:50%;background:var(--line-strong)}
+.timeline li::after{content:"";position:absolute;left:7px;top:17px;bottom:0;width:1px;background:var(--line)}
+.timeline li:last-child::after{display:none}
+.timeline li.ok::before{background:var(--ok)}.timeline li.bad::before{background:var(--bad)}.timeline li.warn::before{background:var(--warn)}
+.timeline time{color:var(--muted);font:12px var(--mono)}
+.timeline b{font-weight:600}
+
+/* ---------- alarm panel ---------- */
+.alarm{border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.alarm-top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;background:var(--surface-2);border-bottom:1px solid var(--line)}
+.alarm-body{display:grid;gap:14px;padding:16px}
+.seg{display:inline-grid;grid-auto-flow:column;padding:3px;border-radius:9px;background:var(--sunken)}
+.seg button{padding:7px 16px;border:0;border-radius:7px;background:transparent;font-weight:600;font-size:13px;color:var(--ink-2)}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.lamp{display:flex;align-items:center;gap:14px;padding:14px;border-radius:var(--radius-sm);border:1px dashed var(--line-strong)}
+.lamp-bulb{width:42px;height:42px;border-radius:50%;background:var(--sunken);border:2px solid var(--line-strong);flex:none}
+.lamp.on .lamp-bulb{background:var(--alarm);border-color:var(--alarm);box-shadow:0 0 0 6px color-mix(in srgb,var(--alarm) 25%,transparent),0 0 26px var(--alarm);animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:.35}}
+.lamp b{display:block}.lamp small{color:var(--muted);font:12px var(--mono)}
+
+/* ---------- tabs (expert) ---------- */
+.tabs{display:flex;gap:2px;overflow-x:auto;border-bottom:1px solid var(--line);padding:0 4px}
+.tabs button{padding:12px 14px;border:0;border-bottom:2px solid transparent;background:transparent;font-weight:600;font-size:14px;color:var(--muted);white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.kpi{padding:14px 16px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
+.kpi small{display:block;color:var(--muted);font:600 11px var(--mono);letter-spacing:.1em;text-transform:uppercase}
+.kpi b{display:block;margin-top:4px;font:600 22px var(--mono);letter-spacing:-.02em}
+.kpi span{color:var(--muted);font-size:12.5px}
+.sensors{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.sensor{padding:12px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface)}
+.sensor header{display:flex;justify-content:space-between;align-items:baseline}
+.sensor b{font:600 13px var(--mono)}.sensor small{color:var(--muted);font:11px var(--mono)}
+.sensor .val{font:600 17px var(--mono);margin:4px 0 2px}
+.spark{width:100%;height:38px;display:block}
+.spark polyline{fill:none;stroke:var(--accent);stroke-width:1.6}
+.table{width:100%;border-collapse:collapse;font-size:13px}
+.table th{padding:9px 12px;border-bottom:1px solid var(--line);color:var(--muted);font:600 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;text-align:left;white-space:nowrap}
+.table td{padding:9px 12px;border-bottom:1px solid var(--line);font-family:var(--mono);white-space:nowrap}
+.table tr:last-child td{border-bottom:0}
+.table-wrap{overflow-x:auto}
+.terminal{display:grid;grid-template-rows:1fr auto;height:360px;border-radius:var(--radius-sm);background:#0b1220;color:#cfe3ff;overflow:hidden}
+.terminal pre{margin:0;padding:12px 14px;overflow:auto;font:12.5px/1.55 var(--mono);white-space:pre-wrap;word-break:break-word}
+.terminal pre .tx{color:#ffcf70}.terminal pre .err{color:#ff8a93}.terminal pre .sys{color:#7fd1ae}
+.terminal form{display:flex;gap:8px;padding:8px;border-top:1px solid #1d2a40}
+.terminal input{flex:1;height:36px;padding:0 10px;border:1px solid #26344c;border-radius:6px;background:#0f1a2c;color:#e7f0ff;font:13px var(--mono)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.chip{padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--surface-2);font:500 12px var(--mono)}
+.chip:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+.bars{display:grid;gap:8px}
+.bar-row{display:grid;grid-template-columns:70px 1fr 64px;gap:10px;align-items:center;font:12.5px var(--mono)}
+.bar{height:10px;border-radius:99px;background:var(--sunken);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);transition:width .3s}
+.bar-row.ok .bar i{background:var(--ok)}
+.topo{width:100%;max-width:760px;height:auto;display:block;margin:0 auto}
+.topo text{fill:var(--ink);font:12px var(--mono)}
+.topo .n{fill:var(--surface);stroke:var(--line-strong);stroke-width:1.5}
+.topo .n.gw{stroke:var(--accent);stroke-width:2}
+.topo .e{stroke:var(--line-strong);stroke-width:1.5;fill:none}
+.topo .e.live{stroke:var(--accent);stroke-dasharray:5 5;animation:flow 1s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-10}}
+
+/* ---------- drawer, modal, toast ---------- */
+.scrim{position:fixed;inset:0;z-index:30;background:#0b1220a6;backdrop-filter:blur(2px);animation:fade .2s}
+@keyframes fade{from{opacity:0}}
+.drawer{position:fixed;z-index:31;top:0;right:0;bottom:0;width:min(500px,100vw);display:flex;flex-direction:column;background:var(--surface);box-shadow:var(--shadow-lg);animation:slide .25s ease}
+@keyframes slide{from{transform:translateX(30px);opacity:0}}
+.drawer header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:20px 22px;border-bottom:1px solid var(--line)}
+.drawer header h2{margin:0;font-size:19px}
+.drawer .body{flex:1;overflow:auto;padding:20px 22px;display:grid;gap:16px;align-content:start}
+.drawer footer{display:flex;justify-content:flex-end;gap:8px;padding:14px 22px;border-top:1px solid var(--line)}
+.x{width:34px;height:34px;border:1px solid var(--line);border-radius:50%;background:transparent;font-size:18px;line-height:1}
+.modal{position:fixed;z-index:41;left:50%;top:50%;width:min(440px,calc(100vw - 32px));transform:translate(-50%,-50%);padding:22px;border-radius:16px;background:var(--surface);box-shadow:var(--shadow-lg);animation:pop .2s ease}
+@keyframes pop{from{opacity:0;transform:translate(-50%,-46%)}}
+.modal h2{margin:0 0 8px;font-size:19px}
+.modal p{margin:0 0 12px;color:var(--ink-2);font-size:14px}
+.modal .btn-row{justify-content:flex-end}
+.modal-scrim{z-index:40}
+.flash-log{height:150px;overflow:auto;margin:0;padding:10px 12px;border-radius:var(--radius-sm);background:#0b1220;color:#cfe3ff;font:12px/1.55 var(--mono)}
+.big-pct{font:600 34px var(--mono);letter-spacing:-.03em}
+.toasts{position:fixed;z-index:50;right:20px;bottom:20px;display:grid;gap:8px;width:min(360px,calc(100vw - 40px))}
+.toast{display:grid;grid-template-columns:auto 1fr;gap:10px;padding:12px 14px;border-radius:var(--radius-sm);background:var(--ink);color:var(--surface);box-shadow:var(--shadow-lg);font-size:13.5px;animation:rise .25s}
+.toast.ok b{color:#7be0b1}.toast.bad b{color:#ff9aa2}.toast.warn b{color:#ffcf70}
+.toast b{font:700 13px var(--mono)}
+
+/* ---------- reviewer scenario popover ---------- */
+.scenario{position:fixed;z-index:35;left:16px;bottom:16px;width:min(380px,calc(100vw - 32px));max-height:calc(100vh - 32px);overflow:auto;padding:18px;border-radius:14px;background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow-lg);animation:rise .2s}
+.scenario h2{margin:0;font-size:16px}
+.scenario .field{margin-top:10px}
+.presets{display:grid;gap:6px;margin-top:10px}
+.presets button{padding:9px 11px;border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--surface-2);text-align:left;font-size:13px}
+.presets button b{display:block;font-size:13.5px}
+.presets button:hover{border-color:var(--accent)}
+
+@media (max-width:1100px){.grid-2{grid-template-columns:1fr}.kpis,.sensors{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:820px){
+  .app{grid-template-columns:1fr}
+  .sidebar{position:static;height:auto;flex-direction:column;gap:12px;padding:14px 16px;border-right:0;border-bottom:1px solid var(--line)}
+  .fleet{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .fleet-card{grid-template-columns:1fr;justify-items:start;padding:10px}
+  .fleet-icon{grid-row:auto}.fleet-card small{grid-column:auto}.fleet-card .dot{position:absolute;margin:2px 0 0 0}
+  .fleet-card{position:relative}.fleet-card .dot{top:10px;right:10px}
+  .side-foot{margin-top:0;grid-template-columns:1fr 1fr}
+  .commandbar,.content{padding-left:16px;padding-right:16px}
+  .commandbar{position:static}
+  select.port{min-width:0;flex:1}
+  .conn{width:100%}
+  .form-grid{grid-template-columns:1fr}
+  .step-body{padding-left:0}
+  .kpis,.sensors{grid-template-columns:1fr 1fr}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" aria-label="Perangkat">
+    <div class="brand"><span class="brand-mark">GLD</span><span><b>Field Commissioning</b><small>Operator Hub · konsep baru <span class="mock-tag">MOCKUP</span></small></span></div>
+    <p class="side-label">Armada perangkat</p>
+    <nav class="fleet" id="fleet"></nav>
+    <p class="side-label">Mode kerja</p>
+    <div class="mode-toggle" role="group" aria-label="Mode kerja">
+      <button type="button" data-action="mode" data-mode="operator">Operator</button>
+      <button type="button" data-action="mode" data-mode="expert">Expert</button>
+    </div>
+    <div class="side-foot">
+      <button class="ghost" type="button" data-action="scenario">Skenario simulasi</button>
+      <button class="ghost" type="button" data-action="theme">Tema terang / gelap</button>
+    </div>
+  </aside>
+  <main class="main">
+    <div class="commandbar" id="commandbar"></div>
+    <div class="content" id="content"></div>
+  </main>
+</div>
+<div id="overlay"></div>
+<div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+"use strict";
+/* =====================================================================
+   Simulation layer — representation only. No serial port, firmware,
+   NVS, MQTT, data or device is touched; all values are generated here.
+   ===================================================================== */
+const $ = (sel, root = document) => root.querySelector(sel);
+const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms * (S.cfg.speed === "fast" ? 0.3 : 1)));
+const now = () => new Date().toLocaleTimeString("id-ID", { hour12: false });
+
+const DEV = {
+  gld: { label: "GLD", name: "Gas Leak Detector", glyph: "G", expertName: "GLD Operator",
+    ports: [["COM10", "USB-Enhanced-SERIAL CH343"], ["COM9", "Silicon Labs CP210x"], ["COM1", "Communications Port"]] },
+  ch: { label: "CH", name: "Cluster Head", glyph: "C", expertName: "CH Operator",
+    ports: [["COM39", "USB-SERIAL CH340"], ["COM38", "USB-SERIAL CH340"], ["COM5", "USB-SERIAL CH340"], ["COM1", "Communications Port"]] },
+  gw: { label: "Gateway", name: "Network Gateway", glyph: "W", expertName: "Gateway Operator",
+    ports: [["COM3", "USB-SERIAL CH340"], ["COM1", "Communications Port"]] }
+};
+const GLD_PACKAGES = [
+  ["gld", "GasleakDetector - GLD1 (GPIO41 Lamp & Buzzer)", "0.8.38"],
+  ["gld_model_1", "Model 1 - Board 1", "0.8.36"], ["gld_model_2", "Model 2 - Board 2", "0.8.36"], ["gld_model_3", "Model 3 - Board 3", "0.8.36"],
+  ["gld_v2", "GasleakDetector - Board V2", "0.8.30"], ["gld_atex", "GasleakDetector - GLD ATEX (GPIO7 fan)", "0.8.30"],
+  ["gld_model_1_dataset_workflow_wifi", "GLD1 Model 1 - Hotspot Wizard Dataset", "0.8.36"],
+  ["gld_model_2_dataset_workflow_wifi", "GLD1 Model 2 - Hotspot Wizard Dataset", "0.8.36"],
+  ["gld_model_3_dataset_workflow_wifi", "GLD1 Model 3 - Hotspot Wizard Dataset", "0.8.36"]
+];
+const isHotspot = (env) => /_dataset_(?:replay_|workflow_)?wifi$/.test(env);
+const SENSORS = ["MQ8", "MQ135", "MQ3", "MQ5", "MQ4", "MQ7", "MQ6", "MQ2"];
+
+const SCENARIO_OPTIONS = {
+  gld: ["Kondisi GLD", [["normal", "Normal — test lulus"], ["fresh", "Board baru — tanpa firmware"], ["fail", "Test gagal — MCP4725/DAC/Sensor"], ["pending", "Test belum lengkap — Sensor menunggu"], ["alarm-locked", "Kontrak alarm tidak lengkap"]]],
+  ch: ["Kondisi CH", [["normal", "Normal — test lulus"], ["fresh", "Board baru — tanpa firmware"], ["fail", "Test gagal — Radio Mesh"]]],
+  gw: ["Kondisi Gateway", [["normal", "Normal — Wi-Fi & MQTT tersambung"], ["fresh", "Board baru — tanpa firmware"], ["fail", "Test gagal — MQTT belum tersambung"]]],
+  gwfw: ["Firmware Gateway", [["non_tls", "MQTT non-TLS"], ["tls", "MQTT over TLS (TLS-capable)"]]],
+  drive: ["Output alarm GLD", [["steady_24v", "Steady 24 V"], ["gpio41_high", "GLD1 GPIO41 active-high"], ["gpio41_pullup", "GLD1 GPIO41 active-low + pull-up"]]],
+  upload: ["Hasil upload firmware", [["success", "Sukses + read-back"], ["error", "Gagal di tengah flash"]]],
+  speed: ["Kecepatan", [["normal", "Realistis"], ["fast", "Cepat"]]]
+};
+const DEFAULT_CFG = { gld: "normal", ch: "normal", gw: "normal", gwfw: "non_tls", drive: "steady_24v", upload: "success", speed: "normal" };
+
+const S = { cfg: { ...DEFAULT_CFG }, device: "gld", mode: "operator", tab: {}, devs: {}, activity: [], overlay: null, scenarioOpen: false, theme: null };
+
+function freshDevice(d) {
+  return { connected: false, port: DEV[d].ports[0][0], hasFw: S.cfg[d] !== "fresh", info: null, test: null, busy: "", openStep: null,
+    configOpen: false, form: {}, errors: {}, saved: {}, needsFw: false, pendingHotspot: false, pinUnlocked: false, term: [], live: null };
+}
+function resetWorld(cfg) {
+  S.cfg = { ...DEFAULT_CFG, ...cfg };
+  S.devs = { gld: freshDevice("gld"), ch: freshDevice("ch"), gw: freshDevice("gw") };
+  S.activity = [];
+  S.overlay = null;
+}
+
+function alarmContract() {
+  if (S.cfg.gld === "alarm-locked") return null;
+  return { mode: "auto", manual: false, inference: false, drive: S.cfg.drive };
+}
+function makeInfo(d, factory = false, version) {
+  if (d === "gld") return { id: factory ? "1001" : "1A2B", targetCh: factory ? "0064" : "0066", fw: version || "0.8.36", freq: factory ? 920.0 : 921.4, radio: true, alarm: alarmContract() };
+  if (d === "ch") return { id: factory ? "0064" : "0066", rootGw: "0001", fw: version || "0.8.0", freq: factory ? 920.0 : 921.4, star: true, mesh: S.cfg.ch !== "fail" };
+  return { id: "0001", fw: version || "0.2.0", mesh: true, transport: S.cfg.gwfw, wifi: !factory, mqtt: !factory && S.cfg.gw !== "fail", ssid: factory ? "" : "PGL-BENCH", mqttHost: factory ? "" : "192.168.1.10", mqttPort: S.cfg.gwfw === "tls" ? 8883 : 1884 };
+}
+function testReport(d, info) {
+  const c = (label, ok, detail) => ({ label, ok, detail });
+  let checks;
+  if (d === "gld") {
+    const f = S.cfg.gld === "fail";
+    checks = [c("ADS1256", true, "ADC siap"), f ? c("MCP4725", false, "Terdeteksi 6/8 kanal") : c("MCP4725", true, "8/8 kanal"),
+      f ? c("DAC Control", false, "Uji tulis lulus 6/8") : c("DAC Control", true, "Uji tulis 8/8"), c("LoRa", true, "Radio STAR siap"), c("ML Model", true, "Model termuat"),
+      f ? c("Sensor Read", false, "Pembacaan belum valid") : S.cfg.gld === "pending" ? c("Sensor Read", null, "Menunggu telemetri") : c("Sensor Read", true, "8/8 valid")];
+  } else if (d === "ch") {
+    checks = [c("Identitas CH", true, `0x${info.id}`), c("Root Gateway", true, `0x${info.rootGw}`), c("Radio STAR", info.star, info.star ? "Siap" : "Tidak siap"), c("Radio Mesh", info.mesh, info.mesh ? "Siap" : "Tidak siap")];
+  } else {
+    checks = [c("Identitas Gateway", true, `0x${info.id}`), c("Radio Mesh", info.mesh, "Siap"), c("Wi-Fi", info.wifi, info.wifi ? `Tersambung · ${info.ssid}` : "Belum tersambung"), c("MQTT", info.mqtt, info.mqtt ? "Tersambung" : "Belum tersambung")];
+  }
+  const passed = checks.filter((x) => x.ok === true).length, failed = checks.filter((x) => x.ok === false).length;
+  return { checks, passed, failed, unknown: checks.length - passed - failed, total: checks.length };
+}
+const testPassed = (dev) => dev.test && dev.test.failed === 0 && dev.test.unknown === 0;
+
+function log(d, kind, title, detail = "") {
+  S.activity.unshift({ t: now(), d, kind, title, detail });
+  S.activity.splice(30);
+}
+function toast(kind, title, text) {
+  const el = document.createElement("div");
+  el.className = `toast ${kind}`;
+  el.innerHTML = `<b>${kind === "ok" ? "✓" : kind === "bad" ? "✕" : "!"}</b><div><b>${esc(title)}</b><div>${esc(text)}</div></div>`;
+  $("#toasts").append(el);
+  setTimeout(() => el.remove(), 4200);
+}
+
+/* ---------------- actions ---------------- */
+const cur = () => S.devs[S.device];
+
+async function connect() {
+  const d = S.device, dev = cur();
+  dev.busy = "connect"; render();
+  await sleep(900);
+  if (dev.port === "COM1") {
+    dev.busy = "";
+    log(d, "bad", "Connect gagal", `${dev.port}: port sistem, tidak ada perangkat`);
+    toast("bad", "Tidak ada perangkat", `${dev.port} adalah port sistem. Pilih port USB serial.`);
+    return render();
+  }
+  dev.connected = true;
+  if (!dev.hasFw) {
+    dev.needsFw = true; dev.busy = "";
+    log(d, "warn", "Terhubung tanpa firmware", `${dev.port}; identitas tidak terdeteksi`);
+    toast("warn", "Firmware tidak terdeteksi", "Pasang firmware awal untuk melanjutkan.");
+    return render();
+  }
+  dev.info = dev.info || makeInfo(d);
+  log(d, "ok", "Terhubung", `${dev.port}; identitas terbaca`);
+  dev.busy = "";
+  await runTest();
+}
+async function disconnect() {
+  const d = S.device, dev = cur();
+  dev.connected = false; dev.needsFw = false; dev.configOpen = false; dev.handover = false; dev.openStep = null;
+  log(d, "", "Disconnect", `${dev.port}; serial ditutup`);
+  render();
+}
+async function runTest() {
+  const d = S.device, dev = cur();
+  if (!dev.connected || !dev.info) return;
+  dev.busy = "test"; dev.test = null; dev.openStep = null; render();
+  await sleep(d === "gld" ? 2400 : 1300);
+  dev.test = testReport(d, dev.info);
+  dev.busy = "";
+  const ok = testPassed(dev);
+  log(d, ok ? "ok" : dev.test.failed ? "bad" : "warn", "Test Device", `${dev.test.passed}/${dev.test.total} OK${dev.test.failed ? `, ${dev.test.failed} error` : dev.test.unknown ? `, ${dev.test.unknown} menunggu` : ""}`);
+  toast(ok ? "ok" : dev.test.failed ? "bad" : "warn", "Test Device selesai", `${dev.test.passed}/${dev.test.total} pemeriksaan lulus.`);
+  render();
+}
+
+const RULES = {
+  id: { gld: ["1001", "FEFF"], ch: ["0010", "0FFF"], gw: ["0001", "000F"] },
+  targetCh: ["0010", "0FFF"], rootGw: ["0001", "000F"]
+};
+function hexIn(v, [lo, hi]) {
+  const t = String(v || "").trim().toUpperCase().replace(/^0X/, "");
+  if (!/^[0-9A-F]{4}$/.test(t)) return [null, "Harus 4 digit heksadesimal."];
+  const n = parseInt(t, 16);
+  if (n < parseInt(lo, 16) || n > parseInt(hi, 16)) return [null, `Rentang yang diizinkan ${lo}–${hi}.`];
+  return [t, ""];
+}
+async function saveField(key) {
+  const d = S.device, dev = cur(), f = dev.form, info = dev.info;
+  dev.errors[key] = ""; dev.saved[key] = false;
+  let value, err;
+  if (key === "id") [value, err] = hexIn(f.id ?? info.id, RULES.id[d]);
+  if (key === "targetCh") [value, err] = hexIn(f.targetCh ?? info.targetCh, RULES.targetCh);
+  if (key === "rootGw") [value, err] = hexIn(f.rootGw ?? info.rootGw, RULES.rootGw);
+  if (key === "freq") {
+    const n = Number(f.freq ?? info.freq);
+    if (!Number.isFinite(n) || n < 920 || n > 923) err = "Frekuensi STAR harus 920.0–923.0 MHz."; else value = Math.round(n * 10) / 10;
+  }
+  if (key === "wifi") {
+    if (!String(f.ssid ?? info.ssid ?? "").trim()) err = "SSID wajib diisi.";
+    else if (f.wifiPass && (f.wifiPass.length < 8 || f.wifiPass.length > 63)) err = "Password Wi-Fi 8–63 karakter.";
+  }
+  if (key === "mqtt") err = validateMqtt(dev);
+  if (err) { dev.errors[key] = err; return render(); }
+  dev.busy = `save-${key}`; render();
+  await sleep(key === "wifi" || key === "mqtt" ? 2200 : key === "targetCh" ? 1800 : 1100);
+  if (key === "id") info.id = value;
+  if (key === "targetCh") info.targetCh = value;
+  if (key === "rootGw") info.rootGw = value;
+  if (key === "freq") info.freq = value;
+  if (key === "wifi") { info.ssid = String(f.ssid ?? info.ssid).trim(); info.wifi = true; }
+  if (key === "mqtt") { info.mqttHost = String(f.mqttHost ?? info.mqttHost).trim(); info.mqttPort = Number(f.mqttPort ?? info.mqttPort); info.mqtt = true; }
+  dev.busy = ""; dev.saved[key] = true;
+  const labels = { id: "Device ID", targetCh: "Target CH", rootGw: "Root Gateway", freq: "STAR frequency", wifi: "Wi-Fi", mqtt: "MQTT" };
+  log(d, "ok", `${labels[key]} tersimpan`, `${dev.port}; ACK + read-back cocok`);
+  toast("ok", `${labels[key]} tersimpan`, "Firmware mengirim ACK dan read-back terverifikasi.");
+  render();
+}
+function validateMqtt(dev) {
+  const f = dev.form, info = dev.info;
+  if (!info.wifi) return "Wi-Fi harus lulus test sebelum MQTT dapat diatur.";
+  const transport = f.transport ?? info.transport;
+  const host = String(f.mqttHost ?? info.mqttHost ?? "").trim(), port = Number(f.mqttPort ?? info.mqttPort);
+  if (!host) return "Host MQTT wajib diisi.";
+  if (!Number.isInteger(port) || port < 1 || port > 65535) return "Port MQTT harus 1–65535.";
+  if (transport === "tls") {
+    if (info.transport !== "tls") return "Firmware Gateway ini tidak mengidentifikasi diri sebagai TLS-capable.";
+    const ca = String(f.ca || "").trim();
+    if (!/^-----BEGIN CERTIFICATE-----[\s\S]+-----END CERTIFICATE-----$/.test(ca) || ca.length < 256) return "Root CA PEM wajib: satu blok CERTIFICATE (256–3900 byte).";
+    if (!String(f.ntp || "").trim()) return "NTP host wajib untuk TLS.";
+  } else if (info.transport === "tls") return "Firmware Gateway adalah TLS; pilih MQTT over TLS.";
+  return "";
+}
+
+async function setAlarmMode(mode) {
+  const dev = S.devs.gld, a = dev.info?.alarm;
+  if (!a || a.mode === mode) return;
+  if (mode === "manual") {
+    const ok = await confirmModal({ title: "Aktifkan mode MANUAL?", body: "MANUAL hanya untuk pengujian dan memisahkan output fisik dari alarm inferensi. Berlaku untuk sesi ini saja — reboot selalu kembali ke AUTO.", phrase: "MANUAL", action: "Aktifkan MANUAL" });
+    if (!ok) return render();
+  }
+  dev.busy = "alarm"; render();
+  await sleep(900);
+  a.mode = mode; a.manual = false; dev.busy = "";
+  log("gld", "ok", `Mode alarm ${mode.toUpperCase()}`, "Sesi ini; diverifikasi dari status baru");
+  render();
+}
+async function setManualOutput(on) {
+  const a = S.devs.gld.info.alarm;
+  if (on) {
+    const msg = a.drive === "gpio41_pullup" ? "GPIO41 akan LOW; J2 LAMP diharapkan HIGH lewat resistor pull-up eksternal (bukan pengukuran tegangan)."
+      : a.drive === "gpio41_high" ? "GPIO41 akan HIGH selama test alarm aktif." : "GLD memberi output steady 24 V; perangkat alarm eksternal berkedip 1 s ON / 1 s OFF.";
+    if (!(await confirmModal({ title: "Nyalakan test alarm fisik?", body: msg, action: "Test Alarm ON" }))) return;
+  }
+  S.devs.gld.busy = "alarm"; render();
+  await sleep(800);
+  a.manual = on; S.devs.gld.busy = "";
+  log("gld", on ? "warn" : "", `Test alarm ${on ? "ON" : "OFF"}`, "ACK + status baru");
+  render();
+}
+async function restartDevice() {
+  const d = S.device, dev = cur();
+  if (!(await confirmModal({ title: `Restart ${DEV[d].label}?`, body: "Koneksi serial terputus sesaat selama boot ulang. Mode alarm MANUAL kembali ke AUTO.", action: "Restart" }))) return;
+  dev.busy = "restart"; render();
+  await sleep(1600);
+  if (d === "gld" && dev.info?.alarm) Object.assign(dev.info.alarm, { mode: "auto", manual: false });
+  dev.busy = "";
+  log(d, "", "Restart", `${dev.port}; boot ulang selesai`);
+  toast("ok", "Restart selesai", "Perangkat kembali online.");
+  render();
+}
+
+/* ---------------- firmware drawer ---------------- */
+function openFirmware(initial = false) {
+  const d = S.device;
+  S.overlay = { type: "firmware", d, initial, pkg: "", board: "", transport: "", reset: initial, error: "", phase: "form", pct: 0, lines: [] };
+  render();
+}
+function fwEnv(o) {
+  if (o.d === "gld") return o.pkg;
+  if (o.d === "ch") return o.board ? `ch_${o.board}` : "";
+  return o.board && o.transport ? `gw_${o.board}${o.transport === "tls" ? "_tls" : ""}` : "";
+}
+function fwVersion(env) {
+  if (!env) return "";
+  if (env.startsWith("ch_")) return "0.8.0";
+  if (env.startsWith("gw_")) return "0.2.0";
+  return GLD_PACKAGES.find((p) => p[0] === env)?.[2] || "";
+}
+async function startUpload() {
+  const o = S.overlay, d = o.d, dev = S.devs[d];
+  const env = fwEnv(o);
+  o.error = "";
+  if (d === "gld" && !o.pkg) o.error = "Pilih paket firmware GLD yang sesuai dengan board.";
+  else if (d !== "gld" && !o.board) o.error = "Pilih bentuk board: Rectangle (kecil) atau Circle (besar).";
+  else if (d === "gw" && !o.transport) o.error = "Pilih transport MQTT: non-TLS atau TLS.";
+  else if (isHotspot(env) && (o.initial || o.reset)) o.error = "Paket Hotspot Dataset memerlukan profil nulling tersimpan. Upload tanpa Reset NVS.";
+  else if (env === "gld" && !o.reset) o.error = "Upload ditahan: downgrade GLD1 v0.8.38 wajib Reset NVS. Centang secara eksplisit setelah membaca peringatan.";
+  if (o.error) return render();
+  o.phase = "flash"; o.pct = 0; o.lines = ["esptool.py v4.7.0", `Serial port ${dev.port}`, "Connecting....", "Chip is ESP32-S3 (QFN56)"]; render();
+  const step = async (pct, line) => { o.pct = pct; if (line) o.lines.push(line); renderOverlay(); await sleep(140); };
+  await step(4, "Uploading stub...");
+  if (o.reset) await step(8, "Erasing NVS partition 0x9000...");
+  for (let p = 10; p <= 96; p += 6) {
+    if (S.cfg.upload === "error" && p >= 46) {
+      o.phase = "error"; o.lines.push("A fatal error occurred: Failed to write to target RAM (Operation timed out)");
+      log(d, "bad", "Upload firmware gagal", `${env}; timeout saat flash`);
+      return render();
+    }
+    await step(p, p % 18 === 4 ? `Writing at 0x${(0x10000 + p * 0x3a00).toString(16)}... (${p} %)` : "");
+  }
+  await step(99, "Hash of data verified. Hard resetting via RTS pin...");
+  if (isHotspot(env)) {
+    o.phase = "hotspot"; dev.connected = false; dev.info = null; dev.test = null; dev.hasFw = true;
+    log(d, "warn", "Flash selesai — verifikasi hotspot", env);
+    return render();
+  }
+  o.lines.push("Reboot... membaca identitas"); renderOverlay();
+  await sleep(1000);
+  const version = fwVersion(env);
+  dev.hasFw = true; dev.needsFw = false;
+  dev.info = o.reset || o.initial || !dev.info ? makeInfo(d, true, version) : { ...dev.info, fw: version };
+  if (d === "gw") dev.info.transport = o.transport;
+  o.pct = 100; o.phase = "done";
+  log(d, "ok", o.initial ? "Firmware awal terpasang" : "Firmware diperbarui", `${env} v${version}; read-back identitas OK${o.reset ? "; NVS direset" : ""}`);
+  render();
+}
+
+/* ---------------- confirmation modal (custom, works in sandboxes) ---------------- */
+function confirmModal({ title, body, action = "Lanjutkan", phrase = "" }) {
+  return new Promise((resolve) => {
+    S.modal = { title, body, action, phrase, resolve, typed: "", error: "" };
+    renderOverlay();
+    setTimeout(() => $("#modalInput")?.focus() || $("#modalAccept")?.focus(), 30);
+  });
+}
+function closeModal(result) {
+  const m = S.modal;
+  if (!m) return;
+  if (result && m.phrase && m.typed.trim() !== m.phrase) { m.error = `Ketik ${m.phrase} dengan tepat.`; renderOverlay(); return; }
+  S.modal = null; renderOverlay(); m.resolve(result);
+}
+
+/* =====================================================================
+   Rendering
+   ===================================================================== */
+function render() {
+  renderFleet(); renderCommandbar(); renderContent(); renderOverlay();
+  document.querySelectorAll('[data-action="mode"]').forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === S.mode)));
+}
+function devStatus(d) {
+  const dev = S.devs[d];
+  if (dev.busy) return ["warn", "sibuk"];
+  if (!dev.connected) return ["", "offline"];
+  if (dev.needsFw) return ["bad", "tanpa firmware"];
+  if (dev.test && !testPassed(dev)) return ["bad", "perlu perhatian"];
+  if (testPassed(dev)) return ["ok", "siap"];
+  return ["warn", "terhubung"];
+}
+function renderFleet() {
+  $("#fleet").innerHTML = Object.keys(DEV).map((d) => {
+    const dev = S.devs[d], [k, t] = devStatus(d);
+    return `<button class="fleet-card" type="button" data-action="device" data-device="${d}" aria-current="${d === S.device}">
+      <span class="fleet-icon">${DEV[d].glyph}</span><b>${DEV[d].label}</b><span class="dot ${k}" title="${t}"></span>
+      <small>${dev.connected ? esc(dev.port) : "—"} · ${dev.info ? `v${esc(dev.info.fw)}` : t}</small></button>`;
+  }).join("");
+}
+function renderCommandbar() {
+  const d = S.device, dev = cur(), [k, t] = devStatus(d);
+  const busy = dev.busy === "connect";
+  $("#commandbar").innerHTML = `
+    <div class="crumb"><small>${S.mode === "expert" ? `EXPERT · ${esc(DEV[d].expertName)}` : "OPERATOR · COMMISSIONING"}</small><b>${esc(DEV[d].name)}</b></div>
+    <div class="conn">
+      <span class="pill ${k}"><span class="dot ${k}"></span>${esc(t)}</span>
+      <label class="sr-only" for="portSelect">Port COM</label>
+      <select id="portSelect" class="port" data-bind="port" ${dev.connected ? "disabled" : ""}>
+        ${DEV[d].ports.map(([p, desc]) => `<option value="${p}" ${p === dev.port ? "selected" : ""}>${p} — ${esc(desc)}</option>`).join("")}
+      </select>
+      ${dev.connected
+        ? `<button class="btn" type="button" data-action="disconnect" ${dev.busy ? "disabled" : ""}>Disconnect</button>`
+        : `<button class="btn primary" type="button" data-action="connect" ${busy ? "disabled" : ""}>${busy ? '<span class="spin"></span>Menghubungkan' : "Connect"}</button>`}
+    </div>`;
+}
+function renderContent() {
+  $("#content").innerHTML = S.mode === "expert" ? expertView() : operatorView();
+  if (S.mode === "expert") afterExpertRender();
+}
+
+/* ---------------- operator view ---------------- */
+function operatorView() {
+  const d = S.device, dev = cur();
+  const s1 = dev.connected && dev.info, s2 = testPassed(dev), s3 = s2 && dev.configOpen;
+  const done = [s1, s2, s3, s3 && dev.handover].filter(Boolean).length;
+  // A passed test stays on screen until the operator explicitly continues.
+  const active = !s1 ? 1 : !s2 || !dev.configOpen ? 2 : 3;
+  const open = dev.openStep || active;
+  const step = (n, title, sub, state, body) => {
+    const locked = state === "locked";
+    return `<li class="step ${state}"><button class="step-head" type="button" data-action="step" data-step="${n}" ${locked ? "disabled" : ""} aria-expanded="${open === n}">
+      <span class="step-num">${state === "done" ? "✓" : n}</span><span class="step-title"><b>${title}</b><small>${sub}</small></span>${stepChip(n, dev)}</button>
+      ${open === n && !locked ? `<div class="step-body">${body()}</div>` : ""}</li>`;
+  };
+  const stateOf = (n) => (n === 1 ? (s1 ? "done" : "active") : n === 2 ? (s2 ? "done" : s1 ? "active" : "locked") : n === 3 ? (s2 ? (dev.configOpen ? "done" : "") : "locked") : (s2 ? (dev.handover ? "done" : dev.configOpen ? "active" : "") : "locked"));
+  return `<div class="grid-2">
+    <section class="card" aria-label="Checklist commissioning">
+      <div class="progress-head"><div><p class="eyebrow">Checklist commissioning</p><h2>${esc(DEV[d].label)} · ${done}/4 tahap</h2></div>
+        <div class="progress-bar" aria-hidden="true"><i style="width:${done * 25}%"></i></div><b>${done * 25}%</b></div>
+      <ol class="steps">
+        ${step(1, "Hubungkan & identifikasi", "Pilih COM di bar atas, lalu Connect", stateOf(1), () => stepConnect(dev))}
+        ${step(2, "Uji kesiapan perangkat", "Boot Report dibaca tanpa mengubah konfigurasi", stateOf(2), () => stepTest(dev))}
+        ${step(3, "Konfigurasi parameter", "Terbuka setelah semua uji lulus", stateOf(3), () => stepConfig(dev))}
+        ${step(4, "Serah terima", "Ringkasan akhir perangkat", stateOf(4), () => stepReady(dev))}
+      </ol>
+    </section>
+    <div style="display:grid;gap:18px">${summaryCard(dev)}${activityCard()}</div>
+  </div>`;
+}
+function stepChip(n, dev) {
+  if (n === 1) return dev.needsFw ? '<span class="pill bad">firmware?</span>' : dev.connected && dev.info ? `<span class="pill ok">${esc(dev.port)}</span>` : "";
+  if (n === 2) return dev.busy === "test" ? '<span class="pill warn">memeriksa…</span>' : dev.test ? `<span class="pill ${testPassed(dev) ? "ok" : dev.test.failed ? "bad" : "warn"}">${dev.test.passed}/${dev.test.total}</span>` : "";
+  if (n === 3) return testPassed(dev) ? '<span class="pill accent">terbuka</span>' : '<span class="pill">terkunci</span>';
+  return "";
+}
+function stepConnect(dev) {
+  if (dev.needsFw) return `<div class="callout bad"><span class="ico">!</span><div><p><b>${esc(dev.port)} terhubung, tetapi firmware tidak terdeteksi.</b></p><p>Board baru atau belum diprogram. Pasang firmware awal; NVS selalu di-reset agar board mulai dari konfigurasi bawaan.</p></div></div>
+    <div class="btn-row"><button class="btn primary" type="button" data-action="firmware-initial">Pasang firmware awal</button><button class="btn" type="button" data-action="disconnect">Batal</button></div>`;
+  if (dev.connected && dev.info) return `<div class="callout ok"><span class="ico">✓</span><p>${esc(dev.port)} terhubung dan teridentifikasi sebagai ${esc(DEV[S.device].label)} 0x${esc(dev.info.id)} · firmware v${esc(dev.info.fw)}.</p></div>`;
+  return `<p class="sub" style="margin:0 0 12px">Port COM selalu mengikuti komputer ini. Setelah terhubung, uji kesiapan berjalan otomatis.</p>
+    <button class="btn primary" type="button" data-action="connect" ${dev.busy ? "disabled" : ""}>${dev.busy === "connect" ? '<span class="spin"></span>Menghubungkan' : `Connect ke ${esc(dev.port)}`}</button>`;
+}
+function stepTest(dev) {
+  if (dev.busy === "test") return `<div class="result"><div class="gauge" style="--p:35;--c:var(--warn)"><span class="spin" style="color:var(--warn)"></span></div><div><h3>Membaca Boot Report…</h3><p class="sub">Menunggu RUN_BOOT_CHECK dan status akhir dari firmware.</p></div></div>`;
+  const t = dev.test;
+  if (!t) return `<button class="btn primary" type="button" data-action="test">Jalankan uji</button>`;
+  const ok = testPassed(dev), pct = Math.round((t.passed / t.total) * 100);
+  return `<div class="result"><div class="gauge" style="--p:${pct};--c:${ok ? "var(--ok)" : t.failed ? "var(--bad)" : "var(--warn)"}"><span>${t.passed}/${t.total}</span></div>
+    <div><h3>${ok ? "Semua pemeriksaan lulus" : t.failed ? `${t.failed} pemeriksaan gagal` : `${t.unknown} pemeriksaan masih menunggu`}</h3>
+    <p class="sub">${ok ? "Perangkat siap dikonfigurasi." : "Konfigurasi tetap terkunci sampai semua pemeriksaan lulus."}</p></div></div>
+    <div class="checks">${t.checks.map((c) => `<div class="chk ${c.ok === true ? "ok" : c.ok === false ? "bad" : "pending"}"><i>${c.ok === true ? "✓" : c.ok === false ? "✕" : "…"}</i><b>${esc(c.label)}</b><small>${esc(c.detail)}</small></div>`).join("")}</div>
+    <div class="btn-row">${ok ? `<button class="btn primary" type="button" data-action="open-config">Lanjut ke konfigurasi →</button>` : ""}
+      <button class="btn" type="button" data-action="test">Uji ulang</button><button class="btn" type="button" data-action="firmware">Upload firmware…</button></div>`;
+}
+function fieldRow(key, label, value, opts = {}) {
+  const dev = cur(), err = dev.errors[key], busy = dev.busy === `save-${key}`;
+  return `<div class="field"><label for="f-${key}">${label}${opts.unit ? ` <span class="hint">(${opts.unit})</span>` : ""}</label>
+    <div class="form-row"><input id="f-${key}" class="input ${err ? "invalid" : ""}" data-form="${key}" value="${esc(value)}" ${opts.type ? `type="${opts.type}" step="0.1"` : 'maxlength="4" autocomplete="off"'}>
+    <button class="btn" type="button" data-action="save" data-key="${key}" ${dev.busy ? "disabled" : ""}>${busy ? '<span class="spin"></span>' : "Simpan"}</button></div>
+    ${err ? `<span class="err">${esc(err)}</span>` : dev.saved[key] ? '<span class="saved">✓ Tersimpan · read-back cocok</span>' : opts.hint ? `<span class="hint">${opts.hint}</span>` : ""}</div>`;
+}
+function stepConfig(dev) {
+  const d = S.device, i = dev.info, f = dev.form;
+  let html = `<div class="form-grid">${fieldRow("id", d === "gld" ? "Device ID" : d === "ch" ? "CH ID" : "Gateway ID", f.id ?? i.id, { hint: `Hex ${RULES.id[d].join("–")}` })}`;
+  if (d !== "gw") html += fieldRow("freq", "STAR frequency", f.freq ?? i.freq, { unit: "MHz", type: "number", hint: "920.0–923.0 MHz" });
+  if (d === "gld") html += fieldRow("targetCh", "Target CH ID", f.targetCh ?? i.targetCh, { hint: "Hex 0010–0FFF · GLD reboot setelah simpan" });
+  if (d === "ch") html += fieldRow("rootGw", "Root Gateway ID", f.rootGw ?? i.rootGw, { hint: "Hex 0001–000F · Mesh: fixed by design" });
+  html += "</div>";
+  if (d === "gw") html += gwNetwork(dev);
+  if (d === "gld") html += `<div class="hr"></div>${alarmPanel(dev)}`;
+  html += `<div class="btn-row"><button class="btn" type="button" data-action="restart" ${dev.busy ? "disabled" : ""}>↻ Restart perangkat</button></div>`;
+  return html;
+}
+function gwNetwork(dev) {
+  const i = dev.info, f = dev.form, transport = f.transport ?? i.transport;
+  const e = (k) => (dev.errors[k] ? `<span class="err">${esc(dev.errors[k])}</span>` : dev.saved[k] ? '<span class="saved">✓ Tersimpan · koneksi terverifikasi</span>' : "");
+  return `<div class="hr"></div><p class="eyebrow">Jaringan wajib Gateway</p>
+  <div class="form-grid">
+    <div class="field"><label for="f-ssid">Wi-Fi SSID</label><input id="f-ssid" class="input" data-form="ssid" value="${esc(f.ssid ?? i.ssid)}"></div>
+    <div class="field"><label for="f-wifiPass">Wi-Fi password</label><input id="f-wifiPass" class="input" type="password" data-form="wifiPass" value="${esc(f.wifiPass ?? "")}"></div>
+    <div class="span">${e("wifi")}<div class="btn-row" style="margin-top:6px"><button class="btn" type="button" data-action="save" data-key="wifi" ${dev.busy ? "disabled" : ""}>${dev.busy === "save-wifi" ? '<span class="spin"></span>Menguji Wi-Fi' : "Simpan & uji Wi-Fi"}</button></div></div>
+    <div class="field"><label for="f-mqttHost">MQTT host</label><input id="f-mqttHost" class="input" data-form="mqttHost" value="${esc(f.mqttHost ?? i.mqttHost)}"></div>
+    <div class="field"><label for="f-mqttPort">MQTT port</label><input id="f-mqttPort" class="input" type="number" data-form="mqttPort" value="${esc(f.mqttPort ?? i.mqttPort)}"></div>
+    <div class="field"><label for="f-mqttUser">Username</label><input id="f-mqttUser" class="input" data-form="mqttUser" value="${esc(f.mqttUser ?? "pgl-hub")}"></div>
+    <div class="field"><label for="f-mqttPass">Password</label><input id="f-mqttPass" class="input" type="password" data-form="mqttPass" value="${esc(f.mqttPass ?? "")}"></div>
+    <div class="field span"><label for="f-transport">Transport</label><select id="f-transport" class="select" data-form="transport"><option value="non_tls" ${transport === "non_tls" ? "selected" : ""}>MQTT non-TLS</option><option value="tls" ${transport === "tls" ? "selected" : ""}>MQTT over TLS</option></select>
+      <span class="hint">Firmware melaporkan: ${i.transport === "tls" ? "TLS-capable" : "non-TLS"}</span></div>
+    ${transport === "tls" ? `<div class="field span"><label for="f-ntp">NTP host</label><input id="f-ntp" class="input" data-form="ntp" placeholder="pool.ntp.org" value="${esc(f.ntp ?? "")}"></div>
+      <div class="field span"><label for="f-ca">Root CA PEM</label><textarea id="f-ca" class="textarea" data-form="ca" spellcheck="false" placeholder="-----BEGIN CERTIFICATE-----&#10;...&#10;-----END CERTIFICATE-----">${esc(f.ca ?? "")}</textarea>
+      <span class="hint">Tidak ada mode TLS insecure. Kunci privat ditolak.</span></div>` : ""}
+    <div class="span">${e("mqtt")}<div class="btn-row" style="margin-top:6px"><button class="btn" type="button" data-action="save" data-key="mqtt" ${dev.busy ? "disabled" : ""}>${dev.busy === "save-mqtt" ? '<span class="spin"></span>Menguji MQTT' : "Simpan & uji MQTT"}</button></div></div>
+  </div>`;
+}
+function alarmPanel(dev) {
+  const a = dev.info.alarm, busy = dev.busy === "alarm";
+  if (!a) return `<div class="alarm"><div class="alarm-top"><div><h3>Alarm fisik</h3><span class="sub">Kontrol terkunci</span></div><span class="pill bad">terkunci</span></div>
+    <div class="alarm-body"><div class="callout bad"><span class="ico">!</span><p>Firmware belum melaporkan kontrak kontrol alarm lengkap. Hub tidak akan mengirim perintah alarm.</p></div></div></div>`;
+  const physical = a.mode === "manual" ? a.manual : a.inference;
+  const out = a.drive === "gpio41_pullup" ? `GPIO41 ${physical ? "LOW" : "HIGH"} → J2 LAMP diharapkan ${physical ? "HIGH" : "LOW"}`
+    : a.drive === "gpio41_high" ? `GPIO41 ${physical ? "HIGH" : "LOW"}` : physical ? "Steady 24 V diperintahkan" : "Output 0 V";
+  return `<div class="alarm"><div class="alarm-top"><div><h3>Alarm fisik</h3><span class="sub">${a.drive === "steady_24v" ? "Output 24 V · perangkat eksternal 1 s ON/OFF" : "GLD1 · GPIO41"}</span></div>
+    <div class="seg" role="group" aria-label="Mode alarm"><button type="button" data-action="alarm-mode" data-mode="auto" aria-pressed="${a.mode === "auto"}" ${busy ? "disabled" : ""}>AUTO</button><button type="button" data-action="alarm-mode" data-mode="manual" aria-pressed="${a.mode === "manual"}" ${busy ? "disabled" : ""}>MANUAL</button></div></div>
+    <div class="alarm-body">
+      <div class="lamp ${physical ? "on" : ""}"><span class="lamp-bulb"></span><div><b>${physical ? "Output AKTIF" : "Output mati"}</b><small>${out} · inferensi: ${a.inference ? "ALARM" : "clear"}</small></div></div>
+      ${a.mode === "manual"
+        ? `<div class="btn-row" style="margin:0"><button class="btn danger" type="button" data-action="alarm-out" data-on="1" ${busy || a.manual ? "disabled" : ""}>Test alarm ON</button><button class="btn" type="button" data-action="alarm-out" data-on="0" ${busy || !a.manual ? "disabled" : ""}>Test alarm OFF</button></div>
+           <div class="callout warn"><span class="ico">!</span><p>MANUAL untuk pengujian, hanya sesi ini. Telemetri & radio tetap melaporkan alarm inferensi sebenarnya. Reboot = AUTO.</p></div>`
+        : `<p class="sub" style="margin:0">AUTO adalah default setiap boot: alarm fisik mengikuti hasil inferensi yang valid.</p>`}
+    </div></div>`;
+}
+function stepReady(dev) {
+  const d = S.device, i = dev.info;
+  return `<div class="callout ok"><span class="ico">✓</span><div><p><b>${esc(DEV[d].label)} 0x${esc(i.id)} siap digunakan.</b></p><p>Firmware aktif v${esc(i.fw)} dibaca langsung dari ${esc(dev.port)}.</p></div></div>
+  <div class="btn-row"><button class="btn" type="button" data-action="restart-flow">Mulai perangkat berikutnya</button><button class="btn" type="button" data-action="go-expert">Buka mode Expert →</button></div>`;
+}
+function summaryCard(dev) {
+  const d = S.device, i = dev.info;
+  let rows = [["Status", devStatus(d)[1]], ["Port", dev.connected ? dev.port : "—"]];
+  if (i) {
+    if (d === "gld") rows.push(["Device ID", `0x${i.id}`], ["Target CH", `0x${i.targetCh}`], ["Firmware", `v${i.fw}`], ["STAR", `${i.freq.toFixed(1)} MHz`], ["Radio", i.radio ? "Ready" : "Tidak siap"], ["Mode alarm", i.alarm ? i.alarm.mode.toUpperCase() : "Tidak tersedia"]);
+    if (d === "ch") rows.push(["CH ID", `0x${i.id}`], ["Root Gateway", `0x${i.rootGw}`], ["Firmware", `v${i.fw}`], ["STAR", `${i.freq.toFixed(1)} MHz`], ["Radio STAR", i.star ? "Ready" : "Tidak siap"], ["Mesh", "Fixed by design"]);
+    if (d === "gw") rows.push(["Gateway ID", `0x${i.id}`], ["Firmware", `v${i.fw}`], ["Transport", i.transport === "tls" ? "TLS" : "non-TLS"], ["Wi-Fi", i.wifi ? i.ssid : "Belum tersambung"], ["MQTT", i.mqtt ? `${i.mqttHost}:${i.mqttPort}` : "Belum tersambung"]);
+  }
+  return `<section class="card card-pad"><p class="eyebrow">Ringkasan perangkat</p><h2>${esc(DEV[d].name)}</h2>
+    <dl class="facts" style="margin-top:8px">${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join("")}</dl></section>`;
+}
+function activityCard() {
+  return `<section class="card card-pad"><p class="eyebrow">Aktivitas</p><h2>Jejak tindakan</h2><div class="hr"></div>
+    ${S.activity.length ? `<ol class="timeline">${S.activity.map((a) => `<li class="${a.kind}"><time>${a.t} · ${DEV[a.d].label}</time><div><b>${esc(a.title)}</b></div><div class="sub" style="margin:0">${esc(a.detail)}</div></li>`).join("")}</ol>` : '<p class="sub" style="margin:0">Belum ada tindakan. Semua aksi perangkat tercatat di sini.</p>'}</section>`;
+}
+
+/* ---------------- expert view ---------------- */
+const EXPERT_TABS = {
+  gld: [["live", "Live telemetri"], ["nulling", "Nulling"], ["dataset", "Dataset"], ["qc", "QC"], ["terminal", "Terminal"]],
+  ch: [["overview", "Ringkasan"], ["nodes", "Node GLD"], ["mesh", "Mesh / Parent"], ["terminal", "Terminal"]],
+  gw: [["overview", "Ringkasan"], ["uplinks", "Uplink"], ["topology", "Topologi"], ["commands", "Perintah"], ["terminal", "Terminal"]]
+};
+function ensureLive(d) {
+  const dev = S.devs[d];
+  if (dev.live) return dev.live;
+  dev.live = d === "gld"
+    ? { series: SENSORS.map((_, k) => Array.from({ length: 40 }, (_, j) => 0.06 + 0.03 * Math.sin((j + k * 3) / 5))), gas: "Clean_Air", conf: 99, nulling: null, dataset: { label: "Clean_Air", rows: 0, recording: false }, qc: null }
+    : d === "ch" ? { nodes: [{ id: "1A2B", seq: 40, alarm: false, ext: true, rssi: -66, snr: 8.9, age: 1 }, { id: "1A2C", seq: 17, alarm: false, ext: false, rssi: -79, snr: 4.1, age: 8 }], parent: "0065", battery: 3920, uptime: 0, hello: 0, state: "JOINED" }
+      : { uplinks: [], published: 0, mqttLive: true, pulls: [] };
+  return dev.live;
+}
+function expertView() {
+  const d = S.device, dev = cur();
+  if (!dev.connected || !dev.info) return `<section class="card"><div class="empty"><b style="color:var(--ink);font-size:16px">${esc(DEV[d].expertName)} memerlukan perangkat terhubung</b><p style="margin:0">Pilih COM di bar atas lalu Connect. Mode Expert memakai koneksi yang sama dengan mode Operator.</p><button class="btn primary" type="button" data-action="connect">Connect ke ${esc(dev.port)}</button></div></section>`;
+  const tabs = EXPERT_TABS[d], tab = S.tab[d] || tabs[0][0];
+  ensureLive(d);
+  const body = d === "gld" ? gldTab(tab, dev) : d === "ch" ? chTab(tab, dev) : gwTab(tab, dev);
+  return `<section class="card"><div class="tabs" role="tablist">${tabs.map(([k, l]) => `<button type="button" role="tab" data-action="tab" data-tab="${k}" aria-selected="${k === tab}">${l}</button>`).join("")}</div>
+    <div class="card-pad">${body}</div></section>
+    <div class="btn-row" style="margin:0"><button class="btn" type="button" data-action="firmware">Upload firmware…</button><button class="btn" type="button" data-action="restart">↻ Restart</button></div>`;
+}
+function spark(arr) {
+  const min = Math.min(...arr), max = Math.max(...arr), span = max - min || 1;
+  return `<svg class="spark" viewBox="0 0 100 38" preserveAspectRatio="none" aria-hidden="true"><polyline points="${arr.map((v, i) => `${(i / (arr.length - 1)) * 100},${36 - ((v - min) / span) * 32}`).join(" ")}"/></svg>`;
+}
+function gldTab(tab, dev) {
+  const L = dev.live, a = dev.info.alarm;
+  if (tab === "live") return `<div class="kpis">
+      <div class="kpi"><small>Kelas gas</small><b id="kGas">${esc(L.gas)}</b><span>inferensi model</span></div>
+      <div class="kpi"><small>Confidence</small><b id="kConf">${L.conf}%</b><span>ambang alarm ≥ 30%</span></div>
+      <div class="kpi"><small>Mode</small><b>inference</b><span>power 24 V</span></div>
+      <div class="kpi"><small>Alarm</small><b style="color:${a && (a.mode === "manual" ? a.manual : a.inference) ? "var(--alarm)" : "var(--ok)"}">${a ? a.mode.toUpperCase() : "—"}</b><span>output fisik</span></div></div>
+    <div class="hr"></div><div class="sensors">${SENSORS.map((s, k) => `<div class="sensor"><header><b>${s}</b><small>CH${k + 1}</small></header><div class="val" data-sv="${k}">${L.series[k].at(-1).toFixed(4)} V</div><div data-sp="${k}">${spark(L.series[k])}</div><small>DAC ${132 + k * 4} · gain ${k === 5 ? 32 : 64}</small></div>`).join("")}</div>`;
+  if (tab === "nulling") {
+    const n = L.nulling;
+    return `<p class="sub" style="margin:0 0 14px">Nulling menyetel DAC tiap kanal hingga baseline sensor mendekati nol. Hasil disimpan sebagai profil di NVS.</p>
+      <div class="bars">${SENSORS.map((s, k) => { const p = n ? n[k] : 0; return `<div class="bar-row ${p >= 100 ? "ok" : ""}"><span>${s}</span><div class="bar"><i style="width:${p}%"></i></div><span>${p >= 100 ? "✓ OK" : n ? `${p}%` : "—"}</span></div>`; }).join("")}</div>
+      <div class="btn-row"><button class="btn primary" type="button" data-action="nulling" ${n && n.some((p) => p < 100) ? "disabled" : ""}>${n && n.some((p) => p < 100) ? '<span class="spin"></span>Nulling berjalan' : n ? "Ulangi nulling 8/8" : "Mulai nulling 8/8"}</button></div>`;
+  }
+  if (tab === "dataset") {
+    const ds = L.dataset;
+    return `<div class="form-grid"><div class="field"><label for="ds-label">Label kelas</label><select id="ds-label" class="select" data-ds="label" ${ds.recording ? "disabled" : ""}>${["Clean_Air", "LPG", "Methane", "Alcohol", "CO"].map((x) => `<option ${x === ds.label ? "selected" : ""}>${x}</option>`).join("")}</select></div>
+      <div class="field"><span class="label">Folder output</span><div class="input" style="display:flex;align-items:center;overflow:hidden;font-size:12px">C:\\PertaminaGLD\\dataset (simulasi)</div></div></div>
+      <div class="kpis" style="margin-top:14px"><div class="kpi"><small>Baris</small><b id="dsRows">${ds.rows}</b><span>sampel 500 ms</span></div><div class="kpi"><small>Status</small><b>${ds.recording ? "REC" : "idle"}</b><span>${ds.recording ? "merekam…" : "siap"}</span></div><div class="kpi"><small>Transport</small><b>Serial</b><span>atau hotspot Wi-Fi</span></div><div class="kpi"><small>AES</small><b>key 1</b><span>siap</span></div></div>
+      <div class="btn-row"><button class="btn ${ds.recording ? "danger" : "primary"}" type="button" data-action="dataset">${ds.recording ? "■ Stop rekam" : "● Mulai rekam"}</button><button class="btn" type="button" data-action="hotspot-info">Dataset Wireless (hotspot)…</button></div>`;
+  }
+  if (tab === "qc") {
+    const q = L.qc;
+    return `<p class="sub" style="margin:0 0 12px">Quality check pasca-produksi: membaca GET_STATUS dan memvalidasi setiap subsistem.</p>
+      ${q ? `<div class="checks">${q.map(([l, ok, det]) => `<div class="chk ${ok ? "ok" : "pending"}"><i>${ok ? "✓" : "…"}</i><b>${l}</b><small>${det}</small></div>`).join("")}</div>` : '<div class="callout info"><span class="ico">i</span><p>Belum ada hasil QC untuk sesi ini.</p></div>'}
+      <div class="btn-row"><button class="btn primary" type="button" data-action="qc">${q ? "Jalankan ulang QC" : "Jalankan QC"}</button></div>`;
+  }
+  return terminal(dev, ["GET_INFO", "GET_STATUS", "RUN_BOOT_CHECK", "GET_TELEMETRY", "SET_MODE nulling", "SET_MODE inference"]);
+}
+function chTab(tab, dev) {
+  const L = dev.live, i = dev.info;
+  if (tab === "overview") return `<div class="kpis"><div class="kpi"><small>State</small><b>${L.state}</b><span>config-ack</span></div><div class="kpi"><small>Baterai</small><b id="chBatt">${L.battery}</b><span>mV · guard 3150</span></div><div class="kpi"><small>Parent</small><b>0x${L.parent}</b><span>RSSI -74 dBm · SNR 7.5</span></div><div class="kpi"><small>Node</small><b>${L.nodes.length}</b><span>di cache</span></div></div>
+    <div class="hr"></div><div class="grid-2" style="grid-template-columns:1fr 1fr"><dl class="facts"><div><dt>CH ID</dt><dd>0x${i.id}</dd></div><div><dt>Root Gateway</dt><dd>0x${i.rootGw}</dd></div><div><dt>Firmware</dt><dd>v${i.fw}</dd></div><div><dt>Protokol</dt><dd>0.2.0</dd></div></dl>
+    <dl class="facts"><div><dt>STAR radio</dt><dd>${i.freq.toFixed(1)} MHz · SF9 · 125 kHz</dd></div><div><dt>MESH radio</dt><dd>922.0 MHz · SF9 · 125 kHz</dd></div><div><dt>Hello terakhir</dt><dd id="chHello">${L.hello ? `${L.hello}s lalu` : "—"}</dd></div><div><dt>Mesh depth</dt><dd>2</dd></div></dl></div>`;
+  if (tab === "nodes") return `<div class="table-wrap"><table class="table"><thead><tr><th>Node</th><th>Seq</th><th>Alarm</th><th>Daya</th><th>RSSI</th><th>SNR</th><th>Terakhir</th></tr></thead><tbody id="chNodes">${chNodeRows(L)}</tbody></table></div>`;
+  if (tab === "mesh") return `<div class="table-wrap"><table class="table"><thead><tr><th>Kandidat</th><th>Parent-nya</th><th>Depth</th><th>RSSI</th><th>SNR</th><th>Baterai</th><th></th></tr></thead><tbody>
+      ${[["0065", "0064", 1, -74, 7.5, 4010], ["0064", "0001", 0, -88, 2.25, 3980]].map((c) => `<tr><td>0x${c[0]}</td><td>0x${c[1]}</td><td>${c[2]}</td><td>${c[3]}</td><td>${c[4]}</td><td>${c[5]}</td><td>${c[0] === L.parent ? '<span class="pill ok">aktif</span>' : '<span class="pill">cadangan</span>'}</td></tr>`).join("")}</tbody></table></div>
+    <div class="btn-row"><button class="btn" type="button" data-action="ch-cmd" data-cmd="SEND_HELLO">Kirim HELLO</button><button class="btn" type="button" data-action="ch-cmd" data-cmd="FORCE_FAILOVER">Paksa failover</button><button class="btn danger" type="button" data-action="ch-cmd" data-cmd="CLEAR_PARENT_NVS">Hapus parent NVS</button></div>`;
+  return terminal(dev, ["APP_PING", "GET_INFO", "GET_STATUS", "GET_NODES", "GET_PARENTS", "DEBUG_ON", "DEBUG_OFF"]);
+}
+function chNodeRows(L) {
+  return L.nodes.map((n) => `<tr><td>0x${n.id}</td><td>${n.seq}</td><td>${n.alarm ? '<span class="pill bad">ALARM</span>' : "—"}</td><td>${n.ext ? "Eksternal" : "Baterai"}</td><td>${n.rssi} dBm</td><td>${n.snr} dB</td><td>${n.age}s lalu</td></tr>`).join("");
+}
+function gwTab(tab, dev) {
+  const L = dev.live, i = dev.info;
+  if (tab === "overview") return `<div class="kpis"><div class="kpi"><small>Wi-Fi</small><b style="color:${i.wifi ? "var(--ok)" : "var(--bad)"}">${i.wifi ? "up" : "down"}</b><span>${esc(i.ssid || "—")} · -58 dBm</span></div><div class="kpi"><small>MQTT</small><b style="color:${i.mqtt ? "var(--ok)" : "var(--bad)"}">${i.mqtt ? "up" : "down"}</b><span>${esc(i.mqttHost || "—")}:${i.mqttPort}</span></div><div class="kpi"><small>Antrian</small><b>0/32</b><span>dropped 0</span></div><div class="kpi"><small>Published</small><b id="gwPub">${L.published}</b><span>sejak boot</span></div></div>
+    <div class="hr"></div><dl class="facts"><div><dt>Gateway ID</dt><dd>0x${i.id}</dd></div><div><dt>Firmware</dt><dd>v${i.fw}</dd></div><div><dt>Transport</dt><dd>${i.transport === "tls" ? "MQTT over TLS" : "MQTT non-TLS"}</dd></div><div><dt>Topic root</dt><dd>gld/gateway</dd></div><div><dt>MESH LoRa</dt><dd>922.0 MHz · 125 kHz · SF9 · CR 4/5 · 17 dBm</dd></div></dl>`;
+  if (tab === "uplinks") return `<div class="table-wrap"><table class="table"><thead><tr><th>Waktu</th><th>Tipe</th><th>Dari</th><th>Ke</th><th>Seq</th><th>Len</th><th>RSSI/SNR</th></tr></thead><tbody id="gwUp">${gwUpRows(L)}</tbody></table></div>`;
+  if (tab === "topology") return `<svg class="topo" viewBox="0 0 640 220" role="img" aria-label="Topologi mesh: Gateway 0001, CH 0064, CH 0065, CH 0066, GLD 1A2B dan 1A2C">
+      <path class="e live" d="M90 110 H200"/><path class="e live" d="M260 110 H360"/><path class="e live" d="M420 110 H500"/><path class="e" d="M540 110 C570 110 570 60 600 60"/><path class="e" d="M540 110 C570 110 570 160 600 160"/>
+      <rect class="n gw" x="20" y="85" width="70" height="50" rx="10"/><text x="55" y="107" text-anchor="middle">GW</text><text x="55" y="124" text-anchor="middle">0x${i.id}</text>
+      <rect class="n" x="200" y="85" width="60" height="50" rx="10"/><text x="230" y="107" text-anchor="middle">CH1</text><text x="230" y="124" text-anchor="middle">0064</text>
+      <rect class="n" x="360" y="85" width="60" height="50" rx="10"/><text x="390" y="107" text-anchor="middle">CH2</text><text x="390" y="124" text-anchor="middle">0065</text>
+      <rect class="n" x="480" y="85" width="60" height="50" rx="10"/><text x="510" y="107" text-anchor="middle">CH3</text><text x="510" y="124" text-anchor="middle">0066</text>
+      <circle class="n" cx="612" cy="60" r="20"/><text x="612" y="64" text-anchor="middle">1A2B</text><circle class="n" cx="612" cy="160" r="20"/><text x="612" y="164" text-anchor="middle">1A2C</text>
+      <text x="145" y="100" text-anchor="middle">-69 dBm</text><text x="310" y="100" text-anchor="middle">-74 dBm</text><text x="460" y="100" text-anchor="middle">-71</text></svg>
+    <p class="sub">Garis putus-putus beranimasi = HELLO/uplink diterima dalam 30 detik terakhir.</p>`;
+  if (tab === "commands") return `<div class="form-grid"><div class="field"><label for="c-cluster">Cluster target</label><select id="c-cluster" class="select" data-cmdf="cluster"><option>0066</option><option>0065</option><option>0064</option></select></div>
+      <div class="field"><label for="c-node">Node GLD (opsional)</label><input id="c-node" class="input" data-cmdf="node" placeholder="1A2B" maxlength="4"></div></div>
+    <div class="btn-row"><button class="btn primary" type="button" data-action="gw-pull" ${i.mqtt ? "" : "disabled"}>Kirim Server Pull</button><button class="btn" type="button" data-action="gw-node" ${i.mqtt ? "" : "disabled"}>Kirim perintah node</button></div>
+    ${i.mqtt ? "" : '<div class="callout warn" style="margin-top:12px"><span class="ico">!</span><p>MQTT belum tersambung — perintah dinonaktifkan.</p></div>'}
+    <div class="hr"></div><p class="eyebrow">Riwayat perintah</p>${L.pulls.length ? `<ol class="timeline">${L.pulls.map((p) => `<li class="${p.ok ? "ok" : "warn"}"><time>${p.t}</time><div><b>${esc(p.title)}</b></div><div class="sub" style="margin:0">${esc(p.detail)}</div></li>`).join("")}</ol>` : '<p class="sub">Belum ada perintah.</p>'}`;
+  return terminal(dev, ["GET_GATEWAY_ADDRESS", "GET_MESH_LORA", "GET_STATUS", "TEST_WIFI"]);
+}
+function gwUpRows(L) {
+  return L.uplinks.length ? L.uplinks.map((u) => `<tr><td>${u.t}</td><td>${u.type}</td><td>0x${u.src}</td><td>0x0001</td><td>${u.seq}</td><td>${u.len}</td><td>${u.rssi} / ${u.snr}</td></tr>`).join("") : '<tr><td colspan="7" style="font-family:var(--sans);color:var(--muted)">Menunggu uplink dari mesh…</td></tr>';
+}
+function terminal(dev, quick) {
+  if (!dev.pinUnlocked) return `<div class="empty"><b style="color:var(--ink);font-size:16px">Terminal terkunci PIN lokal</b><p style="margin:0">Pencegah salah kirim perintah di bench, bukan keamanan sebenarnya.</p><button class="btn primary" type="button" data-action="unlock">Buka kunci</button></div>`;
+  return `<div class="chips">${quick.map((c) => `<button class="chip" type="button" data-action="term-send" data-cmd="${esc(c)}">${esc(c)}</button>`).join("")}</div>
+    <div class="terminal"><pre id="termOut">${dev.term.map((l) => `<span class="${l.k}">${esc(l.text)}</span>`).join("\n") || '<span class="sys">Terminal siap. Ketik perintah atau pilih chip di atas.</span>'}</pre>
+    <form data-action="term-form"><input id="termIn" autocomplete="off" placeholder="Perintah serial, mis. GET_STATUS" aria-label="Perintah serial"><button class="btn primary small" type="submit">Kirim</button></form></div>`;
+}
+function afterExpertRender() { const pre = $("#termOut"); if (pre) pre.scrollTop = pre.scrollHeight; }
+
+function termReply(d, cmd) {
+  const dev = S.devs[d], i = dev.info, c = cmd.trim().split(/\s+/)[0].toUpperCase();
+  const j = (p, o) => `${p} ${JSON.stringify(o)}`;
+  if (d === "gld") {
+    if (c === "GET_INFO") return j("GLD_INFO_JSON", { deviceId: i.id, targetChId: i.targetCh, firmwareVersion: i.fw, starLora: { freqMHz: i.freq } });
+    if (c === "GET_STATUS" || c === "RUN_BOOT_CHECK") return j("GLD_STATUS_JSON", { mode: "inference", gasClass: dev.live.gas, confidence: dev.live.conf, alarmControl: i.alarm ? { mode: i.alarm.mode } : { available: false } });
+    if (c === "GET_TELEMETRY") return j("GLD_TELEMETRY_JSON", { sensors: dev.live.series.map((s) => +s.at(-1).toFixed(4)) });
+    if (c === "SET_MODE") return j("GLD_CMD_ACK_JSON", { cmd: "SET_MODE", status: "ok", rebootExpected: true });
+  }
+  if (d === "ch") {
+    if (c === "APP_PING") return j("CH_CMD_ACK_JSON", { cmd: "APP_PING", status: "ok", message: "pong" });
+    if (c === "GET_INFO") return j("CH_INFO_JSON", { chId: `0x${i.id}`, rootGatewayId: `0x${i.rootGw}`, firmwareVersion: i.fw });
+    if (c === "GET_STATUS") return j("CH_STATUS_JSON", { state: dev.live.state, batteryMv: dev.live.battery, parentId: `0x${dev.live.parent}` });
+    if (c === "GET_NODES") return j("CH_NODES_JSON", { nodes: dev.live.nodes.map((n) => ({ nodeId: `0x${n.id}`, seq: n.seq })) });
+    if (c === "GET_PARENTS") return j("CH_PARENTS_JSON", { active: `0x${dev.live.parent}`, candidates: 2 });
+    if (c.startsWith("DEBUG")) return j("CH_CMD_ACK_JSON", { cmd: c, status: "ok" });
+  }
+  if (d === "gw") {
+    if (c === "GET_GATEWAY_ADDRESS") return j("GW_GATEWAY_ADDRESS_JSON", { gatewayId: `0x${i.id}` });
+    if (c === "GET_MESH_LORA") return j("GW_MESH_LORA_JSON", { freqMHz: 922.0, bwKHz: 125, sf: 9, cr: 5, syncWord: 52, txPowerDbm: 17 });
+    if (c === "GET_STATUS") return j("GW_STATUS_JSON", { wifi: i.wifi, mqtt: i.mqtt, meshReady: true });
+    if (c === "TEST_WIFI") return `GW_CMD_ACK cmd=TEST_WIFI status=ok connected=${i.wifi ? 1 : 0} ip=${i.wifi ? "192.168.1.57" : "none"}`;
+  }
+  return `ERR unknown command ${c}`;
+}
+
+/* ---------------- overlay rendering ---------------- */
+function renderOverlay() {
+  const host = $("#overlay");
+  let html = "";
+  const o = S.overlay;
+  if (o?.type === "firmware") html += firmwareDrawer(o);
+  if (S.scenarioOpen) html += scenarioPanel();
+  if (S.modal) {
+    const m = S.modal;
+    html += `<div class="scrim modal-scrim" data-action="modal-cancel"></div><div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><h2 id="modalTitle">${esc(m.title)}</h2><p>${esc(m.body)}</p>
+      ${m.phrase ? `<div class="field"><label for="modalInput">Ketik <b class="mono">${esc(m.phrase)}</b> untuk melanjutkan</label><input id="modalInput" class="input ${m.error ? "invalid" : ""}" data-modal-input value="${esc(m.typed)}" autocomplete="off">${m.error ? `<span class="err">${esc(m.error)}</span>` : ""}</div>` : ""}
+      <div class="btn-row"><button class="btn" type="button" data-action="modal-cancel">Batal</button><button id="modalAccept" class="btn primary" type="button" data-action="modal-ok">${esc(m.action)}</button></div></div>`;
+  }
+  const focusedId = document.activeElement?.id;
+  host.innerHTML = html;
+  if (focusedId && host.querySelector(`#${CSS.escape(focusedId)}`)) {
+    const el = host.querySelector(`#${CSS.escape(focusedId)}`); el.focus();
+    if (el.setSelectionRange && el.value != null) try { el.setSelectionRange(el.value.length, el.value.length); } catch {}
+  }
+  const logEl = $("#flashLog"); if (logEl) logEl.scrollTop = logEl.scrollHeight;
+}
+function firmwareDrawer(o) {
+  const d = o.d, dev = S.devs[d], env = fwEnv(o), ver = fwVersion(env);
+  let body;
+  if (o.phase === "form") {
+    body = `${o.initial ? '<div class="callout info"><span class="ico">i</span><p>Firmware awal selalu mereset NVS. Identitas default dibaca ulang setelah board reboot.</p></div>' : ""}
+      ${d === "gld" ? `<div class="field"><label for="fw-pkg">Paket firmware GLD</label><select id="fw-pkg" class="select" data-fw="pkg"><option value="">Pilih paket sesuai board</option>
+        ${GLD_PACKAGES.map(([e, l, v]) => `<option value="${e}" ${o.pkg === e ? "selected" : ""} ${o.initial && isHotspot(e) ? "disabled" : ""}>${esc(l)} — v${v}${o.initial && isHotspot(e) ? " (perlu profil nulling)" : ""}</option>`).join("")}
+        <option disabled>Model 4 — artefak belum tersedia</option></select></div>` : ""}
+      ${d !== "gld" ? `<div class="field"><span class="label">Bentuk board</span><div class="seg" role="group">${[["small", "Rectangle (kecil)"], ["large", "Circle (besar)"]].map(([v, l]) => `<button type="button" data-action="fw-board" data-v="${v}" aria-pressed="${o.board === v}">${l}</button>`).join("")}</div></div>` : ""}
+      ${d === "gw" ? `<div class="field"><span class="label">Transport MQTT</span><div class="seg" role="group">${[["non_tls", "non-TLS"], ["tls", "TLS"]].map(([v, l]) => `<button type="button" data-action="fw-transport" data-v="${v}" aria-pressed="${o.transport === v}">${l}</button>`).join("")}</div><span class="hint">TLS dan non-TLS adalah environment firmware terpisah.</span></div>` : ""}
+      <dl class="facts"><div><dt>Environment</dt><dd>${esc(env || "lengkapi pilihan")}</dd></div><div><dt>Versi paket</dt><dd>${ver ? `v${ver}` : "—"}</dd></div><div><dt>Target COM</dt><dd>${esc(dev.port)}</dd></div></dl>
+      <label class="check"><input type="checkbox" data-fw="reset" ${o.reset ? "checked" : ""} ${o.initial ? "disabled" : ""}><span><b>Reset NVS</b><br><span class="sub">${o.initial ? "Wajib untuk firmware awal." : "Tidak dicentang: semua parameter NVS dipertahankan. Dicentang: NVS dihapus, boot dengan default firmware."}</span></span></label>
+      ${env === "gld" ? '<div class="callout warn"><span class="ico">!</span><p><b>Downgrade GLD1 v0.8.38 wajib Reset NVS.</b> Format profil dari firmware lebih baru tidak kompatibel. Konfigurasi, hasil nulling, dan binding model akan dihapus; setelah upload lakukan setup ulang, nulling 8/8, lalu bind model.</p></div>' : ""}
+      ${isHotspot(env) ? '<div class="callout info"><span class="ico">i</span><p>Paket Hotspot Dataset: setelah flash, verifikasi dilakukan lewat Wi-Fi GLD-DATASET-…, bukan COM. Jangan reset NVS.</p></div>' : ""}
+      ${o.error ? `<div class="callout bad"><span class="ico">✕</span><p>${esc(o.error)}</p></div>` : ""}`;
+  } else {
+    const title = o.phase === "done" ? "Firmware terverifikasi" : o.phase === "error" ? "Upload gagal" : o.phase === "hotspot" ? "Flash selesai — verifikasi hotspot" : "Memprogram board…";
+    body = `<div style="display:flex;align-items:baseline;justify-content:space-between"><h3>${title}</h3><span class="big-pct" style="color:${o.phase === "error" ? "var(--bad)" : o.phase === "done" ? "var(--ok)" : "var(--accent)"}">${o.pct}%</span></div>
+      <div class="progress-bar"><i style="width:${o.pct}%;${o.phase === "error" ? "background:var(--bad)" : ""}"></i></div>
+      <pre id="flashLog" class="flash-log">${esc(o.lines.join("\n"))}</pre>
+      ${o.phase === "done" ? `<div class="callout ok"><span class="ico">✓</span><p>Flash, reboot, dan read-back identitas selesai. Firmware aktif v${esc(ver)}. Uji kesiapan dijalankan ulang otomatis.</p></div>` : ""}
+      ${o.phase === "error" ? '<div class="callout bad"><span class="ico">✕</span><p>Board tidak merespons saat menulis flash. Periksa kabel/mode boot lalu coba lagi. Firmware lama tetap di board.</p></div>' : ""}
+      ${o.phase === "hotspot" ? '<div class="callout warn"><span class="ico">!</span><p>Perangkat belum diverifikasi. Sambungkan Wi-Fi laptop ke <b class="mono">GLD-DATASET-1A2B</b>, lalu buka Expert › Dataset › Dataset Wireless dan Connect GLD.</p></div>' : ""}`;
+  }
+  const flashing = o.phase === "flash";
+  const footer = o.phase === "form"
+    ? `<button class="btn" type="button" data-action="fw-close">Batal</button><button class="btn primary" type="button" data-action="fw-upload">Upload ke ${esc(dev.port)}</button>`
+    : o.phase === "error" ? `<button class="btn" type="button" data-action="fw-close">Tutup</button><button class="btn primary" type="button" data-action="fw-retry">Coba lagi</button>`
+      : o.phase === "hotspot" ? `<button class="btn" type="button" data-action="fw-close">Tutup</button><button class="btn primary" type="button" data-action="fw-hotspot">Buka Dataset Wireless</button>`
+        : `<button class="btn primary" type="button" data-action="fw-close" ${flashing ? "disabled" : ""}>${flashing ? "Jangan cabut kabel…" : "Selesai"}</button>`;
+  return `<div class="scrim" ${flashing ? "" : 'data-action="fw-close"'}></div><aside class="drawer" role="dialog" aria-modal="true" aria-labelledby="fwTitle">
+    <header><div><p class="eyebrow">${o.initial ? "Firmware awal" : "Upload firmware"}</p><h2 id="fwTitle">${esc(DEV[d].name)}</h2></div><button class="x" type="button" data-action="fw-close" aria-label="Tutup" ${flashing ? "disabled" : ""}>×</button></header>
+    <div class="body">${body}</div><footer>${footer}</footer></aside>`;
+}
+function scenarioPanel() {
+  const presets = [
+    ["Mulai bersih", "Semua normal", {}], ["GLD board baru", "Tanpa firmware → firmware awal", { gld: "fresh" }],
+    ["GLD test gagal", "3 pemeriksaan gagal", { gld: "fail" }], ["GLD test menunggu", "Sensor belum ada telemetri", { gld: "pending" }],
+    ["Alarm GLD1 pull-up", "Varian GPIO41 + ULN2003", { drive: "gpio41_pullup" }], ["Kontrak alarm tidak lengkap", "Kontrol terkunci", { gld: "alarm-locked" }],
+    ["CH board baru", "Pilih Rectangle/Circle", { ch: "fresh" }], ["Gateway TLS", "Root CA + NTP", { gwfw: "tls" }],
+    ["Gateway MQTT gagal", "Test gagal di MQTT", { gw: "fail" }], ["Upload gagal", "Flash berhenti di 46%", { upload: "error" }]
+  ];
+  return `<div class="scenario" role="dialog" aria-labelledby="scTitle"><div style="display:flex;justify-content:space-between;align-items:start"><div><p class="eyebrow">Mockup · peninjau</p><h2 id="scTitle">Skenario simulasi</h2></div><button class="x" type="button" data-action="scenario" aria-label="Tutup">×</button></div>
+    <p class="sub">Semua respons disimulasikan di halaman ini. Tidak ada port COM, firmware, data, atau perangkat nyata yang disentuh.</p>
+    <div class="presets">${presets.map(([t, s, v], k) => `<button type="button" data-action="preset" data-k="${k}"><b>${t}</b>${s}</button>`).join("")}</div>
+    <div class="hr"></div>${Object.entries(SCENARIO_OPTIONS).map(([k, [label, opts]]) => `<div class="field"><label for="sc-${k}">${label}</label><select id="sc-${k}" class="select" data-sc="${k}">${opts.map(([v, l]) => `<option value="${v}" ${S.cfg[k] === v ? "selected" : ""}>${l}</option>`).join("")}</select></div>`).join("")}
+    <div class="btn-row"><button class="btn primary" type="button" data-action="apply-scenario">Terapkan & mulai ulang</button></div></div>`.replace("<div class=\"presets\">", `<div class="presets" data-presets='${esc(JSON.stringify(presets.map((p) => p[2])))}'>`);
+}
+
+/* =====================================================================
+   Events (delegated)
+   ===================================================================== */
+document.addEventListener("click", async (event) => {
+  const el = event.target.closest("[data-action]");
+  if (!el || el.disabled) return;
+  const a = el.dataset.action, d = S.device, dev = cur();
+  switch (a) {
+    case "device": S.device = el.dataset.device; render(); break;
+    case "mode": S.mode = el.dataset.mode; render(); break;
+    case "connect": connect(); break;
+    case "disconnect": disconnect(); break;
+    case "test": runTest(); break;
+    case "step": dev.openStep = Number(el.dataset.step); if (dev.openStep >= 3 && testPassed(dev)) dev.configOpen = true; if (dev.openStep === 4 && testPassed(dev)) dev.handover = true; render(); break;
+    case "open-config": dev.configOpen = true; dev.openStep = 3; render(); break;
+    case "save": saveField(el.dataset.key); break;
+    case "alarm-mode": setAlarmMode(el.dataset.mode); break;
+    case "alarm-out": setManualOutput(el.dataset.on === "1"); break;
+    case "restart": restartDevice(); break;
+    case "restart-flow": dev.openStep = 1; dev.configOpen = false; dev.handover = false; disconnect(); break;
+    case "go-expert": S.mode = "expert"; render(); break;
+    case "firmware": openFirmware(false); break;
+    case "firmware-initial": openFirmware(true); break;
+    case "fw-board": S.overlay.board = el.dataset.v; S.overlay.error = ""; renderOverlay(); break;
+    case "fw-transport": S.overlay.transport = el.dataset.v; S.overlay.error = ""; renderOverlay(); break;
+    case "fw-upload": case "fw-retry": startUpload(); break;
+    case "fw-close": {
+      const o = S.overlay; S.overlay = null;
+      if (o?.phase === "done") { render(); S.device = o.d; await runTest(); } else render();
+      break;
+    }
+    case "fw-hotspot": S.overlay = null; S.device = "gld"; S.mode = "expert"; S.tab.gld = "dataset"; render(); break;
+    case "scenario": S.scenarioOpen = !S.scenarioOpen; renderOverlay(); break;
+    case "preset": { const list = JSON.parse(el.closest("[data-presets]").dataset.presets); S.scenarioOpen = false; resetWorld(list[Number(el.dataset.k)]); toast("ok", "Skenario diterapkan", "Simulasi dimulai ulang."); render(); break; }
+    case "apply-scenario": { const cfg = {}; document.querySelectorAll("[data-sc]").forEach((s) => { cfg[s.dataset.sc] = s.value; }); S.scenarioOpen = false; resetWorld(cfg); toast("ok", "Skenario diterapkan", "Simulasi dimulai ulang."); render(); break; }
+    case "theme": {
+      const dark = (document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")) === "dark";
+      document.documentElement.dataset.theme = dark ? "light" : "dark"; break;
+    }
+    case "modal-ok": closeModal(true); break;
+    case "modal-cancel": closeModal(false); break;
+    case "tab": S.tab[d] = el.dataset.tab; render(); break;
+    case "unlock": {
+      const ok = await confirmModal({ title: "Buka kunci Expert", body: "PIN lokal mencegah salah kirim perintah di bench. Di mockup PIN-nya 0000.", phrase: "0000", action: "Buka kunci" });
+      if (ok) { dev.pinUnlocked = true; render(); } break;
+    }
+    case "term-send": sendTerm(el.dataset.cmd); break;
+    case "nulling": runNulling(); break;
+    case "dataset": dev.live.dataset.recording = !dev.live.dataset.recording; log("gld", "", dev.live.dataset.recording ? "Rekam dataset dimulai" : "Rekam dataset dihentikan", `label ${dev.live.dataset.label}; ${dev.live.dataset.rows} baris`); render(); break;
+    case "hotspot-info": toast("warn", "Dataset Wireless", "Laptop terhubung ke GLD-DATASET-…, GLD merekam lewat hotspot 500 ms (simulasi)."); break;
+    case "qc": runQc(); break;
+    case "ch-cmd": chCommand(el.dataset.cmd); break;
+    case "gw-pull": case "gw-node": gwCommand(a); break;
+    default: break;
+  }
+});
+document.addEventListener("submit", (event) => {
+  event.preventDefault();
+  if (event.target.matches('[data-action="term-form"]')) { const input = $("#termIn"); if (input.value.trim()) sendTerm(input.value); }
+});
+document.addEventListener("input", (event) => {
+  const t = event.target, dev = cur();
+  if (t.dataset.form) { dev.form[t.dataset.form] = t.value; dev.errors[t.dataset.form] = ""; if (t.dataset.form === "transport") render(); }
+  if (t.dataset.fw === "pkg") { S.overlay.pkg = t.value; S.overlay.error = ""; if (t.value === "gld" || isHotspot(t.value)) S.overlay.reset = S.overlay.initial && !isHotspot(t.value) ? true : false; renderOverlay(); }
+  if (t.dataset.fw === "reset") { S.overlay.reset = t.checked; S.overlay.error = ""; renderOverlay(); }
+  if (t.dataset.modalInput !== undefined && S.modal) { S.modal.typed = t.value; }
+  if (t.dataset.ds === "label") dev.live.dataset.label = t.value;
+});
+document.addEventListener("change", (event) => {
+  const t = event.target;
+  if (t.dataset.bind === "port") { cur().port = t.value; render(); }
+  if (t.dataset.form === "transport") { cur().form.transport = t.value; render(); }
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") { if (S.modal) closeModal(false); else if (S.overlay && S.overlay.phase !== "flash") { S.overlay = null; render(); } else if (S.scenarioOpen) { S.scenarioOpen = false; renderOverlay(); } }
+  if (event.key === "Enter" && S.modal && event.target.dataset.modalInput !== undefined) closeModal(true);
+});
+
+async function sendTerm(cmd) {
+  const d = S.device, dev = cur();
+  dev.term.push({ k: "tx", text: `> ${cmd}` }); render();
+  await sleep(250);
+  const reply = termReply(d, cmd);
+  dev.term.push({ k: reply.startsWith("ERR") ? "err" : "", text: reply });
+  dev.term.splice(0, Math.max(0, dev.term.length - 80));
+  render(); setTimeout(() => $("#termIn")?.focus(), 0);
+}
+async function runNulling() {
+  const L = S.devs.gld.live;
+  L.nulling = SENSORS.map(() => 0); render();
+  log("gld", "", "Nulling dimulai", "8 kanal");
+  while (L.nulling.some((p) => p < 100)) {
+    await sleep(220);
+    L.nulling = L.nulling.map((p, k) => Math.min(100, p + 6 + ((k * 7) % 9)));
+    if (S.mode === "expert" && S.device === "gld" && (S.tab.gld || "live") === "nulling") render();
+  }
+  log("gld", "ok", "Nulling 8/8 selesai", "Profil tersimpan di NVS");
+  toast("ok", "Nulling selesai", "8/8 kanal dalam toleransi, profil tersimpan."); render();
+}
+async function runQc() {
+  const L = S.devs.gld.live;
+  L.qc = null; render(); await sleep(1200);
+  L.qc = [["Sensor / ADS valid", true, "8/8 kanal"], ["Sensor stabil", true, "drift < 2%"], ["Model ML", true, "termuat"], ["Profil nulling", true, "diterapkan"], ["Binding ID profil", S.cfg.gld !== "fail", S.cfg.gld === "fail" ? "belum tersedia" : "cocok"], ["Verifikasi DAC", S.cfg.gld !== "fail", S.cfg.gld === "fail" ? "6/8" : "8/8"], ["Inferensi valid", true, "Clean_Air 99%"]];
+  log("gld", "ok", "QC selesai", `${L.qc.filter((x) => x[1]).length}/${L.qc.length} lulus`); render();
+}
+async function chCommand(cmd) {
+  const L = S.devs.ch.live;
+  if (cmd === "CLEAR_PARENT_NVS" && !(await confirmModal({ title: "Hapus parent NVS?", body: "CH akan mencari parent ulang (JOINING) sebelum kembali JOINED.", action: "Hapus" }))) return;
+  if (cmd === "FORCE_FAILOVER") { L.state = "FAILOVER"; render(); await sleep(1200); L.parent = L.parent === "0065" ? "0064" : "0065"; }
+  if (cmd === "CLEAR_PARENT_NVS") { L.state = "JOINING"; render(); await sleep(1500); }
+  if (cmd === "SEND_HELLO") L.hello = 0.1;
+  L.state = "JOINED";
+  log("ch", "ok", cmd, cmd === "FORCE_FAILOVER" ? `parent aktif 0x${L.parent}` : "ACK ok");
+  toast("ok", cmd, "CH_CMD_ACK_JSON status=ok"); render();
+}
+async function gwCommand(kind) {
+  const L = S.devs.gw.live, cluster = $("#c-cluster")?.value || "0066", node = ($("#c-node")?.value || "").toUpperCase();
+  if (kind === "gw-node" && !/^[0-9A-F]{4}$/.test(node)) return toast("bad", "Node tidak valid", "Isi Node GLD 4 digit heksadesimal, mis. 1A2B.");
+  const reqId = Math.floor(Math.random() * 65535).toString(16).toUpperCase();
+  L.pulls.unshift({ t: now(), ok: false, title: kind === "gw-pull" ? `Server Pull → CH 0x${cluster}` : `Perintah node → 0x${node}`, detail: `MQTT publish gld/gateway/0x0001/cmd · requestId ${reqId}` });
+  render(); await sleep(1300);
+  L.pulls[0].ok = true; L.pulls[0].detail += kind === "gw-pull" ? " · CLUSTER_DATA_RESPONSE diterima (2 record)" : " · ACK node diterima";
+  pushUplink(L, kind === "gw-pull" ? "CLUSTER_DATA_RESPONSE" : "NODE_ACK", cluster);
+  log("gw", "ok", kind === "gw-pull" ? "Server Pull" : "Perintah node", `cluster 0x${cluster}`); render();
+}
+function pushUplink(L, type, src = "0066") {
+  L.published += 1;
+  L.uplinks.unshift({ t: now(), type, src, seq: (L.published * 7) % 256, len: type === "CLUSTER_DATA_RESPONSE" ? 68 : 34, rssi: -70 - Math.round(Math.random() * 10), snr: (5 + Math.random() * 4).toFixed(1) });
+  L.uplinks.splice(14);
+}
+
+/* ---------------- live ticks (only patch the visible numbers) ---------------- */
+setInterval(() => {
+  const g = S.devs.gld;
+  if (g.connected && g.live) {
+    g.live.series.forEach((s, k) => { s.push(Math.max(-0.05, s.at(-1) + (Math.random() - 0.5) * 0.012 + Math.sin(Date.now() / 3000 + k) * 0.002)); s.shift(); });
+    g.live.conf = 97 + Math.round(Math.random() * 2);
+    if (g.live.dataset.recording) g.live.dataset.rows += 2;
+  }
+  const c = S.devs.ch;
+  if (c.connected && c.live) { c.live.nodes.forEach((n) => { n.age += 1; if (Math.random() < 0.3) { n.age = 0; n.seq = (n.seq + 1) % 256; n.rssi = -60 - Math.round(Math.random() * 18); } }); if (c.live.hello) c.live.hello += 1; if (Math.random() < 0.1) c.live.hello = 0.1; }
+  const w = S.devs.gw;
+  if (w.connected && w.live && w.info?.mqtt && Math.random() < 0.35) pushUplink(w.live, Math.random() < 0.7 ? "CLUSTER_DATA_RESPONSE" : "CH_HELLO", ["0066", "0065", "0064"][Math.floor(Math.random() * 3)]);
+  if (S.mode !== "expert") return;
+  const d = S.device, tab = S.tab[d] || EXPERT_TABS[d][0][0];
+  if (d === "gld" && tab === "live" && g.live) {
+    g.live.series.forEach((s, k) => { const v = $(`[data-sv="${k}"]`), p = $(`[data-sp="${k}"]`); if (v) v.textContent = `${s.at(-1).toFixed(4)} V`; if (p) p.innerHTML = spark(s); });
+    const conf = $("#kConf"); if (conf) conf.textContent = `${g.live.conf}%`;
+  }
+  if (d === "gld" && tab === "dataset") { const r = $("#dsRows"); if (r) r.textContent = g.live.dataset.rows; }
+  if (d === "ch" && tab === "nodes") { const b = $("#chNodes"); if (b) b.innerHTML = chNodeRows(c.live); }
+  if (d === "ch" && tab === "overview") { const h = $("#chHello"); if (h) h.textContent = c.live.hello ? `${Math.floor(c.live.hello)}s lalu` : "—"; }
+  if (d === "gw" && tab === "uplinks") { const b = $("#gwUp"); if (b) b.innerHTML = gwUpRows(w.live); }
+  if (d === "gw" && tab === "overview") { const p = $("#gwPub"); if (p) p.textContent = w.live.published; }
+}, 1000);
+
+resetWorld({});
+render();
+})();
+</script>
+</body>
+</html>

@@ -68,6 +68,7 @@
     mock.configure(values);
     try { history.replaceState(null, "", `#${hashFor(values)}`); } catch { /* sandboxed preview: URL is fixed */ }
     if (run > 1) restoreHubDom();
+    if (run > 1) { closeExpert(); Object.keys(expertFrames).forEach((id) => { expertFrames[id].remove(); delete expertFrames[id]; }); }
     renderChrome();
     window.scrollTo(0, 0);
     window.__bootHub();
@@ -101,8 +102,10 @@
       <li>Stepper 3 tahap dengan navigasi kembali; Lanjutkan ke Konfigurasi; Kembali ke awal</li>
       <li>Konfigurasi: Device ID, STAR frequency, Target CH (GLD), Root Gateway (CH), Wi-Fi &amp; MQTT non-TLS/TLS (Gateway) dengan validasi rentang</li>
       <li>Alarm fisik GLD: AUTO/MANUAL (konfirmasi ketik MANUAL), Test Alarm ON/OFF, 3 varian output, kontrak terkunci</li>
-      <li>Restart perangkat (konfirmasi), aktivitas terbaru, ringkasan perangkat, Expert Console (dicegat)</li>
-    </ul></details>`;
+      <li>Restart perangkat (konfirmasi), aktivitas terbaru, ringkasan perangkat</li>
+          <li>Expert Console: GLD Operator (simulator Mock bawaan), CH Operator dan Gateway Operator (bridge + perangkat tiruan, MQTT tiruan) dari UI asli masing-masing</li>
+    </ul></details>
+    <section><h3>Expert Console</h3><div class="mock-links"><button type="button" data-expert="gld">GLD Operator</button><button type="button" data-expert="ch">CH Operator</button><button type="button" data-expert="gw">Gateway Operator</button></div></section>`;
   const launcher = document.createElement("button");
   launcher.type = "button";
   launcher.className = "mock-launcher";
@@ -130,21 +133,75 @@
     modal.showModal();
   }
 
+  // ------------------------------------------------- Expert Console overlay
+  // The real button navigates to the device's operator console (its own
+  // bridge on :5174/:5273/:5373). The mockup opens that console's own UI,
+  // bundled into this file, in an overlay with a simulated bridge + device.
+  const EXPERT = {
+    gld: { name: "GLD Operator", port: 5174, note: "Simulator GLD bawaan konsol (mode Mock) aktif otomatis." },
+    ch: { name: "CH Operator", port: 5273, note: "Pilih COM lalu Connect; CH tiruan menjawab perintah serial." },
+    gw: { name: "Gateway Operator", port: 5373, note: "Pilih COM lalu Connect; Gateway + broker MQTT tiruan." }
+  };
+  const expertFrames = {};
+  const overlay = document.createElement("section");
+  overlay.className = "mock-expert";
+  overlay.hidden = true;
+  overlay.setAttribute("aria-label", "Expert Console (mockup)");
+  overlay.innerHTML = `<header class="mock-expert-bar"><button type="button" id="mockExpertBack" class="secondary">&larr; Kembali ke Simple Hub</button><div><b id="mockExpertTitle"></b><small id="mockExpertNote"></small></div><span class="mock-expert-url" id="mockExpertUrl"></span><button type="button" id="mockExpertReset" class="secondary">Muat ulang konsol</button></header><div class="mock-expert-frames" id="mockExpertFrames"></div>`;
+  let expertActive = null;
+
+  function openExpert(device) {
+    const spec = EXPERT[device] || EXPERT.gld;
+    const key = EXPERT[device] ? device : "gld";
+    if (!expertFrames[key]) {
+      const frame = document.createElement("iframe");
+      frame.title = `${spec.name} (mockup)`;
+      // Own sandbox: the console never shares storage or navigation with the Hub.
+      frame.setAttribute("sandbox", "allow-scripts allow-modals allow-forms allow-downloads");
+      frame.srcdoc = JSON.parse(document.getElementById(`mockExpert-${key}`).textContent);
+      $("mockExpertFrames").append(frame);
+      expertFrames[key] = frame;
+    }
+    Object.entries(expertFrames).forEach(([id, frame]) => { frame.hidden = id !== key; });
+    expertActive = key;
+    $("mockExpertTitle").textContent = `Expert Console — ${spec.name}`;
+    $("mockExpertNote").textContent = `Mockup: ${spec.note}`;
+    $("mockExpertUrl").textContent = `http://127.0.0.1:${spec.port}/`;
+    overlay.hidden = false;
+    document.documentElement.classList.add("mock-expert-open");
+    setPanel(false);
+  }
+  function closeExpert() {
+    overlay.hidden = true;
+    document.documentElement.classList.remove("mock-expert-open");
+  }
+  function reloadExpert() {
+    if (!expertActive) return;
+    expertFrames[expertActive]?.remove();
+    delete expertFrames[expertActive];
+    openExpert(expertActive);
+  }
+  window.addEventListener("message", (event) => {
+    const data = event.data;
+    if (!data || data.source !== "operator-hub-mockup") return;
+    if (data.type === "close-expert") closeExpert();
+    if (data.type === "external-link") openExternal("Tautan keluar", "Tautan ini membuka halaman di luar konsol. Di mockup navigasi keluar dinonaktifkan.", String(data.href || ""));
+  });
+  window.__openExpertMockup = openExpert;
+
   window.addEventListener("click", (event) => {
     if (event.target.closest("#expertBtn")) {
       event.preventDefault();
       event.stopPropagation();
-      const device = document.querySelector("#deviceTabs .device-tab.active")?.dataset.device || "gld";
-      const port = device === "gld" ? 5174 : device === "ch" ? 5273 : 5373;
-      const name = { gld: "GLD Operator", ch: "CH Operator", gw: "Gateway Operator" }[device];
-      openExternal(`Expert Console — ${name}`, `Di aplikasi nyata tombol ini membuka konsol ${name} (bridge terpisah, mode lanjutan: serial log, perintah mentah, Mesh). Konsol tersebut di luar cakupan mockup Simple Hub ini.`, `http://127.0.0.1:${port}/`);
+      openExpert(document.querySelector("#deviceTabs .device-tab.active")?.dataset.device || "gld");
       return;
     }
     const link = event.target.closest("#notice a");
     if (link) {
+      // Hotspot verification link -> GLD Operator (Dataset Wireless).
       event.preventDefault();
       event.stopPropagation();
-      openExternal("Verifikasi hotspot di GLD Operator", "Di aplikasi nyata, laptop disambungkan ke Wi-Fi GLD-DATASET-…, lalu GLD Operator > Dataset Wireless > Connect GLD memverifikasi firmware hotspot.", link.href);
+      openExpert("gld");
     }
   }, true);
 
@@ -197,10 +254,13 @@
     // Plain buttons, not a <form>: sandboxed previews block form submission.
     $("mockApply").onclick = () => go(Object.fromEntries([...panel.querySelectorAll("#mockForm select")].map((select) => [select.name, select.value])));
     $("mockReset").onclick = () => go({});
+    panel.querySelectorAll("[data-expert]").forEach((button) => { button.onclick = () => openExpert(button.dataset.expert); });
   }
 
   document.body.prepend(banner);
-  document.body.append(launcher, panel, modal);
+  document.body.append(launcher, panel, modal, overlay);
+  $("mockExpertBack").onclick = closeExpert;
+  $("mockExpertReset").onclick = reloadExpert;
   launcher.onclick = () => setPanel(panel.hidden);
   $("mockDialogOk").onclick = () => modal.close();
   document.addEventListener("keydown", (event) => { if (event.key === "Escape" && !panel.hidden) setPanel(false); });

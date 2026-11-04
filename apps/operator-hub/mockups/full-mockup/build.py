@@ -16,11 +16,46 @@ sandboxed preview iframe (about:srcdoc). Re-run after changing the production UI
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 
+from expert_bundle import bundle_app
+
 HERE = Path(__file__).resolve().parent
 PUBLIC = HERE.parent.parent / "public"
+APPS = HERE.parents[2]
+EXPERT = HERE / "expert"
+
+# Expert Console apps reachable from the Hub's "Expert Console" button.
+EXPERT_APPS = {
+    "gld": ("gld-operator", "GLD Operator Mockup", "gld-device.js", {
+        # Start the GLD Operator's own built-in simulator (normally ?mock=1).
+        "main.js": [('new URLSearchParams(window.location.search).get("mock") === "1" && !state.mock',
+                     '!state.mock /* mockup: built-in Mock mode always on */')],
+    }),
+    "ch": ("ch-operator", "CH Operator Mockup", "ch-device.js", {}),
+    "gw": ("gw-operator", "Gateway Operator Mockup", "gw-device.js", {}),
+}
+
+
+def package_manifests(key: str) -> dict[str, object]:
+    root = HERE.parents[1] / "firmware-packages"
+    manifests: dict[str, object] = {}
+    for manifest in sorted(root.glob(f"{key}*/latest/manifest.json")):
+        data = json.loads(manifest.read_text(encoding="utf-8"))
+        if data.get("environment") == manifest.parent.parent.name:
+            manifests[data["environment"]] = data
+    return manifests
+
+
+def build_expert(key: str) -> str:
+    app, title, device_script, patches = EXPERT_APPS[key]
+    scripts = [read(EXPERT / name) for name in ("storage-shim.js", device_script, "bridge-mock.js", "nav-shim.js")]
+    # Real package manifests (metadata only, never the .bin files) so the
+    # console's schema-v2 package validation runs exactly as in production.
+    scripts.insert(1, f"window.__mockManifests = {json.dumps(package_manifests(key))};")
+    return bundle_app(APPS / app, title=title, head_scripts=[script_safe(x) for x in scripts], patches=patches)
 OUTPUT = HERE.parent / "operator-hub-full-mockup.html"
 
 
@@ -30,6 +65,11 @@ def read(path: Path) -> str:
 
 def script_safe(source: str) -> str:
     return re.sub(r"</(script)", r"<\\/\1", source, flags=re.IGNORECASE)
+
+
+def json_in_script(value: str) -> str:
+    # JSON allows "\\/", so this keeps "</script" from closing the data block.
+    return json.dumps(value).replace("</", "<\\/")
 
 
 def build() -> str:
@@ -78,9 +118,14 @@ def build() -> str:
         f"<script>/* mockup backend */\n{script_safe(read(HERE / 'mock-backend.js'))}</script>\n"
     )
     html = html.replace("</head>", head_extra + "</head>", 1)
+    # Expert consoles are stored as JSON strings and opened in an iframe (srcdoc).
+    expert_data = "".join(
+        f'<script type="application/json" id="mockExpert-{key}">{json_in_script(build_expert(key))}</script>\n'
+        for key in EXPERT_APPS
+    )
     html = html.replace(
         "</body>",
-        f"<script>/* mockup reviewer panel */\n{script_safe(read(HERE / 'mock-panel.js'))}</script>\n</body>",
+        f"{expert_data}<script>/* mockup reviewer panel */\n{script_safe(read(HERE / 'mock-panel.js'))}</script>\n</body>",
         1,
     )
     banner = (

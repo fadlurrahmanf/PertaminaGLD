@@ -23,7 +23,7 @@
 .mock-form-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:4px}
 .mock-form-actions button{min-height:42px;padding:10px 16px;font-size:14px}
 .mock-links{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
-.mock-links a{padding:8px 12px;border:1px solid var(--line);border-radius:999px;color:var(--teal);font-size:13px;font-weight:700;text-decoration:none}
+.mock-links button{background:transparent;cursor:pointer;padding:8px 12px;border:1px solid var(--line);border-radius:999px;color:var(--teal);font-size:13px;font-weight:700;text-decoration:none}
 .mock-coverage{margin-top:22px;padding:12px 14px;border:1px solid var(--line);border-radius:11px;background:var(--panel)}
 .mock-coverage summary{cursor:pointer;font-weight:800;font-size:14px}
 .mock-coverage ul{margin:10px 0 0;padding-left:18px;color:#c7d8d5;font-size:13px;line-height:1.5}

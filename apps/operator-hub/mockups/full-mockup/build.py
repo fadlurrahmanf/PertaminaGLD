@@ -5,9 +5,11 @@ and writes one self-contained HTML file next to this folder:
 
     apps/operator-hub/mockups/operator-hub-full-mockup.html
 
-The production index.html, CSS, and js/hub.js are inlined unchanged. The only
-additions are a browser-side mock backend (replaces fetch + EventSource for
-/api/simple/*) and a reviewer panel. Re-run after changing the production UI:
+The production index.html and CSS are inlined unchanged; js/hub.js is inlined
+inside a restartable function with one line adapted (simulate mode source).
+Additions: a browser-side mock backend (replaces fetch + EventSource for
+/api/simple/*) and a reviewer panel. Works from file://, a web server, or a
+sandboxed preview iframe (about:srcdoc). Re-run after changing the production UI:
 
     python apps/operator-hub/mockups/full-mockup/build.py
 """
@@ -41,10 +43,25 @@ def build() -> str:
     if css_count != 3:
         raise SystemExit(f"expected 3 production stylesheets, found {css_count}")
 
-    hub_js = script_safe(read(PUBLIC / "js" / "hub.js"))
+    hub_js = read(PUBLIC / "js" / "hub.js")
+    # The only mockup adaptation of hub.js: let the reviewer panel choose the
+    # built-in ?simulate= mode without navigating (sandboxed previews block it).
+    simulate_line = 'const simulationMode = new URLSearchParams(location.search).get("simulate");'
+    if hub_js.count(simulate_line) != 1:
+        raise SystemExit("hub.js simulationMode line changed; update build.py")
+    hub_js = script_safe(hub_js.replace(
+        simulate_line,
+        'const simulationMode = window.__mockSimulate ?? new URLSearchParams(location.search).get("simulate");',
+    ))
+    # Wrapped in a function (instead of a module that runs once) so the panel
+    # can restart the Hub in place for a new scenario: no reload, no URL needed.
+    hub_wrapper = (
+        "<script>/* js/hub.js (production logic; wrapped for in-place restart) */\n"
+        f'window.__bootHub = function () {{\n"use strict";\n{hub_js}\n}};\n</script>'
+    )
     html, js_count = re.subn(
         r'<script type="module" src="\./js/hub\.js[^"]*"></script>',
-        lambda _m: f'<script type="module">/* js/hub.js (production, unchanged) */\n{hub_js}</script>',
+        lambda _m: hub_wrapper,
         html,
     )
     if js_count != 1:

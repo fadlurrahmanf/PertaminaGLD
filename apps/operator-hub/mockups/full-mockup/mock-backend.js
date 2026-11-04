@@ -23,10 +23,17 @@
     speed: "normal",     // normal | fast
     preset: ""           // optional auto-play, see mock-panel.js
   };
-  const hashParams = new URLSearchParams(location.hash.slice(1));
-  const cfg = Object.fromEntries(Object.entries(DEFAULTS).map(([key, value]) => [key, hashParams.get(key) ?? value]));
-  const speed = cfg.speed === "fast" ? 0.25 : 1;
-  const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms * speed));
+  // Scenario comes from the URL hash when the page has a real URL. Inside a
+  // sandboxed preview (about:srcdoc) the hash is empty and defaults apply;
+  // the reviewer panel then reconfigures in place without any reload.
+  const readCfg = (source = {}) => Object.fromEntries(Object.entries(DEFAULTS).map(([key, value]) => [key, source[key] ?? value]));
+  let initialHash = {};
+  try { initialHash = Object.fromEntries(new URLSearchParams(String(location.hash || "").slice(1))); } catch { initialHash = {}; }
+  let cfg = readCfg(initialHash);
+  let generation = 0; // bumped on every in-place restart; stale requests never resolve
+  const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms * (cfg.speed === "fast" ? 0.25 : 1)));
+  // Parse API paths against a fixed base: location.href may be about:srcdoc/blob:.
+  const parseUrl = (value) => new URL(String(value), "http://operator-hub.mock/");
   const clone = (value) => JSON.parse(JSON.stringify(value ?? null));
   const TOKEN = "mockup-token";
 
@@ -138,10 +145,11 @@
     return info;
   }
 
-  const sim = Object.fromEntries(["gld", "ch", "gw"].map((device) => [device, {
+  const freshSim = () => Object.fromEntries(["gld", "ch", "gw"].map((device) => [device, {
     device, connected: false, port: null, hasFirmware: cfg[device] !== "fresh", info: null
   }]));
-  const activity = [];
+  let sim = freshSim();
+  let activity = [];
 
   function addActivity(device, action, detail) {
     const now = new Date();
@@ -220,7 +228,7 @@
   class MockEventSource {
     constructor(url) {
       this.url = url;
-      this.device = new URL(url, location.href).searchParams.get("device");
+      this.device = parseUrl(url).searchParams.get("device");
       this.listeners = {};
       this.readyState = 0;
       sources.add(this);
@@ -514,22 +522,38 @@
   const realFetch = window.fetch.bind(window);
   const state = { pending: 0 }; // in-flight simulated requests (used by automated checks)
   window.fetch = async (input, init = {}) => {
-    const url = new URL(typeof input === "string" ? input : input.url, location.href);
+    const url = parseUrl(typeof input === "string" ? input : input.url);
     if (!url.pathname.startsWith("/api/")) return realFetch(input, init);
     const method = (init.method || "GET").toUpperCase();
     const route = routes[`${method} ${url.pathname}`];
     if (!route) return json({ error: `mockup: ${method} ${url.pathname} is not simulated` }, 404);
     if (method === "POST" && init.headers?.["X-Operator-Hub-Token"] !== TOKEN) return json({ error: "invalid API token" }, 403);
+    const issuedIn = generation;
+    const stale = () => new Promise(() => {}); // a restarted mockup abandons old requests
     state.pending += 1;
     try {
       const body = init.body ? JSON.parse(init.body) : {};
-      return json(await route(body, url.searchParams));
+      const data = await route(body, url.searchParams);
+      return issuedIn === generation ? json(data) : stale();
     } catch (error) {
-      return json({ error: error.message }, error.status || 500);
+      return issuedIn === generation ? json({ error: error.message }, error.status || 500) : stale();
     } finally {
       state.pending -= 1;
     }
   };
   window.EventSource = MockEventSource;
-  window.__operatorHubMock = { cfg, DEFAULTS, sim, activity, state };
+  window.__operatorHubMock = {
+    DEFAULTS, state,
+    get cfg() { return cfg; },
+    get sim() { return sim; },
+    // Reset the simulated world for a new scenario (used by the reviewer panel).
+    configure(next) {
+      generation += 1;
+      state.pending = 0;
+      cfg = readCfg(next);
+      sim = freshSim();
+      activity = [];
+      sources.forEach((source) => source.close());
+    }
+  };
 })();

@@ -1,15 +1,18 @@
 /*
-  Reviewer panel for the Operator Hub mockup. Lives outside the production UI:
-  it only changes the simulated scenario (URL hash) and reloads, intercepts the
-  links that would leave the Hub (Expert Console, GLD Operator hotspot), and can
-  auto-play a preset so a reviewer lands directly on a given stage.
+  Reviewer panel for the Operator Hub mockup. Lives outside the production UI.
+  It boots the wrapped hub.js, switches scenarios IN PLACE (reset mock, restore
+  the pristine Hub DOM, boot again — no reload/navigation, so it also works in
+  sandboxed previews), intercepts links that would leave the Hub (Expert
+  Console, GLD Operator hotspot), and can auto-play a preset to reach a stage.
 */
 (() => {
   "use strict";
   const mock = window.__operatorHubMock;
   if (!mock) return;
-  const { cfg, DEFAULTS } = mock;
+  const { DEFAULTS } = mock;
   const $ = (id) => document.getElementById(id);
+  let builtIn = null;
+  try { builtIn = new URLSearchParams(location.search).get("simulate"); } catch { builtIn = null; }
 
   const OPTIONS = {
     gld: [["normal", "Normal — firmware ada, test lulus"], ["fresh", "Board baru — tanpa firmware"], ["fail", "Test gagal — MCP4725/DAC/Sensor"], ["pending", "Test belum lengkap — Sensor menunggu"], ["alarm-locked", "Kontrak alarm tidak lengkap"]],
@@ -44,11 +47,33 @@
     Object.entries(merged).forEach(([key, value]) => { if (value !== DEFAULTS[key]) params.set(key, value); });
     return params.toString();
   }
-  function go(values) {
-    const target = `${location.pathname}${location.search.includes("simulate=") ? "" : location.search}#${hashFor(values)}`;
-    history.replaceState(null, "", target);
-    location.reload();
+  // Pristine copies of every Hub region hub.js mutates, captured before first boot.
+  const REGIONS = ["header.topbar", "main.shell", "#confirmDialog", "#uploadSuccessToast"];
+  const snapshots = REGIONS.map((selector) => document.querySelector(selector)?.outerHTML || "");
+  function restoreHubDom() {
+    document.querySelectorAll(".firmware-upload-dialog").forEach((dialog) => { try { dialog.close(); } catch { /* not open */ } dialog.remove(); });
+    REGIONS.forEach((selector, index) => {
+      const current = document.querySelector(selector);
+      const template = document.createElement("template");
+      template.innerHTML = snapshots[index];
+      if (current && template.content.firstElementChild) current.replaceWith(template.content.firstElementChild);
+    });
   }
+
+  let run = 0;
+  function boot(values, simulate = null) {
+    run += 1;
+    builtIn = simulate;
+    window.__mockSimulate = simulate;
+    mock.configure(values);
+    try { history.replaceState(null, "", `#${hashFor(values)}`); } catch { /* sandboxed preview: URL is fixed */ }
+    if (run > 1) restoreHubDom();
+    renderChrome();
+    window.scrollTo(0, 0);
+    window.__bootHub();
+    if (mock.cfg.preset && !simulate) autoplay(mock.cfg.preset, run);
+  }
+  const go = (values) => { setPanel(false); boot(values); };
 
   // ------------------------------------------------------------- drawer DOM
   const panel = document.createElement("aside");
@@ -56,18 +81,17 @@
   panel.className = "mock-panel";
   panel.setAttribute("aria-label", "Panel peninjau mockup");
   panel.hidden = true;
-  const builtIn = new URLSearchParams(location.search).get("simulate");
-  panel.innerHTML = `
+  const panelHtml = () => `
     <div class="mock-panel-head">
       <div><p class="card-kicker">MOCKUP / PANEL PENINJAU</p><h2>Skenario simulasi</h2></div>
       <button id="mockPanelClose" class="mock-icon" type="button" aria-label="Tutup panel">&times;</button>
     </div>
     <p class="mock-note">Semua respons berasal dari simulasi di browser. Tidak ada port COM, firmware, NVS, MQTT, data, atau perangkat nyata yang disentuh.</p>
     <section><h3>Lompat cepat</h3><div class="mock-presets">${PRESETS.map(([title, detail], i) => `<button type="button" data-preset="${i}"><b>${title}</b><small>${detail}</small></button>`).join("")}</div></section>
-    <section><h3>Kondisi kustom</h3><form id="mockForm" class="mock-form">${Object.keys(OPTIONS).map((key) => `<label>${LABELS[key]}<select name="${key}">${OPTIONS[key].map(([value, label]) => `<option value="${value}"${cfg[key] === value ? " selected" : ""}>${label}</option>`).join("")}</select></label>`).join("")}
-      <div class="mock-form-actions"><button type="button" id="mockReset" class="secondary">Reset</button><button type="submit" class="primary">Terapkan &amp; muat ulang</button></div></form></section>
-    <section><h3>Simulasi bawaan hub.js</h3><p class="mock-note">Mode <code>?simulate=</code> yang sudah ada di aplikasi produksi.</p><div class="mock-links">
-      <a href="?simulate=ch-com6">CH pada COM6</a><a href="?simulate=ch-com6-new">CH COM6 board baru</a>${builtIn ? '<a href="?">Kembali ke mockup penuh</a>' : ""}</div></section>
+    <section><h3>Kondisi kustom</h3><div id="mockForm" class="mock-form">${Object.keys(OPTIONS).map((key) => `<label>${LABELS[key]}<select name="${key}">${OPTIONS[key].map(([value, label]) => `<option value="${value}"${mock.cfg[key] === value ? " selected" : ""}>${label}</option>`).join("")}</select></label>`).join("")}
+      <div class="mock-form-actions"><button type="button" id="mockReset" class="secondary">Reset</button><button type="button" id="mockApply" class="primary">Terapkan skenario</button></div></div></section>
+    <section><h3>Simulasi bawaan hub.js</h3><p class="mock-note">Mode <code>?simulate=</code> yang sudah ada di aplikasi produksi (tanpa backend).</p><div class="mock-links">
+      <button type="button" data-simulate="ch-com6">CH pada COM6</button><button type="button" data-simulate="ch-com6-new">CH COM6 board baru</button>${builtIn ? '<button type="button" data-simulate="">Kembali ke mockup penuh</button>' : ""}</div></section>
     <details class="mock-coverage"><summary>Cakupan alur yang direpresentasikan</summary><ul>
       <li>Pilih perangkat GLD / CH / Gateway, daftar COM per perangkat, Connect / Disconnect</li>
       <li>Connect → identitas terbaca → Test Device otomatis (Boot Report GLD 6 cek, CH 4 cek, Gateway 4 cek)</li>
@@ -86,10 +110,10 @@
   const banner = document.createElement("div");
   banner.className = "mock-banner";
   banner.setAttribute("role", "note");
-  banner.innerHTML = `<b>MOCKUP</b><span>Representasi Operator Hub — simulasi browser, tidak terhubung ke perangkat.</span><span class="mock-banner-scenario">${describe()}</span>`;
 
   function describe() {
     if (builtIn) return `Simulasi bawaan: ${builtIn}`;
+    const cfg = mock.cfg;
     const changed = Object.keys(OPTIONS).filter((key) => cfg[key] !== DEFAULTS[key]);
     return changed.length ? changed.map((key) => `${LABELS[key]}: ${OPTIONS[key].find(([v]) => v === cfg[key])?.[1] || cfg[key]}`).join(" · ") : "Skenario: semua normal";
   }
@@ -125,9 +149,12 @@
   }, true);
 
   // --------------------------------------------------------------- presets
+  let autoplayRun = 0;
   const waitFor = async (check, timeout = 20000) => {
     const end = Date.now() + timeout;
+    const mine = autoplayRun;
     while (Date.now() < end) {
+      if (mine !== run) return false; // scenario switched meanwhile
       if (check()) return true;
       await new Promise((resolve) => setTimeout(resolve, 120));
     }
@@ -135,13 +162,16 @@
   };
   const visible = (el) => Boolean(el && !el.hidden && el.offsetParent !== null);
 
-  async function autoplay(preset) {
+  async function autoplay(preset, token) {
+    autoplayRun = token;
     const [device, stage] = preset.split("-");
     if (!["gld", "ch", "gw"].includes(device)) return;
     if (!(await waitFor(() => $("runtimeText")?.textContent === "Runtime siap"))) return;
-    document.querySelector(`#deviceTabs [data-device="${device}"]`)?.click();
+    if (!(await waitFor(() => document.querySelector(`#deviceTabs [data-device="${device}"]`)))) return;
+    document.querySelector(`#deviceTabs [data-device="${device}"]`).click();
     await waitFor(() => [...$("portSelect").options].some((o) => o.value && o.value !== "COM1") && $("connectionTitle").textContent.includes(
       { gld: "Gas Leak Detector", ch: "Cluster Head", gw: "Network Gateway" }[device]));
+    if (token !== run) return;
     const select = $("portSelect");
     select.value = [...select.options].find((o) => o.value && o.value !== "COM1").value;
     $("connectBtn").click();
@@ -150,24 +180,29 @@
   }
 
   // ------------------------------------------------------------------ wire
-  function mount() {
-    document.body.prepend(banner);
-    document.body.append(launcher, panel, modal);
-    const toggle = (open) => { panel.hidden = !open; launcher.setAttribute("aria-expanded", String(open)); };
-    launcher.onclick = () => toggle(panel.hidden);
-    $("mockPanelClose").onclick = () => toggle(false);
-    $("mockDialogOk").onclick = () => modal.close();
+  function setPanel(open) {
+    panel.hidden = !open;
+    launcher.setAttribute("aria-expanded", String(open));
+  }
+  function renderChrome() {
+    banner.innerHTML = `<b>MOCKUP</b><span>Representasi Operator Hub — simulasi browser, tidak terhubung ke perangkat.</span><span class="mock-banner-scenario">${describe()}</span>`;
+    panel.innerHTML = panelHtml();
+    $("mockPanelClose").onclick = () => setPanel(false);
     panel.querySelectorAll("[data-preset]").forEach((button) => {
       button.onclick = () => go(PRESETS[Number(button.dataset.preset)][2]);
     });
-    $("mockForm").onsubmit = (event) => {
-      event.preventDefault();
-      go(Object.fromEntries(new FormData(event.target).entries()));
-    };
+    panel.querySelectorAll("[data-simulate]").forEach((button) => {
+      button.onclick = () => { setPanel(false); boot({ ...mock.cfg, preset: "" }, button.dataset.simulate || null); };
+    });
+    // Plain buttons, not a <form>: sandboxed previews block form submission.
+    $("mockApply").onclick = () => go(Object.fromEntries([...panel.querySelectorAll("#mockForm select")].map((select) => [select.name, select.value])));
     $("mockReset").onclick = () => go({});
-    document.addEventListener("keydown", (event) => { if (event.key === "Escape" && !panel.hidden) toggle(false); });
-    if (cfg.preset && !builtIn) autoplay(cfg.preset);
   }
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", mount);
-  else mount();
+
+  document.body.prepend(banner);
+  document.body.append(launcher, panel, modal);
+  launcher.onclick = () => setPanel(panel.hidden);
+  $("mockDialogOk").onclick = () => modal.close();
+  document.addEventListener("keydown", (event) => { if (event.key === "Escape" && !panel.hidden) setPanel(false); });
+  boot({ ...mock.cfg }, builtIn);
 })();

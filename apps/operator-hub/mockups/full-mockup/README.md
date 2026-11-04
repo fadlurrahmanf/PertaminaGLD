@@ -12,7 +12,7 @@ Buka langsung di browser.
   serta `EventSource` (log upload) dengan model in-memory. Bentuk respons dan
   pesan validasi mengikuti `bridge.py`.
 - `mock-panel.js` / `mock-panel.css` menambah banner MOCKUP, panel peninjau
-  (preset dan kondisi kustom lewat URL hash), dan mencegat tautan yang keluar
+  (preset dan kondisi kustom; berganti skenario di tempat tanpa reload, jadi juga berjalan di pratinjau sandbox), dan mencegat tautan yang keluar
   dari Hub (Expert Console, verifikasi hotspot GLD Operator).
 
 Tidak ada port COM, firmware, NVS, MQTT, data, atau perangkat yang disentuh.

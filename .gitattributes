@@ -1,0 +1,9 @@
+# Handover manifests verify the exact original bytes, including CSV/newlines.
+# Preserve them across Windows checkouts with different core.autocrlf settings.
+# Existing public manifest checksums were generated with Windows CRLF bytes.
+apps/operator-hub/firmware-packages/**/manifest.json text eol=crlf
+handover/state/** -text
+handover/runtime/** -text
+handover/drivers/** -text
+handover/deployment.json -text
+handover/plaintext-authorization.json -text

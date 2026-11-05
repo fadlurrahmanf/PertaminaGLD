@@ -9,6 +9,7 @@ not a substitute for external secret scanning or credential rotation.
 from __future__ import annotations
 
 import hashlib
+import json
 import pathlib
 import re
 import subprocess
@@ -47,6 +48,36 @@ REQUIRED_IGNORED_SECRET_PATHS = (
 )
 
 
+def approved_handover_files(root: pathlib.Path) -> tuple[set[str], list[str]]:
+    """Honor the owner's explicit plaintext handover, only for pinned files.
+
+    Local .env paths remain ignored and the general scanner stays active. The
+    approval names exact snapshot/deployment files and their original byte hash.
+    A changed/new file needs a refreshed intentional handover manifest.
+    """
+    policy = root / "handover/plaintext-authorization.json"
+    if not policy.is_file():
+        return set(), []
+    try:
+        value = json.loads(policy.read_text(encoding="utf-8"))
+        if (value.get("schemaVersion") != 1 or value.get("ownerApprovedPlaintext") is not True or
+                not isinstance(value.get("files"), dict) or not value["files"]):
+            raise ValueError()
+        allowed = set()
+        for relative, digest in value["files"].items():
+            if (not isinstance(relative, str) or "\\" in relative or ".." in pathlib.PurePosixPath(relative).parts or
+                    not (relative.startswith("handover/state/") or relative == "handover/deployment.json") or
+                    not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None):
+                raise ValueError()
+            path = root / relative
+            if not path.is_file() or path.is_symlink() or hashlib.sha256(path.read_bytes()).hexdigest() != digest:
+                return set(), ["handover: approved snapshot bytes changed or missing; refresh explicit approval manifest"]
+            allowed.add(relative)
+        return allowed, []
+    except (OSError, ValueError, TypeError, AttributeError):
+        return set(), ["handover: invalid plaintext approval manifest"]
+
+
 def repository_files(root: pathlib.Path) -> list[pathlib.Path]:
     completed = subprocess.run(
         ["git", "ls-files", "--cached", "--others", "--exclude-standard", "-z"],
@@ -63,6 +94,7 @@ def repository_files(root: pathlib.Path) -> list[pathlib.Path]:
         relative_posix = relative.as_posix()
         if (
             path.is_file()
+            and not path.name.startswith("~$")
             and path.suffix.lower() not in SKIP_SUFFIXES
             and relative_posix != "tools/check_repository_secrets.py"
             and not relative_posix.startswith("tools/tests/")
@@ -107,7 +139,11 @@ def ignored_secret_path_failures(root: pathlib.Path) -> list[str]:
 def main() -> int:
     root = pathlib.Path(__file__).resolve().parents[1]
     failures = ignored_secret_path_failures(root)
+    approved, approval_errors = approved_handover_files(root)
+    failures.extend(approval_errors)
     for path in repository_files(root):
+        if path.relative_to(root).as_posix() in approved:
+            continue
         failures.extend(exposed_digest_hits(path, root))
     if failures:
         print("Repository secret guard failed:", file=sys.stderr)

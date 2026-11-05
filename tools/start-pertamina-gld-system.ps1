@@ -20,11 +20,13 @@ $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $NodeRedDir = Join-Path $RepoRoot "server\nodered"
 $OperatorHubDir = Join-Path $RepoRoot "apps\operator-hub"
-$RuntimeDir = Join-Path $RepoRoot "apps\runtime\operator-hub"
+# Share the same private runtime root as apps/operator-hub/bridge.py. Derive
+# every child path here so the launcher reads the broker file the Hub writes.
+$RuntimeDir = Join-Path $RepoRoot "archive\apps\runtime\operator-hub"
 $LogDir = Join-Path $RuntimeDir "logs"
-$CredentialsPath = Join-Path $RepoRoot "apps\runtime\operator-hub\credentials.local.json"
+$CredentialsPath = Join-Path $RuntimeDir "credentials.local.json"
 $StartupStatePath = Join-Path $RuntimeDir "startup-flow-state.json"
-$StartupProfilePath = Join-Path $RepoRoot "apps\runtime\operator-hub\startup.local.json"
+$StartupProfilePath = Join-Path $RuntimeDir "startup.local.json"
 $NodeRedEnvPath = Join-Path $NodeRedDir ".env"
 $NodeRedTopologyBootstrapPath = Join-Path $NodeRedUserDir "pertamina-gld-topology-bootstrap.json"
 $NodeRedTopologyContextPath = Join-Path $NodeRedUserDir "pgl-context\pgl_tab\flow.json"
@@ -477,7 +479,7 @@ function Wait-BrokerCredentials() {
         }
         Start-Sleep -Milliseconds 500
     }
-    throw "MQTT broker credentials/listener were not ready. Start Operator Hub and check apps\runtime\operator-hub\credentials.local.json."
+    throw "MQTT broker credentials/listener were not ready. Start Operator Hub and check $CredentialsPath."
 }
 
 function Apply-NodeRedFlow($Broker) {

@@ -2,6 +2,12 @@
 
 Revisi 3 November 2026, setelah uji koneksi GLD1002 Model 2.
 
+Pembaruan host 5 November 2026: kredensial otomatis kini tersedia dari paket
+firmware terverifikasi yang ikut Git, tanpa folder build `.pio` pada PC baru.
+Upload ketiga model hotspot membaca ID dari COM terpilih, terpisah dari target
+Inject ID tersimpan. Lihat [panduan pindah PC](gld-pc-portability.md) untuk pull,
+restart Hub yang terlihat dan pemeriksaan paket. Firmware/NVS tidak diubah.
+
 **Manual bergambar yang dipakai:**
 [Manual Dataset Workspace - 12 Kolom](../../output/pdf/Manual-GLD-Dataset-Workspace-12-Kolom.pdf)
 (15 halaman, screenshot dengan kotak dan nomor petunjuk).

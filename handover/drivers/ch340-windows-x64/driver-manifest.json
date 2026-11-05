@@ -1,0 +1,41 @@
+{
+  "architecture": "windows-x64",
+  "catalogSignatureVerifiedAtExport": true,
+  "driverVersion": "09/16/2024,3.9.2024.09",
+  "files": [
+    {
+      "path": "ch341portsa64.dll",
+      "sha256": "16ad9a058df6b58ce8259e086275b81f663f43202a2b7f0da7a634c356203e1d",
+      "size": 83344
+    },
+    {
+      "path": "ch341pt.dll",
+      "sha256": "4fae54a4cc5cbfd5bd0a59b6aff3f888bebeb3c78521dadcdd1247b40012c580",
+      "size": 59760
+    },
+    {
+      "path": "ch341pta64.dll",
+      "sha256": "9f8b6dbe2b81a720184f0a0a269e17a90ed6da9ecbb3fa3d9fa32d2b95ab1adc",
+      "size": 78168
+    },
+    {
+      "path": "ch341s64.sys",
+      "sha256": "a8cb7cf5050f9d14106b27d45d50dfb85f6cb119c0e871e673743ad62ecaeed0",
+      "size": 84864
+    },
+    {
+      "path": "ch341ser.cat",
+      "sha256": "b44f551843d0e36319ab4e911d4579a866b175201980daa9e8973919ad3fb1fe",
+      "size": 14494
+    },
+    {
+      "path": "ch341ser.inf",
+      "sha256": "fb573086ee1b6f65d68a330cc4b48350439e3327c85292fc455b3588dff053a3",
+      "size": 9331
+    }
+  ],
+  "infName": "ch341ser.inf",
+  "packageType": "wch-ch340-ch341-driver",
+  "provider": "WCH",
+  "schemaVersion": 1
+}

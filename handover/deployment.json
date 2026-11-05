@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "storage": "plaintext",
+  "ports": {
+    "hub": 5173,
+    "nodeRed": 1880,
+    "mqtt": 1884,
+    "database": 33306
+  },
+  "database": {
+    "name": "pertamina_gld",
+    "user": "gld_app",
+    "password": "pX4Of9oxxJiIPZlXmSP_5XA04YGtxFYp",
+    "rootPassword": "2AtwLC71FAqGwUR7ux1om48M6YWa1t5gn0bizHsW3qE"
+  },
+  "historyOrigin": "CSV and ledger reconstruction; no source project database found"
+}

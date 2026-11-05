@@ -1,0 +1,462 @@
+{
+  "schemaVersion": 1,
+  "storage": "plaintext",
+  "createdAt": "2026-11-05T09:43:21.532409+07:00",
+  "files": [
+    {
+      "path": "config/system.json",
+      "size": 774,
+      "sha256": "14ab50ffae1403d6df09167aefec19e289d5c13a972f3fc0e961d5fddf540f9e",
+      "role": "canonical-system-config"
+    },
+    {
+      "path": "config/source-server.env",
+      "size": 444,
+      "sha256": "833cd46075b814857dfdc1ff506c62060bc06a82cc7c441254daa1f30ae0e564",
+      "role": "original-server-env",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\server\\nodered\\.env"
+    },
+    {
+      "path": "config/source-broker.json",
+      "size": 162,
+      "sha256": "62040ce59821cc964c20db19399c07543f3be3f4ec59c240953e10e02dd92df5",
+      "role": "original-broker-config",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\archive\\apps\\runtime\\operator-hub\\credentials.local.json"
+    },
+    {
+      "path": "nodered/settings.js",
+      "size": 26766,
+      "sha256": "dc9acbca8586752894534dd285d45fd9b829fd87de17fc6616e1862e9ae7687e",
+      "role": "nodered-profile",
+      "sourcePath": "C:\\Users\\MSI\\.node-red\\settings.js"
+    },
+    {
+      "path": "nodered/flows.json",
+      "size": 240570,
+      "sha256": "4020e20b7f703866c751c5f6099e885786f908a4506b72e387014d17dbcdbbea",
+      "role": "nodered-profile",
+      "sourcePath": "C:\\Users\\MSI\\.node-red\\flows.json"
+    },
+    {
+      "path": "nodered/flows_cred.json",
+      "size": 319,
+      "sha256": "bfcb40f9d10e0452885530cc464c51513dce771ace4fa6b9ed54460b3129c351",
+      "role": "nodered-profile",
+      "sourcePath": "C:\\Users\\MSI\\.node-red\\flows_cred.json"
+    },
+    {
+      "path": "nodered/.config.runtime.json",
+      "size": 163,
+      "sha256": "6187a60c941f1957636395eeb014d6e661d7c5f38ec8b0a4c59640cd174d9c56",
+      "role": "nodered-profile",
+      "sourcePath": "C:\\Users\\MSI\\.node-red\\.config.runtime.json"
+    },
+    {
+      "path": "nodered/package.json",
+      "size": 193,
+      "sha256": "e546ebe6739857510fa0d5f4b7ca518397626520de5e221651d3cc2af497c11a",
+      "role": "nodered-profile",
+      "sourcePath": "C:\\Users\\MSI\\.node-red\\package.json"
+    },
+    {
+      "path": "nodered/package-lock.json",
+      "size": 26681,
+      "sha256": "6dbe30693fa9e9f8b1ab752fc4f386ed39e69258dd3cffb236c74dcb9b43067a",
+      "role": "nodered-profile",
+      "sourcePath": "C:\\Users\\MSI\\.node-red\\package-lock.json"
+    },
+    {
+      "path": "nodered/pertamina-gld-replay-state.json",
+      "size": 3767,
+      "sha256": "d65f59445f27235aad40bc6ec6f72242b66c109ff9ae59fa2c59735d4c79db46",
+      "role": "nodered-profile",
+      "sourcePath": "C:\\Users\\MSI\\.node-red\\pertamina-gld-replay-state.json"
+    },
+    {
+      "path": "history/csv/001-GLD_telemetry_20260804T093736_rapi.csv",
+      "size": 853122,
+      "sha256": "884e1edd17d622b2abe9aaceda44d526318e559ff04073d81482b4cf71fc847f",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\Board 2 cadangan (3 kelas)\\Board 2 cadangan (3 kelas)\\GLD_telemetry_20260804T093736_rapi.csv"
+    },
+    {
+      "path": "history/csv/002-GLD_telemetry_fixed_final.csv",
+      "size": 370643,
+      "sha256": "b5f415970342ef04c9b4796a07d7295401985a4ce486236dbbd643d3b8b871ea",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\cnn_gas_datasheet\\cnn_gas_datasheet\\GLD_telemetry_fixed_final.csv"
+    },
+    {
+      "path": "history/csv/003-hasil_prediksi_cnn.csv",
+      "size": 599085,
+      "sha256": "1ef2ef0bdfa3f51688977ba027b6ba98f7363f6ac9f0a421041b4de1e5ddef86",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\cnn_gas_datasheet\\cnn_gas_datasheet\\hasil_prediksi_cnn.csv"
+    },
+    {
+      "path": "history/csv/004-hasil_prediksi_CO2_cnn.csv",
+      "size": 619432,
+      "sha256": "c34be4257d0364f6e16a795eaedc7c6520a6cb1baef63361e8fb1b7e05cbba92",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\cnn_gas_datasheet\\cnn_gas_datasheet\\hasil_prediksi_CO2_cnn.csv"
+    },
+    {
+      "path": "history/csv/005-hasil_prediksi_LPG_cnn.csv",
+      "size": 627192,
+      "sha256": "c3d3897e5387eb4e783c103a2addbf7f75bdec3d6bab5ede443d4ddf6ffe7bc9",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\cnn_gas_datasheet\\cnn_gas_datasheet\\hasil_prediksi_LPG_cnn.csv"
+    },
+    {
+      "path": "history/csv/006-GLD_telemetry_20260720T091003_fixed.csv",
+      "size": 489367,
+      "sha256": "bb3391ec6011d8cbcf21e25dac4399fc393513ae4961780d444c6374e292e9a5",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\GLD_telemetry_20260720T091003_fixed.csv"
+    },
+    {
+      "path": "history/csv/007-GLD_telemetry_20260727T064015.csv",
+      "size": 238000,
+      "sha256": "1545cf48ccb8093436b70d144a68d7fd670e135354064c0950ee52a1c0c44f37",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\GLD_telemetry_20260727T064015.csv"
+    },
+    {
+      "path": "history/csv/008-GLD_telemetry_20260728T064409.csv",
+      "size": 18612,
+      "sha256": "ba18cb889c8b918ff2e8e266dbb8ea3c68efd3203c663f685d0fad565398e1f4",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\GLD_telemetry_20260728T064409.csv"
+    },
+    {
+      "path": "history/csv/009-GLD_telemetry_20260728T071518.csv",
+      "size": 59938,
+      "sha256": "8ea253d2951313beb8a5f8ccb5af6ace8178b68e3fec7423d571504f8483a3ed",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\GLD_telemetry_20260728T071518.csv"
+    },
+    {
+      "path": "history/csv/010-GLD_telemetry_20260728T075558.csv",
+      "size": 7702,
+      "sha256": "5315cb5c70bb5b8e61e4c6a4ba4a3389e69a87dda63772e799502ec4c8385dbb",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\GLD_telemetry_20260728T075558.csv"
+    },
+    {
+      "path": "history/csv/011-GLD_telemetry_20260730T003600.csv",
+      "size": 369950,
+      "sha256": "799dd0dfb20435f752fbd57622a02c7409a8eea9b00a9fc51e79b2fc939d4ede",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\GLD_telemetry_20260730T003600.csv"
+    },
+    {
+      "path": "history/csv/012-GLD_telemetry_20260730T044312.csv",
+      "size": 308163,
+      "sha256": "0f16a5a370ab7e77d31226897deefc76c6c6888ca384bd7391c02bb79edc7c17",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\GLD_telemetry_20260730T044312.csv"
+    },
+    {
+      "path": "history/csv/013-GLD_telemetry_20260730T045724.csv",
+      "size": 591489,
+      "sha256": "4efbfaa1caa060a7d1c4c67d3a85719608fb808a398b34867e74eb5ae7a4d82c",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\GLD_telemetry_20260730T045724.csv"
+    },
+    {
+      "path": "history/csv/014-GLD_telemetry_20260730T052428.csv",
+      "size": 822102,
+      "sha256": "df403f6a1c3d74cf206400555d866ab668773640e234d1ba17539042e4cec0e9",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\GLD_telemetry_20260730T052428.csv"
+    },
+    {
+      "path": "history/csv/015-GLD_telemetry_20261103T085707.csv",
+      "size": 67023,
+      "sha256": "16773525d6f89ea8cd27f40040410dbd360aa7698d37bb809f6423feed620a1f",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\GLD_telemetry_20261103T085707.csv"
+    },
+    {
+      "path": "history/csv/016-HeatedTo87.5ToHeated.csv",
+      "size": 100188,
+      "sha256": "8833c0a3090e5ed10190a33fbdd42d94c225cf286ff7a0ea66e7675b305a9944",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\HeatedTo87.5ToHeated.csv"
+    },
+    {
+      "path": "history/csv/017-GLD_telemetry_20260804_full.csv",
+      "size": 1015052,
+      "sha256": "12ed62b14a3a837cfc82e177a0a9eaa36a8962d3d93cfd4bab6560089465476a",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\MODEL UNTUK BOARD\\MODEL UNTUK BOARD\\Board 1\\GLD_telemetry_20260804_full.csv"
+    },
+    {
+      "path": "history/csv/018-GLD_telemetry_20260804T061756.csv",
+      "size": 596526,
+      "sha256": "f3cff8f1ae41c7d9597484fb38bf8216988a89a1bf990f7f33c602fdf601cb09",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\MODEL UNTUK BOARD\\MODEL UNTUK BOARD\\Board 1\\GLD_telemetry_20260804T061756.csv"
+    },
+    {
+      "path": "history/csv/019-GLD_telemetry_20260804T071904.csv",
+      "size": 411751,
+      "sha256": "1a3db4ae64fe61b576b7c1a944e799c8682f7ee9751fc604c3884d213f63ecec",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\MODEL UNTUK BOARD\\MODEL UNTUK BOARD\\Board 1\\GLD_telemetry_20260804T071904.csv"
+    },
+    {
+      "path": "history/csv/020-GLD_telemetry_20260804T093736.csv",
+      "size": 1058185,
+      "sha256": "b440979892a924caa7c8643e7dc0a62a4a367283df040bb6cc2ac9b367bbdb2c",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\MODEL UNTUK BOARD\\MODEL UNTUK BOARD\\Board 2\\GLD_telemetry_20260804T093736.csv"
+    },
+    {
+      "path": "history/csv/021-GLD_telemetry_20260804T093736_rapi.csv",
+      "size": 1064427,
+      "sha256": "2b76e22e17e924a204feb493af9e8cbc4c398c5a8c5a0ae6988d4cc7da45a763",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\MODEL UNTUK BOARD\\MODEL UNTUK BOARD\\Board 2\\GLD_telemetry_20260804T093736_rapi.csv"
+    },
+    {
+      "path": "history/csv/022-ON1000OFF0.csv",
+      "size": 200370,
+      "sha256": "3d5290639deec28406da104e35f57a37587975c11081b6390b064f680b6317d8",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\ON1000OFF0.csv"
+    },
+    {
+      "path": "history/csv/023-ON1000OFF0_2.csv",
+      "size": 230212,
+      "sha256": "aecd8e625254009e0b3f2f0d654dedc8ab114a2bbebd15cab05dbf57133536c0",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\ON1000OFF0_2.csv"
+    },
+    {
+      "path": "history/csv/024-ON125OFF875.csv",
+      "size": 104592,
+      "sha256": "dbe8bef4f1dbf3cc0253bb4f347ac02873b7255587b5683d5f8a92f4bf66ec1b",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\ON125OFF875.csv"
+    },
+    {
+      "path": "history/csv/025-ON250OFF750.csv",
+      "size": 129562,
+      "sha256": "d2ca58574ee77308234a712ccec3559cbbc5ba63a95891b77eeaa91c6c04f698",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\ON250OFF750.csv"
+    },
+    {
+      "path": "history/csv/026-ON375OFF625.csv",
+      "size": 94195,
+      "sha256": "0643a04dd114765a209276e6af2d27dda64eefc7f8b87eb6883ff5b98297d997",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\ON375OFF625.csv"
+    },
+    {
+      "path": "history/csv/027-ON500OFF500.csv",
+      "size": 108272,
+      "sha256": "1529c3bed1befd555104d1f2fdb447137e4ffd3d179b660ddc5b8a0c0ca84d57",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\ON500OFF500.csv"
+    },
+    {
+      "path": "history/csv/028-ON625OFF375.csv",
+      "size": 102294,
+      "sha256": "7f23e0de8c8cab86e335aed27886cf1d66b26c3b31f8ade14cbef23bb27bec3e",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\ON625OFF375.csv"
+    },
+    {
+      "path": "history/csv/029-dataset-gld.csv",
+      "size": 118067,
+      "sha256": "cd5d6f78dd2a7fa0366c5a0e6f789b349e14f1b86732851953dd579442c39be2",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\testModel\\dataset-gld.csv"
+    },
+    {
+      "path": "history/csv/030-dataset-gld2.csv",
+      "size": 12939,
+      "sha256": "a9511d6a3b710e743fe401a27c41b167ee12786223e4f1cbe15f65536af8c00f",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\testModel\\dataset-gld2.csv"
+    },
+    {
+      "path": "history/csv/031-Warmup.csv",
+      "size": 411295,
+      "sha256": "7c73c3c77c452e3525b7764f7158421ed7faa3e5ce011a1c02162035af9c6194",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\Warmup.csv"
+    },
+    {
+      "path": "history/csv/032-Warmup2.csv",
+      "size": 435833,
+      "sha256": "e7daffda19977fa00dc314ad0d590d7d7588e63ddcae7424c64f372ab502c33d",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\Warmup2.csv"
+    },
+    {
+      "path": "history/csv/033-Warmup3.csv",
+      "size": 469881,
+      "sha256": "79a1a27e6af1f270cfd21f27e890f12df8f0be43c253d73f8b6eaef86a75abe6",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\Warmup3.csv"
+    },
+    {
+      "path": "history/csv/034-WarmupBaru.csv",
+      "size": 97473,
+      "sha256": "271034e50ad97e18356719279ac0e37d23e9545f8741ff8552fb15ca08b8f734",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\WarmupBaru.csv"
+    },
+    {
+      "path": "history/csv/035-WarmupBaru2.csv",
+      "size": 113690,
+      "sha256": "0a28ae44821d4ea10cdd7d680e0263e9f353d613e00e23c0bdf0ce2685c64355",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\WarmupBaru2.csv"
+    },
+    {
+      "path": "history/csv/036-WarmupBaru3.csv",
+      "size": 151246,
+      "sha256": "80b8df74160c5edd61eb59404b424b8879bc44aea49775ef9672bd8bbed3dc62",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\WarmupBaru3.csv"
+    },
+    {
+      "path": "history/csv/037-wireless_1001_5885e7b85e7d4aaea22abe989dd9f8d2.csv",
+      "size": 11859,
+      "sha256": "0c83212836c505b23f47ccaceabcc2427272ee907d6f3958379b85324e5a61ab",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\wireless_1001_5885e7b85e7d4aaea22abe989dd9f8d2.csv"
+    },
+    {
+      "path": "history/csv/038-wireless_1001_87582378b6b948899adc29bf180e640a.csv",
+      "size": 33756,
+      "sha256": "e484849064e0a2fbccd2792e143d059eef1daa8d20a19cac83cf0783746e8811",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\wireless_1001_87582378b6b948899adc29bf180e640a.csv"
+    },
+    {
+      "path": "history/csv/039-wireless_1002_16915d55e0bf40d5a0bcb768789b9221.csv",
+      "size": 7988,
+      "sha256": "8db69e440b3e0b5b22e84e6e9e00e009496261bf7c2596ddbc9ffd4c2ada2e98",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\wireless_1002_16915d55e0bf40d5a0bcb768789b9221.csv"
+    },
+    {
+      "path": "history/csv/040-wireless_1002_ed0a954353c44be295d7e3c0251be59e.csv",
+      "size": 2697,
+      "sha256": "90a60099ca1462756282551a91e79aaea46279a419393eaa17b6cee1d1070066",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\wireless_1002_ed0a954353c44be295d7e3c0251be59e.csv"
+    },
+    {
+      "path": "history/csv/041-wireless_replay_1002_2c4e350dc7354574b85c0a72238b5bb4.csv",
+      "size": 144515,
+      "sha256": "b8c7b32e57d4333df800eea96dc26c3ab2c50bf667242dca26649a2c4302afdd",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\wireless_replay_1002_2c4e350dc7354574b85c0a72238b5bb4.csv"
+    },
+    {
+      "path": "history/csv/042-wireless_replay_1002_3eba1bc5cb0c43a7b14025cd1cda31e4.csv",
+      "size": 158518,
+      "sha256": "1c47c47578821d0735aee63a75642d66091a225077c823db2d019da392d22f38",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\wireless_replay_1002_3eba1bc5cb0c43a7b14025cd1cda31e4.csv"
+    },
+    {
+      "path": "history/csv/043-wireless_replay_1002_cd1c9f94c3cd45c3baffcb2b09cd6af4.csv",
+      "size": 159458,
+      "sha256": "3f402811aae50791e417cdf98a2d477a2d971421ead93680fb9cd8e4d39f7668",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\wireless_replay_1002_cd1c9f94c3cd45c3baffcb2b09cd6af4.csv"
+    },
+    {
+      "path": "history/csv/044-wireless_replay_1002_defe3b69ac394561afcc386f778a8a3d.csv",
+      "size": 131901,
+      "sha256": "6a3c9671951e65336906d840aa843f0c87c53ceacbaf55f72970f20b3def5bb3",
+      "role": "dataset-csv",
+      "sourcePath": "C:\\Users\\MSI\\Downloads\\wireless_replay_1002_defe3b69ac394561afcc386f778a8a3d.csv"
+    },
+    {
+      "path": "history/csv/045-Clean_Air_GLD_1_20260720T071129.csv",
+      "size": 29566,
+      "sha256": "b9394d152b543a0c1c70ef6465c9cda7d40f19c4744e2941ddfe1b1c3dba65f0",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\Clean_Air_GLD_1_20260720T071129.csv"
+    },
+    {
+      "path": "history/csv/046-Warming_UP_20260727T050241.csv",
+      "size": 393,
+      "sha256": "3460d0eaa74857ad726c4022ed0da3a764588066edadfe0a462a0b40823e425e",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\Warming_UP_20260727T050241.csv"
+    },
+    {
+      "path": "history/csv/047-wireless_1002_16915d55e0bf40d5a0bcb768789b9221.csv",
+      "size": 8018,
+      "sha256": "0289b3f2303041dccf86b2455834e0544001df3538900721cfa696c468f37928",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\wireless_1002_16915d55e0bf40d5a0bcb768789b9221.csv"
+    },
+    {
+      "path": "history/csv/048-wireless_1002_ed0a954353c44be295d7e3c0251be59e.csv",
+      "size": 2707,
+      "sha256": "edaad5a9c41870d8532f61d037c813b9f10ab02f3b4b7f39b771c70e13b8dc80",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\wireless_1002_ed0a954353c44be295d7e3c0251be59e.csv"
+    },
+    {
+      "path": "history/csv/049-wireless_replay_1002_2c4e350dc7354574b85c0a72238b5bb4.csv",
+      "size": 145075,
+      "sha256": "9167e00d1dea818cbf1a7c0cb278f172d266b35cd3abbbb0cda7a982f91650eb",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\wireless_replay_1002_2c4e350dc7354574b85c0a72238b5bb4.csv"
+    },
+    {
+      "path": "history/csv/050-wireless_replay_1002_3eba1bc5cb0c43a7b14025cd1cda31e4.csv",
+      "size": 159132,
+      "sha256": "ff85975b2a9ebc08e3df68db390f1ce1a388379881e4df0bcb9943da88f7bc53",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\wireless_replay_1002_3eba1bc5cb0c43a7b14025cd1cda31e4.csv"
+    },
+    {
+      "path": "history/csv/051-wireless_replay_1002_feb6bfb5caed440e81a5de6a9d57e844.csv",
+      "size": 15991,
+      "sha256": "ee086bcf7c1282bd7a351ed5ec4224af9f6dfcfe4b46e82c768cbf4867908741",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\wireless_replay_1002_feb6bfb5caed440e81a5de6a9d57e844.csv"
+    },
+    {
+      "path": "history/csv/052-MQ8_OFF_BASELINE_20260729.csv",
+      "size": 175025,
+      "sha256": "bfddfc37ca36df3b92c7d96ce151405ec8ce7f7ee46d02ea04c867a529ff0a40",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\mq8-duty-cycle\\MQ8_OFF_BASELINE_20260729.csv"
+    },
+    {
+      "path": "history/csv/053-GLD1002-12-kolom-20261103.csv",
+      "size": 12083,
+      "sha256": "f05e1ad4095729c285f578a93abd01906bf3954a93d351f783730a4821323066",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\output\\datasets\\GLD1002-12-kolom-20261103.csv"
+    },
+    {
+      "path": "history/ledger/001-workflow_3d0a3eb8c1ea4741ac3966615e07210b.jsonl",
+      "size": 70431,
+      "sha256": "b3e09dd9407675b9470b7aa0c26f42da37bf343f26e6c5a91242bb852a4caff0",
+      "role": "dataset-ledger",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\workflow_3d0a3eb8c1ea4741ac3966615e07210b.jsonl"
+    },
+    {
+      "path": "history/ledger/002-workflow_e3b7b84359f045348a81085c0976bb41.jsonl",
+      "size": 260936,
+      "sha256": "a165f94728d9ba0693214997dd03159bd536d03d2f2d7bcaa4cbc8523f286364",
+      "role": "dataset-ledger",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\workflow_e3b7b84359f045348a81085c0976bb41.jsonl"
+    }
+  ],
+  "totalBytes": 14897758
+}

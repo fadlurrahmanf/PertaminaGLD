@@ -1,0 +1,812 @@
+{
+  "archiveSha256": "dd61193d192ef67b4e3e6b040bea9be927d521cec4228bd56abdd8808ef94f0b",
+  "archiveSize": 45912221,
+  "excludes": [
+    "data",
+    "backup",
+    "configuration",
+    "other databases"
+  ],
+  "files": [
+    {
+      "path": "bin/api-ms-win-core-console-l1-1-0.dll",
+      "sha256": "03ffdb036329a25beacf905d62611a13e3dfdda6cbd2d13af830258e8cf40ec0",
+      "size": 21984
+    },
+    {
+      "path": "bin/api-ms-win-core-console-l1-2-0.dll",
+      "sha256": "449631a3f5fadef72acc2c2f84765208d0ca014ec1fe93fb9ad805eec1d40eae",
+      "size": 22008
+    },
+    {
+      "path": "bin/api-ms-win-core-datetime-l1-1-0.dll",
+      "sha256": "d718e1b6c352112c2f8e36b4ba5ed28e6179257fd2fe944c4a0d404b5c15b5ae",
+      "size": 22008
+    },
+    {
+      "path": "bin/api-ms-win-core-debug-l1-1-0.dll",
+      "sha256": "f65b1b3ea2767f98f0c29118e85b06f4e61654bec34b60b3abb593b24ec29af4",
+      "size": 21984
+    },
+    {
+      "path": "bin/api-ms-win-core-errorhandling-l1-1-0.dll",
+      "sha256": "a83af0f79abb5e5c818c6f38a38da80e531081f3255cb006ed4c29635cc0b9ce",
+      "size": 21976
+    },
+    {
+      "path": "bin/api-ms-win-core-fibers-l1-1-0.dll",
+      "sha256": "9057131f628e547c14754d545140ad6544e64606358104da50841e9a1b03f442",
+      "size": 21984
+    },
+    {
+      "path": "bin/api-ms-win-core-file-l1-1-0.dll",
+      "sha256": "99ed148ffbb35829480412dc64da6ad24dfabe2f9a0eff9ba1493455d7127677",
+      "size": 26080
+    },
+    {
+      "path": "bin/api-ms-win-core-file-l1-2-0.dll",
+      "sha256": "d56eae93c55abdc8eb77d132777049634e28a9b59fd4b2101d51351546b984d1",
+      "size": 21976
+    },
+    {
+      "path": "bin/api-ms-win-core-file-l2-1-0.dll",
+      "sha256": "9f496e181b1c862c7a7d03c09d9b0a5361535c98acbb1a9d50a27bcfb0a2bcc5",
+      "size": 22008
+    },
+    {
+      "path": "bin/api-ms-win-core-handle-l1-1-0.dll",
+      "sha256": "5e48c99dd6318b017686bde507cdcb9d6ecf25f4f78f345845b865e443f1ee66",
+      "size": 21976
+    },
+    {
+      "path": "bin/api-ms-win-core-heap-l1-1-0.dll",
+      "sha256": "6070ffb5e20ed032d460d323df981d369fa68045fab130fd100803a00ab88c23",
+      "size": 21984
+    },
+    {
+      "path": "bin/api-ms-win-core-interlocked-l1-1-0.dll",
+      "sha256": "4ea02b683513a157e21824b1c1e9ebb782d22f14209b67961f97b1f79673d3ed",
+      "size": 21984
+    },
+    {
+      "path": "bin/api-ms-win-core-libraryloader-l1-1-0.dll",
+      "sha256": "6fc551cfbcaa0f90ed24dd09fa117e9fb3b6755a3fc0251d33ca64862a9a3414",
+      "size": 21976
+    },
+    {
+      "path": "bin/api-ms-win-core-localization-l1-2-0.dll",
+      "sha256": "245d48bfce5cf6e9c5093e995d6ab5988e2401d32530fd6863bd5f8fd688d780",
+      "size": 21976
+    },
+    {
+      "path": "bin/api-ms-win-core-memory-l1-1-0.dll",
+      "sha256": "4a244eea4596ebde0f9094cc6dfeeb5abb3c4385225bb0630ef55a431fe1c4f2",
+      "size": 22008
+    },
+    {
+      "path": "bin/api-ms-win-core-namedpipe-l1-1-0.dll",
+      "sha256": "5662035361e37f6c5e4a5a19de134df2ec20bd4c0f1be803203b37c95ee61265",
+      "size": 22008
+    },
+    {
+      "path": "bin/api-ms-win-core-processenvironment-l1-1-0.dll",
+      "sha256": "2c9a8f8d47b49d04a82e8e689ae9f6552482b1861eb8398f3733e97327191c2a",
+      "size": 21992
+    },
+    {
+      "path": "bin/api-ms-win-core-processthreads-l1-1-0.dll",
+      "sha256": "363825adb27d5a5bd249fe58460a977077f823e50dac7509e124fcbac1512128",
+      "size": 21984
+    },
+    {
+      "path": "bin/api-ms-win-core-processthreads-l1-1-1.dll",
+      "sha256": "53afac76a7124a132a7c11261f3b6ba8d6a5466e7e8f683c8d12ac370b7d6b62",
+      "size": 22008
+    },
+    {
+      "path": "bin/api-ms-win-core-profile-l1-1-0.dll",
+      "sha256": "982fcc32d7614cb921cc5203970e3997a33b31aa1d91f14db5db25a582dcc3af",
+      "size": 21976
+    },
+    {
+      "path": "bin/api-ms-win-core-rtlsupport-l1-1-0.dll",
+      "sha256": "890dbb72c4c35266bd658c663c1242cfa3b50cf51e2873e986b7ab2e055af4a4",
+      "size": 22008
+    },
+    {
+      "path": "bin/api-ms-win-core-string-l1-1-0.dll",
+      "sha256": "90ba9da43d6705d76905e630505bd1fd097d1899c9bca3241ad0de5ab08ee366",
+      "size": 21976
+    },
+    {
+      "path": "bin/api-ms-win-core-synch-l1-1-0.dll",
+      "sha256": "fb4b382e2dfa80b3427a98c51d3270b1e80b5c2a10fdae1a72b7c464e57fc6a7",
+      "size": 21976
+    },
+    {
+      "path": "bin/api-ms-win-core-synch-l1-2-0.dll",
+      "sha256": "0ced53f1ac2adc9525047d2c2a7592300dc48a5f52ad8b740ce22e3f3aad85ff",
+      "size": 21976
+    },
+    {
+      "path": "bin/api-ms-win-core-sysinfo-l1-1-0.dll",
+      "sha256": "f353bfe02e30f4fd5cdc89bd7f44703257f229a09f0d815d7794df902f67d1a1",
+      "size": 22008
+    },
+    {
+      "path": "bin/api-ms-win-core-timezone-l1-1-0.dll",
+      "sha256": "91decddc6e80d742755a1f65261d10c3c0d059aaea6389bb2da6fd3aa7ec5289",
+      "size": 21984
+    },
+    {
+      "path": "bin/api-ms-win-core-util-l1-1-0.dll",
+      "sha256": "8875816a3809753c04acd961244608e9a47127523c1d5e50cddbd83a4627821c",
+      "size": 22008
+    },
+    {
+      "path": "bin/api-ms-win-crt-conio-l1-1-0.dll",
+      "sha256": "2c557f6a21db6c99af6184637b5efb57e44b40fae892230a43e96ab05ab27d40",
+      "size": 22008
+    },
+    {
+      "path": "bin/api-ms-win-crt-convert-l1-1-0.dll",
+      "sha256": "44ebde7f2681c0b8518e55ca242261b24f326994f089a4ef6c060f8dda04d62d",
+      "size": 26080
+    },
+    {
+      "path": "bin/api-ms-win-crt-environment-l1-1-0.dll",
+      "sha256": "0e195a8d013a329a06df877a4569a3ec772f112ad29295f086c6d3e53f322fb5",
+      "size": 22008
+    },
+    {
+      "path": "bin/api-ms-win-crt-filesystem-l1-1-0.dll",
+      "sha256": "58d9a9b2442c10140db98ba705e8c7b7b9ac5a2c030d3286a66debf63b615c1b",
+      "size": 21976
+    },
+    {
+      "path": "bin/api-ms-win-crt-heap-l1-1-0.dll",
+      "sha256": "1edf013e890072987b8957b77baecc37140bc01581e5de6b020ae454bb57f8bf",
+      "size": 21976
+    },
+    {
+      "path": "bin/api-ms-win-crt-locale-l1-1-0.dll",
+      "sha256": "2e23b53441ba6b0779b222c120d44eb9a156d55cc3648f76216017ef06f9a16f",
+      "size": 22000
+    },
+    {
+      "path": "bin/api-ms-win-crt-math-l1-1-0.dll",
+      "sha256": "e6e839c6d205f91adaa3d980f843bab3131b8a25e06d152d0f70a6e98fbe0fb0",
+      "size": 30200
+    },
+    {
+      "path": "bin/api-ms-win-crt-multibyte-l1-1-0.dll",
+      "sha256": "d9388848ebfe27138998518332bb507e5dbeb1d8851e9ed0300f15e14b6958c2",
+      "size": 30200
+    },
+    {
+      "path": "bin/api-ms-win-crt-private-l1-1-0.dll",
+      "sha256": "66f910721f4477ea238603e5c14c858d1e26fc2ceaab3b48294cac069790202c",
+      "size": 75232
+    },
+    {
+      "path": "bin/api-ms-win-crt-process-l1-1-0.dll",
+      "sha256": "b33a762f0eb072033044e7ee89505b695f357c958d4107ce6f1c4d68f88d3277",
+      "size": 21984
+    },
+    {
+      "path": "bin/api-ms-win-crt-runtime-l1-1-0.dll",
+      "sha256": "d3641bbaeaa5a7e7d4ee0ee0ec64ccee0327cfba3d10b89094144eb70a0867a9",
+      "size": 26072
+    },
+    {
+      "path": "bin/api-ms-win-crt-stdio-l1-1-0.dll",
+      "sha256": "eb7851e182a4675bb34633869938ff3579779a92a6c094194efbc970f3765dcc",
+      "size": 26072
+    },
+    {
+      "path": "bin/api-ms-win-crt-string-l1-1-0.dll",
+      "sha256": "08d811ff57efe50d9f365c76ec29e095474e0679e06bb4d0d4d0134b0120b40d",
+      "size": 26104
+    },
+    {
+      "path": "bin/api-ms-win-crt-time-l1-1-0.dll",
+      "sha256": "9c5880c395b4e7db4b8d6de49c75909abdaeeef0b041c1703c7339b05d7d2866",
+      "size": 21984
+    },
+    {
+      "path": "bin/api-ms-win-crt-utility-l1-1-0.dll",
+      "sha256": "7d3d88332d4744c9b6be81e2ba8d42ced7657ce7879a26f5b8a8d3bb2331ada0",
+      "size": 22008
+    },
+    {
+      "path": "bin/aria_chk.exe",
+      "sha256": "b7cd8ebcecb13feba4fffcf0b328fc2d826855b8a6f47d3d680354ae7875b20c",
+      "size": 4495784
+    },
+    {
+      "path": "bin/aria_dump_log.exe",
+      "sha256": "708dbbbe4bb4d4657d8e8c360504c083df72cb0b7b83390465a023b774fd7f11",
+      "size": 4073896
+    },
+    {
+      "path": "bin/aria_ftdump.exe",
+      "sha256": "4754fcdb7f47ebf2e9056298907b812aedb8d02ef8124d61dc9f411c8829f9af",
+      "size": 4309416
+    },
+    {
+      "path": "bin/aria_pack.exe",
+      "sha256": "f8683760c91042ef2477c6c0d072c4068de6ee4d1fdeda195a7afba583b5e2c6",
+      "size": 4352936
+    },
+    {
+      "path": "bin/aria_read_log.exe",
+      "sha256": "fc9121b314e0e7c6778a33dfdef9e59a74236ecf3e5bdc7b64141da2e77b32aa",
+      "size": 4475816
+    },
+    {
+      "path": "bin/concrt140.dll",
+      "sha256": "de1d1bf38090094b702833ddf3a68ee1f5d4ae20ca57f5392fabcf4c49c5b807",
+      "size": 327576
+    },
+    {
+      "path": "bin/innochecksum.exe",
+      "sha256": "9093b96e99de3abefe12889b83099be5a859fe88a624b9d78aea98214fbf1c2b",
+      "size": 3495336
+    },
+    {
+      "path": "bin/mariabackup.exe",
+      "sha256": "99429578026f81b49c94c04b507692b64ffdca3826af751c14a05f7fc5dfd8b5",
+      "size": 15732648
+    },
+    {
+      "path": "bin/mbstream.exe",
+      "sha256": "d60115547af58be592606aec62e15809f0450bef3c768fbfd9dc173af272ea4a",
+      "size": 3426728
+    },
+    {
+      "path": "bin/msvcp140.dll",
+      "sha256": "74892d9b4028c05debaf0b9b5d9dc6d22f7956fa7d7eee00c681318c26792823",
+      "size": 578384
+    },
+    {
+      "path": "bin/msvcp140_1.dll",
+      "sha256": "a3a1199de32bbbc8318ec33e2e1ce556247d012851e4b367fe853a51e74ce4ee",
+      "size": 35704
+    },
+    {
+      "path": "bin/msvcp140_2.dll",
+      "sha256": "63f1a20cb17ec5e0ca4ebea870b68740f24e063e28b235c3c8b58a3d8f57a9c4",
+      "size": 267160
+    },
+    {
+      "path": "bin/msvcp140_atomic_wait.dll",
+      "sha256": "7e02efe075b7dd385992f621fde34728ef7c2d4cf090b127b093d0835345f8fe",
+      "size": 50072
+    },
+    {
+      "path": "bin/msvcp140_codecvt_ids.dll",
+      "sha256": "3bd90db2f147899c65fe279f3e44ac48f5598cd0c23a09c0410be072a4c96070",
+      "size": 31640
+    },
+    {
+      "path": "bin/my_print_defaults.exe",
+      "sha256": "7a4734338ea79f5db40b5d9aec47397bbf79159f4732099c9edce32115ddd9f9",
+      "size": 3418536
+    },
+    {
+      "path": "bin/myisam_ftdump.exe",
+      "sha256": "4b974f14e0151254a5e10eecb26840cc07a6cd8cb3243321c74639ece3932fa6",
+      "size": 3603368
+    },
+    {
+      "path": "bin/myisamchk.exe",
+      "sha256": "abe1906055d75a14eec09a3bc45abbdf85d60a380c941f57adeb03a3682847cf",
+      "size": 3739560
+    },
+    {
+      "path": "bin/myisamlog.exe",
+      "sha256": "6954feb86a0872ac635797fb424075218c0bc32f6f8335be3766baeaa68a92f3",
+      "size": 3620264
+    },
+    {
+      "path": "bin/myisampack.exe",
+      "sha256": "5cc049d28beaccd7c05fd41e072a7395fa42bcb5706433ad9b67d9d367c1ae74",
+      "size": 3639720
+    },
+    {
+      "path": "bin/myrocks_hotbackup",
+      "sha256": "3dbeeee56884571d5c6031965ac9c606118b80f7c22d6ce4a790c518de7bb1a6",
+      "size": 25746
+    },
+    {
+      "path": "bin/mysql.exe",
+      "sha256": "a60d3cbc24984e3c1c5dee3726abc685ec6fff58bce3fbd763f9261c652fb73d",
+      "size": 3784616
+    },
+    {
+      "path": "bin/mysql_config.pl",
+      "sha256": "ec31d6ace8b0e3432363336c8b4dd33458e4aa4bd9ee449d0134cc093cc134e5",
+      "size": 8878
+    },
+    {
+      "path": "bin/mysql_convert_table_format.pl",
+      "sha256": "656017102e89a92d3c8579c522ab4af3113e948439fac0de1b346e33220a9e0b",
+      "size": 4384
+    },
+    {
+      "path": "bin/mysql_install_db.exe",
+      "sha256": "a9803f4c837a78668ee5a8079903480fa55291ce0fc4fe76c6134d6ca3dcdb55",
+      "size": 5574568
+    },
+    {
+      "path": "bin/mysql_ldb.exe",
+      "sha256": "d36a87164d9f0208246f8c114a9ee77f3e4609092dc540a8b39d24b304261e96",
+      "size": 3345832
+    },
+    {
+      "path": "bin/mysql_plugin.exe",
+      "sha256": "dde727915b9b3c3ce6cf92446686873336b0ab404e82f06888c0c68ef9327b93",
+      "size": 3413928
+    },
+    {
+      "path": "bin/mysql_tzinfo_to_sql.exe",
+      "sha256": "71fe4b25dfd8a4ba823e6308f926b56c788948f6d18811f7079867006a37a97a",
+      "size": 3426728
+    },
+    {
+      "path": "bin/mysql_upgrade.exe",
+      "sha256": "632f67b0de1934e4438c6aa5fa9a64723d7991e0912ee9c6d94a73e244d4f41d",
+      "size": 3522984
+    },
+    {
+      "path": "bin/mysql_upgrade_service.exe",
+      "sha256": "d0131df4083458ad26128eb318e98b4716af07f93ebf41bcfb5ce8e5a36a83fb",
+      "size": 3406760
+    },
+    {
+      "path": "bin/mysql_upgrade_wizard.exe",
+      "sha256": "b8e2cddc3425fba4537fa954990aeaae1b420777dc87b82785899e260a962199",
+      "size": 2673576
+    },
+    {
+      "path": "bin/mysqladmin.exe",
+      "sha256": "5d28fb1f6faaf93604f1a46fb5d1133832ef94e90cc9d227acff7add12deaa7c",
+      "size": 3688360
+    },
+    {
+      "path": "bin/mysqlbinlog.exe",
+      "sha256": "3608293482859e3b30f5d33a167c0ffe604d183ba4ebd72f6edc29634285ad78",
+      "size": 3822504
+    },
+    {
+      "path": "bin/mysqlcheck.exe",
+      "sha256": "9ee6ef2084e54da998c1b7ae1e75ebb6a87160568976ef3961a666cc37077ab8",
+      "size": 3700648
+    },
+    {
+      "path": "bin/mysqld.exe",
+      "sha256": "ee6380db7277e0a4ebe0ff255edd846eb3b4ee604804cf5db3bdde1be44b7e8a",
+      "size": 16664488
+    },
+    {
+      "path": "bin/mysqld_multi.pl",
+      "sha256": "14ee465b73dc46913bec3cc030a7146541bec0ddaf85c7e046d543102846d5a2",
+      "size": 28628
+    },
+    {
+      "path": "bin/mysqldump.exe",
+      "sha256": "e30ddbe8f01d7db1d3e75f0dbfb9b62e140d6202eb6fbbea663cb63bdcd2cf56",
+      "size": 3774888
+    },
+    {
+      "path": "bin/mysqldumpslow.pl",
+      "sha256": "bd0a056a921713dbe46495ca1a1a1cae26e8d4e30c10cd4345889d77f228e01b",
+      "size": 8478
+    },
+    {
+      "path": "bin/mysqlhotcopy.pl",
+      "sha256": "ff7ae782b50ad3f6dddf6d763378e60e9c2fdd72991a1d5e9dbd32e67f3c064e",
+      "size": 36124
+    },
+    {
+      "path": "bin/mysqlimport.exe",
+      "sha256": "a1f886b7dc671230233769d09a7c0e2bcbf432edf317d3a7dfe6703bc6d771bf",
+      "size": 3673000
+    },
+    {
+      "path": "bin/mysqlshow.exe",
+      "sha256": "365a852b50c9d5843e3d07a3eeee08eba159fcc3e1acd1b2956b2f2331bc4435",
+      "size": 3672488
+    },
+    {
+      "path": "bin/mysqlslap.exe",
+      "sha256": "f96bd8ddce9b0d7c6819a573c44c57cba8aa542f9455525d93f8ddf6de2b3884",
+      "size": 3690408
+    },
+    {
+      "path": "bin/perror.exe",
+      "sha256": "6bf27f7f8776c8ec81c4dad1c793b5170c65d7f8e864e0641d6d82ef2e336d97",
+      "size": 3542440
+    },
+    {
+      "path": "bin/replace.exe",
+      "sha256": "09f683c1997a420ba5aa4122bd752a2a319fe0f3fe0e4295a4326538505849d1",
+      "size": 3396008
+    },
+    {
+      "path": "bin/sst_dump.exe",
+      "sha256": "c2bfa63e34e66bd45e3e14a5241e935c188ae8b9eddd49318e991e05e669afd7",
+      "size": 1482664
+    },
+    {
+      "path": "bin/ucrtbase.dll",
+      "sha256": "a73bd7d75f368ab2fe949dcddbb25cd5d5975ff9091761a01b98f5e26de543ee",
+      "size": 1123832
+    },
+    {
+      "path": "bin/vcruntime140.dll",
+      "sha256": "69320f278d90efaaeb67e2a1b55e5b0543883125834c812c8d9c39676e0494fc",
+      "size": 109440
+    },
+    {
+      "path": "bin/vcruntime140_1.dll",
+      "sha256": "da5d3440dd53261bffec0f9163a46eb12e46b2a4e1bd72dd1b62c6bca9cca280",
+      "size": 44320
+    },
+    {
+      "path": "licenses/COPYING",
+      "sha256": "240a15a1d0f34d3abca462cdb7e5fb89470967563f16b0e71169e51c1e74cf2b",
+      "size": 17987
+    },
+    {
+      "path": "licenses/CREDITS",
+      "sha256": "390089cc6c2bfa7d6607397f4081783007f6bd6fb93d9a3a28590d2704d84894",
+      "size": 2104
+    },
+    {
+      "path": "licenses/THIRDPARTY",
+      "sha256": "76d7c45ae8f0340eec72bbf0e4ec95c9011245ebcca0a156e06b88c6efadd2f0",
+      "size": 86263
+    },
+    {
+      "path": "share/JavaWrappers.jar",
+      "sha256": "4ed91391dabe7375d0737a4df250e0674718cfffa14a34da7cdd1f761962a30e",
+      "size": 19192
+    },
+    {
+      "path": "share/JdbcInterface.jar",
+      "sha256": "a8873d7336a0708d811e1fffcef16fbe73bbf219e517f5eb68880b7ef0933b7b",
+      "size": 7609
+    },
+    {
+      "path": "share/Mongo2.jar",
+      "sha256": "efae19135b32315c5dc969e5f89bb433be7132e21d747cc54a5a998a1a307927",
+      "size": 624130
+    },
+    {
+      "path": "share/Mongo3.jar",
+      "sha256": "b37b9976d6aeb7901f7142d5afc48d2f1d040862d8255e717a22efce03b8bbb5",
+      "size": 1706057
+    },
+    {
+      "path": "share/bulgarian/errmsg.sys",
+      "sha256": "f68d8a3a235a090598b06d513404c066c0a3d7da9c8e22101cd51797beed4103",
+      "size": 76834
+    },
+    {
+      "path": "share/charsets/Index.xml",
+      "sha256": "f583dfe720b5d0fe47106eec277ba98b18b0b01951f144b8b773267038462189",
+      "size": 23500
+    },
+    {
+      "path": "share/charsets/README",
+      "sha256": "0af62ce1ae651e980006f2e9d29bd2f24e1cd18c6a0b1914e9c437cc80e990ab",
+      "size": 1749
+    },
+    {
+      "path": "share/charsets/armscii8.xml",
+      "sha256": "9e97d39dfa130dc298a23ba21c9ef08e922353effb3d2faa7b8312767e0f12c1",
+      "size": 5526
+    },
+    {
+      "path": "share/charsets/ascii.xml",
+      "sha256": "0d9216d2c38a467e03e0485d3bb9607a554196f7294e41efd92bc8a11b4f29ff",
+      "size": 5512
+    },
+    {
+      "path": "share/charsets/cp1250.xml",
+      "sha256": "65e7d6cf30ab286740dd00dadc6a218b9281316381b461d0a721cf229b742294",
+      "size": 8241
+    },
+    {
+      "path": "share/charsets/cp1251.xml",
+      "sha256": "eda82c06317145d7be01578c34229f7762dffb2907890783fe0bf529664473fb",
+      "size": 8365
+    },
+    {
+      "path": "share/charsets/cp1256.xml",
+      "sha256": "2913f93935de57910436eac59dcde0a0c6a5ceacb339d6635b0eee693836b502",
+      "size": 5569
+    },
+    {
+      "path": "share/charsets/cp1257.xml",
+      "sha256": "82ba85d79760a31a480a63f6e3ff462f472c88cd832411356779c1fe265c8313",
+      "size": 8902
+    },
+    {
+      "path": "share/charsets/cp850.xml",
+      "sha256": "233040414ec9a2b18b83e6bea6490d590275f5e5aefcd08065e22446a9788ef0",
+      "size": 5506
+    },
+    {
+      "path": "share/charsets/cp852.xml",
+      "sha256": "a3598e99923c97273e1bbeb10479f5c45cfef47739b5f38c5029f1d911e1968a",
+      "size": 5528
+    },
+    {
+      "path": "share/charsets/cp866.xml",
+      "sha256": "7ef9c770e934e93aec794a36714ab212776d047cc20e5bb086f29648f8611828",
+      "size": 5613
+    },
+    {
+      "path": "share/charsets/dec8.xml",
+      "sha256": "d3f0fe6fb085ed76072f68b1caed7e821bf384840fbb8c94c4b58049f6bbdf22",
+      "size": 6529
+    },
+    {
+      "path": "share/charsets/geostd8.xml",
+      "sha256": "2635d5a7f2dc7a0373cdd2dd4380799749c59bca44961744265bb9cbdc357a72",
+      "size": 5516
+    },
+    {
+      "path": "share/charsets/greek.xml",
+      "sha256": "e5c1722ae64b2d9d2890103375386cb2bb63c235f589d9f73f24cfd23a5b4303",
+      "size": 5728
+    },
+    {
+      "path": "share/charsets/hebrew.xml",
+      "sha256": "a260ddde747abf250b0b8d6422108b66617ae158e03f1b83e969f6e720648b61",
+      "size": 5517
+    },
+    {
+      "path": "share/charsets/hp8.xml",
+      "sha256": "2feea2baca6c3cb0626b5935815fe950b06dfdc964f7885e4fb15ddf05d680bd",
+      "size": 5502
+    },
+    {
+      "path": "share/charsets/keybcs2.xml",
+      "sha256": "69cadd4266cca445df33e6263dba1cc65baa66520a888bfdd69319b7a3c54d72",
+      "size": 5529
+    },
+    {
+      "path": "share/charsets/koi8r.xml",
+      "sha256": "62e58dea0a82262ceca6d8b4e6fd0ce455837cc18ceec5dd25cf9733b5c06a78",
+      "size": 5510
+    },
+    {
+      "path": "share/charsets/koi8u.xml",
+      "sha256": "89a3a22b8f4428412e2346ac12f9cd684651078b02183869cd3b676dd234eb1e",
+      "size": 6532
+    },
+    {
+      "path": "share/charsets/latin1.xml",
+      "sha256": "14b7af906031f8dd4a548b8be8dcbd2085cb6c7fb4ee2ac8c357329705ee8e08",
+      "size": 9816
+    },
+    {
+      "path": "share/charsets/latin2.xml",
+      "sha256": "5060721b44cbbf1a8d5e092b9f069ee837d7276feaf61e4aad68176450fabb1f",
+      "size": 7238
+    },
+    {
+      "path": "share/charsets/latin5.xml",
+      "sha256": "0a2de75c2c4c78a8babd882b7c29e6e4329bcbb81a6b0bcd24c5c462384e597d",
+      "size": 5515
+    },
+    {
+      "path": "share/charsets/latin7.xml",
+      "sha256": "805ddc77c26c1a947625bdac4107eb9ddaf2f6c4f2218f978f0e30d52852967c",
+      "size": 7438
+    },
+    {
+      "path": "share/charsets/macce.xml",
+      "sha256": "b8ed085763a3e2a23e3b08df9724733035a4d87983ad733a7b299daa7ade805f",
+      "size": 8047
+    },
+    {
+      "path": "share/charsets/macroman.xml",
+      "sha256": "ec449c54ebf9bd8f06bb09833993ff51e5dc29fe7d691963a697db5ff7232d36",
+      "size": 8058
+    },
+    {
+      "path": "share/charsets/swe7.xml",
+      "sha256": "d26b3be163a2a5d0d54c07b28737c618e0aa4dba16972a3740d896849189f34d",
+      "size": 6530
+    },
+    {
+      "path": "share/chinese/errmsg.sys",
+      "sha256": "aa6bda335bd4c37ac768281864779c4f9b93f6f7d25d80bcd3b7f0df2cb7ba98",
+      "size": 64839
+    },
+    {
+      "path": "share/czech/errmsg.sys",
+      "sha256": "3458a093f17230ee1c083afe3455f5b4db81e268c3a2d1ddeea7f63d591e7ea9",
+      "size": 77581
+    },
+    {
+      "path": "share/danish/errmsg.sys",
+      "sha256": "210f09fce92ba842cc9bfab69423e526c533d6e75c1bbd02fbf1f8f977d2c8a0",
+      "size": 77550
+    },
+    {
+      "path": "share/dutch/errmsg.sys",
+      "sha256": "a4fc1dedcbecc1644276d9005b3e73f66e995c9a65c1afe4dddc74ad36fe13ae",
+      "size": 78534
+    },
+    {
+      "path": "share/english/errmsg.sys",
+      "sha256": "bdb2fe4a9dd19b6109630873cda88b20d0efefccd8cf971e54314cc0c1f05b4b",
+      "size": 76546
+    },
+    {
+      "path": "share/errmsg-utf8.txt",
+      "sha256": "90be72840417c6cb41f6c1fc855205bde7053a16b7b81b3383a6dcb04160094b",
+      "size": 627872
+    },
+    {
+      "path": "share/estonian/errmsg.sys",
+      "sha256": "8458490ccbd21a947c09726f298afc68262669a72d633bcf791df45b336e7121",
+      "size": 77071
+    },
+    {
+      "path": "share/fill_help_tables.sql",
+      "sha256": "02cfa590b1289be18817b3f969a73116e0ec88e00a0bcb40e41642c686aed7bb",
+      "size": 2119128
+    },
+    {
+      "path": "share/french/errmsg.sys",
+      "sha256": "cfdb49162e0760f6cd35fcacfe62076cd754ca0330e8ab947479def73757f2cc",
+      "size": 78188
+    },
+    {
+      "path": "share/german/errmsg.sys",
+      "sha256": "0e425eefc6f8eda769053420dd90bb34d05fc844d08662e21b80f62a989d49ea",
+      "size": 84170
+    },
+    {
+      "path": "share/greek/errmsg.sys",
+      "sha256": "604b0807eb5bba34236984d77997e91498182e0f02ea4d90f506ab597025ff60",
+      "size": 83285
+    },
+    {
+      "path": "share/hindi/errmsg.sys",
+      "sha256": "caf2aabb53ae59e6326ca67251bf560140bd3c43cc97b2da979f32b27c377072",
+      "size": 88013
+    },
+    {
+      "path": "share/hungarian/errmsg.sys",
+      "sha256": "b3d7de6138342219aa779b4e54098273394b1b43455b7f05725cf56f607b30fe",
+      "size": 77421
+    },
+    {
+      "path": "share/install_spider.sql",
+      "sha256": "fe1fd21e94986218bf1f6ac8b31c3153cec51a7df142db136e3494f356d9a733",
+      "size": 1722
+    },
+    {
+      "path": "share/italian/errmsg.sys",
+      "sha256": "e3705918e2fa8ae487c6d11e0d2ec5739d63b7363decdfc4e949e7ed782c4834",
+      "size": 78539
+    },
+    {
+      "path": "share/japanese/errmsg.sys",
+      "sha256": "616006415c5aabc32f7cd1de88a0db08f9a59c819056d95970ee0407177d99d6",
+      "size": 83659
+    },
+    {
+      "path": "share/korean/errmsg.sys",
+      "sha256": "108df5bddd4947ed91ad46f5b8233db134d77d84cf259a3d77ca31b141e68115",
+      "size": 79595
+    },
+    {
+      "path": "share/maria_add_gis_sp.sql",
+      "sha256": "e20a880ce27f8488c7f16f268699e0b58819e905b7482749b34fcff817b6877d",
+      "size": 1742
+    },
+    {
+      "path": "share/maria_add_gis_sp_bootstrap.sql",
+      "sha256": "cf605021153e3e36c1d14c4dc3b18b3ee25764f4dc79f3d01962fd6717d1d6b7",
+      "size": 1720
+    },
+    {
+      "path": "share/mysql_performance_tables.sql",
+      "sha256": "98e4a257eed134b507c39f5a2213f7db127cf3b7d055ca5beebfb300f37f8240",
+      "size": 1955
+    },
+    {
+      "path": "share/mysql_system_tables.sql",
+      "sha256": "aba7710bff8d91c8fefa5c6f162251b27876ba2148ecbe2598b1efcb2ccee0bb",
+      "size": 30120
+    },
+    {
+      "path": "share/mysql_system_tables_data.sql",
+      "sha256": "3c6ae21bd9ace0c2621f5de9a81962a9e59bacb7582b8e78f9b2e31ddafa2d79",
+      "size": 3328
+    },
+    {
+      "path": "share/mysql_test_data_timezone.sql",
+      "sha256": "a44c263853c22087d9d7688e3c24a00c1f75d35ea2d75067cb71b898de9b9f62",
+      "size": 10411
+    },
+    {
+      "path": "share/mysql_test_db.sql",
+      "sha256": "840d02c183c9b1031838f7a8da088bc5368ab5b9b27be638e6e86452fa837998",
+      "size": 1679
+    },
+    {
+      "path": "share/norwegian-ny/errmsg.sys",
+      "sha256": "4ca8c6eeee34a55a21bc900586057ca56ecd44f670fa437ad5613b0ef7bbad10",
+      "size": 76859
+    },
+    {
+      "path": "share/norwegian/errmsg.sys",
+      "sha256": "b78095495a4b34b3836dfeecbb3f855f1aaf30bd6a0a7cdaec4a9a41097e7199",
+      "size": 76814
+    },
+    {
+      "path": "share/polish/errmsg.sys",
+      "sha256": "160afeb7e3321396c409a0129acc71a78ec42863bab059e5b596e1e292d46669",
+      "size": 77452
+    },
+    {
+      "path": "share/portuguese/errmsg.sys",
+      "sha256": "df9021c3f30a6a54e7967f4a898266ab1fa02e9fe54e03ee616e95e09ffd5e9b",
+      "size": 79502
+    },
+    {
+      "path": "share/romanian/errmsg.sys",
+      "sha256": "f7ae287bb3f5ba96d98073bb1693b8f9220456f3b73227382b7b51f6cb621c56",
+      "size": 78245
+    },
+    {
+      "path": "share/russian/errmsg.sys",
+      "sha256": "7f4f541adedc2541726d7107c7b8743df08d3d8d081a7d83c08f43a7ff7f6519",
+      "size": 91877
+    },
+    {
+      "path": "share/serbian/errmsg.sys",
+      "sha256": "b2f26a8f51d7428985cab6bfe41a4c2b56f6ca51f19e1fae007a77ab330327fb",
+      "size": 78947
+    },
+    {
+      "path": "share/slovak/errmsg.sys",
+      "sha256": "8e439de6ac37af8246a0905ca52fa32c50f3ab48d4ca97b5e459e3851cb32707",
+      "size": 77287
+    },
+    {
+      "path": "share/spanish/errmsg.sys",
+      "sha256": "22e2bae664028d064e70bd9b88b0b1e62365f9a4779ab85b41a56ec91a7cae9f",
+      "size": 78406
+    },
+    {
+      "path": "share/swedish/errmsg.sys",
+      "sha256": "d7068bb9a7b3645d06f3de59b9a0858acef515b2e514adbb2871b02311733fab",
+      "size": 77522
+    },
+    {
+      "path": "share/ukrainian/errmsg.sys",
+      "sha256": "25c219cff9b1f9b907a59562788500d042001d405a5168734c808391d85603ef",
+      "size": 87281
+    }
+  ],
+  "kind": "pertamina-gld-mariadb-runtime",
+  "parts": [
+    {
+      "path": "mariadb-10.4.32-windows-x64.zip.001",
+      "sha256": "dd61193d192ef67b4e3e6b040bea9be927d521cec4228bd56abdd8808ef94f0b",
+      "size": 45912221
+    }
+  ],
+  "schemaVersion": 1,
+  "version": "10.4.32"
+}

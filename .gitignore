@@ -10,7 +10,12 @@ firmware/config/*.env
 **/settings.local.js
 **/credentials.local.json
 **/startup.local.json
+# Operator explicitly approved the versioned full-handover snapshot in plaintext.
+# Keep local originals ignored; this exact snapshot carries its decryption state.
+!handover/state/nodered/flows_cred.json
 apps/runtime/local-mqtt/
+# Verification restores a working copy (including private runtime files).
+output/handover-verification/
 
 # Local AI agent/session state
 .codex/
@@ -66,3 +71,4 @@ docs/manual/*.pdf
 .idea/
 Thumbs.db
 Desktop.ini
+~$*

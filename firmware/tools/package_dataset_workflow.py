@@ -241,6 +241,11 @@ def main():
         results = [package(model, modules, core, snapshot, args.install_hub) for model in sorted(set(args.model or (1, 2, 3)))]
         require(protected == protected_snapshot(), "An old protected package/artifact changed")
         require(snapshot == modules[0]._firmware_tree_snapshot_sha256(FW), "Firmware workspace changed during packaging")
+        if args.install_hub:
+            # Publish the portable references only after all selected packages
+            # pass admission. No password is serialized into public metadata.
+            from export_workflow_connection_profiles import export_profiles
+            export_profiles(ROOT)
         print(json.dumps(dict(status="PASS", oldProtectedFilesUnchanged=len(protected),
                               packages=[{key: item[key] for key in ("environment", "firmwareSha256", "firmwareSize", "manifestSha256", "hubInstalled")} for item in results])))
         return 0

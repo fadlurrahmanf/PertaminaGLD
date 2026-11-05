@@ -38,21 +38,60 @@ function hasNativeWorkflowSerial(manifest) {
     && manifest?.capabilities?.nativeSerial === true;
 }
 
-async function verifyNativeWorkflowReadback(manifest, targetDeviceId, port) {
-  if (!state.connected) throw new Error(`Flash selesai, tetapi reconnect COM ke ${port} gagal.`);
-  const deadline = Date.now() + 35_000;
-  // connectSerial resets the old device snapshot before requesting GET_INFO.
-  while (state.connected && !state.info && Date.now() < deadline) {
+function requireUploadSlot(slot) {
+  if (state.activeSlot !== slot) throw new Error("Slot GLD berubah saat upload; pilih kembali slot perangkat dan periksa statusnya.");
+}
+
+async function readNativeWorkflowInfo(port, slot, timeoutMs) {
+  requireUploadSlot(slot);
+  const checkPort = async () => {
+    requireUploadSlot(slot);
+    const serial = await bridgeFetch(`/api/serial/status?slot=${slot}`, { timeoutMs: 3_000 });
+    if (!serial.connected || String(serial.port || "").toUpperCase() !== port.toUpperCase()) {
+      throw new Error(`Koneksi COM ${port} belum terkonfirmasi pada slot ${slot}.`);
+    }
+  };
+  await checkPort();
+  // The backend cursor excludes snapshots and serial lines retained from a
+  // previous device/connection. Read the selected physical port, not the
+  // browser's cached target field or an old SSE state.info notification.
+  const before = await bridgeFetch(`/api/serial/recent?slot=${slot}`, { timeoutMs: 3_000 });
+  if (!Number.isSafeInteger(before.sequence) || before.sequence < 0) throw new Error("Urutan log COM tidak valid; baca ulang identitas GLD.");
+  let cursor = before.sequence;
+  await bridgeFetch("/api/serial/write", {
+    method: "POST", timeoutMs: 3_000, body: JSON.stringify({ slot, line: "GET_INFO" })
+  });
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    await checkPort();
+    const recent = await bridgeFetch(`/api/serial/recent?slot=${slot}&after=${cursor}`, { timeoutMs: 3_000 });
+    for (const item of recent.lines || []) {
+      if (!Number.isSafeInteger(item.sequence) || item.sequence <= cursor) continue;
+      cursor = item.sequence;
+      const match = /^GLD_INFO_JSON\s+(\{.*\})\s*$/.exec(String(item.line || "").trim());
+      if (!match) continue;
+      let info;
+      try { info = JSON.parse(match[1]); } catch { throw new Error("GET_INFO GLD tidak valid; upload ditahan."); }
+      const deviceId = String(info?.deviceId || "").toUpperCase();
+      if (!isGldId(deviceId)) throw new Error("ID dari GET_INFO GLD tidak valid; upload ditahan.");
+      await checkPort();
+      return { ...info, deviceId };
+    }
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
-  const info = state.info;
-  if (!state.connected || !info) throw new Error(`Flash selesai, tetapi readback GET_INFO dari ${port} belum diterima.`);
+  return null;
+}
+
+async function verifyNativeWorkflowReadback(manifest, expectedDeviceId, port, slot) {
+  const info = await readNativeWorkflowInfo(port, slot, 35_000);
+  if (!info) throw new Error(`Flash selesai, tetapi readback GET_INFO dari ${port} belum diterima.`);
   if (info.firmwareVersion !== manifest.firmwareVersion) {
     throw new Error(`Flash selesai, tetapi versi readback berbeda: expected ${manifest.firmwareVersion}, got ${info.firmwareVersion || "unknown"}.`);
   }
-  if (String(info.deviceId || "").toUpperCase() !== targetDeviceId) {
-    throw new Error(`Flash selesai, tetapi ID readback berbeda: expected ${targetDeviceId}, got ${info.deviceId || "unknown"}.`);
+  if (expectedDeviceId && info.deviceId !== expectedDeviceId) {
+    throw new Error(`Flash selesai, tetapi ID readback berbeda: expected ${expectedDeviceId}, got ${info.deviceId}.`);
   }
+  return info;
 }
 
 function requiresGld1DowngradeReset(manifest) {
@@ -305,7 +344,13 @@ async function performFirmwareUpload() {
   }
   const port = $("firmwareUploadPort").value;
   const env = state.manifest?.environment || "gld";
-  const targetDeviceId = getField("targetDeviceId").toUpperCase();
+  const manifest = state.manifest;
+  const nativeWorkflow = hasNativeWorkflowSerial(manifest);
+  // For identity-preserving Hotspot uploads, the manual Inject ID input is
+  // intentionally independent. It must never decide the identity readback.
+  let targetDeviceId = nativeWorkflow
+    ? (String(manifest.deviceId || "").toUpperCase() === "ANY" ? "1001" : String(manifest.deviceId || "").toUpperCase())
+    : getField("targetDeviceId").toUpperCase();
   if (!/^COM\d+$/i.test(port)) {
     appendLog("UPLOAD_SKIPPED select a COM port first", "in");
     return;
@@ -316,7 +361,6 @@ async function performFirmwareUpload() {
     switchTab("expert");
     return;
   }
-  const manifest = state.manifest;
   const resetRequired = requiresGld1DowngradeReset(manifest);
   const resetNvs = $("firmwareResetNvs").checked === true;
   if (isDatasetWifiEnvironment(env) && resetNvs) {
@@ -337,8 +381,35 @@ async function performFirmwareUpload() {
   $("firmwareResetNvs").disabled = true;
   ["firmwareUploadEnv", "firmwareUploadModel", "firmwareUploadPort"].forEach((id) => { $(id).disabled = true; });
   setUploadDialogStatus(`Disconnecting serial, then uploading to ${port}…`, "loading");
+  const uploadSlot = state.activeSlot;
+  let preservedDeviceId = "";
+  let verifiedInfo = null;
+  let flashCompleted = false;
   try {
     setUploadProgress(0, "Menyiapkan upload…");
+    if (nativeWorkflow) {
+      setUploadDialogStatus(`Membaca ID GLD dari ${port}; ID tersimpan pada perangkat akan dipertahankan…`, "loading");
+      requireUploadSlot(uploadSlot);
+      await connectSerial();
+      const before = await readNativeWorkflowInfo(port, uploadSlot, 8_000);
+      if (before) {
+        preservedDeviceId = targetDeviceId = before.deviceId;
+        const identityWarning = validateManifestForUpload(manifest, env, targetDeviceId);
+        if (identityWarning) throw new Error(`Upload ditahan: ${identityWarning}`);
+        appendLog(`UPLOAD_ID_DETECTED ${port} GLD ${targetDeviceId}; ID perangkat dipertahankan, tanpa Inject ID`, "in");
+        setUploadDialogStatus(`GLD ${targetDeviceId} terdeteksi di ${port}. Upload mempertahankan ID dan NVS.`, "loading");
+      } else {
+        if (String(manifest.deviceId || "").toUpperCase() !== "ANY") {
+          throw new Error("Upload ditahan: paket ber-ID khusus memerlukan GET_INFO sebelum flash.");
+        }
+        // ANY packages never write targetDeviceId into NVS. The bridge still
+        // requires a syntactically valid admission ID; 1001 is only that
+        // placeholder. We validate the actual identity after recovery flash.
+        appendLog(`UPLOAD_ID_UNAVAILABLE ${port}; upload pemulihan paket ANY, identitas sebelum flash belum terverifikasi`, "in");
+        setUploadDialogStatus(`ID sebelum flash belum terbaca dari ${port}. Melanjutkan upload pemulihan; ID akan dibaca sesudah flash dan tidak diubah otomatis.`, "warn");
+      }
+      requireUploadSlot(uploadSlot);
+    }
     await disconnectSerial();
     const packageFiles = await readPackageFiles(manifest);
     const result = await bridgeFetch("/api/firmware/upload", {
@@ -346,10 +417,10 @@ async function performFirmwareUpload() {
       // Guarded downgrade: allow 45 s for pre-erase, 120 s for flashing,
       // plus a bounded preflight/delivery margin. Other packages keep 135 s.
       timeoutMs: resetRequired ? 195_000 : 135_000,
-      body: JSON.stringify({ env, port, targetDeviceId, resetNvs, ...(resetNvs ? { resetNvsConfirmation: "RESET NVS" } : {}), manifest, packageFiles, slot: state.activeSlot })
+      body: JSON.stringify({ env, port, targetDeviceId, resetNvs, ...(resetNvs ? { resetNvsConfirmation: "RESET NVS" } : {}), manifest, packageFiles, slot: uploadSlot })
     });
+    flashCompleted = true;
     setUploadProgress(100, "Upload firmware selesai.");
-    const nativeWorkflow = hasNativeWorkflowSerial(manifest);
     if (isDatasetWifiEnvironment(env) && !nativeWorkflow) {
       setUploadDialogStatus(
         "Flash tool selesai; perangkat belum diverifikasi. Gunakan catu eksternal/24 V, sambungkan Wi-Fi laptop ke GLD-DATASET-..., lalu buka Dataset Wireless dan Connect GLD untuk verifikasi hotspot. Mode khusus ini tidak memakai reconnect COM."
@@ -363,14 +434,19 @@ async function performFirmwareUpload() {
     setUploadDialogStatus(result.nvsReset
       ? `NVS direset. Connecting to ${port} dengan default firmware…`
       : `Upload berhasil. Parameter NVS dipertahankan. Connecting to ${port}…`, "success");
+    if (nativeWorkflow) {
+      requireUploadSlot(uploadSlot);
+      elements.portSelect.value = port;
+    }
     await connectSerial();
     if (nativeWorkflow) {
       setUploadDialogStatus(`Flash selesai. Memverifikasi versi dan ID GLD melalui ${port}…`, "loading");
-      await verifyNativeWorkflowReadback(manifest, targetDeviceId, port);
+      verifiedInfo = await verifyNativeWorkflowReadback(manifest, preservedDeviceId, port, uploadSlot);
+      appendLog(`UPLOAD_ID_VERIFIED ${port} GLD ${verifiedInfo.deviceId}`, "in");
     }
     setUploadDialogStatus(state.connected
-      ? `Upload berhasil. Connected to ${port}.`
-      : `Upload berhasil, tetapi reconnect ke ${port} gagal. Periksa Port Setup.`, state.connected ? "success" : "warn");
+      ? `Upload berhasil. Connected to ${port}.${verifiedInfo ? ` GLD ${verifiedInfo.deviceId}.` : ""}${nativeWorkflow && !preservedDeviceId ? " ID sebelum flash tidak terbaca; pelestarian ID belum dapat dibandingkan." : ""}`
+      : `Upload berhasil, tetapi reconnect ke ${port} gagal. Periksa Port Setup.`, state.connected && !(nativeWorkflow && !preservedDeviceId) ? "success" : "warn");
     if (state.connected && result.nvsReset) {
       setUploadDialogStatus(`Upload berhasil. NVS direset - reapplying AES key…`, "loading");
       const restoreAck = await restoreGldConfigAfterReset();
@@ -382,11 +458,17 @@ async function performFirmwareUpload() {
     if (resetRequired && result.nvsReset) {
       setUploadDialogStatus(`${$("firmwareUploadStatus").textContent} Belum siap inferensi: lakukan setup ulang konfigurasi, nulling 8/8, lalu bind model kembali.`, "warn");
     }
-    if (state.connected && !resetRequired) setUploadDialog(false);
+    if (state.connected && !resetRequired && !(nativeWorkflow && !preservedDeviceId)) setUploadDialog(false);
   } catch (error) {
     appendLog(`UPLOAD_ERROR ${error.message}`, "in");
-    showBanner(`Firmware upload failed: ${error.message}`, "error");
-    setUploadDialogStatus(`Upload gagal: ${error.message}`, "error");
+    if (nativeWorkflow) {
+      const prefix = flashCompleted ? "Flash selesai, verifikasi belum berhasil" : "Upload ditahan atau gagal";
+      showBanner(`${prefix}: ${error.message}`, "error");
+      setUploadDialogStatus(`${prefix}: ${error.message}`, "error");
+    } else {
+      showBanner(`Firmware upload failed: ${error.message}`, "error");
+      setUploadDialogStatus(`Upload gagal: ${error.message}`, "error");
+    }
   } finally {
     $("firmwareUploadCancelBtn").disabled = false;
     $("firmwareResetNvs").disabled = false;

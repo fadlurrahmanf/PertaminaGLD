@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import pathlib
 import tempfile
 import unittest
@@ -14,6 +15,30 @@ SPEC.loader.exec_module(guard)
 
 
 class RepositorySecretGuardTests(unittest.TestCase):
+    def test_explicit_plaintext_handover_is_limited_to_exact_pinned_snapshot(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            relative = "handover/state/config/system.json"
+            path = root / relative; path.parent.mkdir(parents=True)
+            path.write_text("SYNTHETIC_OWNER_APPROVED_SECRET")
+            policy = dict(schemaVersion=1, ownerApprovedPlaintext=True,
+                files={relative:guard.hashlib.sha256(path.read_bytes()).hexdigest()})
+            (root / "handover/plaintext-authorization.json").write_text(json.dumps(policy))
+            approved, errors = guard.approved_handover_files(root)
+            self.assertEqual(approved, {relative}); self.assertEqual(errors, [])
+            path.write_text("changed_without_approval")
+            approved, errors = guard.approved_handover_files(root)
+            self.assertEqual(approved, set()); self.assertTrue(errors)
+
+    def test_handover_approval_cannot_disable_guard_outside_bundle(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary); (root / "handover").mkdir()
+            for relative in ("server/nodered/.env", "../outside", "tools/secret.py"):
+                policy = dict(schemaVersion=1, ownerApprovedPlaintext=True, files={relative:"0"*64})
+                (root / "handover/plaintext-authorization.json").write_text(json.dumps(policy))
+                approved, errors = guard.approved_handover_files(root)
+                self.assertEqual(approved,set()); self.assertTrue(errors)
+
     def test_placeholder_text_is_allowed(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = pathlib.Path(temporary)

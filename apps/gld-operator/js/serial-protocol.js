@@ -207,6 +207,7 @@ export function resetDeviceSnapshot() {
   state.info = null;
   state.status = null;
   state.mode = "unknown";
+  syncRunningModeUi();
   setText("deviceId", "Unknown");
   setText("currentChAddress", "Unknown");
   setText("modeValue", "Unknown");
@@ -236,6 +237,7 @@ function updateInfo(info) {
   setText("deviceId", info.deviceId);
   setText("currentChAddress", info.targetChId);
   setText("modeValue", info.mode);
+  syncRunningModeUi();
   setText("firmwareValue", info.firmwareVersion || info.firmwareName);
   setBadge(elements.protocolLabel, info.protocolVersion || "app serial", "ok");
   renderAesSecurity(info.security || info.lora);
@@ -282,6 +284,7 @@ function updateStatus(status) {
   setText("deviceId", status.deviceId || state.info?.deviceId);
   if (status.targetChId) setText("currentChAddress", status.targetChId);
   setText("modeValue", status.mode);
+  syncRunningModeUi();
   renderDetectedBoardProfile(status, status);
 
   const telemetry = status.telemetry || {};
@@ -350,6 +353,28 @@ function maybeAppendTelemetry(status) {
   drawChart();
   drawQcCharts();
   maybeCaptureDatasetTelemetry(status);
+}
+
+function syncRunningModeUi() {
+  const mode = String(state.mode || "").toLowerCase();
+  const otherMode = !state.mock && mode && mode !== "unknown" && mode !== "inference";
+  const notice = $("runningModeNotice");
+  if (notice) {
+    notice.hidden = !otherMode;
+    if (otherMode) {
+      const label = mode === "dataset" ? "Dataset" : mode === "nulling" ? "Nulling" : mode;
+      notice.textContent = `GLD masih mode ${label}. Angka sensor di atas dapat berasal dari sampel terakhir; grafik Running baru bergerak setelah klik Switch to Running dan GLD selesai reboot.`;
+    }
+  }
+  const switchButton = document.querySelector('#running [data-mode="inference"]');
+  switchButton?.classList.toggle("is-needed", Boolean(otherMode));
+  const pollButton = $("refreshLoopBtn");
+  if (pollButton) {
+    pollButton.disabled = Boolean(otherMode && !state.polling);
+    pollButton.textContent = otherMode
+      ? (state.polling ? "Stop Poll (mode lain)" : "Poll setelah Running")
+      : (state.polling ? `Stop Poll (${pollIntervalMs()}ms)` : `Poll ${pollIntervalMs()}ms`);
+  }
 }
 
 // ---- alarm ----
@@ -1593,6 +1618,7 @@ function parseLegacyLine(line) {
   if (mode) {
     state.mode = mode;
     setText("modeValue", mode);
+    syncRunningModeUi();
     syncDeviceSummary();
   }
   const gas = /GLD_ML_RESULT .*gasClass=(\w+) confidence=(\d+)/.exec(line);
@@ -1864,6 +1890,7 @@ function setPollButtonLabel(text) {
   document.querySelectorAll(".poll-btn").forEach((button) => {
     button.textContent = text;
   });
+  syncRunningModeUi();
 }
 
 function telemetryPollCommand() {

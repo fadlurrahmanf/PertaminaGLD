@@ -10,14 +10,14 @@ INI = (ROOT / "firmware/platformio.ini").read_text(encoding="utf-8")
 
 
 class NullingStabilityScopeTests(unittest.TestCase):
-    def test_guard_specific_to_fast_model_one(self):
+    def test_guard_shared_by_three_gld1_models(self):
         guard = SERVICE.split("constexpr bool GLD1_STABILITY_GUARD = true", 1)[0]
         for token in ("PGL_GLD1_FAST_NULLING", "PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8",
                       "!PGL_GLD_BOARD_PROFILE_GLD2"):
             self.assertIn(token, guard)
         sections = dict(re.findall(r"(?ms)^\[([^\]]+)\]\s*\n(.*?)(?=^\[|\Z)", INI))
         self.assertEqual([name for name, body in sections.items() if "-DPGL_GLD1_FAST_NULLING=1" in body],
-                         ["env:gld_model_1"])
+                         ["env:gld_model_1", "env:gld_model_2", "env:gld_model_3"])
 
     def test_final_and_verify_are_critical_decisions(self):
         for marker in ("STABILITY_DECISION_MAX_ATTEMPTS = 3", '"exp_recheck"', '"verify"',

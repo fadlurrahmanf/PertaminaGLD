@@ -14,6 +14,10 @@ const HISTORY_RETENTION_MS = 60 * 60 * 1000;
 const Y_AXIS_TICK_COUNT = 10;
 const ALL_SENSOR_CHANNELS = [0, 1, 2, 3, 4, 5, 6, 7];
 
+export function runningHistoryPoints(history = state.history) {
+  return history.filter((point) => !point.mode || point.mode === "inference" || point.mode === "running");
+}
+
 export function isSensorChartSeriesVisible(channel) {
   return Number.isInteger(channel) && channel >= 0 && channel < ALL_SENSOR_CHANNELS.length &&
     !state.hiddenSensorChartChannels.has(channel);
@@ -203,7 +207,7 @@ function renderRunningAnalysisTable() {
   if (!body || !elements.rangeSelect) return;
   const now = Date.now();
   const rangeMs = Number(elements.rangeSelect.value) * 1000;
-  const visible = state.history.filter((point) => point.ts >= now - rangeMs);
+  const visible = runningHistoryPoints().filter((point) => point.ts >= now - rangeMs);
   const labels = latestFeatureOrder(visible);
   body.replaceChildren();
   if (!visible.length) {
@@ -221,7 +225,7 @@ function renderRunningAnalysisTable() {
     // Direction is deliberately independent from the chart zoom: it always
     // compares the present sample with the newest valid sample at least five
     // seconds earlier in the retained telemetry stream.
-    const historyPoints = state.history
+    const historyPoints = runningHistoryPoints()
       .map((point) => ({ ts: point.ts, value: Number(point.sensorVoltage?.[ch]) }))
       .filter((point) => Number.isFinite(point.value));
     const row = document.createElement("tr");
@@ -520,7 +524,10 @@ function datasetSessionMarkers() {
 
 export function drawChart() {
   const visibleRunningChannels = ALL_SENSOR_CHANNELS.filter(isSensorChartSeriesVisible);
-  drawOneChart(elements.sensorChart, elements.rangeSelect, elements.legend, [], visibleRunningChannels);
+  // Dataset can leave one valid but frozen serial snapshot behind after Stop.
+  // Keep it out of Running's trend without touching Dataset/QC shared history.
+  const runningHistory = runningHistoryPoints();
+  drawOneChart(elements.sensorChart, elements.rangeSelect, elements.legend, [], visibleRunningChannels, { history: runningHistory });
   renderRunningAnalysisTable();
   drawOneChart(elements.datasetChart, elements.datasetRangeSelect, elements.datasetLegend, datasetSessionMarkers());
 }

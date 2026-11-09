@@ -814,6 +814,20 @@ button.is-busy::before {
 
 /* ---- Chart ---- */
 
+.running-mode-notice {
+  margin: 0 0 var(--space-3);
+  padding: 12px 16px;
+  border: 1px solid var(--warn);
+  border-radius: var(--radius);
+  color: var(--text);
+  background: color-mix(in srgb, var(--warn) 12%, var(--surface));
+  font-size: .86rem;
+  line-height: 1.5;
+}
+
+.running-mode-notice[hidden] { display: none; }
+#running [data-mode="inference"].is-needed { border-color: var(--warn); color: var(--warn); font-weight: 700; }
+
 .telemetry-row {
   display: grid;
   grid-template-columns: minmax(180px, 240px) 1fr minmax(180px, 240px);

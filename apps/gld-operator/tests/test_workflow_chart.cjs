@@ -63,7 +63,7 @@ function harness(history, sourceOverride = null) {
   vm.createContext(context);
   const source = (sourceOverride ?? fs.readFileSync(path.join(__dirname, '../js/chart.js'), 'utf8'))
     .replace(/^import .*;\r?\n/gm, '').replace(/^export /gm, '');
-  vm.runInContext(source + '\nglobalThis.renderer={drawOneChart};', context);
+  vm.runInContext(source + '\nglobalThis.renderer={drawOneChart,runningHistoryPoints:typeof runningHistoryPoints === "function" ? runningHistoryPoints : null};', context);
   const draw = (dataSource, channels = null) => {
     const chart = canvas(), legend = element();
     context.renderer.drawOneChart(chart.value, { value: '60' }, legend, [], channels, dataSource);
@@ -122,6 +122,11 @@ for (const stroke of series(broken)) {
 const stale = old.draw({ history: [point(NOW - 61_000)], now: NOW });
 assert.equal(series(stale).length, 0, 'own-feed range must use the supplied clock');
 assert(stale.commands.some(c => c[0] === 'fillText' && c[5] === 'Waiting for telemetry'));
+const stoppedDataset = [point(NOW - 1000, 0, { mode: 'dataset' })];
+const runningOnly = old.context.renderer.runningHistoryPoints(stoppedDataset);
+assert.equal(runningOnly.length, 0, 'a frozen Dataset sample cannot masquerade as Running trend');
+assert(old.draw({ history: runningOnly, now: NOW }).commands.some(c => c[0] === 'fillText' && c[5] === 'Waiting for telemetry'));
+assert.equal(old.context.renderer.runningHistoryPoints([point(NOW, 0, { mode: 'inference' }), ...stoppedDataset]).length, 1);
 const shiftedNow = NOW + 120_000;
 const shifted = old.draw({ history: [point(shiftedNow)], now: shiftedNow });
 assert.equal(series(shifted)[0][4][0][1], 942, 'own clock anchors the latest sample to the right plot edge, without changing global Date');

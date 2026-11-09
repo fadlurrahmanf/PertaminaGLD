@@ -17,9 +17,8 @@ namespace {
 
 #if defined(PGL_GLD1_FAST_NULLING) && PGL_GLD1_FAST_NULLING && \
     PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
-// This macro is exclusive to the gld_model_1 environment.  Keep the
-// deterministic pre-GLD2 algorithm behind it so every other profile retains
-// the shared stability/recovery implementation below.
+// The three GLD1 model environments share this deterministic path. Keep GLD2
+// and other board profiles on the shared stability/recovery path below.
 constexpr bool GLD1_LEGACY_DETERMINISTIC_NULLING = true;
 constexpr bool GLD1_STABILITY_GUARD = true;
 #else
@@ -50,7 +49,7 @@ uint8_t decisionErrorCode(DecisionIssue issue, uint8_t fallback) {
 }
 
 #if defined(PGL_GLD1_FAST_NULLING) && PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
-// GLD1 Model 1: reduce ADC work per stability window without removing the
+// GLD1 Models 1/2/3: reduce ADC work per stability window without removing the
 // baseline, crossing recheck, confirm, independent verification or final check.
 constexpr uint8_t  AVG_COUNT            = 6;
 constexpr uint8_t  CONFIRM_COUNT        = 8;
@@ -59,7 +58,7 @@ constexpr uint8_t  CONFIRM_COUNT        = 8;
 constexpr uint8_t  AVG_COUNT            = 8;
 constexpr uint8_t  CONFIRM_COUNT        = 10;
 #endif
-// Laboratory-only GLD1 Model 1 experiment.  Codes below 100 cannot pass the
+// Laboratory-only GLD1 experiment. Codes below 100 cannot pass the
 // exponential bracket gate; begin at 63 so the first eligible bracket still
 // uses the original 63 -> 127 endpoints.  This changes analog dwell/AGC timing
 // and is NOT enabled in a production package without independent bench proof.

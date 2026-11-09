@@ -1,5 +1,0 @@
-device_id,session_id,seq,timestamp_ms,scan_end_ms,mode,label,nulling_profile_id,overrun_count,voltage_MQ8,voltage_MQ135,voltage_MQ3,voltage_MQ5,voltage_MQ4,voltage_MQ7,voltage_MQ6,voltage_MQ2,gain_MQ8,gain_MQ135,gain_MQ3,gain_MQ5,gain_MQ4,gain_MQ7,gain_MQ6,gain_MQ2,status_MQ8,status_MQ135,status_MQ3,status_MQ5,status_MQ4,status_MQ7,status_MQ6,status_MQ2,feature_order
-1002,4053aecd6fad4a97b45ca8a32113609a,0,500,730,DATASET,pc_ui_direct_next,1,0,1.0,1.03,1.06,1.09,1.12,1.15,1.18,1.21,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,MQ8|MQ135|MQ3|MQ5|MQ4|MQ7|MQ6|MQ2
-1002,4053aecd6fad4a97b45ca8a32113609a,1,1000,1230,DATASET,pc_ui_direct_next,1,0,1.001,1.031,1.061,1.091,1.121,1.151,1.181,1.211,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,MQ8|MQ135|MQ3|MQ5|MQ4|MQ7|MQ6|MQ2
-1002,4053aecd6fad4a97b45ca8a32113609a,2,1500,1730,DATASET,pc_ui_direct_next,1,0,1.002,1.032,1.062,1.092,1.122,1.152,1.182,1.212,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,MQ8|MQ135|MQ3|MQ5|MQ4|MQ7|MQ6|MQ2
-1002,4053aecd6fad4a97b45ca8a32113609a,3,2000,2230,DATASET,pc_ui_direct_next,1,0,1.003,1.033,1.063,1.093,1.123,1.153,1.183,1.213,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,MQ8|MQ135|MQ3|MQ5|MQ4|MQ7|MQ6|MQ2

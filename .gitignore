@@ -16,6 +16,10 @@ firmware/config/*.env
 apps/runtime/local-mqtt/
 # Verification restores a working copy (including private runtime files).
 output/handover-verification/
+# Build, browser and one-off test artifacts are local; long Windows paths in
+# these directories prevent a fresh checkout on another PC.
+tmp/
+**/chrome-profile-*/
 
 # Local AI agent/session state
 .codex/

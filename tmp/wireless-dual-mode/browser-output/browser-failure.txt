@@ -1,5 +1,0 @@
-Error: Timed out: ready
-    at eventually (D:\Github\PertaminaGLD\tmp\wireless-dual-mode\browser-client.cjs:10:9)
-    at async waitState (D:\Github\PertaminaGLD\tmp\wireless-dual-mode\browser-e2e.cjs:23:65)
-    at async connect (D:\Github\PertaminaGLD\tmp\wireless-dual-mode\browser-e2e.cjs:43:38)
-    at async D:\Github\PertaminaGLD\tmp\wireless-dual-mode\browser-e2e.cjs:60:3

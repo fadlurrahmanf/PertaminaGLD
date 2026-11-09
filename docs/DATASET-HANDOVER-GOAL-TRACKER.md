@@ -1,22 +1,22 @@
 # Dataset dan handover PC baru — bukti penerimaan
 
-Last updated: 2026-11-09 22:09 WIB
-Last evidence update: 2026-11-09 22:09 WIB
-Last tracker heartbeat: 2026-11-09 22:09 WIB
+Last updated: 2026-11-09 22:17 WIB
+Last evidence update: 2026-11-09 22:17 WIB
+Last tracker heartbeat: 2026-11-09 22:17 WIB
 
 ## Progress dashboard
 
 | Scope | Progress | Status | Note |
 | --- | ---: | --- | --- |
-| **Overall goal** | **68%** | Active | Salinan bersih full stack lulus; Git remote dan PC tujuan belum lulus. |
+| **Overall goal** | **72%** | Active | Clone pertama gagal akibat path sementara; artefak itu keluar dari indeks. Git remote dan PC tujuan belum lulus. |
 | 1. Isi Git dan paket | 100% | Proven locally | Tiga profil koneksi cocok dengan image; snapshot histori terkini valid. |
 | 2. Salinan bersih full stack | 100% | Proven locally | Verifikator penuh 24/24; histori 69 berkas, 90.235 baris, 0 beda byte. |
 | 3. Perangkat dan PC tujuan | 33% | Partial | Model 2/PC ini lulus; PC kedua serta Model 1/3 belum diuji fisik. |
-| 4. Distribusi GitHub | 0% | Not started | Buktikan commit, push, pull dan isi salinan dari remote. |
+| 4. Distribusi GitHub | 25% | Partial | Commit lokal 87e0a5f3; push dan pull dari GitHub belum terjadi. |
 
 ## Progress calculation
 
-Bobot fase: `25%×100% + 35%×100% + 25%×33% + 15%×0% = 68,25% ≈ 68%`.
+Bobot fase: `25%×100% + 35%×100% + 25%×33% + 15%×25% = 72%`.
 Item di dalam tiap fase berbobot sama.
 
 | Phase | Weight | Progress | Status | Closure evidence |
@@ -24,7 +24,7 @@ Item di dalam tiap fase berbobot sama.
 | 1. Isi Git dan paket | 25% | 100% | Proven locally | 15/15 pemeriksaan statis, 59 CSV dan 10 ledger. |
 | 2. Salinan bersih full stack | 35% | 100% | Proven locally | 24/24: Hub, MQTT, Node-RED, DB, AES, CSV, histori dan shutdown. |
 | 3. Perangkat dan PC tujuan | 25% | 33% | Partial | Masing-masing model dan PC fresh membuktikan alur nyata; cold boot 24 V tanpa USB. |
-| 4. Distribusi GitHub | 15% | 0% | Not started | Commit/push yang dimaksud dapat dipull dan diverifikasi dari remote. |
+| 4. Distribusi GitHub | 15% | 25% | Partial | Commit lokal ada; push/pull remote belum dibuktikan. |
 
 ### Phase 1 work items
 
@@ -52,7 +52,7 @@ Item di dalam tiap fase berbobot sama.
 
 | ID | Work item | Progress | Status | Next gate | Last update |
 | --- | --- | ---: | --- | --- | --- |
-| 4.1 | Commit dan push artefak handover yang telah ditinjau | 0% | Not started | SHA commit lokal dan remote sama | Working tree masih belum di-commit. |
+| 4.1 | Commit dan push artefak handover yang telah ditinjau | 50% | Partial | Push eksplisit dan SHA remote sama | Commit lokal 87e0a5f3; aturan repo melarang push tanpa permintaan eksplisit. |
 | 4.2 | Pull/clone dari GitHub ke direktori kosong | 0% | Not started | Verifikator lulus dari commit remote | — |
 
 ## Protected flows
@@ -64,18 +64,19 @@ NVS, firmware biasa, dan database aktif. Audit terisolasi tidak mengubahnya.
 
 | ID | Status | Evidence | Closure / next evidence gate |
 | --- | --- | --- | --- |
-| H01 | Open | Working tree memiliki perubahan firmware, Hub, UI dan docs belum commit. | Audit, commit/push sesuai permintaan, verifikasi remote. |
+| H01 | Open | Perubahan utama telah di-commit lokal sebagai 87e0a5f3; belum di-push. | Verifikasi clone lokal, push sesuai permintaan eksplisit, baca balik remote. |
 | H02 | Deferred | PC kedua tidak dapat dioperasikan dari workspace ini. | Jalankan verifikasi dan uji GLD di PC fresh sesudah pull. |
 | H03 | Deferred | Model 1/3 belum diupload fisik; cold boot tanpa USB dan retensi 5 menit penuh belum dibuktikan. | Uji board dan daya pada bench. |
 | H04 | Open | Driver Windows pernah melepas Wi-Fi GLD; auto rejoin Model 2 diuji berhasil. | Uji durasi panjang dan PC kedua, ukur sinyal/catu saat putus. |
 | H05 | Closed locally | Profil diregenerasi; check terhadap image final dan 12 uji kredensial lulus. | Pastikan masuk commit/remote. |
 | H06 | Closed locally | Snapshot 79 berkas: 59 CSV dan 10 ledger, hash valid; snapshot lama disimpan sebagai backup lokal. | Pastikan masuk commit/remote. |
+| H07 | Repair in progress | Clone Git Windows gagal pada 94% karena path profil browser di `tmp/` terlalu panjang; 17.329 berkas tmp dan 485 berkas profil browser mockup terlacak. | Berkas keluar dari indeks tanpa menghapus file lokal; uji full stack 24/24 dan guard lulus, ulangi clone dari commit baru. |
 
 ## Current work / agent state
 
 | Sub-agent / worker | Active work item | Started at | Elapsed | Progress | Activity / state |
 | --- | --- | --- | --- | ---: | --- |
-| Root | 4.1 Audit Git dan guard rahasia sebelum distribusi | 2026-11-09 22:07 WIB | 00:00 | 0% | Uji full stack lulus; guard repo penuh masih berjalan. |
+| Root | 4.2 Perbaikan clone Git lokal | 2026-11-09 22:14 WIB | 00:03 | 0% | 24/24 tanpa artefak temp; guard lulus; path maksimum 215 karakter. Commit dan clone ulang. |
 
 ## Evidence log
 
@@ -85,3 +86,6 @@ NVS, firmware biasa, dan database aktif. Audit terisolasi tidak mengubahnya.
 - 2026-11-09 22:03 WIB: Profil koneksi tiga model diregenerasi, 12/12 uji kredensial lulus. Snapshot baru 59 CSV dan 10 ledger / 79 berkas / 15.607.586 byte; hash valid dan izin plaintext dipin ulang sesuai instruksi pemilik. Verifikator statis 15/15 lulus; stack runtime belum selesai.
 - 2026-11-09 22:04 WIB: Uji full stack sudah membuat salinan bersih dan mulai layanan terisolasi. Pemeriksa rahasia masih berjalan. Heartbeat melebihi satu menit dari pembaruan sebelumnya; tidak menaikkan progres fase 2 sebelum hasil akhir.
 - 2026-11-09 22:07 WIB: Verifikator full stack lulus 24/24 pada salinan bersih. MQTT, Node-RED, database, AES, CSV, 69 file histori / 90.235 baris / 0 beda byte dan shutdown lulus. Guard rahasia awal menemukan fixture upstream; pengecualian berbasis path+hash persis ditambahkan dan enam uji guard lulus. Pemeriksaan guard penuh masih berjalan. Heartbeat terlewat sekitar tiga menit selama analisis temuan.
+- 2026-11-09 22:10 WIB: Guard rahasia seluruh repo lulus. 64 berkas perubahan terkait Dataset/handover masuk commit lokal 87e0a5f3; clone Git lokal `--no-local` dimulai. Belum ada push/PC kedua. Heartbeat sebelumnya terlewat sekitar tiga menit selama audit staging.
+- 2026-11-09 22:14 WIB: Clone commit 87e0a5f3 gagal checkout Windows pada 94% karena path browser temp terlalu panjang. Seluruh 17.329 berkas `tmp/` dikeluarkan dari indeks Git (file PC ini tetap ada) dan `tmp/` di-ignore. Uji ulang diperlukan sebelum klaim siap clone; heartbeat sebelumnya terlewat sekitar dua menit.
+- 2026-11-09 22:17 WIB: Uji full stack setelah pengeluaran `tmp/` lulus 24/24; guard rahasia lulus. Tambahan 485 file profil browser mockup dikeluarkan dari indeks, screenshot mockup tetap ada. Path maksimum pada clone target 215 karakter; belum diuji clone commit baru. Heartbeat sebelumnya terlewat sekitar dua menit selama audit path.

@@ -1,1 +1,0 @@
-Exact count16 assertion saw17: fixture auto_capture enabled by prior /sim/resume leaked into newContinue. Product preserved/verified17actualsamples. Hostharness nowexplicitmanual beforeeachStart/Continue, matchingbrowserharness. No productchange.

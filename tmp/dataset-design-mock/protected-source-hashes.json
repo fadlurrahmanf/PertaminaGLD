@@ -1,8 +1,0 @@
-{
-  "apps/gld-operator/index.html": "eb27e33b879431efd7c1f5ec4472a0f559655950d5a93561271f9cd75352279d",
-  "apps/gld-operator/js/dataset-workflow.js": "2115107a62ce887801bc1d6b5f8c7e240d47bf8625fcc3c7c7e7779970b47af9",
-  "apps/gld-operator/js/chart.js": "8b83931115d0a434f02c790b0e206d8f224e4f6d6f82ebdc44fae4409b7fd3f5",
-  "apps/gld-operator/css/dataset-workflow.css": "ca3038e525752464dac134e139a8736fb69a9f6030de9ffa3a096ecf4dd858c6",
-  "apps/gld-operator/dataset_workflow.py": "7af054810b446f67f12f28338e54867ba3ec51843d511ec7a0b7191dcefa2db5",
-  "apps/gld-operator/bridge.py": "15b18e69acb3f56ef6a089611d78baefc1850667c2b2bd16b4ccdaa5164bf065"
-}

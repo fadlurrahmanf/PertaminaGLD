@@ -1,8 +1,0 @@
-{
-  "packageLabel": "Firmware terpilih: GLD1 · Model 1 Hotspot buffer 5 menit — GLD1 Board 1 — Tahap 2, RAM replay 5 menit. Memerlukan paket replay yang sudah dibuild; pertahankan NVS. · package gld_model_1_dataset_replay_wifi · v0.8.36",
-  "port": "COM7",
-  "resetNvs": false,
-  "selectedModel": "model_1_dataset_replay_wifi",
-  "targetId": "1002",
-  "uploadDisabled": false
-}

@@ -1,1 +1,0 @@
-device_id,session_id,seq,timestamp_ms,scan_end_ms,mode,label,nulling_profile_id,overrun_count,voltage_MQ8,voltage_MQ135,voltage_MQ3,voltage_MQ5,voltage_MQ4,voltage_MQ7,voltage_MQ6,voltage_MQ2,gain_MQ8,gain_MQ135,gain_MQ3,gain_MQ5,gain_MQ4,gain_MQ7,gain_MQ6,gain_MQ2,status_MQ8,status_MQ135,status_MQ3,status_MQ5,status_MQ4,status_MQ7,status_MQ6,status_MQ2,feature_order

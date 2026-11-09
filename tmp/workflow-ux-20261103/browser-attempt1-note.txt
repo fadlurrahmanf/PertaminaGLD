@@ -1,1 +1,0 @@
-Initial trace instrumentation used exact1.8 comparison; Chromium roundslineWidth tofloat32. Screenshot shows8traces; comparison nowtolerance .001; no product change. Reconciled initialsession verifiedincomplete after directsample-silencecleanup; reset onlyafterverification.

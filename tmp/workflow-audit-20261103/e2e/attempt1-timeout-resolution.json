@@ -1,8 +1,0 @@
-{
-  "status": "drained after test deadline",
-  "count": 607,
-  "verified": true,
-  "reason": "retention_limit",
-  "cause": "full fsync/all-prefix fixture audit scaled beyond60s; no product change",
-  "retry": "fresh fixture and bounded180s retention drain"
-}

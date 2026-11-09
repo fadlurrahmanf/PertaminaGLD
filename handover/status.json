@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-09T23:53:00+07:00",
-  "stage": "workflow_hotspot_github_clone_verified",
+  "updatedAt": "2026-11-10T00:18:00+07:00",
+  "stage": "pc2_diagnostic_and_history_audit_github_clone_verified",
   "softwareBundleReady": true,
   "softwareAcceptance": "PASS",
   "requiredChecksPassed": 24,
@@ -24,7 +24,7 @@
   "replacementPcVerified": false,
   "gitCommitPushRequired": false,
   "githubPushVerified": true,
-  "verificationReport": "output/handover-verification/20261109-234507-1bfbb87f/report.json",
+  "verificationReport": "output/handover-verification/20261110-000729-08a8861d/report.json",
   "verificationCommand": "verifikasi-handover.bat",
   "startCommand": "start-handover.bat",
   "repositoryGuard": {
@@ -34,5 +34,5 @@
   },
   "verificationReportLocation": "source_pc_local_ignored_output",
   "archiveSensorCsvAdded": 140,
-  "latestVerifiedGithubCommit": "d378d7ca7e760b0f4a314b1f422976cd9d767977"
+  "latestVerifiedGithubCommit": "5a3cd423d4c7c1451d625f5237250275006561f3"
 }

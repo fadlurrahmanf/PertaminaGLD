@@ -1,41 +1,26 @@
-// Local PIN lock for Expert Terminal and Firmware Upload/Inject ID. This is
-// a deterrent against accidental bench mistakes, not enterprise auth - PIN
-// hash lives in localStorage, unlock state itself is never persisted.
+// Local confirmation gate for Expert Terminal and firmware actions. This is
+// a deterrent against accidental bench mistakes, not enterprise authentication.
 
-import { $, elements, state, encoder } from "./state.js";
+import { $, elements, state } from "./state.js";
 import { hideBanner } from "./ui.js";
 
-async function sha256Hex(text) {
-  const bytes = encoder.encode(text);
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
-  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-
-const PIN_STORAGE_KEY = "gldOperatorWeb.pinHash";
-
-function hasStoredPin() {
-  return Boolean(localStorage.getItem(PIN_STORAGE_KEY));
-}
+// Shared across browsers and handover PCs. A former browser-local PIN hash is
+// intentionally ignored so an unknown old PIN cannot block an operator.
+const OPERATOR_PIN = "1234";
 
 let pinRequest = null;
 
-function requestPin(setNewPin) {
+function requestPin() {
   if (pinRequest) return pinRequest;
   const dialog = $("operatorPinDialog");
   const form = $("operatorPinForm");
   const input = $("operatorPinInput");
-  const confirmation = $("operatorPinConfirm");
   const error = $("operatorPinError");
   const previousFocus = document.activeElement;
-  $("operatorPinTitle").textContent = setNewPin ? "Atur PIN Operator" : "Buka kunci Operator";
-  $("operatorPinHelp").textContent = setNewPin
-    ? "Buat PIN lokal minimal 4 karakter untuk Expert Terminal dan tindakan firmware."
-    : "Masukkan PIN lokal untuk membuka Expert Terminal dan tindakan firmware.";
-  $("operatorPinConfirmField").hidden = !setNewPin;
-  confirmation.required = setNewPin;
-  $("operatorPinSubmit").textContent = setNewPin ? "Simpan PIN" : "Buka kunci";
+  $("operatorPinTitle").textContent = "Buka kunci Operator";
+  $("operatorPinHelp").textContent = "Masukkan PIN Operator untuk Expert Terminal dan tindakan firmware.";
+  $("operatorPinSubmit").textContent = "Buka kunci";
   input.value = "";
-  confirmation.value = "";
   error.hidden = true;
   dialog.classList.add("open");
   dialog.setAttribute("aria-hidden", "false");
@@ -52,7 +37,6 @@ function requestPin(setNewPin) {
       dialog.classList.remove("open");
       dialog.setAttribute("aria-hidden", "true");
       input.value = "";
-      confirmation.value = "";
       previousFocus?.focus?.();
       pinRequest = null;
       resolve(ok);
@@ -63,32 +47,15 @@ function requestPin(setNewPin) {
     function escape(event) {
       if (event.key === "Escape") { event.preventDefault(); finish(false); }
     }
-    async function submit(event) {
+    function submit(event) {
       event.preventDefault();
       if (settled) return;
-      const entered = input.value.trim();
-      if (entered.length < 4) {
-        error.textContent = "PIN minimal 4 karakter.";
-        error.hidden = false;
-        return;
-      }
-      if (setNewPin) {
-        if (confirmation.value.trim() !== entered) {
-          error.textContent = "Konfirmasi PIN tidak cocok.";
-          error.hidden = false;
-          return;
-        }
-        const digest = await sha256Hex(entered);
-        if (settled) return;
-        localStorage.setItem(PIN_STORAGE_KEY, digest);
-      } else if (await sha256Hex(entered) !== localStorage.getItem(PIN_STORAGE_KEY)) {
-        if (settled) return;
+      if (input.value.trim() !== OPERATOR_PIN) {
         error.textContent = "PIN salah.";
         error.hidden = false;
         input.select();
         return;
       }
-      if (settled) return;
       finish(true);
     }
     form.addEventListener("submit", submit);
@@ -100,7 +67,7 @@ function requestPin(setNewPin) {
 
 export async function requireUnlock() {
   if (state.expertUnlocked) return true;
-  const ok = await requestPin(!hasStoredPin());
+  const ok = await requestPin();
   if (!ok) return false;
   onUnlocked();
   return true;

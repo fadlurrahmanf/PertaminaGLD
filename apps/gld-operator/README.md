@@ -28,6 +28,11 @@ Open:
 http://127.0.0.1:5174/
 ```
 
+Operator PIN for Expert Terminal and firmware upload is `1234` on every PC.
+This is a local confirmation gate for bench actions, not remote authentication.
+Older browser-local PIN hashes are ignored by the current app. Refresh the
+Operator Hub page after updating the repository.
+
 To run GLD, CH, and Gateway together behind one switcher UI instead, use
 `apps/operator-hub/run-operator-hub.bat` and open `http://127.0.0.1:5173/`.
 

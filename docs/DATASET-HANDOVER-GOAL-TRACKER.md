@@ -1,8 +1,8 @@
 # Dataset dan handover PC baru — bukti penerimaan
 
-Last updated: 2026-11-09 22:59 WIB
-Last evidence update: 2026-11-09 22:59 WIB
-Last tracker heartbeat: 2026-11-09 22:59 WIB
+Last updated: 2026-11-09 23:01 WIB
+Last evidence update: 2026-11-09 23:01 WIB
+Last tracker heartbeat: 2026-11-09 23:01 WIB
 
 ## Progress dashboard
 
@@ -80,7 +80,7 @@ NVS, firmware biasa, dan database aktif. Audit terisolasi tidak mengubahnya.
 
 | Sub-agent / worker | Active work item | Started at | Elapsed | Progress | Activity / state |
 | --- | --- | --- | --- | ---: | --- |
-| Root | Dokumentasi bukti akhir dan baca balik remote | 2026-11-09 22:59 WIB | 00:00 | 0% | Clone GitHub lulus 24/24; fixture source 22/22. |
+| Root | Dokumentasi bukti akhir dan baca balik remote | 2026-11-09 22:59 WIB | 00:02 | 100% | Dokumentasi, status, dan SHA remote dibaca balik; tidak ada worker aktif. |
 
 ## Evidence log
 
@@ -106,3 +106,4 @@ NVS, firmware biasa, dan database aktif. Audit terisolasi tidak mengubahnya.
 - 2026-11-09 22:52 WIB: Verifikator full stack snapshot besar lulus 24/24: 209 berkas histori, 256.605 baris, 0 beda byte; laporan `output/handover-verification/20261109-224912-b47c9666/report.json`. Guard rahasia lulus, 9/9 tes snapshot lulus. Manual dan status diselaraskan secara lokal; belum commit/push rilis baru.
 - 2026-11-09 22:55 WIB: Rilis histori luas ter-commit dan di-push sebagai 1dd8ac7f. `git diff --check` kode/docs lulus, path checkout maksimum 208 karakter pada target uji, file terbesar 44,41 MiB. Clone baru langsung dari GitHub dimulai. Heartbeat sebelumnya terlewat sekitar tiga menit selama staging dan push.
 - 2026-11-09 22:59 WIB: Clone langsung GitHub commit 1dd8ac7f checkout bersih (5531 berkas), uji full stack 24/24, 209 berkas/256.605 baris/0 beda byte; `output/handover-verification/remote-extended-test/20261109-225615-e6c006f4/report.json`. Fixture source yang semula gagal karena LF/CRLF dan nomor CSV diperbaiki, di-push sebagai 65f3f633, lalu `git pull --ff-only` pada clone lulus 22/22. PC kedua dan tiga board fisik masih gate terpisah.
+- 2026-11-09 23:01 WIB: Status/manual/tracker ditinjau dan di-push sebagai 09d1c62d. Clone GitHub `git pull --ff-only` ke commit itu berhasil; snapshot check 219/219, source firmware 22/22, snapshot tests 9/9; SHA `origin/master` sama 09d1c62d. Tidak ada perubahan Hub aktif, COM7, NVS atau database sumber.

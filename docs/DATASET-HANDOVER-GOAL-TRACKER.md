@@ -1,18 +1,18 @@
 # Dataset dan handover PC baru — bukti penerimaan
 
-Last updated: 2026-11-09 23:40 WIB
-Last evidence update: 2026-11-09 23:40 WIB
-Last tracker heartbeat: 2026-11-09 23:40 WIB
+Last updated: 2026-11-09 23:53 WIB
+Last evidence update: 2026-11-09 23:53 WIB
+Last tracker heartbeat: 2026-11-09 23:53 WIB
 
 ## Progress dashboard
 
 | Scope | Progress | Status | Note |
 | --- | ---: | --- | --- |
 | **Overall goal** | **83%** | Partial | Snapshot luas dari clone GitHub lulus 24/24; PC kedua/perangkat lain masih perlu bukti. |
-| 1. Isi Git dan paket | 100% | Proven on GitHub | Snapshot 199 CSV/10 ledger dan paket firmware valid. |
-| 2. Salinan bersih full stack | 100% | Proven on GitHub | 24/24 untuk 209 berkas, 256.605 baris, 0 beda byte. |
+| 1. Isi Git dan paket | 100% | Proven on GitHub | Tiga paket Workflow hasil build ulang dan snapshot 199 CSV/10 ledger berada pada commit teruji. |
+| 2. Salinan bersih full stack | 100% | Proven on GitHub | Clone GitHub commit `d378d7ca` lulus 24/24 untuk 209 berkas, 256.605 baris, 0 beda byte. |
 | 3. Perangkat dan PC tujuan | 33% | Partial | Model 2/PC ini lulus; PC kedua serta Model 1/3 belum diuji fisik. |
-| 4. Distribusi GitHub | 100% | Proven | Rilis histori lengkap di-push; clone langsung GitHub lulus 24/24 dan uji source 22/22. |
+| 4. Distribusi GitHub | 100% | Proven | Commit `d378d7ca` di-push; clone langsung GitHub lulus 24/24, host 73/73, source 25/25. |
 
 ## Progress calculation
 
@@ -24,14 +24,14 @@ Item di dalam tiap fase berbobot sama.
 | 1. Isi Git dan paket | 25% | 100% | Proven on GitHub | Snapshot 219 berkas dan hash pins valid. |
 | 2. Salinan bersih full stack | 35% | 100% | Proven on GitHub | Uji penuh 24/24, DB 209 berkas/256.605 baris/0 beda byte. |
 | 3. Perangkat dan PC tujuan | 25% | 33% | Partial | Masing-masing model dan PC fresh membuktikan alur nyata; cold boot 24 V tanpa USB. |
-| 4. Distribusi GitHub | 15% | 100% | Proven | Rilis 1dd8ac7f dari GitHub lulus 24/24; pembaruan fixture 65f3f633 lulus source 22/22. |
+| 4. Distribusi GitHub | 15% | 100% | Proven | Rilis `d378d7ca` dari GitHub lulus 24/24, host 73/73, source 25/25. |
 
 ### Phase 1 work items
 
 | ID | Work item | Progress | Status | Next gate | Last update |
 | --- | --- | ---: | --- | --- | --- |
 | 1.1 | Audit tracked/ignored config, histori dan runtime | 100% | Proven on GitHub | Ulangi jika snapshot berubah | 140 CSV sensor unik ditambah; 3 non-sensor/kosong dikecualikan. |
-| 1.2 | Validasi tiga paket final dan dependensi upload | 100% | Proven on GitHub | Ulangi jika paket berubah | Descriptor tiga firmware cocok; 12 uji kredensial lulus. |
+| 1.2 | Validasi tiga paket final dan dependensi upload | 100% | Proven on GitHub | Ulangi jika paket berubah | Tiga image hasil build ulang cocok dengan paket final; profil koneksi valid. |
 
 ### Phase 2 work items
 
@@ -85,7 +85,7 @@ NVS, firmware biasa, dan database aktif. Audit terisolasi tidak mengubahnya.
 
 | Sub-agent / worker | Active work item | Started at | Elapsed | Progress | Activity / state |
 | --- | --- | --- | --- | ---: | --- |
-| Root | Verifikasi stack akhir, commit dan clone GitHub | 2026-11-09 23:04 WIB | 00:43 | 90% | Tiga paket akhir terpasang; host 73/73 dan source 25/25; full stack akhir berjalan. |
+| Root | Penutupan dokumentasi; gate fisik tetap terbuka | 2026-11-09 23:04 WIB | 00:49 | 100% perangkat lunak | Commit `d378d7ca` di GitHub; clone 24/24, host 73/73, source 25/25. |
 
 
 ## Evidence log
@@ -118,3 +118,4 @@ NVS, firmware biasa, dan database aktif. Audit terisolasi tidak mengubahnya.
 - 2026-11-09 23:35 WIB: Paket final tiga model terpasang setelah tiga compile paralel (RAM 57,4%, flash 17,2%). Static verifier 15/15, kredensial 7/7, host 73/73, Workflow 71/71, source GLD 24/24, guard rahasia PASS. Full stack salinan baru 24/24; laporan `output/handover-verification/20261109-232220-33699e0c/report.json`. Uji tambahan pada work root yang sama menemukan fixture AES id/seq lama; pemilihan ID sintetis belum dipakai memperbaikinya. Restart PASS, dua upgrade generator berturut PASS, profil lama tetap, CSV lama terbukti prefix utuh. Audit GLD lanjutan memastikan AP dapat mulai setelah PG24 pulih tanpa reboot; perlindungan NVS saat power drop sedang ditinjau.
 - 2026-11-09 23:40 WIB: Audit ulang membedakan pemulihan AP dari pemulihan mode COM: loop memang memulai AP setelah PG24 stabil tanpa reboot. Patch khusus Workflow menjaga NVS saat daya turun dan melakukan satu reboot terjaga hanya untuk mengembalikan stored Dataset mode bila boot awal sempat fallback ke Inference; source 25/25. Model 3 rebuild lulus. Build incremental Model 1/2 gagal pada cache SCons sebelum compile; kedua agen beralih ke build bersih C: yang baru, image lama dilarang untuk paket final. Uji upload/wizard terarah 5+18+40 dan UI Node lulus; tracker lama 5 Nov diberi label arsip.
 - 2026-11-09 23:47 WIB: Ketiga build ulang final Model 1/2/3 lulus dan paket Workflow final dipasang secara atomik di Hub; hash image cocok dengan tiga paket dan profil koneksi diperbarui. Paket biasa tidak diubah. Host handover 73/73, source 25/25, `git diff --check` lulus. Verifikasi stack akhir dan guard repo sedang berjalan; belum upload firmware baru, belum uji cold boot fisik atau PC kedua.
+- 2026-11-09 23:53 WIB: Guard repo PASS; verifikasi stack lokal akhir 24/24 (`output/handover-verification/20261109-234507-1bfbb87f/report.json`). Commit `d378d7ca` di-push dan SHA `origin/master` terbaca sama. Clone baru langsung GitHub checkout bersih; static 15/15, host 73/73, source 25/25, full stack 24/24 (`C:/Users/MSI/AppData/Local/Temp/gld-remote-d378d7ca/output/handover-verification/20261109-234936-e0d38c14/report.json`). Histori 209 berkas/256.605 baris/0 beda byte. Pengujian firmware baru pada GLD tanpa USB dan PC kedua tetap belum dilakukan; status keseluruhan tetap 83%.

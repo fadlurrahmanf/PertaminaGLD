@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-09T23:48:00+07:00",
-  "stage": "workflow_hotspot_local_full_stack_verified",
+  "updatedAt": "2026-11-09T23:53:00+07:00",
+  "stage": "workflow_hotspot_github_clone_verified",
   "softwareBundleReady": true,
   "softwareAcceptance": "PASS",
   "requiredChecksPassed": 24,
@@ -22,8 +22,8 @@
   "firmwareModelsChanged": true,
   "hardwareTested": false,
   "replacementPcVerified": false,
-  "gitCommitPushRequired": true,
-  "githubPushVerified": false,
+  "gitCommitPushRequired": false,
+  "githubPushVerified": true,
   "verificationReport": "output/handover-verification/20261109-234507-1bfbb87f/report.json",
   "verificationCommand": "verifikasi-handover.bat",
   "startCommand": "start-handover.bat",
@@ -34,5 +34,5 @@
   },
   "verificationReportLocation": "source_pc_local_ignored_output",
   "archiveSensorCsvAdded": 140,
-  "latestVerifiedGithubCommit": null
+  "latestVerifiedGithubCommit": "d378d7ca7e760b0f4a314b1f422976cd9d767977"
 }

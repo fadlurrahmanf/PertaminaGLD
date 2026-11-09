@@ -449,6 +449,7 @@ def workflow_action(action, payload):
             "select": lambda: service.select(payload.get("device_id", "")),
             "connect": lambda: service.connect(payload.get("device_id", ""), payload.get("password")),
             "choose-file": service.choose_file,
+            "choose-default-file": service.choose_default_file,
             "configure": lambda: service.configure(payload),
             "lock": lambda: service.lock(payload.get("locked")),
             "start": service.start, "pause": service.pause, "resume": service.resume,

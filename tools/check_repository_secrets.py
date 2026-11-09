@@ -29,6 +29,18 @@ PRIVATE_KEY_MARKERS = (
     "-----BEGIN RSA PRIVATE KEY-----",
     "-----BEGIN OPENSSH PRIVATE KEY-----",
 )
+# Public esptool upstream test keys and source examples already bundled in Git.
+# Exempt only these exact bytes; a changed file is scanned normally.
+KNOWN_VENDOR_FIXTURE_SHA256 = {
+    "apps/lib/esptool-master/test/secure_images/ecdsa256_secure_boot_signing_key_pkcs8.pem": "1ad4a4bae1017f4ba3e9e57b89dd1077f92c38f66347810a7bd8142ca07e5bc3",
+    "apps/lib/esptool-master/test/secure_images/rsa_secure_boot_signing_key.pem": "fbacc9de01c087f61dfe22df94a531e9146da64fb4f1314febf578594d2f1c9d",
+    "apps/lib/esptool-master/test/secure_images/rsa_secure_boot_signing_key2.pem": "07a2f08405d9fa24a77ccac2a420e7569757b6468751ce8f92a08b22e5e338d3",
+    "apps/lib/esptool-master/test/secure_images/rsa_secure_boot_signing_key3.pem": "56c8e31d22462c092535183958c9fc1f7c44cd643ad12205f446494a4f3be6c4",
+    "apps/lib/esptool-master/test/secure_images/rsa_secure_boot_signing_key4.pem": "44bed3a4047e35778ab7463d1df4a0059abd830ad20a6b9f58854976138f5a56",
+    "apps/lib/esptool/vendor/cryptography/hazmat/primitives/serialization/ssh.py": "1d5e99a888ea34d68d50be8ce2043234926d67be44b22499b3acb175da81ad62",
+    "apps/lib/esptool/vendor/ecdsa/keys.py": "164a6e6cbf4c1827e4089e9a56f5797346ef7b866e06d5373f57514414ed8749",
+    "apps/lib/esptool/vendor/ecdsa/test_keys.py": "ade4362ad7ceb0035ae7d0aabef4568d99be49a59fb1c259549684f511722fde",
+}
 SKIP_SUFFIXES = {
     ".bin",
     ".elf",
@@ -123,6 +135,12 @@ def exposed_digest_hits(path: pathlib.Path, root: pathlib.Path) -> list[str]:
     return hits
 
 
+def is_pinned_vendor_fixture(path: pathlib.Path, root: pathlib.Path) -> bool:
+    relative = path.relative_to(root).as_posix()
+    digest = KNOWN_VENDOR_FIXTURE_SHA256.get(relative)
+    return digest is not None and hashlib.sha256(path.read_bytes()).hexdigest() == digest
+
+
 def ignored_secret_path_failures(root: pathlib.Path) -> list[str]:
     failures: list[str] = []
     for relative in REQUIRED_IGNORED_SECRET_PATHS:
@@ -143,6 +161,8 @@ def main() -> int:
     failures.extend(approval_errors)
     for path in repository_files(root):
         if path.relative_to(root).as_posix() in approved:
+            continue
+        if is_pinned_vendor_fixture(path, root):
             continue
         failures.extend(exposed_digest_hits(path, root))
     if failures:

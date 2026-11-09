@@ -19,7 +19,7 @@ const titles = {idle:'Belum merekam',disconnected:'Belum terhubung',ready:'Menun
   replaying:'Memulihkan data…',stopping:'Menyelesaikan CSV…',stop_pending:'Menunggu konfirmasi Stop…',
   stopped:'Rekaman berhenti',complete:'Rekaman selesai',incomplete:'Sesi tidak lengkap',cleanup_wait:'Menunggu penutupan sesi GLD…',
   cleanup_pending:'Menutup sesi GLD…',error:'Perlu diperiksa'};
-const settingIds=['wfScan','wfDevice','wfConnect','wfDisconnect','wfChooseFile','wfPrediction','wfGain','wfSensorStatus','wfMode','wfModeDirect','wfModeReplay','wfLabel'];
+const settingIds=['wfScan','wfDevice','wfConnect','wfDisconnect','wfChooseFile','wfDefaultFile','wfPrediction','wfGain','wfSensorStatus','wfMode','wfModeDirect','wfModeReplay','wfLabel'];
 
 function selectedMode(){return $('wfModeReplay').checked?'replay':'direct';}
 function setMode(mode){$('wfModeDirect').checked=mode!=='replay';$('wfModeReplay').checked=mode==='replay';}
@@ -47,6 +47,12 @@ function apply(value) {
     for(const [id,key] of [['wfPrediction','prediction'],['wfGain','gain'],['wfSensorStatus','status']])$(id).checked=Boolean(snapshot.fields?.[key]);
     formLoaded=true;
   }
+  if(snapshot.configuration_frozen||snapshot.ledger_path) {
+    // A frozen session may be started by another local client. Show its actual
+    // immutable settings without overwriting an operator's editable draft.
+    $('wfLabel').value=snapshot.label||'clear_air_test';setMode(snapshot.mode||'direct');
+    for(const [id,key] of [['wfPrediction','prediction'],['wfGain','gain'],['wfSensorStatus','status']])$(id).checked=Boolean(snapshot.fields?.[key]);
+  }
   render();
   if(pendingStopNotice&&snapshot.verification?.verified&&['stopped','complete','incomplete'].includes(snapshot.state)) {
     pendingStopNotice=false;
@@ -73,7 +79,7 @@ function render() {
   const retryCleanup=snapshot.cleanup_pending===true&&snapshot.cleanup_paused===true&&!snapshot.connected;
   const steps=readiness();
   for(const id of settingIds) $(id).disabled=busy||locked||active;
-  if(frozen) for(const id of ['wfScan','wfDevice','wfChooseFile','wfPrediction','wfGain','wfSensorStatus','wfMode','wfModeDirect','wfModeReplay','wfLabel'])$(id).disabled=true;
+  if(frozen) for(const id of ['wfScan','wfDevice','wfChooseFile','wfDefaultFile','wfPrediction','wfGain','wfSensorStatus','wfMode','wfModeDirect','wfModeReplay','wfLabel'])$(id).disabled=true;
   // An owned session may need an explicit retry after transport/disk failure.
   // Only Connect reopens; credentials stay in the backend and ownership stays fixed.
   if(retryCleanup) $('wfConnect').disabled=busy;
@@ -82,6 +88,7 @@ function render() {
   $('wfConnect').disabled ||= !snapshot.selected_device_id||snapshot.connected;
   $('wfDisconnect').disabled ||= !snapshot.connected;
   $('wfChooseFile').disabled ||= !snapshot.connected||!snapshot.ready;
+  $('wfDefaultFile').disabled ||= !snapshot.connected||!snapshot.ready;
   for(const id of ['wfPrediction','wfGain','wfSensorStatus'])$(id).disabled ||= !steps.file;
   for(const id of ['wfMode','wfModeDirect','wfModeReplay'])$(id).disabled ||= !steps.fields;
   $('wfLabel').disabled ||= !steps.mode;
@@ -103,7 +110,8 @@ function render() {
   $('wfConnection').dataset.connected=String(Boolean(snapshot.connected&&snapshot.ready));
   $('wfConnection').textContent=snapshot.connected
     ? snapshot.ready?`Connected · GLD-${snapshot.device_id||snapshot.selected_device_id}`:'Terhubung · perangkat belum siap'
-    : 'Belum terhubung';
+    : frozen&&!snapshot.cleanup_pending&&['complete','incomplete'].includes(snapshot.state)
+      ? `Sesi ditutup · GLD-${snapshot.device_id||snapshot.selected_device_id}`:'Belum terhubung';
   $('wfPath').textContent=snapshot.csv_path||'Belum ada lokasi dipilih.';
   $('wfLabelStamp').textContent=snapshot.label_timestamp||'--:-- Hari dd/mm/yy';
   $('wfLabelPreview').textContent=snapshot.label_timestamp?`${snapshot.label_timestamp} ${$('wfLabel').value}`:'Timestamp dibuat setelah lokasi CSV dipilih. Label ini terpisah dari hasil prediksi model.';
@@ -136,7 +144,7 @@ function render() {
     : snapshot.count?'CSV disimpan selama merekam. Verifikasi penuh dilakukan saat Stop.':'CSV belum direkam.';
   const message=error||syncError||(retryCleanup?'Penutupan sesi tertunda. Klik Hubungkan ulang untuk menyelesaikan GLD yang sama. CSV lama tidak bertambah.':snapshot.error)||snapshot.message||(snapshot.cleanup_pending
     ?'CSV lama tidak ditambah. Sambungkan kembali ke hotspot GLD agar sesi dapat ditutup.'
-    : snapshot.state==='recovering'?'GLD menahan data selama tetap menyala. Kembali ke hotspot GLD untuk memulihkan CSV yang sama.'
+    : snapshot.state==='recovering'?'GLD menahan data selama tetap menyala. Hub mencoba menyambung ulang hotspot dan memulihkan CSV yang sama.'
       :'Pengaturan dapat diedit sebelum Lock. Biarkan backend Operator Hub tetap berjalan selama merekam.');
   $('wfMessage').textContent=message;
   $('wfMessage').dataset.error=String(Boolean(error||syncError||snapshot.error));
@@ -249,6 +257,7 @@ export function initDatasetWorkflow() {
   $('wfConnect').addEventListener('click',()=>action('connect',{device_id:$('wfDevice').value}));
   $('wfDisconnect').addEventListener('click',()=>action('disconnect'));
   $('wfChooseFile').addEventListener('click',()=>action('choose-file'));
+  $('wfDefaultFile').addEventListener('click',()=>action('choose-default-file'));
   for(const id of ['wfLabel','wfModeDirect','wfModeReplay','wfPrediction','wfGain','wfSensorStatus'])$(id).addEventListener('change',()=>action('configure',configuration()));
   $('wfLock').addEventListener('change',()=>action('lock',{locked:$('wfLock').checked}));
   $('wfPrimary').addEventListener('click',()=>action(primaryCommand()));

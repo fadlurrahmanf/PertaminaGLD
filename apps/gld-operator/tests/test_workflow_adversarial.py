@@ -148,6 +148,35 @@ class WorkflowAdversarial(unittest.TestCase):
         self.assertIsNotNone(self.collector._ws)
         self.assertEqual(self.collector.count, 0)
 
+    def test_recovery_rejoins_selected_wifi_before_socket_retry(self):
+        order = []
+        self.collector._rejoin_wifi = lambda password: order.append(("wifi", password))
+        def failed_socket(*_args, **_kwargs):
+            order.append(("socket", None))
+            raise ConnectionError("inert transport failure")
+        self.collector._factory = failed_socket
+        self.collector._loss("transport_lost")
+        self.clock.now = self.collector._next_retry_at
+        self.collector._step()
+        self.assertEqual(order, [("wifi", "fixture-private-credential"), ("socket", None)])
+        self.assertTrue(self.collector.recovery_active)
+        self.assertEqual(self.collector._password, "fixture-private-credential")
+
+    def test_failed_wifi_rejoin_keeps_owned_session_and_backs_off(self):
+        attempts = []
+        def failed_rejoin(_password):
+            attempts.append(self.clock.now)
+            raise RuntimeError("inert WLAN unavailable")
+        self.collector._rejoin_wifi = failed_rejoin
+        self.collector._loss("transport_lost")
+        self.clock.now = self.collector._next_retry_at
+        self.collector._step()
+        self.assertEqual(attempts, [self.clock.now])
+        self.assertEqual(self.collector.error, "reconnect_failed")
+        self.assertGreater(self.collector._next_retry_at, self.clock.now)
+        self.assertTrue(self.collector._active)
+        self.assertEqual(self.collector.next_seq, 0)
+
     def test_terminal_retention_supersedes_accepted_pause_with_lost_ack(self):
         current = self.collector
         current._transition_intent = dict(cmd="PAUSE_DATASET", seq=1, id="pause-id")

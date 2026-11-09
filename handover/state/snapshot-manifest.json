@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
   "storage": "plaintext",
-  "createdAt": "2026-11-05T09:43:21.532409+07:00",
+  "createdAt": "2026-11-09T22:02:07.176944+07:00",
   "files": [
     {
       "path": "config/system.json",
       "size": 774,
-      "sha256": "14ab50ffae1403d6df09167aefec19e289d5c13a972f3fc0e961d5fddf540f9e",
+      "sha256": "cb24a81fa24bf6132a46b4fc0164160a7de0cbcd1b882d4fb54752c9a00e70b7",
       "role": "canonical-system-config"
     },
     {
@@ -19,7 +19,7 @@
     {
       "path": "config/source-broker.json",
       "size": 162,
-      "sha256": "62040ce59821cc964c20db19399c07543f3be3f4ec59c240953e10e02dd92df5",
+      "sha256": "d202a20f708aecbcf5cc1aa1e55ba8d3894f486e635d38ec6a8f1d68cfc1353b",
       "role": "original-broker-config",
       "sourcePath": "D:\\Github\\PertaminaGLD\\archive\\apps\\runtime\\operator-hub\\credentials.local.json"
     },
@@ -388,75 +388,173 @@
       "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\Clean_Air_GLD_1_20260720T071129.csv"
     },
     {
-      "path": "history/csv/046-Warming_UP_20260727T050241.csv",
+      "path": "history/csv/046-dataset-GLD-1002-20261109-212152-83ae7425.csv",
+      "size": 9422,
+      "sha256": "a113ec3449ccf3eb99aa8bcb6eff03eab53c4935efc040117a9ff6b332d61668",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\dataset-GLD-1002-20261109-212152-83ae7425.csv"
+    },
+    {
+      "path": "history/csv/047-dataset-GLD-1002-20261109-212520-4f1c4100.csv",
+      "size": 9645,
+      "sha256": "9b8cfbfaf18d6b4601a745a41307d8e518b88055348129d11eb5f128a9c3ba36",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\dataset-GLD-1002-20261109-212520-4f1c4100.csv"
+    },
+    {
+      "path": "history/csv/048-dataset-GLD-1002-20261109-212832-56ba7d17.csv",
+      "size": 13710,
+      "sha256": "f51715a195e495c28898b586130fa6956f1fb4227033ab6ecbb6adad84e74cc9",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\dataset-GLD-1002-20261109-212832-56ba7d17.csv"
+    },
+    {
+      "path": "history/csv/049-dataset-GLD-1002-20261109-213611-1d7500db.csv",
+      "size": 121,
+      "sha256": "4bc9d81dcb745a56a919143cff85a8b18a8dfa76b35341a64e42ca8569805b36",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\dataset-GLD-1002-20261109-213611-1d7500db.csv"
+    },
+    {
+      "path": "history/csv/050-dataset-GLD-1002-20261109-213850-56b7ea4d.csv",
+      "size": 11284,
+      "sha256": "e5bb251db1d3ec1c067502129b8e9190e5c28f78fca93bb6a073544a7b0eba7c",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\dataset-GLD-1002-20261109-213850-56b7ea4d.csv"
+    },
+    {
+      "path": "history/csv/051-dataset-GLD-1002-20261109-214555-69e7fc19.csv",
+      "size": 16155,
+      "sha256": "86f1cc5dc1eb399ab0043f9fd48624687823f3a62348a373cac92dc1d19582a0",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\dataset-GLD-1002-20261109-214555-69e7fc19.csv"
+    },
+    {
+      "path": "history/csv/052-Warming_UP_20260727T050241.csv",
       "size": 393,
       "sha256": "3460d0eaa74857ad726c4022ed0da3a764588066edadfe0a462a0b40823e425e",
       "role": "dataset-csv",
       "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\Warming_UP_20260727T050241.csv"
     },
     {
-      "path": "history/csv/047-wireless_1002_16915d55e0bf40d5a0bcb768789b9221.csv",
+      "path": "history/csv/053-wireless_1002_16915d55e0bf40d5a0bcb768789b9221.csv",
       "size": 8018,
       "sha256": "0289b3f2303041dccf86b2455834e0544001df3538900721cfa696c468f37928",
       "role": "dataset-csv",
       "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\wireless_1002_16915d55e0bf40d5a0bcb768789b9221.csv"
     },
     {
-      "path": "history/csv/048-wireless_1002_ed0a954353c44be295d7e3c0251be59e.csv",
+      "path": "history/csv/054-wireless_1002_ed0a954353c44be295d7e3c0251be59e.csv",
       "size": 2707,
       "sha256": "edaad5a9c41870d8532f61d037c813b9f10ab02f3b4b7f39b771c70e13b8dc80",
       "role": "dataset-csv",
       "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\wireless_1002_ed0a954353c44be295d7e3c0251be59e.csv"
     },
     {
-      "path": "history/csv/049-wireless_replay_1002_2c4e350dc7354574b85c0a72238b5bb4.csv",
+      "path": "history/csv/055-wireless_replay_1002_2c4e350dc7354574b85c0a72238b5bb4.csv",
       "size": 145075,
       "sha256": "9167e00d1dea818cbf1a7c0cb278f172d266b35cd3abbbb0cda7a982f91650eb",
       "role": "dataset-csv",
       "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\wireless_replay_1002_2c4e350dc7354574b85c0a72238b5bb4.csv"
     },
     {
-      "path": "history/csv/050-wireless_replay_1002_3eba1bc5cb0c43a7b14025cd1cda31e4.csv",
+      "path": "history/csv/056-wireless_replay_1002_3eba1bc5cb0c43a7b14025cd1cda31e4.csv",
       "size": 159132,
       "sha256": "ff85975b2a9ebc08e3df68db390f1ce1a388379881e4df0bcb9943da88f7bc53",
       "role": "dataset-csv",
       "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\wireless_replay_1002_3eba1bc5cb0c43a7b14025cd1cda31e4.csv"
     },
     {
-      "path": "history/csv/051-wireless_replay_1002_feb6bfb5caed440e81a5de6a9d57e844.csv",
+      "path": "history/csv/057-wireless_replay_1002_feb6bfb5caed440e81a5de6a9d57e844.csv",
       "size": 15991,
       "sha256": "ee086bcf7c1282bd7a351ed5ec4224af9f6dfcfe4b46e82c768cbf4867908741",
       "role": "dataset-csv",
       "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\wireless_replay_1002_feb6bfb5caed440e81a5de6a9d57e844.csv"
     },
     {
-      "path": "history/csv/052-MQ8_OFF_BASELINE_20260729.csv",
+      "path": "history/csv/058-MQ8_OFF_BASELINE_20260729.csv",
       "size": 175025,
       "sha256": "bfddfc37ca36df3b92c7d96ce151405ec8ce7f7ee46d02ea04c867a529ff0a40",
       "role": "dataset-csv",
       "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\mq8-duty-cycle\\MQ8_OFF_BASELINE_20260729.csv"
     },
     {
-      "path": "history/csv/053-GLD1002-12-kolom-20261103.csv",
+      "path": "history/csv/059-GLD1002-12-kolom-20261103.csv",
       "size": 12083,
       "sha256": "f05e1ad4095729c285f578a93abd01906bf3954a93d351f783730a4821323066",
       "role": "dataset-csv",
       "sourcePath": "D:\\Github\\PertaminaGLD\\output\\datasets\\GLD1002-12-kolom-20261103.csv"
     },
     {
-      "path": "history/ledger/001-workflow_3d0a3eb8c1ea4741ac3966615e07210b.jsonl",
+      "path": "history/ledger/001-cleanup_0621e77bb6b84b27977751f94b651aad.jsonl",
+      "size": 112221,
+      "sha256": "6cc461c1a47c358e421c76886ed4e0edf799fdf5bac297eb429890c125e2403b",
+      "role": "dataset-ledger",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\cleanup_0621e77bb6b84b27977751f94b651aad.jsonl"
+    },
+    {
+      "path": "history/ledger/002-cleanup_bb2492179be9427ba47bfc0ed8d241f9.jsonl",
+      "size": 160168,
+      "sha256": "e4a3dbbf1f815870c9aa1de18a93402b9c21c0c4d6b435be67957a3bceb7112d",
+      "role": "dataset-ledger",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\cleanup_bb2492179be9427ba47bfc0ed8d241f9.jsonl"
+    },
+    {
+      "path": "history/ledger/003-workflow_0e390df960f4413681ce2be3ceb604a8.jsonl",
+      "size": 85595,
+      "sha256": "5f9abd522b45a9a2d285e701f52940b2da2b703f9245ab315a3ef1360a973652",
+      "role": "dataset-ledger",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\workflow_0e390df960f4413681ce2be3ceb604a8.jsonl"
+    },
+    {
+      "path": "history/ledger/004-workflow_3ce85311345f4d47906a746205f92295.jsonl",
+      "size": 101926,
+      "sha256": "bbf8d87f69a603e61a95090d6a85db52735128d295ceb9dae4b1e4fa8108f22d",
+      "role": "dataset-ledger",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\workflow_3ce85311345f4d47906a746205f92295.jsonl"
+    },
+    {
+      "path": "history/ledger/005-workflow_3d0a3eb8c1ea4741ac3966615e07210b.jsonl",
       "size": 70431,
       "sha256": "b3e09dd9407675b9470b7aa0c26f42da37bf343f26e6c5a91242bb852a4caff0",
       "role": "dataset-ledger",
       "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\workflow_3d0a3eb8c1ea4741ac3966615e07210b.jsonl"
     },
     {
-      "path": "history/ledger/002-workflow_e3b7b84359f045348a81085c0976bb41.jsonl",
+      "path": "history/ledger/006-workflow_68c4dc83c65b4bd084aff79cbab9b93c.jsonl",
+      "size": 70677,
+      "sha256": "eea88dbf7481e1e8ad41c8c9448a98e8edaf8dd3cafd5e76ef2d23567567654c",
+      "role": "dataset-ledger",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\workflow_68c4dc83c65b4bd084aff79cbab9b93c.jsonl"
+    },
+    {
+      "path": "history/ledger/007-workflow_90a58e7693fd479eb32484a005b08755.jsonl",
+      "size": 60003,
+      "sha256": "d535159f214cdb087f2abf9414f69f6aea60b7b76b397bc779b1d96c23b62b2e",
+      "role": "dataset-ledger",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\workflow_90a58e7693fd479eb32484a005b08755.jsonl"
+    },
+    {
+      "path": "history/ledger/008-workflow_beb1e5ef450c4655aa4fb8acc52a4e03.jsonl",
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "role": "dataset-ledger",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\workflow_beb1e5ef450c4655aa4fb8acc52a4e03.jsonl"
+    },
+    {
+      "path": "history/ledger/009-workflow_ceb5ca20da2b498abee8d8a43d110f94.jsonl",
+      "size": 58901,
+      "sha256": "5d905db1b2c2a70d23dd8686499aaa8c101d23f522eef844609f4aec34c2a071",
+      "role": "dataset-ledger",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\workflow_ceb5ca20da2b498abee8d8a43d110f94.jsonl"
+    },
+    {
+      "path": "history/ledger/010-workflow_e3b7b84359f045348a81085c0976bb41.jsonl",
       "size": 260936,
       "sha256": "a165f94728d9ba0693214997dd03159bd536d03d2f2d7bcaa4cbc8523f286364",
       "role": "dataset-ledger",
       "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\workflow_e3b7b84359f045348a81085c0976bb41.jsonl"
     }
   ],
-  "totalBytes": 14897758
+  "totalBytes": 15607586
 }

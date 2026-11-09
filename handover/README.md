@@ -35,7 +35,7 @@ jaringan yang dipakai; tidak diubah otomatis oleh verifier.
 - `runtime/database-windows-x64`: MariaDB 10.4.32, tanpa data server sumber.
 - `drivers/ch340-windows-x64`: paket driver CH340 Windows x64 bertanda tangan.
 - `state`: snapshot konfigurasi aktif, profil/flow/credential Node-RED dan
-  kunci pembukanya, serta 53 CSV dan dua ledger JSONL.
+  kunci pembukanya, serta 59 CSV dan 10 ledger JSONL (9 November 2026).
 - `deployment.json`: konfigurasi database handover dan port lokal.
 - `plaintext-authorization.json`: persetujuan pemilik dan hash berkas
   konfigurasi plaintext yang diizinkan ikut Git.
@@ -51,7 +51,7 @@ Jangan membagikan isinya di log atau screenshot.
 
 Pencarian pada PC sumber tidak menemukan database proyek aktif atau backup SQL
 proyek. Karena itu paket ini tidak diklaim sebagai dump database lama.
-Seluruh histori yang teridentifikasi disalin: **55 berkas, 89.197 baris**.
+Seluruh histori yang teridentifikasi disalin: **69 berkas, 90.235 baris**.
 Database handover merekonstruksi CSV/ledger tersebut dengan provenance dan
 menyimpan byte asli setiap berkas; pengujian mendapatkan **0 perbedaan byte**.
 Impor bersifat idempoten. MySQL sumber pada port 3306 tidak dipakai atau diubah.

@@ -20,7 +20,8 @@
 .dataset-workflow button { display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:34px;padding:7px 11px;border-radius:6px;font:500 .75rem var(--font-body);letter-spacing:0;white-space:normal; }
 .dataset-workflow button:disabled { opacity:.52;cursor:not-allowed; }
 .dataset-workflow button svg { width:17px;height:17px;flex:0 0 17px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round; }
-.dataset-workflow #wfScan,.dataset-workflow #wfChooseFile { width:100%; }
+.dataset-workflow #wfScan,.dataset-workflow #wfChooseFile,.dataset-workflow #wfDefaultFile { width:100%; }
+.dataset-workflow #wfDefaultFile { margin-top:7px; }
 .dataset-workflow .wf-field { display:grid;gap:5px;margin-top:10px;font-size:.7rem;color:var(--wf-muted); }
 .dataset-workflow select,.dataset-workflow input:not([type=checkbox]):not([type=radio]):not([type=range]) { width:100%;min-width:0;margin:0;border-radius:6px;font:.75rem var(--font-mono);padding:8px 9px; }
 .dataset-workflow select { font-family:var(--font-body); }

@@ -29,9 +29,9 @@ class WorkflowRoutes(unittest.TestCase):
     def test_all_wizard_actions_dispatch_only_to_workflow_service(self):
         self.assertEqual(self.request('/api/dataset-workflow/state')[0],200)
         for action,payload in [('scan',{}),('select',{'device_id':'1002'}),('connect',{'device_id':'1002','password':'fake-only-password'}),
-            ('choose-file',{}),('configure',{'label':'air'}),('lock',{'locked':True}),('start',{}),('pause',{}),('resume',{}),('stop',{}),('continue',{}),('reset',{}),('disconnect',{}),('export',{})]:
+            ('choose-file',{}),('choose-default-file',{}),('configure',{'label':'air'}),('lock',{'locked':True}),('start',{}),('pause',{}),('resume',{}),('stop',{}),('continue',{}),('reset',{}),('disconnect',{}),('export',{})]:
             with self.subTest(action=action):self.assertEqual(self.request('/api/dataset-workflow/'+action,payload)[0],200)
-        self.assertEqual([n for n,_ in self.workflow.calls],['scan','select','connect','choose_file','configure','lock','start','pause','resume','stop','continue_recording','reset','disconnect','export_csv'])
+        self.assertEqual([n for n,_ in self.workflow.calls],['scan','select','connect','choose_file','choose_default_file','configure','lock','start','pause','resume','stop','continue_recording','reset','disconnect','export_csv'])
         self.assertEqual(self.direct.calls,[]);self.assertEqual(self.replay.calls,[])
 
     def test_paused_and_cleanup_block_other_transports_before_device_access(self):

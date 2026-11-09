@@ -5,6 +5,7 @@ import importlib.util
 from pathlib import Path
 import tempfile
 import unittest
+import uuid
 from unittest.mock import patch
 from xml.etree import ElementTree
 
@@ -14,6 +15,16 @@ platform=importlib.util.module_from_spec(spec);spec.loader.exec_module(platform)
 
 
 class PlatformBoundaries(unittest.TestCase):
+    def test_route_probe_matches_windows_adapter_guid_string_with_braces(self):
+        calls=[]
+        def runner(arguments, **_kwargs):
+            calls.append(arguments)
+            return type('Result', (), {'returncode':0,'stdout':'READY\n'})()
+        identifier=uuid.UUID('f93d7bbf-ba5f-403f-af23-497eb98816f7')
+        guid=platform._GUID.from_buffer_copy(identifier.bytes_le)
+        self.assertTrue(platform.WindowsWorkflowPlatform(runner=runner)._route_ready(guid))
+        self.assertIn("$g='{f93d7bbf-ba5f-403f-af23-497eb98816f7}'", calls[0][-1])
+
     def test_scan_candidates_are_not_verified_devices_and_never_include_bssid(self):
         text='SSID 1 : ITB Guest\nSSID 2 : GLD-DATASET-1002\n BSSID 1 : 00:11:22\nSSID 3 : GLD-DATASET-10af\nSSID 4 : GLD-DATASET-1002\nSSID 5 : GLD-DATASET-1002;cmd\n'
         self.assertEqual(platform.parse_scan(text),[
@@ -153,12 +164,13 @@ class InertWlan:
 class NativeAdapterSelection(unittest.TestCase):
     target='GLD-DATASET-1002'
 
-    def run_join(self,api,password='DUMMY_ONLY_123'):
+    def run_join(self,api,password='DUMMY_ONLY_123',route_probe=lambda _guid: True):
         now=[0.0]
         def sleep(seconds):now[0]+=seconds
         with patch('ctypes.WinDLL',return_value=api):
             try:
-                return platform.WindowsWorkflowPlatform(clock=lambda:now[0],sleep=sleep).join(self.target,password)
+                return platform.WindowsWorkflowPlatform(clock=lambda:now[0],sleep=sleep,
+                    route_probe=route_probe).join(self.target,password)
             finally:
                 self.assertEqual(api.closed,1)
                 self.assertEqual(set(api.memory),set(api.freed),'all API allocations freed on every branch')
@@ -178,7 +190,7 @@ class NativeAdapterSelection(unittest.TestCase):
                      {0x2222:[None,self.target]})
         self.assertEqual(self.run_join(api),{'ssid':self.target,'associated':True})
         self.assertEqual(api.calls,[('visible',0x2222),('profiles',0x2222),('profile',0x2222),('connect',0x2222),
-                                   ('query',0x2222),('query',0x2222)])
+                                   ('query',0x2222),('query',0x2222),('query',0x2222)])
 
     def test_does_not_choose_adapter_that_cannot_see_target(self):
         api=InertWlan([(1,4),(2,4)],{1:[('OTHER',99,True)],2:[(self.target,30,True)]})
@@ -193,7 +205,29 @@ class NativeAdapterSelection(unittest.TestCase):
 
     def test_existing_target_connection_does_not_rewrite_profile_or_reconnect(self):
         api=InertWlan([(1,1)],queries={1:[self.target]})
-        self.run_join(api);self.assertEqual(api.calls,[('query',1)])
+        self.run_join(api);self.assertEqual(api.calls,[('query',1),('query',1)])
+
+    def test_associated_hotspot_waits_for_delayed_dhcp_route(self):
+        api=InertWlan([(1,1)],queries={1:[self.target]})
+        probes=[]
+        def route(guid):
+            probes.append(InertWlan.guid(ctypes.byref(guid)))
+            return len(probes)==3
+        self.assertEqual(self.run_join(api,route_probe=route),{'ssid':self.target,'associated':True})
+        self.assertEqual(probes,[1,1,1])
+        self.assertFalse(any(call[0] in ('profile','connect') for call in api.calls))
+
+    def test_association_without_route_fails_before_websocket(self):
+        api=InertWlan([(1,1)],queries={1:[self.target]})
+        with self.assertRaises(platform.WorkflowNetworkNotReady) as failure:
+            self.run_join(api,route_probe=lambda _guid: False)
+        self.assertEqual(failure.exception.workflow_code,'wifi_route_not_ready')
+        self.assertFalse(any(call[0] in ('profile','connect') for call in api.calls))
+
+    def test_changed_association_during_route_wait_fails_closed(self):
+        api=InertWlan([(1,1)],queries={1:[self.target,self.target,None]})
+        with self.assertRaises(platform.WorkflowNetworkNotReady):
+            self.run_join(api,route_probe=lambda _guid: False)
 
     def test_wrong_adapter_association_cannot_confirm_selected_connection(self):
         api=InertWlan([(1,4),(2,4)],{1:[(self.target,90,True)],2:[(self.target,20,True)]},

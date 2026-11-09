@@ -22,10 +22,11 @@ PROTOCOL = "gld-dataset-wifi/3"
 
 class WorkflowCollector(WirelessDatasetReplayCollector):
     def __init__(self, output_dir, event_callback=None, *, persist, cutoff,
-                 expected_device_id, mode="replay", **kwargs):
+                 expected_device_id, mode="replay", rejoin_wifi=None, **kwargs):
         super().__init__(output_dir, event_callback, **kwargs)
         self._persist, self._cutoff_callback = persist, cutoff
         self._expected_device_id = expected_device_id
+        self._rejoin_wifi = rejoin_wifi
         self.mode = mode
         self.model = {}
         self.prediction_available = self.prediction_enabled = False
@@ -149,6 +150,25 @@ class WorkflowCollector(WirelessDatasetReplayCollector):
                 reason = "cutoff_disk_failure"
         super()._fatal(reason)
         self._transition_event.set()
+
+    def _step(self):
+        # A WebSocket retry alone cannot recover when Windows has dropped the
+        # GLD association. Rejoin the selected SSID before the bounded protocol
+        # retry, without holding the collector lock during Windows DHCP.
+        with self._lock:
+            rejoin = (self._rejoin_wifi is not None and self._active and self._want_link and
+                      self._ws is None and self._password is not None and
+                      self._clock() >= self._next_retry_at)
+            password = self._password if rejoin else None
+        if rejoin:
+            try:
+                self._rejoin_wifi(password)
+            except Exception:
+                with self._lock:
+                    if self._active and self._want_link and self._ws is None:
+                        self._loss("reconnect_failed")
+                return
+        super()._step()
 
     def start(self, label, interval_ms=500, *, prediction_enabled=False):
         _label(label)

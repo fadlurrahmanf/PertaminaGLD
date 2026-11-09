@@ -58,6 +58,28 @@ class RepositorySecretGuardTests(unittest.TestCase):
             self.assertEqual(len(hits), 1)
             self.assertIn("private-key material", hits[0])
 
+    def test_vendor_fixture_exception_requires_exact_path_and_bytes(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = pathlib.Path(temporary)
+            relative = "apps/lib/esptool-master/test/secure_images/test-key.pem"
+            path = root / relative
+            path.parent.mkdir(parents=True)
+            path.write_text("-----BEGIN PRIVATE KEY-----\nfixture\n", encoding="utf-8")
+            original = guard.KNOWN_VENDOR_FIXTURE_SHA256
+            guard.KNOWN_VENDOR_FIXTURE_SHA256 = {
+                relative: guard.hashlib.sha256(path.read_bytes()).hexdigest()
+            }
+            try:
+                self.assertTrue(guard.is_pinned_vendor_fixture(path, root))
+                other = root / "elsewhere.pem"
+                other.write_bytes(path.read_bytes())
+                self.assertFalse(guard.is_pinned_vendor_fixture(other, root))
+                path.write_text("-----BEGIN PRIVATE KEY-----\nchanged\n", encoding="utf-8")
+                self.assertFalse(guard.is_pinned_vendor_fixture(path, root))
+                self.assertEqual(len(guard.exposed_digest_hits(path, root)), 1)
+            finally:
+                guard.KNOWN_VENDOR_FIXTURE_SHA256 = original
+
     def test_known_digest_is_rejected_without_storing_plaintext_in_test(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             root = pathlib.Path(temporary)

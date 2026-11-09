@@ -13,6 +13,17 @@ restart Hub yang terlihat dan pemeriksaan paket. Firmware/NVS tidak diubah.
 (15 halaman, screenshot dengan kotak dan nomor petunjuk).
 Manual PDF lain yang bernama Wireless, Wizard, 5 Langkah atau Workspace tanpa
 akhiran 12-Kolom adalah arsip revisi sebelumnya.
+Panduan teks di bawah mencakup tombol folder bawaan, launcher, dan pemulihan
+Wi-Fi otomatis per 9 November; screenshot PDF 12-Kolom dibuat sebelum perubahan
+tampilan tersebut. Contoh hasil nyata terbaru:
+
+![Dataset GLD1002: lima langkah, grafik delapan sensor, prediksi, tabel dan CSV 104 baris terverifikasi](screenshots/dataset-auto-rejoin-104-baris-20261109.png)
+
+Panel kiri menunjukkan nomor 1–5 dan Lock. Panel kanan atas menunjukkan
+**Rekaman selesai** dan jumlah sampel; grafik menampilkan delapan sensor serta
+hasil prediksi. Di bawahnya, tabel menunjukkan 10 baris terakhir, status
+verifikasi 104 baris, dan tombol **Export CSV**. Pada screenshot ini sesi sudah
+ditutup sehingga indikator tidak mengklaim sambungan data masih aktif.
 
 ## Paket firmware yang dipilih
 
@@ -39,7 +50,8 @@ profil dan binding masih valid.
 ## Dari hotspot sampai CSV
 
 1. Jalankan `apps/operator-hub/run-operator-hub.bat` di terminal yang terlihat.
-   Buka <http://127.0.0.1:5173>, masuk GLD lalu tab **Dataset**. Jika Hub sudah
+   Buka <http://127.0.0.1:5174> di satu tab browser Codex untuk GLD Console,
+   lalu tab **Dataset**. Launcher tidak membuka Chrome otomatis. Jika Hub sudah
    berjalan, gunakan instance itu. Jangan membuka backend kedua.
 2. Untuk alur Dataset, lepas koneksi serial COM. Klik **Scan Nearby GLD**,
    pilih perangkat yang benar, misalnya **GLD-1002**, lalu **Connect**.
@@ -48,8 +60,10 @@ profil dan binding masih valid.
    hotspot GLD tidak menyediakan internet. Pertahankan Wi-Fi GLD selama sesi.
 3. Tunggu indikator **Connected**. Wi-Fi Windows tersambung saja belum cukup;
    Hub masih memeriksa identitas perangkat dan kesiapan layanan data.
-4. Klik **Pilih file CSV**, tentukan folder yang dapat ditulis dan nama baru.
-   File lama tidak ditimpa. Timestamp label dibuat saat lokasi dipilih.
+4. Klik **Pilih file CSV** untuk menentukan folder dan nama baru lewat dialog
+   Windows, atau **Gunakan folder Dataset bawaan** agar aplikasi memberi nama
+   unik di `apps/gld-operator/output/datasets`. File lama tidak ditimpa.
+   Timestamp label dibuat saat lokasi dipilih.
 5. Pilih kolom tambahan. **Predicted Class + Confidence** hanya dapat diaktifkan
    setelah koneksi, lokasi CSV, model, binding dan nulling siap. **Gain** dan
    **Status sensor** opsional; default keduanya tidak dicentang.
@@ -72,12 +86,13 @@ profil dan binding masih valid.
     aplikasi lain jika akan Continue.
 12. Klik **Export CSV** di bawah tabel untuk mengunduh salinan file rekaman.
     File asli sudah tersimpan di lokasi yang dipilih; tabel hanya menampilkan
-    10 baris terakhir, sedangkan CSV berisi seluruh baris sesi.
+    10 baris terakhir, sedangkan CSV berisi seluruh baris sesi. Setelah Stop
+    terverifikasi, salinan Export identik byte dengan file CSV asli.
 13. **Reset sesi** kembali ke pengaturan awal tanpa menghapus CSV atau NVS.
     Reset tidak aktif ketika merekam. Jika sedang Pause, Stop dan verifikasi
     diselesaikan dahulu. Gunakan sesi/file baru untuk konfigurasi baru.
 14. Sebelum kembali mengubah pengaturan lewat COM: **Stop**, tunggu verifikasi
-    CSV, lalu **Disconnect** Dataset. Jangan mengambil alih sesi yang masih
+    CSV, lalu **Reset sesi**. Jangan mengambil alih sesi yang masih
     merekam, dijeda, pulih atau menunggu penyelesaian.
 
 ## Isi CSV
@@ -104,15 +119,21 @@ Gunakan file baru untuk format ini; CSV lama tidak diubah.
 
 - **Rekam langsung:** CSV, hitungan dan grafik sesi berhenti bertambah; sesi
   ditandai tidak lengkap. Tunggu penutupan sesi sebelum Continue atau Reset.
-- **Pulih otomatis:** sambungkan lagi ke hotspot GLD yang sama dan biarkan
-  backend berjalan. Sampel tertunda kembali ke CSV yang sama dengan timestamp
-  asli; jangan menekan Start sesi baru saat pemulihan berlangsung.
+- **Pulih otomatis:** Hub mencoba menyambungkan ulang Wi-Fi Windows ke hotspot
+  GLD yang dipilih, lalu mengirim sampel tertunda ke CSV yang sama dengan
+  timestamp asli. Biarkan backend berjalan dan jangan menekan Start sesi baru.
+  Jika Windows masih belum tersambung setelah beberapa percobaan, periksa
+  sinyal/catu GLD dan sambungkan Wi-Fi secara manual ke SSID yang sama.
 - Buffer ada di RAM selama GLD menyala, sampai batas lima menit. Pada batas
   retensi, GLD menghentikan sampling sebagai incomplete. Mati/reboot menghapus
   buffer. Restart backend/laptop bukan pemulihan yang dijamin.
-- Selama merekam/pulih, jangan tutup terminal Hub, matikan GLD, atau pindah
-  jaringan untuk mencari internet. Setelah Stop terverifikasi dan Disconnect,
-  laptop dapat kembali ke jaringan internet.
+- Selama merekam/pulih, jangan tutup terminal Hub atau matikan GLD. Setelah
+  Stop terverifikasi, gunakan Reset sesi bila sudah selesai; laptop kemudian
+  dapat kembali ke jaringan internet.
+- Jika ingin Codex tetap bisa memantau tab saat Wi-Fi tersambung ke hotspot
+  GLD tanpa Internet, sambungkan Ethernet atau adaptor Internet kedua. Dengan
+  satu adaptor Wi-Fi saja, aplikasi lokal tetap berjalan tetapi koneksi Codex
+  bisa terputus sampai laptop kembali ke jaringan Internet.
 
 ## Jika gagal Connect atau prediksi tidak tersedia
 
@@ -154,11 +175,22 @@ melalui Disconnect dan memverifikasi tidak ada cleanup/sesi rekaman tersisa.
 Uji ini memperbaiki dan memeriksa risiko timeout handshake; pemicu persis
 insiden awal tidak tertangkap, sehingga tidak dinyatakan pasti.
 
-**Uji koneksi terbaru tidak merekam grafik/CSV dan tidak menguji putus Wi-Fi
-penuh lima menit.** Screenshot grafik, Pause/Resume, Stop/Continue dan Export
-pada PDF berasal dari pengujian GLD1002 revisi sebelumnya; screenshot menu
-paket/kolom dari revisi UI yang lebih baru. Gambar diberi keterangan sumber
-waktu, bukan dianggap screenshot hasil uji Model 2 terbaru.
+**Uji koneksi 3 November tersebut tidak merekam grafik/CSV dan tidak menguji
+putus Wi-Fi penuh lima menit.** Screenshot grafik, Pause/Resume, Stop/Continue
+dan Export pada PDF berasal dari pengujian GLD1002 revisi sebelumnya;
+screenshot menu paket/kolom dari revisi UI yang lebih baru. Gambar diberi
+keterangan sumber waktu.
+
+Pada **9 November 2026**, paket final Model 2 di-upload lagi ke GLD1002 dengan
+Reset NVS OFF. Uji aktual melalui satu tab Codex meliputi grafik 8 sensor,
+prediksi, Pause/Resume, Stop, Continue dan Export. Sesi Pulih otomatis pertama
+berakhir pada 87 baris setelah Continue. Saat uji berikutnya, Wi-Fi Windows
+diputus pada 25 sampel; Hub menyambung ulang hotspot GLD tanpa tindakan manual,
+memulihkan buffer, lalu Stop memverifikasi **104 baris, 12 kolom, urutan utuh,
+interval median 500 ms**. Mode Rekam langsung juga diuji: CSV membeku pada 54
+baris setelah putus, diverifikasi sebagai tidak lengkap, lalu Continue menambah
+data di CSV yang sama. Detail, hash, dan batas bukti ada pada
+`docs/firmware/gld-dataset-hotspot-audit-20261109.md`.
 
 Bukti historis: grafik delapan kanal dan interval median 500 ms, 119 baris CSV
 cocok dengan ledger (81 prediksi valid, 38 pemanasan), serta pemulihan 61 sampel

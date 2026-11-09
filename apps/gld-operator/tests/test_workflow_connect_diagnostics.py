@@ -87,6 +87,13 @@ class WorkflowConnectDiagnostics(unittest.TestCase):
         self.platform.join = join
         self.refused(self.service(), "wifi_association_failed", "wifi")
 
+    def test_associated_without_route_has_specific_safe_message(self):
+        class MissingRoute(RuntimeError):
+            workflow_code = "wifi_route_not_ready"
+        def join(*_args): raise MissingRoute(SECRET)
+        self.platform.join = join
+        self.refused(self.service(), "wifi_route_not_ready", "wifi")
+
     def test_not_ready_profile_zero_identity_and_retained_session_remain_refused(self):
         for case, code, phase in (("not_ready", "device_not_ready", "readiness"),
                                   ("profile_zero", "invalid_profile", "readiness"),

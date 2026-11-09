@@ -413,6 +413,12 @@ bool lastDatasetRejectSaturated = false;
 
 uint32_t wifiReconnectCount = 0;
 uint32_t wifiReconnectFailCount = 0;
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+bool workflowWifiAttemptActive = false;
+bool workflowWifiRetryPending = false;
+uint32_t workflowWifiAttemptStartedMs = 0;
+uint32_t workflowWifiRetryAtMs = 0;
+#endif
 uint32_t mqttReconnectCount = 0;
 uint32_t mqttConnectFailCount = 0;
 int lastMqttState = 0;
@@ -4851,23 +4857,59 @@ void disableNetworkForOfflineMode(const char* reason) {
 
 bool connectWifi() {
 #if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+    // The native router is optional for the standalone Dataset AP. In this
+    // image, never hold the main loop in a station connection wait: it owns
+    // the Workflow control and 500 ms sample scheduler too.
+    const uint32_t now = millis();
+    if (WiFi.status() == WL_CONNECTED) {
+        if (workflowWifiAttemptActive) {
+            workflowWifiAttemptActive = false;
+            workflowWifiRetryPending = false;
+            logPrintf("WIFI_CONNECTED ip=%s\n", WiFi.localIP().toString().c_str());
+        }
+        return true;
+    }
+    if (workflowWifiAttemptActive) {
+        if (now - workflowWifiAttemptStartedMs < WIFI_TIMEOUT_MS) return false;
+        WorkflowNativeOperation nativeOperation;
+        WiFi.disconnect(false);  // Station only; preserve the Dataset AP.
+        workflowWifiAttemptActive = false;
+        workflowWifiRetryPending = true;
+        workflowWifiRetryAtMs = now + MQTT_RETRY_MS;
+        ++wifiReconnectFailCount;
+        setRecoveryReason("wifi_connect_failed");
+        logPrintln("WIFI_CONNECT_FAILED");
+        return false;
+    }
+    if (workflowWifiRetryPending &&
+        static_cast<int32_t>(now - workflowWifiRetryAtMs) < 0) return false;
+    if (pgl::gld::datasetworkflowwifi::clientConnected() ||
+        pgl::gld::datasetworkflowwifi::ownsSession()) return false;
     WorkflowNativeOperation nativeOperation;
-#endif
     ++wifiReconnectCount;
     setRecoveryReason("wifi_connect");
     logPrintf("WIFI_CONNECT ssid=%s\n", runtimeConfig.wifiSsid);
-#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
-    WiFi.mode(pgl::gld::datasetworkflowwifi::available() ? WIFI_AP_STA : WIFI_STA);
+    if (!WiFi.mode(pgl::gld::datasetworkflowwifi::available() ? WIFI_AP_STA : WIFI_STA)) {
+        workflowWifiRetryPending = true;
+        workflowWifiRetryAtMs = now + MQTT_RETRY_MS;
+        ++wifiReconnectFailCount;
+        setRecoveryReason("wifi_connect_failed");
+        logPrintln("WIFI_CONNECT_FAILED");
+        return false;
+    }
+    WiFi.begin(runtimeConfig.wifiSsid, runtimeConfig.wifiPassword);
+    workflowWifiAttemptStartedMs = now;
+    workflowWifiAttemptActive = true;
+    workflowWifiRetryPending = false;
+    return false;
 #else
+    ++wifiReconnectCount;
+    setRecoveryReason("wifi_connect");
+    logPrintf("WIFI_CONNECT ssid=%s\n", runtimeConfig.wifiSsid);
     WiFi.mode(WIFI_STA);
-#endif
     WiFi.begin(runtimeConfig.wifiSsid, runtimeConfig.wifiPassword);
     const uint32_t t0 = millis();
     while (WiFi.status() != WL_CONNECTED && millis() - t0 < WIFI_TIMEOUT_MS) {
-#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
-        // A standalone AP client must not wait for the optional native router.
-        if (pgl::gld::datasetworkflowwifi::clientConnected()) break;
-#endif
         serviceDelay(50);
     }
     const bool ok = WiFi.status() == WL_CONNECTED;
@@ -4878,10 +4920,16 @@ bool connectWifi() {
     logPrintf(ok ? "WIFI_CONNECTED ip=%s\n" : "WIFI_CONNECT_FAILED\n",
               ok ? WiFi.localIP().toString().c_str() : "");
     return ok;
+#endif
 }
 
 void maintainWifi() {
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+    // Poll the in-flight station attempt without waiting for the router.
+    connectWifi();
+#else
     if (WiFi.status() != WL_CONNECTED) connectWifi();
+#endif
 }
 
 // Forward declarations
@@ -7537,6 +7585,9 @@ void setup() {
                                           false, false);
             pulseWdtKeepaliveNow();
 #if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+            // Advertise the local Dataset service before attempting the
+            // optional native router or MQTT broker.
+            beginDatasetWorkflowIfNeeded();
             connectWifi();
             pulseWdtKeepaliveNow();
             mqtt.setBufferSize(MQTT_BUFFER_SIZE);

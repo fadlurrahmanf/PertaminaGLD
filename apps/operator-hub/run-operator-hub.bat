@@ -21,5 +21,6 @@ if errorlevel 1 (
 )
 
 echo Starting Operator Hub and verified GLD/CH/Gateway bridges...
-"%PY_EXE%" bridge.py --host 127.0.0.1 --port 5173 --open-browser
+echo Operator Hub tersedia di http://127.0.0.1:5173/ dan GLD Console di http://127.0.0.1:5174/
+"%PY_EXE%" bridge.py --host 127.0.0.1 --port 5173
 endlocal

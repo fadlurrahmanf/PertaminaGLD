@@ -51,6 +51,7 @@ CONNECT_DIAGNOSTICS = {
     "invalid_integer": ("protocol", "Metadata awal layanan data GLD tidak valid. Periksa paket firmware Hotspot Wizard Dataset."),
     "invalid_prefix": ("protocol", "Metadata urutan sesi GLD tidak valid. Koneksi ditahan agar data sesi tetap terlindungi."),
     "wifi_association_failed": ("wifi", "Windows belum berhasil memastikan koneksi ke hotspot GLD. Periksa adaptor, izin lokasi/Wi-Fi, jaringan yang dipilih dan password."),
+    "wifi_route_not_ready": ("wifi", "Wi-Fi GLD tersambung, tetapi Windows belum memiliki IP dan rute langsung ke 192.168.4.1. Tunggu beberapa detik lalu Connect lagi; periksa adaptor atau VPN jika tetap gagal."),
     "connection_failed_check_hotspot_and_password": ("transport", "Koneksi ke layanan data GLD gagal. Periksa hotspot GLD dan paket firmware, lalu coba Connect lagi."),
 }
 
@@ -246,6 +247,7 @@ class DatasetWorkflowService:
     def _make_engine(self):
         return WorkflowCollector(self.output_dir, self._on_engine, persist=self._persist,
             cutoff=self._cutoff, expected_device_id=self.selected_device_id, mode=self.mode,
+            rejoin_wifi=lambda password: self.platform.join(self.selected_ssid, password),
             websocket_factory=self._factory, clock=self._clock, fsync=self._fsync,
             autostart_worker=self._automatic, command_timeout=self._timeout, silence_timeout=self._silence)
 
@@ -286,8 +288,9 @@ class DatasetWorkflowService:
                 self._password = password
                 self._steps["connection"] = True
                 self.error = ""
-            except Exception:
-                code = "wifi_association_failed" if phase == "wifi" else failure_code or getattr(attempt_engine, "error", "")
+            except Exception as exc:
+                code = (getattr(exc, "workflow_code", "wifi_association_failed") if phase == "wifi"
+                        else failure_code or getattr(attempt_engine, "error", ""))
                 if code not in CONNECT_DIAGNOSTICS:
                     code = "connection_failed_check_hotspot_and_password"
                 phase, self.error = CONNECT_DIAGNOSTICS[code]
@@ -307,16 +310,32 @@ class DatasetWorkflowService:
             value = self.platform.choose_file()
             if value is None:
                 return self.snapshot()
-            value = self.platform.validate_file(value)
-            with self._lock:
-                self.csv_path = str(value)
-                self._steps["file"] = True
-                if not self.label_timestamp:
-                    now = self._wall_clock()
-                    day = ("Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu")[now.weekday()]
-                    self.label_timestamp = f"{now:%H:%M} {day} {now:%d/%m/%y}"
-            self._emit()
-            return self.snapshot()
+            return self._assign_file(value)
+
+    def choose_default_file(self):
+        """Select a fresh CSV in the app's Dataset folder without a native dialog."""
+        with self._operation:
+            self._editable()
+            if self.ledger_path:
+                raise RuntimeError("Reset sebelum memilih file rekaman baru.")
+            if not self._readiness()["connection"]:
+                raise RuntimeError("Hubungkan GLD hingga siap sebelum memilih file CSV.")
+            self.output_dir.mkdir(parents=True, exist_ok=True)
+            stamp = self._wall_clock().strftime("%Y%m%d-%H%M%S")
+            value = self.output_dir / f"dataset-GLD-{self.selected_device_id}-{stamp}-{uuid.uuid4().hex[:8]}.csv"
+            return self._assign_file(value)
+
+    def _assign_file(self, value):
+        value = self.platform.validate_file(value)
+        with self._lock:
+            self.csv_path = str(value)
+            self._steps["file"] = True
+            if not self.label_timestamp:
+                now = self._wall_clock()
+                day = ("Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu")[now.weekday()]
+                self.label_timestamp = f"{now:%H:%M} {day} {now:%d/%m/%y}"
+        self._emit()
+        return self.snapshot()
 
     def configure(self, payload):
         with self._operation:
@@ -691,6 +710,8 @@ class DatasetWorkflowService:
                     self._complete = False
                     self._emit()
                     raise RuntimeError("CSV berubah setelah verifikasi; file tetap dipertahankan.")
-                return dict(filename=Path(self.csv_path).name, csv=Path(self.csv_path).read_text(encoding="utf-8"))
+                # Keep CRLF bytes identical to the verified file on Windows.
+                with Path(self.csv_path).open("r", encoding="utf-8", newline="") as source:
+                    return dict(filename=Path(self.csv_path).name, csv=source.read())
             except OSError:
                 raise RuntimeError("CSV belum dapat dibaca.") from None

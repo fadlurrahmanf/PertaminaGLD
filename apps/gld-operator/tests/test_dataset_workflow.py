@@ -13,6 +13,7 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from dataset_workflow import DatasetWorkflowService, csv_columns, project_record
+from workflow_platform import WindowsWorkflowPlatform
 from test_wireless_dataset_replay import Clock, FakePeer, FakeRingDevice
 
 PASSWORD = "workflow-fixture-only"
@@ -211,6 +212,29 @@ class WorkflowTests(unittest.TestCase):
         self.service.configure(dict(label="fixture", mode="direct", fields=dict(prediction=False,gain=False,status=False,timing=False)))
         self.assertTrue(self.service.lock(True)["configured"])
         with self.assertRaises(RuntimeError): self.service.configure({"label": "changed"})
+
+    def test_default_csv_destination_is_new_and_requires_ready_connection(self):
+        with self.assertRaises(RuntimeError):
+            self.service.choose_default_file()
+        self.service.scan(); self.service.select("1002"); self.service.connect("1002", PASSWORD)
+        with patch.object(self.platform, "validate_file", side_effect=WindowsWorkflowPlatform.validate_file):
+            first = self.service.choose_default_file()
+            self.assertEqual(Path(first["csv_path"]).parent, self.service.output_dir)
+            self.assertEqual(Path(first["csv_path"]).suffix, ".csv")
+            self.assertFalse(Path(first["csv_path"]).exists())
+            second = self.service.choose_default_file()
+            self.assertNotEqual(first["csv_path"], second["csv_path"])
+            self.service.lock(True)
+            with self.assertRaises(RuntimeError):
+                self.service.choose_default_file()
+
+    def test_export_matches_verified_csv_bytes_including_line_endings(self):
+        self.begin(prediction=True, optional=False)
+        self.capture(2)
+        stopped = self.service.stop()
+        self.assertTrue(stopped["verification"]["verified"])
+        self.assertEqual(self.service.export_csv()["csv"].encode("utf-8"),
+                         Path(stopped["csv_path"]).read_bytes())
 
     def test_readiness_is_cumulative_and_picker_waits_for_authenticated_device(self):
         def assert_prefix(snapshot, count):

@@ -273,7 +273,18 @@ class WorkflowSourceShape(unittest.TestCase):
 
     def test_standalone_ap_client_is_not_starved_by_native_dataset_reconnect(self):
         station = old.body(self.unified, 'bool connectWifi()')
-        self.assertIn('if (pgl::gld::datasetworkflowwifi::clientConnected()) break', station)
+        workflow, normal = station.split('#else', 1)
+        self.assertIn('workflowWifiAttemptStartedMs < WIFI_TIMEOUT_MS', workflow)
+        self.assertIn('workflowWifiRetryAtMs', workflow)
+        self.assertIn('datasetworkflowwifi::clientConnected()', workflow)
+        self.assertIn('datasetworkflowwifi::ownsSession()', workflow)
+        self.assertIn('WiFi.disconnect(false)', workflow)
+        self.assertNotIn('serviceDelay(', workflow)
+        self.assertIn('serviceDelay(50)', normal)
+        setup = old.body(self.unified, 'void setup()')
+        dataset = setup[setup.index('if (currentMode == pgl::gld::GldMode::DATASET)'):]
+        self.assertLess(dataset.index('beginDatasetWorkflowIfNeeded();'),
+                        dataset.index('connectWifi();'))
         broker = old.body(self.unified, 'bool mqttConnect() {')
         self.assertIn('clientConnected() || WiFi.status() != WL_CONNECTED) return false', broker)
         self.assertLess(broker.index('clientConnected()'), broker.index('mqtt.connect('))

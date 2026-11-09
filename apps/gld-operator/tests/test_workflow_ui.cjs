@@ -29,10 +29,12 @@ async function settle(){for(let i=0;i<20;i++)await Promise.resolve();}
  assert(!get('wfGain').checked&&!get('wfSensorStatus').checked);assert(!nodes.has('wfTiming'),'technical timing is internal only');assert(get('wfControls').hidden);assert(get('wfLock').disabled);assert(!get('wfReset').disabled);
  assert([...steps.values()].every(s=>s.dataset.ready==='false'),'no later default may be green before connection');
  assert(get('wfGain').disabled&&get('wfModeDirect').disabled&&get('wfLabel').disabled);
+ assert(get('wfDefaultFile').disabled,'default destination requires GLD readiness');
  context.control.apply({...backend,steps:{scan:true,device:true,connection:true,file:false,fields:true,mode:true,label:true},connected:true,ready:true});
  assert.equal(steps.get('connection').dataset.ready,'true');assert([...steps.entries()].filter(([name])=>name!=='connection').every(([,s])=>s.dataset.ready==='false'),'file is the prerequisite for all remaining gates');
  backend={...backend,revision:1,state:'ready',devices:[{device_id:'1002',ssid:'GLD-DATASET-1002',name:'GLD-1002'}],selected_device_id:'1002',device_id:'1002',connected:true,ready:true,prediction_available:true,csv_path:'C:/synthetic/data.csv',label_timestamp:'07:35 Selasa 03/11/26',steps:{scan:true,device:true,...Object.fromEntries([...steps.keys()].map(k=>[k,true]))}};
  context.control.apply(backend);assert.equal(get('wfLabelStamp').textContent,'07:35 Selasa 03/11/26');assert(!get('wfPrediction').disabled);assert([...steps.values()].every(s=>s.dataset.ready==='true'));assert(!get('wfLock').disabled);
+ assert(!get('wfDefaultFile').disabled,'default destination is available after Connect');
  await context.control.action('lock',{locked:true});
  assert.equal(calls.slice(-3)[0].route,'/api/dataset-workflow/configure');
  assert(!get('wfControls').hidden);assert(!get('wfPrimary').disabled);assert.equal(get('wfPrimaryLabel').textContent,'Start');assert(get('wfStop').disabled);assert(!get('wfPrimaryPlay').hidden&&get('wfPrimaryPause').hidden);
@@ -54,9 +56,12 @@ async function settle(){for(let i=0;i<20;i++)await Promise.resolve();}
  for(const state of ['pausing','resuming','recovering','replaying','stopping']){context.control.apply({...backend,revision:backend.revision,state});assert(get('wfPrimary').disabled,'primary disabled during '+state);}
  context.control.apply(backend);
  backend={...backend,revision:backend.revision+1,locked:false,configuration_frozen:true,ledger_path:'C:/synthetic/ledger.jsonl'};
+ backend={...backend,label:'backend_label',mode:'replay',fields:{...backend.fields,prediction:true}};
  context.control.apply(backend);
+ assert.equal(get('wfLabel').value,'backend_label','frozen session shows backend label');
+ assert(get('wfModeReplay').checked&&get('wfPrediction').checked,'frozen session shows backend mode and fields');
  assert(!get('wfLock').disabled,'verified CSV can be relocked');
- assert(get('wfMode').disabled&&get('wfLabel').disabled&&get('wfChooseFile').disabled,'existing CSV schema/label/destination requires Reset');
+ assert(get('wfMode').disabled&&get('wfLabel').disabled&&get('wfChooseFile').disabled&&get('wfDefaultFile').disabled,'existing CSV schema/label/destination requires Reset');
  await context.control.action('lock',{locked:true});
  assert(!get('wfPrimary').disabled&&get('wfPrimaryLabel').textContent==='Continue','unlock/relock preserves Continue');
  backend={...backend,revision:backend.revision+1,locked:true,can_continue:false,verification:{verified:false}};

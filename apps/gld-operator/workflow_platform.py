@@ -13,9 +13,15 @@ import re
 import subprocess
 import tempfile
 import time
+import uuid
 from xml.sax.saxutils import escape
 
 SSID_PATTERN = re.compile(r"GLD-DATASET-([0-9A-Fa-f]{4})\Z")
+GLD_ROUTE_WAIT_SECONDS = 8.0
+
+
+class WorkflowNetworkNotReady(RuntimeError):
+    workflow_code = "wifi_route_not_ready"
 
 
 # Native layouts follow wlanapi.h. Keep them separate from the file dialog ABI.
@@ -190,8 +196,43 @@ def profile_xml(ssid, password):
 
 
 class WindowsWorkflowPlatform:
-    def __init__(self, *, runner=subprocess.run, clock=time.monotonic, sleep=time.sleep):
+    def __init__(self, *, runner=subprocess.run, clock=time.monotonic, sleep=time.sleep,
+                 route_probe=None):
         self._run, self._clock, self._sleep = runner, clock, sleep
+        self._route_probe = route_probe
+
+    def _route_ready(self, guid):
+        if self._route_probe is not None:
+            return bool(self._route_probe(guid))
+        identifier = uuid.UUID(bytes_le=ctypes.string_at(ctypes.byref(guid), 16))
+        # Association precedes Windows DHCP. Require the selected WLAN adapter
+        # to own both the GLD subnet address and the best on-link route before
+        # sending the private WebSocket Authorization header.
+        script = (
+            # Get-NetAdapter.InterfaceGuid is a string with braces, not Guid.
+            f"$g='{{{identifier}}}';"
+            "$a=Get-NetAdapter -IncludeHidden | Where-Object {$_.InterfaceGuid -eq $g} | Select-Object -First 1;"
+            "if(-not $a){'WAIT';exit};"
+            "$r=@(Find-NetRoute -RemoteIPAddress 192.168.4.1 -ErrorAction SilentlyContinue);"
+            "$ip=@($r | Where-Object {$_.InterfaceIndex -eq $a.ifIndex -and "
+            "$_.IPAddress -like '192.168.4.*' -and $_.IPAddress -ne '192.168.4.1'});"
+            "$link=@($r | Where-Object {$_.InterfaceIndex -eq $a.ifIndex -and "
+            "$_.DestinationPrefix -eq '192.168.4.0/24' -and $_.NextHop -eq '0.0.0.0'});"
+            "if($ip.Count -gt 0 -and $link.Count -gt 0){'READY'}else{'WAIT'}"
+        )
+        return self._command(["powershell.exe", "-NoProfile", "-NonInteractive",
+                              "-Command", script]).strip() == "READY"
+
+    def _wait_for_route(self, api, handle, guid, target):
+        deadline = self._clock() + GLD_ROUTE_WAIT_SECONDS
+        while True:
+            if _connection_ssid(api, handle, guid) != target:
+                raise WorkflowNetworkNotReady("Koneksi hotspot GLD berubah sebelum IP siap.")
+            if self._route_ready(guid):
+                return
+            if self._clock() >= deadline:
+                raise WorkflowNetworkNotReady("Windows belum memperoleh IP/rute langsung ke GLD.")
+            self._sleep(.25)
 
     def _command(self, arguments):
         if os.name != "nt":
@@ -264,6 +305,7 @@ class WindowsWorkflowPlatform:
                     continue
                 guid = _GUID.from_buffer_copy(interface.guid)
                 if interface.state == 1 and _connection_ssid(api, handle, guid) == target:
+                    self._wait_for_route(api, handle, guid, target)
                     return dict(ssid=ssid, associated=True)
                 quality = _visible_quality(api, handle, guid, target)
                 if quality is not None:
@@ -288,6 +330,7 @@ class WindowsWorkflowPlatform:
             end = self._clock() + 15
             while self._clock() < end:
                 if _connection_ssid(api, handle, guid) == target:
+                    self._wait_for_route(api, handle, guid, target)
                     return dict(ssid=ssid, associated=True)
                 self._sleep(.25)
             raise RuntimeError("Hotspot belum terhubung. Periksa daya GLD, jarak, dan password.")

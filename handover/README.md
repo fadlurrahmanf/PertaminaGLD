@@ -69,12 +69,17 @@ baru di `output/handover-verification/<waktu>/clean-checkout`, port bertambah
 ditimpa. Port yang telah dipakai menyebabkan launcher berhenti; launcher tidak
 mengambil alih proses asing.
 
+Folder `tmp/` dan profil browser uji di `output/mockups/` sengaja tidak ikut
+Git. Keduanya artefak sementara; profil browser lama memiliki path yang
+menyebabkan checkout Windows gagal. Screenshot mockup tetap ikut Git.
+
 Snapshot Git merupakan kondisi saat ekspor, bukan sinkronisasi data langsung.
 Rekaman baru setelah snapshot harus diekspor lagi untuk handover berikutnya.
 
 ## Bukti dan batas pengujian
 
-Uji stack salinan bersih pada PC sumber berhasil: Hub dan ketiga bridge,
+Clone Git lokal baru pada Windows berhasil, lalu uji stack dari commit clone
+lulus 24/24: Hub dan ketiga bridge,
 autentikasi MQTT, AES melalui decoder Node-RED, penulisan/pembacaan database,
 penulisan CSV, integritas histori, dan penghentian layanan milik pengujian.
 Verifier menghapus ketergantungan konfigurasi tersembunyi dari lingkungan PC
@@ -85,8 +90,8 @@ wajib. Hasil ini tidak mengklaim sudah push ke GitHub, sudah berjalan pada PC
 kedua, atau sudah menguji USB/radio fisik. Jalankan verifier kembali pada PC
 pengganti dan uji perangkat pada jaringan yang akan dipakai.
 
-Firmware, model, NVS, nulling/binding, dan alur COM/Dataset yang sudah bekerja
-tidak diubah oleh pekerjaan handover ini.
+Proses ekspor dan verifikasi handover tidak mengubah firmware, model, NVS,
+nulling/binding, atau alur COM/Dataset pada perangkat yang sedang dipakai.
 
 Lihat `status.json`, [tracker](../docs/GLD-FULL-HANDOVER-TRACKER.md), dan
 [panduan portabilitas GLD](../docs/firmware/gld-pc-portability.md).

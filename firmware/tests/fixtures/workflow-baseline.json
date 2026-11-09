@@ -234,6 +234,6 @@
     "apps\\operator-hub\\firmware-packages\\gw_small_tls\\latest\\manifest.sha256": "db7a2ae3780d68d3c4879f04b050fb8e4ae6ab48ad0040823dfae37254c75841",
     "apps\\operator-hub\\firmware-packages\\gw_small_tls\\latest\\partitions.bin": "bd0f7954aca2ef7d925ee21aaa1f3dc8822d1d6ce5cbbd26a135e5886bfff6ce"
   },
-  "previousCsv": "handover/state/history/csv/057-wireless_replay_1002_feb6bfb5caed440e81a5de6a9d57e844.csv",
+  "previousCsv": "handover/state/history/csv/086-wireless_replay_1002_feb6bfb5caed440e81a5de6a9d57e844.csv",
   "previousCsvSha256": "ee086bcf7c1282bd7a351ed5ec4224af9f6dfcfe4b46e82c768cbf4867908741"
 }

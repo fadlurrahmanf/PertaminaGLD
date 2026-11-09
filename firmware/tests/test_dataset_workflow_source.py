@@ -28,7 +28,13 @@ class WorkflowIsolation(unittest.TestCase):
         for relative, checksum in baseline['hashes'].items():
             self.assertNotIn('credentials.local.json', relative, 'Never inspect real private credentials')
             with self.subTest(path=relative):
-                self.assertEqual(hashlib.sha256((ROOT / relative.replace('\\', '/')).read_bytes()).hexdigest(), checksum)
+                data = (ROOT / relative.replace('\\', '/')).read_bytes()
+                actual = hashlib.sha256(data).hexdigest()
+                if actual != checksum and Path(relative).suffix in {'.cpp', '.h', '.py'}:
+                    # Git may check out text files with CRLF on another Windows PC.
+                    # Only newline conversion is tolerated; source bytes stay pinned.
+                    actual = hashlib.sha256(data.replace(b'\r\n', b'\n')).hexdigest()
+                self.assertEqual(actual, checksum)
         previous_csv = Path(baseline['previousCsv'])
         self.assertFalse(previous_csv.is_absolute(), 'Baseline must be portable')
         self.assertNotIn('..', previous_csv.parts)

@@ -1,22 +1,22 @@
 # Dataset dan handover PC baru — bukti penerimaan
 
-Last updated: 2026-11-09 22:24 WIB
-Last evidence update: 2026-11-09 22:24 WIB
-Last tracker heartbeat: 2026-11-09 22:24 WIB
+Last updated: 2026-11-09 22:28 WIB
+Last evidence update: 2026-11-09 22:28 WIB
+Last tracker heartbeat: 2026-11-09 22:28 WIB
 
 ## Progress dashboard
 
 | Scope | Progress | Status | Note |
 | --- | ---: | --- | --- |
-| **Overall goal** | **76%** | Active | Clone Windows dan uji 24/24 lulus; Git remote dan PC tujuan belum lulus. |
+| **Overall goal** | **83%** | Partial | Clone GitHub dan software stack 24/24 lulus; PC kedua dan board Model 1/3 belum diuji fisik. |
 | 1. Isi Git dan paket | 100% | Proven locally | Tiga profil koneksi cocok dengan image; snapshot histori terkini valid. |
 | 2. Salinan bersih full stack | 100% | Proven locally | Verifikator penuh 24/24; histori 69 berkas, 90.235 baris, 0 beda byte. |
 | 3. Perangkat dan PC tujuan | 33% | Partial | Model 2/PC ini lulus; PC kedua serta Model 1/3 belum diuji fisik. |
-| 4. Distribusi GitHub | 50% | Partial | Commit dan clone Git lokal lulus; push GitHub baru diizinkan, PC kedua belum diuji. |
+| 4. Distribusi GitHub | 100% | Proven | SHA GitHub sama dengan lokal; clone remote bersih dan 24/24 lulus. |
 
 ## Progress calculation
 
-Bobot fase: `25%×100% + 35%×100% + 25%×33% + 15%×50% = 75,75% ≈ 76%`.
+Bobot fase: `25%×100% + 35%×100% + 25%×33% + 15%×100% = 83,25% ≈ 83%`.
 Item di dalam tiap fase berbobot sama.
 
 | Phase | Weight | Progress | Status | Closure evidence |
@@ -24,7 +24,7 @@ Item di dalam tiap fase berbobot sama.
 | 1. Isi Git dan paket | 25% | 100% | Proven locally | 15/15 pemeriksaan statis, 59 CSV dan 10 ledger. |
 | 2. Salinan bersih full stack | 35% | 100% | Proven locally | 24/24: Hub, MQTT, Node-RED, DB, AES, CSV, histori dan shutdown. |
 | 3. Perangkat dan PC tujuan | 25% | 33% | Partial | Masing-masing model dan PC fresh membuktikan alur nyata; cold boot 24 V tanpa USB. |
-| 4. Distribusi GitHub | 15% | 50% | Partial | Commit dan clone lokal lulus; push/pull remote belum dibuktikan. |
+| 4. Distribusi GitHub | 15% | 100% | Proven | Clone dari GitHub pada Windows lulus 24/24 dari 5390 berkas bersih. |
 
 ### Phase 1 work items
 
@@ -52,8 +52,8 @@ Item di dalam tiap fase berbobot sama.
 
 | ID | Work item | Progress | Status | Next gate | Last update |
 | --- | --- | ---: | --- | --- | --- |
-| 4.1 | Commit dan push artefak handover yang telah ditinjau | 50% | Partial | Push eksplisit dan SHA remote sama | Commit lokal 7a60d99f; aturan repo melarang push tanpa permintaan eksplisit. |
-| 4.2 | Pull/clone dari GitHub ke direktori kosong | 50% | Partial | Clone/pull dari remote di PC lain | Clone `--no-local` dari commit lokal bersih; 24/24 lulus dari clone. |
+| 4.1 | Commit dan push artefak handover yang telah ditinjau | 100% | Proven | Pertahankan SHA remote | Commit 4804c5a0 didorong ke `origin/master`; baca balik SHA sama. |
+| 4.2 | Pull/clone dari GitHub ke direktori kosong | 100% | Proven locally | PC tujuan sebagai fase 3 terpisah | Clone `--depth 1` dari GitHub bersih, SHA 4804c5a0; 24/24 lulus. |
 
 ## Protected flows
 
@@ -64,7 +64,7 @@ NVS, firmware biasa, dan database aktif. Audit terisolasi tidak mengubahnya.
 
 | ID | Status | Evidence | Closure / next evidence gate |
 | --- | --- | --- | --- |
-| H01 | Open | Perubahan utama dan pembersihan artefak sementara sudah di-commit lokal sampai 7a60d99f; belum di-push. | Verifikasi clone lokal, push sesuai permintaan eksplisit, baca balik remote. |
+| H01 | Closed | Commit 4804c5a0 sudah di `origin/master`; `ls-remote` sama persis. | Clone remote masih berjalan. |
 | H02 | Deferred | PC kedua tidak dapat dioperasikan dari workspace ini. | Jalankan verifikasi dan uji GLD di PC fresh sesudah pull. |
 | H03 | Deferred | Model 1/3 belum diupload fisik; cold boot tanpa USB dan retensi 5 menit penuh belum dibuktikan. | Uji board dan daya pada bench. |
 | H04 | Open | Driver Windows pernah melepas Wi-Fi GLD; auto rejoin Model 2 diuji berhasil. | Uji durasi panjang dan PC kedua, ukur sinyal/catu saat putus. |
@@ -76,7 +76,7 @@ NVS, firmware biasa, dan database aktif. Audit terisolasi tidak mengubahnya.
 
 | Sub-agent / worker | Active work item | Started at | Elapsed | Progress | Activity / state |
 | --- | --- | --- | --- | ---: | --- |
-| Root | 4.1 Publikasi dan baca balik GitHub | 2026-11-09 22:24 WIB | 00:00 | 0% | Clone lokal 24/24 lulus; user mengizinkan push master, dokumentasi dirapikan dahulu. |
+| Root | Finalisasi tracker dan baca balik GitHub | 2026-11-09 22:28 WIB | 00:00 | 0% | Clone GitHub 24/24 lulus; pembaruan bukti akan di-commit/push. |
 
 ## Evidence log
 
@@ -92,3 +92,6 @@ NVS, firmware biasa, dan database aktif. Audit terisolasi tidak mengubahnya.
 - 2026-11-09 22:19 WIB: Perbaikan path ter-commit sebagai 7a60d99f, working tree bersih, GitHub `master` masih 4568653a. Clone `--no-local` kedua berjalan. Heartbeat sebelumnya terlewat sekitar dua menit selama commit dan pengecekan remote.
 - 2026-11-09 22:22 WIB: Clone `--no-local` dari commit 7a60d99f checkout 5390/5390 berkas, status bersih. Verifikator dari clone lulus 16 langkah statis/salinan; stack runtime masih berjalan. Heartbeat sebelumnya terlewat sekitar dua menit selama clone.
 - 2026-11-09 22:24 WIB: Verifikator dari clone Windows lulus 24/24, 69 file histori / 90.235 baris / 0 beda byte; laporan `output/handover-verification/clone-test/20261109-222219-8324c622/report.json`. User memberi izin eksplisit push master. Heartbeat sebelumnya terlewat sekitar dua menit selama uji clone.
+- 2026-11-09 22:25 WIB: Commit dokumentasi 4804c5a0 didorong ke `origin/master`, SHA remote dibaca balik dan sama. Clone `--depth 1` langsung dari GitHub dimulai; PC kedua belum diuji.
+- 2026-11-09 22:27 WIB: Clone `--depth 1` langsung dari URL GitHub selesai 5390/5390 berkas, working tree bersih, SHA 4804c5a0. Verifikator clone remote lulus 16/24; runtime masih berjalan. Heartbeat sebelumnya terlewat sekitar dua menit selama clone.
+- 2026-11-09 22:28 WIB: Verifikator dari clone langsung GitHub lulus 24/24, termasuk 69 file histori / 90.235 baris / 0 beda byte. Laporan `output/handover-verification/remote-test/20261109-222639-e2e7f45c/report.json`. Bukti fisik PC kedua, Model 1/3, dan cold boot tanpa USB tetap belum ada.

@@ -78,7 +78,7 @@ Rekaman baru setelah snapshot harus diekspor lagi untuk handover berikutnya.
 
 ## Bukti dan batas pengujian
 
-Clone Git lokal baru pada Windows berhasil, lalu uji stack dari commit clone
+Clone langsung dari GitHub pada Windows berhasil, lalu uji stack dari commit clone
 lulus 24/24: Hub dan ketiga bridge,
 autentikasi MQTT, AES melalui decoder Node-RED, penulisan/pembacaan database,
 penulisan CSV, integritas histori, dan penghentian layanan milik pengujian.

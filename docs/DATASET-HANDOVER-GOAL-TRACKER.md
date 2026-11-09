@@ -1,44 +1,44 @@
 # Dataset dan handover PC baru — bukti penerimaan
 
-Last updated: 2026-11-09 22:28 WIB
-Last evidence update: 2026-11-09 22:28 WIB
-Last tracker heartbeat: 2026-11-09 22:28 WIB
+Last updated: 2026-11-09 22:52 WIB
+Last evidence update: 2026-11-09 22:52 WIB
+Last tracker heartbeat: 2026-11-09 22:52 WIB
 
 ## Progress dashboard
 
 | Scope | Progress | Status | Note |
 | --- | ---: | --- | --- |
-| **Overall goal** | **83%** | Partial | Clone GitHub dan software stack 24/24 lulus; PC kedua dan board Model 1/3 belum diuji fisik. |
-| 1. Isi Git dan paket | 100% | Proven locally | Tiga profil koneksi cocok dengan image; snapshot histori terkini valid. |
-| 2. Salinan bersih full stack | 100% | Proven locally | Verifikator penuh 24/24; histori 69 berkas, 90.235 baris, 0 beda byte. |
+| **Overall goal** | **80%** | Partial | Snapshot luas lulus lokal 24/24; GitHub baru dan PC kedua masih perlu bukti. |
+| 1. Isi Git dan paket | 100% | Proven locally | Snapshot 199 CSV/10 ledger dan paket firmware valid. |
+| 2. Salinan bersih full stack | 100% | Proven locally | 24/24 untuk 209 berkas, 256.605 baris, 0 beda byte. |
 | 3. Perangkat dan PC tujuan | 33% | Partial | Model 2/PC ini lulus; PC kedua serta Model 1/3 belum diuji fisik. |
-| 4. Distribusi GitHub | 100% | Proven | SHA GitHub sama dengan lokal; clone remote bersih dan 24/24 lulus. |
+| 4. Distribusi GitHub | 75% | Partial | Snapshot lama sudah di GitHub; rilis histori lengkap perlu push/clone ulang. |
 
 ## Progress calculation
 
-Bobot fase: `25%×100% + 35%×100% + 25%×33% + 15%×100% = 83,25% ≈ 83%`.
+Bobot fase: `25%×100% + 35%×100% + 25%×33% + 15%×75% = 79,5% ≈ 80%`.
 Item di dalam tiap fase berbobot sama.
 
 | Phase | Weight | Progress | Status | Closure evidence |
 | --- | ---: | ---: | --- | --- |
-| 1. Isi Git dan paket | 25% | 100% | Proven locally | 15/15 pemeriksaan statis, 59 CSV dan 10 ledger. |
-| 2. Salinan bersih full stack | 35% | 100% | Proven locally | 24/24: Hub, MQTT, Node-RED, DB, AES, CSV, histori dan shutdown. |
+| 1. Isi Git dan paket | 25% | 100% | Proven locally | Snapshot 219 berkas dan hash pins valid. |
+| 2. Salinan bersih full stack | 35% | 100% | Proven locally | Uji penuh 24/24, DB 209 berkas/256.605 baris/0 beda byte. |
 | 3. Perangkat dan PC tujuan | 25% | 33% | Partial | Masing-masing model dan PC fresh membuktikan alur nyata; cold boot 24 V tanpa USB. |
-| 4. Distribusi GitHub | 15% | 100% | Proven | Clone dari GitHub pada Windows lulus 24/24 dari 5390 berkas bersih. |
+| 4. Distribusi GitHub | 15% | 75% | Partial | Rilis lama lulus; rilis histori lengkap perlu push/clone ulang. |
 
 ### Phase 1 work items
 
 | ID | Work item | Progress | Status | Next gate | Last update |
 | --- | --- | ---: | --- | --- | --- |
-| 1.1 | Audit tracked/ignored config, histori dan runtime | 100% | Proven locally | Salinan bersih dan Git inclusion | Snapshot baru 59 CSV, 10 ledger, 79 berkas valid. |
+| 1.1 | Audit tracked/ignored config, histori dan runtime | 100% | Proven locally | Commit/clone dari GitHub | 140 CSV sensor unik ditambah; 3 non-sensor/kosong dikecualikan. |
 | 1.2 | Validasi tiga paket final dan dependensi upload | 100% | Proven locally | Salinan bersih dan Git inclusion | Descriptor tiga firmware cocok; 12 uji kredensial lulus. |
 
 ### Phase 2 work items
 
 | ID | Work item | Progress | Status | Next gate | Last update |
 | --- | --- | ---: | --- | --- | --- |
-| 2.1 | Salinan bersih dari berkas yang akan didistribusikan | 100% | Proven locally | Commit dan Git remote | Verifikator membuat salinan tanpa konfigurasi tersembunyi. |
-| 2.2 | Uji stack MQTT, Node-RED, DB/histori dan Hub | 100% | Proven locally | PC kedua | 24/24, 69 berkas histori / 90.235 baris / 0 beda byte. |
+| 2.1 | Salinan bersih dari berkas yang akan didistribusikan | 100% | Proven locally | GitHub remote clone | Verifikator baru membuat salinan tanpa konfigurasi tersembunyi. |
+| 2.2 | Uji stack MQTT, Node-RED, DB/histori dan Hub | 100% | Proven locally | GitHub remote clone | 24/24 pada 209 berkas histori / 256.605 baris. |
 
 ### Phase 3 work items
 
@@ -52,8 +52,8 @@ Item di dalam tiap fase berbobot sama.
 
 | ID | Work item | Progress | Status | Next gate | Last update |
 | --- | --- | ---: | --- | --- | --- |
-| 4.1 | Commit dan push artefak handover yang telah ditinjau | 100% | Proven | Pertahankan SHA remote | Commit 4804c5a0 didorong ke `origin/master`; baca balik SHA sama. |
-| 4.2 | Pull/clone dari GitHub ke direktori kosong | 100% | Proven locally | PC tujuan sebagai fase 3 terpisah | Clone `--depth 1` dari GitHub bersih, SHA 4804c5a0; 24/24 lulus. |
+| 4.1 | Commit dan push artefak handover yang telah ditinjau | 75% | Partial | Push rilis histori lengkap | Rilis lama 741e68bc sudah di GitHub. |
+| 4.2 | Pull/clone dari GitHub ke direktori kosong | 75% | Partial | Clone rilis baru dan uji | Clone rilis lama lulus 24/24. |
 
 ## Protected flows
 
@@ -64,19 +64,23 @@ NVS, firmware biasa, dan database aktif. Audit terisolasi tidak mengubahnya.
 
 | ID | Status | Evidence | Closure / next evidence gate |
 | --- | --- | --- | --- |
-| H01 | Closed | Commit 4804c5a0 sudah di `origin/master`; `ls-remote` sama persis. | Clone remote masih berjalan. |
+| H01 | Closed | Commit 741e68bc sudah di `origin/master`; clone remote lulus 24/24, pull docs terakhir lulus 15/15. | Pertahankan pembacaan balik remote saat perubahan berikutnya. |
 | H02 | Deferred | PC kedua tidak dapat dioperasikan dari workspace ini. | Jalankan verifikasi dan uji GLD di PC fresh sesudah pull. |
 | H03 | Deferred | Model 1/3 belum diupload fisik; cold boot tanpa USB dan retensi 5 menit penuh belum dibuktikan. | Uji board dan daya pada bench. |
 | H04 | Open | Driver Windows pernah melepas Wi-Fi GLD; auto rejoin Model 2 diuji berhasil. | Uji durasi panjang dan PC kedua, ukur sinyal/catu saat putus. |
-| H05 | Closed locally | Profil diregenerasi; check terhadap image final dan 12 uji kredensial lulus. | Pastikan masuk commit/remote. |
-| H06 | Closed locally | Snapshot 79 berkas: 59 CSV dan 10 ledger, hash valid; snapshot lama disimpan sebagai backup lokal. | Pastikan masuk commit/remote. |
-| H07 | Closed locally | Clone Git Windows dari commit 7a60d99f selesai 100% tanpa error, working tree clone bersih. | Uji full stack dari clone masih berjalan; bukti PC kedua tetap terpisah. |
+| H05 | Closed | Profil diregenerasi; check terhadap image final dan 12 uji kredensial lulus; sudah di GitHub. | Monitor perubahan paket berikutnya. |
+| H06 | Locally closed | Snapshot baru 219 berkas: 199 CSV, 10 ledger, 446.216.422 byte; DB/stack 24/24. | Commit/push dan clone remote. |
+| H07 | Closed | Clone Windows dari GitHub checkout bersih; full stack dari clone lulus 24/24. | Bukti PC kedua tetap terpisah. |
+| H08 | Locally closed | `handover/status.json` diperbarui untuk 209 berkas/256.605 baris, 24/24 lokal, push rilis baru belum dilakukan. | Commit/clone remote. |
+| H09 | Locally closed | Export snapshot kini mewajibkan manifest discovery eksplisit; manual menandainya alat PC sumber. | Jalankan 9 tes snapshot pada clone. |
+| H10 | Repair in progress | 1/22 uji source firmware gagal pada clone karena fixture `tmp/` tidak terlacak. | Fixture portabel dibuat; uji 22/22 lokal lulus, verifikasi clone. |
+| H11 | Locally closed | 140 CSV sensor unik telah masuk snapshot; 3 non-sensor/kosong dikecualikan. 24/24 lulus pada volume riil. | Git inclusion dan clone remote. |
 
 ## Current work / agent state
 
 | Sub-agent / worker | Active work item | Started at | Elapsed | Progress | Activity / state |
 | --- | --- | --- | --- | ---: | --- |
-| Root | Finalisasi tracker dan baca balik GitHub | 2026-11-09 22:28 WIB | 00:00 | 0% | Clone GitHub 24/24 lulus; pembaruan bukti akan di-commit/push. |
+| Root | Audit Git dan distribusi snapshot luas | 2026-11-09 22:52 WIB | 00:00 | 0% | Full stack 24/24 dan guard rahasia lulus; status/manual diperbarui. |
 
 ## Evidence log
 
@@ -95,3 +99,8 @@ NVS, firmware biasa, dan database aktif. Audit terisolasi tidak mengubahnya.
 - 2026-11-09 22:25 WIB: Commit dokumentasi 4804c5a0 didorong ke `origin/master`, SHA remote dibaca balik dan sama. Clone `--depth 1` langsung dari GitHub dimulai; PC kedua belum diuji.
 - 2026-11-09 22:27 WIB: Clone `--depth 1` langsung dari URL GitHub selesai 5390/5390 berkas, working tree bersih, SHA 4804c5a0. Verifikator clone remote lulus 16/24; runtime masih berjalan. Heartbeat sebelumnya terlewat sekitar dua menit selama clone.
 - 2026-11-09 22:28 WIB: Verifikator dari clone langsung GitHub lulus 24/24, termasuk 69 file histori / 90.235 baris / 0 beda byte. Laporan `output/handover-verification/remote-test/20261109-222639-e2e7f45c/report.json`. Bukti fisik PC kedua, Model 1/3, dan cold boot tanpa USB tetap belum ada.
+- 2026-11-09 22:38 WIB: Audit lanjutan setelah permintaan perbaikan: sumber MySQL/XAMPP lokal aktif namun daftar database tidak memuat GLD; pencarian backup berlanjut. Ditemukan status handover 5 November yang stale dan alur ekspor default bergantung pada `tmp/` yang tidak ikut Git. Tracker heartbeat terlewat sejak akhir giliran sebelumnya; bukti baru tidak dihitung sebagai penerimaan PC kedua.
+- 2026-11-09 22:44 WIB: Arsip eksternal 15 Oktober memberi 140 CSV sensor unik (~430,6 MB), semuanya belum dalam snapshot; 127 sudah ada di Git lain, 13 masih arsip-only. Satu source test pada clone gagal karena fixture `tmp/`; fixture portabel dibuat dan 22/22 tes lokal lulus. Progres recalibrated terhadap cakupan histori baru; uji rilis lama tetap valid hanya untuk rilis lama.
+- 2026-11-09 22:48 WIB: Filter ekspor diperbaiki agar mengabaikan 84 ledger salinan uji di `output/handover-verification`; 8/8 tes snapshot lulus. Snapshot baru 219 berkas / 199 CSV / 10 ledger / 446.216.422 byte terpasang, sebelumnya dibackup. Hash semua berkas cocok, izin plaintext dipin ulang; uji runtime belum dilakukan. Heartbeat sebelumnya terlewat sekitar empat menit selama penyiapan data.
+- 2026-11-09 22:50 WIB: Verifikator statis snapshot besar 15/15 lulus; verifikator penuh melewati salinan bersih 16/24 dan sedang menjalankan stack/DB terisolasi. Guard rahasia penuh masih berjalan. Heartbeat sebelumnya terlewat sekitar dua menit selama uji data besar.
+- 2026-11-09 22:52 WIB: Verifikator full stack snapshot besar lulus 24/24: 209 berkas histori, 256.605 baris, 0 beda byte; laporan `output/handover-verification/20261109-224912-b47c9666/report.json`. Guard rahasia lulus, 9/9 tes snapshot lulus. Manual dan status diselaraskan secara lokal; belum commit/push rilis baru.

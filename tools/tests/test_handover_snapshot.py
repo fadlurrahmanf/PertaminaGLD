@@ -59,6 +59,7 @@ class FullHandoverSnapshot(unittest.TestCase):
         self.write(self.repo / "apps/gld-operator/output/datasets/workflow_synthetic.jsonl", b'{"row":1}\n{"row":2}\n')
         self.write(self.repo / "output/datasets/review.jsonl", b'{"row":3}\n')
         self.write(self.repo / "output/gld-history.jsonl", b'{"row":4}\n')
+        self.write(self.repo / "output/handover-verification/clean-checkout/apps/gld-operator/output/datasets/workflow_test_copy.jsonl", b'{"row":999}\n')
         self.write(self.repo / "output/personal-notes.jsonl", b'{"unrelated":"not approved"}\n')
 
     @staticmethod
@@ -85,6 +86,7 @@ class FullHandoverSnapshot(unittest.TestCase):
         self.assertEqual(summary["ledgerFiles"], 3)
         manifest = snapshot.validate_snapshot(self.output)
         outputs = [item["path"] for item in manifest["files"]]
+        self.assertFalse(any("workflow_test_copy" in path for path in outputs))
         self.assertIn("nodered/.config.runtime.json", outputs)
         self.assertFalse(any("node_modules" in path or "backups" in path or ".config.users" in path or "personal-notes" in path for path in outputs))
         csv_records = [item for item in manifest["files"] if item["role"] == "dataset-csv"]
@@ -174,6 +176,11 @@ class FullHandoverSnapshot(unittest.TestCase):
             self.export()
         self.assertFalse(self.output.exists())
         self.assertEqual(list(self.base.glob(".gld-snapshot-*")), [])
+
+    def test_export_requires_current_explicit_discovery(self):
+        with self.assertRaisesRegex(snapshot.SnapshotError, "discovery manifest required"):
+            snapshot.export_snapshot(self.repo, self.output, node_red_profile=self.profile)
+        self.assertFalse(self.output.exists())
 
     def test_broken_destination_symlink_is_refused_without_following_it(self):
         outside = self.base / "unintended-target"

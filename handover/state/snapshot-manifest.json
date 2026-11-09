@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "storage": "plaintext",
-  "createdAt": "2026-11-09T22:02:07.176944+07:00",
+  "createdAt": "2026-11-09T22:47:23.603280+07:00",
   "files": [
     {
       "path": "config/system.json",
@@ -381,109 +381,1089 @@
       "sourcePath": "C:\\Users\\MSI\\Downloads\\wireless_replay_1002_defe3b69ac394561afcc386f778a8a3d.csv"
     },
     {
-      "path": "history/csv/045-Clean_Air_GLD_1_20260720T071129.csv",
+      "path": "history/csv/045-20260804_095641_050pct.csv",
+      "size": 4010992,
+      "sha256": "0c4570ffceee29d1bc7b70280dbe9c6a4f5c3f5c94ec680638d107dfb81a4034",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Arsip-PertaminaGLD-20261015-074842\\PertaminaGLD-GLD1-569a0cd\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\raw-per-duty\\20260804_095641_050pct.csv"
+    },
+    {
+      "path": "history/csv/046-20260804_095641_055pct.csv",
+      "size": 5722388,
+      "sha256": "902fecfd59e36b3d87407c76ca8ec7ebee48a83396f4b81205611a96d8c87bf0",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Arsip-PertaminaGLD-20261015-074842\\PertaminaGLD-GLD1-569a0cd\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\raw-per-duty\\20260804_095641_055pct.csv"
+    },
+    {
+      "path": "history/csv/047-20260804_095641_060pct.csv",
+      "size": 3377186,
+      "sha256": "09de95db6b7ce40fed2f770fa3f54360a845e8057ede6ddd2d21de61b35b5079",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Arsip-PertaminaGLD-20261015-074842\\PertaminaGLD-GLD1-569a0cd\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\raw-per-duty\\20260804_095641_060pct.csv"
+    },
+    {
+      "path": "history/csv/048-20260804_095641_065pct.csv",
+      "size": 5737071,
+      "sha256": "6651bcf2cb8d2eea9d162b6119e68cfade1b52029db06b0d04d6c86b6b27b268",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Arsip-PertaminaGLD-20261015-074842\\PertaminaGLD-GLD1-569a0cd\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\raw-per-duty\\20260804_095641_065pct.csv"
+    },
+    {
+      "path": "history/csv/049-20260804_095641_070pct.csv",
+      "size": 4164482,
+      "sha256": "cbee1e948832bf8515bfa226f89b7df60a534271c814fbb5b05384a45dc5adc4",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Arsip-PertaminaGLD-20261015-074842\\PertaminaGLD-GLD1-569a0cd\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\raw-per-duty\\20260804_095641_070pct.csv"
+    },
+    {
+      "path": "history/csv/050-20260804_095641_075pct.csv",
+      "size": 4331447,
+      "sha256": "9d6094cf4438411bba271cfa6afe84c4cc0a0d52a755720145582314e2652b51",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Arsip-PertaminaGLD-20261015-074842\\PertaminaGLD-GLD1-569a0cd\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\raw-per-duty\\20260804_095641_075pct.csv"
+    },
+    {
+      "path": "history/csv/051-20260804_095641_080pct.csv",
+      "size": 3306582,
+      "sha256": "a09ed1dd0fe8bfe07323197e8ce5f25fa694621acdc44ce177ea663b2805409b",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Arsip-PertaminaGLD-20261015-074842\\PertaminaGLD-GLD1-569a0cd\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\raw-per-duty\\20260804_095641_080pct.csv"
+    },
+    {
+      "path": "history/csv/052-20260804_095641_085pct.csv",
+      "size": 3310253,
+      "sha256": "bed3d22ac4b9ee5235a308724e1bdedf97288881fee6b7555ed976c5aa071d70",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Arsip-PertaminaGLD-20261015-074842\\PertaminaGLD-GLD1-569a0cd\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\raw-per-duty\\20260804_095641_085pct.csv"
+    },
+    {
+      "path": "history/csv/053-20260804_095641_090pct.csv",
+      "size": 3605531,
+      "sha256": "a2b31a6154f9c96f58da0611c24a07a3411225dd4136aee0aa496043f14593eb",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Arsip-PertaminaGLD-20261015-074842\\PertaminaGLD-GLD1-569a0cd\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\raw-per-duty\\20260804_095641_090pct.csv"
+    },
+    {
+      "path": "history/csv/054-20260804_095641_095pct.csv",
+      "size": 5282270,
+      "sha256": "4f91613bbd38663635e09217f5653f0363cca723b31e02147ba24c2d620eda88",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Arsip-PertaminaGLD-20261015-074842\\PertaminaGLD-GLD1-569a0cd\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\raw-per-duty\\20260804_095641_095pct.csv"
+    },
+    {
+      "path": "history/csv/055-20260804_095641_100pct.csv",
+      "size": 3320244,
+      "sha256": "602d2699a0fd38a4b619a0c6e604d604e9339e58394848f3b96ff505a62bac79",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Arsip-PertaminaGLD-20261015-074842\\PertaminaGLD-GLD1-569a0cd\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\raw-per-duty\\20260804_095641_100pct.csv"
+    },
+    {
+      "path": "history/csv/056-AllSensorWarmup.csv",
+      "size": 333589,
+      "sha256": "698e64a3c036019ae1a32dde3fb4558b51057a7686674d93960066c20b90c266",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Arsip-PertaminaGLD-20261015-074842\\PertaminaGLD-GLD1-569a0cd\\outputs\\019fa1f7-6af7-7eb2-95d8-a5e9dc365fa2\\30Juli2026\\AllSensorWarmup.csv"
+    },
+    {
+      "path": "history/csv/057-ON1000OFF0_2.csv",
+      "size": 231677,
+      "sha256": "550c0e73395eb336da9e2d7aa9859497788acd4b686efcd04817b6645ef9174f",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Arsip-PertaminaGLD-20261015-074842\\PertaminaGLD-GLD1-569a0cd\\outputs\\019fa1f7-6af7-7eb2-95d8-a5e9dc365fa2\\30Juli2026\\ON1000OFF0_2.csv"
+    },
+    {
+      "path": "history/csv/058-gld_F001_20260713_063648.csv",
+      "size": 143413,
+      "sha256": "e5ac8fdcebda272dfc3f7606f230704ccea2ec14affae65dc95f79472dc9c8bd",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-dataset-collector\\data\\gld_F001_20260713_063648.csv"
+    },
+    {
+      "path": "history/csv/059-gld_F001_20260713_064802.csv",
+      "size": 55728,
+      "sha256": "8860282383cc2b6bd322c127cb60bb3b965c536618767218ad410d7efd6c5b9e",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-dataset-collector\\data\\gld_F001_20260713_064802.csv"
+    },
+    {
+      "path": "history/csv/060-gld_F001_20260713_070513.csv",
+      "size": 1130,
+      "sha256": "c3008541f264619025958aa540031f14a99ee0f5b3aebd229e4e099218f64a4c",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-dataset-collector\\data\\gld_F001_20260713_070513.csv"
+    },
+    {
+      "path": "history/csv/061-gld_F001_20260713_070526.csv",
+      "size": 9610,
+      "sha256": "e926de4b7cdd76ab70965c1ff0c89b1441088ed36f61726b557bda4e09107ea0",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-dataset-collector\\data\\gld_F001_20260713_070526.csv"
+    },
+    {
+      "path": "history/csv/062-gld_F001_20260713_070916.csv",
+      "size": 5366,
+      "sha256": "810ec84282e7c9650bd11bb0c83f279f95d8839e37c00c43aa381d06b8bc3636",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-dataset-collector\\data\\gld_F001_20260713_070916.csv"
+    },
+    {
+      "path": "history/csv/063-gld_F001_20260713_071602.csv",
+      "size": 692,
+      "sha256": "992f5a79a33c99684381018d59521e10bb647e7587b12505dbb1e31d94e82f72",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-dataset-collector\\data\\gld_F001_20260713_071602.csv"
+    },
+    {
+      "path": "history/csv/064-gld_F001_20260713_073152.csv",
+      "size": 806,
+      "sha256": "55fb6450fdd195ad22904ce6a08900e9dbe8d887e59e43f68521daf8b5e5e54e",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-dataset-collector\\data\\gld_F001_20260713_073152.csv"
+    },
+    {
+      "path": "history/csv/065-gld_F001_20260713_073227.csv",
+      "size": 4602,
+      "sha256": "637577d7e758acc9fcba5a41d32b12a8e5eb3b3159421f23121091cf5ae48f47",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-dataset-collector\\data\\gld_F001_20260713_073227.csv"
+    },
+    {
+      "path": "history/csv/066-gld_F001_20260715_034213.csv",
+      "size": 103760,
+      "sha256": "e93de2481f1c51096a899915ad56039459d2bd1766877f33df865d1c09e45866",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-dataset-collector\\data\\gld_F001_20260715_034213.csv"
+    },
+    {
+      "path": "history/csv/067-gld_F001_20260715_035005.csv",
+      "size": 87622,
+      "sha256": "69f9e821f85cc04d53ed87bbfcd543d73b2041cfdc048e365df127c56ede402a",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-dataset-collector\\data\\gld_F001_20260715_035005.csv"
+    },
+    {
+      "path": "history/csv/068-gld_F001_20260715_041830.csv",
+      "size": 341782,
+      "sha256": "3660cc036b653d0990ef31ecc8d4b84043f0a62a8fd1547642ca48b5ee8465a6",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-dataset-collector\\data\\gld_F001_20260715_041830.csv"
+    },
+    {
+      "path": "history/csv/069-gld_F001_20260715_071410.csv",
+      "size": 66790,
+      "sha256": "04b86e936c797aaff069ee1c4815c8c8fa8c53bb4d5738c9852d0b329b4108a2",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-dataset-collector\\data\\gld_F001_20260715_071410.csv"
+    },
+    {
+      "path": "history/csv/070-gld_F001_20260715_075226_OKSIGEN.csv",
+      "size": 28921,
+      "sha256": "c7b8e72d2df7ddda0cfa5ddb211c8f3cbeefd7420b45ddff319367284ee1f3f0",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-dataset-collector\\data\\gld_F001_20260715_075226_OKSIGEN.csv"
+    },
+    {
+      "path": "history/csv/071-gld_F001_20260715_075820_CARBON_DIOXIDE.csv",
+      "size": 458565,
+      "sha256": "148fb6097021009015184d97a1a21fe7ec9e2d3fbf059cc67b01530c06faa803",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-dataset-collector\\data\\gld_F001_20260715_075820_CARBON DIOXIDE.csv"
+    },
+    {
+      "path": "history/csv/072-gld_F001_20260715_140758_LPG.csv",
+      "size": 51136,
+      "sha256": "23857ab72857d0ae469ffc37a2f14eb6d44338fa8ff435f3c39dfbc383300ade",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-dataset-collector\\data\\gld_F001_20260715_140758_LPG.csv"
+    },
+    {
+      "path": "history/csv/073-gld_F001_20260715_142549_LPG.csv",
+      "size": 457934,
+      "sha256": "1225c21448f351a669c9ee07666dd3c18d8abc658ad2ba731b1e26586a18fefd",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-dataset-collector\\data\\gld_F001_20260715_142549_LPG.csv"
+    },
+    {
+      "path": "history/csv/074-Clean_Air_GLD_1_20260720T071129.csv",
       "size": 29566,
       "sha256": "b9394d152b543a0c1c70ef6465c9cda7d40f19c4744e2941ddfe1b1c3dba65f0",
       "role": "dataset-csv",
       "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\Clean_Air_GLD_1_20260720T071129.csv"
     },
     {
-      "path": "history/csv/046-dataset-GLD-1002-20261109-212152-83ae7425.csv",
+      "path": "history/csv/075-dataset-GLD-1002-20261109-212152-83ae7425.csv",
       "size": 9422,
       "sha256": "a113ec3449ccf3eb99aa8bcb6eff03eab53c4935efc040117a9ff6b332d61668",
       "role": "dataset-csv",
       "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\dataset-GLD-1002-20261109-212152-83ae7425.csv"
     },
     {
-      "path": "history/csv/047-dataset-GLD-1002-20261109-212520-4f1c4100.csv",
+      "path": "history/csv/076-dataset-GLD-1002-20261109-212520-4f1c4100.csv",
       "size": 9645,
       "sha256": "9b8cfbfaf18d6b4601a745a41307d8e518b88055348129d11eb5f128a9c3ba36",
       "role": "dataset-csv",
       "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\dataset-GLD-1002-20261109-212520-4f1c4100.csv"
     },
     {
-      "path": "history/csv/048-dataset-GLD-1002-20261109-212832-56ba7d17.csv",
+      "path": "history/csv/077-dataset-GLD-1002-20261109-212832-56ba7d17.csv",
       "size": 13710,
       "sha256": "f51715a195e495c28898b586130fa6956f1fb4227033ab6ecbb6adad84e74cc9",
       "role": "dataset-csv",
       "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\dataset-GLD-1002-20261109-212832-56ba7d17.csv"
     },
     {
-      "path": "history/csv/049-dataset-GLD-1002-20261109-213611-1d7500db.csv",
+      "path": "history/csv/078-dataset-GLD-1002-20261109-213611-1d7500db.csv",
       "size": 121,
       "sha256": "4bc9d81dcb745a56a919143cff85a8b18a8dfa76b35341a64e42ca8569805b36",
       "role": "dataset-csv",
       "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\dataset-GLD-1002-20261109-213611-1d7500db.csv"
     },
     {
-      "path": "history/csv/050-dataset-GLD-1002-20261109-213850-56b7ea4d.csv",
+      "path": "history/csv/079-dataset-GLD-1002-20261109-213850-56b7ea4d.csv",
       "size": 11284,
       "sha256": "e5bb251db1d3ec1c067502129b8e9190e5c28f78fca93bb6a073544a7b0eba7c",
       "role": "dataset-csv",
       "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\dataset-GLD-1002-20261109-213850-56b7ea4d.csv"
     },
     {
-      "path": "history/csv/051-dataset-GLD-1002-20261109-214555-69e7fc19.csv",
+      "path": "history/csv/080-dataset-GLD-1002-20261109-214555-69e7fc19.csv",
       "size": 16155,
       "sha256": "86f1cc5dc1eb399ab0043f9fd48624687823f3a62348a373cac92dc1d19582a0",
       "role": "dataset-csv",
       "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\dataset-GLD-1002-20261109-214555-69e7fc19.csv"
     },
     {
-      "path": "history/csv/052-Warming_UP_20260727T050241.csv",
+      "path": "history/csv/081-Warming_UP_20260727T050241.csv",
       "size": 393,
       "sha256": "3460d0eaa74857ad726c4022ed0da3a764588066edadfe0a462a0b40823e425e",
       "role": "dataset-csv",
       "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\Warming_UP_20260727T050241.csv"
     },
     {
-      "path": "history/csv/053-wireless_1002_16915d55e0bf40d5a0bcb768789b9221.csv",
+      "path": "history/csv/082-wireless_1002_16915d55e0bf40d5a0bcb768789b9221.csv",
       "size": 8018,
       "sha256": "0289b3f2303041dccf86b2455834e0544001df3538900721cfa696c468f37928",
       "role": "dataset-csv",
       "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\wireless_1002_16915d55e0bf40d5a0bcb768789b9221.csv"
     },
     {
-      "path": "history/csv/054-wireless_1002_ed0a954353c44be295d7e3c0251be59e.csv",
+      "path": "history/csv/083-wireless_1002_ed0a954353c44be295d7e3c0251be59e.csv",
       "size": 2707,
       "sha256": "edaad5a9c41870d8532f61d037c813b9f10ab02f3b4b7f39b771c70e13b8dc80",
       "role": "dataset-csv",
       "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\wireless_1002_ed0a954353c44be295d7e3c0251be59e.csv"
     },
     {
-      "path": "history/csv/055-wireless_replay_1002_2c4e350dc7354574b85c0a72238b5bb4.csv",
+      "path": "history/csv/084-wireless_replay_1002_2c4e350dc7354574b85c0a72238b5bb4.csv",
       "size": 145075,
       "sha256": "9167e00d1dea818cbf1a7c0cb278f172d266b35cd3abbbb0cda7a982f91650eb",
       "role": "dataset-csv",
       "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\wireless_replay_1002_2c4e350dc7354574b85c0a72238b5bb4.csv"
     },
     {
-      "path": "history/csv/056-wireless_replay_1002_3eba1bc5cb0c43a7b14025cd1cda31e4.csv",
+      "path": "history/csv/085-wireless_replay_1002_3eba1bc5cb0c43a7b14025cd1cda31e4.csv",
       "size": 159132,
       "sha256": "ff85975b2a9ebc08e3df68db390f1ce1a388379881e4df0bcb9943da88f7bc53",
       "role": "dataset-csv",
       "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\wireless_replay_1002_3eba1bc5cb0c43a7b14025cd1cda31e4.csv"
     },
     {
-      "path": "history/csv/057-wireless_replay_1002_feb6bfb5caed440e81a5de6a9d57e844.csv",
+      "path": "history/csv/086-wireless_replay_1002_feb6bfb5caed440e81a5de6a9d57e844.csv",
       "size": 15991,
       "sha256": "ee086bcf7c1282bd7a351ed5ec4224af9f6dfcfe4b46e82c768cbf4867908741",
       "role": "dataset-csv",
       "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\wireless_replay_1002_feb6bfb5caed440e81a5de6a9d57e844.csv"
     },
     {
-      "path": "history/csv/058-MQ8_OFF_BASELINE_20260729.csv",
+      "path": "history/csv/087-MQ8_OFF_BASELINE_20260729.csv",
       "size": 175025,
       "sha256": "bfddfc37ca36df3b92c7d96ce151405ec8ce7f7ee46d02ea04c867a529ff0a40",
       "role": "dataset-csv",
       "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\mq8-duty-cycle\\MQ8_OFF_BASELINE_20260729.csv"
     },
     {
-      "path": "history/csv/059-GLD1002-12-kolom-20261103.csv",
+      "path": "history/csv/088-01_OFF_COLD_BASELINE_20260729_164549.csv",
+      "size": 1744670,
+      "sha256": "c5e1663563829f2c9e7f5f7ab302b1029de978cee4acea791d2cbafcd8598d5c",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\baseline\\01_OFF_COLD_BASELINE_20260729_164549.csv"
+    },
+    {
+      "path": "history/csv/089-01_OFF_COLD_BASELINE_20260729_164549_30s_summary.csv",
+      "size": 1529,
+      "sha256": "c0e9f4f50a16249ae6a732a2fd1769eaba05a5b12765d88defaee5ffec9a7736",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\baseline\\01_OFF_COLD_BASELINE_20260729_164549_30s_summary.csv"
+    },
+    {
+      "path": "history/csv/090-01B_OFF_COLD_CONFIRM_20260729_165153.csv",
+      "size": 5211702,
+      "sha256": "2ca0bf93458d30c46927d8b433e70e9a46bc1c5f2def2b10a37eb5356fed5fcb",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\baseline\\01B_OFF_COLD_CONFIRM_20260729_165153.csv"
+    },
+    {
+      "path": "history/csv/091-01B_OFF_COLD_CONFIRM_20260729_165153_30s_summary.csv",
+      "size": 4479,
+      "sha256": "e1ae3f60dcc93a3e25ceab3cfb4fc586b960d4493ad443967158d5218bd7b44f",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\baseline\\01B_OFF_COLD_CONFIRM_20260729_165153_30s_summary.csv"
+    },
+    {
+      "path": "history/csv/092-03_ON125_OFF875_COOLDOWN_20260729_174742.csv",
+      "size": 5242858,
+      "sha256": "aae71c41c7c4a9f82084cbca6f5632b7d1d13b1c2b903ad844dde74e58e9ef83",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\cooldown\\03_ON125_OFF875_COOLDOWN_20260729_174742.csv"
+    },
+    {
+      "path": "history/csv/093-03_ON125_OFF875_COOLDOWN_20260729_174742_30s_summary.csv",
+      "size": 4465,
+      "sha256": "1d8dcd957bafa95cc11c2aa7b49035df32d50ab5a2546cfc778fbcc0de5c8d05",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\cooldown\\03_ON125_OFF875_COOLDOWN_20260729_174742_30s_summary.csv"
+    },
+    {
+      "path": "history/csv/094-05_ON250_OFF750_COOLDOWN_20260729_184342.csv",
+      "size": 5243485,
+      "sha256": "4900c37c7a8a3f611cec95aa4e0dab896e431de10d828115092cf858d829c1a5",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\cooldown\\05_ON250_OFF750_COOLDOWN_20260729_184342.csv"
+    },
+    {
+      "path": "history/csv/095-05_ON250_OFF750_COOLDOWN_20260729_184342_30s_summary.csv",
+      "size": 4627,
+      "sha256": "e4e30404089667ea7dba1e841556afb78ef9908e67645495b1a87c6bf967d487",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\cooldown\\05_ON250_OFF750_COOLDOWN_20260729_184342_30s_summary.csv"
+    },
+    {
+      "path": "history/csv/096-09_ON375_OFF625_COOLDOWN_RETRY_20260729_203320.csv",
+      "size": 5275505,
+      "sha256": "320636a726266033b8e55a04d3f912019f2671706c9b659a66e814a70939a687",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\cooldown\\09_ON375_OFF625_COOLDOWN_RETRY_20260729_203320.csv"
+    },
+    {
+      "path": "history/csv/097-09_ON375_OFF625_COOLDOWN_RETRY_20260729_203320_30s_summary.csv",
+      "size": 4619,
+      "sha256": "0e20ff8c1e33df94e6b811cb1e2149cb441b03e6ce53e74182eb7b0c6807fedd",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\cooldown\\09_ON375_OFF625_COOLDOWN_RETRY_20260729_203320_30s_summary.csv"
+    },
+    {
+      "path": "history/csv/098-11_ON500_OFF500_COOLDOWN_20260729_212913.csv",
+      "size": 5238254,
+      "sha256": "816192319bd2ad2f7db2b5b95505c5428d9cb95468b3bcb6c6970d97c66fe51a",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\cooldown\\11_ON500_OFF500_COOLDOWN_20260729_212913.csv"
+    },
+    {
+      "path": "history/csv/099-11_ON500_OFF500_COOLDOWN_20260729_212913_30s_summary.csv",
+      "size": 4599,
+      "sha256": "99f9c8e6fd45b0e8827d1d4f98192e70b50a47b67d73eba36152feb2afc7fabf",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\cooldown\\11_ON500_OFF500_COOLDOWN_20260729_212913_30s_summary.csv"
+    },
+    {
+      "path": "history/csv/100-14_ON1000_OFF0_COOLDOWN_20260729_224757.csv",
+      "size": 5238980,
+      "sha256": "b9500caa74cfb1c23ca9977073f0af8dc4560596fd22c0331244fe13a1baa300",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\cooldown\\14_ON1000_OFF0_COOLDOWN_20260729_224757.csv"
+    },
+    {
+      "path": "history/csv/101-02_ON125_OFF875_HEATING_20260729_170716.csv",
+      "size": 13899549,
+      "sha256": "5fca38f91157a986400d5dd35103107d6a705e9e428d85f574e65de79e0d08eb",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\Edit\\02_ON125_OFF875_HEATING_20260729_170716.csv"
+    },
+    {
+      "path": "history/csv/102-02_ON125_OFF875_HEATING_20260729_170716_30s_summary.csv",
+      "size": 11813,
+      "sha256": "c43d143392bd13bba928b37c660c5de862a98db31c3996e7604b4b298640dbfc",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\Edit\\02_ON125_OFF875_HEATING_20260729_170716_30s_summary.csv"
+    },
+    {
+      "path": "history/csv/103-04_ON250_OFF750_HEATING_20260729_180309.csv",
+      "size": 13862789,
+      "sha256": "8df0f9c9ad98e44d39535716ba960cf626d0936c5237b8aed337f1b552b9fb43",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\Edit\\04_ON250_OFF750_HEATING_20260729_180309.csv"
+    },
+    {
+      "path": "history/csv/104-04_ON250_OFF750_HEATING_20260729_180309_30s_summary.csv",
+      "size": 11969,
+      "sha256": "888eb2c08bff8e24955d47d35419fa33c8298f48618dd9059a99763503a984cd",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\Edit\\04_ON250_OFF750_HEATING_20260729_180309_30s_summary.csv"
+    },
+    {
+      "path": "history/csv/105-06_ON375_OFF625_HEATING_20260729_185927.csv",
+      "size": 12988293,
+      "sha256": "b688a02dc634f852cd95c2cc20ac0d097f067a20fc16d6cf086f22af85e8a349",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\Edit\\06_ON375_OFF625_HEATING_20260729_185927.csv"
+    },
+    {
+      "path": "history/csv/106-07_ON375_OFF625_COOLDOWN_20260729_193727.csv",
+      "size": 5257525,
+      "sha256": "6118d2cd883482033367c935cfc30bbbe1649d3c8d0d1086491d0132797fc25e",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\Edit\\07_ON375_OFF625_COOLDOWN_20260729_193727.csv"
+    },
+    {
+      "path": "history/csv/107-07_ON375_OFF625_COOLDOWN_20260729_193727_30s_summary.csv",
+      "size": 4570,
+      "sha256": "49f9bfc5b599ff869f592dfc250be98748c36362e1e6cdb24007de3ab0762ce6",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\Edit\\07_ON375_OFF625_COOLDOWN_20260729_193727_30s_summary.csv"
+    },
+    {
+      "path": "history/csv/108-08_ON375_OFF625_HEATING_RETRY_20260729_195308_30s_summary.csv",
+      "size": 11610,
+      "sha256": "9fee0f8a0e90e4e7c45bb7ba5dead6b0a4648e5180f7bf2c86e505482898b0b3",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\Edit\\08_ON375_OFF625_HEATING_RETRY_20260729_195308_30s_summary.csv"
+    },
+    {
+      "path": "history/csv/109-10_ON500_OFF500_HEATING_20260729_204855.csv",
+      "size": 13868528,
+      "sha256": "eaee43d8e8c53f25da74191c7461e072c5298d7202edb43142d7ed67f48c64c9",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\Edit\\10_ON500_OFF500_HEATING_20260729_204855.csv"
+    },
+    {
+      "path": "history/csv/110-10_ON500_OFF500_HEATING_20260729_204855_30s_summary.csv",
+      "size": 11521,
+      "sha256": "d4727e817d446c996c52d188ce2220846d849f357131adb5b0135d00d5096cc2",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\Edit\\10_ON500_OFF500_HEATING_20260729_204855_30s_summary.csv"
+    },
+    {
+      "path": "history/csv/111-11_ON500_OFF500_COOLDOWN_20260729_212913.csv",
+      "size": 4563101,
+      "sha256": "529e85f95294f7b02b64b46564a09ec87449bbb571dc69021c4a06464296f5ba",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\Edit\\11_ON500_OFF500_COOLDOWN_20260729_212913.csv"
+    },
+    {
+      "path": "history/csv/112-15_ON1000_OFF0_HEATING_60MIN_20260729_230351.csv",
+      "size": 20979605,
+      "sha256": "09fe3d381d1c632c17f64d65d3f55f80483e2a6c435c182982e3934306a58185",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\Edit\\15_ON1000_OFF0_HEATING_60MIN_20260729_230351.csv"
+    },
+    {
+      "path": "history/csv/113-15_ON1000_OFF0_HEATING_60MIN_20260729_230351_30s_summary.csv",
+      "size": 16858,
+      "sha256": "154895e9e53f3315ea743bbc7c5170a5cd018523bfc5ff9bcd5526f6c5b04913",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\Edit\\15_ON1000_OFF0_HEATING_60MIN_20260729_230351_30s_summary.csv"
+    },
+    {
+      "path": "history/csv/114-16_ON375_OFF625_REPEAT_20260730_000524.csv",
+      "size": 1264342,
+      "sha256": "ea70aa5d80fd9a7aee94e014e6c3be0ef329589a3ccd16a8ca632e4a4ac21c81",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\Edit\\16_ON375_OFF625_REPEAT_20260730_000524.csv"
+    },
+    {
+      "path": "history/csv/115-06_ON375_OFF625_HEATING_20260729_185927.csv",
+      "size": 13059554,
+      "sha256": "5ebc566c4efd82940f4daa9ab6abb746a13f6d24ceb687bd7ec7028fc6f95124",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\excluded\\06_ON375_OFF625_HEATING_20260729_185927.csv"
+    },
+    {
+      "path": "history/csv/116-12_ON625_OFF375_HEATING_20260729_214423.csv",
+      "size": 2800030,
+      "sha256": "7cec24771e94c6e6ce778670be1d63112a2352f6a14488bdec9813375168f36f",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\excluded\\12_ON625_OFF375_HEATING_20260729_214423.csv"
+    },
+    {
+      "path": "history/csv/117-12B_ABORTED_625_COOLDOWN_20260729_215240.csv",
+      "size": 5233354,
+      "sha256": "fe662759ebcd3c03f9a12c5b6e5b7a4e3192ab4d3c95efc3ccca560cf69bc9c1",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\excluded\\12B_ABORTED_625_COOLDOWN_20260729_215240.csv"
+    },
+    {
+      "path": "history/csv/118-15_ON1000_OFF0_HEATING_60MIN_20260729_230351.csv",
+      "size": 21071094,
+      "sha256": "953b260944da3dc1bd621632728ab3c57783c245809fdbe278e89fcde37db8ea",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\heater\\raw\\15_ON1000_OFF0_HEATING_60MIN_20260729_230351.csv"
+    },
+    {
+      "path": "history/csv/119-HOT_DUTY_SWEEP_20260730_135141.csv",
+      "size": 144,
+      "sha256": "b3b88ddf6fde15772e35182bdbd8973807a99205273d1a87f90336450a40ae9d",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\HOT_DUTY_SWEEP_20260730_135141.csv"
+    },
+    {
+      "path": "history/csv/120-HOT_DUTY_SWEEP_20260730_135345.csv",
+      "size": 4811554,
+      "sha256": "95221d57e0b18bea8dcf9725fcf3ff9269474f9612d9652c51bdfa768bf1cb09",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\HOT_DUTY_SWEEP_20260730_135345.csv"
+    },
+    {
+      "path": "history/csv/121-HOT_DUTY_SWEEP_20260730_141100.csv",
+      "size": 5727850,
+      "sha256": "834ca43a9066276fd52501849b474fda1926c4676a6bc5dc06fe2ebd1f356aa5",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\HOT_DUTY_SWEEP_20260730_141100.csv"
+    },
+    {
+      "path": "history/csv/122-HOT_DUTY_SWEEP_20260730_141100_live.csv",
+      "size": 117919,
+      "sha256": "4d30769a978ee3c3aaa563c5acebe40c433d32a6abcf4834ebbb54b3f5c40c86",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\HOT_DUTY_SWEEP_20260730_141100_live.csv"
+    },
+    {
+      "path": "history/csv/123-HOT_DUTY_SWEEP_20260731_132600.csv",
+      "size": 19788036,
+      "sha256": "999400b7ed8608d962a4b463321c687699b901d7ac4b1e989e67a1628ba90c20",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\HOT_DUTY_SWEEP_20260731_132600.csv"
+    },
+    {
+      "path": "history/csv/124-HOT_DUTY_SWEEP_20260731_132600_live.csv",
+      "size": 407175,
+      "sha256": "d7e9bbf0f41f17ffd44daa166bfb178bbefb2f00f040224f63d17576658a4111",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\HOT_DUTY_SWEEP_20260731_132600_live.csv"
+    },
+    {
+      "path": "history/csv/125-HOT_DUTY_SWEEP_20260731_142100.csv",
+      "size": 86818,
+      "sha256": "e76349a3d3d64ee12caca70abed0bcf679a9b145e5f6474835e3b039433e7287",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\HOT_DUTY_SWEEP_20260731_142100.csv"
+    },
+    {
+      "path": "history/csv/126-HOT_DUTY_SWEEP_20260731_142100_live.csv",
+      "size": 1593,
+      "sha256": "4d9eda65449d026024bd0739f228f1d2f1233887ac710bf5563b5a445f054435",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\HOT_DUTY_SWEEP_20260731_142100_live.csv"
+    },
+    {
+      "path": "history/csv/127-HOT_DUTY_SWEEP_20260731_165314.csv",
+      "size": 3311053,
+      "sha256": "a85e08f741fe42bdd481cc43e4540c5c5995dbb54b691a34aa2cfa143d02e783",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\HOT_DUTY_SWEEP_20260731_165314.csv"
+    },
+    {
+      "path": "history/csv/128-HOT_DUTY_SWEEP_20260731_165314_live.csv",
+      "size": 72124,
+      "sha256": "9a875b29c33119010ee7bf5be00539d0d32bbc2038710772e3246f6bd6d17bb9",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\HOT_DUTY_SWEEP_20260731_165314_live.csv"
+    },
+    {
+      "path": "history/csv/129-HOT_DUTY_SWEEP_20260731_165314_summary.csv",
+      "size": 308,
+      "sha256": "d3de8d75d4e9d97525b9558900d6e2b22fb44564472adcd06dfdbb80fabfaaa9",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\HOT_DUTY_SWEEP_20260731_165314_summary.csv"
+    },
+    {
+      "path": "history/csv/130-HOT_DUTY_SWEEP_20260804_094257.csv",
+      "size": 3349715,
+      "sha256": "755bc030847d997597abd361845b98474915bdc9bdc16d12a82dbf6aaed385c4",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\HOT_DUTY_SWEEP_20260804_094257.csv"
+    },
+    {
+      "path": "history/csv/131-HOT_DUTY_SWEEP_20260804_094257_live.csv",
+      "size": 73096,
+      "sha256": "3a3138f364d7d1bfc50761cfa3697f04c43a4bd5db2daf52a79611ec66603200",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\HOT_DUTY_SWEEP_20260804_094257_live.csv"
+    },
+    {
+      "path": "history/csv/132-HOT_DUTY_SWEEP_20260804_094257_summary.csv",
+      "size": 305,
+      "sha256": "aba738faab4821335ef5b8d494e914fd20f9e4848a8e881fa9f9c5d1c6b7424a",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\HOT_DUTY_SWEEP_20260804_094257_summary.csv"
+    },
+    {
+      "path": "history/csv/133-HOT_DUTY_SWEEP_20260804_095437.csv",
+      "size": 318048,
+      "sha256": "a5001ea94df5bdfc0aee58ceba03734baf89fde2e4ea271e6428583a3f5c81e5",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\HOT_DUTY_SWEEP_20260804_095437.csv"
+    },
+    {
+      "path": "history/csv/134-HOT_DUTY_SWEEP_20260804_095437_live.csv",
+      "size": 6654,
+      "sha256": "071007972a0090283967029f91c02c1b8537c4a93a4091ba3dc788a6d1bc481d",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\HOT_DUTY_SWEEP_20260804_095437_live.csv"
+    },
+    {
+      "path": "history/csv/135-HOT_DUTY_SWEEP_20260804_095641.csv",
+      "size": 46567280,
+      "sha256": "9e9d47a8738bb874929db1633a1f168f7826e8ac568adbcf945f4110e7b9f7f0",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\HOT_DUTY_SWEEP_20260804_095641.csv"
+    },
+    {
+      "path": "history/csv/136-HOT_DUTY_SWEEP_20260804_095641_live.csv",
+      "size": 962851,
+      "sha256": "a704dba6fdf8875919fa11cfd00ac0085613757a6edd54d01a1acfc71ad618da",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\HOT_DUTY_SWEEP_20260804_095641_live.csv"
+    },
+    {
+      "path": "history/csv/137-HOT_DUTY_SWEEP_20260804_095641_summary.csv",
+      "size": 2087,
+      "sha256": "36e6d8e777cae6d6449f0b0b19c4fab0947d12beda7e14d10f988e1b819eab88",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\HOT_DUTY_SWEEP_20260804_095641_summary.csv"
+    },
+    {
+      "path": "history/csv/138-HOT_DUTY_SWEEP_20260804_121900.csv",
+      "size": 2861076,
+      "sha256": "ca72f6e0b0704896376c767d0521fd4ae579b88a95009ef713c64c61008387d4",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\HOT_DUTY_SWEEP_20260804_121900.csv"
+    },
+    {
+      "path": "history/csv/139-HOT_DUTY_SWEEP_20260804_121900_live.csv",
+      "size": 61573,
+      "sha256": "9e063014aa6dee162ae9922fea0e7172afde8a2140cbb1f246098904b82202b7",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\HOT_DUTY_SWEEP_20260804_121900_live.csv"
+    },
+    {
+      "path": "history/csv/140-MQ8_RECOVERY_20260804_124700_01_BASELINE_100_100pct.csv",
+      "size": 46293,
+      "sha256": "ba0e1707ffc0f517e520c58c76de88bc5ee93eccc75e38fba0c42ca8f0b18ae7",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_20260804_124700_01_BASELINE_100_100pct.csv"
+    },
+    {
+      "path": "history/csv/141-MQ8_RECOVERY_20260804_125300_01_BASELINE_100_100pct.csv",
+      "size": 46317,
+      "sha256": "896e57d183b6a1707d8f72377efcb353b2d5b67db5d903b9dcbaf7e1691b5ff4",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_20260804_125300_01_BASELINE_100_100pct.csv"
+    },
+    {
+      "path": "history/csv/142-MQ8_RECOVERY_20260804_125500_01_BASELINE_100_100pct.csv",
+      "size": 69423,
+      "sha256": "ed9e1f3cba8fd4197b6e0d1bc2a3c024e806731b75aec9ba252404050a751074",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_20260804_125500_01_BASELINE_100_100pct.csv"
+    },
+    {
+      "path": "history/csv/143-MQ8_RECOVERY_20260804_125600_01_BASELINE_100_100pct.csv",
+      "size": 4106642,
+      "sha256": "93eb97eb5406a92bd01b89009793ea7bb3aa51cc543f443c61b7cda5fb3ddb8d",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_20260804_125600_01_BASELINE_100_100pct.csv"
+    },
+    {
+      "path": "history/csv/144-MQ8_RECOVERY_20260804_130800_01_BASELINE_100_100pct.csv",
+      "size": 15534,
+      "sha256": "93653e7e4954f7c626ea336fe2180798fad06d0c28bb0f1136fd77157cc5ae33",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_20260804_130800_01_BASELINE_100_100pct.csv"
+    },
+    {
+      "path": "history/csv/145-MQ8_RECOVERY_20260804_131000_01_BASELINE_100_100pct.csv",
+      "size": 42488,
+      "sha256": "2f33795c0c502b8ab45aa38e89b66cd59a6834804a85ae05052a00a4ef8e2e2b",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_20260804_131000_01_BASELINE_100_100pct.csv"
+    },
+    {
+      "path": "history/csv/146-MQ8_RECOVERY_20260804_131000_02_TEST_95_95pct.csv",
+      "size": 42364,
+      "sha256": "c54a1959c0334dd94979baa822eb190e034e66dcde721c98c0632f8b56e8a0ab",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_20260804_131000_02_TEST_95_95pct.csv"
+    },
+    {
+      "path": "history/csv/147-MQ8_RECOVERY_20260804_131000_03_RECOVERY_100_AFTER_95_100pct.csv",
+      "size": 115867,
+      "sha256": "da4818218a47226e76cf0cd2f98fc8faf77cfbef8c12918b2a0650c84d09c9fa",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_20260804_131000_03_RECOVERY_100_AFTER_95_100pct.csv"
+    },
+    {
+      "path": "history/csv/148-MQ8_RECOVERY_20260804_131000_04_TEST_90_90pct.csv",
+      "size": 30873,
+      "sha256": "70b36aed2d3125287b94ed99552285b00aaf8916d8951f07ad9f47b431514b60",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_20260804_131000_04_TEST_90_90pct.csv"
+    },
+    {
+      "path": "history/csv/149-MQ8_RECOVERY_20260804_131000_05_RECOVERY_100_AFTER_90_100pct.csv",
+      "size": 46449,
+      "sha256": "d7e68c2be5b5178b0c5393fd3724f31e37096277084313fe0aee3161a42b134a",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_20260804_131000_05_RECOVERY_100_AFTER_90_100pct.csv"
+    },
+    {
+      "path": "history/csv/150-MQ8_RECOVERY_20260804_131000_06_TEST_85_85pct.csv",
+      "size": 73120,
+      "sha256": "06f8104c4d0f1cd2bb5b4431025a4243fe29bfdabdfd86368c3c568e7c972a3d",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_20260804_131000_06_TEST_85_85pct.csv"
+    },
+    {
+      "path": "history/csv/151-MQ8_RECOVERY_20260804_131000_07_RECOVERY_100_AFTER_85_100pct.csv",
+      "size": 27138,
+      "sha256": "d687a78dcd6c58654303a681b5335183c99a8294c1924137a099c5e9cecde39c",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_20260804_131000_07_RECOVERY_100_AFTER_85_100pct.csv"
+    },
+    {
+      "path": "history/csv/152-MQ8_RECOVERY_20260804_131000_08_TEST_80_80pct.csv",
+      "size": 42353,
+      "sha256": "b6c3c160836b7f88a67be51cf0f55e3db4c963517058cff45555092c559afc4b",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_20260804_131000_08_TEST_80_80pct.csv"
+    },
+    {
+      "path": "history/csv/153-MQ8_RECOVERY_20260804_131000_09_RECOVERY_100_AFTER_80_100pct.csv",
+      "size": 92658,
+      "sha256": "6f03c6872110918fa911c9dd733a0d2ec55659f319af232afd819b8659bfc9f2",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_20260804_131000_09_RECOVERY_100_AFTER_80_100pct.csv"
+    },
+    {
+      "path": "history/csv/154-MQ8_RECOVERY_20260804_131000_10_TEST_75_75pct.csv",
+      "size": 387931,
+      "sha256": "a58310916c07bbf3065d9aaadcb8a5f80ced27226876c9d65830693f81f8fd09",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_20260804_131000_10_TEST_75_75pct.csv"
+    },
+    {
+      "path": "history/csv/155-MQ8_RECOVERY_20260804_131000_11_RECOVERY_100_AFTER_75_100pct.csv",
+      "size": 142893,
+      "sha256": "c7318eda9af7aa68a989d9d32d162a9313428997f96beb417490ac999353956f",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_20260804_131000_11_RECOVERY_100_AFTER_75_100pct.csv"
+    },
+    {
+      "path": "history/csv/156-MQ8_RECOVERY_20260804_131000_12_TEST_70_70pct.csv",
+      "size": 27030,
+      "sha256": "4f794265555b89a6afbd553cf6956e103d5040af20e564242c2dd4acd347fff4",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_20260804_131000_12_TEST_70_70pct.csv"
+    },
+    {
+      "path": "history/csv/157-MQ8_RECOVERY_20260804_131000_13_RECOVERY_100_AFTER_70_100pct.csv",
+      "size": 61864,
+      "sha256": "52939136b7cb66912f55dc6f691c5f49904e750f9e090e1d83e87663fcceb2a7",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_20260804_131000_13_RECOVERY_100_AFTER_70_100pct.csv"
+    },
+    {
+      "path": "history/csv/158-MQ8_RECOVERY_20260804_131000_14_TEST_65_65pct.csv",
+      "size": 295872,
+      "sha256": "3537def3ae586c6981170c68594f917e3986dc3be891021e85de5caf219776e7",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_20260804_131000_14_TEST_65_65pct.csv"
+    },
+    {
+      "path": "history/csv/159-MQ8_RECOVERY_20260804_131000_15_RECOVERY_100_AFTER_65_100pct.csv",
+      "size": 474645,
+      "sha256": "c0075fddcd7ea4fc11c6eb263f1c84a26958857444caa3a6c26d9d59ac5cf924",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_20260804_131000_15_RECOVERY_100_AFTER_65_100pct.csv"
+    },
+    {
+      "path": "history/csv/160-MQ8_RECOVERY_20260804_131000_16_TEST_60_60pct.csv",
+      "size": 468656,
+      "sha256": "1d0f1fac0c2b7f5b58798eaed6120fed5f45aa391ea227d22569a70c571c1007",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_20260804_131000_16_TEST_60_60pct.csv"
+    },
+    {
+      "path": "history/csv/161-MQ8_RECOVERY_20260804_131000_17_RECOVERY_100_AFTER_60_100pct.csv",
+      "size": 38737,
+      "sha256": "e7821b9ad197df0ba3006279818afb4ccd0f57e57ac74e2b05affdc126e11ab9",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_20260804_131000_17_RECOVERY_100_AFTER_60_100pct.csv"
+    },
+    {
+      "path": "history/csv/162-MQ8_RECOVERY_20260804_131000_18_TEST_55_55pct.csv",
+      "size": 69314,
+      "sha256": "b9d63c5c92c310375e6456392b05af520c49e0ce4a157e24ae442b4b535a5d89",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_20260804_131000_18_TEST_55_55pct.csv"
+    },
+    {
+      "path": "history/csv/163-MQ8_RECOVERY_20260804_131000_19_RECOVERY_100_AFTER_55_100pct.csv",
+      "size": 19462,
+      "sha256": "5442f78a63302710714693c116fab565e4b9372ec19f4a328d70f8f85bae7296",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_20260804_131000_19_RECOVERY_100_AFTER_55_100pct.csv"
+    },
+    {
+      "path": "history/csv/164-MQ8_RECOVERY_20260804_131000_20_TEST_50_50pct.csv",
+      "size": 46216,
+      "sha256": "5b543a2a49c683b118ef267bd146abb4c41a66dbb5c5726aa3cf3baa616c78bd",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_20260804_131000_20_TEST_50_50pct.csv"
+    },
+    {
+      "path": "history/csv/165-MQ8_RECOVERY_20260804_134000_01_BASELINE_100_100pct.csv",
+      "size": 4919485,
+      "sha256": "ffcea7e0f036b2abba96284f356ac5af0a6e1151df75b96648f5a9edcb67c639",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_20260804_134000_01_BASELINE_100_100pct.csv"
+    },
+    {
+      "path": "history/csv/166-MQ8_RECOVERY_20260804_143500_01_BASELINE_100_100pct.csv",
+      "size": 1929002,
+      "sha256": "ebb56ef0bc7d859185bf1047accd123a88b32baa6acde149521a361d28e7629a",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_20260804_143500_01_BASELINE_100_100pct.csv"
+    },
+    {
+      "path": "history/csv/167-MQ8_RECOVERY_20260804_145035_01_BASELINE_100_100pct.csv",
+      "size": 3349951,
+      "sha256": "ca6553934546726ffe93499a578b304be8519f9cceacaf27b30c47ac09255307",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_20260804_145035_01_BASELINE_100_100pct.csv"
+    },
+    {
+      "path": "history/csv/168-MQ8_RECOVERY_20260804_145035_02_TEST_95_95pct.csv",
+      "size": 6844003,
+      "sha256": "7d6e839bec5194463fe4ae718bd322b8de6079d956957c696469b6c0b75d4108",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_20260804_145035_02_TEST_95_95pct.csv"
+    },
+    {
+      "path": "history/csv/169-MQ8_RECOVERY_20260804_145035_03_RECOVERY_100_AFTER_95_100pct.csv",
+      "size": 3613525,
+      "sha256": "ed18d3f79dc0df2c484dcd5c26fc9e807207e0eace8483362e3b54788f77265f",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_20260804_145035_03_RECOVERY_100_AFTER_95_100pct.csv"
+    },
+    {
+      "path": "history/csv/170-MQ8_RECOVERY_20260804_153000_01_TEST_50_50pct.csv",
+      "size": 3793703,
+      "sha256": "d9be094b69d7ffe878172bb6cb2475805c060c5f25cc7fd9ce66941524647c0e",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_20260804_153000_01_TEST_50_50pct.csv"
+    },
+    {
+      "path": "history/csv/171-MQ8_RECOVERY_20260804_153200_01_TEST_100_100pct.csv",
+      "size": 1679456,
+      "sha256": "d5033908ddbe5378390f47efad755dbd52c420606fb9f89a5bef391f805433cd",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_20260804_153200_01_TEST_100_100pct.csv"
+    },
+    {
+      "path": "history/csv/172-MQ8_RECOVERY_20260804_155200_01_TEST_75_75pct.csv",
+      "size": 2555520,
+      "sha256": "16e140fd0ae94edb345f410381eb55ae7020baf532be67f7437db518e9d58e81",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_20260804_155200_01_TEST_75_75pct.csv"
+    },
+    {
+      "path": "history/csv/173-MQ8_RECOVERY_20260804_155500_01_TEST_100_100pct.csv",
+      "size": 7228990,
+      "sha256": "cbc834bd941a6f28879ce1ccde686c3f85b9abb6dfbaa800320bdca138419a1a",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_20260804_155500_01_TEST_100_100pct.csv"
+    },
+    {
+      "path": "history/csv/174-MQ8_RECOVERY_20260804_164000_01_TEST_55_55pct.csv",
+      "size": 983524,
+      "sha256": "48457ba64578dbdc60d69b10a47de6c7d4638c264690927ec828d5f24baecb44",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_20260804_164000_01_TEST_55_55pct.csv"
+    },
+    {
+      "path": "history/csv/175-MQ8_RECOVERY_BASELINE_20260804_124700_live.csv",
+      "size": 865,
+      "sha256": "534dea7e6d994b94e583abcb4d20c05351c3dd310af64926c385e3c2b03b9590",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_BASELINE_20260804_124700_live.csv"
+    },
+    {
+      "path": "history/csv/176-MQ8_RECOVERY_BASELINE_20260804_125300_live.csv",
+      "size": 888,
+      "sha256": "ceecdf0a4465cc1b3dac6b81bdd59fcd6aef499e6c5dcee9225db18ac7c433c9",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_BASELINE_20260804_125300_live.csv"
+    },
+    {
+      "path": "history/csv/177-MQ8_RECOVERY_BASELINE_20260804_125500_live.csv",
+      "size": 893,
+      "sha256": "4f75abcb00af0729808cfcad5752b0f8dc25f588a1942b5d13cfcc8bde17aacb",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_BASELINE_20260804_125500_live.csv"
+    },
+    {
+      "path": "history/csv/178-MQ8_RECOVERY_BASELINE_20260804_125600_live.csv",
+      "size": 90876,
+      "sha256": "54e80b11e72baa832ed60a537c44953b1b899cf309e811f339b416870b36cefc",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_BASELINE_20260804_125600_live.csv"
+    },
+    {
+      "path": "history/csv/179-MQ8_RECOVERY_BASELINE_20260804_131000.csv",
+      "size": 2543099,
+      "sha256": "881712e3942901c09aefd3095443a9d48db0db17b10e9730b5b0eb78edaede7e",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_BASELINE_20260804_131000.csv"
+    },
+    {
+      "path": "history/csv/180-MQ8_RECOVERY_BASELINE_20260804_131000_live.csv",
+      "size": 56755,
+      "sha256": "d07b90679253b96283cb75d2a28e056015976a286a2decd541218b48a28e7fe4",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_BASELINE_20260804_131000_live.csv"
+    },
+    {
+      "path": "history/csv/181-MQ8_RECOVERY_BASELINE_20260804_131000_summary.csv",
+      "size": 5531,
+      "sha256": "dc01147e0c7e93be23e2efc53d2ec2f73c9aa30abbd3d17471f69e464f57095e",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_BASELINE_20260804_131000_summary.csv"
+    },
+    {
+      "path": "history/csv/182-MQ8_RECOVERY_BASELINE_20260804_134000_live.csv",
+      "size": 108677,
+      "sha256": "f53133fd7bd048e5cbd4bb4742a2e25b171dd3f60c82f78060e208852a646f38",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_BASELINE_20260804_134000_live.csv"
+    },
+    {
+      "path": "history/csv/183-MQ8_RECOVERY_BASELINE_20260804_143500_live.csv",
+      "size": 42784,
+      "sha256": "70eb2188a87a1f79a31eda30794b0076efc8edfef8da838e53b5b561a02e707b",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_BASELINE_20260804_143500_live.csv"
+    },
+    {
+      "path": "history/csv/184-MQ8_RECOVERY_BASELINE_20260804_145035.csv",
+      "size": 13807181,
+      "sha256": "ea0385383276d73ce14bae87a07a1623d4fc35a71717145fcddd040ec26d3cf8",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_BASELINE_20260804_145035.csv"
+    },
+    {
+      "path": "history/csv/185-MQ8_RECOVERY_BASELINE_20260804_145035_live.csv",
+      "size": 307975,
+      "sha256": "a0993b346b43395ffb99b175d237c819d7cc3bbdee86c6dd4df42191d2f11644",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_BASELINE_20260804_145035_live.csv"
+    },
+    {
+      "path": "history/csv/186-MQ8_RECOVERY_BASELINE_20260804_153000_live.csv",
+      "size": 78206,
+      "sha256": "44059cd784d5d4e20deb0a0ad97c54f149f51b3a96665e54849a83543daf6aa2",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_BASELINE_20260804_153000_live.csv"
+    },
+    {
+      "path": "history/csv/187-MQ8_RECOVERY_BASELINE_20260804_153200_live.csv",
+      "size": 35120,
+      "sha256": "b719017c1daac89157efb68d89e700371226bdd2619d6efb0539dc3a69f1ed56",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_BASELINE_20260804_153200_live.csv"
+    },
+    {
+      "path": "history/csv/188-MQ8_RECOVERY_BASELINE_20260804_155200_live.csv",
+      "size": 52815,
+      "sha256": "827834a4ae232eb1e86581233d5ad75aeca31643fccd8b9e58447d2710f5310c",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_BASELINE_20260804_155200_live.csv"
+    },
+    {
+      "path": "history/csv/189-MQ8_RECOVERY_BASELINE_20260804_155500_live.csv",
+      "size": 153299,
+      "sha256": "18c1ea66870c9ff6a647f2c1f51a6e56fe0304d83348afd57d29e8856451a808",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_BASELINE_20260804_155500_live.csv"
+    },
+    {
+      "path": "history/csv/190-MQ8_RECOVERY_BASELINE_20260804_162700.csv",
+      "size": 149,
+      "sha256": "5ef31661332b0fd2d62ef0b9790e26aaae14b49ac862695fb8fceb84ff61ba31",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_BASELINE_20260804_162700.csv"
+    },
+    {
+      "path": "history/csv/191-MQ8_RECOVERY_BASELINE_20260804_162700_live.csv",
+      "size": 48,
+      "sha256": "fe9226addcd31be7cd41a654eadcfc508a4f5431b1c59196c23689cbf798c8b5",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_BASELINE_20260804_162700_live.csv"
+    },
+    {
+      "path": "history/csv/192-MQ8_RECOVERY_BASELINE_20260804_164000_live.csv",
+      "size": 19816,
+      "sha256": "d021f81d7797732f33b302318adbd98d5f5bd5131247461e2b674b3d561f13d3",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\operator-hub\\output\\mq8-duty-cycle\\hot-sweep\\MQ8_RECOVERY_BASELINE_20260804_164000_live.csv"
+    },
+    {
+      "path": "history/csv/193-GLD1002-12-kolom-20261103.csv",
       "size": 12083,
       "sha256": "f05e1ad4095729c285f578a93abd01906bf3954a93d351f783730a4821323066",
       "role": "dataset-csv",
       "sourcePath": "D:\\Github\\PertaminaGLD\\output\\datasets\\GLD1002-12-kolom-20261103.csv"
+    },
+    {
+      "path": "history/csv/194-02_ON125_OFF875_HEATING_20260729_170716.csv",
+      "size": 13949853,
+      "sha256": "3826c4a799a1fd5d97f6acc29461437316bfd8a9e57a49512b1aab472ea64c09",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\outputs\\019fa1f7-6af7-7eb2-95d8-a5e9dc365fa2\\30Juli2026\\02_ON125_OFF875_HEATING_20260729_170716.csv"
+    },
+    {
+      "path": "history/csv/195-04_ON250_OFF750_HEATING_20260729_180309.csv",
+      "size": 13942534,
+      "sha256": "817993dea7d05bf46d434ed67b26915e6206105ec55bbd9c8e89dc3a4217867f",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\outputs\\019fa1f7-6af7-7eb2-95d8-a5e9dc365fa2\\30Juli2026\\04_ON250_OFF750_HEATING_20260729_180309.csv"
+    },
+    {
+      "path": "history/csv/196-08_ON375_OFF625_HEATING_RETRY_20260729_195308.csv",
+      "size": 13965998,
+      "sha256": "a5943625133ad446b88725c34dcc252757febbeb0aa2e9e1a7181e1e4fafbac6",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\outputs\\019fa1f7-6af7-7eb2-95d8-a5e9dc365fa2\\30Juli2026\\08_ON375_OFF625_HEATING_RETRY_20260729_195308.csv"
+    },
+    {
+      "path": "history/csv/197-10_ON500_OFF500_HEATING_20260729_204855.csv",
+      "size": 13944666,
+      "sha256": "88f6c46128f1310ee514e77ac3146759b64598b80fcf4a57fceedd83313febeb",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\outputs\\019fa1f7-6af7-7eb2-95d8-a5e9dc365fa2\\30Juli2026\\10_ON500_OFF500_HEATING_20260729_204855.csv"
+    },
+    {
+      "path": "history/csv/198-13_ON1000_OFF0_HEATING_20260729_220745.csv",
+      "size": 13966686,
+      "sha256": "b5e44ff50bf9b2d7e5553a3a8a8563680cb06a6f2c6f66b60ed45be87385a8f2",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\outputs\\019fa1f7-6af7-7eb2-95d8-a5e9dc365fa2\\30Juli2026\\13_ON1000_OFF0_HEATING_20260729_220745.csv"
+    },
+    {
+      "path": "history/csv/199-Efek_duty_cycle.csv",
+      "size": 592119,
+      "sha256": "e63593fa052d364948660899bb0c359e86ec5ad71925b62f374f4d9978400dac",
+      "role": "dataset-csv",
+      "sourcePath": "D:\\Github\\PertaminaGLD\\outputs\\019fa1f7-6af7-7eb2-95d8-a5e9dc365fa2\\30Juli2026\\Efek duty cycle.csv"
     },
     {
       "path": "history/ledger/001-cleanup_0621e77bb6b84b27977751f94b651aad.jsonl",
@@ -556,5 +1536,5 @@
       "sourcePath": "D:\\Github\\PertaminaGLD\\apps\\gld-operator\\output\\datasets\\workflow_e3b7b84359f045348a81085c0976bb41.jsonl"
     }
   ],
-  "totalBytes": 15607586
+  "totalBytes": 446216422
 }

@@ -171,6 +171,10 @@ def _ledger_paths(repo):
     if output.is_dir():
         for path in output.rglob("*.jsonl"):
             parts = [part.lower() for part in path.relative_to(output).parts]
+            # Clean-checkout verification retains copied ledgers under output.
+            # They are test artefacts, not additional history sources.
+            if parts[0] == "handover-verification":
+                continue
             if (any(part in {"datasets", "gld", "ledgers"} for part in parts[:-1]) or
                     re.search(r"^(?:workflow|gld|dataset)[_.-]|ledger", path.name, re.IGNORECASE)):
                 paths.append(path)
@@ -186,12 +190,14 @@ def _history_name(number, path):
 def export_snapshot(repo_root, output, *, node_red_profile=None, csv_discovery=None):
     """Copy approved inputs into a NEW snapshot directory; originals unchanged.
 
-    Defaults use USERPROFILE/.node-red and the coordinator's explicit 53-CSV
-    discovery manifest. Tests inject synthetic profile/discovery paths.
+    The source-PC Node-RED profile defaults to USERPROFILE/.node-red. A current,
+    explicit CSV discovery manifest is required to avoid silently reusing a
+    stale list of history files. Tests inject synthetic profile/discovery paths.
     """
     repo = Path(repo_root).resolve()
     profile = Path(node_red_profile) if node_red_profile is not None else Path.home() / ".node-red"
-    discovery = Path(csv_discovery) if csv_discovery is not None else repo / "tmp/full-handover-20261105/csv-discovery.json"
+    _require(csv_discovery is not None, "Approved CSV discovery manifest required")
+    discovery = Path(csv_discovery)
     target = _new_target(output)
     _require(not target.is_relative_to(profile.absolute()), "Snapshot destination overlaps Node-RED profile")
     stage = Path(tempfile.mkdtemp(prefix=".gld-snapshot-", dir=target.parent))
@@ -337,7 +343,7 @@ def main():
     export.add_argument("--repo-root", type=Path, default=Path(__file__).resolve().parents[1])
     export.add_argument("--output", type=Path, required=True)
     export.add_argument("--node-red-profile", type=Path)
-    export.add_argument("--csv-discovery", type=Path)
+    export.add_argument("--csv-discovery", type=Path, required=True)
     check = commands.add_parser("check"); check.add_argument("snapshot", type=Path)
     recover = commands.add_parser("restore"); recover.add_argument("snapshot", type=Path); recover.add_argument("destination", type=Path)
     args = parser.parse_args()

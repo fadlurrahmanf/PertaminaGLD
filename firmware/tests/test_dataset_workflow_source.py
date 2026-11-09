@@ -11,7 +11,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE = ROOT / 'firmware/gld/src/GldDatasetWorkflowWifi.cpp'
 BUFFER = ROOT / 'firmware/gld/include/GldDatasetWorkflowBuffer.h'
-BASELINE = ROOT / 'tmp/wireless-workflow-firmware/baseline.json'
+BASELINE = ROOT / 'firmware/tests/fixtures/workflow-baseline.json'
 # Verified pre-workflow HEAD, decoded explicitly UTF-8. Windows' default
 # cp1252 decoding produces another digest of identical comment bytes.
 OLD_UNIFIED = '9ca66d309fe90e327458ac377a8ca8d9b81d5e3cee7600b0a957228cc931dbbe'
@@ -29,7 +29,10 @@ class WorkflowIsolation(unittest.TestCase):
             self.assertNotIn('credentials.local.json', relative, 'Never inspect real private credentials')
             with self.subTest(path=relative):
                 self.assertEqual(hashlib.sha256((ROOT / relative.replace('\\', '/')).read_bytes()).hexdigest(), checksum)
-        self.assertEqual(hashlib.sha256(Path(baseline['previousCsv']).read_bytes()).hexdigest(), baseline['previousCsvSha256'])
+        previous_csv = Path(baseline['previousCsv'])
+        self.assertFalse(previous_csv.is_absolute(), 'Baseline must be portable')
+        self.assertNotIn('..', previous_csv.parts)
+        self.assertEqual(hashlib.sha256((ROOT / previous_csv).read_bytes()).hexdigest(), baseline['previousCsvSha256'])
 
     def test_workflow_disabled_preserves_all_old_unified_source(self):
         source = (ROOT / 'firmware/gld/src/GldUnifiedMain.cpp').read_text(encoding='utf-8')

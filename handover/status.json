@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-05T10:26:30.819279+07:00",
-  "stage": "software_handover_accepted",
+  "updatedAt": "2026-11-09T22:52:29.366221+07:00",
+  "stage": "extended_history_locally_verified_pending_github",
   "softwareBundleReady": true,
   "softwareAcceptance": "PASS",
   "requiredChecksPassed": 24,
@@ -11,26 +11,28 @@
   "activePrivateConfigIncluded": true,
   "credentialStorage": "owner-approved-plaintext",
   "historyExported": true,
-  "historyFiles": 55,
-  "historyRows": 89197,
+  "historyFiles": 209,
+  "historyRows": 256605,
   "historyByteMismatches": 0,
-  "historyOrigin": "reconstructed_from_identified_csv_and_ledger_with_original_bytes",
+  "historyOrigin": "reconstructed_from_identified_sensor_csv_and_ledger_with_original_bytes",
   "projectDatabaseLocated": false,
   "isolatedServicesStartedDuringWork": true,
   "sourceDatabaseTouched": false,
   "ownedTestServicesStopped": true,
-  "firmwareModelsChanged": false,
+  "firmwareModelsChanged": true,
   "hardwareTested": false,
   "replacementPcVerified": false,
   "gitCommitPushRequired": true,
   "githubPushVerified": false,
-  "verificationReport": "output/handover-verification/20261105-102359-971bb2ae/report.json",
+  "verificationReport": "output/handover-verification/20261109-224912-b47c9666/report.json",
   "verificationCommand": "verifikasi-handover.bat",
   "startCommand": "start-handover.bat",
   "repositoryGuard": {
-    "status": "pre_existing_vendor_fixture_markers",
-    "findings": 17,
-    "unchangedFiles": 8,
-    "newHandoverFindings": 0
-  }
+    "status": "passed",
+    "findings": 0,
+    "pinnedPublicVendorFixtures": 8
+  },
+  "verificationReportLocation": "source_pc_local_ignored_output",
+  "archiveSensorCsvAdded": 140,
+  "latestVerifiedGithubCommit": "741e68bc4b88f56a23fa4e65411b7543ab42935f"
 }

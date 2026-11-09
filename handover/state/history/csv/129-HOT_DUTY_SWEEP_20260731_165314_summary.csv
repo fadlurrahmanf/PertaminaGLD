@@ -1,0 +1,2 @@
+﻿"DutyPct","Phase","DurationMinutes","Samples","ValidMq8Samples","StartMq8V","EndMq8V","LossStreak","DetectionLost","BaselineStable","BaselineSlopeMvPerMin","BaselineRangeMv"
+"100","HOT_BASELINE_100","10.016","862","862","-0.000811032","-0.000896103","0","False","True","-0.00272670827165967","0.271431"

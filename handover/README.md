@@ -91,8 +91,10 @@ Verifier menghapus ketergantungan konfigurasi tersembunyi dari lingkungan PC
 pengembang. Semua pemeriksaan wajib harus lulus agar kesimpulannya LULUS.
 
 Informasi Git dan hardware ditampilkan terpisah dari hitungan pemeriksaan
-wajib. Rilis sebelumnya telah dibuktikan melalui clone langsung dari GitHub;
-setiap snapshot baru perlu push, clone, dan uji ulang. Pengujian ini belum
+wajib. Snapshot histori 9 November telah di-push dan diuji dari clone langsung
+GitHub pada Windows: 24/24, termasuk 209 berkas histori dan 0 beda byte.
+Uji source firmware dari clone lulus 22/22. Setiap snapshot baru tetap perlu
+push, clone, dan uji ulang. Pengujian ini belum
 membuktikan operasi pada PC kedua atau USB/radio fisik di sana. Jalankan
 verifier kembali pada PC pengganti dan uji perangkat pada jaringan yang dipakai.
 

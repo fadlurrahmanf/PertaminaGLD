@@ -85,6 +85,48 @@ class WorkflowSourceShape(unittest.TestCase):
         self.assertIn('gld-dataset-wifi/3', self.source)
         self.assertNotRegex(self.source, r'Serial\.|logPrintf\(|printf\(.*password|Preferences')
 
+    def test_ap_loss_restarts_ap_and_listener_without_dropping_retained_samples(self):
+        transport = old.body(self.source, 'void transmitter(void*)')
+        self.assertIn('!nativeBusy.load()', transport)
+        self.assertIn('WiFi.getMode() & WIFI_MODE_AP', transport)
+        self.assertIn('WiFi.softAPIP() == address', transport)
+        self.assertIn('socket.listening()', transport)
+        self.assertIn('nextApCheckMs = now + AP_RECOVERY_RETRY_MS', transport)
+        self.assertIn('WiFi.softAP(ssid, GLD_DATASET_WORKFLOW_PRIVATE_PASSWORD', transport)
+        self.assertIn('socket.beginChecked()', transport)
+        self.assertNotIn('retained.clear(', transport)
+
+    def test_cold_boot_pg24_confirmation_does_not_erase_stored_mode(self):
+        setup = old.body(self.unified, 'void setup()')
+        self.assertIn('GLD_PG24_COLD_BOOT_CONFIRM', setup)
+        self.assertIn('stableHigh >= 3', setup)
+        self.assertIn('pgl::gld::readGldExternalPower()', setup)
+        workflow_fallback = setup.split(
+            '#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW\n'
+            '    if (batteryPowerMode && !TFBG_CONTINUOUS_BATTERY &&', 1)[1].split('#else', 1)[0]
+        self.assertIn('currentMode = pgl::gld::GldMode::INFERENCE', workflow_fallback)
+        self.assertNotIn('writeGldMode(', workflow_fallback)
+        begin = old.body(self.unified, 'void beginDatasetWorkflowIfNeeded()')
+        self.assertIn('nextBeginAtMs = now + 5000', begin)
+
+    def test_deferred_dataset_restart_after_stable_external_power(self):
+        setup = old.body(self.unified, 'void setup()')
+        self.assertIn('workflowDeferredDatasetRestart = batteryPowerMode &&', setup)
+        self.assertIn('currentMode == pgl::gld::GldMode::DATASET', setup)
+        self.assertIn('RTC_DATA_ATTR uint8_t workflowPowerRecoveryRestartCount', self.unified)
+        transition = old.body(self.unified, 'void applyRuntimePowerReading(')
+        self.assertIn('workflowDeferredDatasetRestart &&', transition)
+        self.assertIn('workflowPowerRecoveryRestartCount == 0', transition)
+        self.assertIn('pgl::gld::readGldMode() == pgl::gld::GldMode::DATASET', transition)
+        self.assertIn('workflowPowerRecoveryRestartCount = 1', transition)
+        self.assertIn('ESP.restart()', transition)
+        workflow_power_loss = transition.split(
+            '#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW\n'
+            '            // Runtime power loss', 1)[1].split('#else', 1)[0]
+        self.assertNotIn('writeGldMode(', workflow_power_loss)
+        self.assertIn('writeGldMode(pgl::gld::GldMode::INFERENCE)',
+                      transition.split('#else', 1)[1])
+
     def test_ring_has_no_json_and_stores_prediction_with_raw_scan(self):
         self.assertNotIn('Json', self.buffer)
         sample = old.body(self.header, 'struct Sample')

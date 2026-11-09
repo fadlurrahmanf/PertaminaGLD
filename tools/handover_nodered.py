@@ -17,11 +17,13 @@ import sys
 import tempfile
 import urllib.parse
 import urllib.request
+import uuid
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import handover_runtime as archive_util
 
 RECEIPT = "nodered-prepared.json"
+PROFILE_MARKER = "handover-profile-version.json"
 PROJECT_LABELS = {"Pertamina GLD Server", "GLD Dataset Server"}
 
 
@@ -62,6 +64,93 @@ def _copy_tree(source, destination, *, exclude_modules=False):
             path = base / name
             require(path.is_file() and not archive_util._reparse(path), "NODE_RED_LINKED_SNAPSHOT_REFUSED")
             shutil.copy2(path, target / name)
+
+
+def _version_paths(work, fingerprint):
+    # Keep paths short: the offline node_modules tree approaches MAX_PATH in
+    # the verifier's nested clean checkout. Full SHA remains in the marker.
+    suffix = fingerprint[:10]
+    return (work / ("n" + suffix), work / ("g" + suffix),
+            work / ("f" + suffix + ".json"))
+
+
+def _receipt_paths(work, receipt):
+    fingerprint = receipt.get("fingerprint")
+    require(isinstance(fingerprint, str) and re.fullmatch(r"[0-9a-f]{64}", fingerprint),
+            "NODE_RED_INVALID_PREPARATION_RECEIPT")
+    if "profile" in receipt:
+        expected = _version_paths(work, fingerprint)
+        require(tuple(receipt.get(key) for key in ("profile", "generator", "flows")) ==
+                tuple(str(path) for path in expected), "NODE_RED_INVALID_PREPARATION_RECEIPT")
+        return expected
+    return work / "nodered", work / "generator", work / "nodered-deployment-flows.json"
+
+
+def _copy_mutable_profile(prior, stage):
+    """Carry user/context state forward; generated configuration comes from the new snapshot."""
+    require(prior.is_dir() and not archive_util._reparse(prior), "NODE_RED_PRIOR_PROFILE_UNAVAILABLE")
+    static = {"settings.js", "flows.json", "package.json", PROFILE_MARKER, "node_modules", "handover-original"}
+    require((prior / "settings.js").is_file() and (prior / "flows.json").is_file(),
+            "NODE_RED_PRIOR_PROFILE_INCOMPLETE")
+    for current, directories, files in os.walk(prior, followlinks=False):
+        base = Path(current); relative = base.relative_to(prior)
+        allowed = []
+        for name in sorted(directories):
+            child = base / name
+            require(not archive_util._reparse(child), "NODE_RED_LINKED_PRIOR_PROFILE_REFUSED")
+            if relative.parts or name not in static:
+                allowed.append(name)
+        directories[:] = allowed
+        target = stage / relative
+        target.mkdir(parents=True, exist_ok=True)
+        for name in files:
+            source = base / name
+            require(source.is_file() and not archive_util._reparse(source),
+                    "NODE_RED_LINKED_PRIOR_PROFILE_REFUSED")
+            if not relative.parts and name in static:
+                continue
+            shutil.copy2(source, target / name)
+
+
+def _profile_marker(profile, fingerprint):
+    paths = ("settings.js", "flows.json", "flows_cred.json", ".config.runtime.json", "package.json")
+    return dict(fingerprint=fingerprint, hashes={
+        name: hashlib.sha256((profile / name).read_bytes()).hexdigest()
+        for name in paths if (profile / name).is_file()})
+
+
+def _reject_links_tree(root):
+    for path in root.rglob("*"):
+        require(not archive_util._reparse(path), "NODE_RED_LINKED_VERSION_ARTIFACT_REFUSED")
+
+
+def _generator_marker(generator, fingerprint):
+    hashes = {}
+    for path in sorted(generator.rglob("*")):
+        require(not archive_util._reparse(path), "NODE_RED_LINKED_GENERATOR_REFUSED")
+        if path.is_file() and path.name != PROFILE_MARKER:
+            hashes[path.relative_to(generator).as_posix()] = hashlib.sha256(path.read_bytes()).hexdigest()
+    return dict(fingerprint=fingerprint, hashes=hashes)
+
+
+def _publish_directory(staged, target, marker, marker_builder):
+    if target.exists() or target.is_symlink():
+        require(target.is_dir() and not archive_util._reparse(target), "NODE_RED_VERSION_ARTIFACT_CONFLICT")
+        _reject_links_tree(target)
+        path = target / PROFILE_MARKER
+        require(path.is_file() and not archive_util._reparse(path) and
+                _json(path) == marker and marker_builder(target) == marker,
+                "NODE_RED_VERSION_ARTIFACT_CONFLICT")
+        return
+    staged.rename(target)
+
+
+def _publish_file(staged, target):
+    if target.exists() or target.is_symlink():
+        require(target.is_file() and not archive_util._reparse(target) and
+                target.read_bytes() == staged.read_bytes(), "NODE_RED_VERSION_ARTIFACT_CONFLICT")
+        return
+    staged.rename(target)
 
 
 def _fingerprint(snapshot, generator, system, dbconfig, ports, offset):
@@ -158,17 +247,33 @@ def prepare(repo_root, snapshot_root, runtime_root, work_root, system, dbconfig,
     node = runtime / "node/node.exe"
     modules = runtime / "user-node_modules"
     require(node.is_file() and (modules / "node-red-node-mysql/package.json").is_file(), "NODE_RED_RUNTIME_OR_MYSQL_MODULE_MISSING")
-    profile = work / "nodered"; generator = work / "generator"; flows_path = work / "nodered-deployment-flows.json"
     receipt_path = work / RECEIPT
     fingerprint = _fingerprint(snapshot, source_generator, system, dbconfig, ports, port_offset)
+    profile, generator, flows_path = _version_paths(work, fingerprint)
     result = dict(profile=str(profile), flows=str(flows_path), generator=str(generator), ports=effective,
                   csv=str(work / "history/incoming/gld-dataset.csv"))
-    if receipt_path.exists():
+    prior_profile = None
+    prior_offset = 0
+    if receipt_path.exists() or receipt_path.is_symlink():
+        require(not archive_util._reparse(receipt_path) and receipt_path.stat().st_size <= 16384,
+                "NODE_RED_INVALID_PREPARATION_RECEIPT")
         receipt = _json(receipt_path)
-        require(receipt.get("fingerprint") == fingerprint and profile.is_dir() and flows_path.is_file(), "NODE_RED_PROFILE_INPUTS_CHANGED_OR_INCOMPLETE")
-        return result
-    archive_util._empty_destination(profile)
-    require(not generator.exists() and not flows_path.exists(), "NODE_RED_WORK_FILES_ALREADY_EXIST")
+        prior_profile, prior_generator, prior_flows = _receipt_paths(work, receipt)
+        require(prior_profile.is_dir() and prior_generator.is_dir() and prior_flows.is_file() and
+                not any(archive_util._reparse(path) for path in (prior_profile, prior_generator, prior_flows)),
+                "NODE_RED_PROFILE_INPUTS_CHANGED_OR_INCOMPLETE")
+        if receipt["fingerprint"] == fingerprint:
+            result.update(profile=str(prior_profile), generator=str(prior_generator), flows=str(prior_flows))
+            return result
+        previous_ports = receipt.get("ports", {})
+        require(isinstance(previous_ports, dict) and type(previous_ports.get("nodeRed")) is int,
+                "NODE_RED_INVALID_PREPARATION_RECEIPT")
+        prior_offset = previous_ports["nodeRed"] - ports["nodeRed"]
+    else:
+        # An unowned legacy profile must never be treated as migration input.
+        require(not (work / "nodered").exists() and not (work / "generator").exists() and
+                not (work / "nodered-deployment-flows.json").exists(),
+                "NODE_RED_WORK_FILES_ALREADY_EXIST")
     work.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="nodered-prepare-", dir=work) as temporary:
         stage = Path(temporary); staged_profile = stage / "nodered"; staged_generator = stage / "generator"
@@ -177,9 +282,13 @@ def prepare(repo_root, snapshot_root, runtime_root, work_root, system, dbconfig,
         for name in ("settings.js", "flows.json", "flows_cred.json", ".config.runtime.json"):
             if (snapshot / name).is_file(): shutil.copy2(snapshot / name, raw_dir / name)
         _copy_tree(modules, staged_profile / "node_modules")
+        if prior_profile is not None:
+            _copy_mutable_profile(prior_profile, staged_profile)
         with (staged_profile / "settings.js").open("a", encoding="utf-8") as stream:
             stream.write(_settings_tail(effective["nodeRed"], local_only=bool(port_offset)))
-        nonproject = _isolate_nonproject(_nonproject(_nodes(_json(snapshot / "flows.json"))), port_offset)
+        previous_nodes = _json(prior_profile / "flows.json") if prior_profile is not None else _json(snapshot / "flows.json")
+        delta = port_offset - prior_offset if prior_profile is not None else port_offset
+        nonproject = _isolate_nonproject(_nonproject(_nodes(previous_nodes)), delta)
         (staged_profile / "flows.json").write_text(json.dumps(nonproject, ensure_ascii=False, indent=2), encoding="utf-8")
         staged_generator.mkdir()
         for name in ("apply-pertamina-gld-flow.js", "apply-pertamina-gld-dataset-flow.ps1"):
@@ -201,7 +310,11 @@ def prepare(repo_root, snapshot_root, runtime_root, work_root, system, dbconfig,
                      "--gateway-status-url", str(system["serverEnv"].get("GATEWAY_STATUS_URL", "http://0.0.0.0/disabled"))]
         if host.lower() not in ("127.0.0.1", "localhost", "::1"): main_args.append("--allow-insecure-mqtt")
         _run(main_args, env)
-        csv_path = Path(result["csv"]); csv_path.parent.mkdir(parents=True, exist_ok=True)
+        csv_path = Path(result["csv"])
+        require(not any((path.exists() or path.is_symlink()) and archive_util._reparse(path) for path in
+                        (csv_path, csv_path.parent, csv_path.parent.parent)),
+                "NODE_RED_LINKED_CSV_REFUSED")
+        csv_path.parent.mkdir(parents=True, exist_ok=True)
         # GenerateOnly does not provision credentials; inject the selected DB
         # password into the resulting copied document, never process argv.
         dataset_args = ["powershell", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File",
@@ -241,10 +354,25 @@ def prepare(repo_root, snapshot_root, runtime_root, work_root, system, dbconfig,
         staged_flows = stage / flows_path.name
         staged_flows.write_text(json.dumps(merged, ensure_ascii=False, indent=2), encoding="utf-8")
         _run([str(node), "--check", str(staged_profile / "settings.js")], env)
-        if profile.exists(): profile.rmdir()
-        staged_profile.rename(profile); staged_generator.rename(generator); staged_flows.rename(flows_path)
-        receipt_path.write_text(json.dumps(dict(schemaVersion=1, fingerprint=fingerprint, ports=effective,
-            source="snapshot plus canonical copied generators", nonProjectNodes=len(nonproject), projectNodes=len(main) + len(dataset)), sort_keys=True, indent=2), encoding="utf-8")
+        profile_marker = _profile_marker(staged_profile, fingerprint)
+        generator_marker = _generator_marker(staged_generator, fingerprint)
+        (staged_profile / PROFILE_MARKER).write_text(json.dumps(profile_marker, sort_keys=True), encoding="utf-8")
+        (staged_generator / PROFILE_MARKER).write_text(json.dumps(generator_marker, sort_keys=True), encoding="utf-8")
+        _publish_directory(staged_profile, profile, profile_marker,
+                           lambda path: _profile_marker(path, fingerprint))
+        _publish_directory(staged_generator, generator, generator_marker,
+                           lambda path: _generator_marker(path, fingerprint))
+        _publish_file(staged_flows, flows_path)
+        receipt = dict(schemaVersion=2, fingerprint=fingerprint, ports=effective,
+                       profile=str(profile), generator=str(generator), flows=str(flows_path),
+                       source="snapshot plus canonical copied generators", nonProjectNodes=len(nonproject),
+                       projectNodes=len(main) + len(dataset))
+        temporary_receipt = work / ("." + RECEIPT + "." + uuid.uuid4().hex + ".tmp")
+        try:
+            temporary_receipt.write_text(json.dumps(receipt, sort_keys=True, indent=2), encoding="utf-8")
+            temporary_receipt.replace(receipt_path)
+        finally:
+            if temporary_receipt.exists(): temporary_receipt.unlink()
     return result
 
 

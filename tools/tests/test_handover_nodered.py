@@ -87,13 +87,73 @@ class NodeRedPreparation(unittest.TestCase):
         self.assertEqual(before,{p:p.read_bytes() for p in before})
         self.assertEqual(len(self.commands),3)
 
-    def test_repeat_preserves_active_profile_and_refuses_changed_inputs(self):
-        result=self.prepare();profile=Path(result['profile']);(profile/'flows.json').write_text('[{"id":"active-edited"}]')
+    def test_repeat_then_upgrade_preserves_nonproject_context_credentials_and_csv(self):
+        result=self.prepare();profile=Path(result['profile'])
+        (profile/'flows.json').write_text(json.dumps([
+            dict(id='user-edited',type='tab',label='Operator note'),
+            dict(id='pgl_old',type='inject',z='pgl_tab')]))
+        (profile/'old-context/state.json').write_text('{"afterStart":true}')
+        (profile/'flows_cred.json').write_text('{"$":"UPDATED_SYNTHETIC_ENCRYPTED_CREDS"}')
+        Path(result['csv']).write_bytes(b'device_id,seq,sv0\r\nGLD,1,0.5\r\n')
         self.commands=[];again=self.prepare();self.assertEqual(again,result);self.assertEqual(self.commands,[])
-        self.assertIn('active-edited',(profile/'flows.json').read_text())
         self.system['broker']['password']='CHANGED_SYNTHETIC'
-        with self.assertRaisesRegex(ValueError,'INPUTS_CHANGED'):self.prepare()
-        self.assertIn('active-edited',(profile/'flows.json').read_text())
+        upgraded=self.prepare();new_profile=Path(upgraded['profile'])
+        self.assertNotEqual(new_profile,profile);self.assertTrue(profile.is_dir())
+        self.assertEqual((new_profile/'old-context/state.json').read_text(),'{"afterStart":true}')
+        self.assertEqual((new_profile/'flows_cred.json').read_text(),'{"$":"UPDATED_SYNTHETIC_ENCRYPTED_CREDS"}')
+        self.assertEqual((new_profile/'.config.runtime.json').read_bytes(),(profile/'.config.runtime.json').read_bytes())
+        self.assertEqual(Path(upgraded['csv']).read_bytes(),b'device_id,seq,sv0\r\nGLD,1,0.5\r\n')
+        ids={n['id'] for n in json.loads(Path(upgraded['flows']).read_text())}
+        self.assertIn('user-edited',ids);self.assertNotIn('pgl_old',ids)
+        receipt=json.loads((self.work/nr.RECEIPT).read_text())
+        self.assertEqual(receipt['profile'],str(new_profile))
+        self.assertEqual(new_profile.name,'n'+receipt['fingerprint'][:10])
+
+    def test_partial_version_publish_recovers_without_deleting_old_profile(self):
+        prior=self.prepare();old=Path(prior['profile'])
+        self.system['broker']['password']='CHANGED_SYNTHETIC'
+        publish=nr._publish_directory
+        calls=[]
+        def interrupted(*args):
+            result=publish(*args);calls.append(args[1])
+            if len(calls)==1:raise RuntimeError('synthetic crash after profile rename')
+            return result
+        with mock.patch.object(nr,'_publish_directory',side_effect=interrupted):
+            with self.assertRaisesRegex(RuntimeError,'synthetic crash'):self.prepare()
+        self.assertTrue(old.is_dir());self.assertTrue(calls[0].is_dir())
+        self.assertEqual(json.loads((self.work/nr.RECEIPT).read_text())['profile'],str(old))
+        upgraded=self.prepare()
+        self.assertEqual(upgraded['profile'],str(calls[0]))
+        self.assertTrue(Path(upgraded['generator']).is_dir());self.assertTrue(Path(upgraded['flows']).is_file())
+        self.assertTrue(old.is_dir())
+
+    def test_receipt_replace_failure_keeps_previous_version_and_retry_recovers(self):
+        prior=self.prepare();old=Path(prior['profile'])
+        old_receipt=(self.work/nr.RECEIPT).read_bytes()
+        self.system['broker']['password']='CHANGED_SYNTHETIC'
+        replace=Path.replace
+        def interrupted(path,target):
+            if Path(target)==self.work/nr.RECEIPT:
+                raise OSError('synthetic crash before atomic receipt')
+            return replace(path,target)
+        with mock.patch.object(Path,'replace',interrupted):
+            with self.assertRaisesRegex(OSError,'synthetic crash'):self.prepare()
+        self.assertEqual((self.work/nr.RECEIPT).read_bytes(),old_receipt)
+        self.assertTrue(old.is_dir())
+        self.assertFalse(list(self.work.glob('.*.tmp')))
+        upgraded=self.prepare()
+        self.assertNotEqual(upgraded['profile'],str(old))
+        self.assertEqual(json.loads((self.work/nr.RECEIPT).read_text())['profile'],upgraded['profile'])
+
+    def test_migration_refuses_linked_prior_state_without_changing_receipt(self):
+        prior=self.prepare();old=Path(prior['profile']);receipt=(self.work/nr.RECEIPT).read_bytes()
+        (old/'old-context/state.json').write_text('{"keep":true}')
+        self.system['broker']['password']='CHANGED_SYNTHETIC'
+        actual=nr.archive_util._reparse
+        with mock.patch.object(nr.archive_util,'_reparse',side_effect=lambda path: (Path(path).is_relative_to(old) and Path(path).name=='state.json') or actual(path)):
+            with self.assertRaisesRegex(ValueError,'LINKED_PRIOR_PROFILE_REFUSED'):self.prepare()
+        self.assertEqual((self.work/nr.RECEIPT).read_bytes(),receipt)
+        self.assertEqual((old/'old-context/state.json').read_text(),'{"keep":true}')
 
     def test_existing_unknown_profile_and_generator_failure_are_not_overwritten(self):
         profile=self.work/'nodered';profile.mkdir(parents=True);(profile/'keep').write_text('preserve')

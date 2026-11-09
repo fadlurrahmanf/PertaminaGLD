@@ -1,5 +1,29 @@
 # Audit Dataset Hotspot — 9 November 2026
 
+## Pembaruan audit setelah pengujian awal
+
+Audit ulang menemukan bahwa paket awal di bawah belum memantau AP yang hilang
+setelah startup. Firmware Workflow kini memeriksa kelangsungan AP tiap detik,
+mencoba memulihkannya dengan jeda 5 detik, dan menunggu PG24 stabil pada cold
+boot. Mode Dataset yang tersimpan tidak ditimpa oleh pembacaan daya sesaat.
+Jika boot sempat masuk Inference karena daya eksternal belum stabil, satu reboot
+terjaga mengembalikan mode COM sesuai pilihan tersimpan setelah daya pulih.
+Perubahan ini hanya berlaku pada tiga image Workflow Hotspot final.
+
+Tiga image hasil build ulang terakhir yang sudah terpasang sebagai paket final
+di Operator Hub memiliki SHA-256 berikut:
+
+| Model | SHA-256 `firmware.bin` baru |
+| --- | --- |
+| 1 | `5adf808bfbbb88189593bcbd394e718d2cf33ee879b5850cc4b0362d55a25509` |
+| 2 | `a490f17be82388ab5e65cfcb4a1e4dcc38fa6f2eec31e6322063b438ba4403d9` |
+| 3 | `1a9e0f607ba8168362dd885a66b95da65b7ade8a9fdc43879f7731376571f1ba` |
+
+Hash pada bagian pengujian awal di bawah adalah bukti versi sebelumnya,
+bukan identitas paket final ini. Build dan pengujian source lulus; image baru
+belum di-upload ke GLD, sehingga cold boot tanpa USB dan replay lima menit
+pada image baru masih memerlukan uji fisik. Reset NVS tidak dilakukan.
+
 ## Gejala dan batas bukti
 
 Operator melaporkan dua gejala: hotspot tidak selalu terlihat setelah cold boot

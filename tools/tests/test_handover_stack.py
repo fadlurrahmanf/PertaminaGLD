@@ -11,9 +11,43 @@ from unittest import mock
 
 TOOLS=Path(__file__).resolve().parents[1];sys.path.insert(0,str(TOOLS))
 import handover_stack as stack
+import handover_hub
 
 
 class StackTests(unittest.TestCase):
+    def test_repeat_smoke_uses_unused_node_identity(self):
+        with tempfile.TemporaryDirectory() as directory:
+            profile = Path(directory)
+            (profile / 'pertamina-gld-replay-state.json').write_text(json.dumps({
+                'observations': {'production:57344': {'lastSeq': 35}}}))
+            topology = {'nodes': [{'nodeId': 57345}]}
+            self.assertEqual(stack.synthetic_node_id(profile, topology), 57346)
+
+    def test_history_receipt_cannot_hide_missing_or_corrupt_owned_rows(self):
+        first = 'a' * 64
+        second = 'b' * 64
+        history = {'files': [{'sha256': first, 'size': 12}, {'sha256': second, 'size': 20}]}
+        self.assertEqual(stack.missing_history_rows(b'', history), {first, second})
+        healthy = (f'{first}\t12\t{first}\t2\t2\n').encode()
+        self.assertEqual(stack.missing_history_rows(healthy, history), {second})
+        with self.assertRaisesRegex(ValueError, 'HISTORY_DATABASE_INTEGRITY_FAILED'):
+            stack.missing_history_rows((f'{first}\t12\t{first}\t2\t1\n').encode(), history)
+        with self.assertRaisesRegex(ValueError, 'HISTORY_DATABASE_INTEGRITY_FAILED'):
+            stack.missing_history_rows((f'{first}\t12\t{second}\t2\t2\n').encode(), history)
+        with self.assertRaisesRegex(ValueError, 'HISTORY_DATABASE_AUDIT_INVALID'):
+            stack.missing_history_rows(b'bad-row\n', history)
+
+    def test_handover_broker_falls_back_to_loopback_without_lan(self):
+        from types import SimpleNamespace
+        offline = SimpleNamespace(local_ipv4=lambda: None)
+        self.assertTrue(handover_hub.configure_broker_host(offline))
+        self.assertEqual(offline.local_ipv4(), '127.0.0.1')
+        online = SimpleNamespace(local_ipv4=lambda: '192.0.2.20')
+        self.assertFalse(handover_hub.configure_broker_host(online))
+        self.assertEqual(online.local_ipv4(), '192.0.2.20')
+        self.assertTrue(handover_hub.configure_broker_host(online, force_loopback=True))
+        self.assertEqual(online.local_ipv4(), '127.0.0.1')
+
     def test_lock_recovers_only_a_dead_owned_launcher_not_live_or_foreign(self):
         with tempfile.TemporaryDirectory() as directory:
             path=Path(directory)/'stack.lock'

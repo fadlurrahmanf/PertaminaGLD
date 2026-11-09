@@ -434,6 +434,10 @@ bool bootRecoveryNonAdsFailure = false;
 uint32_t bootRecoveryDueMs = 0;
 char bootRecoveryReason[64] = "none";
 RTC_DATA_ATTR uint8_t bootRecoveryRestartCount = 0;
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+RTC_DATA_ATTR uint8_t workflowPowerRecoveryRestartCount = 0;
+bool workflowDeferredDatasetRestart = false;
+#endif
 
 // GLD_GAS_ANOMALY + confidence 0 is the "not classifying" sentinel (no ML
 // result available yet / ML unavailable), so a dead classifier never looks
@@ -3673,7 +3677,13 @@ void applyRuntimePowerReading(const pgl::gld::GldPowerReading& power,
 
     if (batteryPowerMode) {
         if (currentMode != pgl::gld::GldMode::INFERENCE) {
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+            // Runtime power loss must not replace the operator's stored
+            // Dataset intent. The battery safety shutdown below still runs.
+            const bool persisted = false;
+#else
             const bool persisted = pgl::gld::writeGldMode(pgl::gld::GldMode::INFERENCE);
+#endif
             powerTransitionShutdownPending = true;
             logPrintf("MODE_POWER_TRANSITION_BLOCK mode=%s nextMode=inference persisted=%u action=power_off\n",
                       pgl::gld::gldModeName(currentMode), persisted ? 1u : 0u);
@@ -3694,6 +3704,25 @@ void applyRuntimePowerReading(const pgl::gld::GldPowerReading& power,
     batteryFaultPowerOffArmed = false;
     batteryCyclePoweredOff = false;
     logPrintln("GLD_BATTERY_SESSION_CANCEL reason=external_power_restored clrInhibited=1");
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+    if (workflowDeferredDatasetRestart &&
+        workflowPowerRecoveryRestartCount == 0 &&
+        currentMode == pgl::gld::GldMode::INFERENCE &&
+        pgl::gld::readGldMode() == pgl::gld::GldMode::DATASET) {
+        // This boot safely used inference while PG24 was LOW. Reload the
+        // operator's unchanged Dataset mode through normal setup only after
+        // three stable external-power reads. RTC limits this to one reboot if
+        // PG24 is still unreliable on the next boot.
+        workflowDeferredDatasetRestart = false;
+        workflowPowerRecoveryRestartCount = 1;
+        logPrintln("DATASET_POWER_RECOVERY_RESTART reason=stored_dataset_restored");
+        Serial.flush();
+#if defined(ARDUINO_ARCH_ESP32)
+        Serial0.flush();
+#endif
+        ESP.restart();
+    }
+#endif
 }
 
 void reconcileRuntimePowerMode() {
@@ -7302,6 +7331,12 @@ void predictDatasetWorkflow(const pgl::gld::datasetworkflowwifi::RawSample& samp
 void beginDatasetWorkflowIfNeeded() {
     if (pgl::gld::datasetworkflowwifi::available() || batteryPowerMode ||
         !pgl::gld::readGldExternalPower()) return;
+    // A persistent AP/listener failure must not spin through WiFi setup on
+    // every 5 ms main-loop iteration. The transport task handles later loss.
+    static uint32_t nextBeginAtMs = 0;
+    const uint32_t now = millis();
+    if (nextBeginAtMs && static_cast<int32_t>(now - nextBeginAtMs) < 0) return;
+    nextBeginAtMs = now + 5000;
     // Optional ML allocation cannot disable otherwise valid raw Dataset.
     if (network == nullptr) network = new (std::nothrow) NeuralNetwork();
     // getInputSize() counts both ADC and derived evidence tensors.
@@ -7407,7 +7442,27 @@ void setup() {
               pgl::gld::gldModeName(currentMode),
               BOARD_PROFILE);
 
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+    pgl::gld::GldPowerReading power = pgl::gld::readGldPower();
+    if (!power.externalPower) {
+        // A 24 V rail can settle after the first PG24 read on cold boot.
+        // Require three consecutive HIGH observations before accepting it.
+        uint8_t stableHigh = 0;
+        for (uint8_t attempt = 0; attempt < 10; ++attempt) {
+            pulseWdtKeepaliveNow();
+            delay(100);
+            stableHigh = pgl::gld::readGldExternalPower() ? stableHigh + 1 : 0;
+            if (stableHigh >= 3) {
+                power = pgl::gld::readGldPower();
+                break;
+            }
+        }
+        logPrintf("GLD_PG24_COLD_BOOT_CONFIRM stableHigh=%u externalPower=%u\n",
+                  stableHigh, power.externalPower ? 1u : 0u);
+    }
+#else
     const pgl::gld::GldPowerReading power = pgl::gld::readGldPower();
+#endif
     lastKnownBatteryMv = power.batteryMv;
     lastKnownExternalPower = power.externalPower;
     logPrintf("GLD_POWER mode=%s externalPower=%u batteryMv=%u batterySense=%s ambiguous=%u\n",
@@ -7416,6 +7471,12 @@ void setup() {
               pgl::gld::gldBatterySenseStatusName(power.batterySenseStatus),
               power.powerSourceAmbiguous ? 1u : 0u);
     batteryPowerMode = TFBG_CONTINUOUS_BATTERY || !power.externalPower;
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+    if (!batteryPowerMode) workflowPowerRecoveryRestartCount = 0;
+    workflowDeferredDatasetRestart = batteryPowerMode &&
+        currentMode == pgl::gld::GldMode::DATASET &&
+        workflowPowerRecoveryRestartCount == 0;
+#endif
 #if PGL_GLD_BOARD_PROFILE_GLD2
     dac.setAutomaticSensorPowerControl(batteryPowerMode);
     bool pcfOutputsRead = false;
@@ -7450,9 +7511,10 @@ void setup() {
         currentMode != pgl::gld::GldMode::INFERENCE) {
         const pgl::gld::GldMode rejectedMode = currentMode;
         currentMode = pgl::gld::GldMode::INFERENCE;
-        const bool persisted = pgl::gld::writeGldMode(currentMode);
-        logPrintf("MODE_BATTERY_REJECTED requested=%s fallback=inference persisted=%u\n",
-                  pgl::gld::gldModeName(rejectedMode), persisted ? 1u : 0u);
+        // A transient LOW PG24 must not erase the operator's stored Dataset
+        // intent. Battery safety still applies to this boot's runtime mode.
+        logPrintf("MODE_BATTERY_REJECTED requested=%s fallback=inference persisted=0\n",
+                  pgl::gld::gldModeName(rejectedMode));
     }
 #else
 #if !defined(PGL_GLD_DATASET_WIFI) || !PGL_GLD_DATASET_WIFI

@@ -1,8 +1,8 @@
 # Dataset dan handover PC baru — bukti penerimaan
 
-Last updated: 2026-11-09 23:01 WIB
-Last evidence update: 2026-11-09 23:01 WIB
-Last tracker heartbeat: 2026-11-09 23:01 WIB
+Last updated: 2026-11-09 23:40 WIB
+Last evidence update: 2026-11-09 23:40 WIB
+Last tracker heartbeat: 2026-11-09 23:40 WIB
 
 ## Progress dashboard
 
@@ -75,12 +75,18 @@ NVS, firmware biasa, dan database aktif. Audit terisolasi tidak mengubahnya.
 | H09 | Closed | Export snapshot kini mewajibkan manifest discovery eksplisit; manual menandainya alat PC sumber. | 9/9 tes snapshot lulus dari clone. |
 | H10 | Closed | Fixture source portabel: path CSV diperbarui dan CRLF checkout Windows dinormalisasi. | 22/22 uji source lulus dari clone GitHub. |
 | H11 | Closed | 140 CSV sensor unik telah masuk snapshot; 3 non-sensor/kosong dikecualikan. 24/24 lulus pada volume riil. | 24/24 dari clone GitHub. |
+| H12 | Locally closed | Profil Node-RED dengan fingerprint lama menolak start setelah pull; publish parsial bisa mengunci retry. | Migrasi profil berversi, tes upgrade dan retry terputus. |
+| H13 | Locally closed | Hub handover tanpa LAN menolak broker sehingga Dataset tak terbuka; verifier sebelumnya memakai loopback eksplisit. | Fallback loopback khusus handover dan tes offline. |
+| H14 | Locally closed | Firmware Workflow AP belum cek liveness; satu pembacaan PG24 dapat menimpa intent Dataset. | Source 25/25 dan tiga build akhir berhasil; cold boot fisik image baru masih diperlukan. |
+| H16 | Locally closed | Uji stack pada work root yang sama awalnya gagal karena ID sintetis tetap dan seq lama di context. | ID uji belum dipakai dipilih dari topology/replay; restart dan dua upgrade beruntun PASS, CSV prefix utuh. |
+| H15 | Locally closed | Receipt impor dapat menganggap histori DB lengkap hanya dari jumlah file meski blob/baris berubah. | Audit hash dan jumlah baris DB setiap start, lalu uji stack terisolasi. |
 
 ## Current work / agent state
 
 | Sub-agent / worker | Active work item | Started at | Elapsed | Progress | Activity / state |
 | --- | --- | --- | --- | ---: | --- |
-| Root | Dokumentasi bukti akhir dan baca balik remote | 2026-11-09 22:59 WIB | 00:02 | 100% | Dokumentasi, status, dan SHA remote dibaca balik; tidak ada worker aktif. |
+| Root | Verifikasi stack akhir, commit dan clone GitHub | 2026-11-09 23:04 WIB | 00:43 | 90% | Tiga paket akhir terpasang; host 73/73 dan source 25/25; full stack akhir berjalan. |
+
 
 ## Evidence log
 
@@ -107,3 +113,8 @@ NVS, firmware biasa, dan database aktif. Audit terisolasi tidak mengubahnya.
 - 2026-11-09 22:55 WIB: Rilis histori luas ter-commit dan di-push sebagai 1dd8ac7f. `git diff --check` kode/docs lulus, path checkout maksimum 208 karakter pada target uji, file terbesar 44,41 MiB. Clone baru langsung dari GitHub dimulai. Heartbeat sebelumnya terlewat sekitar tiga menit selama staging dan push.
 - 2026-11-09 22:59 WIB: Clone langsung GitHub commit 1dd8ac7f checkout bersih (5531 berkas), uji full stack 24/24, 209 berkas/256.605 baris/0 beda byte; `output/handover-verification/remote-extended-test/20261109-225615-e6c006f4/report.json`. Fixture source yang semula gagal karena LF/CRLF dan nomor CSV diperbaiki, di-push sebagai 65f3f633, lalu `git pull --ff-only` pada clone lulus 22/22. PC kedua dan tiga board fisik masih gate terpisah.
 - 2026-11-09 23:01 WIB: Status/manual/tracker ditinjau dan di-push sebagai 09d1c62d. Clone GitHub `git pull --ff-only` ke commit itu berhasil; snapshot check 219/219, source firmware 22/22, snapshot tests 9/9; SHA `origin/master` sama 09d1c62d. Tidak ada perubahan Hub aktif, COM7, NVS atau database sumber.
+- 2026-11-09 23:10 WIB: Audit ulang menemukan tiga celah di luar uji fresh clone: restart Node-RED sesudah pull menolak fingerprint baru/publish parsial; normal handover tanpa LAN menolak broker; firmware belum memeriksa AP yang hilang dan membaca PG24 hanya sekali saat boot. Uji unit handover 67/67 dan Workflow 71/71 sebelum patch lulus, sehingga cakupan uji sebelumnya memang kurang. Fallback broker khusus handover telah dipatch dan uji terarah 5/5; migrasi profil dan firmware source masih berjalan. Tidak ada layanan aktif/COM/NVS/DB sumber diubah.
+- 2026-11-09 23:18 WIB: User menyetujui compile Model 1/2/3 dan pembaruan paket final; tiga agen memulai build paralel terisolasi di C:. Patch migrasi Node-RED lulus 9/9 termasuk upgrade dan retry setelah publish parsial; host handover keseluruhan 72/72, Workflow 71/71, source GLD 24/24, kredensial 7/7. Static handover 15/15 masih memeriksa paket lama; full stack dan paket baru menunggu build. Audit DB menambahkan pemeriksaan byte SHA dan jumlah baris sebelum receipt dipercaya.
+- 2026-11-09 23:35 WIB: Paket final tiga model terpasang setelah tiga compile paralel (RAM 57,4%, flash 17,2%). Static verifier 15/15, kredensial 7/7, host 73/73, Workflow 71/71, source GLD 24/24, guard rahasia PASS. Full stack salinan baru 24/24; laporan `output/handover-verification/20261109-232220-33699e0c/report.json`. Uji tambahan pada work root yang sama menemukan fixture AES id/seq lama; pemilihan ID sintetis belum dipakai memperbaikinya. Restart PASS, dua upgrade generator berturut PASS, profil lama tetap, CSV lama terbukti prefix utuh. Audit GLD lanjutan memastikan AP dapat mulai setelah PG24 pulih tanpa reboot; perlindungan NVS saat power drop sedang ditinjau.
+- 2026-11-09 23:40 WIB: Audit ulang membedakan pemulihan AP dari pemulihan mode COM: loop memang memulai AP setelah PG24 stabil tanpa reboot. Patch khusus Workflow menjaga NVS saat daya turun dan melakukan satu reboot terjaga hanya untuk mengembalikan stored Dataset mode bila boot awal sempat fallback ke Inference; source 25/25. Model 3 rebuild lulus. Build incremental Model 1/2 gagal pada cache SCons sebelum compile; kedua agen beralih ke build bersih C: yang baru, image lama dilarang untuk paket final. Uji upload/wizard terarah 5+18+40 dan UI Node lulus; tracker lama 5 Nov diberi label arsip.
+- 2026-11-09 23:47 WIB: Ketiga build ulang final Model 1/2/3 lulus dan paket Workflow final dipasang secara atomik di Hub; hash image cocok dengan tiga paket dan profil koneksi diperbarui. Paket biasa tidak diubah. Host handover 73/73, source 25/25, `git diff --check` lulus. Verifikasi stack akhir dan guard repo sedang berjalan; belum upload firmware baru, belum uji cold boot fisik atau PC kedua.

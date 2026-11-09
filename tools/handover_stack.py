@@ -166,7 +166,6 @@ def prepare(repo, work, offset):
         current = snapshot_tool._env(env_path.read_bytes())
         for key in ('GLD_AES128_KEY_HEX', 'GLD_KEY_ID'):
             require(current.get(key) == system['serverEnv'].get(key), 'EXISTING_AES_CONFIG_CONFLICT')
-    system['serverEnv']['PGL_REPLAY_STATE_PATH'] = str(work / 'nodered/pertamina-gld-replay-state.json')
     system['serverEnv']['PGL_FIELD_TEST_LOG_DIR'] = str(work / 'history/field-test-logs')
     hub = work / 'hub'; hub.mkdir(parents=True, exist_ok=True)
     broker = dict(system['broker']); broker.update(port=ports['mqtt'], topicRoot='gld/gateway')
@@ -201,7 +200,33 @@ def mqtt_publish(host, port, username, password, topic, value):
         sock.sendall(b'\xe0\x00')
 
 
-def self_test(repo, prepared, work):
+def synthetic_node_id(profile, topology):
+    """Keep repeat acceptance from conflicting with durable replay/topology state."""
+    require(isinstance(topology, dict) and isinstance(topology.get('nodes'), list),
+            'SYNTHETIC_TOPOLOGY_INVALID')
+    used = set()
+    for node in topology['nodes']:
+        if not isinstance(node, dict): continue
+        if type(node.get('nodeId')) is int: used.add(node['nodeId'])
+        if isinstance(node.get('nodeIdHex'), str):
+            try: used.add(int(node['nodeIdHex'], 16))
+            except ValueError: pass
+    replay = Path(profile) / 'pertamina-gld-replay-state.json'
+    if replay.is_file():
+        value = read(replay)
+        require(isinstance(value, dict) and isinstance(value.get('observations'), dict),
+                'SYNTHETIC_REPLAY_STATE_INVALID')
+        for key in value['observations']:
+            if isinstance(key, str) and key.startswith('production:'):
+                try: used.add(int(key.split(':', 1)[1]))
+                except ValueError: raise ValueError('SYNTHETIC_REPLAY_STATE_INVALID') from None
+    for candidate in range(0xE000, 0xF000):
+        if candidate not in used:
+            return candidate
+    raise ValueError('SYNTHETIC_TEST_IDS_EXHAUSTED')
+
+
+def self_test(repo, prepared, work, profile):
     cfg = prepared['deployment']['database']; port = prepared['ports']['database']; database_runtime = prepared['database_runtime']
     label = 'handover_' + uuid.uuid4().hex[:10]
     sample = dict(device_id='1002', node_id=0x1002, mode='DATASET', seq=int(time.time()) % 4294967295,
@@ -226,14 +251,17 @@ def self_test(repo, prepared, work):
     code = "const c=require('crypto'),fs=require('fs');const s=JSON.parse(fs.readFileSync(0,'utf8'));const k=Buffer.from(s.serverEnv.GLD_AES128_KEY_HEX,'hex'),iv=c.randomBytes(12),p=Buffer.from('handover-check');const e=c.createCipheriv('aes-128-gcm',k,iv);const b=Buffer.concat([e.update(p),e.final()]);const d=c.createDecipheriv('aes-128-gcm',k,iv);d.setAuthTag(e.getAuthTag());if(!Buffer.concat([d.update(b),d.final()]).equals(p))process.exit(1);"
     result = subprocess.run([str(prepared['runtime']/'node/node.exe'),'-e',code], input=json.dumps(prepared['system']).encode(),capture_output=True,timeout=15)
     require(result.returncode == 0, 'AES_ROUNDTRIP_FAILED')
-    encrypted=subprocess.run([str(prepared['runtime']/'node/node.exe'),str(repo/'tools/handover_crypto_smoke.cjs'),str(prepared['state']/'config/system.json')],capture_output=True,timeout=15)
+    topology_url=f"http://127.0.0.1:{prepared['ports']['nodeRed']}/pertamina-gld/topology"
+    node_id=synthetic_node_id(profile,api(topology_url))
+    encrypted=subprocess.run([str(prepared['runtime']/'node/node.exe'),str(repo/'tools/handover_crypto_smoke.cjs'),
+                              str(prepared['state']/'config/system.json'),'--node-id',str(node_id)],capture_output=True,timeout=15)
     require(encrypted.returncode==0,'AES_FRAME_GENERATION_FAILED')
     smoke=json.loads(encrypted.stdout)
     for message in smoke['messages']:
         mqtt_publish(broker['host'],prepared['ports']['mqtt'],broker['username'],broker['password'],message['topic'],message['payload'])
     expected=smoke['expected'];end=time.monotonic()+20;decrypted=False
     while time.monotonic()<end:
-        topology=api(f"http://127.0.0.1:{prepared['ports']['nodeRed']}/pertamina-gld/topology")
+        topology=api(topology_url)
         node=next((n for n in topology.get('nodes',[]) if n.get('type')=='gld' and n.get('nodeIdHex')==expected['nodeIdHex']),{})
         if (all(node.get(k)==expected[k] for k in smoke['verifyHttp']['requiredNodeFields']) and
                 node.get('chIdHex')==expected['chIdHex'] and expected['gatewayIdHex'] in topology.get('gatewayIds',[])):
@@ -243,6 +271,29 @@ def self_test(repo, prepared, work):
     counts = db.run_sql(database_runtime,cfg,port,f"USE `{cfg['name']}`;SELECT COUNT(*),COALESCE(SUM(row_count),0),COALESCE(SUM(SHA2(content,256)<>file_sha256),0) FROM handover_files;").decode().strip().split('\t')
     return dict(mqttAuthentication=True,nodeRedDatabaseInsert=True,nodeRedCsvWrite=True,aesRoundTrip=True,aesMqttNodeRedDecrypt=True,
                 historyFiles=int(counts[0]),historyRows=int(counts[1]),historyByteMismatches=int(counts[2]),hardwareTested=False)
+
+
+def missing_history_rows(database_rows, history):
+    """Check the owned database before trusting an old import receipt.
+
+    Extra hashes from an earlier snapshot are retained. Existing damaged rows
+    are never silently overwritten by INSERT IGNORE or treated as complete.
+    """
+    expected = {item['sha256']: item['size'] for item in history['files']}
+    observed = {}
+    for line in database_rows.decode('ascii').splitlines():
+        fields = line.split('\t')
+        require(len(fields) == 5, 'HISTORY_DATABASE_AUDIT_INVALID')
+        digest, size, content_digest, declared_rows, actual_rows = fields
+        require(digest not in observed and digest and size.isdecimal() and
+                declared_rows.isdecimal() and actual_rows.isdecimal(), 'HISTORY_DATABASE_AUDIT_INVALID')
+        observed[digest] = (int(size), content_digest, int(declared_rows), int(actual_rows))
+    for digest, size in expected.items():
+        record = observed.get(digest)
+        if record is not None:
+            require(record[0] == size and record[1] == digest and record[2] == record[3],
+                    'HISTORY_DATABASE_INTEGRITY_FAILED')
+    return set(expected) - set(observed)
 
 
 def run(repo, work, offset=0, test_once=False, local_only=False, no_browser=False):
@@ -261,14 +312,19 @@ def run(repo, work, offset=0, test_once=False, local_only=False, no_browser=Fals
         data=work/'database-data'
         if not data.exists(): db.initialize(prepared['database_runtime'],data,cfg['database'],ports['database'])
         database=db.start(prepared['database_runtime'],data,cfg['database'],ports['database'])
-        history={'files':[dict(path=item['path'],sha256=item['sha256'],sources=[item.get('sourcePath',item['path'])]) for item in prepared['manifest']['files'] if item['role'] in ('dataset-csv','dataset-ledger')]}
+        history={'files':[dict(path=item['path'],sha256=item['sha256'],size=item['size'],sources=[item.get('sourcePath',item['path'])]) for item in prepared['manifest']['files'] if item['role'] in ('dataset-csv','dataset-ledger')]}
         print('Memeriksa histori database...',flush=True)
         receipt=work/'history-import.json';fingerprint=digest(repo/'handover/state/snapshot-manifest.json')
-        existing=int(db.run_sql(prepared['database_runtime'],cfg['database'],ports['database'],f"USE `{cfg['database']['name']}`;SELECT COUNT(*) FROM handover_files;").strip())
-        expected=len({item['sha256'] for item in history['files']})
-        if not receipt.exists() or read(receipt).get('snapshot') != fingerprint or existing < expected:
+        audit_sql=(f"USE `{cfg['database']['name']}`;SELECT f.file_sha256,f.byte_count,"
+                   "LOWER(SHA2(f.content,256)),f.row_count,COALESCE(r.actual,0) "
+                   "FROM handover_files f LEFT JOIN (SELECT file_sha256,COUNT(*) actual "
+                   "FROM handover_rows GROUP BY file_sha256) r ON r.file_sha256=f.file_sha256;")
+        missing=missing_history_rows(db.run_sql(prepared['database_runtime'],cfg['database'],ports['database'],audit_sql),history)
+        if not receipt.exists() or read(receipt).get('snapshot') != fingerprint or missing:
             imported=db.import_history(prepared['database_runtime'],cfg['database'],ports['database'],history,history_root=repo/'handover/state')
             write(receipt,{'snapshot':fingerprint,'files':imported['files'],'rows':imported['rows']})
+            require(not missing_history_rows(db.run_sql(prepared['database_runtime'],cfg['database'],ports['database'],audit_sql),history),
+                    'HISTORY_DATABASE_INTEGRITY_FAILED')
         stop=prepared['hub']/'stop.request'
         if stop.exists(): stop.unlink()
         command=[sys.executable,str(repo/'tools/handover_hub.py'),'--repo-root',str(repo),'--runtime-dir',str(prepared['hub']),
@@ -280,6 +336,7 @@ def run(repo, work, offset=0, test_once=False, local_only=False, no_browser=Fals
         broker=read(prepared['hub']/'credentials.local.json');prepared['system']['broker']=broker
         node_prepared=nr.prepare(repo,prepared['state'],prepared['runtime'],work,prepared['system'],cfg['database'],cfg['ports'],port_offset=offset)
         profile=Path(node_prepared['profile']);flows=Path(node_prepared['flows'])
+        prepared['system']['serverEnv']['PGL_REPLAY_STATE_PATH'] = str(profile / 'pertamina-gld-replay-state.json')
         env=os.environ.copy();env.update({str(key):str(value) for key,value in prepared['system']['serverEnv'].items()});env['PGL_NODE_RED_PORT']=str(ports['nodeRed'])
         log=(work/'nodered.log').open('ab');handles.append(log)
         node_stop=work/'nodered.stop.request'
@@ -290,8 +347,9 @@ def run(repo, work, offset=0, test_once=False, local_only=False, no_browser=Fals
         nr.deploy(url,flows,token=prepared['system']['serverEnv'].get('NODE_RED_ADMIN_TOKEN',''))
         wait_json(url+'/pertamina-gld/topology',lambda value:value.get('kind')=='pgl-topology',node_process)
         time.sleep(2)
-        report.update(status='ready',ports=ports,preflight=prepared['preflight']['counts'],history=read(receipt),localOnly=local_only)
-        if test_once:report.update(selfTest=self_test(repo,prepared,work),status='PASS')
+        effective_local_only = str(broker['host']).startswith('127.')
+        report.update(status='ready',ports=ports,preflight=prepared['preflight']['counts'],history=read(receipt),localOnly=effective_local_only)
+        if test_once:report.update(selfTest=self_test(repo,prepared,work,profile),status='PASS')
         write(result_path,report)
         print('Hub, MQTT, Node-RED, database dan histori siap.',flush=True)
         if not test_once:

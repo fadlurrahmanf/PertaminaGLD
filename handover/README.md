@@ -6,8 +6,10 @@ konfigurasi aktif, serta histori yang ditemukan pada PC sumber.
 
 ## Cara pakai di PC pengganti
 
-1. Pull `master` terbaru dari GitHub di PC pengganti. Laporan verifikasi lokal
-   tidak memeriksa GitHub; cocokkan SHA commit bila perlu.
+1. Pull `master` terbaru dari GitHub di PC pengganti. Gunakan path pendek,
+   misalnya `C:\GLD\PertaminaGLD`, agar runtime Node-RED tidak melewati batas
+   path Windows. Laporan verifikasi lokal tidak memeriksa GitHub; cocokkan SHA
+   commit bila perlu.
 2. Jalankan `verifikasi-handover.bat` dari root repository. Jendela menampilkan
    daftar pemeriksaan, tanda centang/silang, hitungan `xx/xx`, dan kesimpulan.
    Tunggu sampai selesai. Pemeriksaan menjalankan salinan stack pada port
@@ -28,6 +30,10 @@ Tidak perlu compile firmware atau memasang Node.js/Node-RED/MariaDB global.
 Windows, Git untuk pull, browser, akses USB/jaringan, dan izin driver tetap
 merupakan prasyarat PC. Pengaturan firewall/router perangkat lapangan mengikuti
 jaringan yang dipakai; tidak diubah otomatis oleh verifier.
+Jika PC belum memiliki alamat LAN, launcher handover menjalankan broker MQTT
+di loopback agar Hub, Dataset lokal, Node-RED dan database tetap dapat dibuka.
+Dalam kondisi ini CH/Gateway atau perangkat jaringan lain belum dapat mengakses
+broker dari luar PC; sambungkan LAN yang sesuai untuk operasi jaringan penuh.
 
 ## Apa yang dibawa
 
@@ -57,6 +63,10 @@ CSV diagram/esptool dan satu file kosong tidak dimasukkan.
 Database handover merekonstruksi CSV/ledger tersebut dengan provenance dan
 menyimpan byte asli setiap berkas; pengujian mendapatkan **0 perbedaan byte**.
 Impor bersifat idempoten. MySQL sumber pada port 3306 tidak dipakai atau diubah.
+Baris lama tersedia di tabel arsip `handover_files` dan `handover_rows`.
+Tabel operasional `gld_dataset` mulai kosong dan menerima rekaman baru dari
+Node-RED. Karena database GLD lama tidak ditemukan, riwayat arsip belum dapat
+dianggap sebagai pemulihan seluruh tabel operasional atau data dashboard lama.
 
 ## Port dan penyimpanan lokal
 
@@ -77,6 +87,9 @@ menyebabkan checkout Windows gagal. Screenshot mockup tetap ikut Git.
 
 Snapshot Git merupakan kondisi saat ekspor, bukan sinkronisasi data langsung.
 Rekaman baru setelah snapshot harus diekspor lagi untuk handover berikutnya.
+Saat pull versi baru, launcher membuat profil Node-RED berversi dan menjaga
+profil serta CSV kerja sebelumnya. Jika konfigurasi lama tidak dapat divalidasi,
+launcher berhenti dengan diagnostik tanpa menimpa profil lama.
 `tools/handover_snapshot.py export` adalah alat ekspor dari PC sumber dan
 memerlukan manifest `--csv-discovery` yang eksplisit dan terkini. Alat ini
 tidak diperlukan untuk menjalankan Hub di PC pengganti.

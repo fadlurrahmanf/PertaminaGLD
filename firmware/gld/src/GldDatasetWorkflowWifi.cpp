@@ -24,6 +24,8 @@ constexpr uint32_t INTERVAL_MS = 500;
 constexpr size_t CONTROL_CAPACITY = 8;
 constexpr size_t JSON_BYTES = 2304;
 constexpr const char* PROTOCOL = "gld-dataset-wifi/3";
+constexpr uint32_t AP_HEALTH_CHECK_MS = 1000;
+constexpr uint32_t AP_RECOVERY_RETRY_MS = 5000;
 
 struct ControlMessage {
     char json[JSON_BYTES]{};
@@ -108,6 +110,7 @@ public:
         WebSocketsServerCore::loop();
     }
     void closeChecked() { if (_server != nullptr) WebSocketsServer::close(); }
+    bool listening() { return _runnning && _server != nullptr && static_cast<bool>(*_server); }
 };
 
 State state;
@@ -607,8 +610,38 @@ bool sampleMessageLocked(ControlMessage& wire, uint32_t& sequence) {
 
 void transmitter(void*) {
     while (!initialized) vTaskDelay(pdMS_TO_TICKS(5));
+    uint32_t nextApCheckMs = 0;
     ControlMessage wire;
     for (;;) {
+        const uint32_t now = millis();
+        if (static_cast<int32_t>(now - nextApCheckMs) >= 0 && !nativeBusy.load()) {
+            nextApCheckMs = now + AP_HEALTH_CHECK_MS;
+            const IPAddress address(192, 168, 4, 1);
+            const bool apUp = (WiFi.getMode() & WIFI_MODE_AP) && WiFi.softAPIP() == address;
+            if (!apUp || !socket.listening()) {
+                nextApCheckMs = now + AP_RECOVERY_RETRY_MS;
+                int staleClient;
+                { Lock lock; staleClient = state.client; }
+                if (staleClient >= 0) {
+                    disconnected(staleClient);
+                    socket.disconnect(static_cast<uint8_t>(staleClient));
+                }
+                bool restored = true;
+                if (!apUp) {
+                    char ssid[33]{};
+                    snprintf(ssid, sizeof(ssid), "GLD-DATASET-%s", state.device);
+                    const wifi_mode_t mode = (WiFi.getMode() & WIFI_MODE_STA) ? WIFI_AP_STA : WIFI_AP;
+                    restored = WiFi.mode(mode) &&
+                        WiFi.softAPConfig(address, address, IPAddress(255, 255, 255, 0)) &&
+                        WiFi.softAP(ssid, GLD_DATASET_WORKFLOW_PRIVATE_PASSWORD, 1, false, 1);
+                }
+                if (restored && (!apUp || !socket.listening())) {
+                    socket.closeChecked();
+                    (void)socket.beginChecked();
+                }
+                // Keep the retained session/buffer for the next Hello/ACK.
+            }
+        }
         int closeClient = -1;
         { Lock lock; if (state.closeRequested) { closeClient = state.client; state.closeRequested = false; } }
         if (closeClient >= 0) socket.disconnect(static_cast<uint8_t>(closeClient));

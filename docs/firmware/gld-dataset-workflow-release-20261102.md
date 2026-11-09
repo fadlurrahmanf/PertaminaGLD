@@ -1,5 +1,10 @@
 # GLD Dataset Wizard: firmware, aplikasi dan paket
 
+> Arsip rilis 2 November 2026. Hash firmware dan status upload di bawah ini
+> adalah bukti rilis saat itu. Untuk tiga paket final terbaru dan gate uji fisik,
+> lihat [audit hotspot 9 November](gld-dataset-hotspot-audit-20261109.md)
+> serta [tracker handover aktif](../DATASET-HANDOVER-GOAL-TRACKER.md).
+
 Latest UI revision 2026-11-03: five grouped steps, cumulative readiness, backend-only credentials, timestamp label, shared Running chart and export below table. Current report: gld-dataset-wizard-ux-20261103.md; manual output/pdf/Manual-GLD-Dataset-5-Langkah.pdf. Firmware/protocol/binaries unchanged. Current app Hub6204/GLD12940. Earlier seven-step screenshots/PIDs below are historical; physical release gate remains deferred (95% release).
 
 

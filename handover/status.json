@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-09T22:59:18+07:00",
-  "stage": "extended_history_github_clone_verified",
+  "updatedAt": "2026-11-09T23:48:00+07:00",
+  "stage": "workflow_hotspot_local_full_stack_verified",
   "softwareBundleReady": true,
   "softwareAcceptance": "PASS",
   "requiredChecksPassed": 24,
@@ -22,9 +22,9 @@
   "firmwareModelsChanged": true,
   "hardwareTested": false,
   "replacementPcVerified": false,
-  "gitCommitPushRequired": false,
-  "githubPushVerified": true,
-  "verificationReport": "output/handover-verification/remote-extended-test/20261109-225615-e6c006f4/report.json",
+  "gitCommitPushRequired": true,
+  "githubPushVerified": false,
+  "verificationReport": "output/handover-verification/20261109-234507-1bfbb87f/report.json",
   "verificationCommand": "verifikasi-handover.bat",
   "startCommand": "start-handover.bat",
   "repositoryGuard": {
@@ -34,5 +34,5 @@
   },
   "verificationReportLocation": "source_pc_local_ignored_output",
   "archiveSensorCsvAdded": 140,
-  "latestVerifiedGithubCommit": "65f3f633b8c2c9654d321133167d5fba8ed2910d"
+  "latestVerifiedGithubCommit": null
 }

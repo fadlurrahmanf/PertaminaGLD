@@ -3,17 +3,17 @@
   "protocol": "gld-dataset-wifi/3",
   "models": {
     "gld_model_1_dataset_workflow_wifi": {
-      "firmwareSha256": "e106011e73323ca95fa386416f099444cf9807c592eb5223cd1b812ace221259",
+      "firmwareSha256": "5adf808bfbbb88189593bcbd394e718d2cf33ee879b5850cc4b0362d55a25509",
       "passwordOffset": 16946,
       "passwordLength": 8
     },
     "gld_model_2_dataset_workflow_wifi": {
-      "firmwareSha256": "1b1d0499c63e8bbdb5129a169383f381ba0980176f25844857a8232d9c399a0e",
+      "firmwareSha256": "a490f17be82388ab5e65cfcb4a1e4dcc38fa6f2eec31e6322063b438ba4403d9",
       "passwordOffset": 16946,
       "passwordLength": 8
     },
     "gld_model_3_dataset_workflow_wifi": {
-      "firmwareSha256": "fe6f8b6747160ac6c1358fb44b074dba039a913d397aea61a90916fa1c420606",
+      "firmwareSha256": "1a9e0f607ba8168362dd885a66b95da65b7ade8a9fdc43879f7731376571f1ba",
       "passwordOffset": 16946,
       "passwordLength": 8
     }

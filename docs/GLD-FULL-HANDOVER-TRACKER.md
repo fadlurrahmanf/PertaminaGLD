@@ -1,5 +1,10 @@
 # GLD Full Handover - Hub / Node-RED / MQTT / database
 
+> Arsip status 5 November 2026. Angka 55 berkas/89.197 baris dan 100% di
+> bawah ini hanya berlaku untuk cakupan software saat itu. Status terbaru,
+> termasuk 209 berkas/256.605 baris, paket firmware final, dan gate PC kedua
+> serta cold boot fisik, ada di [tracker aktif](DATASET-HANDOVER-GOAL-TRACKER.md).
+
 Last tracker heartbeat: 2026-11-05 10:28:25 Asia/Jakarta
 Last evidence update: 2026-11-05 10:28:25 Asia/Jakarta
 

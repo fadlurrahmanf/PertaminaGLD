@@ -8,6 +8,19 @@ import threading
 import time
 
 
+def configure_broker_host(hub, *, force_loopback=False):
+    """Keep the handover stack usable when this PC has no LAN route.
+
+    This override applies only to the handover wrapper. The ordinary Hub's
+    LAN broker policy remains unchanged for normal device operation.
+    """
+    if force_loopback or hub.local_ipv4() is None:
+        hub.local_ipv4 = lambda: '127.0.0.1'
+        print('HANDOVER_MQTT_LOOPBACK_ONLY: broker untuk layanan lokal; perangkat luar perlu LAN.', flush=True)
+        return True
+    return False
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--repo-root', type=Path, required=True)
@@ -23,10 +36,7 @@ def main():
     hub.BROKER_CREDENTIALS_PATH = args.runtime_dir / 'credentials.local.json'
     for cfg in hub.CHILD_APPS.values():
         cfg['port'] += args.port_offset
-    if args.loopback_broker:
-        # The normal Hub keeps its LAN-only broker policy. This wrapper's
-        # explicit local mode permits isolated acceptance without a LAN.
-        hub.local_ipv4 = lambda: '127.0.0.1'
+    configure_broker_host(hub, force_loopback=args.loopback_broker)
     servers = []
     original = hub.ExclusiveThreadingHTTPServer
     class ManagedServer(original):

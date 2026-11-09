@@ -34,10 +34,11 @@ function frame(record, seq) {
   return Buffer.concat([body, Buffer.from([checksum >> 8, checksum & 0xFF])]);
 }
 
-function build(system) {
+function build(system, nodeId = IDS.node) {
   requireValid(system && system.schemaVersion === 1 && system.serverEnv &&
     typeof system.serverEnv.GLD_AES128_KEY_HEX === "string" &&
     /^[0-9a-fA-F]{32}$/.test(system.serverEnv.GLD_AES128_KEY_HEX));
+  requireValid(Number.isInteger(nodeId) && nodeId >= 0x1001 && nodeId <= 0xFEFF);
   const keyId = Number(system.serverEnv.GLD_KEY_ID);
   requireValid(Number.isInteger(keyId) && keyId > 0 && keyId <= 255);
   const key = Buffer.from(system.serverEnv.GLD_AES128_KEY_HEX, "hex");
@@ -45,12 +46,12 @@ function build(system) {
   const seq = crypto.randomBytes(1)[0];
   const flags = 0x10; // NodeCache external-power flag, clear alarm.
   const plaintext = Buffer.from([0, 97, 0x0E, 0x74]); // clearGas97%,3700mV.
-  const aad = Buffer.from([IDS.node >> 8, IDS.node & 0xFF, seq, flags, keyId]);
+  const aad = Buffer.from([nodeId >> 8, nodeId & 0xFF, seq, flags, keyId]);
   const cipher = crypto.createCipheriv("aes-128-gcm", key, nonce, { authTagLength: 12 });
   cipher.setAAD(aad);
   const ciphertext = Buffer.concat([cipher.update(plaintext), cipher.final()]);
   const encrypted = Buffer.concat([Buffer.from([keyId]), nonce, ciphertext, cipher.getAuthTag()]);
-  const record = Buffer.concat([Buffer.from([IDS.node >> 8, IDS.node & 0xFF, seq, flags, encrypted.length]), encrypted]);
+  const record = Buffer.concat([Buffer.from([nodeId >> 8, nodeId & 0xFF, seq, flags, encrypted.length]), encrypted]);
   const frameHex = frame(record, seq).toString("hex").toUpperCase();
   // Plaintext values below are synthetic test expectations, not captured GLD data.
   return {
@@ -65,14 +66,14 @@ function build(system) {
       { topic: "gld/gateway/uplink", payload: { gatewayId: IDS.gateway, frameHex } }
     ],
     expected: {
-      nodeId: IDS.node, nodeIdHex: hexId(IDS.node), chIdHex: hexId(IDS.cluster),
+      nodeId, nodeIdHex: hexId(nodeId), chIdHex: hexId(IDS.cluster),
       gatewayIdHex: hexId(IDS.gateway), gasClass: 0, gasName: "clearGas", confidence: 97,
       batteryMv: 3700, alarm: false, externalPower: true, seq, decryptOk: true,
       decodedTopic: "gld/server/decoded", ingressClass: "production"
     },
     verifyHttp: {
       method: "GET", path: "/pertamina-gld/topology",
-      nodeSelector: { type: "gld", nodeIdHex: hexId(IDS.node), chIdHex: hexId(IDS.cluster) },
+      nodeSelector: { type: "gld", nodeIdHex: hexId(nodeId), chIdHex: hexId(IDS.cluster) },
       requiredNodeFields: ["decryptOk", "gasClass", "confidence", "batteryMv", "seq", "externalPower"],
       requiredGateway: hexId(IDS.gateway)
     },
@@ -140,11 +141,12 @@ function main(args) {
     if (args.length === 1 && args[0] === "--self-test") {
       process.stdout.write(JSON.stringify(selfTest()) + "\n"); return 0;
     }
-    requireValid(args.length === 1);
+    requireValid(args.length === 1 || (args.length === 3 && args[1] === "--node-id"));
     const input = path.resolve(args[0]);
     requireValid(fs.statSync(input).isFile() && fs.statSync(input).size < 2 * 1024 * 1024);
     const system = JSON.parse(fs.readFileSync(input, "utf8").replace(/^\uFEFF/, ""));
-    process.stdout.write(JSON.stringify(build(system)) + "\n"); return 0;
+    const nodeId = args.length === 3 ? Number(args[2]) : IDS.node;
+    process.stdout.write(JSON.stringify(build(system, nodeId)) + "\n"); return 0;
   } catch (_) {
     // Never stringify a parser error, source path, private field or key value.
     process.stdout.write(JSON.stringify({ ok: false, code: "synthetic_crypto_smoke_failed", servicesContacted: false }) + "\n"); return 1;

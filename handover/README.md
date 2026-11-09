@@ -6,6 +6,15 @@ konfigurasi aktif, serta histori yang ditemukan pada PC sumber.
 
 ## Cara pakai di PC pengganti
 
+Untuk uji Dataset pada PC kedua, setelah pull dan saat masih ada Internet,
+jalankan `Uji-Dataset-PC2.bat 1002` dari root repository. Satu jendela terminal
+akan memverifikasi stack, meminta operator menghubungkan Wi-Fi ke hotspot GLD,
+memeriksa rute/TCP 81/Hello tanpa mengirim perintah GLD, lalu menjalankan Hub
+di terminal yang terlihat. Buka `http://127.0.0.1:5173/` di browser Codex;
+skrip tidak membuka Chrome.
+Skrip tidak meng-upload firmware atau mereset NVS. Uji fungsi Dataset tetap
+memerlukan operator menekan Start/Stop dan memeriksa CSV pada PC kedua.
+
 1. Pull `master` terbaru dari GitHub di PC pengganti. Gunakan path pendek,
    misalnya `C:\GLD\PertaminaGLD`, agar runtime Node-RED tidak melewati batas
    path Windows. Laporan verifikasi lokal tidak memeriksa GitHub; cocokkan SHA

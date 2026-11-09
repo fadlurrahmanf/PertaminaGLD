@@ -144,9 +144,11 @@ baris. Ethernet menyediakan Internet saat Wi-Fi digunakan untuk GLD.
 Dengan catu 24 V saja dan USB terlepas, lakukan cold boot berulang, ukur waktu
 hingga SSID terlihat, lalu catat `GLD_POWER`, `DATASET_WIFI_SERVER`, mode
 tersimpan, serta sinyal PG24/reset tanpa mengandalkan USB sebagai pemicu.
-Pada PC kedua, jalankan diagnostik baca saja
-`tmp/wifi-connect-audit-20261103/Run-GLD-Connection-Check.cmd` ketika tersambung
-ke GLD dan tidak merekam. Periksa tahap asosiasi, rute, TCP 81 dan Hello.
+Pada PC kedua, jalankan diagnostik baca saja yang ikut Git,
+`tools/Run-GLD-WiFi-Check.cmd 1002` (ganti ID sesuai GLD) ketika tersambung
+ke hotspot GLD dan Hub tidak merekam. Hasil ada di `output/diagnostics/`;
+periksa asosiasi, rute, TCP 81 dan Hello. Skrip tidak mengubah Wi-Fi,
+menjalankan rekaman, atau membuka COM.
 Uji Start, delapan sensor 500 ms, putus Wi-Fi, replay, Stop, dan CSV telah
 lulus pada GLD1002 PC ini. Ulangi di PC kedua setelah pull untuk membuktikan
 rute, port 81 dan perilaku adaptor PC tersebut; tutup sesi sebelum menguji

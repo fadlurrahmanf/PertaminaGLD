@@ -6,6 +6,7 @@ import sys
 import threading
 import tempfile
 import json
+import hashlib
 import unittest
 from unittest import mock
 
@@ -36,6 +37,19 @@ class StackTests(unittest.TestCase):
             stack.missing_history_rows((f'{first}\t12\t{second}\t2\t2\n').encode(), history)
         with self.assertRaisesRegex(ValueError, 'HISTORY_DATABASE_AUDIT_INVALID'):
             stack.missing_history_rows(b'bad-row\n', history)
+
+    def test_history_row_audit_detects_changed_content_even_with_same_count(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'sensor.csv').write_bytes(b'a,b\nx,y\n')
+            digest = hashlib.sha256((root / 'sensor.csv').read_bytes()).hexdigest()
+            history = {'files': [{'sha256': digest, 'path': 'sensor.csv', 'size': 8}]}
+            row_hash = hashlib.sha256(json.dumps(['x', 'y'], ensure_ascii=False).encode()).hexdigest()
+            healthy = f'{digest}\t1\t{row_hash}\n'.encode()
+            stack.verify_history_row_digests(healthy, history, root)
+            corrupted = f'{digest}\t1\t' + '0' * 64 + '\n'
+            with self.assertRaisesRegex(ValueError, 'HISTORY_DATABASE_INTEGRITY_FAILED'):
+                stack.verify_history_row_digests(corrupted.encode(), history, root)
 
     def test_handover_broker_falls_back_to_loopback_without_lan(self):
         from types import SimpleNamespace

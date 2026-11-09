@@ -1,8 +1,8 @@
 # Dataset dan handover PC baru — bukti penerimaan
 
-Last updated: 2026-11-09 23:53 WIB
-Last evidence update: 2026-11-09 23:53 WIB
-Last tracker heartbeat: 2026-11-09 23:53 WIB
+Last updated: 2026-11-10 00:11 WIB
+Last evidence update: 2026-11-10 00:11 WIB
+Last tracker heartbeat: 2026-11-10 00:11 WIB
 
 ## Progress dashboard
 
@@ -80,6 +80,9 @@ NVS, firmware biasa, dan database aktif. Audit terisolasi tidak mengubahnya.
 | H14 | Locally closed | Firmware Workflow AP belum cek liveness; satu pembacaan PG24 dapat menimpa intent Dataset. | Source 25/25 dan tiga build akhir berhasil; cold boot fisik image baru masih diperlukan. |
 | H16 | Locally closed | Uji stack pada work root yang sama awalnya gagal karena ID sintetis tetap dan seq lama di context. | ID uji belum dipakai dipilih dari topology/replay; restart dan dua upgrade beruntun PASS, CSV prefix utuh. |
 | H15 | Locally closed | Receipt impor dapat menganggap histori DB lengkap hanya dari jumlah file meski blob/baris berubah. | Audit hash dan jumlah baris DB setiap start, lalu uji stack terisolasi. |
+| H17 | Locally closed | Upload di browser Codex berhenti karena `window.prompt()` tidak didukung. | Dialog PIN di halaman Hub memakai hash PIN lama; dialog tampil, upload menunggu input pemilik. |
+| H18 | Locally closed | Panduan PC kedua menunjuk diagnostik di `tmp/` yang tidak ikut Git dan ID dikunci ke 1002. | Diagnostik baca saja terlacak di `tools/`, ID dipilih saat dijalankan; uji PC kedua masih diperlukan. |
+| H19 | Locally closed | Jumlah baris histori bisa tetap sama walau isi `row_json` berubah. | Hash setiap baris dibandingkan dengan file asli saat start; tes korupsi lulus dan stack 24/24. |
 
 ## Current work / agent state
 
@@ -119,3 +122,4 @@ NVS, firmware biasa, dan database aktif. Audit terisolasi tidak mengubahnya.
 - 2026-11-09 23:40 WIB: Audit ulang membedakan pemulihan AP dari pemulihan mode COM: loop memang memulai AP setelah PG24 stabil tanpa reboot. Patch khusus Workflow menjaga NVS saat daya turun dan melakukan satu reboot terjaga hanya untuk mengembalikan stored Dataset mode bila boot awal sempat fallback ke Inference; source 25/25. Model 3 rebuild lulus. Build incremental Model 1/2 gagal pada cache SCons sebelum compile; kedua agen beralih ke build bersih C: yang baru, image lama dilarang untuk paket final. Uji upload/wizard terarah 5+18+40 dan UI Node lulus; tracker lama 5 Nov diberi label arsip.
 - 2026-11-09 23:47 WIB: Ketiga build ulang final Model 1/2/3 lulus dan paket Workflow final dipasang secara atomik di Hub; hash image cocok dengan tiga paket dan profil koneksi diperbarui. Paket biasa tidak diubah. Host handover 73/73, source 25/25, `git diff --check` lulus. Verifikasi stack akhir dan guard repo sedang berjalan; belum upload firmware baru, belum uji cold boot fisik atau PC kedua.
 - 2026-11-09 23:53 WIB: Guard repo PASS; verifikasi stack lokal akhir 24/24 (`output/handover-verification/20261109-234507-1bfbb87f/report.json`). Commit `d378d7ca` di-push dan SHA `origin/master` terbaca sama. Clone baru langsung GitHub checkout bersih; static 15/15, host 73/73, source 25/25, full stack 24/24 (`C:/Users/MSI/AppData/Local/Temp/gld-remote-d378d7ca/output/handover-verification/20261109-234936-e0d38c14/report.json`). Histori 209 berkas/256.605 baris/0 beda byte. Pengujian firmware baru pada GLD tanpa USB dan PC kedua tetap belum dilakukan; status keseluruhan tetap 83%.
+- 2026-11-10 00:11 WIB: GLD1002/GLD1 terhubung di COM7 dengan 24 V, delapan kanal Running dan inferensi/binding siap. Percobaan upload final Model 2 melalui satu tab Codex tertahan oleh `window.prompt()` yang tidak didukung browser. Dialog PIN in-page diperbaiki dan terbukti tampil tanpa mengubah hash PIN tersimpan; user diminta memasukkan PIN langsung di tab. Reset NVS tetap OFF; upload belum dimulai. Diagnostik PC kedua dipindahkan ke `tools/`; audit isi tiap baris DB ditambahkan. Unit host 74/74, diagnostik 3/3, full stack salinan bersih 24/24 (`output/handover-verification/20261110-000729-08a8861d/report.json`). Uji PC kedua dan cold boot tanpa USB tetap terbuka.

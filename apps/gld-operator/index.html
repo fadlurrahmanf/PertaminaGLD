@@ -751,6 +751,25 @@
         </section>
       </div>
 
+      <div id="operatorPinDialog" class="upload-dialog pin-dialog" aria-hidden="true">
+        <div class="upload-dialog-backdrop" data-pin-cancel></div>
+        <form id="operatorPinForm" class="upload-dialog-box" role="dialog" aria-modal="true" aria-labelledby="operatorPinTitle">
+          <h2 id="operatorPinTitle">PIN Operator</h2>
+          <p id="operatorPinHelp" class="status-line"></p>
+          <label class="upload-dialog-field">PIN
+            <input id="operatorPinInput" type="password" autocomplete="off" minlength="4" required>
+          </label>
+          <label id="operatorPinConfirmField" class="upload-dialog-field">Konfirmasi PIN
+            <input id="operatorPinConfirm" type="password" autocomplete="off" minlength="4">
+          </label>
+          <p id="operatorPinError" class="status-line" role="alert" hidden></p>
+          <div class="modal-actions">
+            <button id="operatorPinCancel" type="button">Batal</button>
+            <button id="operatorPinSubmit" type="submit" class="primary">Buka kunci</button>
+          </div>
+        </form>
+      </div>
+
       <div id="fullScaleSweepModal" class="modal" aria-hidden="true">
         <div class="modal-backdrop" data-close-dialog="fullScaleSweepModal"></div>
         <div class="modal-box modal-box--wide" role="dialog" aria-modal="true" aria-labelledby="fullScaleSweepTitle">

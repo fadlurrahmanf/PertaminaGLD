@@ -3,7 +3,7 @@
 // hash lives in localStorage, unlock state itself is never persisted.
 
 import { $, elements, state, encoder } from "./state.js";
-import { showBanner, hideBanner } from "./ui.js";
+import { hideBanner } from "./ui.js";
 
 async function sha256Hex(text) {
   const bytes = encoder.encode(text);
@@ -17,37 +17,90 @@ function hasStoredPin() {
   return Boolean(localStorage.getItem(PIN_STORAGE_KEY));
 }
 
-async function promptSetPin() {
-  const first = window.prompt("Set a local PIN to protect Expert Terminal and Firmware Upload/Inject ID (4+ chars). Cancel to skip locking.");
-  if (first == null) return false;
-  if (first.trim().length < 4) {
-    showBanner("PIN must be at least 4 characters.", "warn");
-    return false;
-  }
-  const confirmPin = window.prompt("Confirm the PIN.");
-  if (confirmPin !== first) {
-    showBanner("PIN confirmation did not match. Try again.", "warn");
-    return false;
-  }
-  localStorage.setItem(PIN_STORAGE_KEY, await sha256Hex(first.trim()));
-  return true;
-}
+let pinRequest = null;
 
-async function promptVerifyPin() {
-  const entered = window.prompt("Enter the local PIN to unlock Expert Terminal and Firmware actions.");
-  if (entered == null) return false;
-  const expected = localStorage.getItem(PIN_STORAGE_KEY);
-  const actual = await sha256Hex(entered.trim());
-  if (actual !== expected) {
-    showBanner("Incorrect PIN.", "error");
-    return false;
-  }
-  return true;
+function requestPin(setNewPin) {
+  if (pinRequest) return pinRequest;
+  const dialog = $("operatorPinDialog");
+  const form = $("operatorPinForm");
+  const input = $("operatorPinInput");
+  const confirmation = $("operatorPinConfirm");
+  const error = $("operatorPinError");
+  const previousFocus = document.activeElement;
+  $("operatorPinTitle").textContent = setNewPin ? "Atur PIN Operator" : "Buka kunci Operator";
+  $("operatorPinHelp").textContent = setNewPin
+    ? "Buat PIN lokal minimal 4 karakter untuk Expert Terminal dan tindakan firmware."
+    : "Masukkan PIN lokal untuk membuka Expert Terminal dan tindakan firmware.";
+  $("operatorPinConfirmField").hidden = !setNewPin;
+  confirmation.required = setNewPin;
+  $("operatorPinSubmit").textContent = setNewPin ? "Simpan PIN" : "Buka kunci";
+  input.value = "";
+  confirmation.value = "";
+  error.hidden = true;
+  dialog.classList.add("open");
+  dialog.setAttribute("aria-hidden", "false");
+  input.focus();
+
+  pinRequest = new Promise((resolve) => {
+    let settled = false;
+    function finish(ok) {
+      if (settled) return;
+      settled = true;
+      form.removeEventListener("submit", submit);
+      dialog.removeEventListener("click", cancel);
+      dialog.removeEventListener("keydown", escape);
+      dialog.classList.remove("open");
+      dialog.setAttribute("aria-hidden", "true");
+      input.value = "";
+      confirmation.value = "";
+      previousFocus?.focus?.();
+      pinRequest = null;
+      resolve(ok);
+    }
+    function cancel(event) {
+      if (event.target.closest("[data-pin-cancel], #operatorPinCancel")) finish(false);
+    }
+    function escape(event) {
+      if (event.key === "Escape") { event.preventDefault(); finish(false); }
+    }
+    async function submit(event) {
+      event.preventDefault();
+      if (settled) return;
+      const entered = input.value.trim();
+      if (entered.length < 4) {
+        error.textContent = "PIN minimal 4 karakter.";
+        error.hidden = false;
+        return;
+      }
+      if (setNewPin) {
+        if (confirmation.value.trim() !== entered) {
+          error.textContent = "Konfirmasi PIN tidak cocok.";
+          error.hidden = false;
+          return;
+        }
+        const digest = await sha256Hex(entered);
+        if (settled) return;
+        localStorage.setItem(PIN_STORAGE_KEY, digest);
+      } else if (await sha256Hex(entered) !== localStorage.getItem(PIN_STORAGE_KEY)) {
+        if (settled) return;
+        error.textContent = "PIN salah.";
+        error.hidden = false;
+        input.select();
+        return;
+      }
+      if (settled) return;
+      finish(true);
+    }
+    form.addEventListener("submit", submit);
+    dialog.addEventListener("click", cancel);
+    dialog.addEventListener("keydown", escape);
+  });
+  return pinRequest;
 }
 
 export async function requireUnlock() {
   if (state.expertUnlocked) return true;
-  const ok = hasStoredPin() ? await promptVerifyPin() : await promptSetPin();
+  const ok = await requestPin(!hasStoredPin());
   if (!ok) return false;
   onUnlocked();
   return true;

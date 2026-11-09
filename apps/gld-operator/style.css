@@ -12,6 +12,9 @@
 .upload-dialog-box h2 { margin-top: 0; }
 .upload-dialog-field { display: grid; gap: 7px; margin: 18px 0; font-weight: 700; }
 .upload-dialog-field select { width: 100%; }
+.pin-dialog { z-index: 90; }
+.pin-dialog .upload-dialog-field input { width: 100%; }
+.pin-dialog [hidden] { display: none !important; }
 #firmwareUploadStatus[data-state="loading"] { display: flex; align-items: center; gap: 8px; color: var(--accent); font-weight: 700; }
 #firmwareUploadStatus[data-state="loading"]::before { content: ""; width: 13px; height: 13px; border: 2px solid color-mix(in srgb, var(--accent) 28%, transparent); border-top-color: var(--accent); border-radius: 50%; animation: firmware-upload-spin .75s linear infinite; }
 #firmwareUploadStatus[data-state="success"] { color: var(--ok); }

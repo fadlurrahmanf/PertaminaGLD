@@ -4,6 +4,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import shutil
 import socket
 import struct
@@ -296,6 +297,33 @@ def missing_history_rows(database_rows, history):
     return set(expected) - set(observed)
 
 
+def verify_history_row_digests(database_rows, history, history_root):
+    """Check every derived row against the committed original file bytes."""
+    expected = {item['sha256']: item for item in history['files']}
+    require(all(re.fullmatch(r'[0-9a-f]{64}', key) for key in expected),
+            'HISTORY_DATABASE_AUDIT_INVALID')
+    actual = iter(database_rows.decode('ascii').splitlines())
+    current = next(actual, None)
+    root = Path(history_root).resolve()
+    for file_hash, item in sorted(expected.items()):
+        path = (root / item['path']).resolve()
+        require(path.is_relative_to(root) and path.is_file(), 'HISTORY_SOURCE_INVALID')
+        raw = path.read_bytes()
+        require(hashlib.sha256(raw).hexdigest() == file_hash, 'HISTORY_SOURCE_INVALID')
+        _, _, source_rows = db._history_rows(raw, path.suffix)
+        for index, row in enumerate(source_rows, 1):
+            require(current is not None, 'HISTORY_DATABASE_INTEGRITY_FAILED')
+            fields = current.split('\t')
+            require(len(fields) == 3 and fields[0] == file_hash and fields[1] == str(index),
+                    'HISTORY_DATABASE_INTEGRITY_FAILED')
+            row_hash = hashlib.sha256(json.dumps(row, ensure_ascii=False).encode('utf-8')).hexdigest()
+            require(fields[2] == row_hash, 'HISTORY_DATABASE_INTEGRITY_FAILED')
+            current = next(actual, None)
+        require(current is None or not current.startswith(file_hash + '\t'),
+                'HISTORY_DATABASE_INTEGRITY_FAILED')
+    require(current is None, 'HISTORY_DATABASE_INTEGRITY_FAILED')
+
+
 def run(repo, work, offset=0, test_once=False, local_only=False, no_browser=False):
     import handover_nodered as nr
     work.mkdir(parents=True, exist_ok=True)
@@ -325,6 +353,11 @@ def run(repo, work, offset=0, test_once=False, local_only=False, no_browser=Fals
             write(receipt,{'snapshot':fingerprint,'files':imported['files'],'rows':imported['rows']})
             require(not missing_history_rows(db.run_sql(prepared['database_runtime'],cfg['database'],ports['database'],audit_sql),history),
                     'HISTORY_DATABASE_INTEGRITY_FAILED')
+        row_hashes=','.join("'"+item['sha256']+"'" for item in history['files'])
+        rows_sql=(f"USE `{cfg['database']['name']}`;SELECT file_sha256,row_index,LOWER(SHA2(row_json,256)) "
+                  f"FROM handover_rows WHERE file_sha256 IN ({row_hashes}) ORDER BY file_sha256,row_index;")
+        verify_history_row_digests(db.run_sql(prepared['database_runtime'],cfg['database'],ports['database'],rows_sql),
+                                   history,repo/'handover/state')
         stop=prepared['hub']/'stop.request'
         if stop.exists(): stop.unlink()
         command=[sys.executable,str(repo/'tools/handover_hub.py'),'--repo-root',str(repo),'--runtime-dir',str(prepared['hub']),

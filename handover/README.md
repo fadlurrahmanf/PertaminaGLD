@@ -23,6 +23,10 @@ konfigurasi aktif, serta histori yang ditemukan pada PC sumber.
 5. Sambungkan perangkat, pilih COM yang benar pada PC tersebut, dan periksa
    status perangkat. Untuk Dataset Wi-Fi gunakan catu 24 V dan hotspot GLD.
    Koneksi hotspot lokal tidak menyediakan Internet.
+   Jika Connect gagal, sambungkan Wi-Fi ke hotspot GLD lalu jalankan
+   `tools\Run-GLD-WiFi-Check.cmd 1002` dengan ID GLD yang sesuai saat Hub
+   tidak merekam. Diagnostik baca saja memeriksa SSID, rute, TCP 81 dan Hello;
+   hasil tersimpan di `output\diagnostics`.
 6. Selesaikan rekaman dengan Stop sebelum menutup aplikasi. Tekan `Ctrl+C`
    pada terminal launcher untuk menghentikan layanan yang dibuat launcher.
 

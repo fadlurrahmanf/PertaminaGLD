@@ -348,6 +348,19 @@ class WorkflowSourceShape(unittest.TestCase):
         self.assertIn('const bool ready = state.ready;', hello)
         self.assertNotIn('!nativeBusy.load()', hello)
 
+    def test_placeholder_router_does_not_start_station_beside_workflow_ap(self):
+        configured = old.body(self.unified, 'bool workflowNativeNetworkConfigured()')
+        self.assertIn('strcmp(runtimeConfig.wifiSsid, "CHANGE_ME") != 0', configured)
+        self.assertIn('strcmp(runtimeConfig.mqttHost, "CHANGE_ME_MQTT_HOST") != 0', configured)
+        station = old.body(self.unified, 'bool connectWifi()').split('#else', 1)[0]
+        self.assertLess(station.index('if (!workflowNativeNetworkConfigured()) return false;'),
+                        station.index('WiFi.mode('))
+        self.assertLess(station.index('if (!workflowNativeNetworkConfigured()) return false;'),
+                        station.index('WiFi.begin('))
+        broker = old.body(self.unified, 'bool mqttConnect() {')
+        self.assertLess(broker.index('if (!workflowNativeNetworkConfigured()) return false;'),
+                        broker.index('mqtt.connect('))
+
     def test_workflow_ml_gate_accepts_each_models_actual_dual_input_api(self):
         # Characterize the model API independently from the workflow caller.
         # These source-contract checks do not execute TFLite or replace a

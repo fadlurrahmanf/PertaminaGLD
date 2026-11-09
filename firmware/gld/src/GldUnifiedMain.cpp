@@ -4884,11 +4884,24 @@ void disableNetworkForOfflineMode(const char* reason) {
               reason != nullptr ? reason : "offline_mode");
 }
 
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+// Workflow AP is useful on its own. The shipped placeholders are not a
+// router/broker configuration and repeatedly scanning for them can interrupt
+// clients associating with the AP (including DHCP on 192.168.4.x).
+bool workflowNativeNetworkConfigured() {
+    return runtimeConfig.wifiSsid[0] != '\0' &&
+           strcmp(runtimeConfig.wifiSsid, "CHANGE_ME") != 0 &&
+           runtimeConfig.mqttHost[0] != '\0' &&
+           strcmp(runtimeConfig.mqttHost, "CHANGE_ME_MQTT_HOST") != 0;
+}
+#endif
+
 bool connectWifi() {
 #if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
     // The native router is optional for the standalone Dataset AP. In this
     // image, never hold the main loop in a station connection wait: it owns
     // the Workflow control and 500 ms sample scheduler too.
+    if (!workflowNativeNetworkConfigured()) return false;
     const uint32_t now = millis();
     if (WiFi.status() == WL_CONNECTED) {
         if (workflowWifiAttemptActive) {
@@ -4967,6 +4980,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length);
 
 bool mqttConnect() {
 #if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+    if (!workflowNativeNetworkConfigured()) return false;
     if (pgl::gld::datasetworkflowwifi::clientConnected() || WiFi.status() != WL_CONNECTED) return false;
     WorkflowNativeOperation nativeOperation;
 #endif

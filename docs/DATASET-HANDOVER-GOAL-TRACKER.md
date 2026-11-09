@@ -1,8 +1,8 @@
 # Dataset dan handover PC baru — bukti penerimaan
 
-Last updated: 2026-11-10 00:18 WIB
-Last evidence update: 2026-11-10 00:18 WIB
-Last tracker heartbeat: 2026-11-10 00:18 WIB
+Last updated: 2026-11-10 00:53 WIB
+Last evidence update: 2026-11-10 00:53 WIB
+Last tracker heartbeat: 2026-11-10 00:53 WIB
 
 ## Progress dashboard
 
@@ -80,9 +80,10 @@ NVS, firmware biasa, dan database aktif. Audit terisolasi tidak mengubahnya.
 | H14 | Locally closed | Firmware Workflow AP belum cek liveness; satu pembacaan PG24 dapat menimpa intent Dataset. | Source 25/25 dan tiga build akhir berhasil; cold boot fisik image baru masih diperlukan. |
 | H16 | Locally closed | Uji stack pada work root yang sama awalnya gagal karena ID sintetis tetap dan seq lama di context. | ID uji belum dipakai dipilih dari topology/replay; restart dan dua upgrade beruntun PASS, CSV prefix utuh. |
 | H15 | Locally closed | Receipt impor dapat menganggap histori DB lengkap hanya dari jumlah file meski blob/baris berubah. | Audit hash dan jumlah baris DB setiap start, lalu uji stack terisolasi. |
-| H17 | In progress | Upload di browser Codex berhenti karena `window.prompt()` tidak didukung. | Dialog PIN tampil; PIN yang dicoba ditolak oleh hash lokal yang sudah tersimpan. Upload menunggu PIN lama benar atau reset lokal oleh pemilik. |
+| H17 | UI PIN remains open | Upload di browser Codex berhenti karena `window.prompt()` tidak didukung. | Dialog PIN tampil; `1234` ditolak oleh hash lokal lama. Upload Model 2 telah berhasil lewat endpoint Hub tervalidasi dengan ID1002 dan Reset NVS OFF; pengunci UI tetap memerlukan PIN lama atau reset lokal oleh pemilik. |
 | H18 | Proven in clone | Panduan PC kedua menunjuk diagnostik di `tmp/` yang tidak ikut Git dan ID dikunci ke 1002. | Diagnostik baca saja terlacak di `tools/`, ID dipilih saat dijalankan; uji PC kedua masih diperlukan. |
 | H19 | Proven in clone | Jumlah baris histori bisa tetap sama walau isi `row_json` berubah. | Hash setiap baris dibandingkan dengan file asli saat start; tes korupsi lulus dan stack clone GitHub 24/24. |
+| H20 | Proven on Model 2/source | Percobaan STA ke `CHANGE_ME` bersamaan AP dan klien Wi-Fi sempat putus. | Workflow melewatkan STA/MQTT placeholder, tiga model dibuild ulang, paket final dipasang; Model 2 menunjukkan retry 0/0 dan rekaman nyata 296 baris terverifikasi dengan replay. Putus spontan adaptor masih perlu investigasi PC kedua. |
 
 ## Current work / agent state
 
@@ -124,3 +125,4 @@ NVS, firmware biasa, dan database aktif. Audit terisolasi tidak mengubahnya.
 - 2026-11-09 23:53 WIB: Guard repo PASS; verifikasi stack lokal akhir 24/24 (`output/handover-verification/20261109-234507-1bfbb87f/report.json`). Commit `d378d7ca` di-push dan SHA `origin/master` terbaca sama. Clone baru langsung GitHub checkout bersih; static 15/15, host 73/73, source 25/25, full stack 24/24 (`C:/Users/MSI/AppData/Local/Temp/gld-remote-d378d7ca/output/handover-verification/20261109-234936-e0d38c14/report.json`). Histori 209 berkas/256.605 baris/0 beda byte. Pengujian firmware baru pada GLD tanpa USB dan PC kedua tetap belum dilakukan; status keseluruhan tetap 83%.
 - 2026-11-10 00:11 WIB: GLD1002/GLD1 terhubung di COM7 dengan 24 V, delapan kanal Running dan inferensi/binding siap. Percobaan upload final Model 2 melalui satu tab Codex tertahan oleh `window.prompt()` yang tidak didukung browser. Dialog PIN in-page diperbaiki dan terbukti tampil tanpa mengubah hash PIN tersimpan; user diminta memasukkan PIN langsung di tab. Reset NVS tetap OFF; upload belum dimulai. Diagnostik PC kedua dipindahkan ke `tools/`; audit isi tiap baris DB ditambahkan. Unit host 74/74, diagnostik 3/3, full stack salinan bersih 24/24 (`output/handover-verification/20261110-000729-08a8861d/report.json`). Uji PC kedua dan cold boot tanpa USB tetap terbuka.
 - 2026-11-10 00:18 WIB: Commit `5a3cd423` berisi dialog PIN, diagnostik PC kedua, dan audit baris DB di-push; clone GitHub pull bersih, host 74/74, full stack 24/24 (`C:/Users/MSI/AppData/Local/Temp/gld-remote-d378d7ca/output/handover-verification/20261110-001342-bc60d06a/report.json`). Uji diagnostik clone saat tidak berada di hotspot menghasilkan `target_association_or_dhcp_not_observed` sesuai kondisi tanpa perubahan perangkat; `output/diagnostics/` kini diabaikan Git. PIN lokal yang dimasukkan pemilik ditolak oleh hash lama; upload belum mulai. Pemilik diminta menentukan PIN lama atau reset PIN lokal browser.
+- 2026-11-10 00:53 WIB: Model 2 lama di-upload sekali lalu source Workflow diperbaiki untuk melewatkan router/MQTT placeholder. Tiga build bersih paralel lulus, paket final Model 1/2/3 diganti tervalidasi. Model 2 baru di-upload ke GLD1002/COM7 dengan Reset NVS OFF; ID, daya 24 V dan nulling #2 terjaga. AP Dataset menunjukkan retry router 0/0. Di satu tab Codex, hotspot dan Dataset berhasil Connect, rekam 296 baris/12 kolom/8 sensor, prediksi, Pause/Resume, putus Wi-Fi lalu replay ke CSV yang sama, Stop terverifikasi. Median interval 500 ms, hanya jeda Pause 17.461 ms; verifikator full stack lokal 24/24 (`output/handover-verification/20261110-005209-82565238/report.json`). PIN lama tidak ditemukan; `1234` ditolak. PC kedua, cold boot tanpa USB, 5 menit penuh, dan board Model 1/3 tetap belum terbukti. Perubahan baru belum di-push.

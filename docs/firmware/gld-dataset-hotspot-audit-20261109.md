@@ -1,5 +1,40 @@
 # Audit Dataset Hotspot — 9 November 2026
 
+## Uji lanjutan 10 November 2026
+
+Pada GLD1002 Model 2, firmware Workflow lama mencoba koneksi router
+`CHANGE_ME` berulang kali walau Dataset memakai hotspot lokal. Percobaan STA
+bersamaan dengan AP berpotensi mengganggu klien. Firmware Workflow sekarang
+melewatkan STA dan MQTT ketika SSID atau host MQTT masih placeholder; jalur
+router yang benar dikonfigurasi tetap tersedia. Ini berlaku pada Model 1/2/3.
+
+| Model | SHA-256 `firmware.bin` paket final 10 November |
+| --- | --- |
+| 1 | `cbaf71dbeb5cbaad86f83898a8369db9c0570570390ff19396d1b7eb43e1b617` |
+| 2 | `c96d71e6a3d07cf7458b6bb119e3fa0cc665ff45fd0318d9be8506a11c4fa4bd` |
+| 3 | `97e7884a7bb214eca8c59c2e8ea30e51fb2ab23e2f99e12f993a5936f3a575a4` |
+
+Ketiga build bersih dan validasi paket lulus. Model 2 di-upload ke COM7,
+ID tetap `1002`, Reset NVS OFF, catu 24 V dan profil nulling aktif #2 tetap
+cocok. Setelah masuk Dataset, penghitung percobaan router/gagal Wi-Fi tetap
+0/0. PC ini memperoleh `192.168.4.2` melalui hotspot `GLD-DATASET-1002`;
+Hub pada satu tab browser Codex menampilkan Connected. Rekaman nyata dengan
+delapan sensor, prediksi, Pause/Resume, putus dan pulih otomatis, lalu Stop
+menghasilkan CSV terverifikasi 296 baris/12 kolom. Semua nilai sensor numerik;
+287 baris memuat prediksi dan confidence; median interval 500 ms. Satu jeda
+17.461 ms berasal dari Pause. Tidak ada jeda lain di atas 900 ms, termasuk
+saat koneksi Wi-Fi putus dan data dikirim ulang ke CSV yang sama. CSV uji:
+`apps/gld-operator/output/datasets/dataset-GLD-1002-20261110-004704-f52266af.csv`
+(output lokal, tidak termasuk Git). Verifikasi stack salinan bersih lulus
+24/24: 209 berkas histori, 256.605 baris, 0 beda byte.
+
+Putus Wi-Fi spontan sempat teramati pada adaptor Intel PC ini sebelum sesi
+rekaman, termasuk setelah STA placeholder dihentikan; log Windows menyebut
+driver memutus koneksi. Penyebab fisik/driver itu belum dipastikan. Hub
+berhasil memulihkan sesi rekaman nyata sesudah putus. Pengujian pada PC kedua,
+cold boot 24 V tanpa USB, batas retensi penuh lima menit, dan board fisik
+Model 1/3 masih diperlukan sebelum klaim penerimaan menyeluruh.
+
 ## Pembaruan audit setelah pengujian awal
 
 Audit ulang menemukan bahwa paket awal di bawah belum memantau AP yang hilang
@@ -10,7 +45,7 @@ Jika boot sempat masuk Inference karena daya eksternal belum stabil, satu reboot
 terjaga mengembalikan mode COM sesuai pilihan tersimpan setelah daya pulih.
 Perubahan ini hanya berlaku pada tiga image Workflow Hotspot final.
 
-Tiga image hasil build ulang terakhir yang sudah terpasang sebagai paket final
+Tiga image hasil build ulang 9 November yang pernah terpasang sebagai paket final
 di Operator Hub memiliki SHA-256 berikut:
 
 | Model | SHA-256 `firmware.bin` baru |
@@ -19,10 +54,9 @@ di Operator Hub memiliki SHA-256 berikut:
 | 2 | `a490f17be82388ab5e65cfcb4a1e4dcc38fa6f2eec31e6322063b438ba4403d9` |
 | 3 | `1a9e0f607ba8168362dd885a66b95da65b7ade8a9fdc43879f7731376571f1ba` |
 
-Hash pada bagian pengujian awal di bawah adalah bukti versi sebelumnya,
-bukan identitas paket final ini. Build dan pengujian source lulus; image baru
-belum di-upload ke GLD, sehingga cold boot tanpa USB dan replay lima menit
-pada image baru masih memerlukan uji fisik. Reset NVS tidak dilakukan.
+Hash pada bagian ini adalah bukti versi 9 November, bukan identitas paket final
+10 November pada tabel paling atas. Cold boot tanpa USB dan replay penuh lima
+menit masih memerlukan uji fisik. Reset NVS tidak dilakukan.
 
 ## Gejala dan batas bukti
 

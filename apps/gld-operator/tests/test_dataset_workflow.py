@@ -12,7 +12,7 @@ from datetime import datetime
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from dataset_workflow import DatasetWorkflowService, csv_columns, project_record
+from dataset_workflow import DatasetWorkflowService, _recent_ledger_lines, csv_columns, project_record, read_session_diagnostic
 from workflow_platform import WindowsWorkflowPlatform
 from test_wireless_dataset_replay import Clock, FakePeer, FakeRingDevice
 
@@ -235,6 +235,40 @@ class WorkflowTests(unittest.TestCase):
         self.assertTrue(stopped["verification"]["verified"])
         self.assertEqual(self.service.export_csv()["csv"].encode("utf-8"),
                          Path(stopped["csv_path"]).read_bytes())
+
+    def test_chart_history_reads_raw_ledger_without_changing_active_recording(self):
+        self.begin(prediction=False, optional=False)
+        self.capture(5)
+        ledger = Path(self.service.ledger_path)
+        before = ledger.read_bytes()
+        commands = len(self.device.commands)
+        view = self.service.chart_history()
+        self.assertEqual(view["ledger_path"], str(ledger))
+        self.assertEqual(len(view["history"]), 5)
+        self.assertEqual(view["history"][-1]["sensor_voltage"], json.loads(before.splitlines()[-1])["sensor_voltage"])
+        self.assertEqual(set(view["history"][-1]), {"boot_id", "session_id", "seq", "row_id", "timestamp_ms", "sensor_voltage"})
+        self.assertEqual([row["row_id"] for row in view["history"]], list(range(5)))
+        self.assertEqual(ledger.read_bytes(), before)
+        self.assertEqual(len(self.device.commands), commands)
+        self.assertEqual(self.service.snapshot()["state"], "recording")
+
+    def test_chart_history_tail_ignores_unfinished_append_across_blocks(self):
+        path = Path(self.temp.name) / "chart-tail.jsonl"
+        lines = [json.dumps({"seq": index, "payload": "x" * 900}).encode() for index in range(100)]
+        path.write_bytes(b"\n".join(lines) + b"\n" + b'{"seq":100,"payload":"unfinished')
+        latest = [json.loads(line) for line in _recent_ledger_lines(path, 3)]
+        self.assertEqual([row["seq"] for row in latest], [97, 98, 99])
+
+    def test_chart_history_keeps_four_hours_for_long_visual_average(self):
+        path = Path(self.temp.name) / "four-hour-chart.jsonl"
+        with path.open("w", encoding="utf-8") as stream:
+            for seq in range(28801):
+                stream.write(json.dumps(dict(boot_id="boot", session_id="session", seq=seq,
+                    timestamp_ms=seq * 500, sensor_voltage=[float(seq)] * 8)) + "\n")
+        self.service.ledger_path = str(path)
+        view = self.service.chart_history()
+        self.assertEqual(len(view["history"]), 28801)
+        self.assertEqual((view["history"][0]["seq"], view["history"][-1]["seq"]), (0, 28800))
 
     def test_readiness_is_cumulative_and_picker_waits_for_authenticated_device(self):
         def assert_prefix(snapshot, count):
@@ -704,6 +738,137 @@ class WorkflowTests(unittest.TestCase):
         self.assertTrue(state["cleanup_confirmed"])
         self.assertEqual(sum(c["cmd"] == "START_DATASET" for c in self.device.commands), 1)
 
+    def test_explicit_pending_session_start_rejection_reports_reason_and_continue_recovers(self):
+        self.configure(mode="replay", prediction=False, optional=False)
+        original = self.device.command
+        def reject_first_start(wire, peer):
+            if wire["cmd"] == "START_DATASET":
+                self.device.commands.append(copy.deepcopy(wire))
+                peer.messages.append(dict(type="ack", cmd=wire["cmd"],
+                    command_id=wire["command_id"], session_id=wire["session_id"],
+                    boot_id=self.device.boot, paused=False, transition_seq=0,
+                    result="error", detail="session_or_retained_data_pending"))
+            else:
+                original(wire, peer)
+        self.device.command = reject_first_start
+        with self.assertRaises(RuntimeError):
+            self.service.start()
+        state = self.service.snapshot()
+        self.assertEqual(state["count"], 0)
+        self.assertTrue(state["start_rejected"])
+        self.assertEqual(state["start_reject_detail"], "session_or_retained_data_pending")
+        self.assertEqual(state["cause"]["code"], "session_or_retained_data_pending")
+        self.assertEqual(state["session_closure_status"], "not_started")
+        self.assertEqual(state["reconciliation_status"], "not_started")
+        self.assertTrue(state["verification"]["verified"])
+        self.assertTrue(state["can_continue"])
+        self.assertEqual([c["cmd"] for c in self.device.commands], ["START_DATASET"])
+        self.device.command = original
+        self.assertEqual(self.service.continue_recording()["state"], "recording")
+        self.capture(2)
+        stopped = self.service.stop()
+        self.assertEqual(stopped["count"], 2)
+        self.assertTrue(stopped["complete"])
+        self.assertEqual(stopped["cause"]["code"], "")
+        self.assertEqual(sum(c["cmd"] == "START_DATASET" for c in self.device.commands), 2)
+
+    def test_explicit_transient_busy_ack_retries_same_start_before_any_sample(self):
+        self.configure(mode="replay", prediction=False, optional=False)
+        original_command = self.device.command
+        rejected = False
+        def reject_once(wire, peer):
+            nonlocal rejected
+            if wire["cmd"] == "START_DATASET" and not rejected:
+                rejected = True
+                self.device.commands.append(copy.deepcopy(wire))
+                peer.messages.append(dict(type="ack", cmd=wire["cmd"],
+                    command_id=wire["command_id"], session_id=wire["session_id"],
+                    boot_id=self.device.boot, paused=False, transition_seq=0,
+                    result="error", detail="native_operation_busy"))
+            else:
+                original_command(wire, peer)
+        self.device.command = reject_once
+        engine = self.service._engine
+        step = engine._step
+        def advance_step():
+            self.clock.advance(.05)
+            step()
+        engine._step = advance_step
+        state = self.service.start()
+        starts = [wire for wire in self.device.commands if wire["cmd"] == "START_DATASET"]
+        self.assertEqual(state["state"], "recording")
+        self.assertFalse(state["start_rejected"])
+        self.assertEqual(state["error"], "")
+        self.assertEqual(len(starts), 2)
+        self.assertEqual(starts[0]["command_id"], starts[1]["command_id"])
+        self.assertEqual(starts[0]["session_id"], starts[1]["session_id"])
+        self.assertEqual(state["segment_id"], 1)
+        retry_events = [json.loads(line) for line in Path(state["diagnostic_path"]).read_text().splitlines()
+            if '"event":"start_retry"' in line]
+        self.assertEqual(len(retry_events), 1)
+        self.assertEqual(retry_events[0]["reason_code"], "native_operation_busy")
+        self.capture(2)
+        self.assertTrue(self.service.stop()["complete"])
+
+    def test_lost_ack_after_explicit_busy_retry_does_not_send_third_start(self):
+        self.configure(mode="direct", prediction=False, optional=False)
+        original_command = self.device.command
+        rejected = False
+        def reject_then_lose_ack(wire, peer):
+            nonlocal rejected
+            if wire["cmd"] == "START_DATASET" and not rejected:
+                rejected = True
+                self.device.commands.append(copy.deepcopy(wire))
+                peer.messages.append(dict(type="ack", cmd=wire["cmd"],
+                    command_id=wire["command_id"], session_id=wire["session_id"],
+                    boot_id=self.device.boot, paused=False, transition_seq=0,
+                    result="error", detail="transport_busy"))
+                self.device.start_fault = "ack_lost"
+            else:
+                original_command(wire, peer)
+        self.device.command = reject_then_lose_ack
+        engine = self.service._engine
+        step = engine._step
+        def advance_step():
+            self.clock.advance(.05)
+            step()
+        engine._step = advance_step
+        self.service.start()
+        state = self.service.snapshot()
+        starts = [wire for wire in self.device.commands if wire["cmd"] == "START_DATASET"]
+        self.assertEqual(len(starts), 2)
+        self.assertEqual(starts[0]["command_id"], starts[1]["command_id"])
+        self.assertTrue(state["cleanup_pending"])
+        self.assertFalse(state["can_continue"])
+
+    def test_repeated_explicit_busy_ack_has_bounded_retries_and_no_foreign_stop(self):
+        self.configure(mode="replay", prediction=False, optional=False)
+        def reject_busy(wire, peer):
+            self.device.commands.append(copy.deepcopy(wire))
+            peer.messages.append(dict(type="ack", cmd=wire["cmd"],
+                command_id=wire["command_id"], session_id=wire["session_id"],
+                boot_id=self.device.boot, paused=False, transition_seq=0,
+                result="error", detail="native_operation_busy"))
+        self.device.command = reject_busy
+        engine = self.service._engine
+        engine._timeout = 8
+        step = engine._step
+        def advance_step():
+            self.clock.advance(.05)
+            step()
+        engine._step = advance_step
+        with self.assertRaises(RuntimeError):
+            self.service.start()
+        state = self.service.snapshot()
+        starts = [wire for wire in self.device.commands if wire["cmd"] == "START_DATASET"]
+        self.assertEqual(len(starts), 5)
+        self.assertEqual(len({wire["command_id"] for wire in starts}), 1)
+        self.assertTrue(state["start_rejected"])
+        self.assertFalse(state["cleanup_pending"])
+        self.assertEqual(state["count"], 0)
+        self.assertTrue(state["can_continue"])
+        self.assertFalse(any(wire["cmd"] == "STOP_DATASET" for wire in self.device.commands))
+
     def test_model_change_continue_rejected_without_remote_start(self):
         self.begin()
         self.capture(2)
@@ -800,6 +965,135 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(state["state"], "incomplete")
         self.assertFalse(state["verification"]["verified"])
         with self.assertRaises(RuntimeError): self.service.export_csv()
+
+    def test_diagnostics_survive_restart_without_credentials_or_sample_ledger_changes(self):
+        self.begin(mode="direct")
+        self.capture(2)
+        ledger = Path(self.service.ledger_path)
+        original_ledger = ledger.read_bytes()
+        self.service.disconnect()
+        self.assertEqual(ledger.read_bytes(), original_ledger)
+        path = self.service.snapshot()["diagnostic_path"]
+        events = [json.loads(line) for line in Path(path).read_text(encoding="utf-8").splitlines()]
+        self.assertIn("segment_started", [event["event"] for event in events])
+        self.assertIn("cutoff", [event["event"] for event in events])
+        self.assertIn("cleanup_started", [event["event"] for event in events])
+        cutoff = next(event for event in events if event["event"] == "cutoff")
+        self.assertEqual(cutoff["reason_code"], "explicit_disconnect")
+        self.assertEqual(cutoff["saved_count"], 2)
+        self.assertEqual(cutoff["last_saved_seq"], 1)
+        self.assertEqual(cutoff["last_saved_row_id"], 1)
+        self.assertNotIn(PASSWORD, Path(path).read_text(encoding="utf-8"))
+        reopened = DatasetWorkflowService(self.service.output_dir, self.platform,
+            self.events.append, self.device.factory, clock=self.clock, fsync=self.sync,
+            autostart_worker=False)
+        self.assertEqual(reopened.snapshot()["recent_diagnostic_path"], path)
+        self.assertTrue(read_session_diagnostic(ledger)["available"])
+        self.assertGreater(read_session_diagnostic(ledger)["events"], 2)
+
+    def test_legacy_session_without_sidecar_has_unknown_historical_cause(self):
+        ledger = Path(self.temp.name) / "workflow_legacy.jsonl"
+        ledger.write_text('{"seq":0}\n', encoding="utf-8")
+        result = read_session_diagnostic(ledger)
+        self.assertFalse(result["available"])
+        self.assertIn("penyebab belum diketahui", result["message"])
+
+    def test_verification_reports_matched_over_stored_and_rejects_content_or_count_change(self):
+        self.begin()
+        self.capture(3)
+        state = self.service.stop()
+        self.assertEqual((state["verification"]["matched_count"], state["verification"]["stored_count"]), (3, 3))
+        csv_path = Path(state["csv_path"])
+        original = csv_path.read_bytes()
+        csv_path.write_bytes(original.replace(b"fixture_label", b"changed_label", 1))
+        with self.assertRaisesRegex(RuntimeError, "2/3"):
+            self.service._verify()
+        self.assertFalse(self.service.verification["verified"])
+        self.assertEqual((self.service.verification["matched_count"], self.service.verification["stored_count"]), (2, 3))
+        csv_path.write_bytes(original + original.splitlines(keepends=True)[-1])
+        with self.assertRaisesRegex(RuntimeError, "3/4"):
+            self.service._verify()
+        self.assertEqual(self.service.verification["ledger_count"], 3)
+        self.assertFalse(self.service.verification["verified"])
+        csv_path.write_bytes(original)
+        ledger = Path(state["ledger_path"])
+        ledger.write_bytes(ledger.read_bytes() + ledger.read_bytes().splitlines(keepends=True)[-1])
+        with self.assertRaisesRegex(RuntimeError, "3/3"):
+            self.service._verify()
+        self.assertEqual(self.service.verification["ledger_count"], 4)
+        self.assertFalse(self.service.verification["verified"])
+
+    def test_device_final_total_only_uses_terminal_summary(self):
+        self.begin()
+        self.capture(2)
+        self.assertEqual(self.service.snapshot()["device_final_total"]["status"], "unknown")
+        self.assertIsNone(self.service.snapshot()["device_final_total"]["count"])
+        self.service._engine._summary = dict(total_samples=3)
+        self.assertEqual(self.service.snapshot()["device_final_total"], dict(status="reported", count=3))
+        self.service._engine._summary = None
+        complete = self.service.stop()
+        self.assertEqual(complete["device_final_total"], dict(status="reconciled", count=2))
+
+    def test_device_terminal_incomplete_has_reported_total_and_reason(self):
+        self.begin()
+        self.device.acquire(4)
+        self.device.transition_fault = "ack_lost"
+        self.service.pause()
+        self.device.terminal("retention_limit")
+        self.recover()
+        state = self.service.snapshot()
+        self.assertEqual(state["state"], "incomplete")
+        self.assertTrue(state["verification"]["verified"])
+        self.assertEqual(state["device_final_total"], dict(status="reconciled", count=4))
+        self.assertEqual(state["session_closure_status"], "confirmed_incomplete")
+        self.assertEqual(state["cause"]["code"], "retention_limit")
+        self.assertEqual(state["cause"]["evidence"], "device_or_engine_reported")
+
+    def test_radio_fault_survives_recovery_as_incomplete_reason(self):
+        self.begin()
+        self.device.acquire(4)
+        self.device.transition_fault = "ack_lost"
+        self.service.pause()
+        self.device.terminal("radio_fault")
+        self.recover()
+        state = self.service.snapshot()
+        self.assertEqual(state["state"], "incomplete")
+        self.assertTrue(state["verification"]["verified"])
+        self.assertEqual(state["device_final_total"], dict(status="reconciled", count=4))
+        self.assertEqual(state["cause"]["code"], "radio_fault")
+        self.assertIn("Radio GLD", state["cause"]["description"])
+
+    def test_unknown_incomplete_reason_does_not_become_transport_loss(self):
+        self.begin()
+        self.capture(1)
+        engine = self.service._engine
+        engine._active = False
+        engine.complete = False
+        engine.terminal_reason = engine.error = ""
+        engine._emit()
+        state = self.service.snapshot()
+        self.assertEqual(state["state"], "incomplete")
+        self.assertTrue(state["verification"]["verified"])
+        self.assertEqual(state["cause"], dict(code="", description="", evidence="unknown"))
+        self.assertEqual(state["device_final_total"]["status"], "unknown")
+
+    def test_direct_protocol_fatal_records_exact_code_without_claiming_wifi_loss(self):
+        self.begin(mode="direct")
+        self.capture(1)
+        self.service._engine._fatal("malformed_sample")
+        state = self.service.snapshot()
+        self.assertEqual(state["cause"]["code"], "malformed_sample")
+        self.assertNotIn("koneksi", state["cause"]["description"].lower())
+        events = [json.loads(line) for line in Path(state["diagnostic_path"]).read_text(encoding="utf-8").splitlines()]
+        self.assertEqual(next(event for event in events if event["event"] == "cutoff")["reason_code"], "malformed_sample")
+
+    def test_diagnostic_write_failure_is_visible_without_claiming_persistence(self):
+        self.begin()
+        self.service.diagnostic_path = str(Path(self.temp.name) / "missing" / "diagnostic.jsonl")
+        self.service._diagnostic_event("state_changed", "transport_lost")
+        state = self.service.snapshot()
+        self.assertIn("gagal disimpan", state["diagnostic_error"])
+        self.assertFalse(Path(state["diagnostic_path"]).exists())
 
 
 from wireless_dataset import FEATURE_ORDER

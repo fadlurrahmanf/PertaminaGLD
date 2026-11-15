@@ -24,11 +24,18 @@ class NativeWorkflowUpload(unittest.TestCase):
 
         def request(_host, _device, method, path, payload=None, **_kwargs):
             if method == "GET":
+                if path == "/api/gld-key-status":
+                    return {"configured": False}
                 self.assertEqual(path, f"/api/firmware/package?env={environment}")
                 return dict(manifest=manifest, packageFiles=files)
             self.assertEqual(path, "/api/firmware/upload")
-            self.assertFalse(payload["resetNvs"])
-            self.assertNotIn("resetNvsConfirmation", payload)
+            if flags.get("initialFirmware"):
+                self.assertTrue(payload["resetNvs"])
+                self.assertTrue(payload["initialFirmware"])
+                self.assertEqual(payload["resetNvsConfirmation"], "RESET NVS")
+            else:
+                self.assertFalse(payload["resetNvs"])
+                self.assertNotIn("resetNvsConfirmation", payload)
             self.assertEqual(payload["targetDeviceId"], "1001")
             posts.append(payload)
             return dict(ok=True, nvsReset=False)
@@ -79,8 +86,16 @@ class NativeWorkflowUpload(unittest.TestCase):
         readback.assert_called_once()
         self.assertNotIn("verificationPending", result)
 
-    def test_capability_cannot_bypass_reset_or_initial_firmware_restrictions(self):
-        for flags in (dict(resetNvs=True, resetNvsConfirmation="RESET NVS"), dict(initialFirmware=True)):
+    def test_initial_native_workflow_is_confirmed_and_read_back(self):
+        for model in (1, 2, 3):
+            result, readback = self.upload(f"gld_model_{model}_dataset_workflow_wifi",
+                                           {"nativeSerial": True, "datasetWifi": True},
+                                           initialFirmware=True, resetNvsConfirmation="RESET NVS")
+            self.assertTrue(result["initialFirmware"])
+            readback.assert_called_once()
+
+    def test_reset_remains_blocked_outside_initial_firmware(self):
+        for flags in (dict(resetNvs=True, resetNvsConfirmation="RESET NVS"),):
             handler = object.__new__(hub.Handler)
             with (mock.patch.object(hub, "package_manifest_summary") as package,
                   mock.patch.object(hub, "child_request") as request,
@@ -89,6 +104,12 @@ class NativeWorkflowUpload(unittest.TestCase):
                                                     port="COM999", **flags))
             package.assert_not_called()
             request.assert_not_called()
+
+    def test_initial_firmware_requires_explicit_reset_confirmation(self):
+        handler = object.__new__(hub.Handler)
+        with self.assertRaisesRegex(ValueError, "explicit confirmation"):
+            handler._simple_firmware_upload(dict(device="gld", model="model_1_dataset_workflow_wifi",
+                                                port="COM999", initialFirmware=True))
 
 
 if __name__ == "__main__":

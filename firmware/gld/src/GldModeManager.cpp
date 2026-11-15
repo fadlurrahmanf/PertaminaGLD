@@ -61,10 +61,16 @@ bool validMode(GldMode mode) {
     return static_cast<uint8_t>(mode) <= static_cast<uint8_t>(GldMode::NULLING);
 }
 
+bool validFrozenFrame(const GldPendingAlarm& pending);
+
 bool validPendingAlarmSemantics(const GldPendingAlarm& pending) {
     return pending.gasClass != pgl::protocol::GLD_GAS_CLEAR &&
            pending.gasClass <= pgl::protocol::GLD_GAS_H2 &&
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+           (pending.confidence > 0 || validFrozenFrame(pending)) &&
+#else
            pending.confidence > 0 &&
+#endif
            pending.confidence <= 100;
 }
 
@@ -83,6 +89,14 @@ bool validFrozenFrame(const GldPendingAlarm& pending) {
         return false;
     }
 
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    if (pending.confidence == 0 &&
+        (decoded.payloadLen != pgl::protocol::GLD_ENCRYPTED_PAYLOAD_SIZE ||
+         (decoded.typeFlags != pgl::protocol::TYPE_GLD_ALARM_BATTERY &&
+          decoded.typeFlags != pgl::protocol::TYPE_GLD_ALARM_EXTERNAL))) {
+        return false;
+    }
+#endif
     return decoded.seq == pending.sequence &&
            decoded.srcId != 0 && decoded.dstId != 0 && decoded.srcId != decoded.dstId &&
            (decoded.typeFlags & pgl::protocol::MSG_TYPE_MASK) ==

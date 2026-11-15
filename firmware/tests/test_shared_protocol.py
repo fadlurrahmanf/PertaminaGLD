@@ -895,13 +895,24 @@ def test_server_site_and_dataset_flows_follow_current_firmware_contract():
     assert "gas-leak-detector/+/cmd/ack" in server_doc
     assert "The dataset flow expects the current GLD unified JSON field names" in server_doc
 
-    assert "writeU16Be(&payload[4], ttlSec);" in gateway_src
-    assert "payload[6] = static_cast<uint8_t>(commandLen);" in gateway_src
-    assert "memcpy(&payload[7], commandBytes, commandLen);" in gateway_src
-    assert "const uint16_t ttlSec       = (static_cast<uint16_t>(decoded.payload[4]) << 8) | decoded.payload[5];" in ch_runtime
-    assert "const uint8_t  commandLen   = decoded.payload[6];" in ch_runtime
-    assert "memcpy(dl->payload, decoded.payload + 7, commandLen);" in ch_runtime
-    assert "dl->ttlMs        = ttlSec > 0 ? static_cast<uint32_t>(ttlSec) * 1000UL : PENDING_TTL_MS;" in ch_runtime
+    # Gateway and CH delegate the wire layout to one shared codec.  Check the
+    # runtime integration here; the host route test exercises that codec and
+    # AppFrame round trips with production sources and mutation controls.
+    gateway_command = gateway_src[gateway_src.index("void handleNodeCommand("):]
+    gateway_command = gateway_command[:gateway_command.index("\n}")]
+    assert "encodeLegacyServerNodeCommandPayload(" in gateway_command
+    assert "encodeRoutedServerNodeCommandPayloadV1(" in gateway_command
+    assert "payloadStatus != pgl::protocol::ServerNodeCommandStatus::Ok" in gateway_command
+    assert gateway_command.index("payloadStatus != pgl::protocol::ServerNodeCommandStatus::Ok") < gateway_command.index("transmitMeshFrame(")
+    ch_command = ch_runtime[ch_runtime.index("if (msgType == pgl::protocol::MSG_SERVER_NODE_COMMAND)"):]
+    ch_command = ch_command[:ch_command.index("CH_DOWNLINK_STORED") ]
+    assert "decodeServerNodeCommandPayload(" in ch_command
+    assert "commandStatus != pgl::protocol::ServerNodeCommandStatus::Ok" in ch_command
+    assert "findServerNodeCommandHopIndex(command, CH_ID)" in ch_command
+    assert "dl->ttlMs        = command.ttlSec > 0" in ch_command
+    assert "static_cast<uint32_t>(command.ttlSec) * 1000UL" in ch_command
+    assert "dl->payloadLen   = command.commandLen" in ch_command
+    assert "memcpy(dl->payload, command.commandBytes, command.commandLen)" in ch_command
     assert "Gateway encodes and CH parses the same wire payload" in gw_server_doc
     assert "CH current parser does not consume TTL" not in gw_server_doc
 
@@ -913,6 +924,7 @@ def test_gld_unified_runtime_scaffolds_present():
     mode_header = pathlib.Path("firmware/gld/include/GldModeManager.h").read_text(encoding="utf-8")
     mode_src = pathlib.Path("firmware/gld/src/GldModeManager.cpp").read_text(encoding="utf-8")
     nulling_header = pathlib.Path("firmware/gld/include/GldNullingService.h").read_text(encoding="utf-8")
+    nulling_src = pathlib.Path("firmware/gld/src/GldNullingService.cpp").read_text(encoding="utf-8")
     model_binding_header = pathlib.Path("firmware/gld/include/GldModelBinding.h").read_text(encoding="utf-8")
     model_binding_src = pathlib.Path("firmware/gld/src/GldModelBinding.cpp").read_text(encoding="utf-8")
     power_src = pathlib.Path("firmware/gld/src/GldPower.cpp").read_text(encoding="utf-8")
@@ -975,9 +987,12 @@ def test_gld_unified_runtime_scaffolds_present():
     assert "CANCEL_FULLSCALE_SWEEP" in command_src
     assert "BIND_MODEL_TO_ACTIVE_NULLING_PROFILE" in command_src
     assert "GldSerialCommandType::Unknown" in command_src
-    assert "echoTypedChar" in command_src
-    assert "stream.write(static_cast<uint8_t>(c))" in command_src
-    assert 'stream.print("\\b \\b")' in command_src
+    # Input is intentionally not echoed: JSON may contain provisioning secrets.
+    # Host parser profiles exercise editing and require a read-only Stream API.
+    assert "stream.read()" in command_src
+    assert "stream.write(" not in command_src
+    assert "stream.print(" not in command_src
+    assert "--pos;" in command_src
     assert "GldSerialCommandType::AppPing" in command_src
     assert "GldSerialCommandType::GetInfo" in command_src
     assert "GldSerialCommandType::GetStatus" in command_src
@@ -1017,7 +1032,7 @@ def test_gld_unified_runtime_scaffolds_present():
     assert 'emitCommandAck("RESTART", "ok", "restarting", true)' in unified_src
     assert "runBootCheckFromSerialCommand" in unified_src
     assert 'emitCommandAck("RUN_BOOT_CHECK", "ok", "running boot diagnostics", false)' in unified_src
-    assert "runBootHardwareDiagnostics(power.externalPower)" in unified_src
+    assert re.search(r"runBootHardwareDiagnostics\(power\.externalPower,\s*batteryPowerMode\)", unified_src)
     assert "RUN_BOOT_CHECK_DONE" in unified_src
     assert "void enableNonBatteryRuntimeSensorPower" in unified_src
     assert "bool recoverGld2RootI2cForPcf" in unified_src
@@ -1054,9 +1069,9 @@ def test_gld_unified_runtime_scaffolds_present():
     assert "GLD_BATTERY_ALARM_PENDING_SAVE" in unified_src
     assert "GLD_BATTERY_ALARM_ACK_SUCCESS" in unified_src
     assert "GLD_BATTERY_CYCLE_ALARM_ACTIVE staying_awake" not in unified_src
-    assert "if (batteryPowerMode && !serviceHoldRequested) return;" in unified_src
+    assert "if (batteryPowerMode && !TFBG_CONTINUOUS_BATTERY && !serviceHoldRequested) return;" in unified_src
     assert "const bool cfgLowNow = digitalRead(pgl::gld::board::PIN_USER_BUTTON) == LOW;" in unified_src
-    assert "serviceHoldActive || cfgLowNow || !cfgButtonRawHigh || cfgButtonPressArmed" in unified_src
+    assert re.search(r"serviceHoldActive \|\| batteryPersistenceFaultHold \|\|\s*cfgLowNow \|\| !cfgButtonRawHigh \|\| cfgButtonPressArmed", unified_src)
     assert "GLD_BATTERY_SESSION_POWER_OFF_ABORT" in unified_src
     assert "GLD_BATTERY_SENSOR_WARMUP_MS" in unified_src
     assert "runScan(true)" in unified_src
@@ -1111,8 +1126,13 @@ def test_gld_unified_runtime_scaffolds_present():
     assert 'boot.createNestedArray("mcpControlOk")' in unified_src
     assert "scanMcpAddressMaskOnSelectedMux" in unified_src
     assert "probeInputPullLevels" in unified_src
-    assert "runNullingService(ads, dac, nullingLogLine, firmwareServiceTick, nullingConfig)" in unified_src
-    assert "runNullingService(ads, dac, nullingLogLine, checkSerial, nullingConfig)" in unified_src
+    assert "runNullingService(ads, dac, nullingLogLine, firmwareServiceTick, nullingConfig, channelMask)" in unified_src
+    assert "runNullingServiceWithMcpIsolation();" in unified_src
+    assert "runNullingServiceWithMcpIsolation(retryMask);" in unified_src
+    isolation = unified_src[unified_src.index("pgl::gld::GldNullingServiceResult runNullingServiceWithMcpIsolation("):]
+    isolation = isolation[:isolation.index("\n}")]
+    assert isolation.index("armNullingMcpIsolation()") < isolation.index("runNullingService(ads") < isolation.index("restoreNullingMcpIsolation()")
+    assert "result.status = pgl::gld::GldNullingStatus::DacNotReady" in isolation
     assert 'caps["nullingConfig"] = "SET_NULLING_CONFIG_JSON thresholdV,minFinalV"' in unified_src
     assert "onSetNullingConfigJson" in unified_src
     assert "GldSerialCommandType::SetNullingConfigJson" in unified_src
@@ -1161,7 +1181,8 @@ def test_gld_unified_runtime_scaffolds_present():
     assert "one-shot boot intent" in mode_header
     assert "prefs.begin(NVS_NS, false)" in mode_src
     assert "mode != GldMode::INFERENCE || val > static_cast<uint8_t>(GldMode::NULLING)" in mode_src
-    assert "prefs.putUChar(NVS_KEY, static_cast<uint8_t>(GldMode::INFERENCE))" in mode_src
+    assert re.search(r"putUCharChecked\(\s*prefs, NVS_MODE_KEY, static_cast<uint8_t>\(GldMode::INFERENCE\)\)", mode_src)
+    assert "return consumed ? mode : GldMode::INFERENCE" in mode_src
     gld_config = pathlib.Path("firmware/config/GldConfig.h").read_text(encoding="utf-8")
     assert "#define GLD_SCAN_INTERVAL_MS      500" in gld_config
     assert "#define GLD_DATASET_MIN_SAMPLE_INTERVAL_MS 500" in gld_config
@@ -1170,8 +1191,11 @@ def test_gld_unified_runtime_scaffolds_present():
     assert "#define GLD_BATTERY_ALARM_TX_ATTEMPTS          3" in gld_config
     assert "#define GLD_BATTERY_SESSION_DEADLINE_MS   120000" in gld_config
     assert "#define GLD_CFG_BUTTON_DEBOUNCE_MS            50" in gld_config
-    assert "#define GLD_NODE_HEX        F010" in gld_config
-    assert "#define GLD_CH_ID           0x006B" in gld_config
+    node_match = re.search(r"#ifndef GLD_NODE_HEX\s+#define GLD_NODE_HEX\s+([0-9A-Fa-f]{4})", gld_config)
+    ch_match = re.search(r"#ifndef GLD_CH_ID\s+#define GLD_CH_ID\s+(0x[0-9A-Fa-f]+)", gld_config)
+    assert node_match and ch_match
+    node_id, ch_id = int(node_match.group(1), 16), int(ch_match.group(1), 16)
+    assert 0x1001 <= node_id <= 0xFEFF and 0x0010 <= ch_id <= 0x0FFF and node_id != ch_id
     assert "uint16_t chId = static_cast<uint16_t>(GLD_CH_ID)" in unified_src
     assert 'caps["serialChAddress"] = "SET_CH_ADDRESS_JSON chId"' in unified_src
     assert 'doc["targetChId"] = chIdHex' in unified_src
@@ -1200,9 +1224,13 @@ def test_gld_unified_runtime_scaffolds_present():
     assert "featureOrder" in unified_src
     assert "const bool allValid = okChannels == pgl::gld::board::SENSOR_COUNT" in unified_src
     assert "latestTelemetryValid = allValid" in unified_src
-    assert "latestTelemetryValid = okChannels == pgl::gld::board::SENSOR_COUNT" in unified_src
+    assert "latestTelemetryValid = validation.accepted" in unified_src
+    assert "if (!validation.accepted)" in unified_src
     assert "allValid ? 1 : 0" in unified_src
-    assert "if (allValid && primed && mlReady)" in unified_src
+    assert "const bool inferencePreconditions = allValid && primed && mlReady &&" in unified_src
+    assert "nullingProfileApplied && modelProfileReady && runtimeDacVerificationReady()" in unified_src
+    assert "if (inferencePreconditions)" in unified_src
+    assert "lastGld1InferenceReadiness.executionSucceeded = runInference(mavVoltage)" in unified_src
     assert "lastLoraTxState = txState" in unified_src
     assert "DATASET_QUEUE_CAPACITY = 16" in unified_src
     assert "DATASET_QUEUE_CAPACITY = 16" in dataset_src
@@ -1214,8 +1242,9 @@ def test_gld_unified_runtime_scaffolds_present():
     assert "publishDatasetPayload(payload, datasetSeq, false)" in dataset_src
     assert 'doc.createNestedArray("sensor_status")' in unified_src
     assert 'doc.createNestedArray("sensor_status")' in dataset_src
-    assert "statusArr.add(static_cast<uint8_t>(r.status))" in unified_src
-    assert "statusArr.add(static_cast<uint8_t>(r.status))" in dataset_src
+    assert "statusArr.add(static_cast<uint8_t>(readings[ch].status))" in unified_src
+    assert "statusArr.add(static_cast<uint8_t>(readings[ch].status))" in dataset_src
+    assert "for (size_t ch = 0; ch < pgl::gld::GLD_DATASET_FEATURE_COUNT; ++ch)" in unified_src
     assert "flushDatasetQueue();" in unified_src
     assert "flushDatasetQueue();" in dataset_src
     assert "ADS_RECOVERY_ATTEMPT" in unified_src
@@ -1239,7 +1268,9 @@ def test_gld_unified_runtime_scaffolds_present():
     assert re.search(r'js/main\.js\?v=[^"]+', operator_index)
     assert "js/main.js?v=20260715-1900" not in operator_index
     assert "js/main.js?v=20260715-manifold-1" not in operator_index
-    assert "js/main.js?v=20260716-fullscale-sweep-1" in operator_index
+    # The exact cache-buster changes between releases; require the versioned
+    # module entry above and verify that its source remains present.
+    assert pathlib.Path("apps/gld-operator/js/main.js").is_file()
     assert 'command === "GET_STATUS" || command === "RUN_BOOT_CHECK"' in operator_app
     assert 'command === "GET_TELEMETRY"' in operator_app
     assert "SET_LORA_CONFIG_JSON" in operator_app
@@ -1269,7 +1300,9 @@ def test_gld_unified_runtime_scaffolds_present():
     assert "MSG_NODE_DOWNLINK" in command_src
     assert "GLD_SECURITY_NOT_PROVISIONED" in unified_src
     assert "aesKeyHex" in unified_src
-    assert "GLD_ALLOW_SELFTEST_AES_FALLBACK 1" in pathlib.Path("firmware/config/GldConfig.h").read_text(encoding="utf-8")
+    assert "#define GLD_ALLOW_SELFTEST_AES_FALLBACK 0" in gld_config
+    assert "#if GLD_ALLOW_SELFTEST_AES_FALLBACK && !defined(PGL_GLD_FIELDTEST_SELFTEST_BUILD)" in gld_config
+    assert '#error "GLD public-vector AES fallback requires an explicit nonproduction field-test build"' in gld_config
     assert "CMD_SET_MODE_AUTHENTICATED = 0x81" in command_src
     crypto_header = pathlib.Path("firmware/shared/include/GldCrypto.h").read_text(encoding="utf-8")
     crypto_src = pathlib.Path("firmware/shared/src/GldCrypto.cpp").read_text(encoding="utf-8")
@@ -1313,14 +1346,17 @@ def test_gld_protocol_reference_matches_active_firmware():
     assert "| 4 | butane |" in payload_contract
 
     assert "GLD_LEL_THRESHOLD_PERCENT = 30" in protocol_header
-    assert "confidence >= 30" in final_design
+    assert "confidence klasifikasi tidak dibandingkan" in protocol_ref
+    assert "ATEX Dataset Workflow memakai threshold 0" in protocol_ref
+    assert "builder unified GLD1 dan GLD2 memakai threshold 1" in protocol_ref
+    assert "GLD2/GLD3/GLD ATEX" not in protocol_ref
+    assert "kondisi ini terpisah" in protocol_ref.lower()
+    assert "ATEX Dataset Workflow build it uses threshold 0" in final_design
     assert "confidence >= 40" not in protocol_ref
     assert "confidence ≥ 40" not in protocol_ref
 
-    # GLD1 holds GPIO41 LOW to release J2 LAMP HIGH via external pull-up. GLD2 uses
-    # the audited GPIO40/Q4 active-HIGH path with EN_BOOST
-    # sequencing; only the unsupported fallback profile retains active-low
-    # legacy outputs.
+    # GLD1 drives GPIO48 HIGH during alarm. GLD2/3/ATEX use the separate
+    # boost-first path; legacy fallback outputs are active-low.
     assert "ACTIVE_LOW_OUTPUT_ON = LOW" in unified_src
     assert "ACTIVE_LOW_OUTPUT_OFF = HIGH" in unified_src
     assert "#if PGL_GLD_BOARD_PROFILE_GLD2" in unified_src
@@ -1334,10 +1370,19 @@ def test_gld_protocol_reference_matches_active_firmware():
     assert "setGld1AlarmOutput(enabled)" in alarm_driver
     assert "serviceAlarmOutputPattern()" not in unified_src
     assert "enabled ? ACTIVE_LOW_OUTPUT_ON : ACTIVE_LOW_OUTPUT_OFF" in alarm_driver
-    assert "GPIO41 HIGH" in final_design
-    assert "GPIO41 LOW continuously" in final_design
-    assert "external pull-up" in final_design
-    assert "alarmActive ? LOW : HIGH" in unified_src
+    board_pins = pathlib.Path("firmware/gld/include/BoardPins.h").read_text(encoding="utf-8")
+    assert "#define PGL_GLD_PIN_ALARM_LAMP 48" in board_pins
+    gld1_start = unified_src.index("void setGld1AlarmOutput(bool alarmActive) {")
+    gld1_end = unified_src.index("void beginGld1AlarmOutput()", gld1_start)
+    gld1_alarm = unified_src[gld1_start:gld1_end]
+    assert "PIN_ALARM_LAMP, alarmActive ? HIGH : LOW" in gld1_alarm
+    assert "GPIO48 LOW in" in final_design and "HIGH continuously during alarm" in final_design
+    assert "previous GPIO41/ULN2003 pull-up description" in final_design
+    assert "not a measured output" in final_design
+    assert "GPIO48 HIGH selama alarm dan LOW saat normal" in protocol_ref
+    assert "profil fallback lama, bukan GLD1 atau ATEX" in protocol_ref
+    # The executable GLD1/GLD2 truth table uses production function bodies and
+    # fake GPIO: firmware/gld/tests/test_pullup_output.py (run separately).
 
 
 def test_current_design_docs_mirror_live_source_contracts():
@@ -1534,33 +1579,111 @@ def test_invalid_payload_len_rejected_by_contract():
 
 
 def test_version_constants_format():
-    header = pathlib.Path("firmware/shared/include/FirmwareVersion.h").read_text(encoding="utf-8")
-    versions = re.findall(r'VERSION\s*=\s*"([^"]+)"', header)
-
-    assert versions
-    for version in versions:
-        assert re.fullmatch(r"\d+\.\d+\.\d+", version), version
-
-    assert 'GLD_FIRMWARE_VERSION = "0.8.19"' in header
-    assert 'CH_FIRMWARE_VERSION = "0.8.0"' in header
-    assert 'GATEWAY_FIRMWARE_VERSION = "0.2.0"' in header
-    assert 'PROTOCOL_VERSION = "0.2.0"' in header
-    assert 'CONFIG_SCHEMA_VERSION = "0.1.0"' in header
+    # Validate the current contract, not a historical release number.
+    sources = {
+        pathlib.Path("firmware/shared/include/FirmwareVersion.h"): (
+            "GLD_FIRMWARE_VERSION", "CH_FIRMWARE_VERSION", "GATEWAY_FIRMWARE_VERSION",
+            "PROTOCOL_VERSION", "CONFIG_SCHEMA_VERSION",
+        ),
+        pathlib.Path("firmware/gld/include/Gld1FirmwareVersion.h"): ("GLD1_FIRMWARE_VERSION",),
+    }
+    for path, names in sources.items():
+        header = path.read_text(encoding="utf-8")
+        for name in names:
+            values = re.findall(r'\b' + re.escape(name) + r'\s*=\s*"([^"]+)"', header)
+            assert len(values) == 1, (path, name, values)
+            assert re.fullmatch(r"\d+\.\d+\.\d+", values[0]), (name, values[0])
 
 
 def test_gld_operator_firmware_package_generator_present():
-    script = pathlib.Path("firmware/tools/package_firmware_release.py").read_text(encoding="utf-8")
-    assert "does" in script and "not compile firmware" in script
-    assert "bootloader.bin" in script
-    assert "partitions.bin" in script
-    assert "boot_app0.bin" in script
-    assert "firmware.bin" in script
-    assert '"packageType": "pertamina-gld-prebuilt-firmware"' in script
-    assert '"deviceId": args.device_id' in script
-    assert '"boardProfile": args.board_profile' in script
-    assert '"flashFiles": flash_files' in script
-    assert "sha256(target)" in script
-    assert "GLD_FIRMWARE_VERSION" in script
+    # Exercise the production package entry point with a fake PlatformIO build;
+    # all inputs, binaries and outputs stay in a temporary directory.
+    import argparse
+    import hashlib
+    import importlib.util
+    import json
+    import tempfile
+    from unittest import mock
+
+    path = pathlib.Path("firmware/tools/package_firmware_release.py")
+    spec = importlib.util.spec_from_file_location("package_release_contract", path)
+    assert spec is not None and spec.loader is not None
+    package = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(package)
+    with tempfile.TemporaryDirectory() as temp:
+        root = pathlib.Path(temp)
+        project = root / "project"
+        header = project / "shared/include/FirmwareVersion.h"
+        header.parent.mkdir(parents=True)
+        header.write_text('constexpr const char* GLD_FIRMWARE_VERSION = "1.2.3";\n'
+                          'constexpr const char* PROTOCOL_VERSION = "2.3.4";\n'
+                          'constexpr const char* CONFIG_SCHEMA_VERSION = "3.4.5";\n', encoding="utf-8")
+        (project / "platformio.ini").write_text("[platformio]\n", encoding="utf-8")
+        output = root / "out"
+        build = project / ".pio/build/gld"
+        args = argparse.Namespace(project_dir=str(project), env="gld", device_id="f011",
+            board_profile="Board 1", chip="esp32s3", baud=460800, version=None,
+            platformio_exe=None, output_dir=str(output), package_name="release")
+        binaries = {name: ("fake-" + name).encode() for name, _ in package.DEFAULT_FLASH_FILES}
+        commands = []
+        missing = set()
+        def fake_run(command, cwd):
+            commands.append((command, cwd))
+            if command[-1] != "clean":
+                build.mkdir(parents=True, exist_ok=True)
+                for name, data in binaries.items():
+                    if name not in missing:
+                        (build / name).write_bytes(data)
+            return "OK"
+        with mock.patch.object(package, "parse_args", return_value=args), \
+             mock.patch.object(package, "git_source_identity", return_value=("a" * 40, "clean")), \
+             mock.patch.object(package, "find_platformio_executable", return_value=pathlib.Path("fake-pio")), \
+             mock.patch.object(package, "platformio_core_version", return_value="6.1.0"), \
+             mock.patch.object(package, "run_checked", side_effect=fake_run):
+            assert package.main() == 0
+            assert commands == [(["fake-pio", "run", "-e", "gld", "-t", "clean"], project),
+                                (["fake-pio", "run", "-e", "gld"], project)]
+            manifest_path = output / "release/manifest.json"
+            manifest_bytes = manifest_path.read_bytes()
+            manifest = json.loads(manifest_bytes)
+            assert manifest["packageType"] == "pertamina-gld-prebuilt-firmware"
+            assert manifest["schemaVersion"] == 2
+            assert manifest["deviceId"] == "F011"
+            assert manifest["boardProfile"] == "Board 1"
+            assert manifest["environment"] == "gld"
+            assert (manifest["firmwareVersion"], manifest["protocolVersion"], manifest["configSchemaVersion"]) == ("1.2.3", "2.3.4", "3.4.5")
+            assert manifest["source"]["gitCommit"] == "a" * 40
+            assert manifest["source"]["gitTreeState"] == "clean"
+            assert manifest["source"]["buildCommand"] == "pio run -e gld -t clean && pio run -e gld"
+            assert manifest["source"]["platformioIniSha256"] == hashlib.sha256((project / "platformio.ini").read_bytes()).hexdigest()
+            assert (output / "release/manifest.sha256").read_text().split()[0] == hashlib.sha256(manifest_bytes).hexdigest()
+            expected_offsets = {"bootloader.bin": "0x00000000", "partitions.bin": "0x00008000", "boot_app0.bin": "0x0000E000", "firmware.bin": "0x00010000"}
+            assert {item["path"] for item in manifest["flashFiles"]} == set(binaries)
+            for item in manifest["flashFiles"]:
+                data = binaries[item["path"]]
+                assert (output / "release" / item["path"]).read_bytes() == data
+                assert item["offset"] == expected_offsets[item["path"]]
+                assert item["size"] == len(data)
+                assert item["sha256"] == hashlib.sha256(data).hexdigest()
+            assert manifest["flashSetSha256"] == package.flash_set_sha256(manifest["flashFiles"])
+            # A missing build output fails closed and removes the partial package.
+            args.package_name = "missing"
+            missing.add("firmware.bin")
+            (build / "firmware.bin").unlink()
+            try:
+                package.main()
+                assert False, "missing firmware was accepted"
+            except FileNotFoundError:
+                pass
+            assert not (output / "missing").exists()
+            # A pre-existing release is never overwritten.
+            args.package_name = "release"
+            try:
+                package.main()
+                assert False, "existing package was overwritten"
+            except FileExistsError:
+                pass
+            assert manifest_path.read_bytes() == manifest_bytes
 
 
 def test_gld_sensor_selftest_scaffold_present():
@@ -1623,26 +1746,25 @@ def test_gld_sensor_selftest_scaffold_present():
     assert "muxSingleEnded" in ads_reader
     assert "adsInputForSensor" in ads_reader
     assert "SENSOR_TO_ADS_CH[sensorChannel]" in ads_reader
-    assert "#include <ADS1256.h>" in ads_reader
-    assert "new ADS1256" in ads_reader
+    # The reader now drives ADS1256 registers over SPI directly.  Its
+    # production begin/read/gain paths are exercised separately by
+    # test_gld_ads1256_real_driver.py with SPI/DRDY fakes.
     assert "ADS1256_CMD_RESET = 0xFE" in ads_reader
-    assert "ads_->sendDirectCommand(ADS1256_CMD_RESET)" in ads_reader
-    assert "InitializeADC()" in ads_reader
-    assert "ads_->setPGA(PGA_64)" in ads_reader
-    assert "ads_->setDRATE(DRATE_30000SPS)" in ads_reader
-    assert "ads_->readSingle()" in ads_reader
-    assert "waitDrdyLow(1500)" in ads_reader
+    assert "ADS1256_CMD_RDATA = 0x01" in ads_reader
+    assert "ADS1256_CMD_WREG = 0x50" in ads_reader
+    assert "sendDirectCommand(*spi_, ADS1256_CMD_RESET)" in ads_reader
+    assert "sendDirectCommand(*spi_, ADS1256_CMD_SELFCAL)" in ads_reader
+    assert "ADS1256_STARTUP_DRDY_TIMEOUT_MS = 1500" in ads_reader
     assert "ADS1256_READ_DRDY_TIMEOUT_MS = 5" in ads_reader
-    assert "waitDrdyLow(ADS1256_READ_DRDY_TIMEOUT_MS)" in ads_reader
+    assert "waitDrdyHigh(ADS1256_STARTUP_DRDY_TIMEOUT_MS)" in ads_reader
+    assert "waitDrdyLow(ADS1256_STARTUP_DRDY_TIMEOUT_MS)" in ads_reader
+    assert "readRawBounded(*spi_, raw, ADS1256_READ_DRDY_TIMEOUT_MS)" in ads_reader
     assert "!gainCalibrate(channel)" in ads_reader
     assert "GldAds1256Status::DrdyTimeout" in ads_reader
     assert "bool GldAds1256Reader::readSingleInternal(uint8_t channel, long& raw)" in ads_reader
     assert "PGA_VALUE_TABLE" in ads_reader
-    assert "PGA_LIB_CONST" in ads_reader
+    assert "PGA_REGISTER_TABLE" in ads_reader
     assert "reading.gain" in sensor_main
-    assert "CMD_RDATA" not in ads_reader
-    assert "CMD_WREG" not in ads_reader
-    assert "spi_->transfer" not in ads_reader
     assert "movingAverageVoltage" in sensor_main
     assert "GLD_SENSOR_MOVING_AVERAGE_WINDOW" in moving_average
     assert "GLD_BATTERY_MV_INVALID" in power
@@ -1978,6 +2100,7 @@ def test_ch_hello_ack_rolling_upgrade_matrix_and_direct_origin_rule():
     for source in (ch_runtime, gw_runtime):
         assert "CH_HELLO_FLAG_ACK_REQUEST_V1" in source
         assert "CH_HELLO_ACK_V1_PAYLOAD_SIZE" in source
+    protocol = pathlib.Path("firmware/shared/include/ProtocolConstants.h").read_text(encoding="utf-8")
     assert "CH_HELLO_FLAG_PARENT_LINK_V1 = 0x02" in protocol
     assert "CH_HELLO_PARENT_LINK_V1_PAYLOAD_SIZE = 18" in protocol
     assert "CH_PARENT_LINK_FLAG_SOURCE_CONFIG_RESPONSE" in ch_runtime

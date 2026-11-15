@@ -1,0 +1,41 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const path = require('node:path');
+const source = fs.readFileSync(path.join(__dirname, '../js/warmup-notice.js'), 'utf8')
+  .replace(/export function /g, 'function ');
+const context = {};
+vm.runInNewContext(source + '\nglobalThis.create = createWarmupNotice; globalThis.blocks = warmupBlocksPrediction; globalThis.merge = mergeWarmupTelemetry;', context);
+const element = { hidden: true, textContent: '' };
+const names = ['MQ8', 'MQ135', 'MQ3', 'MQ5', 'MQ4', 'MQ7', 'MQ6', 'MQ2'];
+let callback, canceled = 0, schedules = 0;
+const notice = context.create(element, names, fn => { callback = fn; schedules++; return schedules; }, () => { canceled++; });
+notice.render({ mode: 'inference' });
+assert.equal(element.hidden, true); // legacy firmware
+assert.equal(context.blocks({ mode: 'inference' }), false);
+assert.equal(context.merge({}, {}), undefined);
+assert.equal(context.merge({sensorWarmup: {state: 'ready'}}, {}).state, 'warming');
+assert.equal(context.merge({}, {sensorWarmup: null}).state, 'warming');
+assert.equal(context.merge({}, {sensorWarmup: {state: 'ready'}}).state, 'ready');
+assert.equal(context.blocks({ mode: 'inference', sensorWarmup: { state: 'warming' } }), true);
+assert.equal(context.blocks({ mode: 'inference', sensorWarmup: { state: 'fault' } }), true);
+assert.equal(context.blocks({ mode: 'inference', sensorWarmup: { state: 'ready' }, model: { inferenceValid: false } }), true);
+notice.render({ mode: 'inference', sensorWarmup: { state: 'warming', elapsedMs: 61000, stableMask: 0xfe } });
+assert.equal(element.hidden, false);
+assert.match(element.textContent, /1:01.*7\/8.*MQ8.*deteksi gas belum tersedia/i);
+notice.render({ mode: 'inference', sensorWarmup: { state: 'ready' }, model: { inferenceValid: false } });
+assert.match(element.textContent, /Menunggu inferensi valid/);
+const ready = { mode: 'inference', sensorWarmup: { state: 'ready' }, model: { inferenceValid: true } };
+assert.equal(context.blocks(ready), false);
+notice.render(ready); notice.render(ready);
+assert.equal(schedules, 1); // polling must not perpetually restart timer
+assert.match(element.textContent, /inferensi aktif/);
+callback(); assert.equal(element.hidden, true);
+notice.render(ready); assert.equal(element.hidden, true);
+notice.render({ mode: 'inference', sensorWarmup: { state: 'fault', stableMask: 0 } });
+assert.equal(element.hidden, false);
+notice.render(ready); assert.equal(schedules, 2);
+notice.reset(); assert.equal(element.hidden, true); assert.equal(canceled, 1);
+notice.render({ mode: 'dataset', sensorWarmup: { state: 'warming' } });
+assert.equal(element.hidden, true);
+console.log('PASS warmup notice compatibility, progression, faults, timer and reset');

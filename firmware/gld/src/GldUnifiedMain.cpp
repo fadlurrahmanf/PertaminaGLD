@@ -43,6 +43,11 @@
 #include "GldNullingService.h"
 #include "GldQcProfile.h"
 #include "GldQcService.h"
+#include "GldRxScanGate.h"
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+#include "GldWorkflowRadioSchedule.h"
+#include "GldAtexQcSchedule.h"
+#endif
 #include "GldPower.h"
 #include "GldPcf8574.h"
 #include "GldThresholdClassifier.h"
@@ -227,7 +232,15 @@ constexpr bool ALLOW_UNAUTHENTICATED_ALARM_ACK = false;
 #endif
 
 #if PGL_GLD_BOARD_PROFILE_GLD2
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+#if PGL_GLD_BOARD_PROFILE_GLD_ATEX
+constexpr const char* BOARD_PROFILE = "GLD ATEX MotherBoardGLDVer2";
+#else
 constexpr const char* BOARD_PROFILE = "GLD2 WROOM-1U-N16R8";
+#endif
+#else
+constexpr const char* BOARD_PROFILE = "GLD2 WROOM-1U-N16R8";
+#endif
 #elif PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8
 constexpr const char* BOARD_PROFILE = "WROOM-1U-N16R8";
 #else
@@ -369,6 +382,20 @@ const char* gld1InferenceBlockerName() {
     if (!lastInferenceValid) return "inference_result_invalid";
     return "none";
 }
+#endif
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+#if PGL_GLD_BOARD_PROFILE_GLD_ATEX
+// The workflow prediction callback needs its own readiness snapshot on ATEX;
+// do not enable the GLD1-only radio or alarm implementation on this board.
+struct Gld1InferenceReadinessSnapshot {
+    bool scanObserved = false;
+    bool allSensorsValid = false;
+    bool sensorsPrimed = false;
+    bool executionAttempted = false;
+    bool executionSucceeded = false;
+};
+Gld1InferenceReadinessSnapshot lastGld1InferenceReadiness{};
+#endif
 #endif
 uint32_t lastMqttAttemptMs = 0;
 uint32_t lastStatusMs    = 0;
@@ -599,6 +626,16 @@ struct RuntimeConfig {
 };
 
 RuntimeConfig runtimeConfig{};
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+// Runtime settings can be saved without applying to the radio. Track only
+// parameters from the last successful begin(), with no credential copies.
+struct WorkflowAppliedRadioConfig {
+    bool valid = false;
+    float bandwidthKhz = 0;
+    uint8_t sf = 0, cr = 0;
+    uint16_t preamble = 0;
+} workflowAppliedRadio{};
+#endif
 
 enum class RuntimeAesKeySource : uint8_t {
     None = 0,
@@ -650,6 +687,33 @@ uint32_t     postFanSettleMs = 0;
 
 // LoRa Class A RX flag
 volatile bool loraRxFlag = false;
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+bool workflowCaptureInterrupted = false;
+bool workflowSharedSpiQuarantined = false;
+bool atexConfigPersistenceFault = false;
+void latchAtexConfigPersistenceFault() {
+    atexConfigPersistenceFault = true;
+    runtimeConfig.ctrlword = 0;
+    radioReady = false;
+    lastInferenceValid = false;
+    workflowAppliedRadio.valid = false;
+    pgl::gld::datasetworkflowwifi::failSession("config_persist_failed");
+}
+bool atexNativeConfigTrusted() {
+    // Match the native network placeholder policy; the standalone AP is independent.
+    return runtimeConfigValid() && !atexConfigPersistenceFault &&
+           strcmp(runtimeConfig.wifiSsid, "CHANGE_ME") != 0 &&
+           strcmp(runtimeConfig.mqttHost, "CHANGE_ME_MQTT_HOST") != 0;
+}
+bool retryWorkflowCapture() { return workflowCaptureInterrupted; }
+pgl::gld::GldWorkflowRadioSchedule workflowRadioScheduler(0, GLD_LORA_RX_WINDOW_MS);
+pgl::gld::GldAtexQcSchedule atexQcSchedule;
+bool atexQcWantsRx = false;
+bool atexQcFocusTx = false;
+uint8_t atexQcFrame[pgl::protocol::APPFRAME_OVERHEAD + pgl::protocol::STAR_MAX_PAYLOAD]{};
+size_t atexQcFrameLen = 0;
+GldTxSnapshot workflowTxSnapshot{};
+#endif
 
 // ---------------------------------------------------------------------------
 // Logging
@@ -878,6 +942,14 @@ void resetRuntimeConfigDefaults() {
     alarmControlMode = pgl::gld::GldAlarmControlMode::Auto;
     manualAlarmCommanded = false;
     resetRuntimeLoraDefaults();
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    // QC controls are persisted only on GLD1.  Reset first so missing/corrupt
+    // old NVS entries fail safe to the documented normal defaults.
+    loraTxIntervalMs = DEFAULT_TX_INTERVAL_MS;
+    loraTransmitFocus = false;
+    loraTargetTransmitOnly = false;
+    loraAutoTransmit = true;
+#else
 #if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
     // QC controls are persisted only on GLD1.  Reset first so missing/corrupt
     // old NVS entries fail safe to the documented normal defaults.
@@ -886,13 +958,22 @@ void resetRuntimeConfigDefaults() {
     loraTargetTransmitOnly = false;
     loraAutoTransmit = true;
 #endif
+#endif
     buildRuntimeTopics();
 }
 
 void loadRuntimeConfig() {
     resetRuntimeConfigDefaults();
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    // A missing marker must never inherit a previous in-memory valid marker.
+    runtimeConfig.ctrlword = 0;
+#endif
     Preferences prefs;
     if (!prefs.begin("gld_app", true)) {
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+        runtimeConfig.ctrlword = 0;
+        loraAutoTransmit = false;
+#endif
         logPrintln("GLD_APP_CONFIG_LOAD=DEFAULT reason=nvs_unavailable");
         applySelfTestAesFallbackIfAllowed();
         return;
@@ -923,11 +1004,18 @@ void loadRuntimeConfig() {
     runtimeConfig.loraPreamble = prefs.getUShort("loraPre", runtimeConfig.loraPreamble);
     runtimeConfig.loraTcxoVoltage = prefs.getFloat("loraTcxo", runtimeConfig.loraTcxoVoltage);
     runtimeConfig.loraXtalVoltage = prefs.getFloat("loraXtal", runtimeConfig.loraXtalVoltage);
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    loraTxIntervalMs = prefs.getULong("loraQcInt", loraTxIntervalMs);
+    loraTransmitFocus = prefs.getBool("loraQcFocus", loraTransmitFocus);
+    loraTargetTransmitOnly = prefs.getBool("loraQcTarget", loraTargetTransmitOnly);
+    loraAutoTransmit = prefs.getBool("loraQcAutoTx", loraAutoTransmit);
+#else
 #if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
     loraTxIntervalMs = prefs.getULong("loraQcInt", loraTxIntervalMs);
     loraTransmitFocus = prefs.getBool("loraQcFocus", loraTransmitFocus);
     loraTargetTransmitOnly = prefs.getBool("loraQcTarget", loraTargetTransmitOnly);
     loraAutoTransmit = prefs.getBool("loraQcAutoTx", loraAutoTransmit);
+#endif
 #endif
     runtimeConfig.ctrlword = static_cast<uint8_t>(prefs.getUChar("ctrlword", runtimeConfig.ctrlword));
     const String storedSchema = prefs.getString("schema", "");
@@ -954,6 +1042,23 @@ void loadRuntimeConfig() {
     runtimeConfig.lastDownlinkCommandId = prefs.getUShort("lastCmdId", 0);
     prefs.end();
     if (runtimeConfig.ctrlword != GLD_CTRL_WORD_VALUE) {
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+        // An invalid record may contain partially written values. Keep the AP
+        // identifier unchanged and discard the other loaded fields.
+        char bootDeviceId[sizeof(runtimeConfig.deviceId)];
+        copyBounded(bootDeviceId, sizeof(bootDeviceId), runtimeConfig.deviceId);
+        bool idHex = strlen(bootDeviceId) == 4;
+        for (size_t i = 0; idHex && i < 4; ++i) idHex = hexNibble(bootDeviceId[i]) >= 0;
+        const uint16_t parsedNodeId = idHex ? nodeIdFromDeviceId(bootDeviceId, 0) : 0;
+        const uint16_t bootNodeId = runtimeConfig.nodeId;
+        resetRuntimeConfigDefaults();
+        copyBounded(runtimeConfig.deviceId, sizeof(runtimeConfig.deviceId), bootDeviceId);
+        runtimeConfig.nodeId = bootNodeId;
+        if (parsedNodeId == 0) logPrintln("GLD_APP_CONFIG_LOAD=IDENTITY_UNTRUSTED");
+        runtimeConfig.ctrlword = 0;
+        buildRuntimeTopics();
+        logPrintln("GLD_APP_CONFIG_LOAD=DEFAULT reason=invalid_record_fields_discarded");
+#endif
         clearRuntimeAesKey();
         runtimeConfig.lastDownlinkCommandId = 0;
     }
@@ -965,6 +1070,28 @@ void loadRuntimeConfig() {
         resetRuntimeLoraDefaults();
         logPrintf("GLD_LORA_CONFIG_LOAD=DEFAULT reason=%s\n", loraReason);
     }
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    if (runtimeConfig.ctrlword != GLD_CTRL_WORD_VALUE) {
+        loraTxIntervalMs = DEFAULT_TX_INTERVAL_MS;
+        loraTransmitFocus = loraTargetTransmitOnly = false;
+        loraAutoTransmit = false;
+    }
+    if (loraTxIntervalMs < LORA_FOCUS_MIN_INTERVAL_MS ||
+        loraTxIntervalMs > LORA_MAX_INTERVAL_MS ||
+        (!loraTransmitFocus && loraTxIntervalMs < LORA_CH_MIN_INTERVAL_MS)) {
+        loraTxIntervalMs = DEFAULT_TX_INTERVAL_MS;
+        loraTransmitFocus = false;
+        loraTargetTransmitOnly = false;
+        loraAutoTransmit = true;
+        logPrintln("GLD_LORA_QC_LOAD=DEFAULT reason=invalid_persisted_qc_config");
+    } else {
+        logPrintf("GLD_LORA_QC_LOAD=OK intervalMs=%lu focus=%u target=%s autoTransmit=%u\n",
+                  static_cast<unsigned long>(loraTxIntervalMs),
+                  loraTransmitFocus ? 1 : 0,
+                  loraTargetTransmitOnly ? "radio_only" : "ch",
+                  loraAutoTransmit ? 1 : 0);
+    }
+#else
 #if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
     if (loraTxIntervalMs < LORA_FOCUS_MIN_INTERVAL_MS ||
         loraTxIntervalMs > LORA_MAX_INTERVAL_MS ||
@@ -981,6 +1108,7 @@ void loadRuntimeConfig() {
                   loraTargetTransmitOnly ? "radio_only" : "ch",
                   loraAutoTransmit ? 1 : 0);
     }
+#endif
 #endif
     buildRuntimeTopics();
     logPrintf("GLD_APP_CONFIG_LOAD=%s deviceId=%s nodeId=0x%04X chId=0x%04X ssid=%s mqttHost=%s mqttPort=%u topicRoot=%s aesKey=%u aesKeySource=%s keyId=%u lastCmdId=%u lora=%.3f/%.2f/SF%u/CR%u sync=0x%02X power=%d preamble=%u alarmMode=%s alarmModeSessionOnly=1\n",
@@ -1008,7 +1136,11 @@ void loadRuntimeConfig() {
 
 bool saveRuntimeConfig() {
     Preferences prefs;
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    if (!prefs.begin("gld_app", false)) { latchAtexConfigPersistenceFault(); return false; }
+#else
     if (!prefs.begin("gld_app", false)) return false;
+#endif
     auto putStringChecked = [&prefs](const char* key, const char* value) {
         prefs.putString(key, value != nullptr ? value : "");
         return prefs.getString(key, "__pgl_missing__") == String(value != nullptr ? value : "");
@@ -1021,6 +1153,11 @@ bool saveRuntimeConfig() {
     // failed write therefore leaves the config visibly invalid instead of
     // exposing a mixed old/new record behind a valid ctrlword.
     bool ok = prefs.putUChar("ctrlword", 0) == sizeof(uint8_t);
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    // If invalidation fails, the old marker may still be valid. Never write
+    // any new key under that marker. A failed commit may still be ambiguous.
+    if (!ok) { runtimeConfig.ctrlword = 0; latchAtexConfigPersistenceFault(); prefs.end(); return false; }
+#endif
     runtimeConfig.ctrlword = 0;
     ok = putStringChecked("schema", pgl::firmware::CONFIG_SCHEMA_VERSION) && ok;
     ok = putStringChecked("deviceId", runtimeConfig.deviceId) && ok;
@@ -1042,11 +1179,18 @@ bool saveRuntimeConfig() {
     ok = prefs.putUShort("loraPre", runtimeConfig.loraPreamble) == sizeof(uint16_t) && ok;
     ok = prefs.putFloat("loraTcxo", runtimeConfig.loraTcxoVoltage) == sizeof(float) && ok;
     ok = prefs.putFloat("loraXtal", runtimeConfig.loraXtalVoltage) == sizeof(float) && ok;
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    ok = prefs.putULong("loraQcInt", loraTxIntervalMs) == sizeof(uint32_t) && ok;
+    ok = prefs.putBool("loraQcFocus", loraTransmitFocus) == sizeof(uint8_t) && ok;
+    ok = prefs.putBool("loraQcTarget", loraTargetTransmitOnly) == sizeof(uint8_t) && ok;
+    ok = prefs.putBool("loraQcAutoTx", loraAutoTransmit) == sizeof(uint8_t) && ok;
+#else
 #if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
     ok = prefs.putULong("loraQcInt", loraTxIntervalMs) == sizeof(uint32_t) && ok;
     ok = prefs.putBool("loraQcFocus", loraTransmitFocus) == sizeof(uint8_t) && ok;
     ok = prefs.putBool("loraQcTarget", loraTargetTransmitOnly) == sizeof(uint8_t) && ok;
     ok = prefs.putBool("loraQcAutoTx", loraAutoTransmit) == sizeof(uint8_t) && ok;
+#endif
 #endif
     if (runtimeConfig.aesKeyPresent && runtimeConfig.aesKeyId != 0) {
         ok = prefs.putBool("aesKeySet", true) == sizeof(uint8_t) && ok;
@@ -1064,6 +1208,9 @@ bool saveRuntimeConfig() {
     }
     prefs.end();
     runtimeConfig.ctrlword = ok ? GLD_CTRL_WORD_VALUE : 0;
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    if (!ok) latchAtexConfigPersistenceFault();
+#endif
     return ok;
 }
 
@@ -1266,11 +1413,15 @@ bool applyRuntimeLoraPatch(JsonDocument& doc, char* reason, size_t reasonSize) {
         setRejectReason(reason, reasonSize, "txTarget must be ch or radio_only");
         return false;
     }
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    // ATEX QC uses the same validated Focus and target values.
+#else
 #if !(PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2)
     if (!doc["transmitFocus"].isNull() || !doc["txTarget"].isNull()) {
         setRejectReason(reason, reasonSize, "LoRa Focus is available on GLD1 only");
         return false;
     }
+#endif
 #endif
     if (txIntervalMs < LORA_CH_MIN_INTERVAL_MS && !requestedFocus) {
         setRejectReason(reason, reasonSize, "interval below 3 s requires Focus ON");
@@ -1356,7 +1507,11 @@ bool enqueueDatasetPayload(const char* payload, size_t len, uint32_t seq) {
 }
 
 bool publishDatasetPayload(const char* payload, uint32_t seq, bool retry) {
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    const bool ok = atexNativeConfigTrusted() && mqtt.connected() && mqtt.publish(topicData, payload, false);
+#else
     const bool ok = mqtt.connected() && mqtt.publish(topicData, payload, false);
+#endif
     if (retry) {
         if (ok) {
             ++datasetQueueRetryCount;
@@ -1376,6 +1531,9 @@ bool publishDatasetPayload(const char* payload, uint32_t seq, bool retry) {
 }
 
 void flushDatasetQueue() {
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    if (!atexNativeConfigTrusted()) return;
+#endif
     if (datasetQueueCount == 0 || !mqtt.connected()) return;
     for (uint8_t i = 0; i < DATASET_QUEUE_FLUSH_PER_LOOP && datasetQueueCount > 0; ++i) {
         DatasetQueuedPayload& slot = datasetQueue[datasetQueueHead];
@@ -1446,6 +1604,25 @@ void emitCommandAck(const char* cmd, const char* status,
     rawJsonLine("GLD_CMD_ACK_JSON", doc);
 }
 
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+void emitAtexManualPendingAck() {
+    StaticJsonDocument<256> doc;
+    char chIdHex[5];
+    formatHex4(runtimeConfig.chId, chIdHex, sizeof(chIdHex));
+    doc["deviceId"] = runtimeConfig.deviceId;
+    doc["nodeId"] = runtimeConfig.nodeId;
+    doc["chId"] = chIdHex;
+    doc["cmd"] = "MANUAL_LORA_TX";
+    doc["status"] = "ok";
+    doc["completion"] = "pending";
+    doc["message"] = "manual transmit accepted; result follows asynchronously";
+    doc["rebootExpected"] = false;
+    doc["mode"] = pgl::gld::gldModeName(currentMode);
+    doc["uptimeMs"] = static_cast<uint32_t>(millis());
+    rawJsonLine("GLD_CMD_ACK_JSON", doc);
+}
+#endif
+
 void addCapabilities(JsonObject caps) {
     caps["appPing"] = true;
     caps["getInfo"] = true;
@@ -1453,6 +1630,13 @@ void addCapabilities(JsonObject caps) {
     caps["lightweightTelemetry"] = "GET_TELEMETRY";
     caps["serialAckJson"] = true;
     caps["runningTelemetry"] = true;
+#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
+    caps["scanDuringLoRaRx"] = true;
+#elif defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+#if PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    caps["scanDuringLoRaRx"] = true;
+#endif
+#endif
     caps["modeSwitchReboots"] = true;
     caps["datasetControlPath"] = "mqtt";
     caps["nullingConfig"] = "SET_NULLING_CONFIG_JSON thresholdV,minFinalV";
@@ -1470,9 +1654,14 @@ void addCapabilities(JsonObject caps) {
     caps["serialChAddress"] = "SET_CH_ADDRESS_JSON chId";
     caps["serialLoraConfig"] = "SET_LORA_CONFIG_JSON freqMHz,bwKHz,sf,cr,syncWord,txPowerDbm,preamble,tcxoVoltage,xtalVoltage";
     caps["liveLoraReinit"] = true;
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    caps["loraAutoTransmit"] = "SET_LORA_AUTO_TRANSMIT_JSON enabled (persisted on ATEX)";
+    caps["manualLoraTransmit"] = "MANUAL_LORA_TX (Auto Transmit OFF)";
+#else
 #if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
     caps["loraAutoTransmit"] = "SET_LORA_AUTO_TRANSMIT_JSON enabled (persisted on GLD1)";
     caps["manualLoraTransmit"] = "MANUAL_LORA_TX (Auto Transmit OFF)";
+#endif
 #endif
     caps["runBootCheck"] = true;
     caps["i2cScan"] = "RUN_I2C_SCAN (manual only)";
@@ -1666,7 +1855,16 @@ void emitTelemetryJson() {
 }
 
 void emitInfoJson() {
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    static StaticJsonDocument<3072> doc;
+#else
+#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
+    // GLD1 info includes the full capability list and bounded network fields.
+    static StaticJsonDocument<3072> doc;
+#else
     static StaticJsonDocument<1536> doc;
+#endif
+#endif
     doc.clear();
     char chIdHex[5];
     formatHex4(runtimeConfig.chId, chIdHex, sizeof(chIdHex));
@@ -1715,8 +1913,12 @@ void emitInfoJson() {
     starLora["txIntervalMs"] = loraTxIntervalMs;
     starLora["transmitFocus"] = loraTransmitFocus;
     starLora["txTarget"] = loraTargetTransmitOnly ? "radio_only" : "ch";
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    starLora["autoTransmit"] = loraAutoTransmit;
+#else
 #if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
     starLora["autoTransmit"] = loraAutoTransmit;
+#endif
 #endif
     starLora["manualBeginSupported"] = true;
     starLora["runtime"] = true;
@@ -1738,6 +1940,13 @@ void emitInfoJson() {
     security["lastDownlinkCommandId"] = runtimeConfig.lastDownlinkCommandId;
     JsonObject caps = doc.createNestedObject("capabilities");
     addCapabilities(caps);
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    if (doc.overflowed()) logPrintln("GLD_INFO_JSON_OVERFLOW capacity=3072 ATEX");
+#else
+#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
+    if (doc.overflowed()) logPrintln("GLD_INFO_JSON_OVERFLOW capacity=3072");
+#endif
+#endif
     rawJsonLine("GLD_INFO_JSON", doc);
 }
 
@@ -1755,6 +1964,9 @@ void emitStatusJson() {
     doc["nodeId"] = runtimeConfig.nodeId;
     doc["targetChId"] = chIdHex;
     doc["mode"] = pgl::gld::gldModeName(currentMode);
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    doc["configPersistenceFault"] = atexConfigPersistenceFault;
+#endif
     doc["uptimeMs"] = static_cast<uint32_t>(millis());
     doc["debugEnabled"] = debugEnabled;
 
@@ -1897,8 +2109,12 @@ void emitStatusJson() {
     lora["txIntervalMs"] = loraTxIntervalMs;
     lora["transmitFocus"] = loraTransmitFocus;
     lora["txTarget"] = loraTargetTransmitOnly ? "radio_only" : "ch";
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    lora["autoTransmit"] = loraAutoTransmit;
+#else
 #if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
     lora["autoTransmit"] = loraAutoTransmit;
+#endif
 #endif
     lora["txMode"] = !loraTransmitFocus && !loraTargetTransmitOnly ? "ch_normal"
         : loraTargetTransmitOnly ? "test" : "ch_dummy";
@@ -2229,9 +2445,33 @@ void onBeginLoraFromSerialCommand() {
                    radioReady ? "LoRa Begin success" : "LoRa Begin failed", false);
 }
 
-void runGld1LoraTxAttempt();
+void runGld1LoraTxAttempt(bool scanDuringRx = false);
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+bool runAtexLoraTxAttempt(bool scanDuringRx = false);
+void serviceAtexQcRadio();
+#endif
 
 void onSetLoraAutoTransmitJson(const char* payload) {
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    StaticJsonDocument<96> doc;
+    if (deserializeJson(doc, payload) || !doc["enabled"].is<bool>()) {
+        emitCommandAck("SET_LORA_AUTO_TRANSMIT", "rejected", "enabled must be boolean", false);
+        return;
+    }
+    const bool previous = loraAutoTransmit;
+    loraAutoTransmit = doc["enabled"].as<bool>();
+    if (!saveRuntimeConfig()) {
+        loraAutoTransmit = previous;
+        emitCommandAck("SET_LORA_AUTO_TRANSMIT", "error", "failed to save auto transmit", false);
+        return;
+    }
+    // Refresh the transport snapshot before the operator sees success.
+    pgl::gld::datasetworkflowwifi::updateAtexRadioAutoTx(loraAutoTransmit);
+    lastTxMs = millis();
+    emitCommandAck("SET_LORA_AUTO_TRANSMIT", "ok",
+                   loraAutoTransmit ? "auto transmit enabled; interval restarted"
+                                    : "auto transmit disabled", false);
+#else
 #if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
     StaticJsonDocument<96> doc;
     if (deserializeJson(doc, payload) || !doc["enabled"].is<bool>()) {
@@ -2253,9 +2493,32 @@ void onSetLoraAutoTransmitJson(const char* payload) {
     (void)payload;
     emitCommandAck("SET_LORA_AUTO_TRANSMIT", "rejected", "Auto Transmit is available on GLD1 only", false);
 #endif
+#endif
 }
 
 void onManualLoraTxFromSerialCommand() {
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    if (!external24VPowerMode || batteryPowerMode || !pgl::gld::readGldExternalPower()) {
+        emitCommandAck("MANUAL_LORA_TX", "rejected", "ATEX manual TX requires stable external 24V", false);
+        return;
+    }
+    if (currentMode != pgl::gld::GldMode::INFERENCE) {
+        emitCommandAck("MANUAL_LORA_TX", "rejected", "Manual Transmit requires Running mode", false);
+        return;
+    }
+    if (loraAutoTransmit) {
+        emitCommandAck("MANUAL_LORA_TX", "rejected", "disable Auto Transmit first", false);
+        return;
+    }
+    if (!radioReady || loraRadio == nullptr) {
+        emitCommandAck("MANUAL_LORA_TX", "rejected", "LoRa Begin/radio not ready", false);
+        return;
+    }
+    const bool started = runAtexLoraTxAttempt();
+    lastTxMs = millis();
+    if (started) emitAtexManualPendingAck();
+    else emitCommandAck("MANUAL_LORA_TX", "error", "manual transmit blocked before radio operation", false);
+#else
 #if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
     if (currentMode != pgl::gld::GldMode::INFERENCE) {
         emitCommandAck("MANUAL_LORA_TX", "rejected", "Manual Transmit requires Running mode", false);
@@ -2278,6 +2541,7 @@ void onManualLoraTxFromSerialCommand() {
                                 : "manual transmit failed; interval restarted", false);
 #else
     emitCommandAck("MANUAL_LORA_TX", "rejected", "Manual Transmit is available on GLD1 only", false);
+#endif
 #endif
 }
 
@@ -2305,10 +2569,32 @@ void onSetAppConfigJson(const char* payload) {
     if (topicRoot == nullptr) topicRoot = runtimeConfig.topicRoot;
     const bool reboot = doc["reboot"] | true;
     const bool clearAesKey = doc["clearAesKey"] | false;
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    const char* aesKeyHex = nullptr;
+    bool aesKeyProvided = false;
+    uint8_t firstAliasKey[16]{};
+    const char* const keyAliases[] = {"aesKeyHex", "gldAes128KeyHex", "GLD_AES128_KEY_HEX"};
+    for (const char* alias : keyAliases) {
+        if (!doc.containsKey(alias)) continue;
+        const char* candidate = doc[alias].as<const char*>();
+        uint8_t candidateKey[16]{};
+        if (candidate == nullptr || candidate[0] == '\0' || !parseAesKeyHex(candidate, candidateKey)) {
+            emitCommandAck("SET_APP_CONFIG", "rejected", "present AES key alias must contain a valid key", false);
+            return;
+        }
+        if (aesKeyProvided && memcmp(firstAliasKey, candidateKey, sizeof(firstAliasKey)) != 0) {
+            emitCommandAck("SET_APP_CONFIG", "rejected", "conflicting AES key aliases", false);
+            return;
+        }
+        if (!aesKeyProvided) { aesKeyHex = candidate; memcpy(firstAliasKey, candidateKey, sizeof(firstAliasKey)); }
+        aesKeyProvided = true;
+    }
+#else
     const char* aesKeyHex = doc["aesKeyHex"].as<const char*>();
     if (aesKeyHex == nullptr) aesKeyHex = doc["gldAes128KeyHex"].as<const char*>();
     if (aesKeyHex == nullptr) aesKeyHex = doc["GLD_AES128_KEY_HEX"].as<const char*>();
     const bool aesKeyProvided = aesKeyHex != nullptr && strlen(aesKeyHex) > 0;
+#endif
     uint8_t parsedAesKey[16]{};
     const uint8_t requestedKeyId = static_cast<uint8_t>(doc["keyId"] | runtimeConfig.aesKeyId);
     const bool loraPatch = hasRuntimeLoraPatch(doc);
@@ -2327,6 +2613,14 @@ void onSetAppConfigJson(const char* payload) {
             return;
         }
     }
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    // Preserve legacy clear-then-set precedence when a key is supplied.
+    const uint16_t previousDownlinkId = runtimeConfig.lastDownlinkCommandId;
+    // Downlink CMAC uses the key bytes, not keyId. Re-provisioning the
+    // same bytes must not reopen previously accepted command IDs.
+    const bool sameDownlinkKey = aesKeyProvided && runtimeConfig.aesKeyPresent &&
+        memcmp(runtimeConfig.aesKey, parsedAesKey, sizeof(runtimeConfig.aesKey)) == 0;
+#endif
     if (loraPatch) {
         char reason[160]{};
         if (!applyRuntimeLoraPatch(doc, reason, sizeof(reason))) {
@@ -2351,7 +2645,11 @@ void onSetAppConfigJson(const char* payload) {
         memcpy(runtimeConfig.aesKey, parsedAesKey, sizeof(runtimeConfig.aesKey));
         runtimeConfig.aesKeyPresent = true;
         runtimeAesKeySource = RuntimeAesKeySource::Nvs;
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+        runtimeConfig.lastDownlinkCommandId = sameDownlinkKey ? previousDownlinkId : 0;
+#else
         runtimeConfig.lastDownlinkCommandId = 0;
+#endif
     }
     buildRuntimeTopics();
 
@@ -2399,6 +2697,16 @@ void onSetDeviceIdJson(const char* payload) {
         emitCommandAck("SET_DEVICE_ID", "rejected", "deviceId must be a GLD ID in 1001-FEFF", false);
         return;
     }
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    // The active Dataset AP/hello retains its startup ID; do not silently
+    // save a different runtime ID while leaving that transport unchanged.
+    if (!reboot && pgl::gld::datasetworkflowwifi::available() &&
+        strcmp(runtimeConfig.deviceId, deviceId) != 0) {
+        emitCommandAck("SET_DEVICE_ID", "rejected",
+                       "Dataset hotspot active; changing device ID requires reboot:true", false);
+        return;
+    }
+#endif
     const uint16_t derivedNodeId = nodeIdFromDeviceId(deviceId, DEFAULT_NODE_ID);
     if (!doc["nodeId"].isNull()) {
         uint16_t explicitNodeId = 0;
@@ -2901,6 +3209,80 @@ void checkSerial();
 void firmwareServiceTick();
 
 void onRunNullingSingleJson(const char* payload) {
+#if PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    StaticJsonDocument<96> doc;
+    if (deserializeJson(doc, payload)) {
+        emitCommandAck("RUN_NULLING_SINGLE", "error", "invalid json", false);
+        return;
+    }
+    if (!doc.containsKey("channel")) {
+        emitCommandAck("RUN_NULLING_SINGLE", "rejected", "channel is required", false);
+        return;
+    }
+    const int channel = doc["channel"].as<int>();
+    if (channel < 0 || channel >= pgl::gld::board::SENSOR_COUNT) {
+        emitCommandAck("RUN_NULLING_SINGLE", "rejected", "channel must be 0..7", false);
+        return;
+    }
+    pgl::gld::GldNullingProfile existing{};
+    if (!pgl::gld::loadNullingProfile(existing) || !pgl::gld::isNullingProfileValid(existing)) {
+        emitCommandAck("RUN_NULLING_SINGLE", "rejected", "complete nulling profile required before single-channel update", false);
+        return;
+    }
+    if (existing.profileId == UINT8_MAX) {
+        emitCommandAck("RUN_NULLING_SINGLE", "rejected", "nulling profile id exhausted; maintenance reset required", false);
+        return;
+    }
+    if (!ensureNullingHardwareReady()) {
+        emitCommandAck("RUN_NULLING_SINGLE", "error", "ADS/DAC not ready", false);
+        return;
+    }
+    // The service writes the selected DAC during its search. Suspend use of
+    // the profile until an isolated saved-profile apply/readback succeeds.
+    nullingProfileApplied = false;
+    lastInferenceValid = false;
+    modelProfileReady = false;
+    runtimeMcpReadbackVerified[channel] = false;
+    const auto restoreSavedCode = [&]() {
+        const bool restored = dac.writeDac(static_cast<uint8_t>(channel), existing.dacCode[channel]);
+        if (!restored) dacReady = false;
+        logPrintf("GLD_ATEX_NULLING_SINGLE_RESTORE channel=%d writeOk=%u runtimeInvalidated=1\n",
+                  channel, restored ? 1u : 0u);
+        return restored;
+    };
+    const pgl::gld::GldNullingSingleResult result = pgl::gld::runNullingServiceSingleChannel(
+        ads, dac, static_cast<uint8_t>(channel), nullingLogLine, firmwareServiceTick, nullingConfig);
+    if (!result.success) {
+        (void)restoreSavedCode();
+        emitCommandAck("RUN_NULLING_SINGLE", "failed", "channel nulling failed; restore and verify saved profile before running", false);
+        return;
+    }
+    pgl::gld::GldNullingProfile toSave = existing;
+    toSave.profileId = static_cast<uint8_t>(existing.profileId + 1u);
+    toSave.dacCode[channel] = result.dacCode;
+    toSave.baselineV[channel] = result.baselineV;
+    toSave.afterV[channel] = result.afterV;
+    toSave.channelOk[channel] = 1u;
+    if (!pgl::gld::isNullingProfileValid(toSave)) {
+        (void)restoreSavedCode();
+        emitCommandAck("RUN_NULLING_SINGLE", "error", "updated profile validation failed; verify saved profile before running", false);
+        return;
+    }
+    if (!dac.writeDac(static_cast<uint8_t>(channel), result.dacCode)) {
+        (void)restoreSavedCode();
+        emitCommandAck("RUN_NULLING_SINGLE", "error", "DAC apply failed; verify saved profile before running", false);
+        return;
+    }
+    if (!pgl::gld::saveNullingProfile(toSave)) {
+        (void)restoreSavedCode();
+        emitCommandAck("RUN_NULLING_SINGLE", "error", "failed to save profile; verify saved profile before running", false);
+        return;
+    }
+    nullingProfileId = toSave.profileId;
+    logPrintf("GLD_ATEX_NULLING_SINGLE_SAVE=OK channel=%d profileId=%u runtimeInvalidated=1\n",
+              channel, toSave.profileId);
+    emitCommandAck("RUN_NULLING_SINGLE", "ok", "profile saved; restart to apply and verify before running", false);
+#else
     StaticJsonDocument<96> doc;
     if (deserializeJson(doc, payload)) {
         emitCommandAck("RUN_NULLING_SINGLE", "error", "invalid json", false);
@@ -3021,6 +3403,7 @@ void onRunNullingSingleJson(const char* payload) {
     logPrintf("GLD_NULLING_SINGLE_SAVE=OK channel=%d success=%u profileId=%u\n",
               channel, 1u, toSave.profileId);
     emitCommandAck("RUN_NULLING_SINGLE", "ok", "channel nulled", false);
+#endif
 }
 
 // Diagnostic voltage-vs-DAC-code sweep for one channel, used by the QC tab's
@@ -3116,10 +3499,36 @@ bool workflowReadOnlyCommand(pgl::gld::GldSerialCommandType type) {
         case Type::None: case Type::Unknown:
         case Type::DebugOn: case Type::DebugOff:
         case Type::AppPing: case Type::GetInfo: case Type::GetStatus:
+#if PGL_GLD_BOARD_PROFILE_GLD_ATEX
+        case Type::GetAtexIdentityJson:
+#endif
         case Type::GetTelemetry: case Type::GetQcStatus: return true;
         default: return false;
     }
 }
+
+#if PGL_GLD_BOARD_PROFILE_GLD_ATEX
+void emitAtexIdentityJson(const char* payload) {
+    // Recheck the parser contract before indexing or echoing input.
+    if (payload == nullptr || strlen(payload) != 44 ||
+        strncmp(payload, "{\"nonce\":\"", 10) != 0 || payload[42] != '"' || payload[43] != '}') return;
+    char nonce[33];
+    for (size_t i = 0; i < 32; ++i) {
+        const char c = payload[10 + i];
+        if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'))) return;
+        nonce[i] = c;
+    }
+    nonce[32] = '\0';
+    StaticJsonDocument<512> doc;
+    doc["nonce"] = nonce;
+    doc["boardProfile"] = BOARD_PROFILE;
+    doc["deviceId"] = runtimeConfig.deviceId;
+    doc["modelProfileId"] = pgl::gld::model::PROFILE_ID;
+    doc["firmwareVersion"] = GLD_RUNTIME_FIRMWARE_VERSION;
+    if (doc.overflowed()) return;
+    rawJsonLine("GLD_ATEX_IDENTITY_JSON", doc);
+}
+#endif
 
 const char* workflowCommandName(pgl::gld::GldSerialCommandType type) {
     using Type = pgl::gld::GldSerialCommandType;
@@ -3162,6 +3571,34 @@ const char* workflowCommandName(pgl::gld::GldSerialCommandType type) {
 }
 
 bool rejectWorkflowMutation(const pgl::gld::GldSerialCommand& command) {
+#if PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    if (atexConfigPersistenceFault && command.type == pgl::gld::GldSerialCommandType::Restart) {
+        using Q = pgl::gld::GldAtexQcSchedule;
+        using W = pgl::gld::GldWorkflowRadioSchedule;
+        const bool qcActive = atexQcSchedule.state() != Q::State::Idle && atexQcSchedule.state() != Q::State::Fault;
+        const bool workflowActive = workflowRadioScheduler.state() != W::State::Idle && workflowRadioScheduler.state() != W::State::Fault;
+        if (qcActive || workflowActive) {
+            emitCommandAck("RESTART", "busy", "waiting for radio cleanup", false);
+            return true;
+        }
+    }
+    if (atexConfigPersistenceFault && !workflowReadOnlyCommand(command.type) &&
+        command.type != pgl::gld::GldSerialCommandType::Restart) {
+        emitCommandAck(workflowCommandName(command.type), "busy", "config persistence uncertain; restart and reconcile", false);
+        return true;
+    }
+    if (atexQcSchedule.admissionHeld() && !workflowReadOnlyCommand(command.type) &&
+        command.type != pgl::gld::GldSerialCommandType::Restart) {
+        emitCommandAck(workflowCommandName(command.type), "busy", "QC radio transaction in progress", false);
+        return true;
+    }
+    if (workflowSharedSpiQuarantined && !workflowReadOnlyCommand(command.type) &&
+        command.type != pgl::gld::GldSerialCommandType::Restart) {
+        emitCommandAck(workflowCommandName(command.type), "busy",
+                       "radio SPI state uncertain; restart required before hardware operations", false);
+        return true;
+    }
+#endif
     if (!pgl::gld::datasetworkflowwifi::ownsSession() || workflowReadOnlyCommand(command.type)) return false;
     emitCommandAck(workflowCommandName(command.type), "busy",
                    "Stop Dataset, finish CSV delivery, then Disconnect before changing GLD", false);
@@ -3170,15 +3607,22 @@ bool rejectWorkflowMutation(const pgl::gld::GldSerialCommand& command) {
 
 struct WorkflowNativeOperation {
     bool previous;
-    WorkflowNativeOperation() : previous(pgl::gld::datasetworkflowwifi::exchangeNativeBusy(true)) {}
-    ~WorkflowNativeOperation() { pgl::gld::datasetworkflowwifi::exchangeNativeBusy(previous); }
+    bool marksBusy;
+    explicit WorkflowNativeOperation(bool mutating = true) : previous(false), marksBusy(mutating) {
+        if (marksBusy) previous = pgl::gld::datasetworkflowwifi::exchangeNativeBusy(true);
+    }
+    ~WorkflowNativeOperation() {
+        if (marksBusy) pgl::gld::datasetworkflowwifi::exchangeNativeBusy(previous);
+    }
 };
 #endif
 
 void handleSerialCommand(const pgl::gld::GldSerialCommand& command) {
 #if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
     if (rejectWorkflowMutation(command)) return;
-    WorkflowNativeOperation nativeOperation;
+    // Status/telemetry polling must not race with Wi-Fi START admission.
+    // Mutating serial commands still exclude a simultaneous wireless Start.
+    WorkflowNativeOperation nativeOperation(!workflowReadOnlyCommand(command.type));
 #endif
     switch (command.type) {
         case pgl::gld::GldSerialCommandType::Unknown:
@@ -3202,6 +3646,11 @@ void handleSerialCommand(const pgl::gld::GldSerialCommand& command) {
         case pgl::gld::GldSerialCommandType::GetStatus:
             emitStatusJson();
             break;
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+        case pgl::gld::GldSerialCommandType::GetAtexIdentityJson:
+            emitAtexIdentityJson(command.payload);
+            break;
+#endif
         case pgl::gld::GldSerialCommandType::GetTelemetry:
             emitTelemetryJson();
             break;
@@ -4889,6 +5338,9 @@ void disableNetworkForOfflineMode(const char* reason) {
 // router/broker configuration and repeatedly scanning for them can interrupt
 // clients associating with the AP (including DHCP on 192.168.4.x).
 bool workflowNativeNetworkConfigured() {
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    if (!atexNativeConfigTrusted()) return false;
+#endif
     return runtimeConfig.wifiSsid[0] != '\0' &&
            strcmp(runtimeConfig.wifiSsid, "CHANGE_ME") != 0 &&
            runtimeConfig.mqttHost[0] != '\0' &&
@@ -5016,6 +5468,9 @@ bool mqttConnect() {
 }
 
 void maintainMqtt() {
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    if (!atexNativeConfigTrusted()) return;
+#endif
     if (!mqtt.connected()) mqttConnect();
     else mqtt.loop();
 }
@@ -5025,6 +5480,9 @@ void maintainMqtt() {
 // ---------------------------------------------------------------------------
 
 void publishCmdAck(const char* cmd, const char* result) {
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    if (!atexNativeConfigTrusted()) return;
+#endif
     StaticJsonDocument<128> doc;
     doc["device_id"] = runtimeConfig.deviceId;
     doc["cmd"] = cmd;
@@ -5036,6 +5494,9 @@ void publishCmdAck(const char* cmd, const char* result) {
 }
 
 void publishDatasetStatus(const char* state, const char* detail) {
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    if (!atexNativeConfigTrusted()) return;
+#endif
     StaticJsonDocument<384> doc;
     doc["device_id"] = runtimeConfig.deviceId;
     doc["stage"] = "DATASET";
@@ -5061,6 +5522,9 @@ void publishDatasetRejectedStatus(
     const pgl::gld::GldDatasetValidationResult& validation,
     const pgl::gld::GldDatasetChannelSample* samples,
     size_t count) {
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    if (!atexNativeConfigTrusted()) return;
+#endif
     StaticJsonDocument<512> doc;
     doc["device_id"] = runtimeConfig.deviceId;
     doc["stage"] = "DATASET";
@@ -5089,6 +5553,9 @@ void publishDatasetRejectedStatus(
 }
 
 void publishDatasetSummary() {
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    if (!atexNativeConfigTrusted()) return;
+#endif
     StaticJsonDocument<384> doc;
     doc["device_id"] = runtimeConfig.deviceId;
     doc["stage"] = "DATASET";
@@ -5192,6 +5659,9 @@ void handleDatasetTopic(const char* payload, unsigned int length) {
 }
 
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    if (!atexNativeConfigTrusted()) return;
+#endif
     if (strcmp(topic, topicCmd) == 0) {
         handleCmdTopic(reinterpret_cast<const char*>(payload), length);
     } else if (strcmp(topic, topicDataset) == 0) {
@@ -5969,6 +6439,10 @@ void runAdsMcpSweepFromSerialCommand() {
 void onLoRaRxDone() { loraRxFlag = true; }
 
 bool beginLoraRadio() {
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    if (atexConfigPersistenceFault) return false;
+    workflowAppliedRadio.valid = false;
+#endif
     if (!loraModule) {
         loraModule = new Module(
             pgl::gld::board::PIN_LORA_CS, pgl::gld::board::PIN_LORA_DIO1,
@@ -6010,6 +6484,13 @@ bool beginLoraRadio() {
     lastLoraBeginState = state;
     logPrintf("GLD_STAR_BEGIN_STATE=%d\n", state);
     if (state != RADIOLIB_ERR_NONE) { logPrintln("GLD_STAR_READY=0"); return false; }
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    workflowAppliedRadio.bandwidthKhz = runtimeConfig.loraBwKHz;
+    workflowAppliedRadio.sf = runtimeConfig.loraSf;
+    workflowAppliedRadio.cr = runtimeConfig.loraCr;
+    workflowAppliedRadio.preamble = runtimeConfig.loraPreamble;
+    workflowAppliedRadio.valid = true;
+#endif
     loraRadio->setRfSwitchPins(pgl::gld::board::PIN_LORA_RXEN, pgl::gld::board::PIN_LORA_TXEN);
     logPrintln("GLD_STAR_READY=1");
     return true;
@@ -6209,8 +6690,10 @@ bool runInference(const float mavVoltage[8]) {
     return true;
 }
 
-bool runScan(bool requireCompleteBatch = false) {
+bool runScan(bool requireCompleteBatch = false, const volatile bool* rxInterrupt = nullptr,
+             bool* scanInterrupted = nullptr) {
     (void)requireCompleteBatch;
+    if (scanInterrupted) *scanInterrupted = false;
     pgl::gld::GldAds1256Reading readings[pgl::gld::board::SENSOR_COUNT]{};
     float mavVoltage[8] = {};
     uint8_t okChannels = 0;
@@ -6228,12 +6711,15 @@ bool runScan(bool requireCompleteBatch = false) {
                   static_cast<unsigned>(lastBootMcpOkCount),
                   static_cast<unsigned>(pgl::gld::board::SENSOR_COUNT));
     } else {
+        if (!pgl::gld::collectRxAwareScan(readings, pgl::gld::board::SENSOR_COUNT,
+                rxInterrupt, [](uint8_t ch) { return ads.readChannel(ch); })) {
+            if (scanInterrupted) *scanInterrupted = true;
+            return false;
+        }
         for (uint8_t ch = 0; ch < pgl::gld::board::SENSOR_COUNT; ++ch) {
-            const pgl::gld::GldAds1256Reading r = ads.readChannel(ch);
-            readings[ch] = r;
-            latestSensorGain[ch] = r.gain;
-            latestSensorStatus[ch] = static_cast<uint8_t>(r.status);
-            if (r.status == pgl::gld::GldAds1256Status::Ok && !r.saturated) ++okChannels;
+            latestSensorGain[ch] = readings[ch].gain;
+            latestSensorStatus[ch] = static_cast<uint8_t>(readings[ch].status);
+            if (readings[ch].status == pgl::gld::GldAds1256Status::Ok && !readings[ch].saturated) ++okChannels;
         }
     }
     noteAdsReadHealth(okChannels, "runScan");
@@ -6345,7 +6831,7 @@ bool runScan(bool requireCompleteBatch = false) {
     return allValid;
 }
 
-bool openLoRaRxWindow(bool expectAlarmAck, uint8_t expectedSeq) {
+bool openLoRaRxWindow(bool expectAlarmAck, uint8_t expectedSeq, bool scanDuringRx = false) {
     if (!radioReady || !loraRadio) return false;
     bool alarmAckMatched = false;
     loraRxFlag = false;
@@ -6354,6 +6840,22 @@ bool openLoRaRxWindow(bool expectAlarmAck, uint8_t expectedSeq) {
     const uint32_t t0 = millis();
     while (!loraRxFlag && millis() - t0 < LORA_RX_WINDOW_MS) {
         serviceDelay(5);
+        // Only the regular externally powered inference scheduler opts in.
+        // Battery alarm delivery and commands retain their original flow.
+        // Check the radio IRQ before starting a scan and on the next loop
+        // iteration. Actual RX latency and packet retention need board tests.
+        const uint32_t now = millis();
+        if (pgl::gld::shouldScanDuringRx(scanDuringRx && external24VPowerMode &&
+                pgl::gld::readGldExternalPower(), loraRxFlag,
+                currentMode == pgl::gld::GldMode::INFERENCE, batteryPowerMode,
+                adsReady || SENSORLESS_BENCH, now, t0, lastScanMs,
+                LORA_RX_WINDOW_MS, SCAN_INTERVAL_MS)) {
+            const uint32_t previousScanMs = lastScanMs;
+            lastScanMs = now;
+            bool scanInterrupted = false;
+            runScan(false, &loraRxFlag, &scanInterrupted);
+            if (scanInterrupted) lastScanMs = previousScanMs;
+        }
     }
     if (loraRxFlag) {
         uint8_t rxBuf[pgl::protocol::APPFRAME_OVERHEAD + pgl::protocol::STAR_MAX_PAYLOAD]{};
@@ -6429,7 +6931,11 @@ bool buildTxSnapshot(const pgl::gld::GldClassifyResult& result,
         runtimeConfig.nodeId, runtimeConfig.chId,
         runtimeConfig.aesKeyId, runtimeConfig.aesKey,
         TFBG_CONTINUOUS_BATTERY ? false : power.externalPower,
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+        0,  // Match the ATEX physical alarm for every valid non-clear inference.
+#else
         1,
+#endif
     };
     pgl::gld::GldFrameBuildInput input{
         result.gasClass, result.confidence, batteryMv, sequence,
@@ -6545,6 +7051,36 @@ void writeGld1LoraTxPreviewHex(char* out, size_t outSize) {
 }
 #endif
 
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+struct AtexLoraTxPreview {
+    bool valid = false;
+    uint8_t length = 0;
+    uint8_t bytes[pgl::protocol::APPFRAME_OVERHEAD + pgl::protocol::STAR_MAX_PAYLOAD]{};
+};
+AtexLoraTxPreview atexLoraTxPreview{};
+// True only once the current QC attempt enters the radio transmit call.
+bool atexQcTransmitEnteredRadio = false;
+void clearAtexLoraTxPreview() { atexLoraTxPreview.valid = false; atexLoraTxPreview.length = 0; }
+void captureAtexLoraTxPreview(const uint8_t* bytes, size_t length) {
+    clearAtexLoraTxPreview();
+    if (bytes == nullptr || length == 0 || length > sizeof(atexLoraTxPreview.bytes)) return;
+    memcpy(atexLoraTxPreview.bytes, bytes, length);
+    atexLoraTxPreview.length = static_cast<uint8_t>(length);
+    atexLoraTxPreview.valid = true;
+}
+void writeAtexLoraTxPreviewHex(char* out, size_t outSize) {
+    if (out == nullptr || outSize == 0) return;
+    out[0] = '\0';
+    if (!atexLoraTxPreview.valid || outSize < static_cast<size_t>(atexLoraTxPreview.length) * 2U + 1U) return;
+    static constexpr char digits[] = "0123456789ABCDEF";
+    for (uint8_t i = 0; i < atexLoraTxPreview.length; ++i) {
+        out[i * 2U] = digits[(atexLoraTxPreview.bytes[i] >> 4U) & 0x0fU];
+        out[i * 2U + 1U] = digits[atexLoraTxPreview.bytes[i] & 0x0fU];
+    }
+    out[static_cast<size_t>(atexLoraTxPreview.length) * 2U] = '\0';
+}
+#endif
+
 void emitLoraTxEvent(bool ok, const char* reason) {
     const uint32_t now = millis();
     const uint32_t deltaMs = lastLoraTxEventMs == 0 ? 0 : now - lastLoraTxEventMs;
@@ -6565,11 +7101,17 @@ void emitLoraTxEvent(bool ok, const char* reason) {
     doc["payloadHex"] = payloadHex;
     doc["payloadByteLength"] = lastGld1LoraTxPreview.length;
 #endif
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    char payloadHex[sizeof(atexLoraTxPreview.bytes) * 2U + 1U]{};
+    writeAtexLoraTxPreviewHex(payloadHex, sizeof(payloadHex));
+    doc["payloadHex"] = payloadHex;
+    doc["payloadByteLength"] = atexLoraTxPreview.length;
+#endif
     rawJsonLine("GLD_LORA_EVENT_JSON", doc);
 }
 
 bool transmitSnapshot(const GldTxSnapshot& snapshot,
-                      bool expectAlarmAck = false) {
+                      bool expectAlarmAck = false, bool scanDuringRx = false) {
     lastLoraRxWindowOpened = false;
     if (FIELDTEST_MODEL_UNVERIFIED && (snapshot.alarm || expectAlarmAck)) {
         lastLoraTxState = -32763;
@@ -6594,6 +7136,10 @@ bool transmitSnapshot(const GldTxSnapshot& snapshot,
 #if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
     captureGld1LoraTxPreview(snapshot.frame, snapshot.frameLen);
 #endif
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    captureAtexLoraTxPreview(snapshot.frame, snapshot.frameLen);
+    atexQcTransmitEnteredRadio = true;
+#endif
     const int16_t txState = loraRadio->transmit(snapshot.frame, snapshot.frameLen);
     lastLoraTxState = txState;
     lastLoraTxOk = txState == RADIOLIB_ERR_NONE;
@@ -6607,10 +7153,10 @@ bool transmitSnapshot(const GldTxSnapshot& snapshot,
     // Class A RX window for downlink commands. TX success is retained in
     // lastLoraTxOk even if no downlink is received in the window.
     lastLoraRxWindowOpened = lastLoraTxOk;
-    return openLoRaRxWindow(expectAlarmAck, snapshot.sequence);
+    return openLoRaRxWindow(expectAlarmAck, snapshot.sequence, scanDuringRx);
 }
 
-bool transmitOnce(bool expectAlarmAck = false) {
+bool transmitOnce(bool expectAlarmAck = false, bool scanDuringRx = false) {
     if (!lastInferenceValid) {
         lastLoraTxOk = false;
         logPrintln("GLD_LORA_TX_RESULT=BLOCKED reason=inference_invalid");
@@ -6620,7 +7166,7 @@ bool transmitOnce(bool expectAlarmAck = false) {
     if (!buildTxSnapshot(lastResult, snapshot)) {
         return false;
     }
-    return transmitSnapshot(snapshot, expectAlarmAck);
+    return transmitSnapshot(snapshot, expectAlarmAck, scanDuringRx);
 }
 
 // GLD1-only certification frame.  This deliberately does not use AppFrame
@@ -6628,6 +7174,37 @@ bool transmitOnce(bool expectAlarmAck = false) {
 // report.  It intentionally omits AES/inference/sensor gates and the Class-A
 // RX window; those remain mandatory in transmitOnce()/transmitSnapshot().
 bool transmitFocusTestFrame() {
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    lastLoraRxWindowOpened = false;
+    if (!radioReady || loraRadio == nullptr) {
+        lastLoraTxState = -32764;
+        lastLoraTxOk = false;
+        ++loraFocusTxFailCount;
+        return false;
+    }
+    uint8_t frame[] = {'P', 'G', 'L', 'F', 'T', 'X', '1',
+                       static_cast<uint8_t>((loraFocusTxAttemptCount >> 8) & 0xFFu),
+                       static_cast<uint8_t>(loraFocusTxAttemptCount & 0xFFu)};
+    ++loraFocusTxAttemptCount;
+    digitalWrite(pgl::gld::board::PIN_ADS1256_CS, HIGH);
+    captureAtexLoraTxPreview(frame, sizeof(frame));
+    atexQcTransmitEnteredRadio = true;
+    lastLoraTxState = loraRadio->transmit(frame, sizeof(frame));
+    lastLoraTxOk = lastLoraTxState == RADIOLIB_ERR_NONE;
+    digitalWrite(pgl::gld::board::PIN_LORA_RXEN, LOW);
+    digitalWrite(pgl::gld::board::PIN_LORA_TXEN, LOW);
+    if (lastLoraTxOk) ++loraFocusTxPassCount; else ++loraFocusTxFailCount;
+    const uint32_t now = millis();
+    if (lastLoraFocusSummaryMs == 0 || now - lastLoraFocusSummaryMs >= 10000) {
+        lastLoraFocusSummaryMs = now;
+        logPrintf("GLD_LORA_FOCUS_TX attempts=%lu pass=%lu fail=%lu intervalMs=%lu\n",
+                  static_cast<unsigned long>(loraFocusTxAttemptCount),
+                  static_cast<unsigned long>(loraFocusTxPassCount),
+                  static_cast<unsigned long>(loraFocusTxFailCount),
+                  static_cast<unsigned long>(loraTxIntervalMs));
+    }
+    return lastLoraTxOk;
+#else
 #if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
     lastLoraRxWindowOpened = false;
     if (!radioReady || loraRadio == nullptr) {
@@ -6660,6 +7237,7 @@ bool transmitFocusTestFrame() {
 #else
     return false;
 #endif
+#endif
 }
 
 // Focus + Ke CH uses a structurally valid AppFrame with the actual GLD/CH
@@ -6668,6 +7246,48 @@ bool transmitFocusTestFrame() {
 // framing/timing without opening RX or requiring AES, ADS, model, or inference.
 // A CH may recognize the envelope but must still reject unauthenticated data.
 bool transmitFocusChDummyFrame() {
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    lastLoraRxWindowOpened = false;
+    if (!radioReady || loraRadio == nullptr) {
+        lastLoraTxState = -32764;
+        lastLoraTxOk = false;
+        ++loraFocusTxFailCount;
+        return false;
+    }
+    uint8_t sequence = 0;
+    if (!pgl::gld::reserveGldTxSequence(sequence)) {
+        lastLoraTxState = -32766;
+        lastLoraTxOk = false;
+        ++loraFocusTxFailCount;
+        return false;
+    }
+    txSeq = sequence;
+    uint8_t dummy[pgl::protocol::GLD_ENCRYPTED_PAYLOAD_SIZE]{};
+    dummy[0] = 'P'; dummy[1] = 'G'; dummy[2] = 'L'; dummy[3] = 'D';
+    dummy[4] = 'D'; dummy[5] = 'U'; dummy[6] = 'M'; dummy[7] = 'Y';
+    dummy[sizeof(dummy) - 1] = sequence;
+    uint8_t frame[pgl::protocol::APPFRAME_OVERHEAD + pgl::protocol::GLD_ENCRYPTED_PAYLOAD_SIZE]{};
+    const pgl::protocol::FrameEncodeResult encoded = pgl::protocol::encodeAppFrame(
+        pgl::protocol::makeGldSensorTypeFlags(false, true), runtimeConfig.nodeId,
+        runtimeConfig.chId, sequence, dummy, sizeof(dummy), frame, sizeof(frame),
+        pgl::protocol::STAR_MAX_PAYLOAD);
+    if (encoded.status != pgl::protocol::FrameStatus::Ok) {
+        lastLoraTxState = -32765;
+        lastLoraTxOk = false;
+        ++loraFocusTxFailCount;
+        return false;
+    }
+    ++loraFocusTxAttemptCount;
+    digitalWrite(pgl::gld::board::PIN_ADS1256_CS, HIGH);
+    captureAtexLoraTxPreview(frame, encoded.size);
+    atexQcTransmitEnteredRadio = true;
+    lastLoraTxState = loraRadio->transmit(frame, encoded.size);
+    lastLoraTxOk = lastLoraTxState == RADIOLIB_ERR_NONE;
+    digitalWrite(pgl::gld::board::PIN_LORA_RXEN, LOW);
+    digitalWrite(pgl::gld::board::PIN_LORA_TXEN, LOW);
+    if (lastLoraTxOk) ++loraFocusTxPassCount; else ++loraFocusTxFailCount;
+    return lastLoraTxOk;
+#else
 #if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
     lastLoraRxWindowOpened = false;
     if (!radioReady || loraRadio == nullptr) {
@@ -6711,12 +7331,13 @@ bool transmitFocusChDummyFrame() {
 #else
     return false;
 #endif
+#endif
 }
 
 // This is shared by the GLD1 interval scheduler and the explicit manual
 // command so both paths retain identical radio gates, frame selection, event
 // logging, and PCB TX-success blink behavior.
-void runGld1LoraTxAttempt() {
+void runGld1LoraTxAttempt(bool scanDuringRx) {
 #if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
     lastLoraRxWindowOpened = false;
     clearGld1LoraTxPreview();
@@ -6725,7 +7346,7 @@ void runGld1LoraTxAttempt() {
     } else if (loraTransmitFocus) {
         (void)transmitFocusChDummyFrame();
     } else {
-        (void)transmitOnce();
+        (void)transmitOnce(false, scanDuringRx);
     }
     const char* reason = lastLoraTxOk ? ""
         : (!radioReady || loraRadio == nullptr) ? "SX1262/SPI/radio tidak siap"
@@ -7038,6 +7659,154 @@ void runBatteryInferenceSession() {
     }
 }
 
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+bool runAtexLoraTxAttempt(bool scanDuringRx) {
+    (void)scanDuringRx;
+    if (atexQcSchedule.admissionHeld() || !external24VPowerMode || batteryPowerMode ||
+        !pgl::gld::readGldExternalPower() || !radioReady || loraRadio == nullptr ||
+        pgl::gld::datasetworkflowwifi::ownsSession()) return false;
+    // This function is called inside WorkflowNativeOperation. Set the persistent
+    // radio interlock before that stack-scoped guard can be released.
+    pgl::gld::datasetworkflowwifi::setRadioDrainBlocksStart(true);
+    const bool leased = pgl::gld::datasetworkflowwifi::ownsSession();
+    const bool focus = loraTransmitFocus || loraTargetTransmitOnly;
+    atexQcWantsRx = !focus;
+    atexQcFrameLen = 0;
+    clearAtexLoraTxPreview();
+    uint32_t timeoutMs=0;
+    const float bwKhz=workflowAppliedRadio.bandwidthKhz;
+    const bool validBw=std::isfinite(bwKhz) && bwKhz>=7.799f && bwKhz<=500.0f;
+    const uint32_t hz=validBw ? static_cast<uint32_t>(static_cast<double>(bwKhz)*1000.0) : 0;
+    // Validate a conservative frame size before reserving any sequence/NVS.
+    const uint16_t boundBytes = loraTargetTransmitOnly ? 9u :
+        pgl::protocol::APPFRAME_OVERHEAD + pgl::protocol::GLD_ENCRYPTED_PAYLOAD_SIZE;
+    const bool bounded=!leased && workflowAppliedRadio.valid && validBw &&
+        pgl::gld::GldWorkflowRadioSchedule::txTimeoutFromAppliedConfig(
+            hz,workflowAppliedRadio.sf,workflowAppliedRadio.cr,workflowAppliedRadio.preamble,
+            boundBytes,600000u,atexQcWantsRx ? LORA_RX_WINDOW_MS : 0u,timeoutMs);
+    if (!bounded) {
+        pgl::gld::datasetworkflowwifi::setRadioDrainBlocksStart(false);
+        lastLoraTxOk=false;
+        emitLoraTxEvent(false,"radio configuration blocked before sequence reservation");
+        return false;
+    }
+    if (!leased && loraTargetTransmitOnly) {
+        const uint8_t frame[] = {'P','G','L','F','T','X','1',
+            static_cast<uint8_t>((loraFocusTxAttemptCount >> 8) & 0xffu),
+            static_cast<uint8_t>(loraFocusTxAttemptCount & 0xffu)};
+        memcpy(atexQcFrame, frame, sizeof(frame)); atexQcFrameLen = sizeof(frame);
+    } else if (!leased && loraTransmitFocus) {
+        uint8_t sequence = 0;
+        if (pgl::gld::reserveGldTxSequence(sequence)) {
+            txSeq = sequence;
+            uint8_t dummy[pgl::protocol::GLD_ENCRYPTED_PAYLOAD_SIZE]{};
+            dummy[0]='P'; dummy[1]='G'; dummy[2]='L'; dummy[3]='D';
+            dummy[4]='D'; dummy[5]='U'; dummy[6]='M'; dummy[7]='Y'; dummy[sizeof(dummy)-1]=sequence;
+            const auto encoded = pgl::protocol::encodeAppFrame(
+                pgl::protocol::makeGldSensorTypeFlags(false, true), runtimeConfig.nodeId,
+                runtimeConfig.chId, sequence, dummy, sizeof(dummy), atexQcFrame,
+                sizeof(atexQcFrame), pgl::protocol::STAR_MAX_PAYLOAD);
+            if (encoded.status == pgl::protocol::FrameStatus::Ok) atexQcFrameLen=encoded.size;
+        }
+    } else if (!leased && lastInferenceValid) {
+        GldTxSnapshot snapshot{};
+        if (buildTxSnapshot(lastResult, snapshot) && snapshot.valid && snapshot.frameLen <= sizeof(atexQcFrame)) {
+            memcpy(atexQcFrame, snapshot.frame, snapshot.frameLen); atexQcFrameLen=snapshot.frameLen;
+        }
+    }
+    const bool safePower=external24VPowerMode && !batteryPowerMode && pgl::gld::readGldExternalPower();
+    const bool accepted=atexQcFrameLen > 0 && atexQcFrameLen <= boundBytes &&
+        atexQcSchedule.begin(true,leased,safePower,radioReady,true,
+                                                         atexQcWantsRx,timeoutMs,LORA_RX_WINDOW_MS);
+    if (!accepted) {
+        pgl::gld::datasetworkflowwifi::setRadioDrainBlocksStart(false);
+        lastLoraTxOk=false;
+        emitLoraTxEvent(false,"radio attempt blocked before transmit");
+        return false;
+    }
+    atexQcFocusTx = focus;
+    if (focus) ++loraFocusTxAttemptCount;
+    lastLoraTxOk=false; lastLoraRxWindowOpened=false;
+    return true;
+}
+
+void serviceAtexQcRadio() {
+    using Q=pgl::gld::GldAtexQcSchedule; using A=Q::Action; using S=Q::State;
+    if (!atexQcSchedule.admissionHeld()) return;
+    pgl::gld::datasetworkflowwifi::setRadioDrainBlocksStart(true);
+    const bool safePower=external24VPowerMode && !batteryPowerMode && pgl::gld::readGldExternalPower();
+    const auto prior=atexQcSchedule.state();
+    const A action=atexQcSchedule.next({millis(),safePower,radioReady && loraRadio != nullptr,loraRxFlag});
+    if (action==A::None) return;
+    bool ok=false; bool received=false; uint8_t frame[pgl::protocol::APPFRAME_OVERHEAD+pgl::protocol::STAR_MAX_PAYLOAD]{}; size_t len=0;
+    if (action==A::StartTx) {
+        digitalWrite(pgl::gld::board::PIN_ADS1256_CS,HIGH); loraRxFlag=false;
+        loraRadio->setPacketSentAction(onLoRaRxDone);
+        // Preview means the driver call was attempted, not that RF TX succeeded.
+        captureAtexLoraTxPreview(atexQcFrame,atexQcFrameLen);
+        lastLoraTxState=loraRadio->startTransmit(atexQcFrame,atexQcFrameLen);
+        ok=lastLoraTxState==RADIOLIB_ERR_NONE;
+    } else if (action==A::FinishTx) {
+        uint32_t irq=0; const int16_t status=loraRadio->getIrqFlagsChecked(irq);
+        lastLoraTxState=status==RADIOLIB_ERR_NONE ? loraRadio->finishTransmit() : status;
+        ok=status==RADIOLIB_ERR_NONE && (irq & RADIOLIB_SX126X_IRQ_TX_DONE) && lastLoraTxState==RADIOLIB_ERR_NONE;
+        loraRxFlag=false; lastLoraTxOk=ok;
+        if (ok && atexQcFocusTx) ++loraFocusTxPassCount;
+    } else if (action==A::StartRx) {
+        loraRxFlag=false; loraRadio->setPacketReceivedAction(onLoRaRxDone);
+        ok=loraRadio->startReceive()==RADIOLIB_ERR_NONE; lastLoraRxWindowOpened=ok;
+    } else if (action==A::FinishRx) {
+        uint32_t irq=0;
+        const int16_t is=loraRadio->getIrqFlagsChecked(irq);
+        const bool rxDone=is==RADIOLIB_ERR_NONE && (irq & RADIOLIB_SX126X_IRQ_RX_DONE);
+        const int16_t ls=rxDone ? loraRadio->getPacketLengthChecked(len) : RADIOLIB_ERR_UNKNOWN;
+        const int16_t rs=ls!=RADIOLIB_ERR_NONE ? ls : len>0 && len<=sizeof(frame) ? loraRadio->readData(frame,len) : RADIOLIB_ERR_PACKET_TOO_LONG;
+        received=rxDone && rs==RADIOLIB_ERR_NONE;
+        ok=rxDone && ls==RADIOLIB_ERR_NONE && loraRadio->standby()==RADIOLIB_ERR_NONE &&
+            (received || rs==RADIOLIB_ERR_CRC_MISMATCH || rs==RADIOLIB_ERR_LORA_HEADER_DAMAGED || rs==RADIOLIB_ERR_PACKET_TOO_LONG);
+        loraRxFlag=false;
+    } else if (action==A::TimeoutRx) {
+        uint32_t irq=0; const int16_t status=loraRadio->getIrqFlagsChecked(irq);
+        if (status==RADIOLIB_ERR_NONE && (loraRxFlag || (irq & RADIOLIB_SX126X_IRQ_RX_DONE))) {
+            // Do not resolve timeout; the next iteration must consume RX.
+            atexQcSchedule.cancelPending(action); loraRxFlag=true; return;
+        }
+        ok=status==RADIOLIB_ERR_NONE && loraRadio->standby()==RADIOLIB_ERR_NONE; loraRxFlag=false;
+    } else if (action==A::TimeoutTx) {
+        ok=loraRadio->standby()==RADIOLIB_ERR_NONE; loraRxFlag=false;
+    } else if (action==A::Abort) {
+        // Do not touch an unpowered radio. An unstarted TX has no on-air uncertainty.
+        ok=prior==S::StartTx; loraRxFlag=false;
+    }
+    atexQcSchedule.resolve(action,ok,millis());
+    if (atexQcSchedule.state()==S::Fault) {
+        if (atexQcFocusTx) ++loraFocusTxFailCount;
+        radioReady=false;
+        const int16_t cleanup=safePower && loraRadio ? loraRadio->standby() : RADIOLIB_ERR_NULL_POINTER;
+        if (cleanup!=RADIOLIB_ERR_NONE) workflowSharedSpiQuarantined=true;
+        digitalWrite(pgl::gld::board::PIN_LORA_RXEN,LOW); digitalWrite(pgl::gld::board::PIN_LORA_TXEN,LOW);
+        if (loraRadio) loraRadio->clearPacketReceivedAction();
+        emitLoraTxEvent(false,"QC radio transaction outcome uncertain; restart required");
+        return;
+    }
+    if (!atexQcSchedule.admissionHeld()) {
+        // Cadence restarts after TX/RX or a safe pre-TX abort completes.
+        lastTxMs = millis();
+        pgl::gld::datasetworkflowwifi::setRadioDrainBlocksStart(false);
+        emitLoraTxEvent(lastLoraTxOk,lastLoraTxOk ? "" : "QC radio transmit failed");
+    }
+    if (received) {
+        pgl::gld::GldMode mode;
+        const uint16_t previous=runtimeConfig.lastDownlinkCommandId;
+        if (pgl::gld::parseLoRaDownlinkCmd(frame,len,runtimeConfig.nodeId,runtimeConfig.aesKey,
+                                           runtimeConfig.aesKeyPresent,runtimeConfig.lastDownlinkCommandId,mode)) {
+            if (!saveDownlinkReplayState()) runtimeConfig.lastDownlinkCommandId=previous;
+            else onModeCmd(mode);
+        }
+    }
+}
+#endif
+
 // ---------------------------------------------------------------------------
 // Dataset sample publish
 // ---------------------------------------------------------------------------
@@ -7231,6 +8000,10 @@ bool datasetWifiReady() {
     // Stage 1 is explicitly for the externally powered GLD1 bench. A battery
     // session never silently enables service hold or takes the CLR path.
     return !batteryPowerMode && pgl::gld::readGldExternalPower() &&
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+           external24VPowerMode && !atexConfigPersistenceFault &&
+           workflowRadioScheduler.state() != pgl::gld::GldWorkflowRadioSchedule::State::Fault &&
+#endif
 #if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
            !nullingRetryArmed && !fullScaleSweepActive && !powerTransitionShutdownPending &&
            currentMode != pgl::gld::GldMode::NULLING && datasetState == DatasetState::Idle &&
@@ -7239,9 +8012,23 @@ bool datasetWifiReady() {
 }
 
 bool captureDatasetWifi(pgl::gld::datasetwifi::Sample& sample) {
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    workflowCaptureInterrupted = false;
+#endif
     pgl::gld::GldDatasetChannelSample validationSamples[8]{};
     for (size_t channel = 0; channel < pgl::gld::GLD_DATASET_FEATURE_COUNT; ++channel) {
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+        if (loraRxFlag) { workflowCaptureInterrupted = true; return false; }
+#endif
         const auto reading = ads.readChannel(channel);
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+        // An IRQ must not mask a real error already seen in this partial scan.
+        if (strcmp(pgl::gld::board::SENSOR_NAMES[channel],
+                   pgl::gld::GLD_DATASET_CANONICAL_FEATURE_ORDER[channel]) != 0 ||
+            static_cast<uint8_t>(reading.status) != pgl::gld::GLD_DATASET_STATUS_OK ||
+            !std::isfinite(reading.voltage) || reading.saturated ||
+            !pgl::gld::isGldDatasetGainValid(reading.gain)) return false;
+#endif
         sample.voltage[channel] = reading.voltage;
         sample.gain[channel] = reading.gain;
         sample.status[channel] = static_cast<uint8_t>(reading.status);
@@ -7249,6 +8036,10 @@ bool captureDatasetWifi(pgl::gld::datasetwifi::Sample& sample) {
             pgl::gld::board::SENSOR_NAMES[channel], sample.status[channel],
             reading.voltage, reading.gain, reading.saturated};
     }
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    if (!external24VPowerMode || batteryPowerMode || !pgl::gld::readGldExternalPower()) return false;
+    if (loraRxFlag) { workflowCaptureInterrupted = true; return false; }
+#endif
     return pgl::gld::validateGldDatasetSample(validationSamples, 8,
                                              nullingProfileApplied, nullingProfileId).accepted;
 }
@@ -7271,8 +8062,10 @@ void resetDatasetWorkflowPrediction() {
     lastInferenceValid = false;
     sensorFaultActive = true;
     lastGld1InferenceReadiness = Gld1InferenceReadinessSnapshot{};
+#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
     lastAlarm = false;
     driveAlarmOutputs(false);  // Same invalid-inference policy as native GLD1.
+#endif
 }
 
 void predictDatasetWorkflow(const pgl::gld::datasetworkflowwifi::RawSample& sample,
@@ -7293,8 +8086,10 @@ void predictDatasetWorkflow(const pgl::gld::datasetworkflowwifi::RawSample& samp
     struct InvalidInferenceGuard {
         ~InvalidInferenceGuard() {
             if (!lastInferenceValid) {
+#if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
                 lastAlarm = false;
                 driveAlarmOutputs(false);
+#endif
             }
         }
     } invalidInferenceGuard;
@@ -7344,6 +8139,9 @@ void predictDatasetWorkflow(const pgl::gld::datasetworkflowwifi::RawSample& samp
 
 void beginDatasetWorkflowIfNeeded() {
     if (pgl::gld::datasetworkflowwifi::available() || batteryPowerMode ||
+#if PGL_GLD_BOARD_PROFILE_GLD_ATEX
+        !external24VPowerMode ||
+#endif
         !pgl::gld::readGldExternalPower()) return;
     // A persistent AP/listener failure must not spin through WiFi setup on
     // every 5 ms main-loop iteration. The transport task handles later loss.
@@ -7365,13 +8163,167 @@ void beginDatasetWorkflowIfNeeded() {
     workflowModel.classMap = pgl::gld::model::CLASS_MAP;
     workflowModel.outputElements = static_cast<uint8_t>(pgl::gld::model::EXPECTED_OUTPUT_ELEMENTS);
     workflowModel.productionApproved = pgl::gld::model::PRODUCTION_APPROVED;
+#if defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    workflowModel.radioAutoTx = loraAutoTransmit;
+#endif
     const bool started = pgl::gld::datasetworkflowwifi::begin(
         runtimeConfig.deviceId, nullingProfileId, datasetWifiReady, captureDatasetWifi,
         datasetWorkflowPredictionReady, predictDatasetWorkflow,
-        resetDatasetWorkflowPrediction, workflowModel);
+        resetDatasetWorkflowPrediction, workflowModel
+#if PGL_GLD_BOARD_PROFILE_GLD_ATEX
+        , retryWorkflowCapture
+#endif
+        );
     logPrintf("DATASET_WIFI_SERVER ready=%u endpoint=192.168.4.1:81/dataset auth=basic privatePassword=1\n",
               started ? 1u : 0u);
 }
+#if PGL_GLD_BOARD_PROFILE_GLD_ATEX
+// The workflow radio runs only on the main thread, as do Dataset ADS reads.
+// Transport callbacks never access the radio/ADC. No downlink mutation is
+// accepted while the session owns its profile and replay buffer.
+void reportWorkflowDownlink(const uint8_t* frame, size_t len) {
+    uint16_t candidateCommandId = runtimeConfig.lastDownlinkCommandId;
+    pgl::gld::GldMode requestedMode;
+    if (pgl::gld::parseLoRaDownlinkCmd(frame, len, runtimeConfig.nodeId,
+                                      runtimeConfig.aesKey, runtimeConfig.aesKeyPresent,
+                                      candidateCommandId, requestedMode)) {
+        logPrintf("GLD_WORKFLOW_DOWNLINK rejected=dataset_busy commandId=%u\n", candidateCommandId);
+    }
+}
+
+// Returns true if poll() was already called in this main-loop iteration.
+bool serviceAtexWorkflowRadio() {
+    using Schedule = pgl::gld::GldWorkflowRadioSchedule;
+    using Action = Schedule::Action;
+    using State = Schedule::State;
+    bool didPoll = false;
+    // Finish TX and open RX immediately, but bound the number of operations.
+    for (unsigned step = 0; step < 4; ++step) {
+        pgl::gld::datasetworkflowwifi::setRadioDrainBlocksStart(
+            workflowRadioScheduler.state() != State::Idle && workflowRadioScheduler.state() != State::Fault);
+        const bool leased = pgl::gld::datasetworkflowwifi::ownsSession();
+        const bool sampling = pgl::gld::datasetworkflowwifi::samplingActive();
+        const bool safePower = external24VPowerMode && !batteryPowerMode &&
+                               pgl::gld::readGldExternalPower();
+        const bool enable = leased && sampling && safePower && lastInferenceValid &&
+                            loraAutoTransmit && !loraTransmitFocus && !loraTargetTransmitOnly &&
+                            runtimeConfig.aesKeyPresent && runtimeConfig.aesKeyId != 0;
+        const bool inFlight = workflowRadioScheduler.state() != State::Idle &&
+                              workflowRadioScheduler.state() != State::Fault;
+        // Pause/Stop prevents new TX, but an already submitted packet retains
+        // its TX_DONE/RX lifecycle while power and prediction remain healthy.
+        const bool drain = !sampling && inFlight && safePower && lastInferenceValid &&
+                           runtimeConfig.aesKeyPresent && runtimeConfig.aesKeyId != 0;
+        const uint32_t now = millis();
+        const Schedule::Inputs inputs{now, leased, enable, radioReady && loraRadio != nullptr,
+            now - lastTxMs >= DEFAULT_TX_INTERVAL_MS,
+            pgl::gld::datasetworkflowwifi::sampleDue(), loraRxFlag, safePower, drain, sampling};
+        const Action action = workflowRadioScheduler.next(inputs);
+        if (action == Action::None) break;
+        if (action == Action::AcquireSample) {
+            pgl::gld::datasetworkflowwifi::poll();
+            didPoll = true;
+            workflowRadioScheduler.resolve(action, true, millis());
+            break;
+        }
+        // A packet may arrive after selecting timeout but before hardware I/O.
+        bool checkedReadFailed = false;
+        if (action == Action::TimeoutRx) {
+            uint32_t irq = 0;
+            const int16_t irqStatus = loraRxFlag ? RADIOLIB_ERR_NONE : loraRadio->getIrqFlagsChecked(irq);
+            checkedReadFailed = irqStatus != RADIOLIB_ERR_NONE;
+            const bool pendingRx = !checkedReadFailed && (loraRxFlag ||
+                (irq & RADIOLIB_SX126X_IRQ_RX_DONE) != 0);
+            if (pendingRx) {
+                loraRxFlag = true;
+                workflowRadioScheduler.cancelPending(action);
+                continue;
+            }
+        }
+        bool ok = false;
+        if (checkedReadFailed) {
+            // A failed IRQ read is not an empty RX timeout. Quarantine below.
+            ok = false;
+        } else if (action == Action::StartTx) {
+            lastTxMs = now;
+            lastLoraTxOk = false;
+            lastLoraRxWindowOpened = false;
+            uint32_t timeoutMs = 0;
+            const float bwKhz = workflowAppliedRadio.bandwidthKhz;
+            // Floor Hz so fractional floating point representation can only
+            // lengthen the bound. Reject invalid config before integer cast.
+            const bool validBw = std::isfinite(bwKhz) && bwKhz >= 7.799f && bwKhz <= 500.0f;
+            const uint32_t bwHz = validBw ? static_cast<uint32_t>(static_cast<double>(bwKhz) * 1000.0) : 0;
+            const bool bounded = workflowAppliedRadio.valid && validBw &&
+                Schedule::txTimeoutFromAppliedConfig(bwHz, workflowAppliedRadio.sf,
+                    workflowAppliedRadio.cr, workflowAppliedRadio.preamble,
+                    sizeof(workflowTxSnapshot.frame), DEFAULT_TX_INTERVAL_MS,
+                    LORA_RX_WINDOW_MS, timeoutMs) &&
+                workflowRadioScheduler.setPendingTxTimeout(timeoutMs);
+            if (bounded && digitalRead(pgl::gld::board::PIN_LORA_BUSY) == LOW &&
+                buildTxSnapshot(lastResult, workflowTxSnapshot) && workflowTxSnapshot.valid) {
+                digitalWrite(pgl::gld::board::PIN_ADS1256_CS, HIGH);
+                loraRxFlag = false;
+                loraRadio->setPacketSentAction(onLoRaRxDone);
+                lastLoraTxState = loraRadio->startTransmit(workflowTxSnapshot.frame, workflowTxSnapshot.frameLen);
+                ok = lastLoraTxState == RADIOLIB_ERR_NONE;
+            }
+        } else if (action == Action::FinishTx) {
+            uint32_t irq = 0;
+            const int16_t irqStatus = loraRadio->getIrqFlagsChecked(irq);
+            lastLoraTxState = irqStatus == RADIOLIB_ERR_NONE ? loraRadio->finishTransmit() : irqStatus;
+            ok = irqStatus == RADIOLIB_ERR_NONE &&
+                 (irq & RADIOLIB_SX126X_IRQ_TX_DONE) != 0 && lastLoraTxState == RADIOLIB_ERR_NONE;
+            loraRxFlag = false;
+            lastLoraTxOk = ok;
+        } else if (action == Action::StartRx) {
+            loraRxFlag = false;
+            loraRadio->setPacketReceivedAction(onLoRaRxDone);
+            ok = loraRadio->startReceive() == RADIOLIB_ERR_NONE;
+            lastLoraRxWindowOpened = ok;
+        } else if (action == Action::FinishRx) {
+            uint8_t frame[pgl::protocol::APPFRAME_OVERHEAD + pgl::protocol::STAR_MAX_PAYLOAD]{};
+            size_t len = 0;
+            const int16_t lengthStatus = loraRadio->getPacketLengthChecked(len);
+            const int16_t readStatus = lengthStatus != RADIOLIB_ERR_NONE ? lengthStatus :
+                len > 0 && len <= sizeof(frame) ? loraRadio->readData(frame, len) : RADIOLIB_ERR_PACKET_TOO_LONG;
+            if (readStatus == RADIOLIB_ERR_NONE) reportWorkflowDownlink(frame, len);
+            logPrintf("GLD_WORKFLOW_LORA_RX state=%d len=%u\n", readStatus, static_cast<unsigned>(len));
+            const bool standbyOk = loraRadio->standby() == RADIOLIB_ERR_NONE;
+            ok = lengthStatus == RADIOLIB_ERR_NONE && standbyOk &&
+                 (readStatus == RADIOLIB_ERR_NONE || readStatus == RADIOLIB_ERR_CRC_MISMATCH ||
+                  readStatus == RADIOLIB_ERR_LORA_HEADER_DAMAGED ||
+                  readStatus == RADIOLIB_ERR_PACKET_TOO_LONG);
+            loraRxFlag = false;
+        } else if (action == Action::TimeoutTx || action == Action::TimeoutRx || action == Action::AbortRadio) {
+            ok = loraRadio != nullptr && loraRadio->standby() == RADIOLIB_ERR_NONE;
+            loraRxFlag = false;
+        }
+        workflowRadioScheduler.resolve(action, ok, millis());
+        pgl::gld::datasetworkflowwifi::setRadioDrainBlocksStart(
+            workflowRadioScheduler.state() != State::Idle && workflowRadioScheduler.state() != State::Fault);
+        if (workflowRadioScheduler.state() == State::Fault) {
+            // Outcome may be uncertain: no reinitialization or retry until the
+            // next reboot/reconciliation, including after the lease is released.
+            radioReady = false;
+            pgl::gld::datasetworkflowwifi::failSession("radio_fault");
+            // startTransmit can set RF-switch TX before setTx fails. ATEX
+            // workflow standby uses the bounded driver path. This is only a
+            // cleanup attempt; a failed SPI call leaves physical state unknown.
+            const int16_t cleanupStatus = loraRadio != nullptr
+                ? loraRadio->standby() : RADIOLIB_ERR_NULL_POINTER;
+            if (cleanupStatus != RADIOLIB_ERR_NONE) workflowSharedSpiQuarantined = true;
+            digitalWrite(pgl::gld::board::PIN_LORA_RXEN, LOW);
+            digitalWrite(pgl::gld::board::PIN_LORA_TXEN, LOW);
+            if (loraRadio != nullptr) loraRadio->clearPacketReceivedAction();
+            loraRxFlag = false;
+            logPrintf("GLD_WORKFLOW_LORA_FAULT radioQuarantined=1 standbyState=%d rfPinsLowCommanded=1\n", cleanupStatus);
+            break;
+        }
+    }
+    return didPoll;
+}
+#endif
 #endif
 #endif
 
@@ -7786,7 +8738,25 @@ void setup() {
 void loop() {
 #if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
     pgl::gld::datasetworkflowwifi::refreshRuntime(nullingProfileId);
+#if PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    // Commands already received by the transport take priority over starting
+    // another TX. This pass uses the existing control/retention semantics and
+    // does not acquire ADC samples.
+    const bool leasedBeforeCommands = pgl::gld::datasetworkflowwifi::ownsSession();
+    pgl::gld::datasetworkflowwifi::setRadioDrainBlocksStart(
+        atexQcSchedule.admissionHeld() ||
+        (workflowRadioScheduler.state() != pgl::gld::GldWorkflowRadioSchedule::State::Idle &&
+         workflowRadioScheduler.state() != pgl::gld::GldWorkflowRadioSchedule::State::Fault));
+    pgl::gld::datasetworkflowwifi::pollCommands();
+    if (!leasedBeforeCommands && pgl::gld::datasetworkflowwifi::ownsSession() &&
+        workflowRadioScheduler.state() == pgl::gld::GldWorkflowRadioSchedule::State::Idle) {
+        lastTxMs = millis();
+        loraRxFlag = false;
+    }
+    if (atexQcSchedule.admissionHeld() || !serviceAtexWorkflowRadio()) pgl::gld::datasetworkflowwifi::poll();
+#else
     pgl::gld::datasetworkflowwifi::poll();
+#endif
 #elif defined(PGL_GLD_DATASET_WIFI) && PGL_GLD_DATASET_WIFI
     // ADS is exclusively owned by the sampler task after setup. Do not run
     // serial commands, boot recovery reads, inference, radio, or nulling here.
@@ -7805,6 +8775,9 @@ void loop() {
 #endif
     firmwareServiceTick();
     reconcileRuntimePowerMode();
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    serviceAtexQcRadio();
+#endif
     serviceGld1TxStatusLedFlash(millis());
     // SHT40 has its own cached global values. Status/telemetry serialization
     // only snapshots this cache; it never starts a measurement itself.
@@ -7824,6 +8797,20 @@ void loop() {
         completeBatterySessionAndPowerOff("unsupported_mode_power_transition");
         return;
     }
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    if (workflowSharedSpiQuarantined) {
+        // A failed standby can leave radio CS or RF state unknown. Keep
+        // replay/serial status alive above, but do not touch shared SPI until
+        // reboot. Battery fault policy still leads to the usual safe cutoff.
+        if (batteryPowerMode && !TFBG_CONTINUOUS_BATTERY) {
+            armBatteryFaultPowerOff("workflow_radio_spi_quarantine");
+            if (static_cast<int32_t>(millis() - batteryFaultPowerOffDueMs) >= 0)
+                completeBatterySessionAndPowerOff("workflow_radio_spi_quarantine");
+        }
+        delay(5);
+        return;
+    }
+#endif
 #if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
     beginDatasetWorkflowIfNeeded();
     static bool workflowHadLease = false;
@@ -7833,19 +8820,40 @@ void loop() {
         // steady AUTO alarm through Start/Pause/Continue/Stop/Disconnect.
         workflowHadLease = workflowLease;
         lastScanMs = lastTxMs = millis();
+#if PGL_GLD_BOARD_PROFILE_GLD_ATEX
+        if (workflowLease && workflowRadioScheduler.state() == pgl::gld::GldWorkflowRadioSchedule::State::Idle) {
+            // The preceding native radio window has ended; discard its stale
+            // software latch before the workflow starts its own operations.
+            loraRxFlag = false;
+        }
+#endif
     }
-    if (workflowLease && !batteryPowerMode && pgl::gld::readGldExternalPower()) {
-        // AP transport/replay and COM status stay alive. Native ADS/radio,
-        // calibration, recovery and legacy MQTT scans wait for session release.
+    bool workflowRadioInFlight = false;
+#if PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    workflowRadioInFlight = workflowRadioScheduler.state() != pgl::gld::GldWorkflowRadioSchedule::State::Idle &&
+                            workflowRadioScheduler.state() != pgl::gld::GldWorkflowRadioSchedule::State::Fault;
+#endif
+    if ((workflowLease || workflowRadioInFlight) && !batteryPowerMode && pgl::gld::readGldExternalPower()) {
+        // AP transport/replay and COM status stay alive. Native calibration,
+        // recovery and legacy MQTT scans wait for session release. The ATEX
+        // workflow radio is serviced above using the shared main-thread owner.
         delay(5);
         return;
     }
 #endif
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    if (!atexQcSchedule.admissionHeld()) maintainBootReportRecovery();
+#else
     maintainBootReportRecovery();
+#endif
 
     if (currentMode == pgl::gld::GldMode::INFERENCE) {
         const uint32_t now = millis();
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+        if (!atexQcSchedule.admissionHeld()) maintainAdsRecovery("inference_ads_not_ready");
+#else
         maintainAdsRecovery("inference_ads_not_ready");
+#endif
         serviceNonBatteryDacVerification();
 
         if (batteryPowerMode && !TFBG_CONTINUOUS_BATTERY) {
@@ -7871,9 +8879,32 @@ void loop() {
         }
 
         if ((adsReady || SENSORLESS_BENCH) && now - lastScanMs >= SCAN_INTERVAL_MS) {
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+            const uint32_t previousScanMs = lastScanMs;
+            lastScanMs = now;
+            bool interrupted = false;
+            if (atexQcSchedule.admissionHeld()) runScan(false, &loraRxFlag, &interrupted);
+            else runScan();
+            if (interrupted) lastScanMs = previousScanMs;
+#else
             lastScanMs = now;
             runScan();
+#endif
         }
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+        // GLD1 has four explicit operator-selected LoRa modes.  Every mode
+        // keeps the radio-ready gate; only normal CH telemetry keeps the
+        // AES/sensor/inference gates and the Class-A RX window.
+        if (loraAutoTransmit && !atexQcSchedule.admissionHeld() &&
+            external24VPowerMode && !batteryPowerMode && pgl::gld::readGldExternalPower() &&
+            now - lastTxMs >= loraTxIntervalMs) {
+            lastTxMs = now;
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+            WorkflowNativeOperation nativeOperation;
+#endif
+            runAtexLoraTxAttempt(true);
+        }
+#else
 #if PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8 && !PGL_GLD_BOARD_PROFILE_GLD2
         // GLD1 has four explicit operator-selected LoRa modes.  Every mode
         // keeps the radio-ready gate; only normal CH telemetry keeps the
@@ -7883,14 +8914,23 @@ void loop() {
 #if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
             WorkflowNativeOperation nativeOperation;
 #endif
-            runGld1LoraTxAttempt();
+            runGld1LoraTxAttempt(true);
         }
 #else
         // GLD2/other profiles retain their existing fixed production cadence.
         if (radioReady && now - lastTxMs >= DEFAULT_TX_INTERVAL_MS) {
             lastTxMs = now;
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+#if PGL_GLD_BOARD_PROFILE_GLD_ATEX
+            transmitOnce(false, true);
+#else
             transmitOnce();
+#endif
+#else
+            transmitOnce();
+#endif
         }
+#endif
 #endif
 
     } else if (currentMode == pgl::gld::GldMode::DATASET) {
@@ -7901,7 +8941,11 @@ void loop() {
             maintainWifi();
             maintainMqtt();
         } else if (mqtt.connected()) {
+#if defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW && defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+            if (atexNativeConfigTrusted()) mqtt.loop();
+#else
             mqtt.loop();
+#endif
         }
 #else
         maintainWifi();

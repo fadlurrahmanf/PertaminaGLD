@@ -18,6 +18,7 @@ assert SPEC and SPEC.loader
 bridge = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(bridge)
 PULLUP_DRIVE = "active_low_gpio41_uln2003_pullup"
+GPIO48_DRIVE = "active_high_gpio48_steady"
 
 
 def alarm_state(
@@ -51,10 +52,10 @@ def alarm_state(
                 "outputDrive": output_drive,
                 "externalDevicePattern": (
                     "steady_high_while_alarm"
-                    if output_drive in {"active_high_gpio41_steady", PULLUP_DRIVE}
+                    if output_drive in {"active_high_gpio41_steady", PULLUP_DRIVE, GPIO48_DRIVE}
                     else "self_pulsed_1s_on_1s_off"
                 ),
-                "singleTrigger": output_drive in {"active_high_gpio41_steady", PULLUP_DRIVE},
+                "singleTrigger": output_drive in {"active_high_gpio41_steady", PULLUP_DRIVE, GPIO48_DRIVE},
             },
         },
     }
@@ -64,6 +65,9 @@ def alarm_state(
             "gpio41CommandLevel": "LOW" if physical else "HIGH",
             "j2LampExpectedLevel": "HIGH" if physical else "LOW",
         })
+    if output_drive == GPIO48_DRIVE:
+        state["info"]["alarmControl"].update({"requiresExternalPullup": False, "outputPin": 48,
+                                             "gpio48CommandLevel": "HIGH" if physical else "LOW"})
     return state
 
 
@@ -73,6 +77,23 @@ def alarm_contract_cases() -> list[tuple[str, dict, bool]]:
         ("legacy GLD2", alarm_state(), True),
         ("legacy GLD1", alarm_state(output_drive="active_high_gpio41_steady"), True),
     ]
+    for mode in ("auto", "manual"):
+        for enabled in (False, True):
+            cases.append((f"gpio48 {mode} {enabled}",
+                          alarm_state(mode, manual=enabled, inference=enabled, output_drive=GPIO48_DRIVE), True))
+    for field, value in (("singleTrigger", False), ("requiresExternalPullup", True),
+                         ("outputPin", 41), ("outputPin", True), ("gpio48CommandLevel", "HIGH"),
+                         ("externalDevicePattern", "self_pulsed_1s_on_1s_off")):
+        state = alarm_state(output_drive=GPIO48_DRIVE)
+        state["info"]["alarmControl"][field] = value
+        cases.append((f"gpio48 invalid {field}", state, False))
+    for field in ("singleTrigger", "requiresExternalPullup", "outputPin", "gpio48CommandLevel"):
+        state = alarm_state(output_drive=GPIO48_DRIVE)
+        del state["info"]["alarmControl"][field]
+        cases.append((f"gpio48 missing {field}", state, False))
+    state = alarm_state(inference=True, output_drive=GPIO48_DRIVE)
+    state["info"]["alarmControl"]["gpio48CommandLevel"] = "LOW"
+    cases.append(("gpio48 ON wrong command level", state, False))
     for mode in ("auto", "manual"):
         for enabled in (False, True):
             cases.append((
@@ -297,6 +318,32 @@ class AlarmEndpointTests(unittest.TestCase):
 
 
 class AlarmUiContractTests(unittest.TestCase):
+    def test_gpio48_command_label_and_gld2_fallback(self) -> None:
+        hub_js = HUB_DIR / "public" / "js" / "hub.js"
+        expert_js = HUB_DIR.parent / "gld-operator" / "js" / "serial-protocol.js"
+        program = js_function(hub_js, "validGldAlarmControl") + "\n" + js_function(hub_js, "renderAlarmControls")
+        program += "\n" + js_function(expert_js, "alarmControlContract") + "\n" + js_function(expert_js, "renderManualAlarmControls")
+        program += """
+const nodes = {}; function $(id) { return nodes[id] ||= {dataset:{}, classList:{toggle(){},remove(){},add(){}}, addEventListener(){}}; }
+let active='gld', alarmActionBusy=false, alarmModeSelectionDirty=false, alarmModeApplyPending=false, manualAlarmApplyPending=false;
+const state={info:{boardProfile:'GLD1'}};
+const cases = CASES;
+const results = cases.map(info => {
+  renderAlarmControls(info); renderManualAlarmControls(info.alarmControl);
+  return [nodes.gldAlarmControlCard.hidden, nodes.alarmPhysicalState.textContent,
+          nodes.alarmControlHelp.textContent, nodes.alarmControlStatus.textContent];
+});
+console.log(JSON.stringify(results));
+""".replace("CASES", json.dumps([alarm_state(inference=True, output_drive=GPIO48_DRIVE)["info"],
+                                        alarm_state(inference=True)["info"]]))
+        gpio, gld2 = run_node(program)
+        self.assertFalse(gpio[0])
+        self.assertIn("GPIO48 HIGH", gpio[1])
+        self.assertIn("bukan pengukuran tegangan", gpio[2])
+        self.assertIn("GPIO48 HIGH", gpio[3])
+        self.assertIn("24 V", gld2[1])
+        self.assertIn("24 V steady GLD2", gld2[3])
+
     def test_executable_simple_and_expert_contract_validators(self) -> None:
         cases = alarm_contract_cases()
         program = js_function(HUB_DIR / "public" / "js" / "hub.js", "validGldAlarmControl")

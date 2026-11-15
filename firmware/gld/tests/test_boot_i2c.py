@@ -42,6 +42,16 @@ STUBS = r'''
 #include <cstring>
 #include "BoardPins.h"
 namespace board = pgl::gld::board;
+// Hardware fixture is deliberately independent from BoardPins: a swapped mux
+// or power-enable table in firmware must fail rather than validate itself.
+#if PGL_GLD_BOARD_PROFILE_GLD2
+constexpr uint8_t expectedMux[8] = {7,6,5,4,3,2,1,0};
+#else
+constexpr uint8_t expectedMux[8] = {7,6,5,0,1,2,3,4};
+#endif
+constexpr uint8_t expectedEn[8] = {0,6,7,3,4,5,2,1};
+constexpr uint8_t expectedAds[8] = {0,1,2,3,4,5,6,7};
+const char* const expectedNames[8] = {"MQ8","MQ135","MQ3","MQ5","MQ4","MQ7","MQ6","MQ2"};
 constexpr int LOW = 0, HIGH = 1, INPUT_PULLUP = 2, OUTPUT_OPEN_DRAIN = 3;
 bool stuckLines = false;
 void pinMode(int, int) {}
@@ -56,7 +66,7 @@ void logPrintf(const char* format, ...) {
     if (strstr(format, "GLD1_BOOT_I2C_BEGIN")) ++gld1BeginLogs;
 }
 struct FakeWire {
-    bool started = false, beginOk = true, tcaPresent = true;
+    bool started = false, beginOk = true, tcaPresent = true, pcfPresent = true;
     uint8_t mcpPresent = 0xff, selected = 0, powered = 0;
     uint8_t address = 0, data = 0, selectFailMask = 0, mcpAddress = 0x60;
     bool hasData = false;
@@ -80,20 +90,25 @@ struct FakeWire {
             if (hasData) selected = data;
             return 0;
         }
-        if (board::HAS_PCF8574 && address == board::PCF8574_ADDR) return 0;
+        if (board::HAS_PCF8574 && pcfPresent && address == board::PCF8574_ADDR) return 0;
         if (address == mcpAddress && (selected & mcpPresent)) {
             if (!board::HAS_PCF8574) return 0;
             for (unsigned i = 0; i < board::SENSOR_COUNT; ++i) {
-                if ((selected & (1u << board::SENSOR_TO_MUX_CH[i])) &&
-                    (powered & (1u << board::SENSOR_TO_POWER_EN[i]))) return 0;
+                if ((selected & (1u << expectedMux[i])) &&
+                    (powered & (1u << expectedEn[i]))) return 0;
             }
         }
         return 2;
     }
 } Wire;
 struct FakePcf {
+    bool failWrites = false;
     bool begin(FakeWire& wire) { return wire.started; }
-    bool writeOutputs(uint8_t value) { Wire.powered = value; return Wire.started; }
+    bool writeOutputs(uint8_t value) {
+        if (!Wire.started || failWrites) return false;
+        Wire.powered = value;
+        return true;
+    }
 } pcf8574;
 bool pcfReady = false, pcfAllLoadSwitchesOn = false;
 bool recoverGld2RootI2cForPcf(const char*);
@@ -103,6 +118,7 @@ bool recoverGld2RootI2cForPcf(const char*);
 SCENARIOS = r'''
 void resetBus() {
     Wire = FakeWire{};
+    pcf8574 = FakePcf{};
     pcfReady = pcfAllLoadSwitchesOn = false;
     stuckLines = false;
     gld1BeginLogs = 0;
@@ -117,6 +133,20 @@ void expectCount(const BootI2cReport& report, unsigned count) {
     assert(actual == count);
 }
 int main() {
+    assert(board::SENSOR_COUNT == 8);
+    for (unsigned i = 0; i < 8; ++i) {
+        assert(!strcmp(board::SENSOR_NAMES[i], expectedNames[i]));
+        assert(board::SENSOR_TO_MUX_CH[i] == expectedMux[i]);
+        assert(board::SENSOR_TO_POWER_EN[i] == expectedEn[i]);
+        assert(board::SENSOR_TO_ADS_CH[i] == expectedAds[i]);
+        assert(adsInputForSensor(i) == expectedAds[i]);
+        assert(muxSingleEnded(adsInputForSensor(i)) == ((expectedAds[i] << 4) | 0x0f));
+    }
+#if PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    assert(board::HAS_PCF8574 && board::HAS_DC_FAN && board::PIN_DC_FAN == 7);
+    assert(board::PIN_24V_POWER_GOOD == 47 && board::PIN_POWER_SOURCE_STATUS == 18);
+    assert(board::PIN_ALARM_LAMP == 40 && board::PIN_ALARM_ENABLE_BOOST == 15);
+#endif
 #if EXPECT_COLD_FAILURE && !PGL_GLD_BOARD_PROFILE_GLD2
     resetBus();
     const auto cold = probeBootI2c(true);
@@ -156,7 +186,7 @@ int main() {
 
         for (unsigned missing = 0; missing < board::SENSOR_COUNT; ++missing) {
             resetBus();
-            Wire.mcpPresent &= ~(1u << board::SENSOR_TO_MUX_CH[missing]);
+            Wire.mcpPresent &= ~(1u << expectedMux[missing]);
             const auto oneMissing = probeBootI2c(fullScan);
             assert(oneMissing.tcaOk && !oneMissing.mcpOk[missing]);
             expectCount(oneMissing, 7);
@@ -169,7 +199,7 @@ int main() {
         expectCount(noMcp, 0);
 
         resetBus();
-        Wire.selectFailMask = 1u << board::SENSOR_TO_MUX_CH[3];
+        Wire.selectFailMask = 1u << expectedMux[3];
         const auto selectFailed = probeBootI2c(fullScan);
         assert(selectFailed.tcaOk && !selectFailed.mcpOk[3]);
         expectCount(selectFailed, 7);
@@ -179,6 +209,20 @@ int main() {
         const auto wrongAddress = probeBootI2c(fullScan);
         assert(wrongAddress.tcaOk);
         expectCount(wrongAddress, 0);
+
+#if PGL_GLD_BOARD_PROFILE_GLD2
+        resetBus();
+        Wire.pcfPresent = false;
+        const auto noPcf = probeBootI2c(fullScan);
+        assert(noPcf.tcaOk && !noPcf.pcfOk);
+        expectCount(noPcf, 0);
+
+        resetBus();
+        pcf8574.failWrites = true;
+        const auto failedIsolation = probeBootI2c(fullScan);
+        assert(failedIsolation.tcaOk && failedIsolation.pcfOk);
+        expectCount(failedIsolation, 0);
+#endif
 
         resetBus();
         Wire.beginOk = false;
@@ -195,7 +239,8 @@ int main() {
         assert(!stuck.tcaOk);
         expectCount(stuck, 0);
     }
-    puts(PGL_GLD_BOARD_PROFILE_GLD2 ? "GLD2 boot probe: PASS (unchanged path)" :
+    puts(PGL_GLD_BOARD_PROFILE_GLD_ATEX ? "ATEX boot probe and independent mapping: PASS" :
+         PGL_GLD_BOARD_PROFILE_GLD2 ? "GLD2 boot probe and independent mapping: PASS" :
          "GLD1 boot probe: PASS (cold/warm, missing devices, address/select/init/bus faults)");
 }
 '''
@@ -211,6 +256,11 @@ def compiler_path():
 
 
 def compatible_header(source):
+    # Inline nested namespace aliases have their closing brace on the same
+    # line; expand it before handling multiline namespace blocks.
+    source = re.sub(r"namespace ([\w]+(?:::\w+)+) \{ (namespace \w+ = [\w:]+;) \}",
+                    lambda m: " ".join(f"namespace {part} {{" for part in m[1].split("::"))
+                    + " " + m[2] + " " + "}" * len(m[1].split("::")), source)
     source = re.sub(r"namespace ([\w]+(?:::\w+)+) \{",
                     lambda m: " ".join(f"namespace {part} {{" for part in m[1].split("::")),
                     source)
@@ -233,22 +283,27 @@ def main():
     functions = ["copyBounded", "i2cAck", "tcaSelect", "tcaDisableAll",
                  "scanMcpAddressMaskOnSelectedMux", "scanI2cBus", "probeSelectedMcp4725",
                  "recoverGld2RootI2cForPcf", "probeBootI2c"]
+    adc_source = (ROOT / "firmware/gld/src/GldAds1256Reader.cpp").read_text(encoding="utf-8")
+    adc_helpers = "\n".join(definition(adc_source, name)
+                            for name in ("muxSingleEnded", "adsInputForSensor"))
     program = ("#include <initializer_list>\n" + STUBS + constants + "\n" +
                definition(source, "BootI2cReport", struct=True) + "\n" +
-               "\n".join(definition(source, name) for name in functions) + SCENARIOS)
+               "\n".join(definition(source, name) for name in functions) +
+               "\n" + adc_helpers + SCENARIOS)
     compiler = compiler_path()
     run_env = dict(os.environ)
     run_env["PATH"] = str(Path(compiler).parent) + os.pathsep + run_env.get("PATH", "")
     with tempfile.TemporaryDirectory(prefix="gld-boot-i2c-") as directory:
-        for header in ("BoardPins.h", "BoardPinsGLD2.h"):
+        for header in ("BoardPins.h", "BoardPinsGLD2.h", "BoardPinsGLD3.h", "BoardPinsGLDATEX.h"):
             original = (ROOT / "firmware/gld/include" / header).read_text(encoding="utf-8")
             (Path(directory) / header).write_text(compatible_header(original), encoding="utf-8")
         fixture = Path(directory) / "boot.cpp"
         fixture.write_text(program, encoding="utf-8")
-        for gld2 in (0, 1):
-            binary = Path(directory) / f"boot-{gld2}.exe"
+        for gld2, atex in ((0, 0), (1, 0), (1, 1)):
+            binary = Path(directory) / f"boot-{gld2}-{atex}.exe"
             command = [compiler, "-std=c++17", "-O0", "-Wall", "-Wextra", "-Werror",
                        "-DARDUINO_ARCH_ESP32=1", f"-DPGL_GLD_BOARD_PROFILE_GLD2={gld2}",
+                       f"-DPGL_GLD_BOARD_PROFILE_GLD_ATEX={atex}",
                        f"-DPGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8={1 - gld2}",
                        f"-DEXPECT_COLD_FAILURE={int(args.expect_cold_failure)}",
                        "-I", str(ROOT / "firmware/gld/include"), str(fixture), "-o", str(binary)]

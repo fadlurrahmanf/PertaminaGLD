@@ -18,6 +18,13 @@ from wireless_dataset_replay import (PROTOCOL as PREVIOUS_PROTOCOL, ProtocolErro
     WirelessDatasetReplayCollector, _label, _uint)
 
 PROTOCOL = "gld-dataset-wifi/3"
+START_REJECTION_DETAILS = frozenset({
+    "session_or_retained_data_pending", "session_id_reused", "native_operation_busy",
+    "requires_500ms_24v_and_saved_valid_profile", "prediction_unavailable",
+    "transport_busy", "idempotency_mismatch",
+})
+TRANSIENT_START_REJECTIONS = frozenset({"native_operation_busy", "transport_busy"})
+MAX_EXPLICIT_START_RETRIES = 4
 
 
 class WorkflowCollector(WirelessDatasetReplayCollector):
@@ -29,6 +36,9 @@ class WorkflowCollector(WirelessDatasetReplayCollector):
         self._rejoin_wifi = rejoin_wifi
         self.mode = mode
         self.model = {}
+        self._radio_auto_tx = None
+        self._radio_auto_tx_seen = None
+        self._radio_identity = None
         self.prediction_available = self.prediction_enabled = False
         self.paused = False
         self.transition_seq = 0
@@ -36,6 +46,11 @@ class WorkflowCollector(WirelessDatasetReplayCollector):
         self._transition_event = threading.Event()
         self._start_attempted = False
         self.start_rejected = self.ownership_absent = self.direct_cutoff = False
+        self.start_reject_detail = ""
+        self._start_retry_at = None
+        self._start_deadline = 0.0
+        self._start_retry_count = 0
+        self._start_command_id = ""
 
     def _open(self, recovering):
         try:
@@ -64,9 +79,24 @@ class WorkflowCollector(WirelessDatasetReplayCollector):
             prediction_available=self.prediction_available, prediction_enabled=self.prediction_enabled,
             paused=self.paused, transition_seq=self.transition_seq,
             direct_cutoff=self.direct_cutoff, ownership_absent=self.ownership_absent,
-            start_rejected=self.start_rejected,
-            transition_pending=self._transition_intent is not None)
+            start_rejected=self.start_rejected, start_reject_detail=self.start_reject_detail,
+            start_retry_count=self._start_retry_count,
+            transition_pending=self._transition_intent is not None,
+            radio_auto_tx_observed=self._radio_auto_tx if self._radio_identity == (self.device_id, self.boot_id, self.session_id) else None,
+            radio_auto_tx_seen=self._radio_auto_tx_seen if self._radio_identity == (self.device_id, self.boot_id, self.session_id) else None)
         return value
+
+    def _observe_radio_auto_tx(self, message):
+        # Optional metadata from a validated hello/status, not RF reception.
+        value = message.get("radio_auto_tx")
+        if (type(value) is bool and message.get("device_id") == self.device_id and
+                message.get("boot_id") == self.boot_id and
+                message.get("session_id") == self.session_id):
+            self._radio_auto_tx, self._radio_auto_tx_seen = value, self._clock()
+            self._radio_identity = (self.device_id, self.boot_id, self.session_id)
+        else:
+            self._radio_auto_tx, self._radio_auto_tx_seen = None, None
+            self._radio_identity = None
 
     def _hello(self, message, recovering):
         if not isinstance(message, dict) or message.get("protocol") != PROTOCOL:
@@ -111,6 +141,11 @@ class WorkflowCollector(WirelessDatasetReplayCollector):
             elif transition != self.transition_seq:
                 raise ProtocolError("transition_identity_changed")
         super()._hello(translated, recovering)
+        self._observe_radio_auto_tx(message)
+        # Protocol 3 can stop when the ATEX radio/SPI is quarantined. Preserve
+        # that one known reason; arbitrary device text remains sanitized.
+        if message.get("incomplete") is True and message.get("reason") == "radio_fault":
+            self.terminal_reason = "radio_fault"
         self.model = copy.deepcopy(model)
         self.prediction_available = (caps["prediction"] and message["prediction_ready"] and
             model["production_approved"] and model["output_elements"] > 0)
@@ -132,6 +167,11 @@ class WorkflowCollector(WirelessDatasetReplayCollector):
         self._cutoff_callback(reason)
 
     def _loss(self, reason):
+        if self._start_retry_at is not None:
+            # The last START has an explicit negative ACK and no retry was sent.
+            self._start_retry_at = None
+            self._fatal("device_rejected_start_dataset")
+            return
         if self._active and self._start_attempted and self.mode == "direct":
             try:
                 self._begin_cutoff(reason)
@@ -141,6 +181,7 @@ class WorkflowCollector(WirelessDatasetReplayCollector):
         self._transition_event.set()  # The action returns uncertainty, never false confirmation.
 
     def _fatal(self, reason):
+        self._start_retry_at = None
         if reason == "device_rejected_start_dataset":
             self.start_rejected = True
         elif self._active and self._start_attempted and not self.direct_cutoff:
@@ -156,6 +197,20 @@ class WorkflowCollector(WirelessDatasetReplayCollector):
         # GLD association. Rejoin the selected SSID before the bounded protocol
         # retry, without holding the collector lock during Windows DHCP.
         with self._lock:
+            if self._start_retry_at is not None and self._active and self._ws is not None:
+                now = self._clock()
+                if now >= self._start_deadline:
+                    self._fatal("device_rejected_start_dataset")
+                    return
+                if now >= self._start_retry_at:
+                    self._start_retry_at = None
+                    try:
+                        self._send_control("START_DATASET", dict(label=self.label, sample_interval_ms=500,
+                            prediction_enabled=self.prediction_enabled), self._start_command_id)
+                        self._control["deadline"] = self._start_deadline
+                    except Exception:
+                        self._loss("start_result_unknown_resume_required")
+                    return
             rejoin = (self._rejoin_wifi is not None and self._active and self._want_link and
                       self._ws is None and self._password is not None and
                       self._clock() >= self._next_retry_at)
@@ -193,20 +248,28 @@ class WorkflowCollector(WirelessDatasetReplayCollector):
                 self.prediction_enabled, self.transition_seq = prediction_enabled, 0
                 self._outage_started = None
                 self.error = self.terminal_reason = ""
+                self.start_rejected, self.start_reject_detail = False, ""
+                self._start_retry_at, self._start_retry_count = None, 0
+                self._start_deadline = self._clock() + self._timeout
+                self._start_command_id = ""
                 self.state = "starting"
                 self._emit()
                 self._start_attempted = True
                 try:
                     self._send_control("START_DATASET", dict(label=label, sample_interval_ms=500,
                         prediction_enabled=prediction_enabled))
+                    self._start_command_id = self._control["command_id"]
+                    self._control["deadline"] = self._start_deadline
                 except Exception:
                     self._loss("start_result_unknown_resume_required")
             self._wait(self._start_event)
             with self._lock:
+                if self._active and self._start_retry_at is not None and not self._start_confirmed:
+                    self._fatal("device_rejected_start_dataset")
                 if self._active and not self._start_confirmed and self._ws is not None:
                     self._loss("start_result_unknown_resume_required")
                 if self.start_rejected:
-                    raise RuntimeError("Perangkat menolak Mulai; tidak ada START yang dikirim ulang.")
+                    raise RuntimeError("Perangkat menolak Mulai; tidak ada START tambahan setelah penolakan akhir.")
                 return self.snapshot()
 
     def _send_transition(self):
@@ -253,7 +316,8 @@ class WorkflowCollector(WirelessDatasetReplayCollector):
         if message["incomplete"]:
             from wireless_dataset_replay import _reason
             self._terminal_incomplete = True
-            self.terminal_reason = _reason(message.get("reason"))
+            self.terminal_reason = ("radio_fault" if message.get("reason") == "radio_fault"
+                                    else _reason(message.get("reason")))
         control, intent = self._control, self._transition_intent
         if intent:
             if transition not in (intent["seq"] - 1, intent["seq"]):
@@ -290,6 +354,7 @@ class WorkflowCollector(WirelessDatasetReplayCollector):
         if self._stream_confirmed and self._stop_intent and not self._stop_acked and self._control is None:
             self._send_control("STOP_DATASET", {}, self._stop_intent["command_id"])
         self.transition_seq = transition
+        self._observe_radio_auto_tx(message)
         if self._control:
             self.state = "stopping" if self._control["cmd"] == "STOP_DATASET" else self.state
         else:
@@ -304,6 +369,18 @@ class WorkflowCollector(WirelessDatasetReplayCollector):
             if message.get("boot_id") != self.boot_id:
                 raise ProtocolError("session_identity_changed")
             if message.get("result") != "ok":
+                if control["cmd"] == "START_DATASET":
+                    detail = message.get("detail")
+                    self.start_reject_detail = detail if isinstance(detail, str) and detail in START_REJECTION_DETAILS else "unknown"
+                    if (self.start_reject_detail in TRANSIENT_START_REJECTIONS and
+                            self._start_retry_count < MAX_EXPLICIT_START_RETRIES and
+                            self._clock() < self._start_deadline):
+                        self._start_retry_count += 1
+                        self._start_retry_at = self._clock() + .25 * self._start_retry_count
+                        self._control["deadline"] = self._start_deadline
+                        self.state = "starting"
+                        self._emit(dict(type="start_retry", **self._snapshot(False)))
+                        return
                 if control["cmd"] in {"PAUSE_DATASET", "CONTINUE_DATASET"}:
                     self._control = self._transition_intent = None
                     self.error = "device_rejected_transition"
@@ -322,6 +399,9 @@ class WorkflowCollector(WirelessDatasetReplayCollector):
             if message["transition_seq"] != expected:
                 raise ProtocolError("transition_identity_changed")
             control["acked"] = True
+            if control["cmd"] == "START_DATASET":
+                self._start_retry_at = None
+                self.start_reject_detail = ""
             if control["cmd"] == "STOP_DATASET":
                 if message["paused"]:
                     raise ProtocolError("malformed_stop_ack")

@@ -17,6 +17,11 @@ function boolFrom(...values) {
   return null;
 }
 
+function conservativeBoolFrom(...values) {
+  if (values.some((value) => value === false)) return false;
+  return values.some((value) => value === true) ? true : null;
+}
+
 function statusText(value) {
   return value === true ? "SIAP" : value === false ? "BELUM SIAP" : "BELUM TERSEDIA";
 }
@@ -38,7 +43,7 @@ function nextAction(key) {
   return actions[key] || "Kirim GET_STATUS lagi setelah GLD menyelesaikan inisialisasi.";
 }
 
-function asRows(status) {
+function asRows(status, isAtex = false) {
   const boot = status?.bootHealth || {};
   const model = status?.model || {};
   // GLD1 >= this diagnostic revision publishes the exact latest scan state in
@@ -46,25 +51,37 @@ function asRows(status) {
   // that have not yet been updated.
   const readiness = model.readiness || {};
   const binding = modelBindingState(status);
+  const chooseBoolean = isAtex ? conservativeBoolFrom : boolFrom;
   const telemetry = status?.telemetry || {};
   const sensorStatuses = Array.isArray(telemetry.sensorStatus) ? telemetry.sensorStatus : null;
   const allSensorStatusOk = sensorStatuses && sensorStatuses.length >= 8
     ? sensorStatuses.slice(0, 8).every((entry) => Number(entry) === 0)
     : null;
+  // ATEX sensor status arrays start at zero before any scan. Do not infer
+  // a successful scan until firmware explicitly reports that one occurred.
+  const validSensorStatuses = sensorStatuses && sensorStatuses.length >= 8 &&
+    sensorStatuses.slice(0, 8).every((entry) => Number.isInteger(entry) && entry >= 0);
+  const observedSensorStatusOk = isAtex
+    ? readiness.scanObserved === true && validSensorStatuses ? sensorStatuses.slice(0, 8).every((entry) => entry === 0) : null
+    : allSensorStatusOk;
+
+  const sensorState = chooseBoolean(readiness.allSensorsValid, model.allSensorsValid, model.sensorsValid, telemetry.allSensorsValid, observedSensorStatusOk);
+  // A positive sensor result cannot override an unobserved ATEX scan.
+  const displayedSensorState = isAtex && readiness.scanObserved !== true && sensorState === true ? null : sensorState;
 
   return [
-    { key: "sensors", label: "Sensor / ADS valid", value: boolFrom(readiness.allSensorsValid, model.allSensorsValid, model.sensorsValid, telemetry.allSensorsValid, allSensorStatusOk) },
-    { key: "primed", label: "Sensor sudah stabil", value: boolFrom(readiness.sensorsPrimed, model.sensorsPrimed, model.primed, telemetry.primed) },
-    { key: "ml", label: "Model ML siap", value: boolFrom(readiness.mlReady, model.mlReady, boot.mlReady) },
-    { key: "nulling", label: "Profil nulling diterapkan", value: boolFrom(readiness.nullingProfileApplied, model.nullingProfileApplied, boot.nullingProfileApplied) },
+    { key: "sensors", label: "Sensor / ADS valid", value: displayedSensorState },
+    { key: "primed", label: "Sensor sudah stabil", value: chooseBoolean(readiness.sensorsPrimed, model.sensorsPrimed, model.primed, telemetry.primed) },
+    { key: "ml", label: "Model ML siap", value: chooseBoolean(readiness.mlReady, model.mlReady, boot.mlReady) },
+    { key: "nulling", label: "Profil nulling diterapkan", value: chooseBoolean(readiness.nullingProfileApplied, model.nullingProfileApplied, boot.nullingProfileApplied) },
     {
       key: "binding",
       label: binding.value === true ? "Binding model / profil cocok" : `Binding · ${binding.label}`,
       value: binding.value,
       detail: binding.text
     },
-    { key: "dac", label: "Verifikasi DAC siap", value: boolFrom(readiness.dacVerificationReady, model.dacVerificationReady, boot.dacVerificationReady, boot.dacReady) },
-    { key: "engine", label: "Hasil inference valid", value: boolFrom(readiness.inferenceValid, model.inferenceEngineOk, model.inferenceValid, telemetry.inferenceValid) }
+    { key: "dac", label: "Verifikasi DAC siap", value: chooseBoolean(readiness.dacVerificationReady, model.dacVerificationReady, boot.dacVerificationReady, isAtex ? null : boot.dacReady) },
+    { key: "engine", label: "Hasil inference valid", value: chooseBoolean(readiness.inferenceValid, model.inferenceEngineOk, model.inferenceValid, telemetry.inferenceValid) }
   ];
 }
 
@@ -90,8 +107,9 @@ export function renderExpertStatus(status = state.status) {
   }
 
   const boardProfile = String(status.boardProfile || state.info?.boardProfile || "");
+  const isAtex = boardProfile === "GLD ATEX MotherBoardGLDVer2";
   const isKnownOtherGld = /GLD2|GLD3/i.test(boardProfile) || status.sensorPower?.available === true;
-  if (isKnownOtherGld) {
+  if (isKnownOtherGld && !isAtex) {
     summary.textContent = "KHUSUS GLD1";
     summary.className = "expert-status-summary is-unknown";
     rowsElement.replaceChildren();
@@ -99,13 +117,15 @@ export function renderExpertStatus(status = state.status) {
     return;
   }
 
-  const rows = asRows(status);
+  const rows = asRows(status, isAtex);
   const hasDeviceFields = rows.some((row) => row.value !== null);
   if (!hasDeviceFields) {
     summary.textContent = "STATUS BELUM LENGKAP";
     summary.className = "expert-status-summary is-unknown";
     rowsElement.replaceChildren();
-    hint.textContent = "Firmware ini belum mengirim detail readiness inference. Perbarui paket GLD1 lalu kirim GET_STATUS kembali.";
+    hint.textContent = isAtex
+      ? "Firmware ATEX belum mengirim detail readiness inference. Kirim GET_STATUS kembali setelah inisialisasi."
+      : "Firmware ini belum mengirim detail readiness inference. Perbarui paket GLD1 lalu kirim GET_STATUS kembali.";
     return;
   }
 
@@ -128,4 +148,5 @@ export function renderExpertStatus(status = state.status) {
   hint.textContent = problem ? `${problem.detail || nextAction(problem.key)}${blocker && blocker !== "none" ? ` Kode GLD: ${blocker}.` : ""}`
     : unknown ? "Sebagian detail belum dikirim firmware; GET_STATUS berikutnya akan memperbarui panel ini."
       : "Semua gate inference yang dilaporkan GLD siap. TX normal masih dapat gagal jika radio/SX1262 tidak siap.";
+  if (isAtex) hint.textContent += " Status ini berasal dari firmware dan belum membuktikan kondisi fisik sensor atau kalibrasi.";
 }

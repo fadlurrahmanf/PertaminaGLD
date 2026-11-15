@@ -6,7 +6,7 @@
     <title>GLD Operator</title>
     <link rel="stylesheet" href="./style.css?v=20261015-lora-three-cards-row-1">
     <link rel="stylesheet" href="./css/wireless-dataset.css?v=20261102-stage1">
-      <link rel="stylesheet" href="./css/dataset-workflow.css?v=20261103-final-hotspot-choices">
+      <link rel="stylesheet" href="./css/dataset-workflow.css?v=20261112-average-controls-v2">
   </head>
   <body>
     <div class="shell">
@@ -119,6 +119,7 @@
                 <button id="runningSettingsBtn" class="gear-btn" type="button" title="Running settings" aria-label="Running settings">&#9881;</button>
               </div>
             </div>
+            <p id="sensorWarmupNotice" class="running-mode-notice" role="status" aria-live="polite" hidden></p>
             <p id="runningModeNotice" class="running-mode-notice" role="status" hidden></p>
             <div class="telemetry-row">
               <div id="sensorChannelsLeft" class="sensor-channel-list" aria-label="Sensor channels 1-4 voltage and gain"></div>
@@ -138,7 +139,7 @@
 
         <section id="dataset" class="view">
           <div id="datasetWorkflow" class="module dataset-workflow">
-            <header class="wf-heading"><div><p class="eyebrow">AKUISISI WIRELESS</p><h2>Dataset GLD</h2><p>Pemantauan 8 sensor dan rekaman CSV.</p></div><div class="wf-device-status"><span id="wfConnection" class="wf-indicator" role="status">Belum terhubung</span><small>Wi-Fi lokal · interval 500 ms</small></div></header>
+            <header class="wf-heading"><div><p class="eyebrow">AKUISISI WIRELESS</p><h2>Dataset GLD</h2><p>Pemantauan 8 sensor dan rekaman CSV.</p></div><div class="wf-device-status"><span id="wfConnection" class="wf-indicator" role="status">Belum terhubung</span><small>Wi-Fi lokal · interval 500 ms</small><small id="wfRadioAutoTx" role="status" hidden></small></div></header>
             <div class="wf-workspace">
               <aside class="wf-setup" aria-label="Lima langkah pengaturan sesi">
                 <div class="wf-panel-heading"><h3>Pengaturan sesi</h3></div>
@@ -150,8 +151,12 @@
                 <div class="wf-lockbar"><label class="wf-lock"><input id="wfLock" type="checkbox" role="switch"><span>Lock pengaturan</span></label><small id="wfLockInfo">Lengkapi lima langkah sebelum mengunci.</small></div>
               </aside>
               <div class="wf-monitor">
-                <section class="wf-recording-panel" aria-label="Kontrol perekaman"><div class="wf-summary"><strong id="wfState">Memuat status…</strong><span id="wfCount">0 sampel tersimpan</span></div><div class="wf-controls-row"><div id="wfControls" class="wf-controls" hidden><button id="wfPrimary" class="primary" type="button" aria-label="Start rekaman"><span id="wfPrimaryPlay" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m8 5 11 7-11 7Z"/></svg></span><span id="wfPrimaryPause" aria-hidden="true" hidden><svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg></span><span id="wfPrimaryLabel">Start</span></button><button id="wfStop" class="wf-stop" type="button" aria-label="Stop dan verifikasi CSV" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1"/></svg><span>Stop</span></button></div><button id="wfReset" class="wf-reset" type="button">Reset sesi</button></div><p id="wfMessage" class="wf-message" role="status" aria-live="polite"></p></section>
-                <section class="wf-chart-panel" aria-label="Grafik delapan sensor dan hasil inferensi"><div class="wf-chart-heading"><div class="wf-prediction"><span>Predicted Class</span><strong id="wfPredictedClass">Menunggu sampel</strong></div><div class="wf-confidence"><span>Confidence Score</span><output id="wfConfidenceScore">—</output></div><label class="wf-range" for="wfRange"><span>Rentang <output id="wfRangeValue">1 min</output></span><input id="wfRange" type="range" min="60" max="3600" step="60" value="60" aria-label="Rentang grafik Dataset"></label></div><div class="wf-chart-caption"><span>TEGANGAN SENSOR · V</span><small id="wfPredictionState">Prediksi mengikuti sampel yang tersimpan.</small></div><div class="wf-chart-wrap"><canvas id="wfChart" width="1200" height="340" role="img" aria-label="Grafik delapan sensor Dataset GLD"></canvas></div><div id="wfReadings" class="wf-readings" aria-label="Delapan nilai sensor"></div></section>
+                <section class="wf-recording-panel" aria-label="Kontrol perekaman"><div class="wf-summary"><strong id="wfState">Memuat status…</strong><span id="wfCount">0 sampel tersimpan</span></div><div class="wf-controls-row"><div id="wfControls" class="wf-controls" hidden><button id="wfPrimary" class="primary" type="button" aria-label="Start rekaman"><span id="wfPrimaryPlay" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m8 5 11 7-11 7Z"/></svg></span><span id="wfPrimaryPause" aria-hidden="true" hidden><svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg></span><span id="wfPrimaryLabel">Start</span></button><button id="wfStop" class="wf-stop" type="button" aria-label="Stop dan verifikasi CSV" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1"/></svg><span>Stop</span></button></div><button id="wfReset" class="wf-reset" type="button">Reset sesi</button><p id="wfMessage" class="wf-message" role="status" aria-live="polite"></p><div class="wf-evidence" aria-label="Bukti sesi Dataset"><p id="wfSessionStatus"></p><p id="wfCause"></p><p id="wfDeviceTotal"></p><p id="wfReconciliation"></p><p id="wfDiagnosticPath"></p><p id="wfDiagnosticError" role="alert"></p></div></section>
+                <section class="wf-chart-panel" aria-label="Grafik delapan sensor dan hasil inferensi">
+                  <div class="wf-chart-heading"><div class="wf-prediction"><span>Predicted Class</span><strong id="wfPredictedClass">Menunggu sampel</strong></div><div class="wf-confidence"><span>Confidence Score</span><output id="wfConfidenceScore">—</output></div><div class="wf-chart-tools"><button id="wfAverageToggle" class="wf-average-toggle" type="button" aria-pressed="false" aria-controls="wfAverageOptions">Average: Mati</button><label class="wf-range" for="wfRange"><span>Rentang <output id="wfRangeValue">1 min</output></span><input id="wfRange" type="range" min="60" max="3600" step="60" value="60" aria-label="Rentang grafik Dataset"></label></div></div>
+                  <div id="wfAverageOptions" class="wf-average-options" hidden><fieldset class="wf-average-basis"><legend>Dasar moving average</legend><label><input id="wfAverageByCount" type="radio" name="wf-average-basis" checked> Jumlah data</label><label><input id="wfAverageByDuration" type="radio" name="wf-average-basis"> Durasi</label></fieldset><label id="wfAverageCountField" class="wf-average-field">Data per rata-rata<input id="wfAverageCount" type="number" min="1" max="172800" step="1" value="10" inputmode="numeric"></label><div id="wfAverageDurationField" class="wf-average-duration" hidden><label class="wf-average-field">Jam<input id="wfAverageHours" type="number" min="0" max="24" step="1" value="0" inputmode="numeric"></label><label class="wf-average-field">Menit<input id="wfAverageMinutes" type="number" min="0" max="59" step="1" value="1" inputmode="numeric"></label></div><small id="wfAverageNote">Hanya garis grafik yang dirata-ratakan. Angka sensor, tabel, dan CSV tetap mentah. Durasi maksimum 24 jam; riwayatnya dapat dimuat ulang dari catatan sesi.</small></div>
+                  <div class="wf-chart-caption"><span>TEGANGAN SENSOR · V · <output id="wfAverageStatus">Grafik mentah</output></span><small id="wfPredictionState">Prediksi mengikuti sampel yang tersimpan.</small></div><div class="wf-chart-wrap"><canvas id="wfChart" width="1200" height="340" role="img" aria-label="Grafik delapan sensor Dataset GLD"></canvas></div><div id="wfReadings" class="wf-readings" aria-label="Delapan nilai sensor mentah"></div>
+                </section>
                 <section class="wf-sample-panel" aria-label="Tabel sampel dan export"><div class="wf-table-heading"><h3>Sampel terbaru</h3><small>10 baris terakhir</small></div><div class="wireless-table-wrap"><table><thead><tr id="wfHeaders"><th>Baris</th><th>Waktu GLD</th><th>MQ8</th><th>MQ135</th><th>MQ3</th><th>MQ5</th><th>MQ4</th><th>MQ7</th><th>MQ6</th><th>MQ2</th></tr></thead><tbody id="wfRows"><tr><td colspan="10">Belum ada sampel.</td></tr></tbody></table></div><div class="wf-export"><div><span id="wfVerification">CSV belum direkam.</span><small>Unduh salinan CSV dari lokasi pilihan Anda.</small></div><button id="wfExport" type="button" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M5 16v4h14v-4"/></svg>Export CSV</button></div></section>
               </div>
             </div>
@@ -731,7 +736,7 @@
             <select id="firmwareUploadEnv" aria-label="Firmware environment"><option value="gld">GLD1</option><option value="gld_v2">GLD2 - Board GLD V2</option><option value="gld_atex">GLD ATEX - MotherBoardGLDVer2 (GPIO7 fan)</option><option value="gldFieldtest">GLD Fieldtest</option></select>
           </label>
           <label class="upload-dialog-field">Model yang di-inject
-            <select id="firmwareUploadModel" aria-label="Model yang di-inject"><option value="model_1">Model 1 — Board 1</option><option value="model_2">Model 2 — Board 2</option><option value="model_3">Model 3 — Board 3</option><option value="model_1_dataset_workflow_wifi">GLD1 Model 1 — Hotspot Wizard Dataset</option><option value="model_2_dataset_workflow_wifi">GLD1 Model 2 — Hotspot Wizard Dataset</option><option value="model_3_dataset_workflow_wifi">GLD1 Model 3 — Hotspot Wizard Dataset</option><option value="model_4" disabled>Model 4 — artefak belum tersedia</option></select>
+            <select id="firmwareUploadModel" aria-label="Model yang di-inject"><option value="model_1_dataset_workflow_wifi">Model 1 — Board 1</option><option value="model_2_dataset_workflow_wifi">Model 2 — Board 2</option><option value="model_3_dataset_workflow_wifi">Model 3 — Board 3</option><option value="model_4" disabled>Model 4 — artefak belum tersedia</option></select>
           </label>
           <p id="firmwareUploadModelStatus" class="status-line">Pilih model yang sesuai dengan board dan paket firmware yang akan diprogram.</p>
           <label class="upload-dialog-field">Target COM
@@ -793,6 +798,14 @@
         </div>
       </div>
 
+      <div id="nullingSummaryModal" class="modal" aria-hidden="true">
+        <div class="modal-backdrop" data-close-dialog="nullingSummaryModal"></div>
+        <section class="modal-box modal-box--wide" role="dialog" aria-modal="true" aria-labelledby="nullingSummaryTitle">
+          <div class="module-head"><h2 id="nullingSummaryTitle">Ringkasan Nulling</h2><button id="nullingSummaryClose" type="button" data-close-dialog="nullingSummaryModal">Tutup</button></div>
+          <p id="nullingSummaryMessage" style="white-space: pre-line"></p>
+        </section>
+      </div>
+
       <div id="nullingDetailsModal" class="modal" aria-hidden="true">
         <div class="modal-backdrop" data-close-dialog="nullingDetailsModal"></div>
         <section class="modal-box modal-box--wide nulling-details-modal" role="dialog" aria-modal="true" aria-labelledby="nullingDetailsTitle">
@@ -811,6 +824,6 @@
       </div>
     </div>
 
-    <script type="module" src="./js/main.js?v=20261103-three-model-binding"></script>
+    <script type="module" src="./js/main.js?v=20261112-average-history-v8"></script>
   </body>
 </html>

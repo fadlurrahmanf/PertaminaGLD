@@ -48,6 +48,9 @@ enum class GldSerialCommandType : uint8_t {
     CancelFullScaleSweep,
     InjectTplDone,
     InjectTplClr,
+#if defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX && defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+    GetAtexIdentityJson,
+#endif
 };
 
 struct GldSerialCommand {

@@ -173,7 +173,8 @@ def package(model, modules, core, snapshot, install):
                     source=dict(gitCommit=post._git_commit(ROOT), gitTreeState="build-output", gitTreeStateScope="firmware/",
                                 firmwareTreeSnapshotSha256=snapshot, platformioCoreVersion=core, platformioIniSha256=sha(FW / "platformio.ini"),
                                 buildCommand=f"pio run -e {env}", packagedAtUtc=timestamp),
-                    flashSetSha256=post._flash_set_sha256(flash), flashFiles=flash)
+                    flashSetSha256=post._flash_set_sha256(flash), flashFiles=flash,
+                    capabilities=dict(nativeSerial=True, datasetWifi=True))
     encoded = {name: base64.b64encode((artifact / name).read_bytes()).decode("ascii") for name, _ in FILES}
     checked, verified = uploader.validate_firmware_package(manifest, encoded, env, "1002")
     require(len(verified) == 4 and not uploader.requires_gld1_nvs_reset_before_boot(checked), "Strict child validation or no-reset guard failed")

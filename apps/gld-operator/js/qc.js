@@ -9,7 +9,7 @@ import { $, elements, state, SENSOR_NAMES, SENSOR_STATUS_NAMES } from "./state.j
 import { sendCommand, sendCommandAndWaitAck, togglePolling, channelIndexFromLog, tokenValue } from "./serial-protocol.js";
 import { showAlert, showConfirm, withBusy, saveUiSession, setPanelOpen, downloadText, csvCell, stamp, onAppendLog } from "./ui.js";
 import { drawOneChart, drawFullScaleSweepChart } from "./chart.js";
-import { renderNullingChannels, DAC_CODE_MAX, requestFullNulling } from "./nulling.js";
+import { renderNullingChannels, DAC_CODE_MAX, requestFullNulling, observeSavedNullingProfile } from "./nulling.js";
 
 // Single-channel nulling runs the same physical search algorithm as a full
 // 8-channel nulling pass, just for one channel - it can legitimately take
@@ -86,6 +86,7 @@ export function updateQcStatus(payload) {
     };
   });
   state.qc.nullingProfile = normalizeNullingProfile(payload);
+  observeSavedNullingProfile(payload, state.qc.nullingProfile);
   renderQc();
   // Freshly-known nullingOk can flip a channel's card from "Waiting" to
   // "Done (saved)" in both the Nulling tab and QC's own grids without
@@ -562,12 +563,28 @@ async function manualLoraTransmit() {
     loraFocusLog("MANUAL TX DITOLAK", ["Nonaktifkan Auto Transmit terlebih dahulu."]);
     return;
   }
+  const isAtex = /GLD\s*ATEX/i.test(String(state.info?.boardProfile || ""));
   try {
     const ack = await sendCommandAndWaitAck("MANUAL_LORA_TX", "MANUAL_LORA_TX", LORA_BEGIN_ACK_TIMEOUT_MS);
-    if (ack.status !== "ok") throw new Error(ack.message || ack.status);
+    if (ack.status !== "ok") {
+      loraFocusLog(isAtex ? "MANUAL TX DITOLAK" : "MANUAL TX GAGAL", [ack.message || ack.status]);
+      return;
+    }
+    if (Object.hasOwn(ack, "completion")) {
+      if (ack.completion !== "pending") {
+        loraFocusLog("MANUAL TX HASIL BELUM PASTI", ["Status penyelesaian ACK tidak dikenali; periksa event radio sebelum mencoba lagi."]);
+        return;
+      }
+      loraFocusLog("MANUAL TX DITERIMA", ["ACK hanya menerima permintaan; pantau event radio untuk hasil. Jangan ulang otomatis."]);
+      try { await sendCommand("GET_STATUS"); }
+      catch { loraFocusLog("STATUS RADIO BELUM TERBACA", ["Periksa koneksi dan event radio; hasil TX belum dipastikan oleh ACK."]); }
+      return;
+    }
     loraFocusLog("MANUAL TX SUCCESS", ["TX satu kali memakai konfigurasi aktif; interval berikutnya dimulai ulang."]);
     await sendCommand("GET_STATUS");
-  } catch (error) { loraFocusLog("MANUAL TX GAGAL", [error.message]); }
+  } catch (error) {
+    loraFocusLog(isAtex ? "MANUAL TX HASIL BELUM PASTI" : "MANUAL TX GAGAL", [error.message]);
+  }
 }
 
 async function setLoraAutoTransmit() {

@@ -56,12 +56,29 @@
 .dataset-workflow .wf-stop { color:var(--alarm); }
 .dataset-workflow .wf-reset { margin-left:auto;color:var(--wf-muted);background:transparent;border-color:transparent; }
 .dataset-workflow .wf-message { margin:12px 0 0;font:.72rem/1.6 var(--font-body);color:var(--wf-muted);overflow-wrap:anywhere; }
+.dataset-workflow .wf-evidence { display:grid;gap:4px;margin-top:10px;padding-top:10px;border-top:1px solid var(--hairline);font:.72rem/1.5 var(--font-body);color:var(--wf-muted); }
+.dataset-workflow .wf-evidence p { margin:0;overflow-wrap:anywhere; }
+.dataset-workflow .wf-evidence [role="alert"]:not(:empty) { color:var(--danger); }
 .dataset-workflow .wf-chart-heading { display:flex;align-items:start;gap:20px;padding:17px 16px 12px;flex-wrap:wrap; }
 .dataset-workflow .wf-prediction,.dataset-workflow .wf-confidence { display:grid;gap:5px;min-width:0; }
 .dataset-workflow .wf-prediction>span,.dataset-workflow .wf-confidence>span { font:.63rem var(--font-eyebrow);letter-spacing:.08em;text-transform:uppercase;color:var(--wf-muted); }
 .dataset-workflow #wfPredictedClass { font-size:1.05rem;line-height:1.4;overflow-wrap:anywhere; }
 .dataset-workflow #wfConfidenceScore { font:600 1.1rem var(--font-mono); }
-.dataset-workflow .wf-range { margin-left:auto;display:grid;gap:7px;width:126px;font-size:.68rem;color:var(--wf-muted); }
+.dataset-workflow .wf-chart-tools { margin-left:auto;display:flex;align-items:center;gap:14px;flex-wrap:wrap; }
+.dataset-workflow .wf-average-toggle { align-self:center;border-color:var(--hairline-strong);background:var(--surface-2); }
+.dataset-workflow .wf-average-toggle[aria-pressed=true] { border-color:var(--ok);color:var(--ok);background:var(--ok-soft); }
+.dataset-workflow .wf-average-options { display:flex;align-items:end;gap:12px;flex-wrap:wrap;margin:0 16px 13px;padding:11px 12px;border:1px solid var(--hairline);border-radius:7px;background:var(--surface-2); }
+.dataset-workflow .wf-average-basis { display:flex;align-items:center;gap:12px;flex-wrap:wrap;border:0;padding:0;margin:0; }
+.dataset-workflow .wf-average-basis legend { width:100%;margin-bottom:6px;font-size:.67rem;color:var(--wf-muted); }
+.dataset-workflow .wf-average-basis label { display:inline-flex;align-items:center;gap:5px;font-size:.73rem;white-space:nowrap; }
+.dataset-workflow .wf-average-basis input { width:15px;height:15px;margin:0;accent-color:var(--ok); }
+.dataset-workflow .wf-average-field { display:grid;gap:5px;min-width:115px;font-size:.67rem;color:var(--wf-muted); }
+.dataset-workflow .wf-average-field input { width:100%; }
+.dataset-workflow .wf-average-duration { display:flex;align-items:end;gap:8px; }
+.dataset-workflow .wf-average-duration .wf-average-field { min-width:65px;width:72px; }
+.dataset-workflow .wf-average-options[hidden],.dataset-workflow .wf-average-field[hidden],.dataset-workflow .wf-average-duration[hidden] { display:none; }
+.dataset-workflow #wfAverageNote { flex-basis:100%;margin:0; }
+.dataset-workflow .wf-range { display:grid;gap:7px;width:126px;font-size:.68rem;color:var(--wf-muted); }
 .dataset-workflow .wf-range input { width:100%;min-width:0; }
 .dataset-workflow .wf-chart-caption { display:flex;justify-content:space-between;align-items:center;gap:12px;padding:0 16px 10px;flex-wrap:wrap; }
 .dataset-workflow .wf-chart-caption>span { font-size:.61rem;letter-spacing:.06em;color:var(--wf-muted); }
@@ -85,4 +102,4 @@
 .dataset-workflow [data-error=true] { color:var(--alarm); }
 @media(max-width:1000px) { .dataset-workflow { padding:16px; }.dataset-workflow .wf-workspace { grid-template-columns:250px minmax(0,1fr);gap:12px; }.dataset-workflow .wf-readings { grid-template-columns:repeat(2,minmax(0,1fr)); }.dataset-workflow .wf-chart-heading { gap:14px; } }
 @media(max-width:760px) { .dataset-workflow .wf-workspace { grid-template-columns:1fr; }.dataset-workflow .wf-setup { display:grid;grid-template-columns:repeat(2,minmax(0,1fr)); }.dataset-workflow .wf-panel-heading,.dataset-workflow .wf-lockbar { grid-column:1/-1; }.dataset-workflow .wf-step { border-right:1px solid var(--hairline); }.dataset-workflow .wf-readings { grid-template-columns:repeat(4,minmax(0,1fr)); } }
-@media(max-width:480px) { .dataset-workflow { padding:12px; }.dataset-workflow .wf-setup { display:block; }.dataset-workflow .wf-readings { grid-template-columns:repeat(2,minmax(0,1fr)); }.dataset-workflow .wf-range { margin-left:0; }.dataset-workflow .wf-heading h2 { font-size:1.4rem; } }
+@media(max-width:480px) { .dataset-workflow { padding:12px; }.dataset-workflow .wf-setup { display:block; }.dataset-workflow .wf-readings { grid-template-columns:repeat(2,minmax(0,1fr)); }.dataset-workflow .wf-chart-tools { margin-left:0;width:100%;justify-content:space-between; }.dataset-workflow .wf-heading h2 { font-size:1.4rem; } }

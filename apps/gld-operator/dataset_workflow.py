@@ -11,6 +11,7 @@ import hashlib
 import io
 import itertools
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -55,6 +56,47 @@ CONNECT_DIAGNOSTICS = {
     "connection_failed_check_hotspot_and_password": ("transport", "Koneksi ke layanan data GLD gagal. Periksa hotspot GLD dan paket firmware, lalu coba Connect lagi."),
 }
 
+DIAGNOSTIC_REASONS = {
+    "native_operation_busy": "Perintah Start bertepatan dengan operasi kontrol GLD; perangkat menolak sebelum merekam.",
+    "transport_busy": "Antrean kontrol GLD penuh saat Start; perangkat menolak sebelum merekam.",
+    "session_or_retained_data_pending": "GLD masih mempunyai sesi atau sampel tertahan dari rekaman sebelumnya.",
+    "session_id_reused": "Identitas sesi Start sudah pernah dipakai GLD.",
+    "requires_500ms_24v_and_saved_valid_profile": "GLD belum memenuhi interval 500 ms, catu 24 V, atau profil nulling tersimpan yang valid.",
+    "prediction_unavailable": "Prediksi yang dipilih belum siap pada GLD.",
+    "idempotency_mismatch": "Perintah Start berbeda dari perintah dengan identitas yang sama.",
+    "device_rejected_start_dataset": "GLD menolak Start sebelum rekaman dimulai; rincian penolakan tidak tersedia.",
+    "explicit_disconnect": "Operator memutus koneksi saat sesi aktif.",
+    "transport_lost": "Transport data terputus saat sesi aktif.",
+    "reconnect_failed": "Upaya menyambung ulang transport gagal.",
+    "sample_silence_resume_required": "Sampel tidak diterima dalam batas waktu; status sesi perlu dikonfirmasi.",
+    "radio_fault": "Radio GLD mengalami gangguan; rekaman dihentikan sebagai tidak lengkap dan sampel yang tersimpan tetap dipertahankan.",
+    "cutoff_disk_failure": "Pencatatan saat cutoff mengalami kegagalan disk.",
+    "disk_failure_before_ack": "Penyimpanan sampel gagal sebelum ACK.",
+}
+
+
+def _safe_code(value):
+    return value if isinstance(value, str) and re.fullmatch(r"[a-z][a-z0-9_]{0,79}", value) else "reason_unavailable"
+
+
+def read_session_diagnostic(ledger_path):
+    """Read a sidecar without changing the sample ledger or the recorded CSV."""
+    path = Path(ledger_path).with_suffix(".diagnostics.jsonl")
+    if not path.is_file():
+        return dict(available=False, path=str(path), events=0, last_event=None,
+                    message="Catatan diagnostik historis tidak tersedia; penyebab belum diketahui.")
+    count, last, malformed = 0, None, 0
+    with path.open(encoding="utf-8") as stream:
+        for line in stream:
+            try:
+                last = json.loads(line)
+                count += 1
+            except json.JSONDecodeError:
+                malformed += 1
+    return dict(available=bool(count), path=str(path), events=count, last_event=last,
+        malformed_lines=malformed,
+        message="Sebagian catatan diagnostik tidak dapat dibaca." if malformed else "")
+
 
 def _hash(path):
     digest = hashlib.sha256()
@@ -62,6 +104,35 @@ def _hash(path):
         for chunk in iter(lambda: stream.read(65536), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _recent_ledger_lines(path, limit):
+    """Read only the newest complete ledger lines, including during an append."""
+    found, prefix = [], b""
+    with Path(path).open("rb") as stream:
+        stream.seek(0, 2)
+        position = stream.tell()
+        complete_tail = True
+        if position:
+            stream.seek(position - 1)
+            complete_tail = stream.read(1) == b"\n"
+        while position and len(found) < limit:
+            size = min(position, 65536)
+            position -= size
+            stream.seek(position)
+            parts = (stream.read(size) + prefix).split(b"\n")
+            prefix = parts[0]
+            for line in reversed(parts[1:]):
+                if not complete_tail:
+                    complete_tail = True
+                    continue
+                if line.strip():
+                    found.append(line.rstrip(b"\r"))
+                    if len(found) == limit:
+                        break
+        if position == 0 and len(found) < limit and complete_tail and prefix.strip():
+            found.append(prefix.rstrip(b"\r"))
+    return reversed(found)
 
 
 def csv_columns(fields):
@@ -106,6 +177,20 @@ class DatasetWorkflowService:
         self._password = None
         self.revision = 0
         self._clear_form()
+        self._recent_diagnostic_path = self._find_recent_diagnostic()
+
+    def _find_recent_diagnostic(self):
+        if not self.output_dir.is_dir():
+            return ""
+        latest, latest_mtime = "", -1
+        for path in self.output_dir.glob("workflow_*.diagnostics.jsonl"):
+            try:
+                mtime = path.stat().st_mtime_ns
+            except OSError:
+                continue
+            if mtime > latest_mtime:
+                latest, latest_mtime = str(path), mtime
+        return latest
 
     def _clear_form(self):
         self.devices = []
@@ -132,11 +217,16 @@ class DatasetWorkflowService:
         self._continue_invalid = False
         self._cleanup_pending = self._cleanup_paused = self._cleanup_confirmed = False
         self._cleanup_error = ""
-        self.verification = dict(verified=False, count=0, sha256="", message="Belum ada rekaman yang diverifikasi.")
+        self.verification = dict(verified=False, attempted=False, count=0, matched_count=0, stored_count=0,
+            ledger_count=0, sha256="", message="Belum ada rekaman yang diverifikasi.")
         self._complete = False
         self.error = ""
         self.connection_diagnostic = {}
         self._engine_notice_reason = ""
+        self.diagnostic_path = self.diagnostic_error = ""
+        self._diagnostic_last_state = None
+        self._cause_code = self._cause_description = ""
+        self._cause_evidence = "unknown"
 
     def _busy(self):
         return self._cleanup_pending or (self._engine is not None and not self._segment_closed)
@@ -161,7 +251,13 @@ class DatasetWorkflowService:
         state = "incomplete" if self._cleanup_pending else active_state
         if self._segment_closed and self.ledger_path:
             state = "complete" if self._complete and self.verification["verified"] else "incomplete"
-        result = dict(revision=self.revision, devices=copy.deepcopy(self.devices), scanned=self._steps["scan"],
+        # Treat an old or disconnected report as unknown; the field is
+        # informational and never changes Dataset readiness or controls.
+        observed, seen = engine.get("radio_auto_tx_observed"), engine.get("radio_auto_tx_seen")
+        age = self._clock() - seen if type(seen) in (int, float) else None
+        radio_auto_tx = observed if (engine.get("connected") and type(observed) is bool and
+            age is not None and 0 <= age <= 30.0) else None
+        result = dict(radio_auto_tx=radio_auto_tx, revision=self.revision, devices=copy.deepcopy(self.devices), scanned=self._steps["scan"],
             selected_device_id=self.selected_device_id, selected_ssid=self.selected_ssid,
             device_id=engine.get("device_id", self.selected_device_id),
             boot_id=engine.get("boot_id", ""), session_id=engine.get("session_id", ""),
@@ -174,6 +270,16 @@ class DatasetWorkflowService:
             configured=all(steps.values()), steps=steps, wizard_steps=wizard_steps, count=self.count,
             configuration_frozen=bool(self.ledger_path),
             segment_id=self._segment_id, verification=copy.deepcopy(self.verification), error=self.error,
+            start_rejected=bool(engine.get("start_rejected")),
+            start_reject_detail=engine.get("start_reject_detail", ""),
+            start_retry_count=engine.get("start_retry_count", 0),
+            diagnostic_path=self.diagnostic_path, diagnostic_error=self.diagnostic_error,
+            recent_diagnostic_path=self._recent_diagnostic_path if not self.diagnostic_path else "",
+            cause=dict(code=self._cause_code, description=self._cause_description,
+                       evidence=self._cause_evidence),
+            session_closure_status=self._session_closure_status(),
+            device_final_total=self._device_final_total(),
+            reconciliation_status=self._reconciliation_status(),
             connection_diagnostic=copy.deepcopy(self.connection_diagnostic),
             cleanup_pending=self._cleanup_pending, cleanup_active=self._cleanup_pending and not self._cleanup_paused,
             cleanup_paused=self._cleanup_paused, cleanup_confirmed=self._cleanup_confirmed,
@@ -191,6 +297,89 @@ class DatasetWorkflowService:
         if history:
             result["history"] = copy.deepcopy(list(self._history))
         return result
+
+    def _device_final_total(self):
+        summary = getattr(self._engine, "_summary", None)
+        total = summary.get("total_samples") if isinstance(summary, dict) else None
+        if type(total) is not int or total < 0:
+            return dict(status="unknown", count=None)
+        reconciled = (self._segment_closed and not self._cleanup_pending and
+            not getattr(self._engine, "_active", True) and getattr(self._engine, "next_seq", None) == total)
+        return dict(status="reconciled" if reconciled else "reported", count=total)
+
+    def _session_closure_status(self):
+        engine = self._engine
+        if not self.ledger_path:
+            return "not_started"
+        if self._cleanup_pending:
+            return "pending"
+        if not self._segment_closed:
+            return "ongoing"
+        if engine is not None and getattr(engine, "start_rejected", False) and self.count == 0:
+            return "not_started"
+        if self._cleanup_confirmed:
+            return "cleanup_confirmed"
+        if engine is not None and getattr(engine, "complete", False):
+            return "confirmed_normal"
+        if (engine is not None and getattr(engine, "_summary", None) is not None and
+                getattr(engine, "_terminal_incomplete", False) and not getattr(engine, "_active", True)):
+            return "confirmed_incomplete"
+        return "unconfirmed"
+
+    def _reconciliation_status(self):
+        if self._cleanup_pending:
+            return "pending"
+        if self._segment_closed and self._engine is not None and getattr(self._engine, "start_rejected", False) and self.count == 0:
+            return "not_started"
+        if self._cleanup_confirmed:
+            return "cleanup_confirmed"
+        if self._device_final_total()["status"] == "reconciled":
+            return "confirmed"
+        if self._segment_closed and self.ledger_path:
+            return "unconfirmed"
+        return "not_started"
+
+    def _set_cause(self, code, evidence="confirmed_event"):
+        if self._cause_code:
+            return
+        self._cause_code = _safe_code(code)
+        self._cause_description = DIAGNOSTIC_REASONS.get(self._cause_code,
+            "Kode kejadian tercatat; lihat catatan diagnostik untuk urutannya.")
+        self._cause_evidence = evidence
+
+    def _diagnostic_event(self, event, reason=""):
+        if not self.diagnostic_path:
+            return
+        engine, state = self._engine, self._engine_state
+        last = next((row for row in reversed(self._history) if row.get("segment_id") == self._segment_id), None)
+        summary = getattr(engine, "_summary", None)
+        payload = dict(timestamp_utc=datetime.now(timezone.utc).isoformat(), event=_safe_code(event),
+            reason_code=_safe_code(reason) if reason else "",
+            reason_description=(DIAGNOSTIC_REASONS.get(reason,
+                "Kode alasan diterima; rincian penyebab fisik tidak tersedia.") if reason else ""),
+            device_id=getattr(engine, "device_id", "") or self.selected_device_id,
+            boot_id=getattr(engine, "boot_id", ""), session_id=getattr(engine, "session_id", ""),
+            segment_id=self._segment_id, mode=self.mode,
+            last_saved_seq=last.get("seq") if last else None,
+            last_saved_row_id=last.get("row_id") if last else None,
+            saved_count=self.count, connected=bool(state.get("connected")),
+            engine_state=state.get("state", ""), stop_requested=bool(state.get("stop_requested")),
+            stop_acknowledged=bool(state.get("stop_acknowledged")),
+            cleanup_pending=self._cleanup_pending, cleanup_confirmed=self._cleanup_confirmed,
+            reconciliation_status=self._reconciliation_status(),
+            device_final_total=summary.get("total_samples") if isinstance(summary, dict) else None,
+            device_final_total_status=self._device_final_total()["status"],
+            start_retry_count=state.get("start_retry_count", 0),
+            cause_code=self._cause_code, cause_description=self._cause_description,
+            cause_evidence=self._cause_evidence,
+            verification=copy.deepcopy(self.verification))
+        try:
+            with Path(self.diagnostic_path).open("a", encoding="utf-8", newline="") as stream:
+                stream.write(json.dumps(payload, ensure_ascii=True, allow_nan=False, separators=(",", ":")) + "\n")
+                stream.flush(); self._fsync(stream.fileno())
+            self._recent_diagnostic_path = self.diagnostic_path
+        except (OSError, TypeError, ValueError) as exc:
+            self.diagnostic_error = f"Catatan diagnostik gagal disimpan ({type(exc).__name__}); bukti kejadian ini tidak tersimpan."
 
     def snapshot(self):
         with self._lock:
@@ -397,6 +586,7 @@ class DatasetWorkflowService:
         self._logical_identity = dict(device_id=self._engine.device_id,
             nulling_profile_id=self._engine.nulling_profile_id, model=copy.deepcopy(self._engine.model))
         self.ledger_path = str(self.output_dir / ("workflow_" + uuid.uuid4().hex + ".jsonl"))
+        self.diagnostic_path = str(Path(self.ledger_path).with_suffix(".diagnostics.jsonl"))
         self._public = Path(self.csv_path).open("x+", encoding="utf-8", newline="")
         self._ledger = Path(self.ledger_path).open("x+", encoding="utf-8", newline="")
         header = self._csv_line(self._columns)
@@ -409,8 +599,12 @@ class DatasetWorkflowService:
         if not self.verification["verified"] or self._file_error:
             raise RuntimeError("CSV sebelumnya belum terverifikasi.")
         if _hash(self.csv_path) != self._csv_digest.hexdigest() or _hash(self.ledger_path) != self._ledger_digest.hexdigest():
-            self.verification["verified"] = False
+            self.verification.update(verified=False, attempted=False, count=0, matched_count=0,
+                stored_count=None, ledger_count=None, sha256="",
+                message="CSV atau ledger berubah setelah verifikasi; kecocokan terkini belum diketahui.")
             self._complete = False
+            self._set_cause("file_changed_after_verification")
+            self._diagnostic_event("file_changed_after_verification")
             self._emit()
             raise RuntimeError("CSV/ledger telah berubah di luar aplikasi; pilih file baru melalui Reset.")
         actual = dict(device_id=self._engine.device_id, nulling_profile_id=self._engine.nulling_profile_id,
@@ -427,6 +621,8 @@ class DatasetWorkflowService:
     def _start_segment(self, append):
         if not self.locked or not all(self._readiness().values()) or self._busy():
             raise RuntimeError("Kunci semua langkah dan selesaikan sesi sebelumnya sebelum Mulai.")
+        previous_start_rejected = bool(append and self.count == 0 and self._engine is not None and
+            self._engine.start_rejected)
         if not self._engine_state.get("connected"):
             if not self._password:
                 raise RuntimeError("Hubungkan ulang GLD sebelum memulai segmen berikutnya.")
@@ -444,9 +640,17 @@ class DatasetWorkflowService:
             self._segment_closed = False
             self._cleanup_pending = self._cleanup_paused = self._cleanup_confirmed = False
             self._cleanup_error = self.error = ""
+            if previous_start_rejected:
+                # A correlated negative START ACK never opened an acquisition
+                # session; it must not poison a later successful Continue.
+                self._cause_code = self._cause_description = ""
+                self._cause_evidence = "unknown"
             self._complete = False
-            self.verification = dict(verified=False, count=self.count, sha256="", message="Rekaman berjalan; belum diverifikasi.")
+            self.verification = dict(verified=False, attempted=False, count=self.count, matched_count=0,
+                stored_count=self.count, ledger_count=self.count, sha256="",
+                message="Rekaman berjalan; belum diverifikasi.")
             self._engine.mode = self.mode
+            self._diagnostic_event("segment_started")
         self._engine.start(self.label, prediction_enabled=self.fields["prediction"])
         self._emit()
         return self.snapshot()
@@ -536,9 +740,11 @@ class DatasetWorkflowService:
 
     def _cutoff(self, reason):
         with self._lock:
+            self._set_cause(reason)
+            self._diagnostic_event("cutoff", reason)
             self._logical_incomplete = self._cleanup_pending = True
             self._cleanup_confirmed = self._complete = False
-            self.error = "Rekaman terputus. CSV asli dibekukan; aplikasi menyelesaikan sesi perangkat secara terpisah."
+            self.error = "Rekaman dihentikan sebelum penutupan normal. CSV asli dibekukan; aplikasi menyelesaikan sesi perangkat secara terpisah."
             try:
                 self._rollback()
             except OSError:
@@ -548,35 +754,56 @@ class DatasetWorkflowService:
             except OSError:
                 self._file_error = True
             self._open_private()
+            self._diagnostic_event("cleanup_started")
 
     def _verify(self):
         if self._file_error:
             raise RuntimeError("Kondisi file belum dapat dipastikan setelah kegagalan disk.")
-        if _hash(self.csv_path) != self._csv_digest.hexdigest() or _hash(self.ledger_path) != self._ledger_digest.hexdigest():
-            raise RuntimeError("Isi file berubah atau tidak sesuai dengan data yang disimpan aplikasi.")
-        count = 0
+        digest_ok = _hash(self.csv_path) == self._csv_digest.hexdigest() and _hash(self.ledger_path) == self._ledger_digest.hexdigest()
+        matched = stored = ledger_count = 0
+        mismatch = False
         with Path(self.csv_path).open(encoding="utf-8", newline="") as public, Path(self.ledger_path).open(encoding="utf-8") as ledger:
             rows = csv.DictReader(public)
-            if rows.fieldnames != self._columns:
-                raise RuntimeError("Skema CSV tidak sesuai dengan pilihan kolom.")
+            schema_ok = rows.fieldnames == self._columns
             for row, line in itertools.zip_longest(rows, ledger):
-                if row is None or line is None:
-                    raise RuntimeError("Jumlah baris CSV dan ledger berbeda.")
-                record = json.loads(line)
-                projected = project_record(record, self.fields)
-                expected = {key: "" if projected[key] is None else str(projected[key]) for key in self._columns}
-                if row != expected or record["row_id"] != count:
-                    raise RuntimeError("Ada nilai CSV yang berbeda dari ledger lengkap.")
-                count += 1
-        if count != self.count:
-            raise RuntimeError("Jumlah rekaman tidak sesuai dengan prefix tersimpan.")
-        self.verification = dict(verified=True, count=count, sha256=_hash(self.csv_path),
-            message="Seluruh baris/kolom CSV cocok dengan ledger. " +
-                ("Rekaman tidak lengkap karena sesi pernah terputus/berhenti tidak normal." if self._logical_incomplete else "Rekaman selesai lengkap."))
+                if row is not None:
+                    stored += 1
+                if line is not None:
+                    ledger_count += 1
+                if row is None or line is None or not schema_ok:
+                    mismatch = True
+                    continue
+                try:
+                    record = json.loads(line)
+                    projected = project_record(record, self.fields)
+                    expected = {key: "" if projected[key] is None else str(projected[key]) for key in self._columns}
+                    if row == expected and record["row_id"] == stored - 1:
+                        matched += 1
+                    else:
+                        mismatch = True
+                except (ValueError, TypeError, KeyError, IndexError):
+                    mismatch = True
+        valid = digest_ok and schema_ok and not mismatch and stored == ledger_count == self.count
+        reason = ("Skema CSV berbeda." if not schema_ok else
+            "Jumlah baris CSV dan ledger berbeda." if stored != ledger_count else
+            "Isi baris CSV dan ledger berbeda." if mismatch else
+            "Jumlah baris tidak sama dengan prefix tersimpan." if stored != self.count else
+            "Hash file berubah setelah penyimpanan." if not digest_ok else "")
+        message = (f"{matched}/{stored} baris tersimpan terverifikasi terhadap ledger."
+                   if valid else f"Verifikasi CSV gagal: {matched}/{stored} baris tersimpan cocok dengan ledger. {reason}")
+        self.verification = dict(verified=valid, attempted=True, count=matched, matched_count=matched,
+            stored_count=stored, ledger_count=ledger_count, sha256=_hash(self.csv_path) if valid else "",
+            message=message)
+        self._diagnostic_event("verification_passed" if valid else "verification_failed",
+                               "" if valid else "csv_ledger_verification_failed")
+        if not valid:
+            raise RuntimeError(message)
 
     def _on_engine(self, event):
         with self._lock:
             self._engine_state = {key: copy.deepcopy(value) for key, value in event.items() if key not in {"history", "sample", "type"}}
+            if event.get("type") == "start_retry":
+                self._diagnostic_event("start_retry", event.get("start_reject_detail", ""))
             engine = self._engine
             sample = None
             if engine is not None and event.get("type") == "sample" and not engine.direct_cutoff and self._history:
@@ -602,20 +829,45 @@ class DatasetWorkflowService:
                             self._cleanup_confirmed = False
                         finally:
                             self._private = None
+            fingerprint = (event.get("state"), event.get("connected"), event.get("error"),
+                event.get("terminal_reason"), event.get("stop_requested"),
+                event.get("stop_acknowledged"), self._cleanup_pending,
+                self._cleanup_confirmed, bool(getattr(engine, "_summary", None)))
+            if fingerprint != self._diagnostic_last_state:
+                self._diagnostic_last_state = fingerprint
+                self._diagnostic_event("state_changed", event.get("terminal_reason") or event.get("error") or "")
             terminal = (engine is not None and engine.session_id and not engine._active and not self._segment_closed and
                 (not engine.direct_cutoff or not self._cleanup_pending))
             if terminal:
                 self._segment_closed = True
-                self._logical_incomplete = self._logical_incomplete or not engine.complete
+                self._logical_incomplete = self._logical_incomplete or (not engine.complete and
+                    not (engine.start_rejected and self.count == 0))
+                if not engine.complete and engine.terminal_reason:
+                    self._set_cause(engine.start_reject_detail if engine.start_rejected and
+                        engine.start_reject_detail not in {"", "unknown"} else engine.terminal_reason,
+                        "device_ack" if engine.start_rejected else "device_or_engine_reported")
+                    if engine.start_rejected:
+                        self._diagnostic_event("start_rejected", engine.start_reject_detail or engine.terminal_reason)
                 try:
                     self._close_public()
                     self._verify()
                     self._complete = engine.complete and not self._logical_incomplete
-                    self.error = "" if self._complete else self.verification["message"]
+                    if self._complete:
+                        self.error = ""
+                    elif engine.start_rejected and self.count == 0:
+                        self.error = ("GLD menolak Mulai sebelum ada sampel. " + self._cause_description +
+                            " Gunakan Continue setelah penyebabnya selesai, atau Reset sesi.")
+                    else:
+                        self.error = self.verification["message"]
                 except (OSError, ValueError, RuntimeError):
                     self._complete = False
-                    self.verification = dict(verified=False, count=self.count, sha256="", message="Verifikasi CSV gagal; file tetap dipertahankan.")
+                    if self.verification["verified"] or not self.verification["message"].startswith("Verifikasi CSV gagal"):
+                        self.verification = dict(verified=False, attempted=True, count=0, matched_count=0,
+                            stored_count=None, ledger_count=None, sha256="",
+                            message="Verifikasi CSV gagal; kondisi file belum dapat dipastikan. File tetap dipertahankan.")
+                    self._set_cause("csv_ledger_verification_failed")
                     self.error = self.verification["message"]
+                self._diagnostic_event("segment_closed", engine.terminal_reason or "")
             elif engine is not None and not engine.direct_cutoff:
                 notice = "Perangkat belum mengonfirmasi tindakan. Periksa status koneksi dan kesiapan GLD."
                 transport_reasons = {"transport_lost", "reconnect_failed", "sample_silence_resume_required"}
@@ -658,6 +910,7 @@ class DatasetWorkflowService:
             if self._engine is None or self._segment_closed:
                 raise RuntimeError("Tidak ada rekaman aktif yang dapat dihentikan.")
             if not self._cleanup_pending:
+                self._diagnostic_event("stop_requested")
                 self._engine.stop()
             return self.snapshot()
 
@@ -672,6 +925,7 @@ class DatasetWorkflowService:
                 if not self._segment_closed or not self.verification["verified"]:
                     raise RuntimeError("Reset menunggu STOP dan verifikasi CSV; pengaturan tetap dipertahankan.")
             if self._engine is not None:
+                self._diagnostic_event("reset_requested")
                 self._engine.disconnect()
             with self._lock:
                 self._engine = None
@@ -683,6 +937,8 @@ class DatasetWorkflowService:
 
     def disconnect(self):
         with self._operation:
+            if self.diagnostic_path:
+                self._diagnostic_event("disconnect_requested")
             self._password = None
             if self._engine is not None:
                 if self._cleanup_pending:
@@ -698,6 +954,36 @@ class DatasetWorkflowService:
             self._emit()
             return self.snapshot()
 
+    def chart_history(self):
+        """Read-only compact history for chart smoothing after a page reload."""
+        with self._lock:
+            ledger_path = self.ledger_path
+        if not ledger_path:
+            return dict(ledger_path="", history=[])
+        result = []
+        try:
+            for line in _recent_ledger_lines(ledger_path, 180001):
+                try:
+                    row = json.loads(line)
+                except (UnicodeDecodeError, ValueError):
+                    continue  # A concurrent append may expose an unfinished last line.
+                if not isinstance(row, dict):
+                    continue
+                volts = row.get("sensor_voltage")
+                if (type(row.get("seq")) is not int or row["seq"] < 0 or
+                        type(row.get("timestamp_ms")) is not int or row["timestamp_ms"] < 0 or
+                        not isinstance(row.get("session_id"), str) or
+                        not isinstance(row.get("boot_id"), str) or
+                        not isinstance(volts, list) or len(volts) != 8 or
+                        any(type(value) not in (int, float) or not math.isfinite(value) for value in volts)):
+                    continue
+                result.append(dict(session_id=row["session_id"], boot_id=row["boot_id"],
+                    seq=row["seq"], row_id=row.get("row_id"),
+                    timestamp_ms=row["timestamp_ms"], sensor_voltage=volts))
+        except OSError:
+            raise RuntimeError("Riwayat grafik belum dapat dibaca; rekaman tetap berjalan.") from None
+        return dict(ledger_path=ledger_path, history=result)
+
     def export_csv(self):
         with self._lock:
             if not self.csv_path or self._file_error or not Path(self.csv_path).is_file():
@@ -706,8 +992,12 @@ class DatasetWorkflowService:
                 self._public.flush()
             try:
                 if self.verification["verified"] and _hash(self.csv_path) != self.verification["sha256"]:
-                    self.verification["verified"] = False
+                    self.verification.update(verified=False, attempted=False, count=0, matched_count=0,
+                        stored_count=None, ledger_count=None, sha256="",
+                        message="CSV berubah setelah verifikasi; kecocokan terkini belum diketahui.")
                     self._complete = False
+                    self._set_cause("file_changed_after_verification")
+                    self._diagnostic_event("file_changed_after_verification")
                     self._emit()
                     raise RuntimeError("CSV berubah setelah verifikasi; file tetap dipertahankan.")
                 # Keep CRLF bytes identical to the verified file on Windows.

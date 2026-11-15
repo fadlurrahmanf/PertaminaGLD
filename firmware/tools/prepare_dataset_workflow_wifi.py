@@ -11,6 +11,7 @@ from pathlib import Path
 import re
 
 ENVIRONMENTS = frozenset(f"gld_model_{model}_dataset_workflow_wifi" for model in (1, 2, 3))
+ATEX_CANDIDATES = frozenset(f"gld_atex_model_{model}_workflow_candidate" for model in (1, 2, 3))
 PROTOCOL = "gld-dataset-wifi/3"
 
 
@@ -24,13 +25,15 @@ def _validate(data, name, protocol):
 
 
 def prepare(project: Path, build: Path, name: str) -> Path:
-    if name not in ENVIRONMENTS:
+    if name not in ENVIRONMENTS and name not in ATEX_CANDIDATES:
         raise ValueError("Workflow credentials require a dedicated protocol-3 environment")
     directory = project / ".pio" / "gld-dataset-workflow-wifi" / name
     credential = directory / "credentials.local.json"
     if credential.exists():
         password = _validate(json.loads(credential.read_text(encoding="utf-8")), name, PROTOCOL)
     else:
+        if name in ATEX_CANDIDATES:
+            raise ValueError("Configure separate ATEX candidate credentials before compiling")
         previous_name = name.replace("_dataset_workflow_wifi", "_dataset_replay_wifi")
         previous = project / ".pio" / "gld-dataset-replay-wifi" / previous_name / "credentials.local.json"
         if not previous.is_file():

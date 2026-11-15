@@ -8,6 +8,7 @@ import { appendLog, downloadText, numberField, setPanelOpen, stamp, showAlert, s
 import { tokenValue, channelIndexFromLog, applyAndAlert, sendCommand, sendCommandAndWaitAck } from "./serial-protocol.js";
 import { saveSessionLog } from "./dataset.js";
 import { renderQcNullingViews } from "./qc.js";
+import { validNullingProfile, rememberNullingProfile, channelHistory, formatMcpDelta, summarizeProfiles } from "./nulling-history.js";
 
 export const DAC_CODE_MAX = 4095;
 
@@ -23,14 +24,16 @@ function capturePreviousNullingProfile() {
     return;
   }
   previousNullingProfile = {
+    deviceId: String(state.info?.deviceId || state.status?.deviceId || ""),
     profileId: profile.profileId,
     dacCode: profile.dacCode.map((value) => Number(value))
   };
 }
 
 function previousMcpForChannel(index) {
-  const value = Number(previousNullingProfile?.dacCode?.[index]);
-  return Number.isFinite(value) ? value : null;
+  if (previousNullingProfile?.deviceId !== String(state.info?.deviceId || state.status?.deviceId || "")) return null;
+  const raw = previousNullingProfile?.dacCode?.[index];
+  return raw == null ? null : Number(raw);
 }
 
 export function latestFeatureOrderForNulling() {
@@ -413,7 +416,9 @@ function nullingMcpRow(channel) {
   // The service log supplies the final DAC before GET_QC_STATUS returns the
   // newly saved NVS profile. Prefer it so a completed run never briefly shows
   // the preceding profile as its own result.
-  const current = Number(channel.tone === "pass" && channel.stage === "Done" ? channel.dac : channel.saved?.dac);
+  const raw = channel.tone === "pass" && channel.stage === "Done" ? channel.dac : channel.saved?.dac;
+  if (raw == null || raw === "") return null;
+  const current = Number(raw);
   if (!Number.isFinite(current)) return null;
   const previous = previousMcpForChannel(channel.index);
   if (!Number.isFinite(previous)) return `MCP: ${current}`;
@@ -591,7 +596,12 @@ export function openNullingDetails(channel) {
       : `${threshold} V`;
     criteria.textContent = `Threshold run ini: ${thresholdText} · DAC bracket Exponential ≥ ${minBracketDac ?? "—"} · Batas nol: V ≥ −${threshold} V · Naik dari baseline: V − baseline ≥ ${threshold} V · Minimum final: V ≥ ${minFinalV ?? "—"} V`;
   }
+  const history = channelHistory(state.info?.deviceId || state.status?.deviceId, channel.index);
+  const historyRows = history.map(item => ({ profile: `#${item.profileId}${item.epoch ? " (urutan baru)" : ""}`, mcp: `${item.value} (${formatMcpDelta(item.delta)})` }));
   content.replaceChildren(
+    makeNullingDetailsStage("Riwayat MCP yang terbaca di browser ini", [
+      { label: "Profil", value: "profile" }, { label: "MCP (perubahan dari profil sebelumnya)", value: "mcp" }
+    ], historyRows, "Riwayat belum tersedia. Hanya profil yang sempat terbaca di aplikasi ini dapat ditampilkan."),
     criteria,
     makeNullingDetailsStage("1. Baseline", [
       { label: "DAC", value: "dac" },
@@ -680,7 +690,7 @@ export function renderNullingChannels(container = elements.nullingChannels, chan
 
     const stageRows = nullingStageDetailRows(channel.stages);
     const sourceRow = nullingDacSourceRow(channel);
-    const hasTerminalResult = channel.stage === "Done" || channel.tone === "fail";
+    const hasTerminalResult = channel.stage === "Done" || channel.stage === "Done (saved)" || channel.tone === "fail";
     if (container === elements.nullingChannels && hasTerminalResult) {
       const detailsButton = document.createElement("button");
       detailsButton.type = "button";
@@ -772,7 +782,55 @@ function updateNullingMcpIndicator(line) {
   }
 }
 
+const pendingSummaries = new Map();
+function pendingKey(id) { return `gld.nulling.summary.v1.${encodeURIComponent(String(id).toUpperCase())}`; }
+function setPendingSummary(id, previousId) {
+  if (!id) return;
+  const entry = { previousId: Number(previousId) || 0 };
+  pendingSummaries.set(id, entry);
+  try { localStorage.setItem(pendingKey(id), JSON.stringify(entry)); } catch {}
+}
+function getPendingSummary(id) {
+  if (pendingSummaries.has(id)) return pendingSummaries.get(id);
+  try { return JSON.parse(localStorage.getItem(pendingKey(id)) || "null"); } catch { return null; }
+}
+function clearPendingSummary(id) {
+  pendingSummaries.delete(id);
+  try { localStorage.removeItem(pendingKey(id)); } catch {}
+}
+// Called only with the device's saved NVS profile, never transient candidates.
+export function observeSavedNullingProfile(payload, profile) {
+  const id = String(payload?.deviceId || "").toUpperCase();
+  const active = String(state.info?.deviceId || state.status?.deviceId || "").toUpperCase();
+  if (!id || (active && active !== id) || !validNullingProfile(profile)) return;
+  const result = rememberNullingProfile(id, profile);
+  if (!result.saved && result.history.length) appendLog("NULLING_HISTORY_WARNING riwayat hanya tersimpan di memori browser", "in");
+  const pending = getPendingSummary(id);
+  const current = result.history.at(-1);
+  if (!pending || !current || current.profileId <= pending.previousId) return;
+  const previous = result.history.at(-2);
+  const modal = $("nullingSummaryModal"), message = $("nullingSummaryMessage");
+  if (!modal || !message) return;
+  message.textContent = `GLD ${id} · Nulling berhasil\n${summarizeProfiles(previous, current, latestFeatureOrderForNulling())}\nPeriksa status mode dan kesiapan inference setelah perpindahan otomatis.`;
+  // Dedicated popup does not overwrite an outstanding clean-air confirmation.
+  const show = () => {
+    const shownId = String(state.info?.deviceId || state.status?.deviceId || "").toUpperCase();
+    if (shownId && shownId !== id) return;
+    if ($("appModal")?.classList.contains("open") || $("nullingDetailsModal")?.classList.contains("open")) { setTimeout(show, 500); return; }
+    clearPendingSummary(id);
+    setPanelOpen(modal, true);
+    $("nullingSummaryClose")?.focus();
+  };
+  show();
+}
+
 export function appendNulling(line) {
+  if (line.startsWith("NULLING_RUNTIME_RESULT=PASS")) {
+    const id = String(state.info?.deviceId || state.status?.deviceId || "").toUpperCase();
+    const previousId = Math.max(Number(state.qc?.nullingProfile?.profileId) || 0,
+      previousNullingProfile?.deviceId?.toUpperCase() === id ? Number(previousNullingProfile.profileId) || 0 : 0);
+    setPendingSummary(id, previousId);
+  }
   if (line.startsWith("NULLING_SERVICE_START")) {
     state.nullingLogs = [];
     state.nullingLogPausedCount = 0;

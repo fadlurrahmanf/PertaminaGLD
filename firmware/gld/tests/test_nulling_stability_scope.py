@@ -34,8 +34,16 @@ class NullingStabilityScopeTests(unittest.TestCase):
 
     def test_single_channel_prechecks_and_failure_invalidates_runtime(self):
         single = MAIN.split("void onRunNullingSingleJson(", 1)[1].split("void onRunFullScaleSweepJson", 1)[0]
-        self.assertLess(single.index("loadNullingProfile(existing)"), single.index("runNullingServiceSingleChannel("))
-        failed = single.split("if (!result.success)", 1)[1].split("if (existing.profileId == UINT8_MAX)", 1)[0]
+        # ATEX now has its own earlier conditional branch; inspect each path
+        # independently instead of treating the first failure block as GLD1.
+        atex, gld1 = single.split("GLD_ATEX_NULLING_SINGLE_SAVE=OK", 1)
+        self.assertLess(atex.index("loadNullingProfile(existing)"), atex.index("runNullingServiceSingleChannel("))
+        self.assertLess(atex.index("nullingProfileApplied = false"), atex.index("runNullingServiceSingleChannel("))
+        self.assertLess(atex.index("lastInferenceValid = false"), atex.index("runNullingServiceSingleChannel("))
+        self.assertIn("existing.dacCode[channel]", atex)
+        self.assertIn("(void)restoreSavedCode()", atex.split("if (!result.success)", 1)[1])
+        self.assertLess(gld1.index("loadNullingProfile(existing)"), gld1.index("runNullingServiceSingleChannel("))
+        failed = gld1.split("if (!result.success)", 1)[1].split("if (existing.profileId == UINT8_MAX)", 1)[0]
         self.assertIn("existing.dacCode[channel]", failed)
         self.assertIn("nullingProfileApplied = false", failed)
         self.assertIn("lastInferenceValid = false", failed)

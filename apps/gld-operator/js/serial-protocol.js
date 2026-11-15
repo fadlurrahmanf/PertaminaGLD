@@ -2,7 +2,7 @@
 // rendering, alarm state, and command send/response-watch/poll plumbing.
 
 import { $, elements, state, encoder, SENSOR_NAMES, SENSOR_MUX_CHANNELS, SENSOR_STATUS_NAMES, SERIAL_RESPONSE_TIMEOUT_MS, DEFAULT_POLL_INTERVAL_MS, CHART_COLORS } from "./state.js";
-import { setText, setBadge, appendLog, getField, setField, wait, showAlert, saveUiSession } from "./ui.js";
+import { setText, setBadge, appendLog, getField, setField, wait, showAlert, showBanner, saveUiSession } from "./ui.js";
 import { syncDeviceSummary, renderFleetPanel } from "./fleet.js";
 import { pruneHistory, drawChart, isSensorChartSeriesVisible, toggleSensorChartSeries } from "./chart.js";
 import { renderNullingChannels, latestFeatureOrderForNulling, updateNullingMeta, appendNulling } from "./nulling.js";
@@ -14,6 +14,9 @@ import { updateQcStatus, resetQcStatus, drawQcCharts, appendFullScaleSweep, upda
 import { bridgeFetch, connectBridgeSerialOnly } from "./bridge-client.js";
 import { renderExpertStatus, resetExpertStatus } from "./expert.js";
 import { modelBindingState } from "./model-binding.js";
+import { createWarmupNotice, mergeWarmupTelemetry, warmupBlocksPrediction } from "./warmup-notice.js";
+
+const warmupNotice = createWarmupNotice($("sensorWarmupNotice"), SENSOR_NAMES);
 
 // ---- generic parse helpers ----
 
@@ -93,6 +96,11 @@ const MAX_CONSECUTIVE_SERIAL_TIMEOUTS = 2;
 let consecutiveSerialTimeouts = 0;
 let recoveryRequested = false;
 let skippedPollLogged = false;
+function newBackgroundPollOwner() {
+  return globalThis.crypto?.randomUUID?.() || `session-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+let backgroundPollSession = null;
+let pollingGeneration = 0;
 const serialCommandQueue = [];
 let sensorPowerApplyPending = false;
 let alarmModeApplyPending = false;
@@ -131,7 +139,7 @@ function expectedResponses(command) {
   // firmware has emitted its bounded completion marker.  An immediate ACK
   // means only that it started; it is not safe to resume the 500 ms poll yet.
   if (cmd === "RUN_CURRENT_STATE_CHECK") return ["current-state-done"];
-  return [`ack:${cmd}`];
+  return [`ack:${cmd.endsWith("_JSON") ? cmd.slice(0, -5) : cmd}`];
 }
 
 function responseTimeoutMs(command) {
@@ -204,6 +212,7 @@ function clearSerialResponseWatchIfStartedAt(startedAt) {
 // ---- device snapshot ----
 
 export function resetDeviceSnapshot() {
+  warmupNotice.reset();
   state.info = null;
   state.status = null;
   state.mode = "unknown";
@@ -281,6 +290,7 @@ export function renderModelBindingStatus(status) {
 }
 
 function updateStatus(status) {
+  warmupNotice.render(status);
   setText("deviceId", status.deviceId || state.info?.deviceId);
   if (status.targetChId) setText("currentChAddress", status.targetChId);
   setText("modeValue", status.mode);
@@ -288,8 +298,9 @@ function updateStatus(status) {
   renderDetectedBoardProfile(status, status);
 
   const telemetry = status.telemetry || {};
-  setText("gasValue", telemetry.gasName || formatGas(telemetry.gasClass));
-  setText("confidenceValue", Number.isFinite(telemetry.confidence) ? `${telemetry.confidence}%` : "-%");
+  const warmupBlocked = warmupBlocksPrediction(status);
+  setText("gasValue", warmupBlocked ? "Belum tersedia" : telemetry.gasName || formatGas(telemetry.gasClass));
+  setText("confidenceValue", warmupBlocked ? "—" : Number.isFinite(telemetry.confidence) ? `${telemetry.confidence}%` : "-%");
 
   const alarm = Boolean(telemetry.alarm || status.alarm);
   updateAlarmState(alarm);
@@ -322,7 +333,7 @@ function updateStatus(status) {
   renderExpertStatus(status);
 }
 
-function maybeAppendTelemetry(status) {
+function maybeAppendTelemetry(status, receivedMs = Date.now()) {
   const telemetry = status.telemetry;
   if (!telemetry || !telemetry.valid || !Array.isArray(telemetry.sensorVoltage)) return;
 
@@ -330,15 +341,21 @@ function maybeAppendTelemetry(status) {
   // firmware's sampleMs is the scan identity; never turn repeated replies for
   // that same scan into artificial chart/history samples.
   const sampleMs = Number(telemetry.sampleMs);
-  const previous = state.history.at(-1);
-  if (Number.isFinite(sampleMs) && previous?.sampleMs === sampleMs) return;
-
-  const ts = Date.now();
-  state.history.push({
+  const ts = Number.isFinite(receivedMs) ? receivedMs : Date.now();
+  let position = state.history.length;
+  while (position > 0 && state.history[position - 1].ts > ts) position -= 1;
+  const previous = state.history[position - 1];
+  const next = state.history[position];
+  const deviceId = status.deviceId || state.info?.deviceId || "";
+  const mode = status.mode || state.mode;
+  const sameSample = (point) => Number.isFinite(sampleMs) && point?.sampleMs === sampleMs &&
+    point.deviceId === deviceId && point.mode === mode;
+  if (sameSample(previous) || sameSample(next)) return;
+  state.history.splice(position, 0, {
     ts,
     sampleMs: Number.isFinite(sampleMs) ? sampleMs : null,
-    deviceId: status.deviceId || state.info?.deviceId || "",
-    mode: status.mode || state.mode,
+    deviceId,
+    mode,
     gasName: telemetry.gasName || formatGas(telemetry.gasClass),
     gasClass: telemetry.gasClass,
     confidence: telemetry.confidence,
@@ -355,9 +372,48 @@ function maybeAppendTelemetry(status) {
   maybeCaptureDatasetTelemetry(status);
 }
 
+// Replay restores the Running chart only. It must not re-run Dataset capture,
+// command ACK handling, alarms or device state updates for old messages.
+export function replayRunningTelemetry(records) {
+  const recovered = [];
+  for (const record of records) {
+    let message;
+    try { message = parseJsonAfter("GLD_TELEMETRY_JSON", String(record.line || "")); }
+    catch { continue; }
+    const telemetry = message?.telemetry;
+    const mode = String(message?.mode || "").toLowerCase();
+    if (!["inference", "running"].includes(mode) || !telemetry?.valid ||
+        !Array.isArray(telemetry.sensorVoltage) || !Number.isFinite(record.receivedMs)) continue;
+    const sampleMs = Number(telemetry.sampleMs);
+    recovered.push({ ts: record.receivedMs, sampleMs: Number.isFinite(sampleMs) ? sampleMs : null,
+      deviceId: message.deviceId || "", mode, gasName: telemetry.gasName || formatGas(telemetry.gasClass),
+      gasClass: telemetry.gasClass, confidence: telemetry.confidence, alarm: Boolean(telemetry.alarm),
+      sensorVoltage: telemetry.sensorVoltage.slice(0, 8),
+      sensorGain: Array.isArray(telemetry.sensorGain) ? telemetry.sensorGain.slice(0, 8) : [],
+      sensorStatus: Array.isArray(telemetry.sensorStatus) ? telemetry.sensorStatus.slice(0, 8) : [],
+      featureOrder: Array.isArray(telemetry.featureOrder) ? telemetry.featureOrder.slice(0, 8) : [] });
+  }
+  if (!recovered.length) return;
+  const all = [...state.history.map(point => ({ point, recovered: false })),
+    ...recovered.map(point => ({ point, recovered: true }))].sort((a, b) => a.point.ts - b.point.ts);
+  const sameSample = (a, b) => a && b && a.deviceId === b.deviceId && a.mode === b.mode &&
+    Number.isFinite(a.sampleMs) && a.sampleMs === b.sampleMs;
+  const merged = [];
+  for (let i = 0; i < all.length; i += 1) {
+    const item = all[i];
+    if (item.recovered && (sameSample(merged.at(-1), item.point) ||
+        (!all[i + 1]?.recovered && sameSample(all[i + 1]?.point, item.point)))) continue;
+    merged.push(item.point);
+  }
+  state.history = merged;
+  pruneHistory();
+  updateTelemetryCollectionProgress();
+  drawChart();
+}
+
 function syncRunningModeUi() {
   const mode = String(state.mode || "").toLowerCase();
-  const otherMode = !state.mock && mode && mode !== "unknown" && mode !== "inference";
+  const otherMode = !state.mock && mode && !["unknown", "inference", "running"].includes(mode);
   const notice = $("runningModeNotice");
   if (notice) {
     notice.hidden = !otherMode;
@@ -374,6 +430,20 @@ function syncRunningModeUi() {
     pollButton.textContent = otherMode
       ? (state.polling ? "Stop Poll (mode lain)" : "Poll setelah Running")
       : (state.polling ? `Stop Poll (${pollIntervalMs()}ms)` : `Poll ${pollIntervalMs()}ms`);
+  }
+  // The bridge poller is scoped to Running only; preserve the legacy poll
+  // path when the device changes to Dataset/Nulling, without replaying old
+  // Running samples into Dataset capture.
+  const returnToRunning = state.pollTimer && state.bridgeAvailable && !state.mock &&
+    ["inference", "running"].includes(mode) && telemetryPollCommand();
+  if (state.polling && ((backgroundPollSession && otherMode) || returnToRunning)) {
+    const targetMode = mode;
+    const stopped = stopPolling();
+    const generation = pollingGeneration;
+    stopped.then((ok) => {
+      if (ok && generation === pollingGeneration && state.connected && !state.polling &&
+          String(state.mode || "").toLowerCase() === targetMode) togglePolling();
+    });
   }
 }
 
@@ -961,7 +1031,7 @@ export function updateTelemetryCollectionProgress() {
   elements.telemetryBaselineProgressValue.textContent = `${baselinePercent}%`;
 }
 
-function updateLightweightTelemetry(message) {
+function updateLightweightTelemetry(message, receivedMs = Date.now()) {
   // Preserve the last complete snapshot: a lightweight poll intentionally has
   // no power, boot, LoRa, nulling, or NVS fields to avoid serial overhead.
   const telemetryPower = message.sensorPower;
@@ -975,6 +1045,7 @@ function updateLightweightTelemetry(message) {
     mode: message.mode || state.mode,
     uptimeMs: message.uptimeMs,
     alarmLatched: message.alarmLatched ?? state.status?.alarmLatched,
+    sensorWarmup: mergeWarmupTelemetry(state.status, message),
     model: { ...(state.status?.model || {}), ...(message.model || {}) },
     environment: message.environment || state.status?.environment,
     // A truncated serial JSON line used to contain outputMask plus only the
@@ -986,7 +1057,7 @@ function updateLightweightTelemetry(message) {
   state.status = status;
   state.mode = status.mode || state.mode;
   updateStatus(status);
-  maybeAppendTelemetry(status);
+  maybeAppendTelemetry(status, receivedMs);
 }
 
 function renderEnvironment(environment) {
@@ -1051,10 +1122,13 @@ function renderDetectedBoardProfile(snapshot, status) {
   const sensorPower = status?.sensorPower || status?.pcf8574;
   const hasPcf = sensorPower?.available === true;
   const profileKnown = boardProfile.length > 0;
+  const isAtex = /GLD\s*ATEX/i.test(boardProfile);
   const isGld2 = hasPcf || /GLD2/i.test(boardProfile);
 
   badge.textContent = !profileKnown && !hasPcf
     ? "Board: menunggu"
+    : isAtex
+      ? "Board: GLD ATEX · PCF8574"
     : isGld2
       ? "Board: GLD2 · PCF8574"
       : "Board: GLD1";
@@ -1087,7 +1161,7 @@ function renderSensorPowerControls(sensorPower) {
   $("sensorPowerAllOnBtn").disabled = sensorPowerApplyPending || !available || !ready;
   $("sensorPowerAllOffBtn").disabled = sensorPowerApplyPending || !available || !ready;
   status.textContent = !available
-    ? "Kontrol ini hanya tersedia pada board profile GLD2 (PCF8574 EN0–EN7)."
+    ? "Kontrol tersedia pada board dengan PCF8574 EN0–EN7."
     : !ready
       ? "PCF8574 tidak merespons; perubahan power diblokir. Periksa I2C dan supply 3V3."
       : "Status ini adalah perintah PCF8574 yang tersinkron setelah setiap perubahan EN; bukan pembuktian tegangan +5 V fisik pada modul.";
@@ -1102,7 +1176,9 @@ function renderControlAvailability(sensorPower, alarmControl) {
   const sensorPowerReady = sensorPower?.ready === true;
   const alarm = alarmControlContract(alarmControl);
   const profile = String(state.info?.boardProfile || "");
-  const board = sensorPowerAvailable || /GLD2/i.test(profile)
+  const board = /GLD\s*ATEX/i.test(profile)
+    ? "GLD ATEX"
+    : sensorPowerAvailable || /GLD2/i.test(profile)
     ? "GLD2"
     : profile ? "GLD1" : "Board";
   const parts = [board];
@@ -1134,7 +1210,15 @@ function alarmControlContract(alarmControl) {
     alarmControl.singleTrigger === true && alarmControl.requiresExternalPullup === true &&
     alarmControl.gpio41CommandLevel === (alarmControl.physicalCommanded ? "LOW" : "HIGH") &&
     alarmControl.j2LampExpectedLevel === (alarmControl.physicalCommanded ? "HIGH" : "LOW"));
-  const available = pullupContractValid && (alarmControl?.available === true ||
+  const isGld1Gpio48 = alarmControl?.outputDrive === "active_high_gpio48_steady";
+  const gpio48ContractValid = !isGld1Gpio48 || (hasExplicitMode &&
+    alarmControl.modePersisted === false && alarmControl.sessionOnly === true &&
+    alarmControl.resetsToAutoOnBoot === true &&
+    ["manualCommanded", "inferenceAlarm", "physicalCommanded"].every((field) => typeof alarmControl[field] === "boolean") &&
+    alarmControl.externalDevicePattern === "steady_high_while_alarm" && alarmControl.singleTrigger === true &&
+    alarmControl.requiresExternalPullup === false && alarmControl.outputPin === 48 &&
+    alarmControl.gpio48CommandLevel === (alarmControl.physicalCommanded ? "HIGH" : "LOW"));
+  const available = pullupContractValid && gpio48ContractValid && (alarmControl?.available === true ||
     (legacyManualOnly && alarmControl?.available !== false));
   const mode = hasExplicitMode
     ? alarmControl.mode
@@ -1158,11 +1242,15 @@ function renderManualAlarmControls(alarmControl) {
   const isGld1Pullup = alarmControl?.outputDrive === "active_low_gpio41_uln2003_pullup";
   const outputDescription = isGld1Pullup
     ? `GLD1: perintah GPIO41 ${alarmControl.gpio41CommandLevel}, ekspektasi J2 LAMP ${alarmControl.j2LampExpectedLevel} (pull-up eksternal wajib; bukan tegangan terukur)`
+    : alarmControl?.outputDrive === "active_high_gpio48_steady"
+      ? `GLD1: perintah GPIO48 ${alarmControl.gpio48CommandLevel} (bukan tegangan terukur)`
     : alarmControl?.outputDrive === "active_high_gpio41_steady"
       ? "GPIO41 GLD1 HIGH selama alarm"
       : alarmControl?.outputDrive === "active_low_lamp_buzzer_led"
         ? "lampu/buzzer/LED legacy"
-        : "24 V steady GLD2";
+        : /GLD\s*ATEX/i.test(String(state.info?.boardProfile || ""))
+          ? "24 V steady GLD ATEX"
+          : "24 V steady GLD2";
   const physicalCommanded = legacyManualOnly
     ? commanded
     : alarmControl?.physicalCommanded === true;
@@ -1622,13 +1710,13 @@ function parseLegacyLine(line) {
     syncDeviceSummary();
   }
   const gas = /GLD_ML_RESULT .*gasClass=(\w+) confidence=(\d+)/.exec(line);
-  if (gas) {
+  if (gas && !warmupBlocksPrediction(state.status)) {
     setText("gasValue", gas[1]);
     setText("confidenceValue", `${gas[2]}%`);
   }
 }
 
-export function handleLine(rawLine) {
+export function handleLine(rawLine, receivedMs = Date.now()) {
   const line = rawLine.trim();
   if (!line) return;
   appendLog(line, "in");
@@ -1643,6 +1731,14 @@ export function handleLine(rawLine) {
       state.mode = info.mode || state.mode;
       updateInfo(info);
       updateQcLoraFromDevice(info, state.status);
+      // STATUS can arrive before INFO. Once the exact ATEX profile is known,
+      // refresh only the same-device snapshot; do not send another command.
+      const statusDevice = state.status?.deviceId;
+      if (info.boardProfile === "GLD ATEX MotherBoardGLDVer2" &&
+          typeof info.deviceId === "string" && typeof statusDevice === "string" &&
+          info.deviceId.length > 0 && info.deviceId.toUpperCase() === statusDevice.toUpperCase()) {
+        renderExpertStatus(state.status);
+      }
       return;
     }
 
@@ -1660,7 +1756,7 @@ export function handleLine(rawLine) {
     const telemetry = parseJsonAfter("GLD_TELEMETRY_JSON", line);
     if (telemetry) {
       recordSerialResponse("telemetry");
-      updateLightweightTelemetry(telemetry);
+      updateLightweightTelemetry(telemetry, receivedMs);
       return;
     }
 
@@ -1921,6 +2017,7 @@ function pollTelemetryOnce() {
 }
 
 export function togglePolling() {
+  pollingGeneration += 1;
   if (state.polling) {
     stopPolling();
   } else {
@@ -1931,16 +2028,59 @@ export function togglePolling() {
     const intervalMs = pollIntervalMs();
     state.polling = true;
     setPollButtonLabel(`Stop Poll (${intervalMs}ms)`);
-    state.pollTimer = setInterval(pollTelemetryOnce, intervalMs);
-    pollTelemetryOnce();
+    if (state.bridgeAvailable && !state.mock && ["inference", "running"].includes(String(state.mode || "").toLowerCase())) {
+      if (!telemetryPollCommand()) {
+        appendLog("POLL_WAITING GET_INFO capability; polling not started", "in");
+        stopPolling();
+        return;
+      }
+      const session = { slot: state.activeSlot, owner: newBackgroundPollOwner(), started: null };
+      backgroundPollSession = session;
+      session.started = bridgeFetch(`/api/serial/status?slot=${session.slot}`).then((status) => {
+        if (!status.connected || typeof status.telemetryStream !== "string") throw new Error("serial connection is unavailable");
+        return bridgeFetch("/api/serial/poll/start", {
+          method: "POST",
+          body: JSON.stringify({ slot: session.slot, owner: session.owner, intervalMs, stream: status.telemetryStream })
+        });
+      });
+      session.started.catch((error) => {
+        if (backgroundPollSession !== session) return;
+        appendLog(`POLL_START_ERROR ${error.message}`, "in");
+        showBanner(`Polling latar gagal dimulai: ${error.message}`, "warn");
+        void stopPolling();
+      });
+    } else {
+      if (!state.bridgeAvailable && !state.mock) {
+        showBanner("Polling browser langsung dapat melambat saat diminimalkan; gunakan bridge lokal untuk polling latar.", "warn");
+      }
+      state.pollTimer = setInterval(pollTelemetryOnce, intervalMs);
+      pollTelemetryOnce();
+    }
   }
   saveUiSession({ polling: state.polling });
 }
 
 export function stopPolling() {
+  pollingGeneration += 1;
   state.polling = false;
   setPollButtonLabel(`Poll ${pollIntervalMs()}ms`);
   if (state.pollTimer) clearInterval(state.pollTimer);
   state.pollTimer = null;
   saveUiSession({ polling: false });
+  const session = backgroundPollSession;
+  backgroundPollSession = null;
+  if (!session) return Promise.resolve(true);
+  const stopGeneration = pollingGeneration;
+  return bridgeFetch("/api/serial/poll/stop", {
+    method: "POST", keepalive: true, body: JSON.stringify({ slot: session.slot, owner: session.owner })
+  }).then(() => true).catch((error) => {
+    appendLog(`POLL_STOP_ERROR ${error.message}`, "in");
+    showBanner(`Status penghentian polling belum pasti: ${error.message}`, "warn");
+    if (pollingGeneration === stopGeneration && !backgroundPollSession && !state.polling) {
+      backgroundPollSession = session;
+      state.polling = true;
+      document.querySelectorAll(".poll-btn").forEach((button) => { button.textContent = "Stop Poll (belum pasti)"; });
+    }
+    return false;
+  });
 }

@@ -73,8 +73,8 @@ async function expert(number, hotspot) {
     const page = read('apps/gld-operator/index.html');
     // Legacy packages still route correctly but the approved picker shows
     // only the three final Workflow variants, avoiding nine hotspot choices.
-    assert(!page.includes(`value="${value}"`));
-    assert(page.includes(`value="model_${number}_dataset_workflow_wifi">GLD1 Model ${number} — Hotspot Wizard Dataset`));
+    if (datasetSuffix !== '_dataset_workflow_wifi') assert(!page.includes(`value="${value}"`));
+    assert(page.includes(`value="model_${number}_dataset_workflow_wifi">Model ${number} — Board ${number}`));
   }
 }
 async function hubUpload(hotspot) {
@@ -133,10 +133,22 @@ async function hotspotSelector(initial) {
   const reset=dialog.querySelector('#firmwareUploadReset');reset.checked=true;
   const accept=dialog.querySelector('#firmwareUploadAccept');
   accept.onclick({preventDefault(){}});
-  assert.equal(dialog.closed,undefined);
-  assert.match(dialog.querySelector('#firmwareUploadError').textContent,/Reset NVS OFF/);
-  assert(!dialog.html.includes(`value="${value}"`),'legacy hotspot is hidden in the picker');
-  if(initial){
+  const nativeInitial = initial && datasetSuffix === '_dataset_workflow_wifi';
+  if (!nativeInitial) {
+    assert.equal(dialog.closed,undefined);
+    assert.match(dialog.querySelector('#firmwareUploadError').textContent,/Reset NVS OFF/);
+  }
+  if (datasetSuffix === '_dataset_workflow_wifi') {
+    assert(dialog.html.includes(`value="${value}"`));
+    assert(dialog.html.includes('Model 1 - Board 1'));
+  } else {
+    assert(!dialog.html.includes(`value="${value}"`),'legacy hotspot is hidden in the picker');
+  }
+  if(nativeInitial){
+    const selected=await result;
+    assert.equal(selected.model,value);assert.equal(selected.resetNvs,true);
+    assert.equal(selected.resetNvsConfirmation,'RESET NVS');
+  } else if(initial){
     dialog.oncancel({preventDefault(){}});
     assert.equal(await result,null);
   } else {
@@ -146,7 +158,7 @@ async function hotspotSelector(initial) {
   }
 }
 (async()=>{
-  for (const suffix of ['_dataset_wifi', '_dataset_replay_wifi']) {
+  for (const suffix of ['_dataset_wifi', '_dataset_replay_wifi', '_dataset_workflow_wifi']) {
   datasetSuffix = suffix;
   for(const number of [1,2,3]) await expert(number,true);
   await expert(2,false);

@@ -56,6 +56,7 @@ else:
 # `import local_mqtt_broker` fails whenever bridge.py is started via the
 # embedded interpreter, even though the file sits right next to bridge.py.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from telemetry_polling import BackgroundTelemetryPoller, SerialPollGate, TelemetryReplayBuffer, expected_response, response_kind
 
 try:
     from wireless_dataset import WirelessDatasetCollector
@@ -135,7 +136,14 @@ GLD_DATASET_WIFI_ENVIRONMENTS = frozenset({
 GLD_DATASET_REPLAY_ENVIRONMENTS = frozenset({
     "gld_model_1_dataset_replay_wifi", "gld_model_2_dataset_replay_wifi", "gld_model_3_dataset_replay_wifi",
 })
-GLD_DATASET_WORKFLOW_ENVIRONMENTS = frozenset(f"gld_model_{model}_dataset_workflow_wifi" for model in (1, 2, 3))
+ATEX_WORKFLOW_MODELS = {f"gld_atex_model_{model}_dataset_workflow_wifi": model for model in (1, 2, 3)}
+# The known legacy ATEX image lacks an ATEX runtime marker. This narrow deny
+# catches an accidental env/manifest relabel; hashes are not authentication.
+ATEX_KNOWN_BLOCKED_FIRMWARE_SHA256 = frozenset({
+    "10391c34a922c7b07026648dbd25749fd1adda8218ef25fedca327a674bb03a0",
+})
+GLD_DATASET_WORKFLOW_ENVIRONMENTS = (frozenset(f"gld_model_{model}_dataset_workflow_wifi" for model in (1, 2, 3))
+                                     | frozenset(ATEX_WORKFLOW_MODELS))
 AES_KEY_HEX_RE = re.compile(r"^[0-9A-Fa-f]{32}$")
 
 
@@ -226,6 +234,10 @@ class EventHub:
         with self._lock:
             self._clients.discard(client)
 
+    def registered(self, client: queue.Queue[dict[str, Any]]) -> bool:
+        with self._lock:
+            return client in self._clients
+
     def emit(self, event: str, payload: dict[str, Any]) -> None:
         item = {"event": event, "payload": payload, "ts": time.time()}
         stale: list[queue.Queue[dict[str, Any]]] = []
@@ -259,6 +271,33 @@ class SerialBridge:
         # the board reboots back to Inference.
         self._recent_lines: deque[dict[str, Any]] = deque(maxlen=6000)
         self._line_sequence = 0
+        self._poll_lock = threading.Lock()
+        self._poll_condition = threading.Condition(self._poll_lock)
+        # Only ATEX nonce verification uses this state. Ordinary GLD1 writes
+        # retain their existing poll-gate behavior when no challenge is active.
+        self._atex_identity_state_lock = threading.Lock()
+        # Covers an entire open/install/reader-start or disconnect transaction.
+        # Reentrant because connect deliberately disconnects its previous handle.
+        self._atex_connection_lock = threading.RLock()
+        self._atex_identity_active = False
+        self._atex_identity_unknown_stream: str | None = None
+        self._atex_command_writers = 0
+        self._priority_pending = threading.Event()
+        self._priority_state_lock = threading.Lock()
+        self._priority_count = 0
+        self._poll_gate = SerialPollGate()
+        self._poll_enabled = False
+        self._poll_version = 0
+        self._passive_responses: list[str] = []
+        self._passive_overflow = False
+        self._late_poll_unknown = False
+        self._cancelled_poll_owners: deque[str] = deque(maxlen=128)
+        self._telemetry_stream = secrets.token_hex(16)
+        self._telemetry_buffer = TelemetryReplayBuffer()
+        self._poller = BackgroundTelemetryPoller(
+            self._poll_gate, self._send_raw,
+            self._background_poll_error,
+        )
         self.port = ""
         self.baud = 115200
 
@@ -283,6 +322,20 @@ class SerialBridge:
         return ports
 
     def connect(self, port: str, baud: int = 115200) -> dict[str, Any]:
+        # Register before waiting for another connect, so a queued replacement
+        # cannot sneak in after an ATEX identity challenge has acquired its lease.
+        _begin_port_operation(port)
+        try:
+            self._enter_regular_serial_operation(allow_unknown=True)
+            try:
+                with self._atex_connection_lock:
+                    return self._connect_ordinary(port, baud)
+            finally:
+                self._exit_regular_serial_operation()
+        finally:
+            _end_port_operation(port)
+
+    def _connect_ordinary(self, port: str, baud: int = 115200) -> dict[str, Any]:
         if serial is None:
             raise RuntimeError(f"pyserial unavailable: {SERIAL_IMPORT_ERROR}")
         if is_flash_port_reserved(port):
@@ -309,6 +362,8 @@ class SerialBridge:
             generation = self._generation
             self._reader_stop = threading.Event()
             stop_event = self._reader_stop
+            self._telemetry_stream = secrets.token_hex(16)
+            self._telemetry_buffer = TelemetryReplayBuffer()
         self._reader_thread = threading.Thread(
             target=self._read_loop,
             args=(ser, stop_event, generation),
@@ -319,42 +374,410 @@ class SerialBridge:
         self._emit("serial_status", {"connected": True, "port": port, "baud": baud})
         return {"connected": True, "port": port, "baud": baud}
 
-    def disconnect(self) -> dict[str, Any]:
+    def disconnect(self, *, _atex_identity_guard: tuple[str, str, int, str] | None = None) -> dict[str, Any]:
+        owner = _atex_identity_guard is not None
+        if owner:
+            with self._atex_identity_state_lock:
+                if not self._atex_identity_active:
+                    raise RuntimeError("ATEX identity lease is not active")
+        else:
+            self._enter_regular_serial_operation(allow_unknown=True)
+        try:
+            with self._atex_connection_lock:
+                return self._disconnect_ordinary(_atex_identity_guard)
+        finally:
+            if not owner:
+                self._exit_regular_serial_operation()
+
+    def _disconnect_ordinary(self, _atex_identity_guard: tuple[str, str, int, str] | None) -> dict[str, Any]:
+        if _atex_identity_guard is None:
+            self._poller.stop_for_disconnect()
         reader: threading.Thread | None
-        with self._lock:
-            ser = self._serial
-            self._serial = None
-            self._generation += 1
-            self._reader_stop.set()
-            reader = self._reader_thread
-            self._reader_thread = None
+        with self._poll_lock:
+            if _atex_identity_guard is not None:
+                expected_stream, expected_port, expected_epoch, expected_pending = _atex_identity_guard
+                if (self._poll_gate.epoch() != expected_epoch or
+                        self._poll_gate.pending_response() != expected_pending):
+                    raise RuntimeError("ATEX upload held: serial ownership changed before disconnect")
+            # Check stream and detach that exact handle in one critical section;
+            # do not release the serial lock between verification and detach.
+            with self._lock:
+                if _atex_identity_guard is not None and (
+                        self._serial is None or not getattr(self._serial, "is_open", False) or
+                        self.port.upper() != expected_port.upper() or self._telemetry_stream != expected_stream):
+                    raise RuntimeError("ATEX upload held: serial connection changed before disconnect")
+                ser = self._serial
+                self._serial = None
+                self._generation += 1
+                self._reader_stop.set()
+                reader = self._reader_thread
+                self._reader_thread = None
+            if _atex_identity_guard is not None:
+                # Sentinel still owns the poll gate, so no new polling write
+                # can begin between verified detach and this stop request.
+                self._poller.stop_for_disconnect()
+            self._poll_gate.reset()
+            self._poll_enabled = False
+            self._poll_version += 1
+            self._passive_responses.clear()
+            self._passive_overflow = False
+            self._late_poll_unknown = False
+            self._poll_condition.notify_all()
+        self._poller.join(1.0)
+        close_error = None
         if ser is not None:
             try:
                 ser.close()
-            except Exception:
-                pass
+            except Exception as exc:
+                close_error = exc
         # Serial reads use a short timeout, so this normally returns within
         # 200 ms.  Waiting here prevents an old loop from racing a reconnect.
         if reader is not None and reader is not threading.current_thread():
             reader.join(timeout=1.0)
         self._emit("serial_status", {"connected": False})
+        if _atex_identity_guard is not None and (close_error is not None or ser is None or getattr(ser, "is_open", True)):
+            raise RuntimeError("ATEX upload held: verified serial handle did not close") from close_error
         return {"connected": False}
 
     def status(self) -> dict[str, Any]:
         with self._lock:
             ser = self._serial
-            return {"connected": ser is not None and getattr(ser, "is_open", False), "port": self.port, "baud": self.baud}
+            return {"connected": ser is not None and getattr(ser, "is_open", False), "port": self.port, "baud": self.baud,
+                    "telemetryStream": self._telemetry_stream}
 
     def recent_lines(self, after: int = 0) -> dict[str, Any]:
         with self._lock:
             return {"sequence": self._line_sequence, "lines": [item for item in self._recent_lines if item["sequence"] > after]}
 
-    def _record_line(self, line: str) -> None:
+    def challenge_atex_identity(self, port: str, target_id: str, timeout: float = 8.0, *, keep_connected: bool = False) -> dict[str, Any] | None:
+        """Verify nonce identity on one exclusive serial lease.
+
+        A failed or ambiguous sent command quarantines that stream; no retry is
+        attempted. This is a software identity response, not hardware attestation.
+        """
+        if not isinstance(port, str) or not re.fullmatch(r"COM\d+", port, re.IGNORECASE):
+            raise RuntimeError("ATEX upload held: invalid serial port")
+        if not isinstance(target_id, str) or not re.fullmatch(r"[0-9A-F]{4}", target_id) or not GLD_ID_MIN <= int(target_id, 16) <= GLD_ID_MAX:
+            raise RuntimeError("ATEX upload held: invalid device identity")
+        if not isinstance(timeout, (int, float)) or isinstance(timeout, bool) or not 0 < timeout <= 30:
+            raise RuntimeError("ATEX upload held: invalid identity timeout")
+        nonce = secrets.token_hex(16)
+        with self._atex_identity_state_lock:
+            if self._atex_identity_active or self._atex_command_writers:
+                raise RuntimeError("ATEX upload held: another serial command is active")
+            self._atex_identity_active = True
+        guard_name = "ATEX_IDENTITY_GUARD_" + nonce.upper()
+        guard_expected = "ack:" + guard_name
+        guard_token = None
+        stream = None
+        sent = False
+        completed = False
+        try:
+            with self._poll_lock:
+                with self._lock:
+                    initial_handle = self._serial
+                    initial_generation = self._generation
+                    initial = {"connected": initial_handle is not None and getattr(initial_handle, "is_open", False),
+                               "port": self.port, "telemetryStream": self._telemetry_stream}
+                stream = initial.get("telemetryStream")
+                if (not initial.get("connected") or str(initial.get("port") or "").upper() != port.upper() or
+                        not isinstance(stream, str) or not stream):
+                    raise RuntimeError("ATEX upload held: connect the selected port and identify the board")
+                with self._atex_identity_state_lock:
+                    if self._atex_identity_unknown_stream == stream:
+                        raise RuntimeError("ATEX upload held: previous identity outcome unknown; reconnect")
+                if (self._passive_responses or self._passive_overflow or self._late_poll_unknown or
+                        self._priority_pending.is_set()):
+                    raise RuntimeError("ATEX upload held: serial command response is unresolved")
+                guard_token = self._poll_gate.reserve(guard_name)
+                if guard_token is None:
+                    raise RuntimeError("ATEX upload held: serial request gate is busy or quarantined")
+                epoch = self._poll_gate.epoch()
+                cursor = self.recent_lines().get("sequence")
+                if type(cursor) is not int or cursor < 0:
+                    raise RuntimeError("ATEX upload held: serial sequence unavailable")
+                command = "GET_ATEX_IDENTITY_JSON " + json.dumps({"nonce": nonce}, separators=(",", ":"))
+                # A write error may occur after bytes left the process.
+                sent = True
+                self._send_raw(command)
+            deadline = time.monotonic() + timeout
+            while time.monotonic() < deadline:
+                current = self.status()
+                if (not current.get("connected") or str(current.get("port") or "").upper() != port.upper() or
+                        current.get("telemetryStream") != stream or self._poll_gate.epoch() != epoch or
+                        self._poll_gate.pending_response() != guard_expected):
+                    raise RuntimeError("ATEX upload held: serial connection or ownership changed")
+                recent = self.recent_lines(after=cursor)
+                lines = recent.get("lines")
+                if not isinstance(lines, list):
+                    raise RuntimeError("ATEX upload held: invalid serial history")
+                matches = []
+                for item in lines:
+                    if not isinstance(item, dict) or type(item.get("sequence")) is not int or item["sequence"] != cursor + 1:
+                        raise RuntimeError("ATEX upload held: serial history incomplete or out of order")
+                    cursor = item["sequence"]
+                    line = str(item.get("line") or "")
+                    if not line.startswith("GLD_ATEX_IDENTITY_JSON "):
+                        continue
+                    try:
+                        info = json.loads(line[len("GLD_ATEX_IDENTITY_JSON "):])
+                    except (TypeError, ValueError) as exc:
+                        raise RuntimeError("ATEX upload held: invalid identity response") from exc
+                    if not isinstance(info, dict) or not isinstance(info.get("nonce"), str):
+                        raise RuntimeError("ATEX upload held: invalid identity response")
+                    if info["nonce"] == nonce:
+                        matches.append(info)
+                if len(matches) > 1:
+                    raise RuntimeError("ATEX upload held: duplicate identity response")
+                if matches:
+                    info = matches[0]
+                    model_profile = info.get("modelProfileId")
+                    version = info.get("firmwareVersion")
+                    if (set(info) != {"nonce", "boardProfile", "deviceId", "modelProfileId", "firmwareVersion"} or
+                            not isinstance(version, str) or not version.strip() or
+                            info.get("boardProfile") != "GLD ATEX MotherBoardGLDVer2" or
+                            str(info.get("deviceId") or "").upper() != target_id or
+                            not isinstance(model_profile, str) or
+                            re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.:/()+ -]{0,127}", model_profile) is None):
+                        raise RuntimeError("ATEX upload held: board profile or device identity mismatch")
+                    if keep_connected:
+                        # Check the exact handle, generation and sentinel as one
+                        # transaction before releasing the identity lease.
+                        with self._poll_lock:
+                            with self._lock:
+                                if (self._serial is not initial_handle or
+                                        initial_handle is None or not getattr(initial_handle, "is_open", False) or
+                                        self._generation != initial_generation or self._telemetry_stream != stream or
+                                        self.port.upper() != port.upper() or self._poll_gate.epoch() != epoch or
+                                        self._poll_gate.pending_response() != guard_expected):
+                                    raise RuntimeError("ATEX identity held: serial ownership changed before completion")
+                                if not self._poll_gate.cancel_unsent(guard_token):
+                                    raise RuntimeError("ATEX identity held: serial request gate changed")
+                                guard_token = None
+                                completed = True
+                                return {"ok": True, "identity": info, "telemetryStream": stream}
+                    # Preflash disconnect rechecks stream and guard atomically.
+                    self.disconnect(_atex_identity_guard=(stream, port, epoch, guard_expected))
+                    completed = True
+                    guard_token = None  # disconnect reset the sentinel gate.
+                    return None
+                time.sleep(0.05)
+            raise RuntimeError("ATEX upload held: nonce identity response timed out")
+        finally:
+            with self._poll_lock:
+                if guard_token is not None:
+                    if sent:
+                        self._poll_gate.fail(guard_token)
+                        self._passive_overflow = True
+                    else:
+                        self._poll_gate.cancel_unsent(guard_token)
+                with self._atex_identity_state_lock:
+                    if sent and not completed and stream:
+                        self._atex_identity_unknown_stream = stream
+                    self._atex_identity_active = False
+
+    def telemetry_replay(self, cursor: int, stream: str) -> dict[str, Any]:
         with self._lock:
+            current_stream = self._telemetry_stream
+            buffer = self._telemetry_buffer
+        changed = bool(stream and stream != current_stream)
+        result = buffer.after(0 if changed else cursor)
+        return {**result, "stream": current_stream, "streamChanged": changed}
+
+    def _record_line(self, line: str, generation: int | None = None, serial_handle: Any = None) -> dict[str, Any] | None:
+        received_ms = int(time.time() * 1000)
+        kind = response_kind(line)
+        # A stale reader must not satisfy a request or append telemetry to a
+        # newly connected serial stream.
+        with self._lock:
+            if generation is not None and (self._generation != generation or self._serial is not serial_handle):
+                return None
+            self._poll_gate.observe(line)
             self._line_sequence += 1
             self._recent_lines.append({"sequence": self._line_sequence, "line": line})
+            stream, buffer = self._telemetry_stream, self._telemetry_buffer
+        with self._poll_lock:
+            if kind == "telemetry":
+                self._late_poll_unknown = False
+            if kind in self._passive_responses:
+                self._passive_responses.remove(kind)
+                self._poll_condition.notify_all()
+        if kind == "telemetry":
+            return {"telemetrySequence": buffer.append(line, received_ms),
+                    "receivedMs": received_ms, "telemetryStream": stream}
+        return {}
+
+    def start_background_poll(self, owner: str, interval_ms: int, stream: str) -> dict[str, Any]:
+        self._enter_regular_serial_operation()
+        try:
+            return self._start_background_poll_ordinary(owner, interval_ms, stream)
+        finally:
+            self._exit_regular_serial_operation()
+
+    def _start_background_poll_ordinary(self, owner: str, interval_ms: int, stream: str) -> dict[str, Any]:
+        with self._poll_lock:
+            deadline = time.monotonic() + 5.0
+            while True:
+                if owner in self._cancelled_poll_owners:
+                    raise RuntimeError("polling request was already stopped")
+                status = self.status()
+                if not status["connected"]:
+                    raise RuntimeError("serial port is not connected")
+                if not stream or stream != status["telemetryStream"]:
+                    raise RuntimeError("serial connection changed before polling started")
+                if self._passive_overflow:
+                    raise RuntimeError("serial command state is unknown; reconnect before polling")
+                if not self._passive_responses:
+                    break
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise RuntimeError("serial command is still awaiting a response")
+                self._poll_condition.wait(remaining)
+            if not self._poll_enabled:
+                self._poll_gate.reset()
+            started = self._poller.start(owner, interval_ms)
+            self._poll_enabled = True
+            if started:
+                self._poll_version += 1
+            return {"ok": True, "started": started}
+
+    def stop_background_poll(self, owner: str) -> dict[str, Any]:
+        self._enter_regular_serial_operation()
+        try:
+            return self._stop_background_poll_ordinary(owner)
+        finally:
+            self._exit_regular_serial_operation()
+
+    def _stop_background_poll_ordinary(self, owner: str) -> dict[str, Any]:
+        with self._poll_lock:
+            if not isinstance(owner, str) or not 16 <= len(owner) <= 128:
+                raise ValueError("invalid polling owner")
+            version = self._poll_version
+            self._poller.stop(owner)
+            self._cancelled_poll_owners.append(owner)
+            self._poll_condition.notify_all()
+        if not self._poller.join(6.0) or not self._poll_gate.is_idle():
+            # Do not release an unrelated operator command merely because a
+            # polling owner stopped; its response may still be in flight.
+            if self._poll_gate.pending_response() == "telemetry":
+                self._disable_background_poll("poll response unresolved; polling stopped", expected_version=version)
+            raise RuntimeError("poll response unresolved; reconnect serial before retrying")
+        with self._poll_lock:
+            if self._poll_version == version:
+                self._poll_enabled = False
+        return {"ok": True}
+
+    def _disable_background_poll(self, message: str, expected_epoch: int | None = None,
+                                 expected_version: int | None = None) -> None:
+        with self._poll_lock:
+            if expected_epoch is not None and (not self._poll_enabled or self._poll_gate.epoch() != expected_epoch):
+                return
+            if expected_version is not None and self._poll_version != expected_version:
+                return
+            pending = self._poll_gate.pending_response()
+            self._poller.stop_for_disconnect()
+            self._poll_enabled = False
+            self._poll_version += 1
+            self._passive_overflow = True  # Explicit reconnect required for another background poll.
+            self._late_poll_unknown = pending == "telemetry"
+            self._poll_gate.reset()
+        self._emit("telemetry_poll_error", {"message": message})
+
+    def _background_poll_error(self, message: str) -> None:
+        self._disable_background_poll(message)
+
+    def _watch_external_poll_gate(self, token: int, command: str, epoch: int) -> None:
+        timeout = 15.0 if command == "RUN_CURRENT_STATE_CHECK" else 5.0
+        if not self._poll_gate.wait_response(token, timeout):
+            self._disable_background_poll("serial response unresolved; polling stopped", expected_epoch=epoch)
+
+    def _enter_regular_serial_operation(self, *, allow_unknown: bool = False) -> None:
+        with self._atex_identity_state_lock:
+            if self._atex_identity_active:
+                raise RuntimeError("ATEX identity challenge owns serial")
+            with self._lock:
+                current_stream = self._telemetry_stream
+            if not allow_unknown and self._atex_identity_unknown_stream == current_stream:
+                raise RuntimeError("ATEX identity result unknown; reconnect before serial commands")
+            self._atex_command_writers += 1
+
+    def _exit_regular_serial_operation(self) -> None:
+        with self._atex_identity_state_lock:
+            self._atex_command_writers -= 1
 
     def write_line(self, line: str, require_connected: bool = True) -> dict[str, Any]:
+        self._enter_regular_serial_operation()
+        try:
+            return self._write_line_ordinary(line, require_connected)
+        finally:
+            self._exit_regular_serial_operation()
+
+    def _write_line_ordinary(self, line: str, require_connected: bool = True) -> dict[str, Any]:
+        command = line.strip().split(maxsplit=1)[0].upper() if line.strip() else ""
+        priority = command in {"RESTART", "CANCEL_FULLSCALE_SWEEP"}
+        preempted_telemetry = False
+        if priority:
+            with self._priority_state_lock:
+                self._priority_count += 1
+                self._priority_pending.set()
+        try:
+            if priority and self._poll_enabled:
+                self._poller.stop_for_disconnect()
+                preempted_telemetry = self._poll_gate.pending_response() == "telemetry"
+                # Wake an operator request waiting on the poll gate before
+                # taking the lock it holds. The firmware treats this command
+                # as an explicit high-priority recovery action.
+                self._poll_gate.reset()
+            with self._poll_lock:
+                if not priority and self._priority_pending.is_set():
+                    raise RuntimeError("priority serial command is in progress")
+                if self._poll_enabled and priority:
+                    self._poller.stop_for_disconnect()
+                    self._late_poll_unknown = preempted_telemetry or self._poll_gate.pending_response() == "telemetry"
+                    self._passive_overflow = True
+                    self._poll_gate.reset()
+                    self._poll_enabled = False
+                    self._poll_version += 1
+                token = None
+                passive_added = False
+                if self._late_poll_unknown and command == "GET_TELEMETRY":
+                    raise RuntimeError("previous telemetry response is unresolved")
+                if self._poll_enabled:
+                    token = self._poll_gate.reserve(line, 5.0)
+                    if token is None:
+                        raise RuntimeError("serial request unresolved; polling paused")
+                    token_epoch = self._poll_gate.epoch()
+                else:
+                    if len(self._passive_responses) < 64:
+                        self._passive_responses.append(expected_response(line))
+                        passive_added = True
+                    else:
+                        self._passive_overflow = True
+                try:
+                    result = self._send_raw(line, require_connected)
+                except Exception:
+                    if token is not None:
+                        self._poll_gate.fail(token)
+                    elif passive_added:
+                        self._passive_responses.pop()
+                    raise
+                if not result.get("ok"):
+                    if token is not None:
+                        self._poll_gate.fail(token)
+                    elif passive_added:
+                        self._passive_responses.pop()
+                elif token is not None:
+                    threading.Thread(target=self._watch_external_poll_gate, args=(token, command, token_epoch),
+                                     name="gld-poll-command-watch", daemon=True).start()
+                return result
+        finally:
+            if priority:
+                with self._priority_state_lock:
+                    self._priority_count -= 1
+                    if not self._priority_count:
+                        self._priority_pending.clear()
+
+    def _send_raw(self, line: str, require_connected: bool = True) -> dict[str, Any]:
         if not line.endswith("\n"):
             line += "\n"
         with self._lock:
@@ -391,8 +814,9 @@ class SerialBridge:
                 raw, pending = pending.split(b"\n", 1)
                 line = raw.decode("utf-8", errors="replace").strip("\r")
                 if line:
-                    self._record_line(line)
-                    self._emit("serial_line", {"line": line})
+                    metadata = self._record_line(line, generation, ser)
+                    if metadata is not None:
+                        self._emit("serial_line", {"line": line, **metadata})
         with self._lock:
             still_active = self._generation == generation and self._serial is ser
             if still_active:
@@ -442,7 +866,7 @@ def workflow_action(action, payload):
         if action in {"connect", "start", "continue", "resume"}:
             if wireless_collector_in_use(wireless_dataset_collector) or wireless_collector_in_use(wireless_replay_collector):
                 raise RuntimeError("Disconnect Dataset lama sebelum menggunakan wizard.")
-            if any(item.status().get("connected") for item in serial_bridges.values()):
+            if any(item.status().get("connected") for item in serial_bridges_snapshot().values()):
                 raise RuntimeError("Disconnect COM sebelum menghubungkan Dataset Wireless.")
         operations = {
             "scan": service.scan,
@@ -505,15 +929,17 @@ def connect_wireless_dataset(password: str, *, replay: bool = False) -> Any:
         other = wireless_dataset_collector if replay else wireless_replay_collector
         if wireless_collector_in_use(other):
             raise RuntimeError("Disconnect the other Wireless Dataset mode first")
-        if any(item.status().get("connected") for item in serial_bridges.values()):
+        if any(item.status().get("connected") for item in serial_bridges_snapshot().values()):
             raise RuntimeError("Disconnect COM before connecting Wireless Dataset")
         collector = get_wireless_replay_collector() if replay else get_wireless_dataset_collector()
         return collector.connect(password)
 
 
 serial_bridges: dict[int, "SerialBridge"] = {}
+serial_bridges_lock = threading.Lock()
 flash_port_lock = threading.Lock()
-flash_ports: set[str] = set()
+flash_ports: dict[str, object] = {}
+flash_port_operations: dict[str, int] = {}
 
 
 def _flash_port_key(port: str) -> str:
@@ -525,18 +951,49 @@ def is_flash_port_reserved(port: str) -> bool:
         return _flash_port_key(port) in flash_ports
 
 
-def reserve_flash_port(port: str) -> bool:
+def _begin_port_operation(port: str, reservation: object | None = None) -> None:
+    key = _flash_port_key(port)
+    with flash_port_lock:
+        owner = flash_ports.get(key)
+        if owner is not None and owner is not reservation:
+            raise RuntimeError(f"{port} is reserved for firmware upload; wait until the upload finishes")
+        if reservation is not None and owner is not reservation:
+            raise RuntimeError("firmware upload reservation is not valid")
+        flash_port_operations[key] = flash_port_operations.get(key, 0) + 1
+
+
+def _end_port_operation(port: str) -> None:
+    key = _flash_port_key(port)
+    with flash_port_lock:
+        remaining = flash_port_operations[key] - 1
+        if remaining:
+            flash_port_operations[key] = remaining
+        else:
+            del flash_port_operations[key]
+
+
+def reserve_flash_port(port: str) -> object | None:
     with flash_port_lock:
         key = _flash_port_key(port)
-        if key in flash_ports:
-            return False
-        flash_ports.add(key)
-        return True
+        if key in flash_ports or flash_port_operations.get(key, 0):
+            return None
+        token = object()
+        flash_ports[key] = token
+        return token
 
 
-def release_flash_port(port: str) -> None:
+def _require_flash_reservation(port: str, token: object | None) -> None:
     with flash_port_lock:
-        flash_ports.discard(_flash_port_key(port))
+        if token is None or flash_ports.get(_flash_port_key(port)) is not token:
+            raise RuntimeError("firmware upload reservation is not valid")
+
+
+def release_flash_port(port: str, token: object) -> None:
+    with flash_port_lock:
+        key = _flash_port_key(port)
+        if flash_ports.get(key) is not token or flash_port_operations.get(key, 0):
+            raise RuntimeError("firmware upload reservation cannot be released")
+        del flash_ports[key]
 dataset_monitors: dict[int, "DatasetMqttMonitor"] = {}
 local_mqtt_broker: Any = None
 local_mqtt_broker_error = ""
@@ -551,9 +1008,17 @@ def parse_slot(value: Any) -> int:
 
 
 def get_serial_bridge(slot: int) -> "SerialBridge":
-    if slot not in serial_bridges:
-        serial_bridges[slot] = SerialBridge(events, slot=slot)
-    return serial_bridges[slot]
+    # Publish exactly one bridge per slot, including simultaneous first requests.
+    with serial_bridges_lock:
+        if slot not in serial_bridges:
+            serial_bridges[slot] = SerialBridge(events, slot=slot)
+        return serial_bridges[slot]
+
+
+def serial_bridges_snapshot() -> dict[int, "SerialBridge"]:
+    # Never call bridge methods while holding the registry lock.
+    with serial_bridges_lock:
+        return dict(serial_bridges)
 
 
 def get_dataset_monitor(slot: int) -> "DatasetMqttMonitor":
@@ -564,7 +1029,7 @@ def get_dataset_monitor(slot: int) -> "DatasetMqttMonitor":
 
 def connected_slots_summary() -> dict[str, Any]:
     summary = {}
-    for slot, bridge in serial_bridges.items():
+    for slot, bridge in serial_bridges_snapshot().items():
         status = bridge.status()
         if status["connected"]:
             summary[str(slot)] = status
@@ -939,14 +1404,22 @@ def mqtt_publish_dataset(payload: dict[str, Any], slot: int = 1) -> dict[str, An
 
 
 def slot_holding_port(port: str) -> int | None:
-    for slot, bridge in serial_bridges.items():
+    for slot, bridge in serial_bridges_snapshot().items():
         status = bridge.status()
         if status["connected"] and status["port"] == port:
             return slot
     return None
 
 
-def probe_port(port: str) -> dict[str, Any]:
+def probe_port(port: str, *, _reservation: object | None = None) -> dict[str, Any]:
+    _begin_port_operation(port, _reservation)
+    try:
+        return _probe_port_ordinary(port)
+    finally:
+        _end_port_operation(port)
+
+
+def _probe_port_ordinary(port: str) -> dict[str, Any]:
     if not port:
         raise RuntimeError("port is required")
     holder = slot_holding_port(port)
@@ -1204,6 +1677,44 @@ def validate_firmware_package(
     return manifest, verified
 
 
+def require_atex_release(env: str) -> None:
+    """Hard-coded release gate; opening it requires a reviewed source change."""
+    if env == "gld_atex" or env in ATEX_WORKFLOW_MODELS:
+        raise RuntimeError("ATEX upload held: integration and device release gates are not complete")
+
+
+def reject_atex_manifest_before_release(payload: dict[str, Any]) -> None:
+    """Reject an explicitly ATEX-labelled manifest even if its env is renamed.
+
+    Labels and markers are not authenticated; this is a guard against mistakes,
+    not proof of firmware provenance or physical board identity.
+    """
+    manifest = payload.get("manifest")
+    profile = str(manifest.get("boardProfile") or "") if isinstance(manifest, dict) else ""
+    if "ATEX" in profile.upper():
+        raise RuntimeError("ATEX upload held: integration and device release gates are not complete")
+
+
+def validate_atex_workflow(manifest: Any, package_files: Any, env: str, target_id: str) -> dict[str, Any]:
+    """Fail closed if the independent ATEX verifier or its source contract is unavailable."""
+    import importlib.util
+    model = ATEX_WORKFLOW_MODELS.get(env)
+    if model is None:
+        raise RuntimeError("unrecognized ATEX workflow environment")
+    verifier_path = REPO_ROOT / "firmware" / "tools" / "validate_atex_package.py"
+    try:
+        spec = importlib.util.spec_from_file_location("gld_atex_package_validator", verifier_path)
+        if spec is None or spec.loader is None:
+            raise RuntimeError("ATEX validator unavailable")
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module.validate_atex_package(
+            manifest, package_files, model, target_id,
+            base_validator=validate_firmware_package, nvs_resolver=verified_nvs_region)
+    except (OSError, ImportError) as exc:
+        raise RuntimeError("ATEX package verifier or model source unavailable") from exc
+
+
 def shared_esptool_command(args: list[str]) -> list[str]:
     runner = REPO_ROOT / "apps" / "lib" / "run_esptool.py"
     if not runner.is_file():
@@ -1276,8 +1787,15 @@ def erase_verified_nvs(manifest: dict[str, Any], verified_files: list[tuple[dict
         raise RuntimeError(f"esptool NVS reset failed with exit code {code}")
 
 
-def _firmware_upload_reserved(payload: dict[str, Any], slot: int = 1) -> dict[str, Any]:
+def verify_atex_upload_identity(upload_bridge: Any, port: str, target_id: str, timeout: float = 8.0) -> None:
+    """Require a nonce-matched identity on the same exclusive serial stream."""
+    upload_bridge.challenge_atex_identity(port, target_id, timeout)
+
+
+def _firmware_upload_reserved(payload: dict[str, Any], slot: int = 1, *, _reservation: object | None = None) -> dict[str, Any]:
     env = str(payload.get("env") or "").strip()
+    require_atex_release(env)
+    reject_atex_manifest_before_release(payload)
     port = str(payload.get("port") or "").strip()
     target_id = str(payload.get("targetDeviceId") or "").strip().upper()
     reset_nvs = bool(payload.get("resetNvs"))
@@ -1290,7 +1808,17 @@ def _firmware_upload_reserved(payload: dict[str, Any], slot: int = 1) -> dict[st
     manifest, verified_files = validate_firmware_package(
         payload.get("manifest"), payload.get("packageFiles"), env, target_id
     )
-    if env in GLD_DATASET_WIFI_ENVIRONMENTS | GLD_DATASET_REPLAY_ENVIRONMENTS | GLD_DATASET_WORKFLOW_ENVIRONMENTS and reset_nvs:
+    if any(b"GLD ATEX MotherBoardGLDVer2" in data or
+           hashlib.sha256(data).hexdigest() in ATEX_KNOWN_BLOCKED_FIRMWARE_SHA256
+           for _item, data in verified_files):
+        raise RuntimeError("ATEX upload held: integration and device release gates are not complete")
+    if env in ATEX_WORKFLOW_MODELS:
+        validate_atex_workflow(manifest, payload.get("packageFiles"), env, target_id)
+    native_initial = (payload.get("initialFirmware") is True and
+                      env in GLD_DATASET_WORKFLOW_ENVIRONMENTS and
+                      manifest.get("capabilities") == {"nativeSerial": True, "datasetWifi": True} and
+                      payload.get("resetNvsConfirmation") == "RESET NVS")
+    if env in GLD_DATASET_WIFI_ENVIRONMENTS | GLD_DATASET_REPLAY_ENVIRONMENTS | GLD_DATASET_WORKFLOW_ENVIRONMENTS and reset_nvs and not native_initial:
         raise RuntimeError(
             "Hotspot Dataset requires an existing saved nulling profile; Reset NVS must be OFF"
         )
@@ -1311,12 +1839,19 @@ def _firmware_upload_reserved(payload: dict[str, Any], slot: int = 1) -> dict[st
         # partition layout before any serial access or destructive operation.
         if verified_nvs_region(verified_files) != (0x9000, 0x5000):
             raise RuntimeError("GLD1 rollback NVS partition does not match the approved baseline")
+    _require_flash_reservation(port, _reservation)
     holder = slot_holding_port(port)
+    if env in ATEX_WORKFLOW_MODELS and holder != slot:
+        raise RuntimeError("ATEX upload held: selected port must be connected in the selected slot")
     upload_bridge = get_serial_bridge(holder if holder is not None else slot)
-    upload_bridge.disconnect()
+    if env in ATEX_WORKFLOW_MODELS:
+        # Challenge owns the stream through the verified disconnect.
+        verify_atex_upload_identity(upload_bridge, port, target_id)
+    else:
+        upload_bridge.disconnect()
     if not bool(payload.get("skipPreflight")):
         time.sleep(0.3)
-        preflight = probe_port(port)
+        preflight = probe_port(port, _reservation=_reservation)
         if not preflight["free"]:
             raise RuntimeError(
                 f"COM port {port} is still busy after disconnect ({preflight['message']}). "
@@ -1451,13 +1986,16 @@ def _firmware_upload_reserved(payload: dict[str, Any], slot: int = 1) -> dict[st
 
 
 def firmware_upload(payload: dict[str, Any], slot: int = 1) -> dict[str, Any]:
+    require_atex_release(str(payload.get("env") or "").strip())
+    reject_atex_manifest_before_release(payload)
     port = str(payload.get("port") or "").strip()
-    if not reserve_flash_port(port):
-        raise RuntimeError(f"COM port {port} already has an active firmware upload")
+    reservation = reserve_flash_port(port)
+    if reservation is None:
+        raise RuntimeError(f"COM port {port} is busy or has an active firmware upload")
     try:
-        return _firmware_upload_reserved(payload, slot)
+        return _firmware_upload_reserved(payload, slot, _reservation=reservation)
     finally:
-        release_flash_port(port)
+        release_flash_port(port, reservation)
 
 
 class ExclusiveThreadingHTTPServer(ThreadingHTTPServer):
@@ -1589,6 +2127,8 @@ class Handler(SimpleHTTPRequestHandler):
                 return json_response(self, get_wireless_dataset_collector().snapshot())
             if path == "/api/dataset-workflow/state":
                 return json_response(self, get_dataset_workflow_service().snapshot())
+            if path == "/api/dataset-workflow/chart-history":
+                return json_response(self, get_dataset_workflow_service().chart_history())
             if path == "/api/wireless-replay/state":
                 return json_response(self, get_wireless_replay_collector().snapshot())
             if path == "/api/serial/status":
@@ -1602,14 +2142,35 @@ class Handler(SimpleHTTPRequestHandler):
                 except (TypeError, ValueError):
                     after = 0
                 return json_response(self, get_serial_bridge(slot).recent_lines(after))
+            if path == "/api/serial/telemetry-replay":
+                query = parse_qs(urlparse(self.path).query)
+                slot = parse_slot((query.get("slot") or [1])[0])
+                try:
+                    after = max(0, int((query.get("after") or [0])[0]))
+                except (TypeError, ValueError):
+                    raise ValueError("invalid telemetry cursor")
+                stream = (query.get("stream") or [""])[0]
+                return json_response(self, get_serial_bridge(slot).telemetry_replay(after, stream))
             if path == "/api/firmware/package":
                 package_env = (parse_qs(urlparse(self.path).query).get("env") or [""])[0]
                 if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", package_env):
                     raise RuntimeError("invalid firmware environment")
                 package_dir = REPO_ROOT / "apps" / "operator-hub" / "firmware-packages" / package_env / "latest"
                 manifest = json.loads((package_dir / "manifest.json").read_text(encoding="utf-8"))
+                if package_env in ATEX_WORKFLOW_MODELS:
+                    entries = manifest.get("flashFiles") if isinstance(manifest, dict) else None
+                    if not isinstance(entries, list) or len(entries) != 4 or any(
+                        not isinstance(item, dict) or item.get("path") not in
+                        {"bootloader.bin", "partitions.bin", "boot_app0.bin", "firmware.bin"} for item in entries
+                    ):
+                        raise RuntimeError("invalid ATEX package file list")
                 package_files = {str(item["path"]): base64.b64encode((package_dir / str(item["path"])).read_bytes()).decode("ascii") for item in manifest["flashFiles"]}
-                return json_response(self, {"manifest": manifest, "packageFiles": package_files})
+                response = {"manifest": manifest, "packageFiles": package_files}
+                if package_env in ATEX_WORKFLOW_MODELS:
+                    package_id = str(manifest.get("deviceId") or "").upper()
+                    target = "1001" if package_id == "ANY" else package_id
+                    response["atexEvidence"] = validate_atex_workflow(manifest, package_files, package_env, target)
+                return json_response(self, response)
             if path == "/api/network":
                 return json_response(self, network_info())
             if path == "/api/gld-key-status":
@@ -1683,8 +2244,17 @@ class Handler(SimpleHTTPRequestHandler):
                     if holder is not None and holder != slot:
                         raise RuntimeError(f"{port} is already connected on slot {holder}")
                     result = get_serial_bridge(slot).connect(port, int(payload.get("baud") or 115200))
+            elif path == "/api/serial/atex-identity":
+                result = get_serial_bridge(slot).challenge_atex_identity(
+                    str(payload.get("port") or ""), str(payload.get("targetDeviceId") or ""),
+                    keep_connected=True)
             elif path == "/api/serial/disconnect":
                 result = get_serial_bridge(slot).disconnect()
+            elif path == "/api/serial/poll/start":
+                result = get_serial_bridge(slot).start_background_poll(
+                    str(payload.get("owner") or ""), payload.get("intervalMs"), str(payload.get("stream") or ""))
+            elif path == "/api/serial/poll/stop":
+                result = get_serial_bridge(slot).stop_background_poll(str(payload.get("owner") or ""))
             elif path == "/api/serial/write":
                 line, aes_key_synced = inject_canonical_aes_key(str(payload.get("line") or ""))
                 result = get_serial_bridge(slot).write_line(line, require_connected=False)
@@ -1727,7 +2297,9 @@ class Handler(SimpleHTTPRequestHandler):
         try:
             self.wfile.write(b": connected\n\n")
             self.wfile.flush()
-            while True:
+            # Overflowed clients are removed by EventHub. Close their SSE
+            # connection so EventSource reconnects and can request replay.
+            while events.registered(client):
                 try:
                     item = client.get(timeout=15)
                     event = item["event"]
@@ -1794,7 +2366,7 @@ def main() -> int:
             wireless_dataset_collector.disconnect()
         for monitor in dataset_monitors.values():
             monitor.stop(emit=False)
-        for bridge in serial_bridges.values():
+        for bridge in serial_bridges_snapshot().values():
             bridge.disconnect()
         if local_mqtt_broker is not None:
             local_mqtt_broker.stop()

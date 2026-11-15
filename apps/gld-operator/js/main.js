@@ -34,6 +34,17 @@ function requestFullNullingWithRealtime() {
 }
 
 function setupEvents() {
+  let resumePollingAfterPageRestore = false;
+  let pageHideStop = Promise.resolve(true);
+  window.addEventListener("pagehide", (event) => {
+    resumePollingAfterPageRestore = Boolean(event.persisted && state.polling);
+    pageHideStop = stopPolling();
+  });
+  window.addEventListener("pageshow", async (event) => {
+    if (!event.persisted || !resumePollingAfterPageRestore) return;
+    resumePollingAfterPageRestore = false;
+    if (await pageHideStop && state.connected && !state.polling) togglePolling();
+  });
   elements.portSetupBtn.addEventListener("click", () => {
     setPanelOpen(elements.setupPanel, true);
     if (state.bridgeAvailable) refreshPorts(true);
@@ -360,7 +371,7 @@ async function bootstrap() {
   import("./wireless-dataset.js?v=20261102-dual-recording")
     .then(({ initWirelessDataset }) => initWirelessDataset())
     .catch((error) => appendLog(`WIRELESS_UI_UNAVAILABLE ${error.message}`, "in"));
-  import("./dataset-workflow.js?v=20261103-compact-csv")
+  import("./dataset-workflow.js?v=20261112-average-history-v8")
     .then(({ initDatasetWorkflow }) => initDatasetWorkflow())
     .catch((error) => appendLog(`WORKFLOW_UI_UNAVAILABLE ${error.message}`, "in"));
   // Local visual/device-contract simulation.  It is opt-in by URL and never

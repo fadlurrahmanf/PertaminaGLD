@@ -19,7 +19,28 @@ void resetCommand(GldSerialCommand& command) {
     command.payload[0] = '\0';
 }
 
+#if defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX && defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+bool validAtexIdentityPayload(const char* p) {
+    if (strlen(p) != 44 || strncmp(p, "{\"nonce\":\"", 10) != 0) return false;
+    for (size_t i = 10; i < 42; ++i) {
+        const char c = p[i];
+        if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'))) return false;
+    }
+    return p[42] == '\"' && p[43] == '}';
+}
+#endif
+
 bool decodeLine(const char* line, GldSerialCommand& outCommand) {
+#if defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX && defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+    constexpr char cmd[] = "GET_ATEX_IDENTITY_JSON";
+    constexpr size_t n = sizeof(cmd) - 1;
+    if (strncmp(line, cmd, n) == 0 && (line[n] == ' ' || line[n] == '\0')) {
+        if (line[n] != ' ' || !validAtexIdentityPayload(line + n + 1)) return false;
+        outCommand.type = GldSerialCommandType::GetAtexIdentityJson;
+        memcpy(outCommand.payload, line + n + 1, 45);
+        return true;
+    }
+#endif
     if (strncmp(line, "SET_MODE ", 9) == 0) {
         outCommand.type = GldSerialCommandType::SetMode;
         outCommand.mode = gldModeFromString(line + 9);
@@ -222,12 +243,18 @@ bool decodeLine(const char* line, GldSerialCommand& outCommand) {
 }
 
 bool readCommandFrom(Stream& stream, char* buf, uint16_t& pos,
+#if defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX && defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+                     bool& invalid,
+#endif
                      GldSerialCommand& outCommand) {
     while (stream.available()) {
         const int value = stream.read();
         if (value < 0) break;
         const char c = static_cast<char>(value);
         if (c == '\n' || c == '\r') {
+#if defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX && defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+            if (invalid) { invalid = false; pos = 0; buf[0] = '\0'; continue; }
+#endif
             buf[pos] = '\0';
             pos = 0;
             if (decodeLine(buf, outCommand)) return true;
@@ -236,8 +263,16 @@ bool readCommandFrom(Stream& stream, char* buf, uint16_t& pos,
                 --pos;
                 buf[pos] = '\0';
             }
+#if defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX && defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+        } else if (c == '\0') {
+            invalid = true;
+#endif
         } else if (pos < 511) {
             buf[pos++] = c;
+#if defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX && defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+        } else {
+            invalid = true;
+#endif
         }
     }
     return false;
@@ -280,15 +315,29 @@ bool verifyModeCommandCmac(const pgl::protocol::FrameView& decoded,
 bool parseSerialCommand(GldSerialCommand& outCommand) {
     static char usbBuf[512];
     static uint16_t usbPos = 0;
+#if defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX && defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+    static bool usbInvalid = false;
+#endif
 #if defined(ARDUINO_ARCH_ESP32)
     static char uart0Buf[512];
     static uint16_t uart0Pos = 0;
+#if defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX && defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+    static bool uart0Invalid = false;
+#endif
 #endif
     resetCommand(outCommand);
 
-    if (readCommandFrom(Serial, usbBuf, usbPos, outCommand)) return true;
+    if (readCommandFrom(Serial, usbBuf, usbPos,
+#if defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX && defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+                        usbInvalid,
+#endif
+                        outCommand)) return true;
 #if defined(ARDUINO_ARCH_ESP32)
-    if (readCommandFrom(Serial0, uart0Buf, uart0Pos, outCommand)) return true;
+    if (readCommandFrom(Serial0, uart0Buf, uart0Pos,
+#if defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX && defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+                        uart0Invalid,
+#endif
+                        outCommand)) return true;
 #endif
     return false;
 }

@@ -18,23 +18,34 @@ const GLD_MODEL_SLOTS = {
   model_1_dataset_replay_wifi: { label: "Model 1 Hotspot buffer 5 menit", available: true, environment: "gld_model_1_dataset_replay_wifi", detail: "GLD1 Board 1 — Tahap 2, RAM replay 5 menit. Memerlukan paket replay yang sudah dibuild; pertahankan NVS." },
   model_2_dataset_replay_wifi: { label: "Model 2 Hotspot buffer 5 menit", available: true, environment: "gld_model_2_dataset_replay_wifi", detail: "GLD1 Board 2 — Tahap 2, RAM replay 5 menit. Memerlukan paket replay yang sudah dibuild; pertahankan NVS." },
   model_3_dataset_replay_wifi: { label: "Model 3 Hotspot buffer 5 menit", available: true, environment: "gld_model_3_dataset_replay_wifi", detail: "GLD1 Board 3 — Tahap 2, RAM replay 5 menit. Memerlukan paket replay yang sudah dibuild; pertahankan NVS." },
-  model_1_dataset_workflow_wifi: { label: "Model 1 Hotspot Wizard Dataset", available: true, environment: "gld_model_1_dataset_workflow_wifi", detail: "GLD1 Board 1 — Wizard baru: Pause/Resume, pilihan kolom dan prediksi. Gunakan catu 24 V; pertahankan NVS." },
-  model_2_dataset_workflow_wifi: { label: "Model 2 Hotspot Wizard Dataset", available: true, environment: "gld_model_2_dataset_workflow_wifi", detail: "GLD1 Board 2 — Wizard baru: Pause/Resume, pilihan kolom dan prediksi. Gunakan catu 24 V; pertahankan NVS." },
-  model_3_dataset_workflow_wifi: { label: "Model 3 Hotspot Wizard Dataset", available: true, environment: "gld_model_3_dataset_workflow_wifi", detail: "GLD1 Board 3 — Wizard baru: Pause/Resume, pilihan kolom dan prediksi. Gunakan catu 24 V; pertahankan NVS." },
+  model_1_dataset_workflow_wifi: { label: "Model 1 — Board 1", available: true, environment: "gld_model_1_dataset_workflow_wifi", detail: "Gunakan catu 24 V; pertahankan NVS." },
+  model_2_dataset_workflow_wifi: { label: "Model 2 — Board 2", available: true, environment: "gld_model_2_dataset_workflow_wifi", detail: "Gunakan catu 24 V; pertahankan NVS." },
+  model_3_dataset_workflow_wifi: { label: "Model 3 — Board 3", available: true, environment: "gld_model_3_dataset_workflow_wifi", detail: "Gunakan catu 24 V; pertahankan NVS." },
   model_4: { label: "Model 4", available: false, detail: "Artefak dan package Model 4 belum tersedia." }
 };
 
+// Release gate stays closed until ATEX integration and physical checks pass.
+// Never fall back to a GLD1 image.
+const ATEX_MODEL_SLOTS = Object.fromEntries([1, 2, 3].map((model) => [
+  `model_${model}_dataset_workflow_wifi`,
+  { label: `Model ${model} — Board ${model}`, available: false,
+    environment: `gld_atex_model_${model}_dataset_workflow_wifi`,
+    detail: "Paket ATEX masih dalam verifikasi." }
+]));
+
 let builtinPackageRequestId = 0;
+let verifiedAtexPackage = null;
+const isAtexWorkflow = (environment) => /^gld_atex_model_[123]_dataset_workflow_wifi$/.test(environment || "");
 
 function isDatasetWifiEnvironment(environment) {
-  return ["gld_model_1_dataset_wifi", "gld_model_2_dataset_wifi", "gld_model_3_dataset_wifi",
+  return isAtexWorkflow(environment) || ["gld_model_1_dataset_wifi", "gld_model_2_dataset_wifi", "gld_model_3_dataset_wifi",
     "gld_model_1_dataset_replay_wifi", "gld_model_2_dataset_replay_wifi", "gld_model_3_dataset_replay_wifi",
     "gld_model_1_dataset_workflow_wifi", "gld_model_2_dataset_workflow_wifi", "gld_model_3_dataset_workflow_wifi"].includes(environment);
 }
 
 function hasNativeWorkflowSerial(manifest) {
-  return ["gld_model_1_dataset_workflow_wifi", "gld_model_2_dataset_workflow_wifi",
-    "gld_model_3_dataset_workflow_wifi"].includes(manifest?.environment)
+  return (isAtexWorkflow(manifest?.environment) || ["gld_model_1_dataset_workflow_wifi", "gld_model_2_dataset_workflow_wifi",
+    "gld_model_3_dataset_workflow_wifi"].includes(manifest?.environment))
     && manifest?.capabilities?.nativeSerial === true;
 }
 
@@ -42,7 +53,7 @@ function requireUploadSlot(slot) {
   if (state.activeSlot !== slot) throw new Error("Slot GLD berubah saat upload; pilih kembali slot perangkat dan periksa statusnya.");
 }
 
-async function readNativeWorkflowInfo(port, slot, timeoutMs) {
+async function readNativeWorkflowInfo(port, slot, timeoutMs, expectedStream = null) {
   requireUploadSlot(slot);
   const checkPort = async () => {
     requireUploadSlot(slot);
@@ -50,6 +61,10 @@ async function readNativeWorkflowInfo(port, slot, timeoutMs) {
     if (!serial.connected || String(serial.port || "").toUpperCase() !== port.toUpperCase()) {
       throw new Error(`Koneksi COM ${port} belum terkonfirmasi pada slot ${slot}.`);
     }
+    if (expectedStream !== null && serial.telemetryStream !== expectedStream) {
+      throw new Error("Koneksi serial ATEX berubah saat verifikasi identitas.");
+    }
+    if (expectedStream !== null) requireUploadSlot(slot);
   };
   await checkPort();
   // The backend cursor excludes snapshots and serial lines retained from a
@@ -82,7 +97,44 @@ async function readNativeWorkflowInfo(port, slot, timeoutMs) {
   return null;
 }
 
+async function readAtexFreshIdentity(port, slot, timeoutMs, expectedStream, expectedDeviceId) {
+  requireUploadSlot(slot);
+  if (!isGldId(expectedDeviceId)) throw new Error("ID ATEX sebelum flash tidak tersedia.");
+  const result = await bridgeFetch("/api/serial/atex-identity", { method: "POST", timeoutMs,
+    body: JSON.stringify({ slot, port, targetDeviceId: expectedDeviceId }) });
+  requireUploadSlot(slot);
+  if (result?.ok !== true || result.telemetryStream !== expectedStream || !result.identity ||
+      typeof result.identity.nonce !== "string" || !/^[0-9a-f]{32}$/.test(result.identity.nonce)) {
+    throw new Error("Koneksi serial ATEX berubah atau identitas nonce tidak valid.");
+  }
+  return result.identity;
+}
+
 async function verifyNativeWorkflowReadback(manifest, expectedDeviceId, port, slot) {
+  if (isAtexWorkflow(manifest.environment)) {
+    requireUploadSlot(slot);
+    const serial = await bridgeFetch(`/api/serial/status?slot=${slot}`, { timeoutMs: 3_000 });
+    requireUploadSlot(slot);
+    if (!serial.connected || String(serial.port || "").toUpperCase() !== port.toUpperCase() ||
+        typeof serial.telemetryStream !== "string" || !serial.telemetryStream) {
+      throw new Error("Identitas koneksi serial ATEX tidak tersedia atau port berubah.");
+    }
+    const identity = await readAtexFreshIdentity(port, slot, 12_000, serial.telemetryStream, expectedDeviceId);
+    if (typeof manifest.firmwareVersion !== "string" || !manifest.firmwareVersion ||
+        identity.firmwareVersion !== manifest.firmwareVersion) {
+      throw new Error("Flash selesai, tetapi versi firmware nonce ATEX tidak cocok.");
+    }
+    const deviceId = String(identity.deviceId || "").toUpperCase();
+    if (identity.boardProfile !== "GLD ATEX MotherBoardGLDVer2" || !isGldId(deviceId) ||
+        !expectedDeviceId || deviceId !== expectedDeviceId) {
+      throw new Error("Flash selesai, tetapi identitas board atau ID ATEX tidak cocok.");
+    }
+    if (!verifiedAtexPackage || verifiedAtexPackage.environment !== manifest.environment ||
+        identity.modelProfileId !== verifiedAtexPackage.profileId) {
+      throw new Error("Flash selesai, tetapi profil model ATEX tidak cocok atau belum terbaca.");
+    }
+    return { ...identity, deviceId, model: { profileId: identity.modelProfileId } };
+  }
   const info = await readNativeWorkflowInfo(port, slot, 35_000);
   if (!info) throw new Error(`Flash selesai, tetapi readback GET_INFO dari ${port} belum diterima.`);
   if (info.firmwareVersion !== manifest.firmwareVersion) {
@@ -106,13 +158,15 @@ function updateFirmwareResetGuard() {
   const help = $("firmwareResetNvsHelp");
   if (warning) warning.hidden = !required;
   if (help) help.hidden = required;
-  const ready = Boolean(state.manifest && /^COM\d+$/i.test($("firmwareUploadPort")?.value));
+  const ready = Boolean(state.manifest && /^COM\d+$/i.test($("firmwareUploadPort")?.value) &&
+    (!isAtexWorkflow(state.manifest.environment) || verifiedAtexPackage?.environment === state.manifest.environment));
   const consented = !required || $("firmwareResetNvs")?.checked === true;
   $("firmwareUploadConfirmBtn").disabled = !ready || !consented;
   return ready && consented;
 }
 
 export async function loadManifestFile(fileList) {
+  verifiedAtexPackage = null;
   const files = Array.from(fileList || []);
   if (!files.length) return;
   const manifestFile = files.find((file) => file.name === "manifest.json");
@@ -243,10 +297,11 @@ export function handleFirmwareUploadProgress(payload) {
   );
 }
 
-function selectedModelSlot() {
-  return GLD_MODEL_SLOTS[$("firmwareUploadModel")?.value] || {
+function selectedModelSlot(environment = "gld") {
+  const slots = environment === "gld_atex" ? ATEX_MODEL_SLOTS : GLD_MODEL_SLOTS;
+  return slots[$("firmwareUploadModel")?.value] || {
     label: "Pilih model", available: false,
-    detail: "Pilih model biasa atau salah satu dari tiga Hotspot Wizard Dataset yang sesuai board."
+    detail: "Pilih model yang sesuai board."
   };
 }
 
@@ -254,14 +309,15 @@ function updateModelSelection() {
   const environment = $("firmwareUploadEnv")?.value;
   const selector = $("firmwareUploadModel");
   const status = $("firmwareUploadModelStatus");
-  const isGld1 = environment === "gld";
-  if (selector) selector.disabled = !isGld1;
+  const supportsModel = environment === "gld" || environment === "gld_atex";
+  const model = selectedModelSlot(environment);
+  if (selector) selector.disabled = !supportsModel;
   if (status) {
-    status.textContent = isGld1
-      ? `GLD1 · ${selectedModelSlot().label} — ${selectedModelSlot().detail} Paket firmware: ${selectedModelSlot().environment}.`
+    status.textContent = supportsModel
+      ? `${environment === "gld_atex" ? "GLD ATEX" : "GLD1"} · ${model.label} — ${model.detail} Paket firmware: ${model.environment}.`
       : "Pilihan model tidak diterapkan untuk package release ini.";
   }
-  return isGld1 ? selectedModelSlot() : null;
+  return supportsModel ? model : null;
 }
 
 async function refreshFirmwareUploadPorts() {
@@ -304,6 +360,7 @@ export async function uploadFirmware() {
 
 async function loadBuiltinPackage(environment) {
   const requestId = ++builtinPackageRequestId;
+  verifiedAtexPackage = null;
   if (requiresGld1DowngradeReset(state.manifest)) $("firmwareResetNvs").checked = false;
   state.manifest = null;
   state.manifestPackageFiles = new Map();
@@ -319,11 +376,23 @@ async function loadBuiltinPackage(environment) {
     const packageEnvironment = model?.environment || environment;
     const result = await bridgeFetch(`/api/firmware/package?env=${encodeURIComponent(packageEnvironment)}`);
     if (requestId !== builtinPackageRequestId) return;
+    if (isAtexWorkflow(packageEnvironment)) {
+      const evidence = result.atexEvidence;
+      const modelNumber = Number(/^gld_atex_model_([123])_dataset_workflow_wifi$/.exec(packageEnvironment)?.[1]);
+      if (result.manifest?.environment !== packageEnvironment || evidence?.environment !== packageEnvironment ||
+          evidence.model !== modelNumber || evidence.boardProfile !== "GLD ATEX MotherBoardGLDVer2 / GPIO7 fan" ||
+          result.manifest?.boardProfile !== evidence.boardProfile ||
+          typeof evidence.profileId !== "string" || !evidence.profileId ||
+          evidence.firmwareSha256 !== result.manifest?.flashFiles?.find((entry) => entry.path === "firmware.bin")?.sha256) {
+        throw new Error("Validasi package ATEX belum tersedia atau tidak cocok.");
+      }
+      verifiedAtexPackage = evidence;
+    }
     state.manifest = result.manifest;
     state.manifestPackageFiles = new Map(Object.entries(result.packageFiles || {}));
     if (requiresGld1DowngradeReset(state.manifest)) $("firmwareResetNvs").checked = false;
     const selectionText = model
-      ? `GLD1 · ${model.label} — ${model.detail} · package ${state.manifest.environment}`
+      ? `${environment === "gld_atex" ? "GLD ATEX" : "GLD1"} · ${model.label} — ${model.detail} · package ${state.manifest.environment}`
       : `Environment ${state.manifest.environment}`;
     $("firmwareUploadPackage").textContent = `Firmware terpilih: ${selectionText} · v${state.manifest.firmwareVersion}`;
   } catch (error) {
@@ -346,6 +415,10 @@ async function performFirmwareUpload() {
   const env = state.manifest?.environment || "gld";
   const manifest = state.manifest;
   const nativeWorkflow = hasNativeWorkflowSerial(manifest);
+  if (isAtexWorkflow(env) && (!verifiedAtexPackage || verifiedAtexPackage.environment !== env)) {
+    setUploadDialogStatus("Upload ditahan: package ATEX belum diverifikasi.", "warn");
+    return;
+  }
   // For identity-preserving Hotspot uploads, the manual Inject ID input is
   // intentionally independent. It must never decide the identity readback.
   let targetDeviceId = nativeWorkflow
@@ -392,6 +465,9 @@ async function performFirmwareUpload() {
       requireUploadSlot(uploadSlot);
       await connectSerial();
       const before = await readNativeWorkflowInfo(port, uploadSlot, 8_000);
+      if (isAtexWorkflow(env) && before?.boardProfile !== "GLD ATEX MotherBoardGLDVer2") {
+        throw new Error("Upload ditahan: identitas board ATEX belum terbukti dari GET_INFO. Firmware ATEX lama yang melapor GLD2 memerlukan jalur migrasi terverifikasi.");
+      }
       if (before) {
         preservedDeviceId = targetDeviceId = before.deviceId;
         const identityWarning = validateManifestForUpload(manifest, env, targetDeviceId);
@@ -410,7 +486,9 @@ async function performFirmwareUpload() {
       }
       requireUploadSlot(uploadSlot);
     }
-    await disconnectSerial();
+    // ATEX identity is independently re-read by the bridge on this still
+    // connected stream before the bridge disconnects it for flashing.
+    if (!isAtexWorkflow(env)) await disconnectSerial();
     const packageFiles = await readPackageFiles(manifest);
     const result = await bridgeFetch("/api/firmware/upload", {
       method: "POST",
@@ -431,9 +509,11 @@ async function performFirmwareUpload() {
       );
       return;
     }
-    setUploadDialogStatus(result.nvsReset
+    setUploadDialogStatus(isAtexWorkflow(env)
+      ? `Flash selesai. Memulai verifikasi pada ${port}…`
+      : result.nvsReset
       ? `NVS direset. Connecting to ${port} dengan default firmware…`
-      : `Upload berhasil. Parameter NVS dipertahankan. Connecting to ${port}…`, "success");
+      : `Upload berhasil. Parameter NVS dipertahankan. Connecting to ${port}…`, isAtexWorkflow(env) ? "loading" : "success");
     if (nativeWorkflow) {
       requireUploadSlot(uploadSlot);
       elements.portSelect.value = port;

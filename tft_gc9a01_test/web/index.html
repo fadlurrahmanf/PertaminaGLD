@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tuning TFT GC9A01</title>
+<style>
+  :root{--bg:#f6f7f9;--card:#fff;--fg:#14181f;--mut:#5d6675;--line:#d9dde4;--acc:#1f6feb;--ok:#1a7f37;--bad:#cf222e}
+  @media (prefers-color-scheme:dark){:root{--bg:#0f1318;--card:#171c24;--fg:#e8ecf2;--mut:#98a2b3;--line:#2a313c;--acc:#4c8dff;--ok:#3fb950;--bad:#f85149}}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.45 system-ui,sans-serif}
+  main{max-width:720px;margin:0 auto;padding:16px}
+  h1{font-size:20px;margin:4px 0 12px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px}
+  .cfg{font-size:15px;word-break:break-word}
+  .cnt{color:var(--mut);font-size:14px;margin-bottom:6px}
+  .row{display:flex;gap:10px;flex-wrap:wrap}
+  button{font:inherit;padding:14px 18px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--fg);cursor:pointer;min-height:48px}
+  button.pri{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600;flex:1}
+  button.good{background:var(--ok);border-color:var(--ok);color:#fff;font-weight:600}
+  button:disabled{opacity:.5;cursor:wait}
+  label{display:block;font-size:13px;color:var(--mut);margin:8px 0 2px}
+  select{width:100%;font:inherit;padding:10px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--fg)}
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:0 12px}
+  pre{white-space:pre-wrap;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;font-size:12.5px;max-height:180px;overflow:auto;margin:6px 0 0}
+  .st{font-weight:600}.st.ok{color:var(--ok)}.st.bad{color:var(--bad)}
+  ul{margin:6px 0 0;padding-left:20px;font-size:14px}
+</style>
+</head>
+<body>
+<main>
+  <h1>Tuning layar GC9A01</h1>
+
+  <div class="card">
+    <div class="cnt" id="cnt">memuat…</div>
+    <div class="cfg" id="cfg"></div>
+    <div class="st" id="res" style="margin-top:8px"></div>
+  </div>
+
+  <div class="row" style="margin-bottom:12px">
+    <button id="prev">◀ Sebelumnya</button>
+    <button id="next" class="pri">Berikutnya ▶</button>
+    <button id="good" class="good">Ini bagus ✔</button>
+  </div>
+
+  <div class="card">
+    <strong>Pilih manual</strong>
+    <div class="grid" id="sel"></div>
+    <div class="row" style="margin-top:12px"><button id="apply" class="pri">Terapkan &amp; upload</button></div>
+  </div>
+
+  <div class="card">
+    <strong>Serial ESP32</strong>
+    <pre id="ser">-</pre>
+    <strong style="display:block;margin-top:10px">Log upload</strong>
+    <pre id="log">-</pre>
+  </div>
+
+  <div class="card" id="histcard" hidden>
+    <strong>Konfigurasi yang ditandai bagus</strong>
+    <ul id="hist"></ul>
+  </div>
+</main>
+<script>
+const $=s=>document.querySelector(s);
+const names={pins:'Set pin',freq:'Kecepatan SPI (Hz)',mode:'Mode SPI',invert:'Invert warna',order:'Urutan warna'};
+let built=false;
+async function post(p,b){await fetch(p,{method:'POST',body:JSON.stringify(b||{})});poll()}
+function build(s){
+  const box=$('#sel');box.innerHTML='';
+  s.order.forEach(k=>{
+    const w=document.createElement('div');
+    w.innerHTML=`<label for="s_${k}">${names[k]}</label><select id="s_${k}"></select>`;
+    box.appendChild(w);
+    const el=w.querySelector('select');
+    s.options[k].forEach(v=>{const o=document.createElement('option');o.value=JSON.stringify(v);o.textContent=String(v);el.appendChild(o)});
+  });
+  built=true;
+}
+async function poll(){
+  const s=await (await fetch('/state')).json();
+  if(!built)build(s);
+  $('#cnt').textContent=`Konfigurasi ${s.index+1} dari ${s.total}`;
+  $('#cfg').textContent=s.label;
+  const r=$('#res');r.textContent=s.result;r.className='st '+(s.result.includes('OK')?'ok':(s.result.includes('GAGAL')||s.result.startsWith('error')?'bad':''));
+  $('#ser').textContent=s.serial||'-';$('#log').textContent=s.log||'-';
+  ['prev','next','apply','good'].forEach(i=>$('#'+i).disabled=s.busy&&i!=='good');
+  s.order.forEach(k=>{const el=$('#s_'+k);if(el&&document.activeElement!==el)el.value=JSON.stringify(s.cfg[k])});
+  $('#histcard').hidden=!s.history.length;
+  $('#hist').innerHTML=s.history.map(h=>`<li>${h}</li>`).join('');
+}
+$('#next').onclick=()=>post('/next');
+$('#prev').onclick=()=>post('/prev');
+$('#good').onclick=()=>post('/good');
+$('#apply').onclick=()=>{const b={};['pins','freq','mode','invert','order'].forEach(k=>b[k]=JSON.parse($('#s_'+k).value));post('/apply',b)};
+setInterval(poll,1500);poll();
+</script>
+</body>
+</html>

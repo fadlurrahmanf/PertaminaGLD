@@ -120,7 +120,8 @@ function markReadbackVerified() {
 function isPendingHotspotUpload(result) {
   return ["gld_model_1_dataset_wifi", "gld_model_2_dataset_wifi", "gld_model_3_dataset_wifi",
     "gld_model_1_dataset_replay_wifi", "gld_model_2_dataset_replay_wifi", "gld_model_3_dataset_replay_wifi",
-    "gld_model_1_dataset_workflow_wifi", "gld_model_2_dataset_workflow_wifi", "gld_model_3_dataset_workflow_wifi"].includes(result?.selectedEnvironment)
+    "gld_model_1_dataset_workflow_wifi", "gld_model_2_dataset_workflow_wifi", "gld_model_3_dataset_workflow_wifi",
+    "gld_atex_model_1_dataset_workflow_wifi", "gld_atex_model_2_dataset_workflow_wifi", "gld_atex_model_3_dataset_workflow_wifi"].includes(result?.selectedEnvironment)
     && result?.flashToolCompleted === true && result?.deviceVerified === false
     && result?.verificationPending === "hotspot";
 }
@@ -257,14 +258,17 @@ function requestFirmwareUploadOptions({ device, port, initialFirmware = false })
   const requiresBoard = device === "ch" || device === "gw";
   const modelPicker = device === "gld" ? `
     <label>PAKET FIRMWARE GLD
-      <select id="firmwareUploadModel"><option value="">Pilih package GLD</option>${(packageOptions.models || []).filter((option) => !/^gld_model_[123]_dataset_(?:replay_)?wifi$/.test(option.environment)).map((option) => {
+      <select id="firmwareUploadModel"><option value="">Pilih package GLD</option>${(packageOptions.models || []).filter((option) => !/^gld_model_[123](?:_dataset_(?:replay_)?wifi)?$/.test(option.environment)).map((option) => {
         const item = packageCatalog[option.environment];
         const detail = item?.available ? `v${item.firmwareVersion}` : "package tidak tersedia";
         const hotspot = ["gld_model_1_dataset_wifi", "gld_model_2_dataset_wifi", "gld_model_3_dataset_wifi",
           "gld_model_1_dataset_replay_wifi", "gld_model_2_dataset_replay_wifi", "gld_model_3_dataset_replay_wifi",
-    "gld_model_1_dataset_workflow_wifi", "gld_model_2_dataset_workflow_wifi", "gld_model_3_dataset_workflow_wifi"].includes(option.environment);
-        const disabled = item?.available !== true || (initialFirmware && hotspot);
-        return `<option value="${option.value}"${disabled ? " disabled" : ""}>${option.label} — ${detail}${initialFirmware && hotspot ? " / memerlukan profil nulling tersimpan" : ""}</option>`;
+    "gld_model_1_dataset_workflow_wifi", "gld_model_2_dataset_workflow_wifi", "gld_model_3_dataset_workflow_wifi",
+    "gld_atex_model_1_dataset_workflow_wifi", "gld_atex_model_2_dataset_workflow_wifi", "gld_atex_model_3_dataset_workflow_wifi"].includes(option.environment);
+        const workflowMatch = /^(gld|gld_atex)_model_([123])_dataset_workflow_wifi$/.exec(option.environment);
+        const disabled = item?.available !== true || (initialFirmware && hotspot && !workflowMatch);
+        const label = workflowMatch ? `${workflowMatch[1] === "gld_atex" ? "GLD ATEX " : ""}Model ${workflowMatch[2]} - Board ${workflowMatch[2]}` : option.label;
+        return `<option value="${option.value}"${disabled ? " disabled" : ""}>${label} — ${detail}${initialFirmware && hotspot && !workflowMatch ? " / memerlukan profil nulling tersimpan" : ""}</option>`;
       }).join("")}<option disabled>Model 4 - artefak belum tersedia</option></select>
       <small>Pilih package sesuai board yang akan di-flash.</small>
     </label>` : "";
@@ -383,7 +387,9 @@ function requestFirmwareUploadOptions({ device, port, initialFirmware = false })
       }
       if (["gld_model_1_dataset_wifi", "gld_model_2_dataset_wifi", "gld_model_3_dataset_wifi",
         "gld_model_1_dataset_replay_wifi", "gld_model_2_dataset_replay_wifi", "gld_model_3_dataset_replay_wifi",
-    "gld_model_1_dataset_workflow_wifi", "gld_model_2_dataset_workflow_wifi", "gld_model_3_dataset_workflow_wifi"].includes(selectedEnvironment) && (initialFirmware || reset.checked)) {
+    "gld_model_1_dataset_workflow_wifi", "gld_model_2_dataset_workflow_wifi", "gld_model_3_dataset_workflow_wifi",
+    "gld_atex_model_1_dataset_workflow_wifi", "gld_atex_model_2_dataset_workflow_wifi", "gld_atex_model_3_dataset_workflow_wifi"].includes(selectedEnvironment) && (initialFirmware || reset.checked) &&
+        !(initialFirmware && /^(?:gld|gld_atex)_model_[123]_dataset_workflow_wifi$/.test(selectedEnvironment))) {
         error.textContent = "Hotspot Dataset memerlukan GLD dengan profil nulling tersimpan valid. Gunakan upload biasa dengan Reset NVS OFF; setup/nulling melalui firmware normal terlebih dahulu.";
         error.hidden = false;
         reset.focus();
@@ -499,12 +505,16 @@ function validGldAlarmControl(info) {
     alarm.externalDevicePattern === "self_pulsed_1s_on_1s_off";
   const gld1SingleTrigger = alarm.outputDrive === "active_high_gpio41_steady" &&
     alarm.externalDevicePattern === "steady_high_while_alarm" && alarm.singleTrigger === true;
+  const gld1Gpio48 = alarm.outputDrive === "active_high_gpio48_steady" &&
+    alarm.externalDevicePattern === "steady_high_while_alarm" && alarm.singleTrigger === true &&
+    alarm.requiresExternalPullup === false && alarm.outputPin === 48 &&
+    alarm.gpio48CommandLevel === (alarm.physicalCommanded ? "HIGH" : "LOW");
   const gld1Pullup = alarm.outputDrive === "active_low_gpio41_uln2003_pullup" &&
     alarm.externalDevicePattern === "steady_high_while_alarm" && alarm.singleTrigger === true &&
     alarm.requiresExternalPullup === true &&
     alarm.gpio41CommandLevel === (alarm.physicalCommanded ? "LOW" : "HIGH") &&
     alarm.j2LampExpectedLevel === (alarm.physicalCommanded ? "HIGH" : "LOW");
-  if (!steady24v && !gld1SingleTrigger && !gld1Pullup) return null;
+  if (!steady24v && !gld1SingleTrigger && !gld1Gpio48 && !gld1Pullup) return null;
   return alarm;
 }
 
@@ -546,8 +556,10 @@ function renderAlarmControls(info) {
   badge.textContent = alarm.mode === "manual" ? "MANUAL • sesi ini" : "AUTO • default boot";
   badge.dataset.mode = alarm.mode;
   const gld1SingleTrigger = alarm.outputDrive === "active_high_gpio41_steady";
+  const gld1Gpio48 = alarm.outputDrive === "active_high_gpio48_steady";
   const gld1Pullup = alarm.outputDrive === "active_low_gpio41_uln2003_pullup";
-  const outputOnText = gld1SingleTrigger
+  const outputOnText = gld1Gpio48 ? "ON — GPIO48 HIGH diperintahkan"
+    : gld1SingleTrigger
     ? "ON — GPIO41 HIGH selama alarm"
     : "ON — steady 24 V diperintahkan";
   output.textContent = gld1Pullup
@@ -556,7 +568,9 @@ function renderAlarmControls(info) {
   output.classList.toggle("commanded", alarm.physicalCommanded);
   help.textContent = alarm.mode === "manual"
     ? "MANUAL aktif untuk pengujian. ON/OFF bersifat volatile; telemetri dan radio tetap memakai hasil alarm inferensi sebenarnya."
-    : gld1SingleTrigger
+    : gld1Gpio48
+      ? "AUTO adalah default produk: hasil alarm inferensi valid memerintahkan GPIO48 HIGH selama alarm aktif; bukan pengukuran tegangan."
+      : gld1SingleTrigger
       ? "AUTO adalah default produk: hasil alarm inferensi valid membuat GPIO41 HIGH selama alarm aktif."
       : "AUTO adalah default produk: hasil alarm inferensi valid mengendalikan output fisik. Perangkat eksternal membentuk pola 1 detik ON / 1 detik OFF secara internal.";
   if (gld1Pullup) {

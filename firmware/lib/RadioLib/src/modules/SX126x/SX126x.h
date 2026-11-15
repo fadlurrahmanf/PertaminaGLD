@@ -1015,6 +1015,12 @@ class SX126x: public PhysicalLayer {
     */
     size_t getPacketLength(bool update, uint8_t* offset);
 
+#if defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX && defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+    // ATEX workflow: report SPI failure separately; outputs remain untouched
+    // on failure. Callers must test the returned RadioLib status first.
+    int16_t getPacketLengthChecked(size_t& length, uint8_t* offset = nullptr);
+#endif
+
     /*!
       \brief Set modem in fixed packet length mode. Available in FSK mode only.
       \param len Packet length.
@@ -1048,6 +1054,10 @@ class SX126x: public PhysicalLayer {
       \returns IRQ flags.
     */
     uint32_t getIrqFlags() override;
+
+#if defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX && defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+    int16_t getIrqFlagsChecked(uint32_t& irq);
+#endif
 
     /*!
       \brief Set interrupt on DIO1 to be sent on a specific IRQ bit (e.g. RxTimeout, CadDone).

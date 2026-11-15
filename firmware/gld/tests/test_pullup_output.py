@@ -24,10 +24,13 @@ STUBS = r'''
 #include "BoardPins.h"
 #include "GldAlarmControl.h"
 namespace board = pgl::gld::board;
+namespace pgl { namespace protocol { constexpr uint8_t GLD_GAS_CLEAR = 0; } }
+using pgl::protocol::GLD_GAS_CLEAR;
 constexpr uint8_t LOW = 0, HIGH = 1, OUTPUT = 3;
 constexpr uint8_t ACTIVE_LOW_OUTPUT_ON = LOW, ACTIVE_LOW_OUTPUT_OFF = HIGH;
 bool FIELDTEST_MODEL_UNVERIFIED = false;
 bool lastAlarm = false, physicalAlarmCommanded = false, manualAlarmCommanded = false;
+uint32_t gld1TxStatusLedFlashUntilMs = 0;
 auto alarmControlMode = pgl::gld::GldAlarmControlMode::Auto;
 struct Event { char type; int pin; int value; };
 std::vector<Event> events;
@@ -55,6 +58,25 @@ void logPrintf(const char* format, ...) {
 
 SCENARIOS = r'''
 int main() {
+    // Classification requests and frame flag thresholds are distinct contracts.
+    assert(!classifierForTest(false, 2));
+    assert(!classifierForTest(true, 0));
+    assert(classifierForTest(true, 2));
+    assert(!isGldAlarm(0, 100, 1));
+    assert(!isGldAlarm(2, 0, 1));
+    assert(isGldAlarm(2, 1, 1));
+    assert(isGldAlarm(2, 29, 1));
+    assert(isGldAlarm(2, 0, 0));
+    assert(!isGldAlarm(0, 100, 0));
+#if PGL_GLD_DATASET_WORKFLOW && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    assert(activeThreshold() == 0);
+    assert(isGldAlarm(2, 0, activeThreshold()));
+#else
+    assert(activeThreshold() == 1);
+    assert(!isGldAlarm(2, 0, activeThreshold()));
+#endif
+    assert(!isGldAlarm(0, 100, activeThreshold()));
+    assert(isGldAlarm(2, 1, activeThreshold()));
     beginGld1AlarmOutput();
 #if PGL_GLD_BOARD_PROFILE_GLD2
     assert(board::PIN_TPL5110_DONE == 17 && board::PIN_ALARM_LAMP == 40);
@@ -83,6 +105,9 @@ int main() {
     assert(events[0].type == 'w' && events[0].pin == 48 && events[0].value == LOW);
     assert(events[1].type == 'm' && events[1].pin == 48 && events[1].value == OUTPUT);
     assert(events[2].type == 'w' && events[2].pin == 48 && events[2].value == LOW);
+    gld1TxStatusLedFlashUntilMs = 123;
+    drivePhysicalAlarmOutputs(true);
+    assert(gld1TxStatusLedFlashUntilMs == 0);
     for (int repeat = 0; repeat < 20; ++repeat) {
         setGld1AlarmOutput(true);
         assert(gpio[48] == HIGH);
@@ -123,7 +148,7 @@ int main() {
             }
         }
     }
-    puts(PGL_GLD_BOARD_PROFILE_GLD2 ? "GLD2 alarm output: PASS (unchanged sequence)" :
+    puts(PGL_GLD_BOARD_PROFILE_GLD2 ? (PGL_GLD_BOARD_PROFILE_GLD_ATEX ? "ATEX alarm output: PASS" : "GLD2 alarm output: PASS (unchanged sequence)") :
          "GLD1 GPIO48 output: PASS (startup, AUTO, MANUAL, invalid, commanded logs)");
 }
 '''
@@ -135,12 +160,23 @@ def main():
     assert setup.index("beginGld1AlarmOutput();") < setup.index("Serial.begin(115200);")
     functions = ("setGld1AlarmOutput", "beginGld1AlarmOutput", "drivePhysicalAlarmOutputs",
                  "driveAlarmOutputs", "updateAlarmOutputs")
-    program = STUBS + "\n".join(definition(source, name) for name in functions) + SCENARIOS
+    classifier = re.search(r"const bool classifierAlarm = (.*?);", source, re.DOTALL)
+    assert classifier, "production classifier alarm expression missing"
+    classifier_fn = ("bool classifierForTest(bool lastInferenceValid, uint8_t gasClass) { "
+                     "struct { uint8_t gasClass; } lastResult{gasClass}; return " + classifier[1] + "; }\n")
+    payload = (ROOT / "firmware/shared/src/GldPayload.cpp").read_text(encoding="utf-8")
+    frame_fn = definition(payload, "isGldAlarm")
+    config_start = source.index("pgl::gld::GldFrameBuilderConfig config{")
+    guard_start = source.index("#if", config_start)
+    guard_end = source.index("#endif", guard_start) + len("#endif")
+    guard = source[guard_start:guard_end]
+    threshold_fn = "int activeThreshold() { constexpr int values[] = {\n" + guard + "\n}; return values[0]; }\n"
+    program = STUBS + classifier_fn + frame_fn + threshold_fn + "\n".join(definition(source, name) for name in functions) + SCENARIOS
     compiler = compiler_path()
     run_env = dict(os.environ)
     run_env["PATH"] = str(Path(compiler).parent) + os.pathsep + run_env.get("PATH", "")
     with tempfile.TemporaryDirectory(prefix="gld-pullup-") as directory:
-        for header in ("BoardPins.h", "BoardPinsGLD2.h", "GldAlarmControl.h"):
+        for header in ("BoardPins.h", "BoardPinsGLD2.h", "BoardPinsGLD3.h", "BoardPinsGLDATEX.h", "GldAlarmControl.h"):
             original = (ROOT / "firmware/gld/include" / header).read_text(encoding="utf-8")
             # Older MinGW needs the one-line nested namespace alias expanded
             # too; this transforms the host fixture only, never board headers.
@@ -152,10 +188,12 @@ def main():
             (Path(directory) / header).write_text(compatible_header(original), encoding="utf-8")
         fixture = Path(directory) / "alarm.cpp"
         fixture.write_text(program, encoding="utf-8")
-        for gld2 in (0, 1):
-            binary = Path(directory) / f"alarm-{gld2}.exe"
+        for gld2, atex in ((0, 0), (1, 0), (1, 1)):
+            binary = Path(directory) / f"alarm-{gld2}-{atex}.exe"
             subprocess.run([compiler, "-std=c++17", "-O0", "-Wall", "-Wextra", "-Werror",
+                            "-DPGL_GLD_DATASET_WORKFLOW=1",
                             f"-DPGL_GLD_BOARD_PROFILE_GLD2={gld2}",
+                            f"-DPGL_GLD_BOARD_PROFILE_GLD_ATEX={atex}",
                             f"-DPGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8={1 - gld2}",
                             str(fixture), "-o", str(binary)],
                            check=True, env=run_env, timeout=60)

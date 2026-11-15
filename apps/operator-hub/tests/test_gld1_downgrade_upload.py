@@ -45,6 +45,9 @@ def payload_for(env="gld"):
 
 class DowngradeUploadTests(unittest.TestCase):
     def setUp(self):
+        self.reservation = child.reserve_flash_port("COM999")
+        self.assertIsNotNone(self.reservation)
+        self.addCleanup(child.release_flash_port, "COM999", self.reservation)
         self.history = []
         self.write_exit = 0
         self.erase_exit = 0
@@ -84,7 +87,7 @@ class DowngradeUploadTests(unittest.TestCase):
     def test_reset_nvs_without_local_aes_is_rejected_before_hardware(self):
         with mock.patch.object(child, "load_canonical_gld_aes_key", return_value=None):
             with self.assertRaisesRegex(RuntimeError, "provisioning AES lokal"):
-                child._firmware_upload_reserved(payload_for("gld_v2"))
+                child._firmware_upload_reserved(payload_for("gld_v2"), _reservation=self.reservation)
         self.serial.disconnect.assert_not_called()
         self.assertEqual(self.history, [])
         self.assertEqual(self.events, [])
@@ -93,7 +96,7 @@ class DowngradeUploadTests(unittest.TestCase):
         request = payload_for("gld_v2")
         request.update(resetNvs=False, resetNvsConfirmation="")
         with mock.patch.object(child, "load_canonical_gld_aes_key", return_value=None):
-            result = child._firmware_upload_reserved(request)
+            result = child._firmware_upload_reserved(request, _reservation=self.reservation)
         self.assertFalse(result["nvsReset"])
         self.assertEqual(len(self.history), 1)
         self.assertIn("write_flash", self.history[0][1])
@@ -115,7 +118,7 @@ class DowngradeUploadTests(unittest.TestCase):
                 request = payload_for(env)
                 request.update(resetNvs=reset, resetNvsConfirmation=confirmation)
                 with self.assertRaisesRegex(RuntimeError, "explicit Reset NVS"):
-                    child._firmware_upload_reserved(request)
+                    child._firmware_upload_reserved(request, _reservation=self.reservation)
         self.serial.disconnect.assert_not_called()
         self.assertEqual(self.history, [])
 
@@ -123,7 +126,7 @@ class DowngradeUploadTests(unittest.TestCase):
         for env in ("gld", "gld_model_1", "gld_model_2", "gld_model_3"):
             self.history.clear()
             self.events.clear()
-            result = child._firmware_upload_reserved(payload_for(env))
+            result = child._firmware_upload_reserved(payload_for(env), _reservation=self.reservation)
             self.assertTrue(result["nvsReset"])
             self.assertEqual(len(self.history), 2)
             erase, write = self.history[0][1], self.history[1][1]
@@ -139,7 +142,7 @@ class DowngradeUploadTests(unittest.TestCase):
     def test_failed_preerase_does_not_flash_or_report_success(self):
         self.erase_exit = 2
         with self.assertRaisesRegex(RuntimeError, "rollback was not flashed"):
-            child._firmware_upload_reserved(payload_for())
+            child._firmware_upload_reserved(payload_for(), _reservation=self.reservation)
         self.assertEqual(len(self.history), 1)
         self.assertIn("erase_region", self.history[0][1])
         self.assertNotIn("upload_done", [name for name, _ in self.events])
@@ -147,14 +150,14 @@ class DowngradeUploadTests(unittest.TestCase):
     def test_preerase_timeout_does_not_flash(self):
         self.erase_timeout = True
         with self.assertRaisesRegex(RuntimeError, "timed out"):
-            child._firmware_upload_reserved(payload_for())
+            child._firmware_upload_reserved(payload_for(), _reservation=self.reservation)
         self.assertEqual(len(self.history), 1)
         self.assertNotIn("upload_done", [name for name, _ in self.events])
 
     def test_flash_failure_after_erase_does_not_report_success(self):
         self.write_exit = 2
         with self.assertRaisesRegex(RuntimeError, "flash failed"):
-            child._firmware_upload_reserved(payload_for())
+            child._firmware_upload_reserved(payload_for(), _reservation=self.reservation)
         self.assertEqual(len(self.history), 2)
         self.assertNotIn("upload_done", [name for name, _ in self.events])
 
@@ -164,7 +167,7 @@ class DowngradeUploadTests(unittest.TestCase):
         request["manifest"]["firmwareVersion"] = "0.8.38"
         request["manifest"]["source"]["gitCommit"] = BASE
         with self.assertRaisesRegex(RuntimeError, "NVS partition"):
-            child._firmware_upload_reserved(request)
+            child._firmware_upload_reserved(request, _reservation=self.reservation)
         self.serial.disconnect.assert_not_called()
         self.assertEqual(self.history, [])
 
@@ -179,7 +182,7 @@ class DowngradeUploadTests(unittest.TestCase):
                     # Historical Model 2/3 packages are not this approved rollback.
                     request["manifest"]["firmwareVersion"] = "0.8.34"
                 request.update(resetNvs=reset, resetNvsConfirmation="")
-                child._firmware_upload_reserved(request)
+                child._firmware_upload_reserved(request, _reservation=self.reservation)
                 self.assertIn("write_flash", self.history[0][1])
                 self.assertNotIn("--before", self.history[0][1])
                 self.assertNotIn("--after", self.history[0][1])

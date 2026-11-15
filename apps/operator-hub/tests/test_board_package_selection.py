@@ -104,7 +104,10 @@ class FirmwareEnvironmentSelectionTests(unittest.TestCase):
         }
         for device, environments in expected.items():
             with self.subTest(device=device):
-                self.assertEqual(set(catalog[device]["packages"]), environments)
+                pending_atex = {f"gld_atex_model_{model}_dataset_workflow_wifi" for model in (1, 2, 3)} if device == "gld" else set()
+                self.assertEqual(set(catalog[device]["packages"]), environments | pending_atex)
+                for environment in pending_atex:
+                    self.assertFalse(catalog[device]["packages"][environment]["available"])
                 # GLD1's canonical production environment is intentionally
                 # named `gld`; CH/Gateway must never use their generic device
                 # names as selectable package environments.
@@ -112,6 +115,9 @@ class FirmwareEnvironmentSelectionTests(unittest.TestCase):
                     self.assertNotIn(device, catalog[device]["packages"])
                 for environment in environments:
                     package = catalog[device]["packages"][environment]
+                    if environment == "gld_atex":
+                        self.assertFalse(package["available"])
+                        continue
                     manifest_path = HUB_DIR / "firmware-packages" / environment / "latest" / "manifest.json"
                     manifest = __import__("json").loads(manifest_path.read_text(encoding="utf-8"))
                     self.assertEqual(package["firmwareVersion"], manifest["firmwareVersion"])

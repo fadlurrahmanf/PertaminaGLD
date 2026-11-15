@@ -14,11 +14,55 @@ BUFFER = ROOT / 'firmware/gld/include/GldDatasetWorkflowBuffer.h'
 BASELINE = ROOT / 'firmware/tests/fixtures/workflow-baseline.json'
 # Verified pre-workflow HEAD, decoded explicitly UTF-8. Windows' default
 # cp1252 decoding produces another digest of identical comment bytes.
-OLD_UNIFIED = '9ca66d309fe90e327458ac377a8ca8d9b81d5e3cee7600b0a957228cc931dbbe'
+# Non-workflow source also includes the GLD1 LoRa RX scan update. Freeze that
+# current baseline so this gate still detects unintended workflow spillover.
+OLD_UNIFIED = '427b579913e6f8209b501969b18520a5e86a46b8574778ac235dc397069302f8'
 OLD_ENVIRONMENTS = 'fe1c34e2087a57c7b654d0ab484387bee5fee50d3a73ff2fea1a2a8e0ee3f8ed'
 spec = importlib.util.spec_from_file_location('workflow_old_isolation', Path(__file__).with_name('test_dataset_replay_source.py'))
 old = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(old)
+
+
+def select_atex_off_single_nulling(source: str) -> str:
+    """Keep the ATEX-off branch of this one guarded handler, verbatim.
+
+    All other preprocessor conditions remain unevaluated. Refuse to proceed
+    if the expected guard/else structure changes instead of masking changes.
+    This textual check complements native tests; it is not a C++ compiler.
+    """
+    signature = 'void onRunNullingSingleJson(const char* payload) {'
+    lines = source.splitlines(keepends=True)
+    matches = [i for i, line in enumerate(lines) if line.strip() == signature]
+    if len(matches) != 1:
+        raise AssertionError('Expected exactly one single-nulling handler')
+    guard = matches[0] + 1
+    if guard >= len(lines) or lines[guard].strip() != '#if PGL_GLD_BOARD_PROFILE_GLD_ATEX':
+        raise AssertionError('Expected ATEX-only handler guard immediately after signature')
+    depth, outer_else, end = 1, None, None
+    for i in range(guard + 1, len(lines)):
+        directive = lines[i].strip()
+        if re.match(r'#\s*(if|ifdef|ifndef)\b', directive):
+            depth += 1
+        elif re.match(r'#\s*endif\b', directive):
+            depth -= 1
+            if depth == 0:
+                end = i
+                break
+        elif depth == 1 and re.match(r'#\s*else\b', directive):
+            if outer_else is not None:
+                raise AssertionError('Multiple outer ATEX else branches')
+            outer_else = i
+        elif depth == 1 and re.match(r'#\s*elif\b', directive):
+            raise AssertionError('Unexpected outer ATEX elif')
+    if outer_else is None or end is None or lines[end + 1].strip() != '}':
+        raise AssertionError('ATEX handler guard must wrap both complete branches')
+    return ''.join(lines[:guard] + lines[outer_else + 1:end] + lines[end + 1:])
+
+
+def legacy_workflow_source_digest(source: str) -> str:
+    selected = old.absent_workflow(select_atex_off_single_nulling(source))
+    meaningful = '\n'.join(line for line in selected.splitlines() if line.strip())
+    return hashlib.sha256(meaningful.encode()).hexdigest()
 
 
 class WorkflowIsolation(unittest.TestCase):
@@ -42,10 +86,29 @@ class WorkflowIsolation(unittest.TestCase):
 
     def test_workflow_disabled_preserves_all_old_unified_source(self):
         source = (ROOT / 'firmware/gld/src/GldUnifiedMain.cpp').read_text(encoding='utf-8')
-        selected = old.absent_workflow(source)
-        meaningful = '\n'.join(line for line in selected.splitlines() if line.strip())
-        self.assertEqual(hashlib.sha256(meaningful.encode()).hexdigest(), OLD_UNIFIED)
+        selected = old.absent_workflow(select_atex_off_single_nulling(source))
+        self.assertEqual(legacy_workflow_source_digest(source), OLD_UNIFIED)
         self.assertNotIn('datasetworkflowwifi', selected)
+
+    def test_legacy_handler_change_is_detected(self):
+        source = (ROOT / 'firmware/gld/src/GldUnifiedMain.cpp').read_text(encoding='utf-8')
+        # Invert the result gate in the shared legacy handler: both GLD1 and
+        # GLD2 would change behavior even though ATEX is selected separately.
+        marker = '    if (!result.success) {\n#if defined(PGL_GLD1_FAST_NULLING)'
+        self.assertEqual(source.count(marker), 1)
+        self.assertEqual(legacy_workflow_source_digest(source), OLD_UNIFIED)
+        altered = source.replace(marker, marker.replace('!result.success', 'result.success'), 1)
+        self.assertNotEqual(legacy_workflow_source_digest(altered), OLD_UNIFIED)
+        # Also alter the old GLD1-only rollback target without touching ATEX.
+        old_restore = 'const bool restored = dac.writeDac(static_cast<uint8_t>(channel), existing.dacCode[channel])'
+        self.assertEqual(source.count(old_restore), 2)
+        position = source.rfind(old_restore)
+        changed_restore = source[:position] + old_restore.replace('existing.dacCode[channel]', '0') + source[position + len(old_restore):]
+        self.assertNotEqual(legacy_workflow_source_digest(changed_restore), OLD_UNIFIED)
+        atex_marker = 'GLD_ATEX_NULLING_SINGLE_RESTORE channel=%d writeOk=%u runtimeInvalidated=1'
+        self.assertEqual(source.count(atex_marker), 1)
+        atex_only = source.replace(atex_marker, 'GLD_ATEX_NULLING_SINGLE_RESTORE_MUTATED', 1)
+        self.assertEqual(legacy_workflow_source_digest(atex_only), OLD_UNIFIED)
 
     def test_isolation_selector_keeps_old_replay_and_plain_branches(self):
         source = '#if PGL_GLD_DATASET_WORKFLOW\nnew\n#elif PGL_GLD_DATASET_REPLAY\noldreplay\n#else\noldplain\n#endif\n'
@@ -57,9 +120,13 @@ class WorkflowIsolation(unittest.TestCase):
         config = configparser.ConfigParser(interpolation=None, strict=False)
         config.read(ROOT / 'firmware/platformio.ini', encoding='utf-8')
         new = {f'env:gld_model_{model}_dataset_workflow_wifi' for model in (1, 2, 3)}
+        atex_candidates = {f'env:gld_atex_model_{model}_{kind}_candidate'
+                           for model in (1, 2, 3) for kind in ('', 'workflow')}
+        # Base candidate names do not contain a doubled separator.
+        atex_candidates = {name.replace('__candidate', '_candidate') for name in atex_candidates}
         selected = {name for name in config.sections() if '-DPGL_GLD_DATASET_WORKFLOW=1' in config[name].get('build_flags', '')}
-        self.assertEqual(selected, new)
-        previous = {name: dict(config[name]) for name in config.sections() if name not in new}
+        self.assertEqual(selected, new | {'env:gld_atex_model_1_workflow_candidate'})
+        previous = {name: dict(config[name]) for name in config.sections() if name not in new | atex_candidates}
         self.assertEqual(hashlib.sha256(json.dumps(previous, sort_keys=True, separators=(',', ':')).encode()).hexdigest(), OLD_ENVIRONMENTS)
         for model in (1, 2, 3):
             env = config[f'env:gld_model_{model}_dataset_workflow_wifi']
@@ -273,6 +340,10 @@ class WorkflowSourceShape(unittest.TestCase):
         self.assertIn('"busy"', reject)
         dispatch = old.body(self.unified, 'void handleSerialCommand(')
         self.assertLess(dispatch.index('rejectWorkflowMutation(command)'), dispatch.index('switch (command.type)'))
+        self.assertIn('WorkflowNativeOperation nativeOperation(!workflowReadOnlyCommand(command.type))', dispatch)
+        busy = old.body(self.unified, 'struct WorkflowNativeOperation {')
+        self.assertIn('if (marksBusy) previous =', busy)
+        self.assertIn('if (marksBusy) pgl::gld::datasetworkflowwifi::exchangeNativeBusy(previous)', busy)
         parser = old.body(self.unified, 'void checkSerial() {')
         self.assertLess(parser.index('rejectWorkflowMutation(parsed)'), parser.index('restartFromSerialCommand()'))
         self.assertLess(parser.index('rejectWorkflowMutation(parsed)'), parser.index('onCancelFullScaleSweep()'))
@@ -293,7 +364,7 @@ class WorkflowSourceShape(unittest.TestCase):
         self.assertLess(loop.index('refreshRuntime(nullingProfileId)'), loop.index('reconcileRuntimePowerMode()'))
         self.assertLess(loop.index('if (workflowLease &&'), loop.index('maintainBootReportRecovery()'))
         self.assertLess(loop.index('if (workflowLease &&'), loop.index('runScan()'))
-        self.assertLess(loop.index('if (workflowLease &&'), loop.index('runGld1LoraTxAttempt()'))
+        self.assertLess(loop.index('if (workflowLease &&'), loop.index('runGld1LoraTxAttempt(true)'))
         self.assertIn('!batteryPowerMode && pgl::gld::readGldExternalPower()', loop)
 
     def test_transport_ownership_does_not_clear_a_valid_native_alarm_or_mav(self):

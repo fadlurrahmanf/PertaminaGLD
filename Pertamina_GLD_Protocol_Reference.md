@@ -33,14 +33,23 @@ GLD (Gas Leak Detector) adalah node sensor ujung yang melakukan pembacaan gas, i
 - Membuka **RX window 2.000 ms** setelah setiap TX: menerima perintah mode dari CH
 - Mendeteksi sumber daya: GPIO45 HIGH → 24v; GPIO45 LOW + GPIO4 ADC valid → battery; selain itu → 5v
 
-**Kondisi alarm:** `gasClass ≠ 0 && confidence ≥ 30%`
+**Alarm AUTO:** inferensi valid dengan kelas non-clear meminta output alarm;
+confidence klasifikasi tidak dibandingkan dengan threshold. Mode MANUAL
+mengikuti perintah manual, sedangkan inferensi tidak valid tidak meminta alarm
+AUTO. **Flag frame:** builder unified GLD1 dan GLD2 memakai threshold 1; build GLD
+ATEX Dataset Workflow memakai threshold 0, sehingga kelas non-clear dengan
+confidence 0 pun menghasilkan flag alarm. Helper protokol memiliki default 30
+yang berbeda. Ini kontrak source, bukan pengukuran output atau frame RF.
 
-Saat alarm aktif, GLD menyalakan output fisik via ULN2003G (active low):
-- **Alarm Lamp** — GPIO1 LOW
-- **Buzzer** — GPIO2 LOW
-- **Status LED** — GPIO41 LOW
+Perilaku output alarm bergantung profil board. Pada GLD1 WROOM, firmware
+memerintah GPIO48 HIGH selama alarm dan LOW saat normal; lampu dan buzzer
+menggunakan satu trigger eksternal. Pada GLD2 dan GLD ATEX, firmware
+mengaktifkan boost sebelum alarm dan mematikan alarm sebelum boost. Deskripsi
+GPIO1/GPIO2 active-low adalah profil fallback lama, bukan GLD1 atau ATEX.
+Ini kontrak software; wiring, sinyal, dan perangkat alarm fisik belum diverifikasi
+dengan pengujian hardware untuk perubahan ini.
 
-Sekaligus, bit FLAG_ALARM_ACK (`0x40`) di-set pada typeFlags frame yang dikirim — CH langsung meneruskan ke GW tanpa menunggu pull request.
+Jika kondisi flag frame terpenuhi, builder mengatur FLAG_ALARM_ACK (`0x40`) pada typeFlags. Kondisi ini terpisah dari perintah output fisik.
 
 ---
 

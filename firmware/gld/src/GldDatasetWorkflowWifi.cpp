@@ -79,6 +79,9 @@ struct State {
     bool sessionLease = false;
     bool ready = false;
     bool predictionReady = false;
+#if defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    bool radioAutoTx = false;
+#endif
 };
 
 // WebSocketsServer.begin() is void. Inspect the framework listener instead of
@@ -118,6 +121,7 @@ ReplayBuffer retained;
 AckProgressClock ackClock;
 Ready isReady = nullptr;
 Capture captureSample = nullptr;
+Ready retryInterruptedCapture = nullptr;
 Ready predictionIsReady = nullptr;
 Predict predictSample = nullptr;
 ResetPrediction resetPrediction = nullptr;
@@ -129,6 +133,7 @@ TaskHandle_t transportHandle = nullptr;
 CheckedServer socket;
 std::atomic<bool> initialized{false};
 std::atomic<bool> nativeBusy{false};
+std::atomic<bool> radioDrainBlocksStart{false};
 
 struct Lock {
     Lock() { xSemaphoreTake(guard, portMAX_DELAY); }
@@ -155,6 +160,10 @@ void sessionFields(JsonDocument& doc) {
     doc["nulling_profile_id"] = state.profile;
     doc["sampling"] = state.sampling;
     doc["paused"] = state.paused;
+#if defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    // Last main-thread radio setting, not a measurement of RF reception.
+    doc["radio_auto_tx"] = state.radioAutoTx;
+#endif
     doc["transition_seq"] = state.transitionSequence;
     doc["prediction_enabled"] = state.predictionEnabled;
     doc["incomplete"] = state.incomplete;
@@ -381,6 +390,8 @@ void process(const Command& command) {
             ackLocked(command, false, "session_id_reused");
         } else if (command.nativeBusy || nativeBusy.load()) {
             ackLocked(command, false, "native_operation_busy");
+        } else if (radioDrainBlocksStart.load()) {
+            ackLocked(command, false, "radio_transaction_draining");
         } else if (command.intervalMs != INTERVAL_MS || isReady == nullptr || !isReady()) {
             ackLocked(command, false, "requires_500ms_24v_and_saved_valid_profile");
         } else if (command.predictionEnabled && (predictSample == nullptr || predictionIsReady == nullptr || !predictionIsReady())) {
@@ -504,6 +515,15 @@ void acquireDueSample() {
         const bool valid = isReady != nullptr && isReady() && captureSample(sample.raw);
         sample.raw.scanEndMs = millis();
         sample.predictionEnabled = predictionEnabled;
+        // An ATEX radio IRQ can interrupt an uncommitted scan. Preserve the
+        // original deadline and retry only after the radio IRQ is consumed;
+        // invalid power or actual sensor failure retains the original stop path.
+        if (!valid && retryInterruptedCapture != nullptr && retryInterruptedCapture() &&
+            isReady != nullptr && isReady()) {
+            Lock lock;
+            if (state.sampling && acquisitionEpoch == state.acquisitionEpoch) state.nextDue -= INTERVAL_MS;
+            return;
+        }
         // A transport/session transition does not invalidate the native MAV
         // or a valid steady alarm. Main-thread ownership permits continuity.
         if (valid) {
@@ -695,16 +715,20 @@ void failStartup() {
 
 bool begin(const char* deviceId, uint8_t nullingProfileId, Ready ready, Capture capture,
            Ready predictionReady, Predict predict, ResetPrediction reset,
-           const ModelInfo& model) {
+           const ModelInfo& model, Ready retryInterrupted) {
     if (initialized || ready == nullptr || capture == nullptr) return false;
     copy(state.device, deviceId);
     state.profile = nullingProfileId;
     isReady = ready;
     captureSample = capture;
+    retryInterruptedCapture = retryInterrupted;
     predictionIsReady = predictionReady;
     predictSample = predict;
     resetPrediction = reset;
     modelInfo = model;
+#if defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+    state.radioAutoTx = model.radioAutoTx;
+#endif
     if (!state.boot[0]) {
         uint8_t random[16];
         esp_fill_random(random, sizeof(random));
@@ -739,6 +763,34 @@ bool begin(const char* deviceId, uint8_t nullingProfileId, Ready ready, Capture 
 
 bool available() { return initialized.load(); }
 
+#if defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX
+void updateAtexRadioAutoTx(bool enabled) {
+    if (!initialized || !guard) return;
+    Lock lock;
+    state.radioAutoTx = enabled;
+}
+#endif
+
+bool sampleDue() {
+    if (!initialized || !guard) return false;
+    Lock lock;
+    return state.sampling && static_cast<int32_t>(millis() - state.nextDue) >= 0;
+}
+
+bool samplingActive() {
+    if (!initialized || !guard) return false;
+    Lock lock;
+    return state.sampling;
+}
+
+void failSession(const char* reason) {
+    if (!initialized || !guard || reason == nullptr || reason[0] == '\0') return;
+    Lock lock;
+    // A radio fault can arrive after operator Stop while the final TX/RX is
+    // draining. Keep its retained records and make the unsent summary honest.
+    if (state.sampling || state.paused || (state.sessionLease && !state.summarySent)) stopLocked(reason, true);
+}
+
 bool clientConnected() {
     if (!initialized || !guard) return false;
     Lock lock;
@@ -746,6 +798,8 @@ bool clientConnected() {
 }
 
 bool exchangeNativeBusy(bool busy) { return nativeBusy.exchange(busy); }
+
+void setRadioDrainBlocksStart(bool blocked) { radioDrainBlocksStart.store(blocked); }
 
 bool ownsSession() {
     if (!initialized || !guard) return false;
@@ -775,17 +829,22 @@ void refreshRuntime(uint8_t nullingProfileId) {
     if (invalidated && resetPrediction != nullptr) resetPrediction();
 }
 
-void poll() {
+void pollCommands() {
     if (!initialized || !guard) return;
     Command command;
     while (xQueueReceive(commands, &command, 0) == pdTRUE) process(command);
+}
+
+void poll() {
+    if (!initialized || !guard) return;
+    pollCommands();
     acquireDueSample();
     Lock lock;
     checkLimitLocked(millis());
     if (state.sessionLease && !state.sampling && !state.paused && retained.size() == 0 &&
         state.summarySent && state.client < 0) state.sessionLease = false;
     if (state.client < 0 || !state.streamEnabled) return;
-    if (!state.sampling && !state.paused && state.summaryPending && retained.size() == 0 &&
+    if (!state.sampling && !state.paused && state.summaryPending && retained.size() == 0 && !radioDrainBlocksStart.load() &&
         retained.acknowledgedNext() == retained.nextSequence() && uxQueueSpacesAvailable(controls) >= 2) {
         statusLocked();
         StaticJsonDocument<768> doc;

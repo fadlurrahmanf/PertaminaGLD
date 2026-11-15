@@ -1,7 +1,7 @@
 import { bridgeFetch } from './bridge-client.js';
 import { CHART_COLORS, state as legacyState } from './state.js';
 import { showAlert } from './ui.js';
-import { drawOneChart } from './chart.js';
+import { drawOneChart, runningDisplayHistory } from './chart.js';
 import { formatGas } from './serial-protocol.js';
 
 const $ = id => document.getElementById(id);
@@ -12,6 +12,17 @@ let snapshot = {state:'idle',devices:[],history:[],fields:{gain:false,status:fal
 let busy = false, initialized = false, revision = 0, syncing = false, error = '', syncError = '';
 let observedRevision = -1;
 let pendingStopNotice = false;
+// Chart-only history extends the server's one-hour UI snapshot while this page
+// stays open. CSV, ledger, latest readings and the ten-row table stay raw.
+// A 24-hour moving average needs one extra hour of raw history to draw the
+// earliest point in the chart's one-hour visible range at full window length.
+const VISUAL_HISTORY_LIMIT = 180001;
+let visualHistory = [], visualLedgerPath = '', visualHistoryVersion = 0, chartCache = null;
+const visualKeys = new Set();
+let averageEnabled = false;
+let visualBackfillPending = false, visualBackfillError = '';
+// Rendering-only animation clock; never changes workflow samples or state.
+let workflowFrameKey = "", workflowFrameStarted = 0;
 let formLoaded = false;
 const activeStates = new Set(['starting','recording','pausing','paused','resuming','continuing','recovering','replaying','stopping','stop_pending','cleanup_wait','cleanup_pending']);
 const titles = {idle:'Belum merekam',disconnected:'Belum terhubung',ready:'Menunggu Start',connecting:'Menghubungkan GLD…',starting:'Memulai rekaman…',
@@ -23,6 +34,47 @@ const settingIds=['wfScan','wfDevice','wfConnect','wfDisconnect','wfChooseFile',
 
 function selectedMode(){return $('wfModeReplay').checked?'replay':'direct';}
 function setMode(mode){$('wfModeDirect').checked=mode!=='replay';$('wfModeReplay').checked=mode==='replay';}
+function csvVerificationText(value) {
+  const check=value.verification||{};
+  const matched=Number.isInteger(check.matched_count)?check.matched_count:check.verified?check.count:null;
+  const stored=Number.isInteger(check.stored_count)?check.stored_count:check.verified?value.count:null;
+  if(check.verified&&Number.isInteger(matched)&&Number.isInteger(stored))
+    return `CSV: ${matched}/${stored} baris tersimpan terverifikasi terhadap ledger.`;
+  if(check.attempted===true&&Number.isInteger(matched)&&Number.isInteger(stored)&&['complete','incomplete','error'].includes(value.state))
+    return `CSV: ${matched}/${stored} baris tersimpan cocok dengan ledger; verifikasi keseluruhan gagal. ${check.message||''}`;
+  if(value.count&&['complete','incomplete','error'].includes(value.state))
+    return value.cleanup_pending?'CSV: verifikasi menunggu penutupan sesi perangkat.':`CSV: verifikasi belum berhasil. ${check.message||''}`;
+  return value.count?'CSV disimpan selama merekam; verifikasi dilakukan saat Stop.':'CSV belum direkam.';
+}
+function sessionEvidence(value) {
+  const cause=value.cause||{};
+  const closure=value.session_closure_status;
+  const session=value.start_rejected===true&&value.count===0
+    ?'Sesi: Mulai ditolak GLD sebelum rekaman; belum ada sampel atau sesi perangkat yang diterima.'
+    :value.state==='complete'&&value.complete===true
+    ?'Sesi: lengkap; penutupan normal terkonfirmasi.'
+    :value.state==='incomplete'
+      ?closure==='confirmed_normal'?'Sesi: penutupan normal terkonfirmasi, tetapi verifikasi file atau kelengkapan keseluruhan belum berhasil.'
+        :closure==='confirmed_incomplete'?'Sesi: perangkat melaporkan akhir sesi tidak lengkap.'
+          :closure==='cleanup_confirmed'?'Sesi: penutupan cleanup terkonfirmasi; rekaman publik tetap tidak lengkap.'
+            :value.cleanup_pending?'Sesi: tidak lengkap; penutupan perangkat belum terkonfirmasi.'
+              :'Sesi: tidak lengkap; penutupan normal belum terkonfirmasi.'
+      :['recording','paused','replaying','recovering','stopping','stop_pending'].includes(value.state)
+        ?'Sesi: masih berlangsung atau menunggu penutupan.':'Sesi: belum dimulai.';
+  const reason=!value.ledger_path&&!value.recent_diagnostic_path?'Penyebab: belum ada sesi.'
+    :cause.code&&cause.code!=='reason_unavailable'
+    ?`Penyebab tercatat: ${cause.code}${cause.description?` — ${cause.description}`:''}`
+    :'Penyebab: belum diketahui.';
+  const total=value.device_final_total;
+  const device=Number.isInteger(total?.count)&&total?.status!=='unknown'
+    ?`Total sampel dari perangkat: ${total.count} (${total.status==='reconciled'?'urutan sesi perangkat direkonsiliasi; cakupan CSV terpisah':'dilaporkan; rekonsiliasi belum terkonfirmasi'}).`
+    :'Total sampel sesi dari perangkat: belum diketahui.';
+  const reconcile={confirmed:'Rekonsiliasi: selesai dan terkonfirmasi.',cleanup_confirmed:'Rekonsiliasi: penutupan cleanup terkonfirmasi; sesi akuisisi tetap tidak lengkap.',pending:'Rekonsiliasi: masih menunggu konfirmasi perangkat.',unconfirmed:'Rekonsiliasi: penutupan normal belum terkonfirmasi.',not_started:'Rekonsiliasi: belum dimulai.'};
+  const path=value.diagnostic_path?`${value.diagnostic_error?'Lokasi catatan diagnostik yang dituju':'Catatan diagnostik'}: ${value.diagnostic_path}`
+    :value.recent_diagnostic_path?`Catatan sesi sebelumnya: ${value.recent_diagnostic_path}`
+      :value.ledger_path?'Catatan diagnostik historis tidak tersedia.':'Catatan diagnostik: belum ada sesi.';
+  return {session,reason,device,reconcile:reconcile[value.reconciliation_status]||'Rekonsiliasi: status belum diketahui.',path};
+}
 function readiness() {
   const source=snapshot.wizard_steps||{...snapshot.steps,connection:snapshot.steps?.scan&&snapshot.steps?.device&&snapshot.steps?.connection};
   const result={};let previous=true;
@@ -36,12 +88,14 @@ function apply(value) {
     if(value.revision < observedRevision) return;
     observedRevision=value.revision;
   }
-  let history=value.history||snapshot.history||[];
+  const resetHistory=value.ledger_path===''&&Boolean(snapshot.ledger_path);
+  let history=value.history||(resetHistory?[]:snapshot.history||[]);
   const row=value.sample;
   if(!value.history&&row&&Array.isArray(row.sensor_voltage)&&row.sensor_voltage.length===8&&row.sensor_voltage.every(Number.isFinite)) {
     history=[...history.filter(saved=>!(saved.session_id===row.session_id&&saved.seq===row.seq)),row].slice(-7200);
   }
   snapshot={...snapshot,...value,history};
+  mergeVisualHistory(value);
   if(!formLoaded) {
     $('wfLabel').value=snapshot.label||'clear_air_test';setMode(snapshot.mode||'direct');
     for(const [id,key] of [['wfPrediction','prediction'],['wfGain','gain'],['wfSensorStatus','status']])$(id).checked=Boolean(snapshot.fields?.[key]);
@@ -56,8 +110,77 @@ function apply(value) {
   render();
   if(pendingStopNotice&&snapshot.verification?.verified&&['stopped','complete','incomplete'].includes(snapshot.state)) {
     pendingStopNotice=false;
-    showAlert(`${snapshot.complete===false?'Sesi tidak lengkap. Data yang diterima sudah tersimpan.':'Rekaman selesai.'}\n${snapshot.verification.count??snapshot.count} baris telah diperiksa.\n${snapshot.csv_path}`,snapshot.complete===false?'warn':'ok','CSV terverifikasi');
+    const evidence=sessionEvidence(snapshot);
+    showAlert(`${csvVerificationText(snapshot)}\n${evidence.session}\n${evidence.reason}\n${evidence.device}\n${snapshot.csv_path}`,snapshot.complete===false?'warn':'ok','Hasil verifikasi CSV');
   }
+}
+
+function mergeVisualHistory(value) {
+  const ledger=snapshot.ledger_path||'';
+  if(ledger!==visualLedgerPath){
+    visualHistory=[];visualKeys.clear();visualLedgerPath=ledger;visualHistoryVersion++;
+    visualBackfillError='';
+  }
+  const incoming=Array.isArray(value.history)?value.history:value.sample?[value.sample]:[];
+  appendVisualRows(incoming);
+}
+
+function appendVisualRows(incoming) {
+  for(const row of incoming){
+    if(!row||!Number.isInteger(row.seq)||!Number.isFinite(row.timestamp_ms)||
+       !Array.isArray(row.sensor_voltage)||row.sensor_voltage.length!==8||
+       !row.sensor_voltage.every(Number.isFinite))continue;
+    const key=`${row.boot_id}|${row.session_id}|${row.seq}`;
+    if(visualKeys.has(key))continue;
+    visualKeys.add(key);
+    const previous=visualHistory.at(-1);
+    const delta=previous&&row.boot_id===previous.boot_id?row.timestamp_ms-previous.timestamp_ms:500;
+    const breakBefore=Boolean(previous&&(row.boot_id!==previous.boot_id||
+      row.session_id!==previous.session_id||row.seq!==previous.seq+1||delta>1000||delta<0));
+    visualHistory.push({boot_id:row.boot_id,session_id:row.session_id,seq:row.seq,
+      row_id:Number.isInteger(row.row_id)?row.row_id:null,
+      timestamp_ms:row.timestamp_ms,sensor_voltage:[...row.sensor_voltage],
+      ts:(previous?.ts||0)+Math.max(0,delta),breakBefore});
+    visualHistoryVersion++;
+  }
+  if(visualHistory.length>VISUAL_HISTORY_LIMIT){
+    const removed=visualHistory.splice(0,visualHistory.length-VISUAL_HISTORY_LIMIT);
+    for(const old of removed)visualKeys.delete(`${old.boot_id}|${old.session_id}|${old.seq}`);
+  }
+}
+
+async function maybeBackfillVisualHistory() {
+  const ledger=visualLedgerPath,settings=averageSettings();
+  if(!settings.enabled||!ledger||visualBackfillPending||snapshot.count<=(snapshot.history||[]).length)return;
+  const first=Math.max(0,visualHistory.findLastIndex(point=>point.breakBefore));
+  const count=visualHistory.length-first;
+  const span=count>1?visualHistory.at(-1).ts-visualHistory[first].ts:0;
+  const rangeMs=Number($('wfRange').value||3600)*1000;
+  const neededCount=Math.min(VISUAL_HISTORY_LIMIT,settings.count+Math.ceil(rangeMs/500));
+  const neededSpan=Math.min((VISUAL_HISTORY_LIMIT-1)*500,settings.durationMs+rangeMs);
+  if(settings.byDuration?span>=neededSpan:count>=neededCount)return;
+  visualBackfillPending=true;visualBackfillError='';
+  try {
+    const response=await bridgeFetch(prefix+'/chart-history',{timeoutMs:30000});
+    if(ledger!==visualLedgerPath||response?.ledger_path!==ledger||!Array.isArray(response.history))return;
+    const live=visualHistory;
+    const serverTail=response.history.at(-1);
+    const serverRowId=serverTail?.row_id;
+    const hasComparableIds=Number.isInteger(serverRowId)&&live.every(row=>Number.isInteger(row.row_id));
+    const tailKey=serverTail?`${serverTail.boot_id}|${serverTail.session_id}|${serverTail.seq}`:'';
+    const overlapIndex=hasComparableIds?-1:live.findIndex(row=>`${row.boot_id}|${row.session_id}|${row.seq}`===tailKey);
+    const newerLive=!serverTail?live:hasComparableIds
+      ?live.filter(row=>row.row_id>serverRowId)
+      :overlapIndex>=0?live.slice(overlapIndex+1)
+        :live.filter(row=>row.boot_id===serverTail.boot_id&&
+          row.session_id===serverTail.session_id&&row.seq>serverTail.seq);
+    visualHistory=[];visualKeys.clear();visualHistoryVersion++;
+    appendVisualRows(response.history);
+    appendVisualRows(newerLive);
+    draw();
+  } catch(failure) {
+    if(ledger===visualLedgerPath){visualBackfillError='Riwayat lama belum dapat dimuat; grafik memakai data yang tersedia.';draw();}
+  } finally {visualBackfillPending=false;}
 }
 
 function configuration() {
@@ -69,6 +192,14 @@ function primaryCommand() {
   if(snapshot.state==='recording')return 'pause';
   if(snapshot.state==='paused')return 'resume';
   return snapshot.can_continue||snapshot.configuration_frozen||snapshot.ledger_path||snapshot.segment_id>1?'continue':'start';
+}
+
+// The value is last-reported metadata, not proof that RF reception works.
+function radioAutoTxText(value) {
+  if (!value.connected) return '';
+  if (value.radio_auto_tx === false) return 'LoRa Auto TX OFF (laporan terakhir); TX otomatis tidak akan dijadwalkan; jendela RX biasanya mengikuti TX. Periksa QC melalui serial bila diperlukan; rekaman sensor tetap bisa digunakan. Jika diubah lewat QC, setelah rekaman berhenti Connect ulang untuk mencoba memperbarui.';
+  if (value.radio_auto_tx === true) return 'LoRa Auto TX ON (laporan terakhir; bukan bukti penerimaan RX). Jika diubah lewat QC, setelah rekaman berhenti Connect ulang untuk mencoba memperbarui.';
+  return 'Status Auto TX LoRa belum diketahui atau sudah lama. Periksa QC melalui serial bila diperlukan; rekaman sensor tetap bisa digunakan.';
 }
 
 function render() {
@@ -112,6 +243,8 @@ function render() {
     ? snapshot.ready?`Connected · GLD-${snapshot.device_id||snapshot.selected_device_id}`:'Terhubung · perangkat belum siap'
     : frozen&&!snapshot.cleanup_pending&&['complete','incomplete'].includes(snapshot.state)
       ? `Sesi ditutup · GLD-${snapshot.device_id||snapshot.selected_device_id}`:'Belum terhubung';
+  const radioHint=$('wfRadioAutoTx');
+  if(radioHint){const text=radioAutoTxText(snapshot);radioHint.hidden=!text;radioHint.textContent=text;}
   $('wfPath').textContent=snapshot.csv_path||'Belum ada lokasi dipilih.';
   $('wfLabelStamp').textContent=snapshot.label_timestamp||'--:-- Hari dd/mm/yy';
   $('wfLabelPreview').textContent=snapshot.label_timestamp?`${snapshot.label_timestamp} ${$('wfLabel').value}`:'Timestamp dibuat setelah lokasi CSV dipilih. Label ini terpisah dari hasil prediksi model.';
@@ -135,16 +268,22 @@ function render() {
     ? !['recording','paused'].includes(snapshot.state)||snapshot.cleanup_pending===true
     : active||(frozen&&!snapshot.can_continue)||(!snapshot.can_continue&&(!snapshot.connected||!snapshot.ready)));
   $('wfStop').disabled=busy||!locked||!active||snapshot.cleanup_pending===true||['starting','stopping','stop_pending','cleanup_wait','cleanup_pending'].includes(snapshot.state);
-  $('wfReset').disabled=busy||(active&&!paused);
+  const resetButton=$('wfReset');if(resetButton)resetButton.disabled=busy||(active&&!paused);
   $('wfExport').disabled=busy||!snapshot.count||!snapshot.csv_path;
-  $('wfState').textContent=titles[snapshot.state]||snapshot.state||'Belum merekam';
+  $('wfState').textContent=snapshot.start_rejected&&snapshot.count===0?'Mulai ditolak':titles[snapshot.state]||snapshot.state||'Belum merekam';
   $('wfCount').textContent=`${snapshot.count||0} sampel tersimpan`;
-  const verified=snapshot.verification?.verified;
-  $('wfVerification').textContent=verified?`CSV terverifikasi · ${snapshot.verification.count??snapshot.count} baris`
-    : snapshot.count?'CSV disimpan selama merekam. Verifikasi penuh dilakukan saat Stop.':'CSV belum direkam.';
-  const message=error||syncError||(retryCleanup?'Penutupan sesi tertunda. Klik Hubungkan ulang untuk menyelesaikan GLD yang sama. CSV lama tidak bertambah.':snapshot.error)||snapshot.message||(snapshot.cleanup_pending
+  $('wfVerification').textContent=csvVerificationText(snapshot);
+  const evidence=sessionEvidence(snapshot);
+  $('wfSessionStatus').textContent=evidence.session;
+  $('wfCause').textContent=evidence.reason;
+  $('wfDeviceTotal').textContent=evidence.device;
+  $('wfReconciliation').textContent=evidence.reconcile;
+  $('wfDiagnosticPath').textContent=evidence.path;
+  $('wfDiagnosticError').textContent=snapshot.diagnostic_error||'';
+  const message=(snapshot.start_rejected&&snapshot.count===0?snapshot.error:'')||error||syncError||(retryCleanup?'Penutupan sesi tertunda. Klik Hubungkan ulang untuk menyelesaikan GLD yang sama. CSV lama tidak bertambah.':snapshot.error)||snapshot.message||(snapshot.cleanup_pending
     ?'CSV lama tidak ditambah. Sambungkan kembali ke hotspot GLD agar sesi dapat ditutup.'
     : snapshot.state==='recovering'?'GLD menahan data selama tetap menyala. Hub mencoba menyambung ulang hotspot dan memulihkan CSV yang sama.'
+      :snapshot.state==='starting'&&snapshot.start_retry_count>0?'GLD sibuk sesaat; Hub mencoba Mulai lagi setelah penolakan yang terkonfirmasi.'
       :'Pengaturan dapat diedit sebelum Lock. Biarkan backend Operator Hub tetap berjalan selama merekam.');
   $('wfMessage').textContent=message;
   $('wfMessage').dataset.error=String(Boolean(error||syncError||snapshot.error));
@@ -196,21 +335,89 @@ function renderSensors() {
   }));
 }
 
+function averageSettings() {
+  const byDuration=$('wfAverageByDuration').checked;
+  const integer=(id,min,max,fallback)=>{
+    const value=Number($(id).value);
+    return Number.isFinite(value)&&Number.isInteger(value)?Math.max(min,Math.min(max,value)):fallback;
+  };
+  const count=integer('wfAverageCount',1,172800,10);
+  const requestedMinutes=integer('wfAverageHours',0,24,0)*60+integer('wfAverageMinutes',0,59,1);
+  const totalMinutes=Math.min(1440,Math.max(1,requestedMinutes));
+  const hours=Math.floor(totalMinutes/60),minutes=totalMinutes%60;
+  return {enabled:averageEnabled,byDuration,count,hours,minutes,
+    durationMs:totalMinutes*60000};
+}
+
+function averageDurationLabel(hours,minutes) {
+  return [hours?`${hours} jam`:'',minutes?`${minutes} menit`:''].filter(Boolean).join(' ')||'1 menit';
+}
+
+function movingAverageHistory(history, settings, visibleStart=-Infinity) {
+  const voltage=point=>point.sensorVoltage||point.sensor_voltage;
+  if(!settings.enabled)return visibleStart===-Infinity?history:history.filter(point=>point.ts>=visibleStart).map(point=>({
+    ts:point.ts,sensorVoltage:voltage(point),featureOrder:point.featureOrder||sensors,breakBefore:point.breakBefore}));
+  let window=[],head=0;
+  const sums=Array(8).fill(0),result=[];
+  for(const point of history){
+    if(point.breakBefore){window=[];head=0;sums.fill(0);}
+    window.push(point);
+    for(let channel=0;channel<8;channel++)sums[channel]+=voltage(point)[channel];
+    while(window.length-head>1&&(settings.byDuration
+      ?point.ts-window[head].ts>settings.durationMs:window.length-head>settings.count)){
+      const removed=window[head++];
+      for(let channel=0;channel<8;channel++)sums[channel]-=voltage(removed)[channel];
+    }
+    if(head>4096&&head*2>window.length){window=window.slice(head);head=0;}
+    if(point.ts>=visibleStart)result.push({ts:point.ts,
+      sensorVoltage:sums.map(sum=>sum/(window.length-head)),
+      featureOrder:point.featureOrder||sensors,breakBefore:point.breakBefore});
+  }
+  return result;
+}
+
 function chartFeed() {
-  let previous=null,timeline=0;
-  const history=(snapshot.history||[]).filter(row=>Array.isArray(row.sensor_voltage)&&row.sensor_voltage.length===8).map(row=>{
-    const delta=previous&&row.boot_id===previous.boot_id?row.timestamp_ms-previous.timestamp_ms:500;
-    timeline+=Math.max(0,delta);
-    const breakBefore=Boolean(previous&&(row.session_id!==previous.session_id||row.seq!==previous.seq+1||delta>1000||delta<0));
-    previous=row;return {ts:timeline,sensorVoltage:row.sensor_voltage,featureOrder:sensors,breakBefore};
-  });
-  return {history,now:timeline,height:340};
+  const settings=averageSettings();
+  const rangeMs=Number($('wfRange').value||3600)*1000;
+  const key=`${visualHistoryVersion}|${rangeMs}|${settings.enabled}|${settings.byDuration}|${settings.count}|${settings.durationMs}`;
+  if(chartCache?.key===key)return {history:chartCache.history,now:chartCache.now,height:340};
+  const timeline=visualHistory.at(-1)?.ts||0;
+  chartCache={key,history:movingAverageHistory(visualHistory,settings,timeline-rangeMs-1000),now:timeline};
+  return {history:chartCache.history,now:timeline,height:340};
 }
 
 function draw() {
-  const canvas=$('wfChart');if(!canvas.clientWidth||!canvas.parentElement)return;
+  const canvas=$('wfChart');
+  const settings=averageSettings();
+  $('wfAverageToggle').setAttribute('aria-pressed',String(settings.enabled));
+  $('wfAverageToggle').textContent=settings.enabled?'Average: Aktif':'Average: Mati';
+  $('wfAverageOptions').hidden=!settings.enabled;
+  $('wfAverageCountField').hidden=settings.byDuration;
+  $('wfAverageDurationField').hidden=!settings.byDuration;
+  $('wfAverageStatus').textContent=!settings.enabled?'Grafik mentah':settings.byDuration
+    ?`Average ${averageDurationLabel(settings.hours,settings.minutes)}`:`Average ${settings.count} data`;
+  if(!canvas.clientWidth||!canvas.parentElement)return;
   const minutes=Number($('wfRange').value||60)/60;$('wfRangeValue').textContent=`${minutes} min`;
-  drawOneChart(canvas,$('wfRange'),null,[],null,chartFeed());
+  const feed=chartFeed();
+  const currentStart=Math.max(0,visualHistory.findLastIndex(point=>point.breakBefore));
+  const availableCount=visualHistory.length-currentStart;
+  const availableMs=availableCount>1?feed.now-visualHistory[currentStart].ts:0;
+  const partial=settings.enabled&&(settings.byDuration?availableMs<settings.durationMs:availableCount<settings.count);
+  $('wfAverageNote').textContent='Hanya garis grafik yang dirata-ratakan. Angka sensor, tabel, dan CSV tetap mentah. Durasi maksimum 24 jam; riwayatnya dapat dimuat ulang dari catatan sesi.'+
+    (partial&&availableCount?` Jendela belum penuh; memakai ${availableCount} data grafik yang tersedia.`:'')+
+    (visualBackfillError?` ${visualBackfillError}`:'');
+  canvas.setAttribute('aria-label',settings.enabled
+    ?`Grafik moving average delapan sensor Dataset GLD, ${$('wfAverageStatus').textContent}`
+    :'Grafik delapan sensor Dataset GLD');
+  const last=(snapshot.history||[]).at(-1);
+  const key=last?`${last.session_id}|${last.boot_id}|${last.seq}`:"";
+  if(key!==workflowFrameKey){workflowFrameKey=key;workflowFrameStarted=Date.now();}
+  if(['recording','replaying'].includes(snapshot.state) && feed.history.length>1){
+    const visualNow=feed.now-500+Math.max(0,Math.min(500,Date.now()-workflowFrameStarted));
+    feed.history=runningDisplayHistory(feed.history,visualNow+500,true);
+    feed.now=visualNow;
+  }
+  drawOneChart(canvas,$('wfRange'),null,[],null,feed);
 }
 
 async function sync() {
@@ -262,13 +469,28 @@ export function initDatasetWorkflow() {
   $('wfLock').addEventListener('change',()=>action('lock',{locked:$('wfLock').checked}));
   $('wfPrimary').addEventListener('click',()=>action(primaryCommand()));
   $('wfStop').addEventListener('click',()=>action('stop'));
-  $('wfReset').addEventListener('click',()=>action('reset'));
+  $('wfReset')?.addEventListener('click',()=>action('reset'));
   $('wfExport').addEventListener('click',exportCsv);
   $('wfRange').addEventListener('input',draw);
+  $('wfAverageToggle').addEventListener('click',()=>{averageEnabled=!averageEnabled;draw();if(averageEnabled)void maybeBackfillVisualHistory();});
+  for(const id of ['wfAverageByCount','wfAverageByDuration','wfAverageCount','wfAverageHours','wfAverageMinutes']){
+    $(id).addEventListener('input',draw);
+    $(id).addEventListener('change',()=>{
+      const settings=averageSettings();
+      if(settings.byDuration){
+        $('wfAverageHours').value=String(settings.hours);
+        $('wfAverageMinutes').value=String(settings.minutes);
+      } else $('wfAverageCount').value=String(settings.count);
+      draw();void maybeBackfillVisualHistory();
+    });
+  }
   $('wfLabel').addEventListener('input',()=>{$('wfLabelPreview').textContent=[snapshot.label_timestamp,$('wfLabel').value].filter(Boolean).join(' ');});
   window.addEventListener('gld-dataset-workflow',event=>apply(event.detail));
   window.addEventListener('gld-bridge-events-open',sync);
   window.addEventListener('resize',draw);new ResizeObserver(draw).observe($('wfChart'));
   $('datasetLegacyExpert')?.addEventListener('toggle',()=>{if($('datasetLegacyExpert').open)window.dispatchEvent(new Event('resize'));});
-  window.setInterval(sync,3000);render();sync();
+  window.setInterval(sync,3000);
+  window.setInterval(()=>{const canvas=$('wfChart');if(['recording','replaying'].includes(snapshot.state) && Date.now()-workflowFrameStarted < 550 && !document.hidden && canvas &&
+    (typeof canvas.getClientRects!=='function'||canvas.getClientRects().length))draw();},50);
+  render();sync();
 }

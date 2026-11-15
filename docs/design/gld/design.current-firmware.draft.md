@@ -139,13 +139,13 @@ When `PGL_GLD_BOARD_PROFILE_WROOM_U1_N16R8=1`, LoRa pin mapping changes:
 |---|---|
 | LoRa CS/RST/BUSY/DIO1 | GPIO7/GPIO2/GPIO15/GPIO1 |
 | LoRa RXEN/TXEN | GPIO5/GPIO6 |
-| Single alarm trigger | GPIO41 active-LOW for alarm; ULN2003 releases J2.2 to an external pull-up |
+| Single alarm trigger | GPIO48 active-HIGH for alarm; GPIO48 LOW in normal operation |
 | Former buzzer trigger | GPIO40 unused, `-1` in firmware |
 | Board profile log | `WROOM-1U-N16R8` |
 
 This is an important difference from the baseline document: on the WROOM GLD1
 profile, GPIO1 and GPIO2 are consumed by LoRa. The external alarm device uses
-one GPIO41 trigger; GPIO40 and J2.3 are not driven by firmware.
+one GPIO48 trigger; GPIO17, GPIO40, and GPIO41 are not alarm outputs.
 
 ### 5.3 Sensor Order
 
@@ -273,20 +273,25 @@ Model class mapping:
 
 Confidence is stored as `uint8_t(confidenceFloat * 100.0f)`.
 
-Alarm rule:
+Alarm rules for the unified runtime are distinct:
 
-```text
-alarm = gasClass != clearGas && confidence >= 30
-```
+- In AUTO, a valid non-clear classification requests the physical alarm;
+  classification confidence is not compared to a threshold. Invalid inference
+  does not request an AUTO alarm. MANUAL mode follows its explicit command.
+- The unified frame builder uses threshold 1 for GLD1 and GLD2. For the GLD
+  ATEX Dataset Workflow build it uses threshold 0, so every non-clear class
+  sets the alarm flag, including confidence 0. The protocol helper has a
+  separate default threshold of 30; it is not the unified frame setting.
+  These are source contracts, not measured RF frames or physical outputs.
 
 On the WROOM GLD1 profile, one external alarm device provides both lamp and
-buzzer from a single trigger. GPIO41 HIGH during normal operation makes ULN2003
-sink J2 LAMP LOW. GPIO41 LOW continuously while the alarm command is active
-releases J2 LAMP to an external pull-up. The pull-up voltage and resistance must
-match the alarm input; 5 V compatibility is not yet verified. Firmware starts
-driving the normal level at the beginning of setup, but J2 may be HIGH during
-reset or before setup. Reported J2 levels are expected, not voltage measurements.
-GPIO40/J2.3 is unused by firmware.
+buzzer from a single trigger. The current firmware commands GPIO48 LOW in
+normal operation and HIGH continuously during alarm. It preloads LOW before
+setting the pin as an output at startup. GPIO17, GPIO40, and GPIO41 are not
+alarm outputs on this profile. The previous GPIO41/ULN2003 pull-up description
+is historical and does not describe the current GLD1 firmware. This is a
+software contract, not a measured output: reset behavior, board wiring and
+external alarm electrical compatibility remain to be verified on the device.
 
 The board status LED remains a separate local indicator and is not part of the
 external alarm trigger.

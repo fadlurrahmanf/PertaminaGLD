@@ -117,6 +117,8 @@ GLD_FIRMWARE_MODELS = (
     {"value": "model_2_dataset_workflow_wifi", "label": "GLD1 Model 2 - Hotspot Wizard Dataset", "environment": "gld_model_2_dataset_workflow_wifi"},
     {"value": "model_3_dataset_workflow_wifi", "label": "GLD1 Model 3 - Hotspot Wizard Dataset", "environment": "gld_model_3_dataset_workflow_wifi"},
     {"value": "gld_atex", "label": "GasleakDetector - GLD ATEX (GPIO7 fan)", "environment": "gld_atex"},
+    *({"value": f"atex_model_{model}_dataset_workflow_wifi", "label": f"GLD ATEX Model {model} - Board {model}",
+       "environment": f"gld_atex_model_{model}_dataset_workflow_wifi"} for model in (1, 2, 3)),
 )
 GLD_DATASET_WIFI_ENVIRONMENTS = frozenset({
     "gld_model_1_dataset_wifi", "gld_model_2_dataset_wifi", "gld_model_3_dataset_wifi",
@@ -124,7 +126,9 @@ GLD_DATASET_WIFI_ENVIRONMENTS = frozenset({
 GLD_DATASET_REPLAY_ENVIRONMENTS = frozenset({
     "gld_model_1_dataset_replay_wifi", "gld_model_2_dataset_replay_wifi", "gld_model_3_dataset_replay_wifi",
 })
-GLD_DATASET_WORKFLOW_ENVIRONMENTS = frozenset(f"gld_model_{model}_dataset_workflow_wifi" for model in (1, 2, 3))
+ATEX_WORKFLOW_MODELS = {f"gld_atex_model_{model}_dataset_workflow_wifi": model for model in (1, 2, 3)}
+GLD_DATASET_WORKFLOW_ENVIRONMENTS = (frozenset(f"gld_model_{model}_dataset_workflow_wifi" for model in (1, 2, 3))
+                                     | frozenset(ATEX_WORKFLOW_MODELS))
 FIRMWARE_ENVIRONMENTS = {
     "ch": {
         "small": "ch_small",
@@ -505,6 +509,32 @@ def requires_gld1_nvs_reset_before_boot(manifest: dict[str, object]) -> bool:
     )
 
 
+def require_atex_release(environment: str) -> None:
+    """Hard-coded release gate; opening it requires a reviewed source change."""
+    if environment == "gld_atex" or environment in ATEX_WORKFLOW_MODELS:
+        raise RuntimeError("ATEX upload held: integration and device release gates are not complete")
+
+
+def validated_atex_evidence(package: object, environment: str) -> dict[str, object]:
+    """Accept only exact model/hash evidence returned by the GLD child verifier."""
+    if environment not in ATEX_WORKFLOW_MODELS or not isinstance(package, dict):
+        raise RuntimeError("invalid ATEX package response")
+    manifest, evidence = package.get("manifest"), package.get("atexEvidence")
+    if not isinstance(manifest, dict) or not isinstance(evidence, dict):
+        raise RuntimeError("ATEX package validation evidence unavailable")
+    files = manifest.get("flashFiles")
+    firmware = [item for item in files if isinstance(item, dict) and item.get("path") == "firmware.bin"] if isinstance(files, list) else []
+    if (manifest.get("environment") != environment or evidence.get("environment") != environment or
+            manifest.get("boardProfile") != "GLD ATEX MotherBoardGLDVer2 / GPIO7 fan" or
+            evidence.get("boardProfile") != manifest.get("boardProfile") or
+            manifest.get("capabilities") != {"nativeSerial": True, "datasetWifi": True} or
+            type(evidence.get("model")) is not int or evidence["model"] != ATEX_WORKFLOW_MODELS[environment] or
+            len(firmware) != 1 or evidence.get("firmwareSha256") != firmware[0].get("sha256") or
+            not isinstance(evidence.get("profileId"), str) or not evidence["profileId"]):
+        raise RuntimeError("ATEX package validation evidence mismatch")
+    return evidence
+
+
 def package_manifest_summary(environment: str) -> dict[str, object]:
     """Read one exact selectable package manifest without breaking overview.
 
@@ -519,6 +549,12 @@ def package_manifest_summary(environment: str) -> dict[str, object]:
         "firmwareVersion": None,
         "protocolVersion": None,
     }
+    if environment == "gld_atex" or environment in ATEX_WORKFLOW_MODELS:
+        try:
+            require_atex_release(environment)
+        except RuntimeError:
+            summary["error"] = "ATEX release gate is not complete"
+            return summary
     try:
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     except FileNotFoundError:
@@ -537,6 +573,15 @@ def package_manifest_summary(environment: str) -> dict[str, object]:
     if not version:
         summary["error"] = "firmwareVersion missing"
         return summary
+    if environment in ATEX_WORKFLOW_MODELS:
+        try:
+            package = child_request("127.0.0.1", "gld", "GET", f"/api/firmware/package?env={environment}")
+            if package.get("manifest") != manifest:
+                raise RuntimeError("ATEX manifest changed during validation")
+            validated_atex_evidence(package, environment)
+        except Exception:
+            summary["error"] = "ATEX package validation unavailable or failed"
+            return summary
     summary.update(
         {
             "available": True,
@@ -676,6 +721,34 @@ def wait_for_readback(host: str, device: str, port: str, timeout: float = 20.0) 
     raise RuntimeError(f"device did not return for verified read-back: {last_error}")
 
 
+def wait_for_atex_readback(host: str, port: str, target_id: str, timeout: float = 35.0) -> dict[str, object]:
+    """Connect before, never retry after, one backend-leased nonce challenge."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        state = child_request(host, "gld", "GET", "/api/serial/status?slot=1")
+        if state.get("connected"):
+            stream = state.get("telemetryStream")
+            if (str(state.get("port") or "").upper() != port.upper() or
+                    not isinstance(stream, str) or not stream):
+                raise RuntimeError("ATEX serial stream or port changed during verification")
+            result = child_request(host, "gld", "POST", "/api/serial/atex-identity",
+                                   {"slot": 1, "port": port, "targetDeviceId": target_id}, timeout=15.0)
+            identity = result.get("identity")
+            if (result.get("ok") is not True or result.get("telemetryStream") != stream or
+                    not isinstance(identity, dict) or
+                    not isinstance(identity.get("nonce"), str) or
+                    re.fullmatch(r"[0-9a-f]{32}", identity["nonce"]) is None):
+                raise RuntimeError("ATEX serial stream changed or nonce identity invalid")
+            return {"device": "gld", "connected": True, "port": port,
+                    "info": {**identity, "model": {"profileId": identity.get("modelProfileId")}}}
+        try:
+            child_request(host, "gld", "POST", "/api/serial/connect", {"slot": 1, "port": port, "baud": 115200})
+        except Exception:
+            pass
+        time.sleep(1.0)
+    raise RuntimeError("ATEX device did not return for verified read-back")
+
+
 def send_and_confirm(host: str, device: str, line: str, ack_marker: str) -> dict[str, object]:
     before = child_request(host, device, "GET", "/api/serial/recent?slot=1&after=0")
     sequence = int(before.get("sequence") or 0)
@@ -723,6 +796,12 @@ def require_gld_alarm_control(state: dict[str, object]) -> dict[str, object]:
     if output_drive == "steady_24v":
         if external_pattern != "self_pulsed_1s_on_1s_off":
             raise RuntimeError("GLD external alarm pattern contract is missing or incompatible")
+    elif output_drive == "active_high_gpio48_steady":
+        if (external_pattern != "steady_high_while_alarm" or alarm.get("singleTrigger") is not True or
+                alarm.get("requiresExternalPullup") is not False or
+                type(alarm.get("outputPin")) is not int or alarm["outputPin"] != 48 or
+                alarm.get("gpio48CommandLevel") != ("HIGH" if alarm["physicalCommanded"] else "LOW")):
+            raise RuntimeError("GLD1 GPIO48 alarm contract is missing or incompatible")
     elif output_drive == "active_high_gpio41_steady":
         if (
             external_pattern != "steady_high_while_alarm"
@@ -1506,9 +1585,10 @@ class Handler(SimpleHTTPRequestHandler):
         else:
             selection = resolve_firmware_environment(device, payload)
             env = str(selection["environment"])
+        require_atex_release(env)
         initial_firmware = bool(payload.get("initialFirmware"))
         reset_nvs = True if initial_firmware else bool(payload.get("resetNvs"))
-        if device == "gld" and env in GLD_DATASET_WIFI_ENVIRONMENTS | GLD_DATASET_REPLAY_ENVIRONMENTS | GLD_DATASET_WORKFLOW_ENVIRONMENTS and (initial_firmware or reset_nvs):
+        if device == "gld" and env in GLD_DATASET_WIFI_ENVIRONMENTS | GLD_DATASET_REPLAY_ENVIRONMENTS | GLD_DATASET_WORKFLOW_ENVIRONMENTS and (initial_firmware or reset_nvs) and not (initial_firmware and env in GLD_DATASET_WORKFLOW_ENVIRONMENTS):
             raise ValueError(
                 "Hotspot Dataset memerlukan GLD yang sudah memiliki profil nulling valid. "
                 "Gunakan firmware normal untuk setup/nulling terlebih dahulu; pilih upload biasa "
@@ -1531,9 +1611,18 @@ class Handler(SimpleHTTPRequestHandler):
             raise RuntimeError("selected port must match the connected device")
         if not initial_firmware and not state.get("info"):
             raise RuntimeError("connect and identify the device first")
+        if env in ATEX_WORKFLOW_MODELS:
+            detected = state.get("info") if isinstance(state.get("info"), dict) else {}
+            if detected.get("boardProfile") != "GLD ATEX MotherBoardGLDVer2":
+                raise RuntimeError("ATEX upload held: board identity not verified; legacy GLD2-labelled firmware requires a verified migration path")
         package = child_request(host, device, "GET", f"/api/firmware/package?env={env}")
         manifest = validate_selected_package(package, env)
+        atex_evidence = validated_atex_evidence(package, env) if env in ATEX_WORKFLOW_MODELS else None
+        if initial_firmware and env in GLD_DATASET_WORKFLOW_ENVIRONMENTS and manifest.get("capabilities") != {"nativeSerial": True, "datasetWifi": True}:
+            raise ValueError("Firmware awal Workflow memerlukan package native serial yang tervalidasi")
         request: dict[str, object] = {"env": env, "port": port, "manifest": package.get("manifest"), "packageFiles": package.get("packageFiles"), "resetNvs": reset_nvs, "slot": 1}
+        if initial_firmware:
+            request["initialFirmware"] = True
         if reset_nvs:
             request["resetNvsConfirmation"] = "RESET NVS"
         info = state.get("info") if isinstance(state.get("info"), dict) else {}
@@ -1577,7 +1666,8 @@ class Handler(SimpleHTTPRequestHandler):
                 "boardFormFactor": None, "mqttTransport": None,
             })
             return
-        readback = wait_for_readback(host, device, port, timeout=35.0)
+        readback = (wait_for_atex_readback(host, port, expected_identifier, timeout=35.0) if atex_evidence is not None
+                    else wait_for_readback(host, device, port, timeout=35.0))
         expected_version = manifest.get("firmwareVersion")
         actual_version = (readback.get("info") or {}).get("firmwareVersion")
         if expected_version and actual_version != expected_version:
@@ -1587,6 +1677,20 @@ class Handler(SimpleHTTPRequestHandler):
         expected_id = expected_identifier
         if actual_id != expected_id:
             raise RuntimeError(f"flash completed but identity read-back differs: expected {expected_id}, got {readback_id}")
+        if device == "gld" and atex_evidence is not None:
+            readback_info = readback.get("info") if isinstance(readback.get("info"), dict) else {}
+            if readback_info.get("boardProfile") != "GLD ATEX MotherBoardGLDVer2":
+                raise RuntimeError("flash completed but ATEX board profile readback differs")
+            model_info = readback_info.get("model")
+            if not isinstance(model_info, dict) or model_info.get("profileId") != atex_evidence["profileId"]:
+                raise RuntimeError("flash completed but ATEX model profile readback differs or is unavailable")
+            fresh = readback_info
+            if (not isinstance(expected_version, str) or not expected_version or
+                    fresh.get("firmwareVersion") != expected_version or
+                    fresh.get("boardProfile") != "GLD ATEX MotherBoardGLDVer2" or
+                    str(fresh.get("deviceId") or "").upper() != expected_id or
+                    fresh.get("modelProfileId") != atex_evidence["profileId"]):
+                raise RuntimeError("flash completed but nonce-correlated ATEX board, device or model differs")
         if device in {"ch", "gw"}:
             readback_info = readback.get("info") if isinstance(readback.get("info"), dict) else {}
             expected_board = "rectangle" if selection.get("boardFormFactor") == "small" else "circle"

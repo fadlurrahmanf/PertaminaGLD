@@ -13,6 +13,66 @@ import { csvCell, downloadText, stamp } from "./ui.js";
 const HISTORY_RETENTION_MS = 60 * 60 * 1000;
 const Y_AXIS_TICK_COUNT = 10;
 const ALL_SENSOR_CHANNELS = [0, 1, 2, 3, 4, 5, 6, 7];
+const RUNNING_DISPLAY_DELAY_MS = 500;
+const RUNNING_FRAME_MS = 50;
+const RUNNING_MAX_INTERPOLATION_GAP_MS = 1500;
+let runningFrameTimer = null;
+let datasetFrameTimer = null;
+
+// Display-only interpolation: measured history, analysis and CSV remain raw.
+// A short delay means the next real sample is known before drawing between
+// samples; gaps are never filled with invented measurements.
+export function runningDisplayHistory(history, now, respectBreakBefore = false) {
+  const target = now - RUNNING_DISPLAY_DELAY_MS;
+  const before = history.filter((point) => point.ts <= target);
+  const left = before.at(-1);
+  const right = history.find((point) => point.ts > target);
+  if (!left || !right || (respectBreakBefore && right.breakBefore) || right.ts - left.ts > RUNNING_MAX_INTERPOLATION_GAP_MS || right.ts <= left.ts) return before;
+  const fraction = (target - left.ts) / (right.ts - left.ts);
+  const sensorVoltage = left.sensorVoltage.map((value, channel) => {
+    const next = right.sensorVoltage[channel];
+    return Number.isFinite(value) && Number.isFinite(next) ? value + (next - value) * fraction : value;
+  });
+  return [...before, { ...left, ts: target, sensorVoltage }];
+}
+
+function drawRunningChart(skipLegend = false) {
+  const channels = ALL_SENSOR_CHANNELS.filter(isSensorChartSeriesVisible);
+  const history = runningHistoryPoints();
+  const now = Date.now();
+  const configuredInterval = Number($("pollIntervalMs")?.value);
+  const gapThreshold = Math.max(1500, (Number.isFinite(configuredInterval) && configuredInterval >= 200 ? configuredInterval : 500) * 3);
+  const display = state.polling ? runningDisplayHistory(history, now) : history;
+  const gaps = [];
+  const marked = display.map((point, index) => {
+    const previous = display[index - 1];
+    if (!previous || point.ts - previous.ts <= gapThreshold) return point;
+    gaps.push({ start: previous.ts, end: point.ts });
+    return { ...point, breakBefore: true };
+  });
+  drawOneChart(elements.sensorChart, elements.rangeSelect, elements.legend, [], channels, {
+    history: marked,
+    now,
+    gaps,
+    skipLegend,
+  });
+}
+
+function runningChartVisible() {
+  const canvas = elements.sensorChart;
+  return Boolean(canvas && !document.hidden &&
+    (typeof canvas.getClientRects !== "function" || canvas.getClientRects().length));
+}
+
+function scheduleRunningFrame() {
+  if (runningFrameTimer !== null || !state.polling || !runningChartVisible()) return;
+  runningFrameTimer = setTimeout(() => {
+    runningFrameTimer = null;
+    if (!state.polling || !runningChartVisible()) return;
+    drawRunningChart(true);
+    scheduleRunningFrame();
+  }, RUNNING_FRAME_MS);
+}
 
 export function runningHistoryPoints(history = state.history) {
   return history.filter((point) => !point.mode || point.mode === "inference" || point.mode === "running");
@@ -289,9 +349,11 @@ export function drawOneChart(canvas, rangeSelect, legendEl, markers = [], channe
   const cssHeight = Number.isFinite(dataSource?.height)
     ? Math.max(240, Math.min(735, Math.round(dataSource.height)))
     : Math.max(490, Math.min(735, Math.round(window.innerHeight * 0.84)));
-  canvas.width = Math.round(cssWidth * dpr);
-  canvas.height = Math.round(cssHeight * dpr);
-  canvas.style.height = `${cssHeight}px`;
+  const pixelWidth = Math.round(cssWidth * dpr);
+  const pixelHeight = Math.round(cssHeight * dpr);
+  if (canvas.width !== pixelWidth) canvas.width = pixelWidth;
+  if (canvas.height !== pixelHeight) canvas.height = pixelHeight;
+  if (canvas.style.height !== `${cssHeight}px`) canvas.style.height = `${cssHeight}px`;
 
   const ctx = canvas.getContext("2d");
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -316,7 +378,7 @@ export function drawOneChart(canvas, rangeSelect, legendEl, markers = [], channe
     ctx.fillStyle = "#8a8272";
     ctx.font = "14px 'Segoe UI', sans-serif";
     ctx.fillText("Waiting for telemetry", pad.left + 12, pad.top + 24);
-    renderLegend([], legendEl, channelIndices);
+    if (!dataSource?.skipLegend) renderLegend([], legendEl, channelIndices);
     return;
   }
 
@@ -362,6 +424,26 @@ export function drawOneChart(canvas, rangeSelect, legendEl, markers = [], channe
   max = Math.max(max, 0);
 
   drawYAxisTicks(ctx, pad, width, height, min, max);
+
+  // Mark missing intervals without inventing sensor readings. Clip the
+  // indicator to the selected time range and keep other chart feeds unchanged.
+  for (const gap of dataSource?.gaps || []) {
+    if (gap.end < rangeStart || gap.start > now) continue;
+    const start = Math.max(gap.start, rangeStart);
+    const end = Math.min(gap.end, now);
+    const x = pad.left + (((start + end) / 2 - rangeStart) / rangeMs) * width;
+    ctx.beginPath();
+    ctx.strokeStyle = "#ff6b6b";
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 5]);
+    ctx.moveTo(x, pad.top);
+    ctx.lineTo(x, pad.top + height);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = "#ff6b6b";
+    ctx.font = "11px 'Segoe UI', sans-serif";
+    ctx.fillText(`Data terputus ${((gap.end - gap.start) / 1000).toFixed(1)}s`, x + 4, pad.top + 13);
+  }
 
   // Vertical session markers (dataset START/STOP) drawn under the series
   // lines so the traces stay legible on top of them.
@@ -434,7 +516,7 @@ export function drawOneChart(canvas, rangeSelect, legendEl, markers = [], channe
     }
   }
   ctx.textBaseline = "alphabetic";
-  renderLegend(labels, legendEl, channelIndices);
+  if (!dataSource?.skipLegend) renderLegend(labels, legendEl, channelIndices);
 }
 
 // Full Scale MCP Sweep popup chart: X axis is DAC/MCP code (0..codeMax), Y axis
@@ -522,14 +604,34 @@ function datasetSessionMarkers() {
   return markers;
 }
 
+function datasetChartVisible() {
+  const canvas = elements.datasetChart;
+  return Boolean(canvas && !document.hidden && (typeof canvas.getClientRects !== "function" || canvas.getClientRects().length));
+}
+function drawDatasetDisplay(skipLegend = false) {
+  const now = Date.now();
+  const history = state.polling ? runningDisplayHistory(state.history, now, true) : state.history;
+  drawOneChart(elements.datasetChart, elements.datasetRangeSelect, elements.datasetLegend, datasetSessionMarkers(), null,
+    { history, now, skipLegend });
+}
+function scheduleDatasetFrame() {
+  if (datasetFrameTimer !== null || !state.polling || !datasetChartVisible()) return;
+  datasetFrameTimer = setTimeout(() => {
+    datasetFrameTimer = null;
+    if (!state.polling || !datasetChartVisible()) return;
+    drawDatasetDisplay(true);
+    scheduleDatasetFrame();
+  }, RUNNING_FRAME_MS);
+}
+
 export function drawChart() {
-  const visibleRunningChannels = ALL_SENSOR_CHANNELS.filter(isSensorChartSeriesVisible);
   // Dataset can leave one valid but frozen serial snapshot behind after Stop.
   // Keep it out of Running's trend without touching Dataset/QC shared history.
-  const runningHistory = runningHistoryPoints();
-  drawOneChart(elements.sensorChart, elements.rangeSelect, elements.legend, [], visibleRunningChannels, { history: runningHistory });
+  drawRunningChart();
+  scheduleRunningFrame();
   renderRunningAnalysisTable();
-  drawOneChart(elements.datasetChart, elements.datasetRangeSelect, elements.datasetLegend, datasetSessionMarkers());
+  drawDatasetDisplay();
+  scheduleDatasetFrame();
 }
 
 function historyToCsv() {

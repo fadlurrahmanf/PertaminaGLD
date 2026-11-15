@@ -4,9 +4,9 @@
 // is untouched by adding more slots, keeping regression risk low.
 
 import { elements, state, MAX_FLEET_SLOTS, ensureFleetSlot } from "./state.js";
-import { setSetupOpen, showBanner } from "./ui.js";
-import { parseJsonAfter, formatGas, resetDeviceSnapshot, sendCommand, updateTelemetryCollectionProgress } from "./serial-protocol.js";
-import { updateConnectionUi, bridgeFetch } from "./bridge-client.js";
+import { setSetupOpen, showBanner, wait } from "./ui.js";
+import { parseJsonAfter, formatGas, resetDeviceSnapshot, sendCommand, updateTelemetryCollectionProgress, stopPolling, togglePolling } from "./serial-protocol.js";
+import { updateConnectionUi, bridgeFetch, recoverActiveSlotTelemetry } from "./bridge-client.js";
 import { drawChart } from "./chart.js";
 
 function textValue(value, fallback = "Unknown") {
@@ -101,6 +101,11 @@ export async function removeFleetSlot(slot) {
 
 export async function setActiveSlot(slot) {
   if (slot === state.activeSlot) return;
+  const resumePolling = state.polling;
+  if (resumePolling && !(await stopPolling())) {
+    showBanner("Polling pada slot sebelumnya belum dapat dihentikan; perpindahan slot dibatalkan.", "warn");
+    return;
+  }
   state.activeSlot = slot;
   elements.activeSlotLabel.textContent = String(slot);
   ensureFleetSlot(slot);
@@ -116,6 +121,13 @@ export async function setActiveSlot(slot) {
     await sendCommand("GET_INFO");
     await sendCommand("GET_STATUS");
     await sendCommand("GET_QC_STATUS");
+    recoverActiveSlotTelemetry(slot);
+    if (resumePolling) {
+      const deadline = Date.now() + 6000;
+      while (state.activeSlot === slot && Date.now() < deadline &&
+             (!state.info?.capabilities?.lightweightTelemetry || state.pendingSerialRequest)) await wait(100);
+      if (state.activeSlot === slot && !state.polling) togglePolling();
+    }
   }
 }
 

@@ -3,6 +3,50 @@
 #include <math.h>
 #if !RADIOLIB_EXCLUDE_SX126X
 
+#if defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX && \
+    defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+namespace {
+// Candidate bound: RadioLib already uses a 50 ms fallback when BUSY is not
+// connected. This is an engineering limit, not a measured ATEX timing claim.
+// Nested transactions share the same Module; the single radio owner restores
+// the prior limit even on an early error return.
+constexpr RadioLibTime_t ATEX_WORKFLOW_BUSY_TIMEOUT_MS = 50;
+class AtexWorkflowSpiTimeout {
+public:
+  explicit AtexWorkflowSpiTimeout(Module* mod) : mod_(mod), previous_(mod->spiConfig.timeout) {
+    if(mod_->spiConfig.timeout > ATEX_WORKFLOW_BUSY_TIMEOUT_MS) {
+      mod_->spiConfig.timeout = ATEX_WORKFLOW_BUSY_TIMEOUT_MS;
+    }
+  }
+  ~AtexWorkflowSpiTimeout() { mod_->spiConfig.timeout = previous_; }
+private:
+  Module* mod_;
+  RadioLibTime_t previous_;
+};
+
+int16_t atexWorkflowWaitBusy(Module* mod) {
+  const RadioLibTime_t started = mod->hal->millis();
+  while(mod->hal->digitalRead(mod->getGpio())) {
+    if(mod->hal->millis() - started >= ATEX_WORKFLOW_BUSY_TIMEOUT_MS) {
+      return(RADIOLIB_ERR_SPI_CMD_TIMEOUT);
+    }
+    mod->hal->yield();
+  }
+  return(RADIOLIB_ERR_NONE);
+}
+
+// Unlike getPacketType(), preserve an SPI status error even when the chip
+// returned a byte that happens to look like a valid modem type.
+int16_t atexWorkflowReadPacketType(Module* mod, uint8_t& packetType) {
+  uint8_t candidate = 0xFF;
+  const int16_t state = mod->SPIreadStream(RADIOLIB_SX126X_CMD_GET_PACKET_TYPE, &candidate, 1);
+  RADIOLIB_ASSERT(state);
+  packetType = candidate;
+  return(RADIOLIB_ERR_NONE);
+}
+}  // namespace
+#endif
+
 SX126x::SX126x(Module* mod) : PhysicalLayer(RADIOLIB_SX126X_FREQUENCY_STEP_SIZE, RADIOLIB_SX126X_MAX_PACKET_LENGTH) {
   this->mod = mod;
   this->XTAL = false;
@@ -463,6 +507,9 @@ int16_t SX126x::standby() {
 }
 
 int16_t SX126x::standby(uint8_t mode, bool wakeup) {
+#if defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX && defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+  AtexWorkflowSpiTimeout atexTimeout(this->mod);
+#endif
   // set RF switch (if present)
   this->mod->setRfSwitchState(Module::MODE_IDLE);
 
@@ -472,7 +519,15 @@ int16_t SX126x::standby(uint8_t mode, bool wakeup) {
   }
 
   uint8_t data[] = { mode };
+#if defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX && defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+  const int16_t state = this->mod->SPIwriteStream(RADIOLIB_SX126X_CMD_SET_STANDBY, data, 1);
+  // Wakeup pulls NSS low before SPIwriteStream. A BUSY pre-transfer timeout
+  // returns before that function toggles NSS; always release the shared bus.
+  this->mod->hal->digitalWrite(this->mod->getCs(), this->mod->hal->GpioLevelHigh);
+  return(state);
+#else
   return(this->mod->SPIwriteStream(RADIOLIB_SX126X_CMD_SET_STANDBY, data, 1));
+#endif
 }
 
 void SX126x::setDio1Action(void (*func)(void)) {
@@ -508,6 +563,9 @@ void SX126x::clearChannelScanAction() {
 }
 
 int16_t SX126x::startTransmit(const uint8_t* data, size_t len, uint8_t addr) {
+#if defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX && defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+  AtexWorkflowSpiTimeout atexTimeout(this->mod);
+#endif
   (void)addr;
   
   // check packet length
@@ -522,7 +580,13 @@ int16_t SX126x::startTransmit(const uint8_t* data, size_t len, uint8_t addr) {
 
   // set packet Length
   int16_t state = RADIOLIB_ERR_NONE;
+#if defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX && defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+  uint8_t modem = 0xFF;
+  state = atexWorkflowReadPacketType(this->mod, modem);
+  RADIOLIB_ASSERT(state);
+#else
   uint8_t modem = getPacketType();
+#endif
   if(modem == RADIOLIB_SX126X_PACKET_TYPE_LORA) {
     state = setPacketParams(this->preambleLengthLoRa, this->crcTypeLoRa, len, this->headerType, this->invertIQEnabled);
   
@@ -609,14 +673,22 @@ int16_t SX126x::startTransmit(const uint8_t* data, size_t len, uint8_t addr) {
   RADIOLIB_ASSERT(state);
 
   // wait for BUSY to go low (= PA ramp up done)
+#if defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX && defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+  state = atexWorkflowWaitBusy(this->mod);
+  RADIOLIB_ASSERT(state);
+#else
   while(this->mod->hal->digitalRead(this->mod->getGpio())) {
     this->mod->hal->yield();
   }
+#endif
 
   return(state);
 }
 
 int16_t SX126x::finishTransmit() {
+#if defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX && defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+  AtexWorkflowSpiTimeout atexTimeout(this->mod);
+#endif
   // clear interrupt flags
   int16_t state = clearIrqStatus();
   RADIOLIB_ASSERT(state);
@@ -630,6 +702,9 @@ int16_t SX126x::startReceive() {
 }
 
 int16_t SX126x::startReceive(uint32_t timeout, RadioLibIrqFlags_t irqFlags, RadioLibIrqFlags_t irqMask, size_t len) {
+#if defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX && defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+  AtexWorkflowSpiTimeout atexTimeout(this->mod);
+#endif
   // in implicit header mode, use the provided length if it is nonzero
   // otherwise we trust the user has previously set the payload length manually
   if((this->headerType == RADIOLIB_SX126X_LORA_HEADER_IMPLICIT) && (len != 0)) {
@@ -731,9 +806,18 @@ int16_t SX126x::startReceiveCommon(uint32_t timeout, RadioLibIrqFlags_t irqFlags
 
   // clear interrupt flags
   state = clearIrqStatus();
+#if defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX && defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+  RADIOLIB_ASSERT(state);
+#endif
 
   // restore original packet length
+#if defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX && defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+  uint8_t modem = 0xFF;
+  state = atexWorkflowReadPacketType(this->mod, modem);
+  RADIOLIB_ASSERT(state);
+#else
   uint8_t modem = getPacketType();
+#endif
   if(modem == RADIOLIB_SX126X_PACKET_TYPE_LORA) {
     state = setPacketParams(this->preambleLengthLoRa, this->crcTypeLoRa, this->implicitLen, this->headerType, this->invertIQEnabled);
   } else if(modem == RADIOLIB_SX126X_PACKET_TYPE_GFSK) {
@@ -746,11 +830,21 @@ int16_t SX126x::startReceiveCommon(uint32_t timeout, RadioLibIrqFlags_t irqFlags
 }
 
 int16_t SX126x::readData(uint8_t* data, size_t len) {
+#if defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX && defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+  AtexWorkflowSpiTimeout atexTimeout(this->mod);
+#endif
   // this method may get called from receive() after Rx timeout
   // if that's the case, the first call will return "SPI command timeout error"
   // check the IRQ to be sure this really originated from timeout event
   int16_t state = this->mod->SPIcheckStream();
+#if defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX && defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+  uint32_t checkedIrq = 0;
+  const int16_t irqState = getIrqFlagsChecked(checkedIrq);
+  RADIOLIB_ASSERT(irqState);
+  const uint16_t irq = static_cast<uint16_t>(checkedIrq);
+#else
   uint16_t irq = getIrqFlags();
+#endif
   if((state == RADIOLIB_ERR_SPI_CMD_TIMEOUT) && (irq & RADIOLIB_SX126X_IRQ_TIMEOUT)) {
     // this is definitely Rx timeout
     return(RADIOLIB_ERR_RX_TIMEOUT);
@@ -766,7 +860,13 @@ int16_t SX126x::readData(uint8_t* data, size_t len) {
   
   // get packet length and Rx buffer offset
   uint8_t offset = 0;
+#if defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX && defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+  size_t length = 0;
+  state = getPacketLengthChecked(length, &offset);
+  RADIOLIB_ASSERT(state);
+#else
   size_t length = getPacketLength(true, &offset);
+#endif
   if((len != 0) && (len < length)) {
     // user requested less data than we got, only return what was requested
     length = len;
@@ -1429,6 +1529,9 @@ size_t SX126x::getPacketLength(bool update) {
 }
 
 size_t SX126x::getPacketLength(bool update, uint8_t* offset) {
+#if defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX && defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+  AtexWorkflowSpiTimeout atexTimeout(this->mod);
+#endif
   (void)update;
 
   // in implicit mode, return the cached value
@@ -1443,6 +1546,29 @@ size_t SX126x::getPacketLength(bool update, uint8_t* offset) {
 
   return((size_t)rxBufStatus[0]);
 }
+
+#if defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX && defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+int16_t SX126x::getPacketLengthChecked(size_t& length, uint8_t* offset) {
+  AtexWorkflowSpiTimeout atexTimeout(this->mod);
+  uint8_t packetType = 0xFF;
+  int16_t state = this->mod->SPIreadStream(RADIOLIB_SX126X_CMD_GET_PACKET_TYPE, &packetType, 1);
+  RADIOLIB_ASSERT(state);
+  if(packetType != RADIOLIB_SX126X_PACKET_TYPE_LORA && packetType != RADIOLIB_SX126X_PACKET_TYPE_GFSK) {
+    return(RADIOLIB_ERR_UNKNOWN);
+  }
+  if(packetType == RADIOLIB_SX126X_PACKET_TYPE_LORA && this->headerType == RADIOLIB_SX126X_LORA_HEADER_IMPLICIT) {
+    length = this->implicitLen;
+    if(offset != nullptr) *offset = 0;
+    return(RADIOLIB_ERR_NONE);
+  }
+  uint8_t status[2] = {0, 0};
+  state = this->mod->SPIreadStream(RADIOLIB_SX126X_CMD_GET_RX_BUFFER_STATUS, status, 2);
+  RADIOLIB_ASSERT(state);
+  length = status[0];
+  if(offset != nullptr) *offset = status[1];
+  return(RADIOLIB_ERR_NONE);
+}
+#endif
 
 int16_t SX126x::fixedPacketLengthMode(uint8_t len) {
   return(setPacketMode(RADIOLIB_SX126X_GFSK_PACKET_FIXED, len));
@@ -1531,10 +1657,24 @@ RadioLibTime_t SX126x::calculateRxTimeout(RadioLibTime_t timeoutUs) {
 }
 
 uint32_t SX126x::getIrqFlags() {
+#if defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX && defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+  AtexWorkflowSpiTimeout atexTimeout(this->mod);
+#endif
   uint8_t data[] = { 0x00, 0x00 };
   this->mod->SPIreadStream(RADIOLIB_SX126X_CMD_GET_IRQ_STATUS, data, 2);
   return(((uint32_t)(data[0]) << 8) | data[1]);
 }
+
+#if defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX && defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+int16_t SX126x::getIrqFlagsChecked(uint32_t& irq) {
+  AtexWorkflowSpiTimeout atexTimeout(this->mod);
+  uint8_t data[] = {0, 0};
+  const int16_t state = this->mod->SPIreadStream(RADIOLIB_SX126X_CMD_GET_IRQ_STATUS, data, 2);
+  RADIOLIB_ASSERT(state);
+  irq = (static_cast<uint32_t>(data[0]) << 8) | data[1];
+  return(RADIOLIB_ERR_NONE);
+}
+#endif
 
 int16_t SX126x::setIrqFlags(uint32_t irq) {
   return(this->setDioIrqParams(irq, irq));
@@ -2124,7 +2264,19 @@ int16_t SX126x::fixSensitivity() {
   RADIOLIB_ASSERT(state);
 
   // fix the value for LoRa with 500 kHz bandwidth
+#if defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX && defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+  uint8_t atExPacketType = 0xFF;
+  state = atexWorkflowReadPacketType(this->mod, atExPacketType);
+  RADIOLIB_ASSERT(state);
+  if(atExPacketType != RADIOLIB_SX126X_PACKET_TYPE_LORA &&
+     atExPacketType != RADIOLIB_SX126X_PACKET_TYPE_GFSK &&
+     atExPacketType != RADIOLIB_SX126X_PACKET_TYPE_LR_FHSS) {
+    return(RADIOLIB_ERR_SPI_CMD_FAILED);
+  }
+  if((atExPacketType == RADIOLIB_SX126X_PACKET_TYPE_LORA) && (fabsf(this->bandwidthKhz - 500.0) <= 0.001)) {
+#else
   if((getPacketType() == RADIOLIB_SX126X_PACKET_TYPE_LORA) && (fabsf(this->bandwidthKhz - 500.0) <= 0.001)) {
+#endif
     sensitivityConfig &= 0xFB;
   } else {
     sensitivityConfig |= 0x04;
@@ -2286,9 +2438,14 @@ int16_t SX126x::config(uint8_t modem) {
 
   // wait for calibration completion
   this->mod->hal->delay(5);
+#if defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX && defined(PGL_GLD_DATASET_WORKFLOW) && PGL_GLD_DATASET_WORKFLOW
+  state = atexWorkflowWaitBusy(this->mod);
+  RADIOLIB_ASSERT(state);
+#else
   while(this->mod->hal->digitalRead(this->mod->getGpio())) {
     this->mod->hal->yield();
   }
+#endif
 
   // check calibration result
   state = this->mod->SPIcheckStream();

@@ -5,13 +5,105 @@
 import { elements, state, decoder } from "./state.js";
 import { setBadge, setText, appendLog, showBanner, switchTab, setSetupOpen, wait, saveUiSession } from "./ui.js";
 import { syncDeviceSummary, renderFleetPanel, updateFleetFromLine } from "./fleet.js";
-import { handleLine, clearSerialResponseWatch, clearSerialCommandQueue, resetSerialLiveness, sendCommand, resetDeviceSnapshot, stopPolling } from "./serial-protocol.js";
+import { handleLine, replayRunningTelemetry, clearSerialResponseWatch, clearSerialCommandQueue, resetSerialLiveness, sendCommand, resetDeviceSnapshot, stopPolling } from "./serial-protocol.js";
 import { setDatasetState, handleDatasetMqttEvent, renderDatasetSession } from "./dataset.js";
 
 const DEFAULT_BRIDGE_ORIGIN = "http://127.0.0.1:5174";
 let bridgeToken = "";
 let serialRecoveryInFlight = false;
 let serialRecoveryListenerInstalled = false;
+const telemetryCursors = new Map();
+let telemetryVisibilityListenerInstalled = false;
+const delayedTelemetry = new Map();
+
+function flushDelayedTelemetry(slot) {
+  const records = delayedTelemetry.get(slot) || [];
+  delayedTelemetry.delete(slot);
+  if (records.length && slot === state.activeSlot && !state.mock) replayRunningTelemetry(records);
+}
+
+function stageDelayedTelemetry(slot, payload) {
+  if (!delayedTelemetry.has(slot)) {
+    delayedTelemetry.set(slot, []);
+    window.setTimeout(() => flushDelayedTelemetry(slot), 50);
+  }
+  const records = delayedTelemetry.get(slot);
+  records.push({ line: payload.line, receivedMs: payload.receivedMs });
+  if (records.length >= 100) flushDelayedTelemetry(slot);
+}
+
+function isRunningTelemetryLine(line) {
+  try {
+    const prefix = "GLD_TELEMETRY_JSON";
+    if (!String(line).startsWith(prefix)) return false;
+    const message = JSON.parse(String(line).slice(prefix.length).trim());
+    return ["inference", "running"].includes(String(message.mode || "").toLowerCase());
+  } catch { return false; }
+}
+
+function telemetryCursor(slot) {
+  if (!telemetryCursors.has(slot)) telemetryCursors.set(slot, { stream: "", sequence: 0, retired: new Set(), chain: Promise.resolve() });
+  return telemetryCursors.get(slot);
+}
+
+function adoptTelemetryStream(cursor, stream) {
+  if (!stream || cursor.retired.has(stream)) return false;
+  if (cursor.stream && cursor.stream !== stream) {
+    cursor.retired.add(cursor.stream);
+    if (cursor.retired.size > 32) cursor.retired.delete(cursor.retired.values().next().value);
+    cursor.sequence = 0;
+  }
+  cursor.stream = stream;
+  return true;
+}
+
+async function recoverTelemetry(slot, cursor) {
+  if (slot === state.activeSlot && state.mock) return;
+  const result = await bridgeFetch(`/api/serial/telemetry-replay?slot=${slot}&after=${cursor.sequence}&stream=${encodeURIComponent(cursor.stream)}`);
+  if (!adoptTelemetryStream(cursor, result.stream)) return;
+  if (result.streamChanged) cursor.sequence = 0;
+  if (slot === state.activeSlot) {
+    if (result.truncated) appendLog("TELEMETRY_REPLAY_GAP older samples are no longer retained", "in");
+    replayRunningTelemetry(result.samples || []);
+  }
+  cursor.sequence = Math.max(cursor.sequence, Number(result.sequence) || 0);
+}
+
+function queueTelemetryRecovery(slot) {
+  const cursor = telemetryCursor(slot);
+  cursor.chain = cursor.chain.then(() => recoverTelemetry(slot, cursor)).catch((error) => {
+    appendLog(`TELEMETRY_REPLAY_ERROR ${error.message}`, "in");
+  });
+}
+
+export function recoverActiveSlotTelemetry(slot) {
+  const cursor = telemetryCursor(slot);
+  cursor.chain = cursor.chain.then(async () => {
+    cursor.stream = "";
+    cursor.sequence = 0;
+    await recoverTelemetry(slot, cursor);
+  }).catch((error) => appendLog(`TELEMETRY_REPLAY_ERROR ${error.message}`, "in"));
+}
+
+function queueTelemetryLine(slot, payload) {
+  if (slot === state.activeSlot && state.mock) return;
+  const cursor = telemetryCursor(slot);
+  cursor.chain = cursor.chain.then(async () => {
+    if (!adoptTelemetryStream(cursor, payload.telemetryStream)) return;
+    if (payload.telemetrySequence > cursor.sequence + 1) await recoverTelemetry(slot, cursor);
+    if (payload.telemetryStream !== cursor.stream || payload.telemetrySequence <= cursor.sequence) return;
+    if (slot === state.activeSlot && !state.mock) {
+      if (Number.isFinite(payload.receivedMs) && Date.now() - payload.receivedMs > 1500 && isRunningTelemetryLine(payload.line)) {
+        stageDelayedTelemetry(slot, payload);
+      } else {
+        flushDelayedTelemetry(slot);
+        handleLine(payload.line, payload.receivedMs);
+      }
+    }
+    else updateFleetFromLine(slot, payload.line);
+    cursor.sequence = payload.telemetrySequence;
+  }).catch((error) => appendLog(`TELEMETRY_STREAM_ERROR ${error.message}`, "in"));
+}
 
 export function bridgeUrl(path) {
   const onBridgeOrigin = location.protocol.startsWith("http")
@@ -169,7 +261,16 @@ async function initDatasetOutputDir() {
 function startBridgeEvents() {
   if (state.eventSource) state.eventSource.close();
   const source = new EventSource(bridgeUrl(`/api/events?token=${encodeURIComponent(bridgeToken)}`));
-  source.addEventListener("open", () => window.dispatchEvent(new Event("gld-bridge-events-open")));
+  source.addEventListener("open", () => {
+    queueTelemetryRecovery(state.activeSlot);
+    window.dispatchEvent(new Event("gld-bridge-events-open"));
+  });
+  if (!telemetryVisibilityListenerInstalled) {
+    telemetryVisibilityListenerInstalled = true;
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden && state.bridgeAvailable) queueTelemetryRecovery(state.activeSlot);
+    });
+  }
   source.addEventListener("wireless_dataset", (event) => {
     window.dispatchEvent(new CustomEvent("gld-wireless-dataset", { detail: JSON.parse(event.data) }));
   });
@@ -186,12 +287,23 @@ function startBridgeEvents() {
   source.addEventListener("serial_line", (event) => {
     const payload = JSON.parse(event.data);
     const slot = payload.slot || 1;
+    if (Number.isSafeInteger(payload.telemetrySequence) && typeof payload.telemetryStream === "string") {
+      queueTelemetryLine(slot, payload);
+      return;
+    }
     if (slot !== state.activeSlot) {
       updateFleetFromLine(slot, payload.line);
       return;
     }
     if (state.mock) return;
     handleLine(payload.line);
+  });
+  source.addEventListener("telemetry_poll_error", (event) => {
+    const payload = JSON.parse(event.data);
+    if ((payload.slot || 1) !== state.activeSlot || !state.polling) return;
+    appendLog(`POLL_ERROR ${payload.message}`, "in");
+    showBanner(`Polling latar berhenti: ${payload.message}`, "warn");
+    stopPolling();
   });
   source.addEventListener("serial_tx", (event) => {
     const payload = JSON.parse(event.data);
@@ -374,6 +486,7 @@ export async function connectSerial() {
       await sendCommand("GET_INFO");
       await wait(300);
       await sendCommand("GET_STATUS");
+      await sendCommand("GET_QC_STATUS");
       setSetupOpen(false);
     } catch (error) {
       appendLog(`CONNECT_ERROR ${error.message}`, "in");
@@ -401,6 +514,7 @@ export async function connectSerial() {
     await sendCommand("GET_INFO");
     await wait(300);
     await sendCommand("GET_STATUS");
+    await sendCommand("GET_QC_STATUS");
     setSetupOpen(false);
   } catch (error) {
     setBadge(elements.connectionBadge, "error", "error");

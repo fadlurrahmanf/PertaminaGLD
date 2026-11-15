@@ -1,4 +1,4 @@
-"""Source-contract checks for the GLD1 Model 1 nulling sample counts.
+"""Source-contract checks for the three GLD1 model nulling sample counts.
 
 These checks do not replace calibration tests with an actual sensor board.
 """
@@ -32,11 +32,11 @@ class FastNullingScopeTests(unittest.TestCase):
             self.assertRegex(text, rf"AVG_COUNT\s*=\s*{average}\s*;")
             self.assertRegex(text, rf"CONFIRM_COUNT\s*=\s*{confirm}\s*;")
 
-    def test_fast_flag_is_specific_to_model_one(self):
+    def test_fast_flag_is_shared_by_three_gld1_models(self):
         environments = dict(re.findall(r"(?ms)^\[([^\]]+)\]\s*\n(.*?)(?=^\[|\Z)", self.ini))
         flagged = [name for name, body in environments.items()
                    if "-DPGL_GLD1_FAST_NULLING=1" in body]
-        self.assertEqual(flagged, ["env:gld_model_1"])
+        self.assertEqual(flagged, ["env:gld_model_1", "env:gld_model_2", "env:gld_model_3"])
 
     def test_measurement_and_final_guards_remain_present(self):
         for marker in (

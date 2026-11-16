@@ -1,6 +1,6 @@
 # Pertamina GLD Node-RED Flow
 
-## Mode lokal portable (PC baru)
+## Mode lama: broker lokal terpisah
 
 Untuk bench lokal yang tidak bergantung pada IP broker lama, jalankan:
 
@@ -33,27 +33,26 @@ Jalur utama kasus sebenarnya adalah MQTT/LAN dari Gateway ke server, bukan AP.
 Import `pertamina-gld-server.flow.json` dan deploy di Node-RED. File ini
 disinkronkan dengan generator; `handover/state/nodered/flows.json` adalah
 snapshot runtime yang terpisah, bukan file import server yang dipelihara.
-Import flow tidak memasang broker MQTT atau menyalin kredensial/secret.
+Flow berisi node broker Aedes dan client MQTT Node-RED. Install
+`node-red-contrib-aedes` 1.2.0 melalui Manage Palette terlebih dahulu; import
+tidak memasang modul dan tidak menyalin kredensial/secret.
 
-1. Untuk bench, jalankan `apps\operator-hub\run-operator-hub.bat` pada PC
-   yang sama dengan Node-RED dan terhubung ke jaringan Gateway. Hub mencoba
-   menjalankan broker MQTT non-TLS di alamat LAN PC, port 1884. Di Gateway
-   Setup, tombol **Use Hub Broker** mengisi host, port dan kredensialnya.
-   Nilai yang sama tersedia secara lokal di
-   `apps\runtime\operator-hub\credentials.local.json`; masukkan nilai ini
-   secara privat pada node broker Node-RED. Biarkan Hub berjalan dan periksa
-   bahwa broker benar-benar menerima koneksi; file kredensial saja bukan bukti
-   broker berjalan. Pastikan firewall mengizinkan Gateway mencapai port itu.
-   Broker loopback launcher di atas tidak dapat dijangkau board. Untuk sistem
-   produksi, gunakan broker site dengan autentikasi, ACL dan TLS yang sesuai.
+1. Import flow, lalu buka node **Aedes MQTT broker**. Atur username dan
+   password broker sebelum Deploy; field yang kosong membuat Aedes menerima
+   koneksi anonim. Port default adalah 1883 dan harus bebas dari broker lain.
+   Aedes 1.2.0 mendengarkan semua interface; batasi firewall dan gunakan
+   jaringan bench yang sesuai. Flow bawaan non-TLS, bukan konfigurasi produksi.
 2. Di Expert Gateway, pilih bentuk board dan transport MQTT yang sesuai saat
    upload. Setelahnya gunakan Gateway Setup untuk menyimpan dan memverifikasi
-   Wi-Fi serta host/IP broker, port, username dan password. Untuk paket TLS,
+   Wi-Fi serta host/IP PC Node-RED, port 1883, username dan password Aedes.
+   **Use This PC IP** hanya benar jika Expert dan Node-RED ada di PC yang sama;
+   tombol ini tidak mengisi kredensial. Untuk paket TLS,
    konfigurasi CA dan NTP yang sesuai dengan sertifikat broker juga diperlukan.
-3. Di node konfigurasi `Pertamina GLD MQTT`, atur alamat broker yang dapat
-   dijangkau dari mesin Node-RED, port, credentials dan TLS/CA yang sesuai;
-   lalu deploy. Untuk broker Hub, gunakan alamat LAN dari file kredensial pada
-   kedua client: broker Hub terikat ke alamat LAN tersebut, bukan loopback.
+3. Di node konfigurasi `Pertamina GLD MQTT`, gunakan `127.0.0.1:1883` dan
+   username/password yang sama dengan Aedes, lalu Deploy. Pastikan firewall
+   mengizinkan koneksi Gateway ke alamat LAN PC pada port tersebut. Operator
+   Hub dapat menjalankan broker terpisah pada 1884 untuk workflow lamanya;
+   broker itu bukan Aedes dan tidak dipakai flow ini.
 4. Pastikan `settings.js` mengizinkan `functionExternalModules` dan Function
    nodes dapat memakai modul Node.js `crypto`, `fs`, dan `path`. Contoh
    tersedia di `handover/state/nodered/settings.js`. Siapkan environment
@@ -172,7 +171,7 @@ Contoh dari repo root:
 
 ```powershell
 node .\server\nodered\apply-pertamina-gld-flow.js `
-  --node-red-url "http://127.0.0.1:1880" `
+  --external-mqtt --node-red-url "http://127.0.0.1:1880" `
   --gateway-status-url "http://0.0.0.0/disabled-until-gateway-ip-known" `
   --gateway-base-url "http://0.0.0.0" `
   --mqtt-host "127.0.0.1" `
@@ -194,7 +193,9 @@ Wrapper PowerShell lama tetap bisa dipakai dan meneruskan argumen ke generator J
 Jika broker MQTT butuh auth, pass username/password saat apply lokal. Untuk host
 non-loopback generator mewajibkan credentials dan TLS (`--mqtt-tls`), kecuali
 operator secara eksplisit memilih `--allow-insecure-mqtt` untuk jaringan bench
-yang benar-benar terisolasi. Flow tidak lagi membuat broker Aedes anonim.
+yang benar-benar terisolasi. `--external-mqtt` menggunakan broker eksternal;
+tanpa opsi itu generator membuat node Aedes dan deployment via script
+mensyaratkan `MQTT_USER` dan `MQTT_PASS`.
 
 ## Catatan Keamanan
 

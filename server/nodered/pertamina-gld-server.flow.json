@@ -34,6 +34,32 @@
     ]
   },
   {
+    "id": "pgl_aedes_broker",
+    "type": "aedes broker",
+    "z": "pgl_tab",
+    "name": "Aedes MQTT broker (configure credentials before deploy)",
+    "mqtt_port": "1883",
+    "mqtt_ws_bind": "port",
+    "mqtt_ws_port": "",
+    "mqtt_ws_path": "",
+    "cert": "",
+    "key": "",
+    "ca": "",
+    "certname": "",
+    "keyname": "",
+    "caname": "",
+    "persistence_bind": "memory",
+    "dburl": "",
+    "persist_to_file": false,
+    "usetls": false,
+    "x": 200,
+    "y": 60,
+    "wires": [
+      [],
+      []
+    ]
+  },
+  {
     "id": "pgl_poll_gateway",
     "type": "inject",
     "z": "pgl_tab",
@@ -1220,7 +1246,7 @@
     "type": "mqtt-broker",
     "name": "Pertamina GLD MQTT",
     "broker": "127.0.0.1",
-    "port": "1884",
+    "port": "1883",
     "clientid": "node-red-pertamina-gld",
     "autoConnect": true,
     "usetls": false,

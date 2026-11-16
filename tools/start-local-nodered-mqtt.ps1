@@ -77,7 +77,7 @@ $previousMqttPass = $env:MQTT_PASS
 try {
     $env:MQTT_USER = [string]$credentials.username
     $env:MQTT_PASS = [string]$credentials.password
-    & $nodeExe $FlowApplyScript "--no-write-flow" "--node-red-url" "http://127.0.0.1:$NodeRedPort" "--node-red-user-dir" $NodeRedUserDir "--mqtt-host" "127.0.0.1" "--mqtt-port" "$MqttPort"
+    & $nodeExe $FlowApplyScript "--external-mqtt" "--no-write-flow" "--node-red-url" "http://127.0.0.1:$NodeRedPort" "--node-red-user-dir" $NodeRedUserDir "--mqtt-host" "127.0.0.1" "--mqtt-port" "$MqttPort"
     if ($LASTEXITCODE -ne 0) { throw "Node-RED flow apply failed with exit code $LASTEXITCODE." }
 } finally {
     $env:MQTT_USER = $previousMqttUser

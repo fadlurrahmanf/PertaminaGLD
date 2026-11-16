@@ -18,6 +18,7 @@ $nodeExe = (Get-Command node -ErrorAction Stop).Source
 
 $nodeArgs = @(
     $jsPath,
+    "--external-mqtt",
     "--node-red-url", $NodeRedUrl,
     "--node-red-user-dir", $NodeRedUserDir,
     "--gateway-status-url", $GatewayStatusUrl,

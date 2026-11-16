@@ -7,8 +7,8 @@ const assert = require('assert/strict');
 const root = path.resolve(__dirname, '../../..');
 const read = p => fs.readFileSync(path.join(root, p), 'utf8');
 const models = [
-  {value:'model_2', environment:'gld_model_2', selectorLabel:'Model 2 — Board 2', detail:'Board 2 — Kelas: Clean Air, LPG.'},
-  {value:'model_3', environment:'gld_model_3', selectorLabel:'Model 3 — Board 3', detail:'Board 3 — Kelas: Clean Air, LPG.'},
+  {value:'model_2', environment:'gld_model_2', selectorLabel:'Model 2 — Board 2', detail:'Board 2 — Kelas: Clean Air, LPG.', currentLabel:'Model 2 — Board 2 (LPG, Clean Air)'},
+  {value:'model_3', environment:'gld_model_3', selectorLabel:'Model 3 — Board 3', detail:'Board 3 — Kelas: Clean Air, LPG.', currentLabel:'Model 3 — Board 3 (LPG, Clean Air)'},
 ];
 const manifestFor = environment => ({
   environment, firmwareVersion: '0.8.38',
@@ -67,7 +67,11 @@ async function expert(model) {
   assert.equal(posts[0].resetNvs,true);
   assert.equal(posts[0].resetNvsConfirmation,'RESET NVS');
   assert.match(nodes.firmwareUploadStatus.textContent,/nulling 8\/8/);
-  assert(read('apps/gld-operator/index.html').includes(`value="${model.value}">${model.selectorLabel}`));
+  // The Expert selector now exposes the native workflow package; the legacy
+  // model route above remains callable and is covered independently here.
+  const html = read('apps/gld-operator/index.html');
+  assert(!html.includes(`value="${model.value}">`));
+  assert(html.includes(`value="${model.value}_dataset_workflow_wifi">${model.currentLabel}`));
   console.log(`PASS ${model.value} Expert: exact package routing, guard scope, explicit consent and upload payload`);
 }
 async function simple(modelCase) {

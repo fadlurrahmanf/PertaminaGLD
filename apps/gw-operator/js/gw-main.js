@@ -26,7 +26,7 @@ import {
 function mqttConfigFromForm() {
   return {
     host: elements.mqttHost.value.trim(),
-    port: Number(elements.mqttPort.value) || 1884,
+    port: Number(elements.mqttPort.value) || 1883,
     username: elements.mqttUsername.value,
     password: elements.mqttPassword.value,
     topicRoot: elements.mqttTopicRoot.value.trim() || "gld/gateway"
@@ -137,7 +137,7 @@ async function handleTestGatewayWifi() {
 async function handleApplyMqttConfig() {
   const config = {
     host: elements.mqttHost.value.trim(),
-    port: Number(elements.mqttPort.value) || 1884,
+    port: Number(elements.mqttPort.value) || 1883,
     username: elements.mqttUsername.value,
     password: elements.mqttPassword.value
   };

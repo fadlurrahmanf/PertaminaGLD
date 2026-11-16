@@ -486,6 +486,7 @@ function Apply-NodeRedFlow($Broker) {
     Write-Step "Applying Node-RED flow with current Operator Hub MQTT credentials"
     $args = @(
         (Join-Path $NodeRedDir "apply-pertamina-gld-flow.js"),
+        "--external-mqtt",
         "--node-red-url", $NodeRedUrl,
         "--node-red-user-dir", $NodeRedUserDir,
         "--gateway-status-url", "http://0.0.0.0/disabled-until-gateway-ip-known",

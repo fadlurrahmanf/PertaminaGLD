@@ -28,6 +28,10 @@ manual.
 Step 3 has one shared broker form. The Gateway and operator monitor remain two
 independent MQTT clients, but both use the same broker credentials; only their
 connect actions and statuses are separate.
+For the importable server flow use the PC running Node-RED and its Aedes port
+1883; enter the same credentials configured in the Aedes node. **Use This PC
+IP** fills only the local LAN IP and is appropriate only when Node-RED runs on
+the same PC. It does not detect the broker or supply credentials.
 
 - It publishes to `{topicRoot}/uplink`, `{topicRoot}/status`, and
   `{topicRoot}/topology` on the site broker.

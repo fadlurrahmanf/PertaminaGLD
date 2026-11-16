@@ -302,7 +302,7 @@ def prepare(repo_root, snapshot_root, runtime_root, work_root, system, dbconfig,
         host = "127.0.0.1" if port_offset else broker["host"]
         replay = profile / "pertamina-gld-replay-state.json"
         env["PGL_REPLAY_STATE_PATH"] = str(replay)
-        main_args = [str(node), str(staged_generator / "apply-pertamina-gld-flow.js"), "--generate-only",
+        main_args = [str(node), str(staged_generator / "apply-pertamina-gld-flow.js"), "--generate-only", "--external-mqtt",
                      "--node-red-user-dir", str(profile), "--mqtt-host", host, "--mqtt-port", str(effective["mqtt"]),
                      "--replay-state-path", str(replay), "--field-test-log-dir", str(work / "field-test-logs"),
                      "--topology-bootstrap-file", str(profile / "pertamina-gld-topology-bootstrap.json"),

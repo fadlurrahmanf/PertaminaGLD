@@ -421,11 +421,11 @@
           <label for="mqttHost">MQTT Host</label>
           <div class="field-row" style="grid-template-columns: 1fr auto">
             <input id="mqttHost" type="text" placeholder="broker.example.com" />
-            <button id="useThisPcBtn" type="button">Use Hub Broker</button>
+            <button id="useThisPcBtn" type="button">Use This PC IP</button>
           </div>
         </div>
         <div class="field-row">
-          <div class="field"><label for="mqttPort">Port</label><input id="mqttPort" type="text" value="1884" /></div>
+          <div class="field"><label for="mqttPort">Port</label><input id="mqttPort" type="text" value="1883" /></div>
           <div class="field"><label for="mqttTopicRoot">Topic root</label><input id="mqttTopicRoot" type="text" value="gld/gateway" readonly /></div>
         </div>
         <div class="field-row">
@@ -433,7 +433,7 @@
           <div class="field"><label for="mqttPassword">Password</label><input id="mqttPassword" type="password" autocomplete="off" /></div>
         </div>
         <label class="field"><span>Gateway MQTT transport</span>
-          <select id="mqttTransport"><option value="non_tls">non-TLS (Hub Broker)</option><option value="tls">TLS</option></select>
+          <select id="mqttTransport"><option value="non_tls">non-TLS (Aedes)</option><option value="tls">TLS</option></select>
         </label>
         <div id="mqttTlsFields" hidden>
           <div class="field"><label for="mqttTlsCa">Broker Root CA PEM</label><textarea id="mqttTlsCa" rows="5" spellcheck="false"></textarea></div>
@@ -474,6 +474,6 @@
     </div>
   </aside>
 
-  <script type="module" src="./js/gw-main.js?v=20261116-gateway-package-selection-1"></script>
+  <script type="module" src="./js/gw-main.js?v=20261116-aedes-1"></script>
 </body>
 </html>

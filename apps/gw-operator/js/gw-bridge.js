@@ -553,17 +553,13 @@ export async function useLocalPc() {
     return;
   }
   try {
-    const info = await bridgeFetch("/api/local-broker");
-    elements.mqttHost.value = info.host || "";
-    elements.mqttPort.value = String(info.port || 1884);
-    elements.mqttUsername.value = info.username || "";
-    elements.mqttPassword.value = info.password || "";
-    elements.mqttTopicRoot.value = info.topicRoot || "gld/gateway";
-    elements.mqttTransport.value = "non_tls";
-    elements.mqttTlsFields.hidden = true;
-    appendLog(`USE_HUB_BROKER host=${info.host || ""} port=${info.port || ""} auth=${info.username ? 1 : 0}`, "in");
+    const info = await bridgeFetch("/api/network");
+    if (!info.ipv4 || info.ipv4.startsWith("127.")) throw new Error("PC LAN IP unavailable; enter the Node-RED server IP manually");
+    elements.mqttHost.value = info.ipv4;
+    appendLog(`USE_PC_IP host=${info.ipv4}`, "in");
   } catch (error) {
-    appendLog(`USE_HUB_BROKER_ERROR ${error.message}`, "in");
+    showBanner(`PC IP unavailable: ${error.message}`, "error");
+    appendLog(`USE_PC_IP_ERROR ${error.message}`, "in");
   }
 }
 

@@ -20,8 +20,11 @@ for (let i = 2; i < process.argv.length; i++) {
 
 const repoDir = path.resolve(__dirname, "..", "..");
 const scriptDir = __dirname;
-const decodeFunction = fs.readFileSync(path.join(scriptDir, "functions", "pertamina-gld-decode.js"), "utf8");
-const commandFunction = fs.readFileSync(path.join(scriptDir, "functions", "pertamina-gld-build-command.js"), "utf8");
+// Git may check text files out as CRLF on Windows. Keep the generated node
+// function bodies stable across clean checkouts and platforms.
+const readFunctionSource = (name) => fs.readFileSync(path.join(scriptDir, "functions", name), "utf8").replace(/\r\n/g, "\n");
+const decodeFunction = readFunctionSource("pertamina-gld-decode.js");
+const commandFunction = readFunctionSource("pertamina-gld-build-command.js");
 const generatorVersion = "2.1.0";
 
 const nodeRedUrl = args.get("node-red-url") || "http://127.0.0.1:1880";
@@ -3303,8 +3306,19 @@ return msg;`,
 const flowPath = path.join(scriptDir, "pertamina-gld-server.flow.json");
 const renderedFlow = JSON.stringify(nodes, null, 2);
 if (checkOnly) {
-  const currentFlow = fs.existsSync(flowPath) ? fs.readFileSync(flowPath, "utf8") : "";
-  if (currentFlow !== renderedFlow) {
+  const currentFlow = fs.existsSync(flowPath) ? fs.readFileSync(flowPath, "utf8").replace(/\r\n/g, "\n") : "";
+  // Embedded Function-node source may itself contain escaped CRLF from an
+  // earlier Windows export. Compare parsed content with normalized line ends,
+  // while still detecting any actual node or function changes.
+  const normalize = (value) => {
+    if (typeof value === "string") return value.replace(/\r\n/g, "\n");
+    if (Array.isArray(value)) return value.map(normalize);
+    if (value && typeof value === "object") return Object.fromEntries(Object.keys(value).sort().map((key) => [key, normalize(value[key])]));
+    return value;
+  };
+  let matches = false;
+  try { matches = JSON.stringify(normalize(JSON.parse(currentFlow))) === JSON.stringify(normalize(nodes)); } catch (_) {}
+  if (!matches) {
     console.error(JSON.stringify({ generated: false, drift: true, flowPath }));
     process.exit(1);
   }

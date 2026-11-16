@@ -46,7 +46,9 @@ tidak memasang modul dan tidak menyalin kredensial/secret.
    upload. Setelahnya gunakan Gateway Setup untuk menyimpan dan memverifikasi
    Wi-Fi serta host/IP PC Node-RED, port 1883, username dan password Aedes.
    **Use This PC IP** hanya benar jika Expert dan Node-RED ada di PC yang sama;
-   tombol ini tidak mengisi kredensial. Untuk paket TLS,
+   pada pemakaian pertama isi port dan kredensial lalu jalankan **Test broker
+   from this PC**. Setelah tes lokal berhasil, tombol juga mengisi profil yang
+   tersimpan terenkripsi untuk user Windows tersebut. Untuk paket TLS,
    konfigurasi CA dan NTP yang sesuai dengan sertifikat broker juga diperlukan.
 3. Di node konfigurasi `Pertamina GLD MQTT`, gunakan `127.0.0.1:1883` dan
    username/password yang sama dengan Aedes, lalu Deploy. Pastikan firewall

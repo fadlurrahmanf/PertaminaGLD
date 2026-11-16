@@ -15,6 +15,8 @@ firmware/config/*.env
 !handover/state/nodered/flows_cred.json
 apps/runtime/local-mqtt/
 apps/runtime/ch-gateway-aedes/
+# This user-requested PDF contains the MQTT password and is shared privately.
+output/pdf/Panduan-Pull-GLD-CH-Gateway-NodeRED.pdf
 # Verification restores a working copy (including private runtime files).
 output/handover-verification/
 output/diagnostics/

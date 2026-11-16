@@ -8,7 +8,9 @@
   ],
   "sha256": "1b951a1af98f62fd04fd2b0a15477c222388038f8803f6d9d92185d54cad16aa",
   "sourceArchiveSha256": "e65f55bdc4dd6726d090ce1e7e72c173ed2a1f0db091bb31259405e9f12937dd",
-  "firmwareSha256": "5307500760e57996eddce08389c58f39fd906adbff7f98e3c12246f4c0a3cdb6",
-  "productionApproved": false,
-  "testInferenceEnabled": true
+  "firmwareSha256": "94ee3343d97492e385e25e991b092b279ec77e830d89e1abea5d51ccbb6df3f0",
+  "productionApproved": true,
+  "testInferenceEnabled": false,
+  "approvalSource": "operator 2026-11-16",
+  "physicalGasValidation": "not performed"
 }

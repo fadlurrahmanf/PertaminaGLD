@@ -1,7 +1,7 @@
 {
   "slot": "model_1_h2",
   "label": "Model 1 (H2, LPG, Clean Air)",
-  "state": "available-unvalidated",
+  "state": "available",
   "source": "C:\\Users\\MSI\\Downloads\\model\\Board 1 cadangan.zip",
   "sourceArchiveSha256": "e65f55bdc4dd6726d090ce1e7e72c173ed2a1f0db091bb31259405e9f12937dd",
   "modelSha256": "1b951a1af98f62fd04fd2b0a15477c222388038f8803f6d9d92185d54cad16aa",
@@ -12,5 +12,12 @@
     "H2",
     "LPG"
   ],
-  "note": "Test-only inference and normal transmission authorized by operator; physical board and gas validation pending. Not production approved."
+  "note": "Operator approved production activation; physical GLD1 board and H2/LPG validation have not yet been performed. Valid nulling and explicit model binding remain required.",
+  "productionApproval": {
+    "status": "approved",
+    "date": "2026-11-16",
+    "operatorStatement": "semua model harus sudah disetujui untuk produksi.. apply skrng..",
+    "validationEvidence": "No physical board or gas validation reported; operator expressly approved activation",
+    "agentPerformedGasValidation": false
+  }
 }

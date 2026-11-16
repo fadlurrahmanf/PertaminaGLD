@@ -52,7 +52,7 @@ function nowIso() {
 
 export function handleStatus(json) {
   if (!json) return;
-  state.status = json;
+  state.status = { ...json, _source: "mqtt" };
   state.statusReceivedAt = Date.now();
   renderOverview();
 }
@@ -73,12 +73,12 @@ export function renderOverview() {
   el.ovProtocol.textContent = s.protocolVersion ?? "—";
   el.ovUptime.textContent = s.uptimeMs === undefined ? "—" : `${Math.round(Number(s.uptimeMs) / 1000)} s`;
   el.ovIp.textContent = s.ip || "—";
-  el.ovWifi.textContent = s.wifi ? "up" : "down";
-  el.ovMqtt.textContent = s.mqtt ? "up" : "down";
-  el.ovMeshReady.textContent = s.meshReady ? "ready" : "not ready";
+  el.ovWifi.textContent = s.wifi == null ? "—" : s.wifi ? "up" : "down";
+  el.ovMqtt.textContent = s.mqtt == null ? "—" : s.mqtt ? "up" : "down";
+  el.ovMeshReady.textContent = s.meshReady == null ? "—" : s.meshReady ? "ready" : "not ready";
   el.ovQueueDepth.textContent = s.mqttQueueDepth ?? "—";
   el.ovQueueCapacity.textContent = s.mqttQueueCapacity ?? "—";
-  el.ovQueueDropped.textContent = s.mqttQueueDropped ?? "0";
+  el.ovQueueDropped.textContent = s.mqttQueueDropped ?? "—";
   el.ovQueuePublished.textContent = s.mqttQueuePublished ?? "—";
   el.ovWifiSsid.textContent = s.wifiSsid || "—";
   el.ovWifiRssi.textContent = s.wifiRssi === undefined ? "—" : `${s.wifiRssi} dBm`;
@@ -86,18 +86,18 @@ export function renderOverview() {
   el.ovWifiMac.textContent = s.wifiMac || "—";
   el.ovMqttBroker.textContent = s.mqttHost ? `${s.mqttHost}:${s.mqttPort ?? 1884}` : "—";
   el.ovMqttState.textContent = s.mqttState ?? "—";
-  el.ovMqttAuth.textContent = s.mqttAuthConfigured ? "configured" : "not configured";
-  el.ovMqttSubscriptions.textContent = s.mqttSubscriptionsReady ? "ready" : "not ready";
+  el.ovMqttAuth.textContent = s.mqttAuthConfigured == null ? "—" : s.mqttAuthConfigured ? "configured" : "not configured";
+  el.ovMqttSubscriptions.textContent = s.mqttSubscriptionsReady == null ? "—" : s.mqttSubscriptionsReady ? "ready" : "not ready";
   el.ovMqttTopicRoot.textContent = s.topicRoot || "—";
   el.ovMeshFrequency.textContent = s.meshFreqMhz === undefined ? "—" : `${s.meshFreqMhz} MHz`;
   el.ovMeshBandwidth.textContent = s.meshBandwidthKhz === undefined ? "—" : `${s.meshBandwidthKhz} kHz`;
   el.ovMeshModulation.textContent = s.meshSpreadingFactor === undefined ? "—" : `SF${s.meshSpreadingFactor} / CR 4/${s.meshCodingRate}`;
-  el.ovMeshRadioDetail.textContent = s.meshSyncWord === undefined ? "—" : `0x${Number(s.meshSyncWord).toString(16).toUpperCase()} / ${s.meshTxPowerDbm} dBm / ${s.meshPreamble}`;
+  el.ovMeshRadioDetail.textContent = s.meshSyncWord === undefined ? "—" : `0x${Number(s.meshSyncWord).toString(16).toUpperCase()} / ${s.meshTxPowerDbm ?? "—"} dBm / ${s.meshPreamble ?? "—"}`;
 
   setBadge(el.gatewayIdBadge, hexId(s.gatewayId));
-  setBadge(el.gatewayMqttBadge, s.mqtt ? "connected" : "disconnected", s.mqtt ? "ok" : "warn");
+  setBadge(el.gatewayMqttBadge, s.mqtt == null ? "—" : s.mqtt ? "connected" : "disconnected", s.mqtt == null ? "" : s.mqtt ? "ok" : "warn");
   setBadge(el.stateBadge, s.state || "unknown", s.wifi && s.mqtt ? "ok" : "warn");
-  setBadge(el.queueBadge, `${s.mqttQueueDepth ?? 0}q`, Number(s.mqttQueueDropped || 0) > 0 ? "warn" : "");
+  setBadge(el.queueBadge, s.mqttQueueDepth == null ? "—" : `${s.mqttQueueDepth}q`, Number(s.mqttQueueDropped || 0) > 0 ? "warn" : "");
   tickStatusAge();
 }
 

@@ -6,9 +6,10 @@
 import { elements, state } from "./gw-state.js";
 import { gatewayIdFromRuntime } from "./gw-gateway-id.mjs";
 import { applyLocalBrokerProfile } from "./gw-aedes-autofill.mjs";
+import { mergeSerialOverview } from "./gw-serial-overview.mjs";
 import { setupAccess } from "./gw-setup-flow.mjs";
 import { setBadge, appendLog, showBanner, switchTab } from "./gw-ui.js";
-import { handleStatus, handleUplink, handleTopologyEvent, logCommand } from "./gw-protocol.js";
+import { handleStatus, renderOverview, handleUplink, handleTopologyEvent, logCommand } from "./gw-protocol.js";
 
 const BRIDGE_PORT = "5373";
 const DEFAULT_BRIDGE_ORIGIN = `http://127.0.0.1:${BRIDGE_PORT}`;
@@ -54,6 +55,7 @@ export async function initBridge() {
       setTimeout(() => {
         requestGatewayAddress().catch(() => {});
         requestMeshLoraConfig().catch(() => {});
+        requestSerialOverview().catch(() => {});
       }, 300);
     }
     if (health.mqtt?.connected) {
@@ -190,6 +192,12 @@ function startBridgeEvents() {
     if ((payload.slot || 1) !== state.activeSlot) return;
     appendLog(payload.line, "in");
     window.dispatchEvent(new CustomEvent("gw-serial-line", { detail: payload.line }));
+    const serialOverview = mergeSerialOverview(state.status, payload.line);
+    if (serialOverview) {
+      state.status = serialOverview;
+      state.statusReceivedAt = Date.now();
+      renderOverview();
+    }
     const meshPrefix = "GW_MESH_LORA_JSON ";
     if (payload.line.startsWith(meshPrefix)) {
       try {
@@ -336,14 +344,23 @@ export async function connectSerial() {
       body: JSON.stringify({ port, baud: 115200, slot: state.activeSlot })
     });
     state.serialConnected = true;
+    state.status = null;
+    state.statusReceivedAt = null;
+    renderOverview();
     updateSerialUi();
     await Promise.allSettled([
       requestGatewayAddress().catch((error) => appendLog(`GET_GATEWAY_ADDRESS_ERROR ${error.message}`, "err")),
-      requestMeshLoraConfig().catch((error) => appendLog(`GET_MESH_LORA_ERROR ${error.message}`, "err"))
+      requestMeshLoraConfig().catch((error) => appendLog(`GET_MESH_LORA_ERROR ${error.message}`, "err")),
+      requestSerialOverview().catch((error) => appendLog(`GET_STATUS_ERROR ${error.message}`, "err"))
     ]);
   } catch (error) {
     appendLog(`CONNECT_ERROR ${error.message}`, "err");
   }
+}
+
+export async function requestSerialOverview() {
+  if (!state.serialConnected) return;
+  await bridgeFetch("/api/serial/write", { method: "POST", body: JSON.stringify({ line: "GET_STATUS", slot: state.activeSlot }) });
 }
 
 export async function disconnectSerial() {

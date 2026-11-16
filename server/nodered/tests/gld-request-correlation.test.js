@@ -186,6 +186,21 @@ try {
   assert.equal(unavailableStore.pglGldDiscovery["0x0012"].devices["0x1002"].alarm, true,
     "DATA_NOT_AVAIL must retain the last alarm as history");
 
+  const emptyRequestId = 12821;
+  unavailableStore.pglGldRequestIndex[emptyRequestId] = {
+    requestId: emptyRequestId, targetChIdHex: "0x0012", gatewayIdHex: "0x0001",
+    hopList: ["0x0010", "0x0011", "0x0012"], requestedAt: new Date().toISOString()
+  };
+  Object.assign(unavailableStore.pglGldDiscovery["0x0012"], {
+    status: "sent", requestId: emptyRequestId, requestedAt: new Date().toISOString()
+  });
+  runDecoder(buildResponseFrame({ requestId: emptyRequestId, transportSrc: 0x0010,
+    gatewayId: 0x0001, dstId: 0x0010, status: 1 }), unavailableStore,
+    path.join(tempDir, "data-empty.json"), 0x0001);
+  assert.equal(unavailableStore.pglGldDiscovery["0x0012"].responseStatus, 1);
+  assert(unavailableStore.pglGldDiscovery["0x0012"].devices["0x1002"],
+    "DATA_EMPTY must retain previously authenticated GLD as history");
+
   const directStore = {
     pglGldRequestIndex: {
       12816: { requestId: 12816, targetChIdHex: "0x0068", gatewayIdHex: "0x0001", hopList: ["0x0068"], requestedAt }

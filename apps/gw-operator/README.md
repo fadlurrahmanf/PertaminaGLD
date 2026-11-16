@@ -33,7 +33,10 @@ manual.
 
 Step 3 has one shared broker form. The Gateway and operator monitor remain two
 independent MQTT clients, but both use the same broker credentials; only their
-connect actions and statuses are separate.
+statuses are separate. Saving a non-TLS MQTT configuration also starts the
+operator monitor; the Overview shows the serial status as soon as COM is
+connected, then fills the additional broker-published fields when available.
+Fields not supplied by the Gateway remain unknown rather than being guessed.
 For the importable server flow use the PC running Node-RED and its Aedes port
 1883; enter the same credentials configured in the Aedes node. **Use This PC
 IP** fills the current LAN IP and, once a local broker connection test has

@@ -64,6 +64,18 @@ tidak memasang modul dan tidak menyalin kredensial/secret.
    contoh lengkap ada di `handover/state/nodered/settings.js`. Setelah mengubah
    settings, restart Node-RED dan tunggu rute tersimpan. Tanpa store tersebut,
    rute bisa sementara hilang hingga CH mengirim HELLO kembali.
+   Jika Node-RED dimulai tanpa environment GLD, siapkan file lokal yang diabaikan
+   Git `server/nodered/.env` dengan `GLD_KEY_ID` dan `GLD_AES128_KEY_HEX` yang
+   sesuai dengan GLD, lalu jalankan dari root repository:
+
+   ```powershell
+   node server/nodered/configure-local-gld-env.js
+   ```
+
+   Skrip mencadangkan `settings.js` dan menambahkan pembaca untuk dua nilai itu;
+   nilai kunci tidak disalin ke flow atau repository. Restart Node-RED setelah
+   pengaturan. Jalankan sekali pada setiap PC yang memakai user Node-RED yang
+   berbeda. Untuk lokasi khusus, gunakan `--user-dir` dan `--env-file`.
 5. Tab flow memiliki path relatif `.node-red/...` untuk replay state, log dan
    bootstrap topology. Path ini relatif terhadap working directory proses
    Node-RED; pada server, ubah flow environment tersebut ke lokasi privat yang

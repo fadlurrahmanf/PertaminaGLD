@@ -12,7 +12,7 @@ import {
   ensureManualPortOption, bridgeFetch, connectMqtt, disconnectMqtt, testMqtt,
   publishPull, publishNode, useLocalPc, applyWifiConfig, testGatewayWifi,
   applyMqttConfig, requestMeshLoraConfig, applyMeshLoraConfig, updateSetupFlowUi,
-  requestGatewayAddress, applyGatewayAddress, reconnectSerialAfterGatewayReboot
+  requestGatewayAddress, applyGatewayAddress, reconnectSerialAfterGatewayReboot, requestSerialOverview
 } from "./gw-bridge.js";
 import { validateMeshLoraConfig } from "./gw-lora-config.mjs";
 import { validateGatewayId } from "./gw-gateway-id.mjs";
@@ -164,6 +164,8 @@ async function handleApplyMqttConfig() {
     const ack = await applyMqttConfig(config);
     if (ack.status !== "ok") throw new Error(ack.message || ack.status);
     elements.gwApplyMqttStatus.textContent = "Saved. Gateway is connecting to MQTT.";
+    if (elements.mqttTransport.value !== "tls") await connectMqtt(mqttConfigFromForm());
+    await requestSerialOverview();
   } catch (error) {
     elements.gwApplyMqttStatus.textContent = `MQTT configuration failed: ${error.message}`;
   } finally {
@@ -582,7 +584,7 @@ function setupEvents() {
   elements.useManualPortBtn.addEventListener("click", () => ensureManualPortOption(true));
 
   // Overview
-  elements.refreshOverviewBtn.addEventListener("click", renderOverview);
+  elements.refreshOverviewBtn.addEventListener("click", () => { renderOverview(); requestSerialOverview().catch(() => {}); });
 
   // Uplinks
   elements.clearUplinksBtn.addEventListener("click", clearUplinks);
@@ -624,6 +626,13 @@ async function bootstrap() {
   updateSetupFlowUi();
   startBridgeHealthPoll();
   setInterval(tickStatusAge, 1000);
+  // Keep serial-only Overview current, and fall back to serial when the
+  // monitor is connected but no fresh Gateway MQTT status is arriving.
+  setInterval(() => {
+    if (state.serialConnected && (!state.mqttConnected || !state.statusReceivedAt || Date.now() - state.statusReceivedAt > 15000)) {
+      requestSerialOverview().catch(() => {});
+    }
+  }, 10000);
   appendLog("Gateway Operator ready. Setup order: connect COM, verify Gateway identity, save and verify Wi-Fi, then configure MQTT.", "in");
 }
 

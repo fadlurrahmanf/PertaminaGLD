@@ -12,6 +12,8 @@
 #include "../src/DirtyFrame.h"
 #include "../src/FrameStats.h"
 #include "../src/PdrStability.h"
+#include "../src/RunningAnimation.h"
+#include "../src/UiNavigation.h"
 uint32_t fakeMillis = 1, fakeRandom = 100;
 FakeWiFi WiFi;
 FakeSerial Serial0;
@@ -36,6 +38,15 @@ static NowMessage msg(uint8_t type, uint32_t boot, uint32_t session=0, uint32_t 
 static void receive(const uint8_t* mac,const NowMessage& m) { onReceive(mac,reinterpret_cast<const uint8_t*>(&m),sizeof(m)); }
 static void advance(uint32_t ms) { fakeMillis+=ms; poll(); }
 int main() {
+ check(uinavigation::nextTestPage(4,false,true)==1 && uinavigation::nextTestPage(1,false,true)==2 && uinavigation::nextTestPage(2,false,true)==3 && uinavigation::nextTestPage(3,false,true)==4,"completed PDR navigation visits each direction once then back and summary");
+ check(uinavigation::nextTestPage(0,false,false)==1 && uinavigation::nextTestPage(3,false,false)==4 && uinavigation::nextTestPage(0,true,false)==3 && uinavigation::nextTestPage(3,true,false)==0,"running PDR and realtime navigation retained");
+ check(uinavigation::testLongAction(1,false,true)==uinavigation::TestLongAction::Start && uinavigation::testLongAction(2,false,true)==uinavigation::TestLongAction::Start && uinavigation::testLongAction(3,false,true)==uinavigation::TestLongAction::Back && uinavigation::testLongAction(3,true,false)==uinavigation::TestLongAction::Back && uinavigation::testLongAction(1,true,false)==uinavigation::TestLongAction::Stop && uinavigation::testLongAction(1,false,false)==uinavigation::TestLongAction::Wait,"detail START, KEMBALI, STOP and uncertain wait stay distinct");
+ check(runninganimation::visible(true,false,true,true,2,false,false,false),"running illustration appears on confirmed test screen");
+ check(!runninganimation::visible(true,false,true,true,1,false,false,false) && !runninganimation::visible(true,false,true,true,3,false,false,false) && !runninganimation::visible(true,true,true,true,2,false,false,false) && !runninganimation::visible(true,false,false,true,2,false,false,false) && !runninganimation::visible(true,false,true,true,2,true,false,false) && !runninganimation::visible(true,false,true,true,2,false,true,false) && !runninganimation::visible(false,false,true,true,2,false,false,false),"illustration hidden for startup, terminal, simulation, offline, stopping, and menu");
+ check(runninganimation::packetX(0)==100 && runninganimation::packetX(500)==144 && runninganimation::packetX(1000)==100,"illustration moves back and forth in bounded one-line track");
+ const auto inAperture=[](int x,int y){const int dx=x-123,dy=y-120;return dx*dx+dy*dy<=116*116;};
+ check(inAperture(74,92) && inAperture(172,100) && inAperture(98,94) && inAperture(146,98),"running illustration bounds remain within calibrated circular aperture");
+ check(runninganimation::kTrackY+4 < runninganimation::kRtDir1-4 && runninganimation::kRtDir1+4 < runninganimation::kRtValue1-2-8 && runninganimation::kRtValue1+8 < runninganimation::kRtUnits1-4 && runninganimation::kRtUnits1+4 < runninganimation::kRtDir2-4 && runninganimation::kRtDir2+4 < runninganimation::kRtValue2-2-8 && runninganimation::kRtValue2+8 < runninganimation::kRtUnits2-4,"realtime labels and moving numbers have separate vertical bounds");
  loratester::DirectionStats dirA{};dirA.available=dirA.final=1;dirA.received=9;dirA.minRssiDbm=-90;dirA.maxRssiDbm=-80;dirA.minSnrDb10=20;dirA.maxSnrDb10=70;
  auto dirB=dirA;dirB.received=10;
  check(pdrstability::classify(true,dirA)==pdrstability::Result::Insufficient && pdrstability::classify(true,dirB)==pdrstability::Result::Stable,"stability needs ten samples independently for each direction");

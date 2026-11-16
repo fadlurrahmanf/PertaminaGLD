@@ -17,6 +17,8 @@
 #include "DirtyFrame.h"
 #include "FrameStats.h"
 #include "PdrStability.h"
+#include "RunningAnimation.h"
+#include "UiNavigation.h"
 #include <cstdlib>
 
 constexpr long kDefaultTftFrequency = 40000000;
@@ -127,7 +129,7 @@ uint32_t retryReadyAt = 0;
 uint32_t stopRequestedAt = 0, stopLastAttempt = 0;
 uint32_t shortFlashUntil = 0, longFlashUntil = 0;
 uint32_t simulationStarted = 0;
-uint32_t startAnimationAt = 0, packetFlashCh1 = 0, packetFlashCh2 = 0;
+uint32_t packetFlashCh1 = 0, packetFlashCh2 = 0;
 uint32_t resultAnimationAt = 0;
 bool lastPdrValid = false, lastPdrReverseValid = false;
 uint16_t lastPdr = 0, lastPdrReverse = 0;
@@ -159,6 +161,19 @@ void drawBatteryIcon(int x, int y, const char* label, int mv, int pct) {
   frame.drawString(text.percent,x+27,y);
   frame.drawString(text.voltage,x+6,y+12);
 }
+
+// This is an activity illustration during a confirmed running session;
+// packet counters and measurements still come exclusively from real STATUS.
+void drawRunningAnimation(uint32_t now, uint16_t lineColor, uint16_t ch1Color, uint16_t ch2Color) {
+  frame.setTextDatum(lgfx::middle_center); frame.setTextSize(1);
+  frame.setTextColor(ch1Color); frame.drawString("CH1",83,runninganimation::kTrackY);
+  frame.setTextColor(ch2Color); frame.drawString("CH2",163,runninganimation::kTrackY);
+  frame.drawFastHLine(98,runninganimation::kTrackY,50,lineColor);
+  frame.drawLine(98,96,102,93,lineColor); frame.drawLine(98,96,102,99,lineColor);
+  frame.drawLine(147,96,143,93,lineColor); frame.drawLine(147,96,143,99,lineColor);
+  const uint32_t phase=now%1000U;
+  frame.fillCircle(runninganimation::packetX(now),96,2,phase<500?ch1Color:ch2Color);
+}
 void chooseLoRaMode() {
   if (uiLoRaSelected == 2) { uiSubmenu=false; uiSelected=0; return; }
   if (!uiRunning) {
@@ -167,6 +182,26 @@ void chooseLoRaMode() {
     uiRealtime=uiLoRaSelected==1; monitorlink::forgetSession(); memset(&uiStatus,0,sizeof(uiStatus));
   }
   uiSubmenu=false; uiTester=true; uiPage=0;
+}
+
+void startUiTest() {
+  uiSimulation=false; sessionInterrupted=false; stopPending=false; stopUnconfirmed=false; retryAfterUnknown=false;
+  uiRunning=monitorlink::start(uiRealtime);
+  if (uiRunning) {
+    uiPage=0; uiStatus=loratester::NowMessage{}; uiStatusReceiptValid=false;
+    packetFlashCh1=packetFlashCh2=0;
+  }
+}
+
+void handleTestLong() {
+  const bool canStart=!stopPending && (!retryAfterUnknown || static_cast<int32_t>(millis()-retryReadyAt)>=0) && (!stopUnconfirmed || retryAfterUnknown);
+  switch (uinavigation::testLongAction(uiPage,uiRunning,canStart)) {
+    case uinavigation::TestLongAction::Back: uiTester=false; uiSubmenu=true; break;
+    case uinavigation::TestLongAction::Start: startUiTest(); break;
+    case uinavigation::TestLongAction::Stop:
+      retryAfterUnknown=false; monitorlink::stopStartRetries(); monitorlink::stop(); stopPending=true; stopRequestedAt=stopLastAttempt=millis(); break;
+    case uinavigation::TestLongAction::Wait: break;
+  }
 }
 
 void pattern(int n) {
@@ -226,8 +261,7 @@ void loop() {
       if (calibration) calibration = false;
       else if (uiSubmenu) uiLoRaSelected = (uiLoRaSelected + 1) % 3;
       else if (!uiTester) uiSelected = (uiSelected + 1) % 2;
-      else if (uiRealtime) uiPage = uiPage == 3 ? 0 : 3;
-      else uiPage = (uiPage + 1) % 5;
+      else uiPage = uinavigation::nextTestPage(uiPage,uiRealtime,uiStatus.state==3);
       uiDirty = true;
   }
   if (buttonEvent==DebouncedButton::Event::Long) {
@@ -235,9 +269,7 @@ void loop() {
     if (calibration) calibration = false;
     else if (uiSubmenu) { chooseLoRaMode(); }
     else if (!uiTester) { if (uiSelected == 0) { uiSubmenu = true; uiLoRaSelected = 0; } }
-    else if (uiPage == 3) { uiTester = false; uiSubmenu=true; }
-    else if (!uiRunning && !stopPending && (!retryAfterUnknown || static_cast<int32_t>(millis()-retryReadyAt)>=0) && (!stopUnconfirmed || retryAfterUnknown)) { uiSimulation = false; sessionInterrupted=false; stopPending=false; stopUnconfirmed=false; retryAfterUnknown=false; uiRunning = monitorlink::start(uiRealtime); if (uiRunning) startAnimationAt=millis(); }
-    else if (uiRunning) { retryAfterUnknown=false; monitorlink::stopStartRetries(); monitorlink::stop(); stopPending=true; stopRequestedAt=stopLastAttempt=millis(); }
+    else { handleTestLong(); }
     uiDirty = true;
   }
   monitorlink::poll();
@@ -322,6 +354,7 @@ void loop() {
     uiDirty = false;
     const uint16_t bg=0x0000, mint=0x4DFB, muted=0xB5F6, white=0xFFFF, dim=0x49D3, selected=0x2253;
     const uint16_t ch2Color=0x5DFF, ch1Color=0xFD47, header=0x5DFF, warning=0xFD20, success=0x57EC;
+    const bool runningAnimation=runninganimation::visible(uiTester,uiSimulation,uiLink,uiRunning,uiStatus.state,stopPending,stopUnconfirmed,calibration);
     const auto health=monitorlink::healthSnapshot();
     const uint16_t effectiveAgeCh2=uiSimulation ? 0 : sampleage::effective(uiStatus.ageCh2Ms,uiStatusReceivedAt,millis(),uiStatusReceiptValid);
     const uint16_t effectiveAgeCh1=uiSimulation ? 0 : sampleage::effective(uiStatus.ageCh1Ms,uiStatusReceivedAt,millis(),uiStatusReceiptValid);
@@ -397,14 +430,15 @@ void loop() {
       frame.setTextSize(1); frame.setTextColor(muted); frame.drawString("Ke menu utama",123,126);
       frame.drawString(uiRunning ? "TES AKTIF" : "TES BERHENTI",123,148);
     } else if (uiPage == 4) {
-      frame.setTextColor(header); frame.drawString("RINGKASAN DUA ARAH",123,84);
+      frame.setTextColor(header); frame.drawString(runningAnimation ? "PENGUJIAN" : "RINGKASAN DUA ARAH",123,84);
+      if (runningAnimation) drawRunningAnimation(millis(),dim,ch1Color,ch2Color);
       char row[48];
       auto showSummary = [&](const loratester::DirectionStats &s, int x, uint16_t color, const char *name) {
-        frame.setTextSize(1); frame.setTextColor(color); frame.drawString(name,x,100);
+        frame.setTextSize(1); frame.setTextColor(color); frame.drawString(name,x,runningAnimation?109:100);
         frame.setTextSize(2); frame.setTextColor(resultAnimationAt && millis()-resultAnimationAt<1000 && (millis()/140)%2 ? color : white);
         if (uiStatus.state==3 && s.available && s.final) snprintf(row,sizeof(row),"%u%%",s.received);
         else snprintf(row,sizeof(row),"--");
-        frame.drawString(row,x,116); frame.setTextSize(1);
+        frame.drawString(row,x,runningAnimation?124:116); frame.setTextSize(1);
       };
       showSummary(uiStatus.fromCh2,78,ch2Color,"CH2 > CH1");
       showSummary(uiStatus.fromCh1,168,ch1Color,"CH1 > CH2");
@@ -421,47 +455,48 @@ void loop() {
         char starting[24]; const int dots=(millis()/350)%4;
         snprintf(starting,sizeof(starting),"MEMULAI%.*s",dots,"..."); frame.drawString(starting,123,84);
       } else frame.drawString(stateText,123,84);
+      if (runningAnimation) drawRunningAnimation(millis(),dim,ch1Color,ch2Color);
       frame.setTextColor(white); frame.setTextSize(1);
       const bool reverse = uiPage == 2;
       const loratester::DirectionStats &stats = reverse ? uiStatus.fromCh1 : uiStatus.fromCh2;
       if (uiRealtime && uiPage == 0) {
-        char row[24]; frame.setTextColor(ch2Color); frame.drawString(millis()-packetFlashCh2<400 && packetFlashCh2 ? "CH2 >> CH1" : "CH2 > CH1",123,99);
+        char row[24]; frame.setTextColor(ch2Color); frame.drawString(millis()-packetFlashCh2<400 && packetFlashCh2 ? "CH2 >> CH1" : "CH2 > CH1",123,runningAnimation?runninganimation::kRtDir1:99);
         frame.setTextColor(white); frame.setTextSize(2);
         if (uiStatus.fromCh2.received) snprintf(row,sizeof(row),"%4d %5.1f%s",uiStatus.fromCh2.latestRssiDbm,uiStatus.fromCh2.latestSnrDb10/10.0f,effectiveAgeCh2==sampleage::kUnknown?"?":effectiveAgeCh2>5000?"*":""); else snprintf(row,sizeof(row)," --   --");
         const int offset2=packetFlashCh2 && millis()-packetFlashCh2<250 ? (250-(millis()-packetFlashCh2))/125 : 0;
-        frame.drawString(row,123,115-offset2); frame.setTextSize(1); frame.setTextColor(muted); frame.drawString("RSSI dBm          SNR dB",123,127);
-        frame.setTextColor(ch1Color); frame.drawString(millis()-packetFlashCh1<400 && packetFlashCh1 ? "CH1 >> CH2" : "CH1 > CH2",123,143);
+        frame.drawString(row,123,(runningAnimation?runninganimation::kRtValue1:115)-offset2); frame.setTextSize(1); frame.setTextColor(muted); frame.drawString("RSSI dBm          SNR dB",123,runningAnimation?runninganimation::kRtUnits1:127);
+        frame.setTextColor(ch1Color); frame.drawString(millis()-packetFlashCh1<400 && packetFlashCh1 ? "CH1 >> CH2" : "CH1 > CH2",123,runningAnimation?runninganimation::kRtDir2:143);
         frame.setTextColor(white); frame.setTextSize(2);
         if (uiStatus.fromCh1.received) snprintf(row,sizeof(row),"%4d %5.1f%s",uiStatus.fromCh1.latestRssiDbm,uiStatus.fromCh1.latestSnrDb10/10.0f,effectiveAgeCh1==sampleage::kUnknown?"?":effectiveAgeCh1>5000?"*":""); else snprintf(row,sizeof(row)," --   --");
         const int offset1=packetFlashCh1 && millis()-packetFlashCh1<250 ? (250-(millis()-packetFlashCh1))/125 : 0;
-        frame.drawString(row,123,158-offset1); frame.setTextSize(1); frame.setTextColor(muted); frame.drawString("RSSI dBm          SNR dB",123,170);
+        frame.drawString(row,123,(runningAnimation?runninganimation::kRtValue2:158)-offset1); frame.setTextSize(1); frame.setTextColor(muted); frame.drawString("RSSI dBm          SNR dB",123,runningAnimation?runninganimation::kRtUnits2:170);
       } else if (uiPage == 0 && uiStatus.state != 3) {
         char row[40];
-        frame.setTextColor(ch2Color); frame.drawString(millis()-packetFlashCh2<400 && packetFlashCh2 ? "CH2 >> CH1" : "CH2 > CH1",123,98);
+        frame.setTextColor(ch2Color); frame.drawString(millis()-packetFlashCh2<400 && packetFlashCh2 ? "CH2 >> CH1" : "CH2 > CH1",123,runningAnimation?108:98);
         if (uiStatus.fromCh2.available) snprintf(row,sizeof(row),"%u / 100%s",uiStatus.fromCh2.received,effectiveAgeCh2==sampleage::kUnknown?" (?)":effectiveAgeCh2>5000?" (LAMA)":""); else snprintf(row,sizeof(row),"MENUNGGU DATA");
-        frame.setTextColor(white); frame.drawString(row,123,109);
+        frame.setTextColor(white); frame.drawString(row,123,runningAnimation?119:109);
         if (uiStatus.fromCh2.received) snprintf(row,sizeof(row),"R %d dBm  S %.1f dB",uiStatus.fromCh2.latestRssiDbm,uiStatus.fromCh2.latestSnrDb10 / 10.0f); else snprintf(row,sizeof(row),"R -- dBm  S -- dB");
-        frame.drawString(row,123,120);
-        frame.setTextColor(ch1Color); frame.drawString(millis()-packetFlashCh1<400 && packetFlashCh1 ? "CH1 >> CH2" : "CH1 > CH2",123,137);
+        frame.drawString(row,123,runningAnimation?130:120);
+        frame.setTextColor(ch1Color); frame.drawString(millis()-packetFlashCh1<400 && packetFlashCh1 ? "CH1 >> CH2" : "CH1 > CH2",123,runningAnimation?141:137);
         if (uiStatus.fromCh1.available) snprintf(row,sizeof(row),"%u / 100%s",uiStatus.fromCh1.received,effectiveAgeCh1==sampleage::kUnknown?" (?)":effectiveAgeCh1>5000?" (LAMA)":""); else snprintf(row,sizeof(row),"MENUNGGU DATA");
-        frame.setTextColor(white); frame.drawString(row,123,151);
+        frame.setTextColor(white); frame.drawString(row,123,runningAnimation?152:151);
         if (uiStatus.fromCh1.received) snprintf(row,sizeof(row),"R %d dBm  S %.1f dB",uiStatus.fromCh1.latestRssiDbm,uiStatus.fromCh1.latestSnrDb10 / 10.0f); else snprintf(row,sizeof(row),"R -- dBm  S -- dB");
-        frame.drawString(row,123,162);
+        frame.drawString(row,123,runningAnimation?163:162);
       } else {
       frame.setTextColor(reverse ? ch1Color : ch2Color);
-      frame.drawString(reverse ? "CH1 -> CH2" : "CH2 -> CH1",123,101);
+      frame.drawString(reverse ? "CH1 -> CH2" : "CH2 -> CH1",123,runningAnimation?107:101);
       frame.setTextColor(white);
       char row[44];
       if (uiLink && stats.available && stats.received) {
-        snprintf(row,sizeof(row),"RSSI AVG %.1f dBm",stats.avgRssiDbm10 / 10.0f); frame.drawString(row,123,114);
-        snprintf(row,sizeof(row),"MIN %d    MAX %d",stats.minRssiDbm,stats.maxRssiDbm); frame.drawString(row,123,125);
-        snprintf(row,sizeof(row),"SNR AVG %.1f dB",stats.avgSnrDb10 / 10.0f); frame.drawString(row,123,136);
-        snprintf(row,sizeof(row),"MIN %.1f  MAX %.1f",stats.minSnrDb10 / 10.0f,stats.maxSnrDb10 / 10.0f); frame.drawString(row,123,147);
+        snprintf(row,sizeof(row),"RSSI AVG %.1f dBm",stats.avgRssiDbm10 / 10.0f); frame.drawString(row,123,runningAnimation?118:114);
+        snprintf(row,sizeof(row),"MIN %d    MAX %d",stats.minRssiDbm,stats.maxRssiDbm); frame.drawString(row,123,runningAnimation?129:125);
+        snprintf(row,sizeof(row),"SNR AVG %.1f dB",stats.avgSnrDb10 / 10.0f); frame.drawString(row,123,runningAnimation?140:136);
+        snprintf(row,sizeof(row),"MIN %.1f  MAX %.1f",stats.minSnrDb10 / 10.0f,stats.maxSnrDb10 / 10.0f); frame.drawString(row,123,runningAnimation?151:147);
         if (stats.final && uiStatus.state == 3) snprintf(row,sizeof(row),"PDR %u%% (%u/100)",stats.received,stats.received);
         else snprintf(row,sizeof(row),"PAKET %u / 100",stats.received);
       } else if (uiLink && stats.available && stats.final && uiStatus.state == 3) snprintf(row,sizeof(row),"PDR 0%% (0/100)");
       else snprintf(row,sizeof(row),"DATA BELUM ADA");
-      frame.setTextColor(mint); frame.drawString(row,123,161);
+      frame.setTextColor(mint); frame.drawString(row,123,runningAnimation?162:161);
       }
     }
     if (!calibration) {
@@ -481,17 +516,7 @@ void loop() {
         frame.drawFastVLine(123,200,7,white);
       }
     }
-    if (startAnimationAt && millis()-startAnimationAt<1500 && uiTester && !uiRealtime && uiPage==0 && !calibration) {
-      frame.fillSprite(bg); frame.drawCircle(circleX,circleY,circleR,dim);
-      frame.setTextDatum(lgfx::middle_center); frame.setTextSize(2); frame.setTextColor(white);
-      frame.drawString("CH1",72,120); frame.drawString("CH2",174,120);
-      frame.drawFastHLine(96,120,54,dim);
-      frame.drawLine(96,120,101,116,dim); frame.drawLine(96,120,101,124,dim);
-      frame.drawLine(149,120,144,116,dim); frame.drawLine(149,120,144,124,dim);
-      const uint32_t phase=(millis()-startAnimationAt)%1000;
-      const int dx=phase<500 ? phase*48/500 : (1000-phase)*48/500;
-      frame.fillCircle(99+dx,120,3,phase<500?ch2Color:ch1Color);
-    } else if (millis() < 3000 && !calibration) {
+    if (millis() < 3000 && !calibration) {
       frame.fillSprite(bg);
       int introProgress = min(100UL, millis()*100UL/2600UL);
       for (int n=0; n<introProgress; ++n) {
@@ -535,17 +560,14 @@ void loop() {
           if (calibration) calibration = false;
           else if (uiSubmenu) uiLoRaSelected = (uiLoRaSelected + 1) % 3;
           else if (!uiTester) uiSelected = (uiSelected + 1) % 2;
-          else if (uiRealtime) uiPage = uiPage == 3 ? 0 : 3;
-          else uiPage = (uiPage + 1) % 5;
+          else uiPage = uinavigation::nextTestPage(uiPage,uiRealtime,uiStatus.state==3);
           uiDirty = true; Serial.println("OK SHORT");
         } else if (line == "LONG") {
           longFlashUntil = millis() + 700;
           if (calibration) calibration = false;
           else if (uiSubmenu) { chooseLoRaMode(); }
           else if (!uiTester) { if (uiSelected == 0) { uiSubmenu=true; uiLoRaSelected=0; } }
-          else if (uiPage == 3) { uiTester = false; uiSubmenu=true; }
-          else if (!uiRunning && !stopPending && (!retryAfterUnknown || static_cast<int32_t>(millis()-retryReadyAt)>=0) && (!stopUnconfirmed || retryAfterUnknown)) { uiSimulation = false; sessionInterrupted=false; stopPending=false; stopUnconfirmed=false; retryAfterUnknown=false; uiRunning = monitorlink::start(uiRealtime); if (uiRunning) startAnimationAt=millis(); }
-          else if (uiRunning) { retryAfterUnknown=false; monitorlink::stopStartRetries(); monitorlink::stop(); stopPending=true; stopRequestedAt=stopLastAttempt=millis(); }
+          else { handleTestLong(); }
           uiDirty = true; Serial.println("OK LONG");
         } else if (line == "RESTART") { Serial.println("OK RESTART"); Serial.flush(); delay(50); ESP.restart();
         } else if (line == "STATUS") {

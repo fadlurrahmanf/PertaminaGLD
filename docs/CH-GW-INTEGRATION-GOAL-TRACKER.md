@@ -1,7 +1,7 @@
 # CH - Gateway - Node-RED integration
 
-Last evidence update: 2026-11-17 03:43:25 +07:00
-Last tracker heartbeat: 2026-11-17 03:43:25 +07:00
+Last evidence update: 2026-11-17 03:52:12 +07:00
+Last tracker heartbeat: 2026-11-17 03:52:12 +07:00
 
 ## Progress dashboard
 
@@ -64,7 +64,7 @@ Last tracker heartbeat: 2026-11-17 03:43:25 +07:00
 
 | Sub-agent / worker | Active work item | Started at | Elapsed | Progress | Activity / state |
 |---|---|---|---|---|---|
-| Codex | 3.2 Hardware proof | 2026-11-17 03:37:05 +07:00 | 00:06:20 | 70% | Eight fresh GLD pulls passed; scoped candidate files staged, no MQTT password in staged files. |
+| Codex | 3.2 Hardware proof | 2026-11-17 03:37:05 +07:00 | 00:15:07 | 70% | Six consecutive fresh GLD pulls passed after six-retry flash; CRC remains intermittent and other boards untested. |
 
 ## Protected baseline
 
@@ -72,6 +72,18 @@ Last tracker heartbeat: 2026-11-17 03:43:25 +07:00
 - User explicitly authorizes GW V2 COM6 and CH V3 COM7 flash through Operator Hub after six packages prepared. Preserve unrelated GLD/LoRaTester work and known-good packages.
 
 ## Evidence log
+
+- 03:52:12 Nov 17: Heartbeat SLA breach 52 seconds. Six consecutive real pulls 39042/48092/55134/9939/21033/30095 after six-retry GW V2 flash returned fresh decrypted GLD 1001. Several initial CRC failures recovered on retry; no evidence yet of attempts 4-6 or long-term field reliability. Operator README notes single pending retry and sequential pulls.
+
+- 03:51:20 Nov 17: All three six-retry GW builds passed. Expert COM6 upload verified hashes, mesh and MQTT ready. Requests 39042/48092/55134 delivered decrypted GLD 1001; two had CRC on initial packet and succeeded on attempt 2/6. No claim of guaranteed delivery or fixed RF.
+
+- 03:50:42 Nov 17: Heartbeat deadline missed by 4 seconds. GW V1 and V2 six-retry builds succeeded; GW V2 upload in progress via Expert, NVS retained. GW V3 build underway. Further hardware tests pending.
+
+- 03:48:35 Nov 17: Heartbeat SLA breach 71 seconds. CH restored 17dBm, radios ready and joined GW, GLD 1001 received; three fresh pulls 56853/63887/9425 decrypted. Raising bounded retry count in versioned GW candidate to six (1.8 s gap) within Node-RED 20 s timeout because three attempts previously exhausted.
+
+- 03:47:24 Nov 17: Heartbeat SLA breach 129 seconds. Controlled CH 7dBm test reduced GW observed RSSI by 10dB but CRC persisted; three pull replies were DataNotAvail because CH cache empty after reboot, not successful GLD pulls. Restored 17dBm with saved ACK and reboot; checking STAR and CH join before finalizing.
+
+- 03:45:15 Nov 17: Heartbeat SLA breach 110 seconds. Pushed candidate commit 457fb2f. Request 30738 later timed out after CRC errors and three attempts, so reliability is not solved. CH GET_INFO shows MESH 921/125/SF9/CR5/sync52/17dBm; temporarily testing 7dBm and will restore.
 
 - 03:43:25 Nov 17: Heartbeat SLA breach: 52 seconds. Scoped 78 candidate files staged; staged check found no supplied MQTT password or private device backup. Packages remain candidates due intermittent CRC and untested physical variants.
 

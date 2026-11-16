@@ -83,6 +83,11 @@ contain identical PCB and schematic files, so the two labels do not claim
 different firmware wiring. The V1/V3 watchdog builds require physical-board
 validation. Legacy profiles remain available for existing workflows.
 
+The versioned non-TLS candidates retry a pull at most six times, 1.8 seconds
+apart, stopping when a matching response arrives. This mitigates packet loss;
+it does not eliminate radio CRC errors. The Gateway keeps one pending retry,
+so issue pulls sequentially rather than overlapping requests for different CHs.
+
 To refresh this dated package set from the current firmware source, build all
 four Gateway environments with `PGL_OPERATOR_PACKAGE_NAME` set to a new
 dedicated directory name, verify the resulting manifests and binaries, then

@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import sys
 import tempfile
+import types
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -42,6 +43,58 @@ class FirmwareEnvironmentSelectionTests(unittest.TestCase):
                     {"boardFormFactor": board, "mqttTransport": transport},
                 )
                 self.assertEqual(selected["environment"], environment)
+
+    def test_versioned_candidates_match_expert_and_reject_unavailable_tls(self) -> None:
+        for version in (1, 2, 3):
+            board = f"v{version}"
+            for device in ("ch", "gw"):
+                payload = {"boardFormFactor": board}
+                if device == "gw":
+                    payload["mqttTransport"] = "non_tls"
+                env = f"{device}_v{version}"
+                self.assertEqual(bridge.resolve_firmware_environment(device, payload)["environment"], env)
+                self.assertTrue(bridge.package_manifest_summary(env)["available"])
+                expected_package = bridge.VERSIONED_PACKAGE_NAMES[env]
+                self.assertEqual(bridge.firmware_package_api_path(env),
+                                 f"/api/firmware/package?env={env}&package={expected_package}")
+            with self.assertRaises(ValueError):
+                bridge.resolve_firmware_environment("gw", {"boardFormFactor": board, "mqttTransport": "tls"})
+        self.assertEqual(bridge.firmware_package_api_path("gw_large_tls"), "/api/firmware/package?env=gw_large_tls")
+
+    def test_versioned_upload_uses_selected_candidate_and_checks_readback(self) -> None:
+        handler = object.__new__(bridge.Handler)
+        handler.server = types.SimpleNamespace(server_address=("127.0.0.1", 5188))
+        for device in ("ch", "gw"):
+            for version in (1, 2, 3):
+                env = f"{device}_v{version}"
+                shape = "circle" if version == 2 else "rectangle"
+                identity_key = "chId" if device == "ch" else "gatewayId"
+                info = {identity_key: "0020" if device == "ch" else "0001", "boardProfile": shape,
+                        "firmwareVersion": "0.8.0" if device == "ch" else "0.2.0"}
+                metadata = {"boardShape": shape}
+                if device == "gw":
+                    info.update(mqttTransport="non_tls", tlsCapable=False)
+                    metadata["mqttTransport"] = "non_tls"
+                manifest = {"environment": env, "firmwareVersion": info["firmwareVersion"], **metadata}
+                calls = []
+                def child(host, selected_device, method, path, payload=None, timeout=12):
+                    calls.append((method, path, payload))
+                    if method == "GET":
+                        return {"manifest": manifest, "packageFiles": {"firmware.bin": "AA=="}}
+                    return {"ok": True}
+                payload = {"device": device, "port": "COM6", "boardFormFactor": f"v{version}"}
+                if device == "gw":
+                    payload["mqttTransport"] = "non_tls"
+                with self.subTest(device=device, version=version), \
+                     mock.patch.object(bridge, "simple_device_state", return_value={"connected": True, "port": "COM6", "info": info}), \
+                     mock.patch.object(bridge, "child_request", side_effect=child), \
+                     mock.patch.object(bridge, "wait_for_readback", return_value={"info": info}), \
+                     mock.patch.object(bridge, "add_activity"), \
+                     mock.patch.object(bridge, "json_response"):
+                    handler._simple_firmware_upload(payload)
+                self.assertEqual(calls[0][1], bridge.firmware_package_api_path(env))
+                self.assertEqual(calls[1][2]["env"], env)
+                self.assertFalse(calls[1][2]["resetNvs"])
 
     def test_missing_board_selection_never_falls_back_to_legacy_packages(self) -> None:
         for device in ("ch", "gw"):
@@ -89,7 +142,7 @@ class FirmwareEnvironmentSelectionTests(unittest.TestCase):
 
     def test_catalog_exposes_operator_labels_and_all_environments(self) -> None:
         catalog = bridge.firmware_package_options()
-        self.assertEqual([item["label"] for item in catalog["ch"]["boards"]], ["Rectangle (kecil)", "Circle (besar)"])
+        self.assertEqual([item["value"] for item in catalog["ch"]["boards"]], ["v1", "v2", "v3", "small", "large"])
         self.assertEqual(catalog["gw"]["environments"]["large"]["tls"], "gw_large_tls")
         self.assertEqual(catalog["gld"]["environments"]["gld"], "gld")
         self.assertEqual(catalog["gld"]["environments"]["gld_v2"], "gld_v2")
@@ -100,8 +153,8 @@ class FirmwareEnvironmentSelectionTests(unittest.TestCase):
                     "gld_model_1_dataset_replay_wifi", "gld_model_2_dataset_replay_wifi", "gld_model_3_dataset_replay_wifi",
                     "gld_model_1_dataset_workflow_wifi", "gld_model_2_dataset_workflow_wifi", "gld_model_3_dataset_workflow_wifi",
                     "gld_model_1_h2_dataset_workflow_wifi"},
-            "ch": {"ch_small", "ch_large"},
-            "gw": {"gw_small", "gw_large", "gw_small_tls", "gw_large_tls"},
+            "ch": {"ch_small", "ch_large", "ch_v1", "ch_v2", "ch_v3"},
+            "gw": {"gw_small", "gw_large", "gw_small_tls", "gw_large_tls", "gw_v1", "gw_v2", "gw_v3"},
         }
         for device, environments in expected.items():
             with self.subTest(device=device):
@@ -119,7 +172,7 @@ class FirmwareEnvironmentSelectionTests(unittest.TestCase):
                     if environment == "gld_atex":
                         self.assertFalse(package["available"])
                         continue
-                    manifest_path = HUB_DIR / "firmware-packages" / environment / "latest" / "manifest.json"
+                    manifest_path = HUB_DIR / "firmware-packages" / environment / bridge.VERSIONED_PACKAGE_NAMES.get(environment, "latest") / "manifest.json"
                     manifest = __import__("json").loads(manifest_path.read_text(encoding="utf-8"))
                     self.assertEqual(package["firmwareVersion"], manifest["firmwareVersion"])
 
@@ -190,6 +243,8 @@ class FirmwareEnvironmentSelectionTests(unittest.TestCase):
             "gld_model_3",
             "gld_v2",
             "gld_atex",
+            "ch_v1", "ch_v2", "ch_v3",
+            "gw_v1", "gw_v2", "gw_v3",
             "ch_small",
             "ch_large",
             "gw_small",
@@ -198,6 +253,7 @@ class FirmwareEnvironmentSelectionTests(unittest.TestCase):
             "gw_large_tls",
         }
         self.assertEqual(set(preflight.REQUIRED_ENVIRONMENTS), expected)
+        self.assertEqual(preflight.VERSIONED_PACKAGE_NAMES, bridge.VERSIONED_PACKAGE_NAMES)
         self.assertTrue(
             {"gldFieldtest", "ch", "chFieldtest", "gw"}.isdisjoint(
                 preflight.REQUIRED_ENVIRONMENTS
@@ -374,8 +430,8 @@ class SimpleHubUiContractTests(unittest.TestCase):
         source = (HUB_DIR / "public" / "js" / "hub.js").read_text(encoding="utf-8")
         for marker in (
             "firmwareUploadBoard",
-            "Pilih bentuk board",
-            "Rectangle = board kecil. Circle = board besar.",
+            "Pilih board",
+            "V1/V3 = rectangle, V2 = circle.",
             "firmwareUploadTransport",
             "Pilih transport MQTT",
             "boardFormFactor",

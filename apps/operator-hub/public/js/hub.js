@@ -274,14 +274,14 @@ function requestFirmwareUploadOptions({ device, port, initialFirmware = false })
       <small>Pilih package sesuai board yang akan di-flash.</small>
     </label>` : "";
   const boardPicker = requiresBoard ? `
-    <label>BENTUK BOARD
-      <select id="firmwareUploadBoard"><option value="">Pilih bentuk board</option>${(packageOptions.boards || []).map((option) => `<option value="${option.value}">${option.label}</option>`).join("")}</select>
-      <small>Rectangle = board kecil. Circle = board besar.</small>
+    <label>VERSI ATAU BENTUK BOARD
+      <select id="firmwareUploadBoard"><option value="">Pilih board</option>${(packageOptions.boards || []).map((option) => `<option value="${option.value}">${option.label}</option>`).join("")}</select>
+      <small>V1/V3 = rectangle, V2 = circle. Pilihan bentuk tanpa versi memakai paket lama.</small>
     </label>` : "";
   const transportPicker = device === "gw" ? `
     <label>TRANSPORT MQTT
       <select id="firmwareUploadTransport"><option value="">Pilih transport MQTT</option>${(packageOptions.transports || []).map((option) => `<option value="${option.value}">${option.label}</option>`).join("")}</select>
-      <small>TLS dan non-TLS adalah environment firmware terpisah.</small>
+      <small>V1–V3 menyediakan kandidat non-TLS. Paket TLS lama tersedia melalui pilihan bentuk board.</small>
     </label>` : "";
   dialog.className = "firmware-upload-dialog";
   dialog.innerHTML = `<form method="dialog">
@@ -340,8 +340,10 @@ function requestFirmwareUploadOptions({ device, port, initialFirmware = false })
         : `${board?.selectedOptions?.[0]?.textContent || ""}${transportValue ? ` / ${transport?.selectedOptions?.[0]?.textContent || ""}` : ""}`;
       environment.replaceChildren(new Option(selectedEnvironment || "Lengkapi pilihan package", selectedEnvironment || ""));
       if (!selectedEnvironment) {
-        packageLabel.textContent = `Package: ${spec.label} / pilihan belum lengkap`;
-        error.hidden = true;
+        const unavailableCombination = device === "gw" && boardValue && transportValue;
+        packageLabel.textContent = `Package: ${spec.label} / ${unavailableCombination ? "kombinasi tidak tersedia" : "pilihan belum lengkap"}`;
+        error.textContent = unavailableCombination ? "Paket untuk versi board dan transport MQTT ini belum tersedia." : "";
+        error.hidden = !unavailableCombination;
         return "";
       }
       if (selectedPackage?.available !== true) {
@@ -367,7 +369,7 @@ function requestFirmwareUploadOptions({ device, port, initialFirmware = false })
         return;
       }
       if (requiresBoard && !board?.value) {
-        error.textContent = "Pilih bentuk board Rectangle (kecil) atau Circle (besar).";
+        error.textContent = "Pilih versi atau bentuk board yang sesuai.";
         error.hidden = false;
         board?.focus();
         return;

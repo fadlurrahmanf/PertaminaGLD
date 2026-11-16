@@ -54,6 +54,18 @@ operator-selection page; the three cards are buttons that open the
 corresponding console. Running `apps/ch-operator/run-ch-operator.bat` also
 opens this Hub entry page instead of entering the CH console directly.
 
+Simple Hub and the CH/Gateway Expert consoles offer matching V1, V2 and V3
+firmware candidates: V1 and V3 use rectangle wiring; V2 uses circle wiring.
+The versioned Gateway candidates use non-TLS MQTT. The separate rectangle and
+circle choices in Simple Hub continue to select the older packages, including
+their TLS variants. Verify the device version before flashing: the CH candidate
+is source version 0.8.0 and must not be assumed equivalent to a newer installed
+firmware. V1/V3 Gateway and V1/V2 CH candidates still need physical-board tests.
+GLD has separate model and operating-mode packages; select the one appropriate
+for the specific detector rather than treating a different model's build as an
+upgrade. The maintained Node-RED Aedes setup is documented in
+`server/nodered/README.md`.
+
 If no LAN connection is available at startup, the Hub still opens and the
 GLD/CH serial consoles still work; only Gateway/MQTT features are marked
 degraded.

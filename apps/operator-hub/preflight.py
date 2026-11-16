@@ -32,6 +32,8 @@ REQUIRED_ENVIRONMENTS = (
     "gld_model_3",
     "gld_v2",
     "gld_atex",
+    "ch_v1", "ch_v2", "ch_v3",
+    "gw_v1", "gw_v2", "gw_v3",
     "ch_small",
     "ch_large",
     "gw_small",
@@ -40,12 +42,22 @@ REQUIRED_ENVIRONMENTS = (
     "gw_large_tls",
 )
 PACKAGE_METADATA_BY_ENVIRONMENT = {
+    "ch_v1": {"boardShape": "rectangle"},
+    "ch_v2": {"boardShape": "circle"},
+    "ch_v3": {"boardShape": "rectangle"},
+    "gw_v1": {"boardShape": "rectangle", "mqttTransport": "non_tls"},
+    "gw_v2": {"boardShape": "circle", "mqttTransport": "non_tls"},
+    "gw_v3": {"boardShape": "rectangle", "mqttTransport": "non_tls"},
     "ch_small": {"boardShape": "rectangle"},
     "ch_large": {"boardShape": "circle"},
     "gw_small": {"boardShape": "rectangle", "mqttTransport": "non_tls"},
     "gw_large": {"boardShape": "circle", "mqttTransport": "non_tls"},
     "gw_small_tls": {"boardShape": "rectangle", "mqttTransport": "tls"},
     "gw_large_tls": {"boardShape": "circle", "mqttTransport": "tls"},
+}
+VERSIONED_PACKAGE_NAMES = {
+    **{f"ch_v{version}": "candidate-hello-ack-20261116" for version in (1, 2, 3)},
+    **{f"gw_v{version}": "candidate-board-20261116" for version in (1, 2, 3)},
 }
 
 
@@ -167,10 +179,9 @@ def _firmware_packages_check() -> dict[str, str]:
 
     broken: dict[str, str] = {}
     for env in REQUIRED_ENVIRONMENTS:
-        # Upload and package-catalog paths always consume the exact `latest`
-        # package. An older archived manifest must never make readiness green
-        # when that selected package is missing or corrupt.
-        manifest_path = FIRMWARE_PACKAGES_DIR / env / "latest" / "manifest.json"
+        # Verify the exact package selected for upload, including pinned
+        # versioned candidates; another valid archive cannot substitute.
+        manifest_path = FIRMWARE_PACKAGES_DIR / env / VERSIONED_PACKAGE_NAMES.get(env, "latest") / "manifest.json"
         if not manifest_path.is_file():
             broken[env] = "no package found"
             continue

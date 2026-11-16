@@ -90,6 +90,9 @@ simple_activity: list[dict[str, object]] = []
 simple_activity_lock = threading.Lock()
 
 BOARD_FORM_FACTORS = (
+    {"value": "v1", "label": "V1 - Rectangle (kecil)"},
+    {"value": "v2", "label": "V2 - Circle (besar)"},
+    {"value": "v3", "label": "V3 - Rectangle (kecil, WDT)"},
     {"value": "small", "label": "Rectangle (kecil)"},
     {"value": "large", "label": "Circle (besar)"},
 )
@@ -132,10 +135,14 @@ GLD_DATASET_WORKFLOW_ENVIRONMENTS = (frozenset(f"gld_model_{model}_dataset_workf
                                      | frozenset(ATEX_WORKFLOW_MODELS) | {"gld_model_1_h2_dataset_workflow_wifi"})
 FIRMWARE_ENVIRONMENTS = {
     "ch": {
+        "v1": "ch_v1", "v2": "ch_v2", "v3": "ch_v3",
         "small": "ch_small",
         "large": "ch_large",
     },
     "gw": {
+        "v1": {"non_tls": "gw_v1"},
+        "v2": {"non_tls": "gw_v2"},
+        "v3": {"non_tls": "gw_v3"},
         "small": {"non_tls": "gw_small", "tls": "gw_small_tls"},
         "large": {"non_tls": "gw_large", "tls": "gw_large_tls"},
     },
@@ -153,6 +160,12 @@ GATEWAY_TEXT_FIELD_MAX_BYTES = {
     "NTP host": 64,
 }
 PACKAGE_METADATA_BY_ENVIRONMENT = {
+    "ch_v1": {"boardShape": "rectangle"},
+    "ch_v2": {"boardShape": "circle"},
+    "ch_v3": {"boardShape": "rectangle"},
+    "gw_v1": {"boardShape": "rectangle", "mqttTransport": "non_tls"},
+    "gw_v2": {"boardShape": "circle", "mqttTransport": "non_tls"},
+    "gw_v3": {"boardShape": "rectangle", "mqttTransport": "non_tls"},
     "ch_small": {"boardShape": "rectangle"},
     "ch_large": {"boardShape": "circle"},
     "gw_small": {"boardShape": "rectangle", "mqttTransport": "non_tls"},
@@ -160,6 +173,16 @@ PACKAGE_METADATA_BY_ENVIRONMENT = {
     "gw_small_tls": {"boardShape": "rectangle", "mqttTransport": "tls"},
     "gw_large_tls": {"boardShape": "circle", "mqttTransport": "tls"},
 }
+VERSIONED_PACKAGE_NAMES = {
+    **{f"ch_v{version}": "candidate-hello-ack-20261116" for version in (1, 2, 3)},
+    **{f"gw_v{version}": "candidate-board-20261116" for version in (1, 2, 3)},
+}
+
+
+def firmware_package_api_path(environment: str) -> str:
+    """Use the same pinned candidate package as the matching Expert selector."""
+    name = VERSIONED_PACKAGE_NAMES.get(environment)
+    return f"/api/firmware/package?env={environment}" + (f"&package={name}" if name else "")
 DEFAULT_DEVICE_IDENTITIES = {
     "gld": "1001",
     "ch": "0010",
@@ -306,7 +329,7 @@ def resolve_firmware_environment(device: str, payload: dict[str, object]) -> dic
     raw_board = str(payload.get("boardFormFactor") or "").strip().lower()
     raw_transport = str(payload.get("mqttTransport") or "").strip().lower()
     if raw_board not in FIRMWARE_ENVIRONMENTS[device]:
-        raise ValueError("boardFormFactor must be small (Rectangle) or large (Circle)")
+        raise ValueError("boardFormFactor must identify V1, V2, V3, small or large")
 
     if device == "ch":
         if raw_transport:
@@ -321,7 +344,9 @@ def resolve_firmware_environment(device: str, payload: dict[str, object]) -> dic
 
     if raw_transport not in {"non_tls", "tls"}:
         raise ValueError("Gateway mqttTransport must be selected as non_tls or tls")
-    environment = FIRMWARE_ENVIRONMENTS["gw"][raw_board][raw_transport]
+    environment = FIRMWARE_ENVIRONMENTS["gw"][raw_board].get(raw_transport)
+    if not environment:
+        raise ValueError("selected board and MQTT transport combination is not available")
     return {
         "environment": environment,
         "boardFormFactor": raw_board,
@@ -543,7 +568,8 @@ def package_manifest_summary(environment: str) -> dict[str, object]:
     resolved here. Callers must pass the exact environment selected by the
     operator-facing catalog.
     """
-    manifest_path = HUB_DIR / "firmware-packages" / environment / "latest" / "manifest.json"
+    package_name = VERSIONED_PACKAGE_NAMES.get(environment, "latest")
+    manifest_path = HUB_DIR / "firmware-packages" / environment / package_name / "manifest.json"
     summary: dict[str, object] = {
         "environment": environment,
         "available": False,
@@ -1616,7 +1642,7 @@ class Handler(SimpleHTTPRequestHandler):
             detected = state.get("info") if isinstance(state.get("info"), dict) else {}
             if detected.get("boardProfile") != "GLD ATEX MotherBoardGLDVer2":
                 raise RuntimeError("ATEX upload held: board identity not verified; legacy GLD2-labelled firmware requires a verified migration path")
-        package = child_request(host, device, "GET", f"/api/firmware/package?env={env}")
+        package = child_request(host, device, "GET", firmware_package_api_path(env))
         manifest = validate_selected_package(package, env)
         atex_evidence = validated_atex_evidence(package, env) if env in ATEX_WORKFLOW_MODELS else None
         if initial_firmware and env in GLD_DATASET_WORKFLOW_ENVIRONMENTS and manifest.get("capabilities") != {"nativeSerial": True, "datasetWifi": True}:
@@ -1694,7 +1720,7 @@ class Handler(SimpleHTTPRequestHandler):
                 raise RuntimeError("flash completed but nonce-correlated ATEX board, device or model differs")
         if device in {"ch", "gw"}:
             readback_info = readback.get("info") if isinstance(readback.get("info"), dict) else {}
-            expected_board = "rectangle" if selection.get("boardFormFactor") == "small" else "circle"
+            expected_board = PACKAGE_METADATA_BY_ENVIRONMENT[env]["boardShape"]
             if readback_info.get("boardProfile") != expected_board:
                 raise RuntimeError(
                     f"{device.upper()} package flashed but board profile read-back differs: "

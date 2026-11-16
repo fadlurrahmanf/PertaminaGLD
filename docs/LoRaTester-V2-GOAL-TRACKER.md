@@ -1,7 +1,7 @@
 # LoRaTester V2 — Tracker
 
-Last tracker heartbeat: 2026-11-16 21:18:38 WIB
-Last evidence update: 2026-11-16 21:17:36 WIB
+Last tracker heartbeat: 2026-11-16 21:35:35 WIB
+Last evidence update: 2026-11-16 21:35:35 WIB
 
 ## Progress dashboard
 
@@ -36,7 +36,8 @@ Bobot 20% + 30% + 30% + 20%; progress tiap fase adalah rata-rata work item.
 | V2-06 | Solved | Umur efektif memakai timestamp STATUS | Host batas stale, sentinel dan wrap lulus |
 | V2-07 | Solved | Indikator PDR saat koneksi pulih | 91 tes host dan build display lulus |
 | V2-08 | Deferred | Guard reset, timeout dan retry ACK lulus host/build dan review | Uji timing dan RF pada perangkat |
-| V2-09 | Open | COM5: 63–65 render/s menu, animasi PDR 41–44 changed blit/s di 40MHz | Optimasi ring dan ukur ulang; full-screen 60 belum terbukti |
+| V2-09 | Open | 40MHz realtime 63–65 blit/s saat animasi; refresh penuh 26,3ms, 80MHz 17,1ms | Minimum 60 pada semua frame belum tercapai; perlu solusi dan uji lanjut |
+| V2-10 | Deferred | Ambang 10/5 dan ring interval sampel: build serta 110 host lulus | User meminta simpan untuk upload berikutnya; tes fisik tertunda |
 
 ### Phase 1 work items
 
@@ -68,9 +69,4 @@ Bobot 20% + 30% + 30% + 20%; progress tiap fase adalah rata-rata work item.
 
 ## Current work / agent state
 
-| Worker | Active work | Started at | Elapsed | State |
-|---|---|---|---|---|
-| Display worker | Optimasi laju animasi | 2026-11-16 21:17:36 WIB | 0:01:02 | Aktif |
-| Coordinator | Cadangan COM5, uji dan upload | 2026-11-16 21:01:17 WIB | 0:17:21 | Aktif |
-
-User mengotorisasi upload COM5; V1 dan CH tidak diubah. Jaga firmware display yang telah diuji, serta NVS. Target 60 FPS perlu bukti pengukuran perangkat.
+Waiting for next upload / further FPS work. Display COM5 has the verified uploaded 40 MHz firmware, instant menu selection and dirty-tile drawing. User observed normal display at 40 and at temporary 80 MHz. Live LoRa Realtime 40 MHz animated windows showed 63–65 changed blits/s; full refresh measured 26.3 ms at 40 MHz and 17.1 ms at temporary 80 MHz, so minimum 60 FPS on every frame is not met or guaranteed. Serial reports command-set frequency, not measured panel scan rate. Test session STOP confirmed; COM5 closed. Backup of prior bench app0 is `.pio/verified-bench-app0.bin`. Changes to V2 stability thresholds 10/5 dB and ring start/reset are built with 110 host checks but intentionally not uploaded per user request. Battery ADC and field tests remain pending.

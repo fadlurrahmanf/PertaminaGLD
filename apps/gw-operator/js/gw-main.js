@@ -35,6 +35,7 @@ function mqttConfigFromForm() {
 
 async function handleMqttConnect() {
   if (!state.wifiVerified) return showBanner("Verify Gateway Wi-Fi before connecting MQTT.", "error");
+  if (elements.mqttTransport.value === "tls") return showBanner("Operator monitor does not support TLS; use Node-RED to monitor this broker.", "error");
   const config = mqttConfigFromForm();
   if (!config.host) return showBanner("Broker host is required.", "error");
   await connectMqtt(config);
@@ -46,6 +47,7 @@ async function handleMqttDisconnect() {
 
 async function handleMqttTest() {
   if (!state.wifiVerified) return showBanner("Verify Gateway Wi-Fi before testing MQTT.", "error");
+  if (elements.mqttTransport.value === "tls") return showBanner("The PC broker test does not support TLS; use Node-RED to test this broker.", "error");
   const config = mqttConfigFromForm();
   if (!config.host) return showBanner("Broker host is required.", "error");
   elements.mqttSetupDetail.textContent = "Testing…";
@@ -142,6 +144,16 @@ async function handleApplyMqttConfig() {
   if (!config.host) {
     elements.gwApplyMqttStatus.textContent = "MQTT host is required.";
     return;
+  }
+  if (elements.mqttTransport.value === "tls") {
+    const ca = elements.mqttTlsCa.value.trim();
+    const ntp = elements.mqttNtpHost.value.trim();
+    if (!ca.includes("-----BEGIN CERTIFICATE-----") || !ca.includes("-----END CERTIFICATE-----") || new TextEncoder().encode(ca).length > 3900 || !ntp || new TextEncoder().encode(ntp).length > 64) {
+      elements.gwApplyMqttStatus.textContent = "TLS requires a valid Root CA PEM (max 3900 bytes) and NTP host (max 64 bytes).";
+      return;
+    }
+    config.tlsCaPem = ca;
+    config.ntpHost = ntp;
   }
   elements.gwApplyMqttBtn.disabled = true;
   elements.gwApplyMqttStatus.textContent = "Saving MQTT settings to the Gateway…";
@@ -372,6 +384,8 @@ function readFileBase64(file) {
   });
 }
 
+let manualUploadPackage = null;
+
 function pickFirmwareFolder() {
   const input = document.createElement("input");
   input.type = "file";
@@ -389,12 +403,14 @@ function pickFirmwareFolder() {
         if (!bin) throw new Error(`binary ${item.path} missing from folder`);
         state.manifestFiles.set(item.path, await readFileBase64(bin));
       }
+      manualUploadPackage = { manifest, packageFiles: Object.fromEntries(state.manifestFiles) };
       elements.fwTargetId.value = manifest.deviceId || DEFAULT_GATEWAY_ID;
       if (manifest.environment) elements.fwEnvSelect.value = manifest.environment;
       elements.fwStatus.textContent = `Loaded ${manifest.environment} v${manifest.firmwareVersion} (${manifest.flashFiles.length} files, chip ${manifest.chip}).`;
       applyExpertLockUi();
     } catch (error) {
       state.manifest = null;
+      manualUploadPackage = null;
       elements.fwStatus.textContent = `Package error: ${error.message}`;
       applyExpertLockUi();
     }
@@ -416,32 +432,51 @@ function setFirmwareUploadStatus(message, state = "") {
   status.setAttribute("aria-busy", String(resolvedState === "loading"));
 }
 
+let uploadPackageRequest = 0;
+
+async function loadUploadProfile() {
+  const request = ++uploadPackageRequest;
+  const profile = $("firmwareUploadProfile").value;
+  state.manifest = null;
+  state.manifestFiles = new Map();
+  $("firmwareUploadConfirmBtn").disabled = true;
+  $("firmwareUploadPackage").textContent = "Memuat paket…";
+  try {
+    const builtin = profile === "custom" ? manualUploadPackage : profile
+      ? await bridgeFetch(`/api/firmware/package?env=${encodeURIComponent(profile)}&package=current-source-20261116`)
+      : null;
+    if (request !== uploadPackageRequest) return;
+    if (!builtin || !builtin.manifest || (profile !== "custom" && builtin.manifest.environment !== profile)) {
+      throw new Error("Pilih paket yang tersedia dan sesuai board");
+    }
+    state.manifest = builtin.manifest;
+    state.manifestFiles = new Map(Object.entries(builtin.packageFiles || {}));
+    $("firmwareUploadPackage").textContent = `Package: ${state.manifest.environment} v${state.manifest.firmwareVersion} — ${state.manifest.boardProfile}`;
+    const ready = /^COM\d+$/i.test($("firmwareUploadPort").value);
+    $("firmwareUploadConfirmBtn").disabled = !ready;
+    setFirmwareUploadStatus(ready ? "Ready to upload." : "Choose a valid COM port first.");
+  } catch (error) {
+    if (request !== uploadPackageRequest) return;
+    $("firmwareUploadPackage").textContent = "Paket tidak tersedia.";
+    setFirmwareUploadStatus(`Paket gagal dimuat: ${error.message}`);
+  }
+}
+
 async function openFirmwareUploadDialog() {
   switchTab("firmware");
   if (state.bridgeAvailable) await refreshPorts(true);
-  try {
-    const builtin = await bridgeFetch("/api/firmware/package?env=gw");
-    state.manifest = builtin.manifest;
-    state.manifestFiles = new Map(Object.entries(builtin.packageFiles || {}));
-  } catch (error) {
-    state.manifest = null;
-    state.manifestFiles = new Map();
-    showBanner(`Package Gateway belum tersedia: ${error.message}`, "error");
-  }
   const dialogPort = $("firmwareUploadPort");
   const selectedPort = elements.portSelect.value;
   dialogPort.replaceChildren(...Array.from(elements.portSelect.options).map((option) => new Option(option.text, option.value, false, option.value === selectedPort)));
-  $("firmwareUploadPackage").textContent = state.manifest
-    ? `Package: ${state.manifest.environment || "unknown"} v${state.manifest.firmwareVersion || "unknown"}`
-    : "Paket Gateway belum tersedia.";
-  const ready = Boolean(state.manifest && /^COM\d+$/i.test(dialogPort.value));
-  $("firmwareUploadConfirmBtn").disabled = !ready;
-  setFirmwareUploadStatus(ready ? "Ready to upload." : "Choose a valid package and COM port first.");
+  $("firmwareUploadProfile").value = manualUploadPackage ? "custom" : "";
+  await loadUploadProfile();
   setFirmwareUploadDialog(true);
 }
 
 async function uploadFirmware() {
   if (!state.manifest) return;
+  const manifest = state.manifest;
+  const packageFiles = Object.fromEntries(state.manifestFiles);
   const targetId = normalizeHexId(elements.fwTargetId.value || DEFAULT_GATEWAY_ID);
   const port = $("firmwareUploadPort").value;
   if (!/^COM\d+$/i.test(port)) return setFirmwareUploadStatus("Choose a valid COM port first.");
@@ -449,7 +484,9 @@ async function uploadFirmware() {
   $("firmwareUploadConfirmBtn").disabled = true;
   $("firmwareUploadCancelBtn").disabled = true;
   $("firmwareResetNvs").disabled = true;
-  appendLog(`UPLOAD_START requested port=${port} env=${elements.fwEnvSelect.value || state.manifest.environment || "gw"}`, "in");
+  $("firmwareUploadProfile").disabled = true;
+  $("firmwareUploadPort").disabled = true;
+  appendLog(`UPLOAD_START requested port=${port} env=${manifest.environment}`, "in");
   switchTab("log");
   setFirmwareUploadStatus(`Disconnecting serial, then uploading to ${port}…`);
   $("firmwareUploadStatus").dataset.state = "loading";
@@ -459,13 +496,13 @@ async function uploadFirmware() {
     const result = await bridgeFetch("/api/firmware/upload", {
       method: "POST",
       body: JSON.stringify({
-        env: elements.fwEnvSelect.value || state.manifest.environment || "gw",
+        env: manifest.environment,
         port,
         targetDeviceId: targetId,
         resetNvs: $("firmwareResetNvs").checked,
         slot: state.activeSlot,
-        manifest: state.manifest,
-        packageFiles: Object.fromEntries(state.manifestFiles)
+        manifest,
+        packageFiles
       })
     });
     setFirmwareUploadStatus(result.nvsReset
@@ -483,6 +520,8 @@ async function uploadFirmware() {
   } finally {
     $("firmwareUploadCancelBtn").disabled = false;
     $("firmwareResetNvs").disabled = false;
+    $("firmwareUploadProfile").disabled = false;
+    $("firmwareUploadPort").disabled = false;
     $("firmwareUploadCancelBtn").textContent = "Close";
   }
 }
@@ -496,6 +535,10 @@ function setupEvents() {
   $("firmwareUploadCancelBtn")?.addEventListener("click", () => setFirmwareUploadDialog(false));
   document.querySelectorAll("[data-upload-dialog-close]").forEach((node) => node.addEventListener("click", () => setFirmwareUploadDialog(false)));
   $("firmwareUploadConfirmBtn")?.addEventListener("click", uploadFirmware);
+  $("firmwareUploadProfile")?.addEventListener("change", loadUploadProfile);
+  $("firmwareUploadPort")?.addEventListener("change", () => {
+    $("firmwareUploadConfirmBtn").disabled = !(state.manifest && /^COM\d+$/i.test($("firmwareUploadPort").value));
+  });
 
   document.querySelectorAll(".tab").forEach((tab) => {
     tab.addEventListener("click", () => switchTab(tab.dataset.tab));
@@ -509,6 +552,7 @@ function setupEvents() {
   elements.mqttDisconnectBtn.addEventListener("click", handleMqttDisconnect);
   elements.mqttTestBtn.addEventListener("click", handleMqttTest);
   elements.useThisPcBtn.addEventListener("click", useLocalPc);
+  elements.mqttTransport.addEventListener("change", () => { elements.mqttTlsFields.hidden = elements.mqttTransport.value !== "tls"; });
   elements.gwUseThisWifiBtn.addEventListener("click", useCurrentPcWifi);
   elements.gwApplyWifiBtn.addEventListener("click", handleApplyWifiConfig);
   elements.gwTestWifiBtn.addEventListener("click", handleTestGatewayWifi);

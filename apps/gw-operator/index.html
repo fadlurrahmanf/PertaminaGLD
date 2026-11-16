@@ -39,6 +39,16 @@
       <div class="upload-dialog-backdrop" data-upload-dialog-close></div>
       <section class="upload-dialog-box" role="dialog" aria-modal="true" aria-labelledby="firmwareUploadDialogTitle">
         <h2 id="firmwareUploadDialogTitle">Upload Firmware</h2>
+        <label class="upload-dialog-field">Board dan koneksi MQTT
+          <select id="firmwareUploadProfile">
+            <option value="">Pilih board dan MQTT</option>
+            <option value="gw_small">Rectangle kecil — non-TLS</option>
+            <option value="gw_small_tls">Rectangle kecil — TLS</option>
+            <option value="gw_large">Circle besar — non-TLS</option>
+            <option value="gw_large_tls">Circle besar — TLS</option>
+            <option value="custom">Paket pilihan manual</option>
+          </select>
+        </label>
         <p id="firmwareUploadPackage" class="hint">No firmware package loaded.</p>
         <label class="upload-dialog-field">Target COM
           <select id="firmwareUploadPort" aria-label="Target COM for firmware upload"></select>
@@ -314,6 +324,8 @@
             <select id="fwEnvSelect" disabled>
               <option value="gw">gw</option>
               <option value="gw_hello_ack_fieldtest">gw_hello_ack_fieldtest</option>
+              <option value="gw_small">gw_small</option><option value="gw_small_tls">gw_small_tls</option>
+              <option value="gw_large">gw_large</option><option value="gw_large_tls">gw_large_tls</option>
             </select>
           </div>
           <div class="field">
@@ -420,6 +432,14 @@
           <div class="field"><label for="mqttUsername">Username</label><input id="mqttUsername" type="text" autocomplete="off" /></div>
           <div class="field"><label for="mqttPassword">Password</label><input id="mqttPassword" type="password" autocomplete="off" /></div>
         </div>
+        <label class="field"><span>Gateway MQTT transport</span>
+          <select id="mqttTransport"><option value="non_tls">non-TLS (Hub Broker)</option><option value="tls">TLS</option></select>
+        </label>
+        <div id="mqttTlsFields" hidden>
+          <div class="field"><label for="mqttTlsCa">Broker Root CA PEM</label><textarea id="mqttTlsCa" rows="5" spellcheck="false"></textarea></div>
+          <div class="field"><label for="mqttNtpHost">NTP host</label><input id="mqttNtpHost" type="text" placeholder="pool.ntp.org" /></div>
+          <p class="hint">TLS requires a TLS-capable firmware and broker. The local operator monitor and its test button currently support non-TLS only; use Node-RED or broker tools to monitor TLS.</p>
+        </div>
         <div class="btn-row">
           <button id="gwApplyMqttBtn" class="primary">Save &amp; connect Gateway</button>
           <button id="mqttTestBtn">Test broker from this PC</button>
@@ -454,6 +474,6 @@
     </div>
   </aside>
 
-  <script type="module" src="./js/gw-main.js?v=20260723-gateway-runtime-id-1"></script>
+  <script type="module" src="./js/gw-main.js?v=20261116-gateway-package-selection-1"></script>
 </body>
 </html>

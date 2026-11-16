@@ -16,7 +16,10 @@
 #include "SampleAge.h"
 #include "DirtyFrame.h"
 #include "FrameStats.h"
+#include "PdrStability.h"
 #include <cstdlib>
+
+constexpr long kDefaultTftFrequency = 40000000;
 
 class LGFX : public lgfx::LGFX_Device {
 public:
@@ -24,7 +27,7 @@ public:
   lgfx::Bus_SPI bus;
   bool configured = false;
   int activeSclk=18, activeMosi=23, activeCs=27, activeDc=26, activeRst=25, activeMode=0;
-  long activeFreq=10000000;
+  long activeFreq=kDefaultTftFrequency;
   bool activeInvert=true, activeBgr=false;
 
   bool apply(int sclk, int mosi, int cs, int dc, int rst, long freq, int mode, bool inv, bool bgr) {
@@ -194,7 +197,7 @@ void setup() {
   delay(300);
   Serial.printf("reset reason = %d (1=POWERON, 9=BROWNOUT)\n", (int)esp_reset_reason());
   Serial.println("READY tuner");
-  bool ok = lcd.apply(18, 23, 27, 26, 25, 10000000, 0, true, false);
+  bool ok = lcd.apply(18, 23, 27, 26, 25, kDefaultTftFrequency, 0, true, false);
   frame.setColorDepth(8);
   bool spriteOk = frame.createSprite(240, 240) != nullptr;
   Serial.printf("Sprite=%d free=%u\n", spriteOk, ESP.getFreeHeap());
@@ -275,7 +278,7 @@ void loop() {
       b.avgRssiDbm10=-790; b.minRssiDbm=-85; b.maxRssiDbm=-72; b.avgSnrDb10=90; b.minSnrDb10=70; b.maxSnrDb10=110;
       b.latestRssiDbm=-79; b.latestSnrDb10=90;
     } else uiLink = monitorlink::snapshot(uiStatus,&uiStatusReceivedAt,&uiStatusReceiptValid);
-    if (uiStatus.session && uiStatus.session!=previousSession) { previousSession=uiStatus.session; previousReport=0; }
+    if (uiStatus.session && uiStatus.session!=previousSession) { previousSession=uiStatus.session; previousReport=0; packetFlashCh1=packetFlashCh2=0; }
     if (!uiSimulation && uiLink && uiStatus.state==2 && uiStatus.reportSeq!=previousReport) {
       if (uiStatus.phase==5) {
         const uint8_t changes=sampleEvents.update(uiStatus.session,uiStatus.sampleSeqValid,uiStatus.sampleSeqFromCh2,uiStatus.sampleSeqFromCh1);
@@ -315,8 +318,7 @@ void loop() {
   if (!calibration && (stable!=LOW || longHandled) && millis() - animationAt >= 16) { animationAt = millis(); uiDirty = true; }
   if (uiDirty) {
     const uint32_t frameStarted=micros();
-    static uint32_t renderedFrameSequence=0;
-    const uint32_t animationFrame=renderedFrameSequence++;
+    static uitiming::RingAnimation ringAnimation;
     uiDirty = false;
     const uint16_t bg=0x0000, mint=0x4DFB, muted=0xB5F6, white=0xFFFF, dim=0x49D3, selected=0x2253;
     const uint16_t ch2Color=0x5DFF, ch1Color=0xFD47, header=0x5DFF, warning=0xFD20, success=0x57EC;
@@ -331,7 +333,7 @@ void loop() {
     if (circleR!=cachedCircleRadius) {
       cachedCircleRadius=circleR;
       for (int n=0; n<100; ++n) {
-        const float a=(n*6.2831853f/100.0f)-1.5707963f;
+        const float a=uitiming::ringAngle(n);
         const float c=cosf(a), s=sinf(a);
         ringX[n]=static_cast<int16_t>((circleR-5)*c); ringY[n]=static_cast<int16_t>((circleR-5)*s);
         introX[n]=static_cast<int16_t>((circleR-13)*c); introY[n]=static_cast<int16_t>((circleR-13)*s);
@@ -340,10 +342,10 @@ void loop() {
     frame.fillSprite(bg);
     frame.drawCircle(circleX,circleY,circleR,dim);
     int ringPercent = !uiTester ? 0 : (!uiLink || uiStatus.sentCh1 > 100 || uiStatus.sentCh2 > 100 ? 0 : min(uiStatus.sentCh1, uiStatus.sentCh2));
-    if (uiTester && uiRealtime && uiStatus.state == 2 && uiStatus.fromCh2.received && effectiveAgeCh2 != sampleage::kUnknown) {
-      uint32_t age = effectiveAgeCh2;
-      ringPercent = min(100UL, age*100UL/2000UL);
+    if (uiTester && uiRealtime && uiStatus.state == 2) {
+      ringPercent=uitiming::observedPacketProgress(packetFlashCh2,millis(),packetFlashCh2!=0);
     }
+    const uint32_t animationFrame=ringAnimation.next(scene,uiStatus.session,ringPercent>0,uiRealtime?packetFlashCh2:0);
     for (int n = 0; n < ringPercent; ++n) {
       const int px=circleX+ringX[n], py=circleY+ringY[n];
       bool highlight = uitiming::ringHighlight(ringPercent,animationFrame,n);
@@ -407,12 +409,11 @@ void loop() {
       showSummary(uiStatus.fromCh2,78,ch2Color,"CH2 > CH1");
       showSummary(uiStatus.fromCh1,168,ch1Color,"CH1 > CH2");
       auto stability = [&](const loratester::DirectionStats &s) -> const char* {
-        if (uiStatus.state!=3 || !s.available || !s.final || s.received<10) return "DATA KURANG";
-        return (s.maxRssiDbm-s.minRssiDbm<=6 && s.maxSnrDb10-s.minSnrDb10<=30) ? "STABIL" : "BERFLUKTUASI";
+        return pdrstability::text(pdrstability::classify(uiStatus.state==3,s));
       };
       frame.setTextColor(ch2Color); snprintf(row,sizeof(row),"2>1 %s",stability(uiStatus.fromCh2)); frame.drawString(row,123,149);
       frame.setTextColor(ch1Color); snprintf(row,sizeof(row),"1>2 %s",stability(uiStatus.fromCh1)); frame.drawString(row,123,162);
-      frame.setTextColor(muted); frame.drawString("R 6dB / S 3dB",123,172);
+      frame.setTextColor(muted); frame.drawString("R 10dB / S 5dB",123,172);
     } else {
       frame.setTextColor((stopUnconfirmed || uiStatus.state==4 || uiStatus.state==5)?warning:uiLink?success:muted);
       const char* stateText = retryAfterUnknown && !uiRunning && static_cast<int32_t>(millis()-retryReadyAt)<0 ? "TUNGGU CH2" : stopUnconfirmed ? "STOP BELUM PASTI" : stopPending ? "STOP DIPROSES" : !uiLink ? (uiRunning ? "MENUNGGU CH1" : "BELUM TERHUBUNG") : uiStatus.state == 1 ? "MEMULAI" : uiStatus.state == 2 ? "PENGUJIAN" : uiStatus.state == 3 ? "SELESAI" : uiStatus.state == 4 ? "TIMEOUT" : uiStatus.state == 5 ? "ERROR" : uiStatus.state == 6 ? "MENGHENTIKAN" : uiStatus.state == 7 ? "BERHENTI" : uiRunning ? "MENUNGGU DATA" : sessionInterrupted ? "TES TERPUTUS" : "SIAP";
@@ -567,7 +568,7 @@ void loop() {
                         (unsigned long)frameStats.lastMaxBlitUs,(unsigned long)frameStats.lastMaxLoopUs,previousFrame!=nullptr,lcd.activeFreq);
         } else if (line.startsWith("SPIHZ ")) {
           long hz=line.substring(6).toInt();
-          if (hz!=10000000 && hz!=20000000 && hz!=40000000) Serial.println("ERR SPIHZ USE 10000000 20000000 OR 40000000");
+          if (hz!=10000000 && hz!=20000000 && hz!=40000000 && hz!=80000000) Serial.println("ERR SPIHZ USE 10000000 20000000 40000000 OR 80000000");
           else {
             const long oldHz=lcd.activeFreq;
             const bool ok=lcd.apply(lcd.activeSclk,lcd.activeMosi,lcd.activeCs,lcd.activeDc,lcd.activeRst,hz,lcd.activeMode,lcd.activeInvert,lcd.activeBgr);

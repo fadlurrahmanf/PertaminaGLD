@@ -28,6 +28,50 @@ deployment produksi.
 Flow ini adalah server-side bridge untuk tahap bench GLD -> CH -> Gateway -> Node-RED.
 Jalur utama kasus sebenarnya adalah MQTT/LAN dari Gateway ke server, bukan AP.
 
+## Import untuk Gateway fisik
+
+Import `pertamina-gld-server.flow.json` dan deploy di Node-RED. File ini
+disinkronkan dengan generator; `handover/state/nodered/flows.json` adalah
+snapshot runtime yang terpisah, bukan file import server yang dipelihara.
+Import flow tidak memasang broker MQTT atau menyalin kredensial/secret.
+
+1. Untuk bench, jalankan `apps\operator-hub\run-operator-hub.bat` pada PC
+   yang sama dengan Node-RED dan terhubung ke jaringan Gateway. Hub mencoba
+   menjalankan broker MQTT non-TLS di alamat LAN PC, port 1884. Di Gateway
+   Setup, tombol **Use Hub Broker** mengisi host, port dan kredensialnya.
+   Nilai yang sama tersedia secara lokal di
+   `apps\runtime\operator-hub\credentials.local.json`; masukkan nilai ini
+   secara privat pada node broker Node-RED. Biarkan Hub berjalan dan periksa
+   bahwa broker benar-benar menerima koneksi; file kredensial saja bukan bukti
+   broker berjalan. Pastikan firewall mengizinkan Gateway mencapai port itu.
+   Broker loopback launcher di atas tidak dapat dijangkau board. Untuk sistem
+   produksi, gunakan broker site dengan autentikasi, ACL dan TLS yang sesuai.
+2. Di Expert Gateway, pilih bentuk board dan transport MQTT yang sesuai saat
+   upload. Setelahnya gunakan Gateway Setup untuk menyimpan dan memverifikasi
+   Wi-Fi serta host/IP broker, port, username dan password. Untuk paket TLS,
+   konfigurasi CA dan NTP yang sesuai dengan sertifikat broker juga diperlukan.
+3. Di node konfigurasi `Pertamina GLD MQTT`, atur alamat broker yang dapat
+   dijangkau dari mesin Node-RED, port, credentials dan TLS/CA yang sesuai;
+   lalu deploy. Untuk broker Hub, gunakan alamat LAN dari file kredensial pada
+   kedua client: broker Hub terikat ke alamat LAN tersebut, bukan loopback.
+4. Pastikan `settings.js` mengizinkan `functionExternalModules` dan Function
+   nodes dapat memakai modul Node.js `crypto`, `fs`, dan `path`. Contoh
+   tersedia di `handover/state/nodered/settings.js`. Siapkan environment
+   Node-RED untuk `GLD_AES128_KEY_HEX`, `GLD_KEY_ID` dan
+   `PGL_COMMAND_AUTH_TOKEN`; key dan ID harus sesuai dengan GLD. Restart proses
+   setelah mengubah environment. Jangan memasukkan secret ke flow JSON.
+5. Tab flow memiliki path relatif `.node-red/...` untuk replay state, log dan
+   bootstrap topology. Path ini relatif terhadap working directory proses
+   Node-RED; pada server, ubah flow environment tersebut ke lokasi privat yang
+   tetap dan dapat ditulis. Replay state harus bertahan saat restart.
+6. Pastikan kedua client MQTT connected, lalu periksa `gld/gateway/status`.
+   Dengan CH dan GLD aktif, periksa `gld/gateway/uplink`,
+   `gld/server/decoded`, dan `gld/server/integrity`; uji command serta ACK
+   terpisah jika fungsi downlink diperlukan.
+
+Topik flow menggunakan root tetap `gld/gateway`. Penggantian root pada build
+Gateway memerlukan penyesuaian topik node MQTT di flow.
+
 ## Isi
 
 - `functions/pertamina-gld-decode.js`

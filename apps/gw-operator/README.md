@@ -59,6 +59,20 @@ system Python).
 
 ## Features
 
+The header **Firmware Upload** dialog requires an explicit board shape and
+MQTT transport selection. It loads the corresponding
+`firmware-packages/<environment>/current-source-20261116` package, displays
+its identity, and refuses upload when that package is unavailable. The
+previous `latest` packages are retained. A manually selected package remains
+available as a separate option. Select TLS only for a broker configured for
+TLS; provision the trusted CA and NTP in Gateway Setup.
+
+To refresh this dated package set from the current firmware source, build all
+four Gateway environments with `PGL_OPERATOR_PACKAGE_NAME` set to a new
+dedicated directory name, verify the resulting manifests and binaries, then
+update the package name used by the Expert dialog and bridge. The normal
+post-build default remains `latest` for existing workflows.
+
 - **Gateway Setup** drawer — enforced COM -> verified Gateway Wi-Fi -> MQTT
   sequence, followed by the independent operator-monitor broker connection;
   its independent MESH LoRa section reads and persists frequency, bandwidth,

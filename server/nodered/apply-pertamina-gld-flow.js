@@ -41,7 +41,7 @@ const mqttTls = args.has("mqtt-tls");
 const mqttTlsInsecure = args.has("mqtt-tls-insecure");
 const mqttCaPath = String(args.get("mqtt-ca") || "");
 const replayStatePath = String(args.get("replay-state-path") || process.env.PGL_REPLAY_STATE_PATH || ".node-red/pertamina-gld-replay-state.json");
-const fieldTestLogDir = String(args.get("field-test-log-dir") || path.join(scriptDir, "field-test-logs"));
+const fieldTestLogDir = String(args.get("field-test-log-dir") || ".node-red/field-test-logs");
 const fieldTestSnapshotIntervalSec = String(args.get("field-test-snapshot-interval-sec") || "30");
 const gldTargetChMapJson = canonicalizeGldTargetChMap(args.get("gld-target-ch-map-json") || process.env.PGL_GLD_TARGET_CH_MAP_JSON || "");
 
@@ -124,7 +124,8 @@ function id(name) {
 const tab = id("tab");
 const broker = id("mqtt_broker");
 const topologyBootstrapFile = String(args.get("topology-bootstrap-file") ||
-  path.join(nodeRedUserDir, "pertamina-gld-topology-bootstrap.json"));
+  (args.has("node-red-user-dir") ? path.join(nodeRedUserDir, "pertamina-gld-topology-bootstrap.json") :
+    ".node-red/pertamina-gld-topology-bootstrap.json"));
 
 const flowEnv = [
   { name: "GATEWAY_STATUS_URL", value: gatewayStatusUrl, type: "str" },

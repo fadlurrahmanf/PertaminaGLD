@@ -20,6 +20,6 @@ Firmware ini prototipe bench. Paket dummy bertipe khusus masih bisa diteruskan g
 
 Jangan hapus konfigurasi NVS ketika upload. Versi baru harus diuji timing, kehilangan paket, START/STOP dan pemulihan pada perangkat sebelum digunakan untuk pengukuran lapangan.
 
-Ringkasan PDR memberi indikasi STABIL bila tiap arah memiliki minimal 10 sampel, rentang RSSI maksimal 6 dB, dan rentang SNR maksimal 3 dB. Ini ambang tampilan praktis, bukan standar atau jaminan kualitas tautan; nilai min/maks sensitif terhadap spike.
+Pada firmware V1, ringkasan PDR memberi indikasi STABIL bila tiap arah memiliki minimal 10 sampel, rentang RSSI maksimal 6 dB, dan rentang SNR maksimal 3 dB. Ambang V2 dijelaskan di `V2/README.md`. Ini ambang tampilan praktis, bukan standar atau jaminan kualitas tautan; nilai min/maks sensitif terhadap spike.
 
 Pencarian CH1 baru: bila CH1 lama offline sekurangnya 15 detik dan sesi terakhir aman/idle, pilih ulang mode tes pada display agar peer baru dapat terdeteksi. Saat sesi aktif atau status STOP belum pasti, peer tidak diganti otomatis. ESP-NOW pada alat ini belum diautentikasi.

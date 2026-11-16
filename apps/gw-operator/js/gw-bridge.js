@@ -559,6 +559,8 @@ export async function useLocalPc() {
     elements.mqttUsername.value = info.username || "";
     elements.mqttPassword.value = info.password || "";
     elements.mqttTopicRoot.value = info.topicRoot || "gld/gateway";
+    elements.mqttTransport.value = "non_tls";
+    elements.mqttTlsFields.hidden = true;
     appendLog(`USE_HUB_BROKER host=${info.host || ""} port=${info.port || ""} auth=${info.username ? 1 : 0}`, "in");
   } catch (error) {
     appendLog(`USE_HUB_BROKER_ERROR ${error.message}`, "in");

@@ -1191,7 +1191,10 @@ class Handler(SimpleHTTPRequestHandler):
                 package_env = (parse_qs(urlparse(self.path).query).get("env") or [""])[0]
                 if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", package_env):
                     raise RuntimeError("invalid firmware environment")
-                package_dir = REPO_ROOT / "apps" / "operator-hub" / "firmware-packages" / package_env / "latest"
+                package_name = (parse_qs(urlparse(self.path).query).get("package") or ["latest"])[0]
+                if package_name not in {"latest", "current-source-20261116"}:
+                    raise RuntimeError("invalid firmware package selection")
+                package_dir = REPO_ROOT / "apps" / "operator-hub" / "firmware-packages" / package_env / package_name
                 manifest = json.loads((package_dir / "manifest.json").read_text(encoding="utf-8"))
                 package_files = {str(item["path"]): base64.b64encode((package_dir / str(item["path"])).read_bytes()).decode("ascii") for item in manifest["flashFiles"]}
                 return json_response(self, {"manifest": manifest, "packageFiles": package_files})

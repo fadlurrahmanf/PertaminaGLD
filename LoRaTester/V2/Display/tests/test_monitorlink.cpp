@@ -2,6 +2,7 @@
 #include <cstring>
 #include <vector>
 #include <cstdint>
+#include <cmath>
 #include "../src/tester_monitor.h"
 #include "../src/UiTiming.h"
 #include "../src/SampleEvents.h"
@@ -10,6 +11,7 @@
 #include "../src/SampleAge.h"
 #include "../src/DirtyFrame.h"
 #include "../src/FrameStats.h"
+#include "../src/PdrStability.h"
 uint32_t fakeMillis = 1, fakeRandom = 100;
 FakeWiFi WiFi;
 FakeSerial Serial0;
@@ -34,6 +36,12 @@ static NowMessage msg(uint8_t type, uint32_t boot, uint32_t session=0, uint32_t 
 static void receive(const uint8_t* mac,const NowMessage& m) { onReceive(mac,reinterpret_cast<const uint8_t*>(&m),sizeof(m)); }
 static void advance(uint32_t ms) { fakeMillis+=ms; poll(); }
 int main() {
+ loratester::DirectionStats dirA{};dirA.available=dirA.final=1;dirA.received=9;dirA.minRssiDbm=-90;dirA.maxRssiDbm=-80;dirA.minSnrDb10=20;dirA.maxSnrDb10=70;
+ auto dirB=dirA;dirB.received=10;
+ check(pdrstability::classify(true,dirA)==pdrstability::Result::Insufficient && pdrstability::classify(true,dirB)==pdrstability::Result::Stable,"stability needs ten samples independently for each direction");
+ dirA=dirB;dirA.maxRssiDbm=-79;check(pdrstability::classify(true,dirA)==pdrstability::Result::Fluctuating && pdrstability::classify(true,dirB)==pdrstability::Result::Stable,"RSSI 10 dB accepted, 11 dB fluctuates independently");
+ dirA=dirB;dirA.maxSnrDb10=71;check(pdrstability::classify(true,dirA)==pdrstability::Result::Fluctuating && pdrstability::classify(true,dirB)==pdrstability::Result::Stable,"SNR 5.0 dB accepted, 5.1 dB fluctuates independently");
+ check(pdrstability::classify(false,dirB)==pdrstability::Result::Insufficient,"nonfinal test does not report stability");
  std::vector<uint8_t> previous(dirtyframe::kWidth*dirtyframe::kHeight,0), current=previous;
  auto plan=dirtyframe::compare(current.data(),previous.data(),false,false);check(plan.tiles==225,"invalid frame forces full repaint");
  plan=dirtyframe::compare(current.data(),previous.data(),true,false);check(plan.tiles==0,"identical sprite sends no pixels");
@@ -68,6 +76,23 @@ int main() {
    if(!changed || highlighted!=(count>3?3:1)) moving=false;
  }
  check(moving && !uitiming::ringHighlight(0,1,0) && uitiming::ringHighlight(1,0,0)==uitiming::ringHighlight(1,1,0),"ring highlight moves every rendered frame when progress has at least two points");
+ const auto x=[](int n){return std::cos(uitiming::ringAngle(n));};const auto y=[](int n){return std::sin(uitiming::ringAngle(n));};
+ check(std::fabs(x(0))<0.0001 && y(0)<-0.99 && x(25)>0.99 && std::fabs(y(25))<0.0001 && y(50)>0.99 && x(75)<-0.99 && x(99)<0 && y(99)<0,"ring positions start at twelve and advance clockwise through three six nine and wrap");
+ check(x(8)>0.4 && x(8)<0.6 && y(8)<-0.8 && x(17)>0.8 && y(17)<-0.4 && y(17)>-0.6,"ring crosses roughly one and two o'clock before three");
+ uitiming::RingAnimation ring;check(ring.next(1,7,true)==0 && ring.next(1,7,true)==1 && ring.next(2,7,true)==0 && ring.next(2,8,true)==0 && ring.next(2,8,false)==0 && ring.next(2,8,true)==0,"ring phase resets on scene, session, and re-entry");
+ check(ring.next(2,8,true,100)==0 && ring.next(2,8,true,100)==1 && ring.next(2,8,true,200)==0,"new observed packet resets ring phase even if first visible frame is delayed");
+ check(uitiming::observedPacketProgress(100,100,false)==0 && uitiming::observedPacketProgress(100,100,true)==0 && uitiming::observedPacketProgress(100,1100,true)==50 && uitiming::observedPacketProgress(100,2100,true)==100 && uitiming::observedPacketProgress(100,5000,true)==100,"realtime ring starts from observed packet and saturates when next update is late");
+ check(uitiming::observedPacketProgress(0xfffffff0U,0x000003d8U,true)==50,"realtime ring survives millis rollover");
+ SampleEvents observedEvents;uint32_t observedAt=0;bool observed=false;
+ if(observedEvents.update(9,1,5,0)&1){observedAt=1000;observed=true;}
+ if(observedEvents.update(9,1,5,0)&1)observedAt=1500;
+ const bool repeatKeeps=uitiming::observedPacketProgress(observedAt,2000,observed)==50;
+ if(observedEvents.update(9,0,0,0)&1)observedAt=2100;
+ const bool missingSaturates=uitiming::observedPacketProgress(observedAt,3500,observed)==100;
+ if(observedEvents.update(9,1,6,0)&1)observedAt=3600;
+ const bool newResets=uitiming::observedPacketProgress(observedAt,3600,observed)==0;
+ if(observedEvents.update(10,1,6,0)&1)observedAt=4000;
+ check(repeatKeeps && missingSaturates && newResets && uitiming::observedPacketProgress(observedAt,4000,observed)==0,"realtime observed sequence ignores duplicate/missing and resets for new packet and session");
  SampleEvents events;check(events.update(7,0,0,0)==0 && events.update(7,3,0,255)==3 && events.update(7,3,0,255)==0 && events.update(7,3,1,0)==3 && events.update(8,1,1,0)==1,"sample events require new sequence and reset per session, including wrap");
  PdrPacketEvents pdr;check(pdr.update(7,10,5)==3 && pdr.update(0,0,0)==0 && pdr.update(7,10,5)==0,"PDR stale snapshot and unchanged counts do not replay packets");
  check(pdr.update(7,11,5)==1 && pdr.update(7,11,6)==2,"PDR packet arrow follows only the direction whose count increases");

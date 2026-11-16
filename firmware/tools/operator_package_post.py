@@ -11,6 +11,7 @@ from __future__ import annotations
 import datetime as dt
 import hashlib
 import json
+import os
 import pathlib
 import re
 import shutil
@@ -205,8 +206,11 @@ def write_operator_package(source, target, env):
     repo_root = project_dir.parent
     build_dir = pathlib.Path(str(env.subst("$BUILD_DIR"))).resolve()
     output_root = repo_root / "apps" / "operator-hub" / "firmware-packages" / environment
-    final_dir = output_root / "latest"
-    staging_dir = output_root / ".latest-staging"
+    package_name = os.environ.get("PGL_OPERATOR_PACKAGE_NAME", "latest")
+    if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", package_name):
+        raise ValueError("invalid PGL_OPERATOR_PACKAGE_NAME")
+    final_dir = output_root / package_name
+    staging_dir = output_root / f".{package_name}-staging"
     if staging_dir.exists():
         shutil.rmtree(staging_dir)
 

@@ -95,7 +95,7 @@ const ELEMENT_IDS = [
   "setupBackdrop", "setupPanel", "closeSetupBtn",
   "serialSetupStep", "gatewayIdentitySetupStep", "wifiSetupStep", "mqttSetupStep", "mqttLockNote", "meshLoraSetupStep",
   "gatewayCurrentId", "gatewayIdInput", "gatewayIdLoadBtn", "gatewayIdApplyBtn", "gatewayIdStatus",
-  "mqttHost", "mqttPort", "mqttUsername", "mqttPassword", "mqttTopicRoot",
+  "mqttHost", "mqttPort", "mqttUsername", "mqttPassword", "mqttTopicRoot", "mqttTransport", "mqttTlsFields", "mqttTlsCa", "mqttNtpHost",
   "mqttConnectBtn", "mqttDisconnectBtn", "mqttTestBtn", "mqttSetupDetail", "useThisPcBtn",
   "gwWifiSsid", "gwWifiPassword", "gwUseThisWifiBtn",
   "gwApplyWifiBtn", "gwTestWifiBtn", "gwApplyWifiStatus",

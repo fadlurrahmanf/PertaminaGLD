@@ -50,11 +50,18 @@ Hold progress uses a partial TFT update; timing and smoothness must be
 measured on hardware. The physical PDR/realtime path and visual appearance
 remain unverified until a bench test is explicitly performed.
 
+The ring starts at twelve o'clock and advances clockwise in logical screen
+coordinates. In Realtime mode it restarts when Display observes a new
+CH2→CH1 sample sequence, reaches full after two seconds and stays full if
+the next sample is late. Packet age still drives the stale-data indicator.
+The physical orientation in the enclosure requires visual confirmation.
+
 The renderer compares 16×16 tiles of an 8-bit sprite and sends only changed
 tiles; it falls back to a full-screen write if the extra buffer cannot be
 allocated or most tiles change. The display still scans independently, and
-a full RGB565 frame at 10 MHz has a theoretical data-only minimum of about
-92 ms. The 16 ms render request is not a measured 60 FPS guarantee.
+a full RGB565 frame at 40 MHz has a theoretical data-only minimum of about
+23 ms. One bench full refresh took 26.3 ms, so 60 FPS minimum for every frame
+has not been demonstrated. The 16 ms render request is not a guarantee.
 
 Serial `FPS` returns the previous measured window (`window_us`), attempted
 sprite render rate (`render_milli`, in 0.001 FPS), actual transfers of at
@@ -65,8 +72,11 @@ Zero-pixel renders are not counted as screen transfers. Measure while the
 actual desired animation is moving and include scene transitions, not just
 an idle screen. These are task/transfer measurements, not LCD scan rate.
 
-`SPIHZ 10000000`, `SPIHZ 20000000` and `SPIHZ 40000000` try those display
+`SPIHZ 10000000`, `SPIHZ 20000000`, `SPIHZ 40000000` and `SPIHZ 80000000` try those display
 SPI frequencies without changing the active pins, SPI mode or color settings.
-The default remains 10 MHz after restart. Higher speeds are unverified on the
-actual wiring: check the entire screen for corruption and restore 10 MHz if
-needed. Switching reinitializes the panel and forces a full redraw.
+The candidate defaults to 40 MHz after restart. The user confirmed the image
+looked normal in a short bench test at 40 MHz; longer visual and reliability
+testing remains outstanding. Use `SPIHZ 10000000` as a temporary fallback if
+corruption appears. 80 MHz is an experimental temporary setting and its
+integrity on the actual board and jumper wiring has not been verified.
+Switching reinitializes the panel and forces a full redraw.

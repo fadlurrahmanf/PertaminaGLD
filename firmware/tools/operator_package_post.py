@@ -49,12 +49,18 @@ PROFILE_BY_ENV = {
     "chFieldtest": "CH Circle (besar) ESP32-S3 R8N16 field-test",
     "ch_large": "CH Circle (besar) ESP32-S3 R8N16",
     "ch_small": "CH Rectangle (kecil) ESP32-S3 R8N16",
+    "ch_v1": "CH V1 Rectangle ESP32-S3 R8N16",
+    "ch_v2": "CH V2 Circle ESP32-S3 R8N16",
+    "ch_v3": "CH V3 Rectangle TPL5010 ESP32-S3 R8N16",
     "gw": "Gateway Rectangle (kecil) ESP32-S3 R8N16 legacy alias",
     "gw_hello_ack_fieldtest": "Gateway Rectangle (kecil) ESP32-S3 R8N16 field-test",
     "gw_large": "Gateway Circle (besar) ESP32-S3 R8N16 / MQTT non-TLS",
     "gw_small": "Gateway Rectangle (kecil) ESP32-S3 R8N16 / MQTT non-TLS",
     "gw_large_tls": "Gateway Circle (besar) ESP32-S3 R8N16 / MQTT TLS",
     "gw_small_tls": "Gateway Rectangle (kecil) ESP32-S3 R8N16 / MQTT TLS",
+    "gw_v1": "Gateway V1 Rectangle TPL5010 ESP32-S3 R8N16 / MQTT non-TLS",
+    "gw_v2": "Gateway V2 Circle ESP32-S3 R8N16 / MQTT non-TLS",
+    "gw_v3": "Gateway V3 Rectangle TPL5010 ESP32-S3 R8N16 / MQTT non-TLS",
 }
 
 
@@ -67,9 +73,9 @@ def _device_kind(environment: str) -> str:
 
 
 def _board_shape(environment: str) -> str | None:
-    if environment in {"ch", "chFieldtest", "ch_large", "gw_large", "gw_large_tls"}:
+    if environment in {"ch", "chFieldtest", "ch_large", "ch_v2", "gw_large", "gw_large_tls", "gw_v2"}:
         return "circle"
-    if environment in {"ch_small", "gw", "gw_hello_ack_fieldtest", "gw_small", "gw_small_tls"}:
+    if environment in {"ch_small", "ch_v1", "ch_v3", "gw", "gw_hello_ack_fieldtest", "gw_small", "gw_small_tls", "gw_v1", "gw_v3"}:
         return "rectangle"
     return None
 

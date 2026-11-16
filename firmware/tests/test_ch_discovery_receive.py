@@ -17,3 +17,13 @@ def test_radiolib_rearming_clears_pending_irq():
     common = source[source.index('int16_t SX126x::startReceiveCommon('):source.index('int16_t SX126x::readData(')]
     assert 'standby()' in common
     assert 'clearIrqStatus()' in common
+
+
+def test_hello_and_retry_do_not_rearm_after_transmit():
+    source = Path('firmware/ch/src/ChStarMeshRuntimeMain.cpp').read_text(encoding='utf-8')
+    initial = source[source.index('bool sendHello()'):source.index('void retryHelloIfNeeded()')]
+    retry = source[source.index('void retryHelloIfNeeded()'):source.index('void sendConfigRequest()')]
+    assert 'transmitRadio(meshRadio' in initial and 'startMeshReceive(' not in initial
+    assert 'transmitRadio(meshRadio' in retry and 'startMeshReceive(' not in retry
+    assert 'startMeshAckTransaction(MeshAckKind::Hello' in initial
+    assert 'meshAck.retryCount++' in retry

@@ -42,6 +42,12 @@
         <label class="upload-dialog-field">Board dan koneksi MQTT
           <select id="firmwareUploadProfile">
             <option value="">Pilih board dan MQTT</option>
+            <option value="gw_v1">Gateway V1 - rectangle, non-TLS (watchdog candidate)</option>
+            <option value="gw_v1_tls" disabled>Gateway V1 TLS - menunggu verifikasi watchdog</option>
+            <option value="gw_v2">Gateway V2 - circle, non-TLS</option>
+            <option value="gw_v2_tls">Gateway V2 - circle, TLS</option>
+            <option value="gw_v3">Gateway V3 - rectangle, non-TLS (watchdog candidate)</option>
+            <option value="gw_v3_tls" disabled>Gateway V3 TLS - menunggu verifikasi watchdog</option>
             <option value="gw_small">Rectangle kecil — non-TLS</option>
             <option value="gw_small_tls">Rectangle kecil — TLS</option>
             <option value="gw_large">Circle besar — non-TLS</option>
@@ -474,6 +480,6 @@
     </div>
   </aside>
 
-  <script type="module" src="./js/gw-main.js?v=20261116-aedes-1"></script>
+  <script type="module" src="./js/gw-main.js?v=20261116-board-version-1"></script>
 </body>
 </html>

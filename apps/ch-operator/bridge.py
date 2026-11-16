@@ -458,7 +458,7 @@ def validate_firmware_package(
     if not SAFE_PACKAGE_FILE_RE.fullmatch(manifest_env) or manifest_env != env:
         raise RuntimeError(f"manifest environment {manifest_env!r} does not match selected env {env!r}")
     expected_board_shape = {
-        "ch_large": "circle", "ch_small": "rectangle",
+        "ch_large": "circle", "ch_small": "rectangle", "ch_v1": "rectangle", "ch_v2": "circle", "ch_v3": "rectangle",
     }.get(manifest_env)
     if expected_board_shape is not None and manifest.get("boardShape") != expected_board_shape:
         raise RuntimeError(
@@ -831,10 +831,12 @@ class Handler(SimpleHTTPRequestHandler):
                 if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", package_env):
                     raise RuntimeError("invalid firmware environment")
                 package_name = (parse_qs(urlparse(self.path).query).get("package") or ["latest"])[0]
-                if package_name not in {"latest", "current-source-20261116"}:
+                if package_name not in {"latest", "current-source-20261116", "candidate-hello-ack-20261116"}:
                     raise RuntimeError("invalid firmware package selection")
-                if package_name != "latest" and package_env not in {"ch_small", "ch_large"}:
+                if package_name == "current-source-20261116" and package_env not in {"ch_small", "ch_large"}:
                     raise RuntimeError("current source package requires a CH board profile")
+                if package_name == "candidate-hello-ack-20261116" and package_env not in {"ch_v1", "ch_v2", "ch_v3"}:
+                    raise RuntimeError("HELLO ACK candidate requires a CH version profile")
                 package_dir = REPO_ROOT / "apps" / "operator-hub" / "firmware-packages" / package_env / package_name
                 manifest = json.loads((package_dir / "manifest.json").read_text(encoding="utf-8"))
                 package_files = {str(item["path"]): base64.b64encode((package_dir / str(item["path"])).read_bytes()).decode("ascii") for item in manifest["flashFiles"]}

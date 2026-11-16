@@ -83,6 +83,13 @@ alone does not identify the build. Legacy and manually selected packages remain
 available separately. The normal `latest` packages are preserved for the Simple
 Hub and older workflows; they are not the new discovery candidate.
 
+The CH V1/V2/V3 entries are built from the repository source, reporting
+firmware 0.8.0 / protocol 0.2.0. A connected CH was observed running 0.10.0 /
+0.3.0 from unavailable source; do not assume these candidates contain all of
+its features. Verify the device version and maintain a recovery image before
+replacing a newer image. V1 and V3 source archives contain identical design
+files; owner-confirmed V1/V3 labels map to the same rectangle wiring and pins.
+
 For a discovery check, compare the CH's configured root Gateway ID and MESH
 radio settings with the existing Gateway. Monitor `CH_MESH_CFG_REQ_TX`,
 `CH_CONFIG_REQUEST_TX ... txOk`, `CH_CONFIG_RESPONSE_RECV`, and

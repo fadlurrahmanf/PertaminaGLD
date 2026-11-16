@@ -22,6 +22,9 @@
 #endif
 #include "ChCommandParser.h"
 #include "ChParentPolicy.h"
+#if defined(PGL_CH_PULL_REPLAY)
+#include "ChPullReplayCache.h"
+#endif
 #include "ChRuntime.h"
 #include "ChTxQueue.h"
 #include "ChConfig.h"
@@ -208,6 +211,10 @@ static volatile bool meshPacketReceived = false;
 static pgl::ch::NodeCacheEntry nodeCache[NODE_CACHE_CAPACITY]{};
 static pgl::ch::AlarmQueueItem alarmQueue[ALARM_QUEUE_CAPACITY]{};
 static pgl::ch::ChTxItem       txQueue[TX_QUEUE_CAPACITY]{};
+#if defined(PGL_CH_PULL_REPLAY)
+static pgl::ch::ChPullReplayCache<pgl::ch::CH_TX_FRAME_MAX, 4> pullReplayCache;
+constexpr uint32_t PULL_REPLAY_TTL_MS = 20000;
+#endif
 
 struct PendingDownlink {
     uint16_t nodeId;
@@ -1718,7 +1725,9 @@ bool sendHello() {
         payload, payloadLen, frame, sizeof(frame), pgl::protocol::MESH_MAX_PAYLOAD);
     if (enc.status != pgl::protocol::FrameStatus::Ok) return false;
     const bool txOk = transmitRadio(meshRadio, MESH_PINS, frame, enc.size, "MESH_HELLO");
-    startMeshReceive("after-hello");
+    // transmitRadio has already restored the callback and armed receive.
+    // A second startReceive would return the radio to standby and clear IRQs,
+    // potentially losing an ACK that arrives immediately after the HELLO.
     if (txOk && ackRequested) {
         startMeshAckTransaction(MeshAckKind::Hello, parentId, 0, 0,
                                 static_cast<uint16_t>(uptimeSec), frame, enc.size);
@@ -1755,7 +1764,6 @@ void retryHelloIfNeeded() {
     meshAck.retryCount++;
     meshAck.sentAtMs = millis();
     const bool txOk = transmitRadio(meshRadio, MESH_PINS, meshAck.frame, meshAck.frameSize, "MESH_HELLO_RETRY");
-    startMeshReceive("after-hello-retry");
     logPrintf("CH_HELLO_ACK_RETRY parent=0x%04X seq=%u retry=%u/%u txOk=%u\n",
               meshAck.expectedParent, meshAck.frameSeq, meshAck.retryCount, HELLO_RETRY_MAX, txOk ? 1 : 0);
 }
@@ -2058,11 +2066,47 @@ void handleMeshPacketReceived() {
             startMeshReceive("after-pull-relay");
             return;
         }
+#if defined(PGL_CH_PULL_REPLAY)
+        pgl::ch::ChPullRequestView request{};
+        const bool validPull = pgl::ch::parseServerPullRequestFrame(
+            frame, packetLen, CH_ID, request) == pgl::ch::ChPullStatus::Ok;
+        if (validPull) {
+            size_t replaySize = 0;
+            const uint8_t* replay = pullReplayCache.find(
+                request.srcId, request.requestId, request.seq, millis(), PULL_REPLAY_TTL_MS, replaySize);
+            if (replay != nullptr) {
+                const auto queued = pgl::ch::enqueueChTxFrame(
+                    txQueue, TX_QUEUE_CAPACITY, pgl::ch::ChTxKind::RelayFrame,
+                    0, 0, nullptr, nullptr, 0, replay, replaySize);
+                logPrintf("CH_PULL_REPLAY requestId=%u queued=%u bytes=%u\n",
+                          request.requestId, queued == pgl::ch::ChTxQueueStatus::Ok ? 1 : 0,
+                          static_cast<unsigned>(replaySize));
+                if (chState == ChState::JOINED) drainTxQueue();
+                return;
+            }
+        }
+#endif
         pgl::ch::ChRuntimeProcessResult result{};
         const pgl::ch::ChRuntimeStatus status = pgl::ch::handleServerPullRequestFrame(
             runtimeConfig, frame, packetLen, millis(),
             nodeCache, NODE_CACHE_CAPACITY,
             txQueue, TX_QUEUE_CAPACITY, result);
+#if defined(PGL_CH_PULL_REPLAY)
+        if (validPull && status == pgl::ch::ChRuntimeStatus::Ok && result.onwardQueued) {
+            for (size_t i = 0; i < TX_QUEUE_CAPACITY; ++i) {
+                const auto& item = txQueue[i];
+                if (!item.used || item.kind != pgl::ch::ChTxKind::ClusterDataResponse) continue;
+                pgl::protocol::FrameView response{};
+                if (pgl::protocol::decodeAppFrame(item.frame, item.frameSize, response,
+                        pgl::protocol::MESH_MAX_PAYLOAD) == pgl::protocol::FrameStatus::Ok &&
+                    response.payloadLen >= 2 && readU16Be(response.payload) == request.requestId) {
+                    pullReplayCache.remember(request.srcId, request.requestId, request.seq,
+                                             millis(), item.frame, item.frameSize);
+                    break;
+                }
+            }
+        }
+#endif
         logPrintf("CH_PULL_PROCESS status=%s onwardQueued=%u pullStatus=%u txStatus=%u requestId=%u dataStatus=%s records=%u responseSize=%u buildStatus=%u\n",
                   pgl::ch::chRuntimeStatusName(status),
                   result.onwardQueued ? 1 : 0,

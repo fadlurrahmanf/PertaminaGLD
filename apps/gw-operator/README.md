@@ -19,6 +19,12 @@ limited to network provisioning, runtime Gateway identity
 and `SET_MESH_LORA_JSON`; operational traffic still uses MQTT. The gateway
 bridges LoRa MESH frames to MQTT entirely on its own:
 
+The versioned Gateway firmware reports Wi-Fi RSSI during **Test Gateway
+Wi-Fi**. The Expert UI warns when the signal is at or below -85 dBm; a device
+may have an IP address yet still fail to establish a stable MQTT connection.
+Move the Gateway or access point closer, or check the Gateway's Wi-Fi antenna.
+Earlier firmware without RSSI reporting remains supported.
+
 Step 2 can read the active Windows Wi-Fi profile with **Use this PC Wi-Fi**.
 The password travels only through the token-protected localhost bridge into a
 masked input; it is not logged or stored by the operator app. If Windows does
@@ -70,6 +76,12 @@ its identity, and refuses upload when that package is unavailable. The
 previous `latest` packages are retained. A manually selected package remains
 available as a separate option. Select TLS only for a broker configured for
 TLS; provision the trusted CA and NTP in Gateway Setup.
+
+The owner-confirmed V1 and V3 version labels select separate rectangle builds
+with GPIO47 TPL5010 keepalive; V2 selects a circle build. The V1/V3 archives
+contain identical PCB and schematic files, so the two labels do not claim
+different firmware wiring. The V1/V3 watchdog builds require physical-board
+validation. Legacy profiles remain available for existing workflows.
 
 To refresh this dated package set from the current firmware source, build all
 four Gateway environments with `PGL_OPERATOR_PACKAGE_NAME` set to a new

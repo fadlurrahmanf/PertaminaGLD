@@ -20,10 +20,11 @@ const ctx=vm.createContext({state,elements,manualUploadPackage:null,packageReque
   }});
 vm.runInContext(part,ctx);
 (async()=>{
-  for(const e of ['ch_small','ch_large','ch','chFieldtest']){
+  for(const e of ['ch_v1','ch_v2','ch_v3','ch_small','ch_large','ch','chFieldtest']){
     nodes.firmwareUploadEnv.value=e; await ctx.loadFirmwareUploadProfile();
     assert.equal(state.manifest.environment,e); assert.equal(nodes.firmwareUploadConfirmBtn.disabled,false);
     assert.equal(requests.at(-1).includes('package=current-source-20261116'),e==='ch_small'||e==='ch_large');
+    assert.equal(requests.at(-1).includes('package=candidate-hello-ack-20261116'),['ch_v1','ch_v2','ch_v3'].includes(e));
     await ctx.uploadFirmware(); assert.equal(posts.at(-1).env,e); assert.equal(posts.at(-1).resetNvs,false);
   }
   let resolve; pending=new Promise(r=>resolve=r);

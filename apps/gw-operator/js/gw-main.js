@@ -121,8 +121,11 @@ async function handleTestGatewayWifi() {
     const ack = await testGatewayWifi();
     state.wifiVerified = ack.status === "ok" && ack.connected === "1";
     state.wifiIp = state.wifiVerified && ack.ip !== "none" ? ack.ip : "";
+    const wifiRssi = ack.rssi === undefined ? null : Number(ack.rssi);
+    const signal = Number.isFinite(wifiRssi) && wifiRssi !== null
+      ? ` Sinyal ${wifiRssi} dBm.${wifiRssi <= -85 ? " Sinyal lemah; dekatkan Gateway ke Wi-Fi atau periksa antena." : ""}` : "";
     elements.gwApplyWifiStatus.textContent = state.wifiVerified
-      ? `Wi-Fi connected. Gateway IP: ${state.wifiIp || "available"}.`
+      ? `Wi-Fi connected. Gateway IP: ${state.wifiIp || "available"}.${signal}`
       : "Wi-Fi is not connected on the Gateway. MQTT remains locked.";
   } catch (error) {
     state.wifiVerified = false;
@@ -437,16 +440,18 @@ let uploadPackageRequest = 0;
 async function loadUploadProfile() {
   const request = ++uploadPackageRequest;
   const profile = $("firmwareUploadProfile").value;
+  const selectedEnvironment = ({gw_v1_tls:"gw_small_tls", gw_v2_tls:"gw_large_tls", gw_v3_tls:"gw_small_tls"})[profile] || profile;
+  const packageName = ["gw_v1", "gw_v2", "gw_v3"].includes(profile) ? "candidate-board-20261116" : "current-source-20261116";
   state.manifest = null;
   state.manifestFiles = new Map();
   $("firmwareUploadConfirmBtn").disabled = true;
   $("firmwareUploadPackage").textContent = "Memuat paket…";
   try {
     const builtin = profile === "custom" ? manualUploadPackage : profile
-      ? await bridgeFetch(`/api/firmware/package?env=${encodeURIComponent(profile)}&package=current-source-20261116`)
+      ? await bridgeFetch(`/api/firmware/package?env=${encodeURIComponent(selectedEnvironment)}&package=${packageName}`)
       : null;
     if (request !== uploadPackageRequest) return;
-    if (!builtin || !builtin.manifest || (profile !== "custom" && builtin.manifest.environment !== profile)) {
+    if (!builtin || !builtin.manifest || (profile !== "custom" && builtin.manifest.environment !== selectedEnvironment)) {
       throw new Error("Pilih paket yang tersedia dan sesuai board");
     }
     state.manifest = builtin.manifest;

@@ -32,6 +32,25 @@
 
 namespace {
 
+// The available rectangle and circle CH board designs expose TPL5010 DONE on
+// GPIO47. Enable only in versioned builds, preserving legacy GPIO behavior.
+#if defined(PGL_GW_EXTERNAL_WDT_KEEPALIVE)
+constexpr uint8_t GW_EXTERNAL_WDT_DONE_PIN = 47;
+constexpr uint32_t GW_EXTERNAL_WDT_INTERVAL_MS = 10000;
+uint32_t lastExternalWdtPulseMs = 0;
+void pulseGatewayExternalWdt() {
+    digitalWrite(GW_EXTERNAL_WDT_DONE_PIN, HIGH);
+    delay(5);
+    digitalWrite(GW_EXTERNAL_WDT_DONE_PIN, LOW);
+    lastExternalWdtPulseMs = millis();
+}
+void maintainGatewayExternalWdt() {
+    if (millis() - lastExternalWdtPulseMs >= GW_EXTERNAL_WDT_INTERVAL_MS) {
+        pulseGatewayExternalWdt();
+    }
+}
+#endif
+
 // WiFi/MQTT site credentials start from the compile-time ServerConfig.h
 // defaults (loadDefaultNetConfig) but are overridden at boot by whatever was
 // last saved to NVS via SET_WIFI_CONFIG_JSON (loadNetConfig) - the Operator
@@ -664,8 +683,32 @@ bool saveMeshConfig(const RuntimeMeshConfig& cfg) {
 
 Module* meshModule = nullptr;
 SX1262* meshRadio = nullptr;
+#if defined(PGL_GW_CONTINUOUS_MESH_RX)
+volatile bool meshPacketReceived = false;
+void IRAM_ATTR onMeshPacketReceived() { meshPacketReceived = true; }
+
+bool startMeshReceive() {
+    meshPacketReceived = false;
+    const int16_t state = meshRadio->startReceive();
+    if (state != RADIOLIB_ERR_NONE) logPrintf("GW_MESH_RX_START_ERROR state=%d\n", state);
+    return state == RADIOLIB_ERR_NONE;
+}
+#endif
 #if defined(PGL_GW_MQTT_TLS)
 WiFiClientSecure wifiClient;
+#elif defined(PGL_GW_BOUNDED_MQTT_CONNECT)
+// Do not let an unreachable broker monopolize the single radio loop. The
+// default TCP timeout is as long as the MQTT retry interval on this target.
+class BoundedMqttClient : public WiFiClient {
+public:
+    int connect(IPAddress ip, uint16_t port) override {
+        return WiFiClient::connect(ip, port, 1000);
+    }
+    int connect(const char* host, uint16_t port) override {
+        return WiFiClient::connect(host, port, 1000);
+    }
+};
+BoundedMqttClient wifiClient;
 #else
 WiFiClient wifiClient;
 #endif
@@ -1069,6 +1112,10 @@ bool beginMeshRadio() {
     }
 
     meshRadio->setRfSwitchPins(pgl::gateway::board::PIN_RADIO_B_RXEN, pgl::gateway::board::PIN_RADIO_B_TXEN);
+#if defined(PGL_GW_CONTINUOUS_MESH_RX)
+    meshRadio->setPacketReceivedAction(onMeshPacketReceived);
+    if (!startMeshReceive()) return false;
+#endif
     logPrintln("GW_MESH_READY=1");
     return true;
 }
@@ -1326,6 +1373,9 @@ void beginMqtt() {
     mqtt.setServer(netConfig.mqttHost, netConfig.mqttPort);
     mqtt.setCallback(mqttCallback);
     mqtt.setBufferSize(1024);
+#if defined(PGL_GW_BOUNDED_MQTT_CONNECT)
+    mqtt.setSocketTimeout(1);
+#endif
 }
 
 void ensureMqtt() {
@@ -1355,6 +1405,11 @@ void ensureMqtt() {
     logPrintf("GW_MQTT_CONNECT transport=%s host=%s port=%u ok=%u\n",
               mqttTransportName(), netConfig.mqttHost, netConfig.mqttPort, ok ? 1 : 0);
     if (!ok) {
+#if defined(PGL_GW_BOUNDED_MQTT_CONNECT)
+        // Space retries from completion, so an offline broker cannot keep the
+        // radio handler continuously blocked by immediate reconnect attempts.
+        lastMqttAttemptMs = millis();
+#endif
         return;
     }
     mqttSubCommands = mqtt.subscribe(TOPIC_COMMANDS);
@@ -1436,9 +1491,16 @@ bool transmitMeshFrame(const uint8_t* frame, size_t frameSize, const char* reaso
         logPrintf("GW_MESH_TX_SKIP reason=%s meshReady=0\n", reason);
         return false;
     }
+#if defined(PGL_GW_CONTINUOUS_MESH_RX)
+    meshRadio->clearPacketReceivedAction();
+#endif
     const int16_t txState = meshRadio->transmit(frame, frameSize);
     digitalWrite(pgl::gateway::board::PIN_RADIO_B_RXEN, LOW);
     digitalWrite(pgl::gateway::board::PIN_RADIO_B_TXEN, LOW);
+#if defined(PGL_GW_CONTINUOUS_MESH_RX)
+    meshRadio->setPacketReceivedAction(onMeshPacketReceived);
+    startMeshReceive();
+#endif
     logPrintf("GW_MESH_TX reason=%s state=%d len=%u\n", reason, txState, static_cast<unsigned>(frameSize));
     return txState == RADIOLIB_ERR_NONE;
 }
@@ -2088,13 +2150,23 @@ void sendGatewayConfigResponseIfNeeded(const uint8_t* frame, size_t frameLen,
 
 void receiveMeshOnce() {
     uint8_t frame[pgl::protocol::APPFRAME_OVERHEAD + pgl::protocol::MESH_MAX_PAYLOAD]{};
+#if defined(PGL_GW_CONTINUOUS_MESH_RX)
+    if (!meshPacketReceived) return;
+    meshPacketReceived = false;
+    const size_t packetLen = meshRadio->getPacketLength();
+    const int16_t state = meshRadio->readData(frame, sizeof(frame));
+#else
     const int16_t state = meshRadio->receive(frame, sizeof(frame));
     if (state == RADIOLIB_ERR_RX_TIMEOUT) {
         return;
     }
     const size_t packetLen = meshRadio->getPacketLength();
+#endif
     const float rxRssiDbm = meshRadio->getRSSI();
     const float rxSnrDb = meshRadio->getSNR();
+#if defined(PGL_GW_CONTINUOUS_MESH_RX)
+    startMeshReceive();
+#endif
     logPrintf("GW_MESH_RX state=%d len=%u rssi=%.2f snr=%.2f\n",
               state,
               static_cast<unsigned>(packetLen),
@@ -2259,10 +2331,19 @@ void handleSetWifiConfigJson(const char* payload) {
 void handleTestWifi() {
     const bool connected = WiFi.status() == WL_CONNECTED;
     const String ip = connected ? WiFi.localIP().toString() : String("");
-    logPrintf("GW_CMD_ACK cmd=TEST_WIFI status=%s connected=%u ip=%s\n",
+    logPrintf("GW_CMD_ACK cmd=TEST_WIFI status=%s connected=%u ip=%s rssi=%ld\n",
               connected ? "ok" : "error",
               connected ? 1 : 0,
-              connected ? ip.c_str() : "none");
+              connected ? ip.c_str() : "none",
+              connected ? static_cast<long>(WiFi.RSSI()) : 0L);
+    if (connected) {
+        const String gateway = WiFi.gatewayIP().toString();
+        const String subnet = WiFi.subnetMask().toString();
+        const String bssid = WiFi.BSSIDstr();
+        logPrintf("GW_WIFI_DIAG rssi=%ld channel=%ld bssid=%s gateway=%s subnet=%s\n",
+                  static_cast<long>(WiFi.RSSI()), static_cast<long>(WiFi.channel()),
+                  bssid.c_str(), gateway.c_str(), subnet.c_str());
+    }
 }
 
 void handleTestMqtt() {
@@ -2644,6 +2725,11 @@ void pollSerialCommands() {
 }  // namespace
 
 void setup() {
+#if defined(PGL_GW_EXTERNAL_WDT_KEEPALIVE)
+    pinMode(GW_EXTERNAL_WDT_DONE_PIN, OUTPUT);
+    digitalWrite(GW_EXTERNAL_WDT_DONE_PIN, LOW);
+    pulseGatewayExternalWdt();
+#endif
     Serial.begin(115200);
 #if defined(ARDUINO_ARCH_ESP32)
     Serial0.begin(115200);
@@ -2660,6 +2746,9 @@ void setup() {
 }
 
 void loop() {
+#if defined(PGL_GW_EXTERNAL_WDT_KEEPALIVE)
+    maintainGatewayExternalWdt();
+#endif
     pollSerialCommands();
     ensureWifi();
     ensureMqtt();

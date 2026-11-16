@@ -178,8 +178,9 @@ async function loadFirmwareUploadProfile() {
   $("firmwareUploadPackage").textContent = "Memuat paket...";
   try {
     const candidate = profile === "ch_small" || profile === "ch_large";
+    const versionCandidate = ["ch_v1", "ch_v2", "ch_v3"].includes(profile);
     const builtin = profile === "custom" ? manualUploadPackage : profile
-      ? await bridgeFetch(`/api/firmware/package?env=${encodeURIComponent(profile)}${candidate ? "&package=current-source-20261116" : ""}`)
+      ? await bridgeFetch(`/api/firmware/package?env=${encodeURIComponent(profile)}${versionCandidate ? "&package=candidate-hello-ack-20261116" : candidate ? "&package=current-source-20261116" : ""}`)
       : null;
     if (request !== packageRequest) return;
     if (!builtin || !builtin.manifest || (profile !== "custom" && builtin.manifest.environment !== profile)) {

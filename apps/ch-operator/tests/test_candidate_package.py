@@ -32,10 +32,28 @@ class CandidatePackageEndpoint(unittest.TestCase):
         response, error = self.request('env=ch')
         error.assert_not_called()
         self.assertEqual(response.call_args.args[1]['manifest']['environment'], 'ch')
-        for query in ['env=ch&package=current-source-20261116', 'env=ch_large&package=..']:
+        for query in ['env=ch&package=current-source-20261116', 'env=ch_large&package=..',
+                      'env=ch_large&package=candidate-hello-ack-20261116']:
             response, error = self.request(query)
             response.assert_not_called()
             error.assert_called_once()
+
+    def test_three_version_candidates_have_matching_board_and_hashes(self):
+        for env, shape in [('ch_v1', 'rectangle'), ('ch_v2', 'circle'), ('ch_v3', 'rectangle')]:
+            with self.subTest(environment=env):
+                response, error = self.request(f'env={env}&package=candidate-hello-ack-20261116')
+                error.assert_not_called()
+                package = response.call_args.args[1]
+                self.assertEqual(package['manifest']['environment'], env)
+                self.assertEqual(package['manifest']['boardShape'], shape)
+                bridge.validate_firmware_package(package['manifest'], package['packageFiles'], env, '0010')
+
+    def test_version_candidates_reject_the_wrong_board_environment(self):
+        response, error = self.request('env=ch_v3&package=candidate-hello-ack-20261116')
+        error.assert_not_called()
+        package = response.call_args.args[1]
+        with self.assertRaisesRegex(RuntimeError, 'does not match selected env'):
+            bridge.validate_firmware_package(package['manifest'], package['packageFiles'], 'ch_v2', '0010')
 
 
 if __name__ == '__main__':

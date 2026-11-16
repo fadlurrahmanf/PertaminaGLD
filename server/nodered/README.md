@@ -59,6 +59,11 @@ tidak memasang modul dan tidak menyalin kredensial/secret.
    Node-RED untuk `GLD_AES128_KEY_HEX`, `GLD_KEY_ID` dan
    `PGL_COMMAND_AUTH_TOKEN`; key dan ID harus sesuai dengan GLD. Restart proses
    setelah mengubah environment. Jangan memasukkan secret ke flow JSON.
+   Untuk menyimpan rute CH setelah Node-RED restart, aktifkan juga named context
+   store `pglTopologyFile` dengan `module: "localfilesystem"` di `settings.js`;
+   contoh lengkap ada di `handover/state/nodered/settings.js`. Setelah mengubah
+   settings, restart Node-RED dan tunggu rute tersimpan. Tanpa store tersebut,
+   rute bisa sementara hilang hingga CH mengirim HELLO kembali.
 5. Tab flow memiliki path relatif `.node-red/...` untuk replay state, log dan
    bootstrap topology. Path ini relatif terhadap working directory proses
    Node-RED; pada server, ubah flow environment tersebut ke lokasi privat yang

@@ -780,6 +780,9 @@ def validate_firmware_package(
         "gw_large": ("circle", "non_tls"),
         "gw_small_tls": ("rectangle", "tls"),
         "gw_large_tls": ("circle", "tls"),
+        "gw_v1": ("rectangle", "non_tls"),
+        "gw_v2": ("circle", "non_tls"),
+        "gw_v3": ("rectangle", "non_tls"),
     }.get(manifest_env)
     if expected_metadata is not None:
         expected_board_shape, expected_transport = expected_metadata
@@ -1192,8 +1195,10 @@ class Handler(SimpleHTTPRequestHandler):
                 if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", package_env):
                     raise RuntimeError("invalid firmware environment")
                 package_name = (parse_qs(urlparse(self.path).query).get("package") or ["latest"])[0]
-                if package_name not in {"latest", "current-source-20261116"}:
+                if package_name not in {"latest", "current-source-20261116", "candidate-board-20261116"}:
                     raise RuntimeError("invalid firmware package selection")
+                if package_name == "candidate-board-20261116" and package_env not in {"gw_v1", "gw_v2", "gw_v3"}:
+                    raise RuntimeError("invalid firmware candidate environment")
                 package_dir = REPO_ROOT / "apps" / "operator-hub" / "firmware-packages" / package_env / package_name
                 manifest = json.loads((package_dir / "manifest.json").read_text(encoding="utf-8"))
                 package_files = {str(item["path"]): base64.b64encode((package_dir / str(item["path"])).read_bytes()).decode("ascii") for item in manifest["flashFiles"]}

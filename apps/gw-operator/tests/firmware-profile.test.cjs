@@ -35,6 +35,14 @@ vm.runInContext(section, context);
     assert.equal(sent.at(-1).manifest.environment,env);
     assert.equal(sent.at(-1).resetNvs,false);
   }
+  for (const [version, env] of Object.entries({gw_v1:'gw_v1',gw_v1_tls:'gw_small_tls',gw_v2:'gw_v2',gw_v3:'gw_v3',gw_v3_tls:'gw_small_tls'})) {
+    nodes.firmwareUploadProfile.value=version;
+    await context.loadUploadProfile();
+    assert.equal(state.manifest.environment,env);
+    assert.match(requested.at(-1), version.endsWith('_tls') ? /package=current-source-20261116/ : /package=candidate-board-20261116/);
+    await context.uploadFirmware();
+    assert.equal(sent.at(-1).env,env);
+  }
   nodes.firmwareUploadProfile.value='gw_large_tls';
   await context.loadUploadProfile();
   assert.equal(state.manifest,null);

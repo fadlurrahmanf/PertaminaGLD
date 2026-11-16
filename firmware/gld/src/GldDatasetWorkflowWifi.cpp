@@ -305,6 +305,9 @@ void websocket(uint8_t client, WStype_t type, uint8_t* payload, size_t length) {
                 model["scaler_profile_id"] = modelInfo.scalerProfileId;
                 model["runtime_version"] = modelInfo.runtimeVersion;
                 model["production_approved"] = modelInfo.productionApproved;
+#if defined(PGL_GLD_H2_LPG_TEST_INFERENCE) && PGL_GLD_H2_LPG_TEST_INFERENCE
+                model["test_inference_enabled"] = modelInfo.testInferenceEnabled;
+#endif
                 model["output_elements"] = modelInfo.outputElements;
                 JsonArray classMap = model.createNestedArray("class_map");
                 for (uint8_t i = 0; modelInfo.classMap && i < modelInfo.outputElements; ++i) classMap.add(modelInfo.classMap[i]);

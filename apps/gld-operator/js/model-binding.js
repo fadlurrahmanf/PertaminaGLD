@@ -11,7 +11,9 @@ export function modelBindingState(status) {
   const trueFlag = (key) => flag(key).includes(true);
   const result = (value, reason, label, text) => ({ value, reason, label, text });
 
-  if (falseFlag("productionApproved")) {
+  const testMode = model.testInferenceEnabled === true && model.productionApproved === false &&
+    model.profileId === "cnn-dualbranch-board-1-backup-h2-lpg-v1";
+  if (falseFlag("productionApproved") && !testMode) {
     return result(false, "model_not_approved", "model belum disetujui",
       "Model belum disetujui untuk produksi. Bind ulang tidak dapat mengaktifkan inferensi; gunakan paket model yang sudah disetujui.");
   }
@@ -35,10 +37,12 @@ export function modelBindingState(status) {
     return result(null, "profile_id_unknown", "ID profil belum valid",
       "ID profil nulling bound/aktif belum tersedia atau tidak valid. Kirim GET_STATUS; binding belum dapat dinyatakan cocok.");
   }
-  if (!trueFlag("bindingValid") || !trueFlag("bindingModelMatches") || !trueFlag("productionApproved")) {
+  if (!trueFlag("bindingValid") || !trueFlag("bindingModelMatches") || (!trueFlag("productionApproved") && !testMode)) {
     return result(null, "binding_unknown", "data belum lengkap",
       "Persetujuan model atau detail binding belum lengkap. Kirim GET_STATUS; firmware tetap menentukan apakah bind dan inferensi diizinkan.");
   }
+  if (testMode) return result(true, "matched_test", "cocok — model uji",
+    `Model uji belum divalidasi terikat ke profil nulling #${bound}. Jangan gunakan sebagai pengaman produksi.`);
   return result(true, "matched", "cocok",
     `Model terikat ke profil nulling #${bound}; profil aktif #${active} cocok.`);
 }

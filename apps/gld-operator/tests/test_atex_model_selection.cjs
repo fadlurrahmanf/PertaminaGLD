@@ -26,7 +26,7 @@ fields.firmwareUploadEnv.value = "gld";
 fields.firmwareUploadModel.value = "model_1_h2_dataset_workflow_wifi";
 assert.equal(select().environment, "gld_model_1_h2_dataset_workflow_wifi");
 assert.equal(select().label, "Model 1 (H2, LPG, Clean Air)");
-assert.match(fields.firmwareUploadModelStatus.textContent, /inferensi dinonaktifkan/);
+assert.match(fields.firmwareUploadModelStatus.textContent, /Model uji/);
 fields.firmwareUploadEnv.value = "gld_atex";
 assert.equal(select().available, false);
 fields.firmwareUploadEnv.value = "gld_v2";

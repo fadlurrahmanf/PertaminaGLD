@@ -21,7 +21,7 @@ const GLD_MODEL_SLOTS = {
   model_1_dataset_workflow_wifi: { label: "Model 1 — Board 1 (LPG, Clean Air)", available: true, environment: "gld_model_1_dataset_workflow_wifi", detail: "Gunakan catu 24 V; pertahankan NVS." },
   model_2_dataset_workflow_wifi: { label: "Model 2 — Board 2 (LPG, Clean Air)", available: true, environment: "gld_model_2_dataset_workflow_wifi", detail: "Gunakan catu 24 V; pertahankan NVS." },
   model_3_dataset_workflow_wifi: { label: "Model 3 — Board 3 (LPG, Clean Air)", available: true, environment: "gld_model_3_dataset_workflow_wifi", detail: "Gunakan catu 24 V; pertahankan NVS." },
-  model_1_h2_dataset_workflow_wifi: { label: "Model 1 (H2, LPG, Clean Air)", available: true, environment: "gld_model_1_h2_dataset_workflow_wifi", detail: "Model belum divalidasi pada board; inferensi dinonaktifkan." },
+  model_1_h2_dataset_workflow_wifi: { label: "Model 1 (H2, LPG, Clean Air)", available: true, environment: "gld_model_1_h2_dataset_workflow_wifi", detail: "Model uji: inferensi dan transmisi aktif setelah nulling dan bind; belum divalidasi untuk produksi." },
   model_4: { label: "Model 4", available: false, detail: "Artefak dan package Model 4 belum tersedia." }
 };
 

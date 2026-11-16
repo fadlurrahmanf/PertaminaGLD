@@ -12,5 +12,5 @@
     "H2",
     "LPG"
   ],
-  "note": "Production inference disabled pending physical board and gas validation."
+  "note": "Test-only inference and normal transmission authorized by operator; physical board and gas validation pending. Not production approved."
 }

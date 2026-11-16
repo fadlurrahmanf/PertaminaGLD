@@ -76,6 +76,20 @@ parameters remain build-time constants; their setter commands still reply
 
 ## Firmware upload (Expert tab)
 
+The header **Firmware Upload** dialog offers **CH kecil - rectangle** and
+**CH besar - circle**, and loads the matching `ch_small` or `ch_large` package
+from `current-source-20261116`. Select the actual PCB shape; package version
+alone does not identify the build. Legacy and manually selected packages remain
+available separately. The normal `latest` packages are preserved for the Simple
+Hub and older workflows; they are not the new discovery candidate.
+
+For a discovery check, compare the CH's configured root Gateway ID and MESH
+radio settings with the existing Gateway. Monitor `CH_MESH_CFG_REQ_TX`,
+`CH_CONFIG_REQUEST_TX ... txOk`, `CH_CONFIG_RESPONSE_RECV`, and
+`CH_PARENT_CANDIDATE_REJECT` in the CH log. A transmitted request alone does
+not prove that a Gateway received or answered it. A saved NVS configuration
+survives an upload unless Reset NVS is explicitly selected.
+
 Flash a schema-v2 prebuilt CH package over the same COM port. The CH builds on
 ESP32-S3 (env `ch`). Create a package with the repository
 packager, then select the whole generated directory in the Expert tab:

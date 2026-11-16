@@ -59,6 +59,12 @@ for(const model of [1,2,3]){
 }
 check({},null,'profile_id_unknown');
 check({model:{bindingValid:true,bindingModelMatches:true}},null,'profile_id_unknown');
+const testStatus={model:{profileId:'cnn-dualbranch-board-1-backup-h2-lpg-v1',productionApproved:false,
+  testInferenceEnabled:true,bindingValid:true,bindingModelMatches:true,boundNullingProfileId:2,
+  activeNullingProfileId:2,profileReady:true}};
+check(testStatus,true,'matched_test');
+check({model:{...testStatus.model,bindingModelMatches:false}},false,'model_mismatch');
+check({model:{...testStatus.model,profileId:'unapproved-other-model'}},false,'model_not_approved');
 
 const main=read('apps/gld-operator/js/main.js');
 const handlerStart=main.indexOf('  $("bindModelToNullingProfileBtn")?.addEventListener(');
@@ -78,5 +84,9 @@ vm.runInContext(handler,context);
   calls.length=0;state.status={model:{activeNullingProfileId:2}};
   await get('bindModelToNullingProfileBtn').listeners.click();
   assert.deepEqual(calls,['confirm','bind','status'],'legacy unknown retains explicit confirmation and firmware-authoritative command');
+  calls.length=0;state.status=testStatus;
+  context.showConfirm=async(text)=>{assert.match(text,/MODEL UJI/); calls.push('confirm');return true;};
+  await get('bindModelToNullingProfileBtn').listeners.click();
+  assert.deepEqual(calls,['confirm','bind','status'],'test model may bind only after explicit test warning');
   console.log('PASS Model1/2/3 shared Running/Expert binding status: ID equality, approval, mismatches, readiness, invalid/legacy data and Bind guard');
 })().catch(error=>{console.error(error);process.exitCode=1;});

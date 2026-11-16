@@ -260,7 +260,7 @@ function requestFirmwareUploadOptions({ device, port, initialFirmware = false })
     <label>PAKET FIRMWARE GLD
       <select id="firmwareUploadModel"><option value="">Pilih package GLD</option>${(packageOptions.models || []).filter((option) => !/^gld_model_[123](?:_dataset_(?:replay_)?wifi)?$/.test(option.environment)).map((option) => {
         const item = packageCatalog[option.environment];
-        const detail = item?.available ? `v${item.firmwareVersion}${option.environment === "gld_model_1_h2_dataset_workflow_wifi" ? " / inferensi belum aktif" : ""}` : "package tidak tersedia";
+        const detail = item?.available ? `v${item.firmwareVersion}${option.environment === "gld_model_1_h2_dataset_workflow_wifi" ? " / MODEL UJI - belum divalidasi" : ""}` : "package tidak tersedia";
         const hotspot = ["gld_model_1_dataset_wifi", "gld_model_2_dataset_wifi", "gld_model_3_dataset_wifi",
           "gld_model_1_dataset_replay_wifi", "gld_model_2_dataset_replay_wifi", "gld_model_3_dataset_replay_wifi",
     "gld_model_1_dataset_workflow_wifi", "gld_model_2_dataset_workflow_wifi", "gld_model_3_dataset_workflow_wifi", "gld_model_1_h2_dataset_workflow_wifi",

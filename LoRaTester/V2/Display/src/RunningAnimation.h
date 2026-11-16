@@ -12,8 +12,13 @@ inline bool visible(bool tester, bool simulation, bool link, bool running,
   return tester && !simulation && link && running && state==2 &&
          !stopPending && !stopUnconfirmed && !calibration;
 }
-inline int packetX(uint32_t now) {
-  const uint32_t phase=now%1000U;
-  return 100 + int(phase<500 ? phase*44/500 : (1000-phase)*44/500);
+constexpr uint32_t kPacketDurationMs=900;
+struct Packet { bool visible; int x; };
+inline Packet packet(uint32_t now, uint32_t observedAt, bool observed, bool ch1ToCh2) {
+  const uint32_t elapsed=now-observedAt;
+  if (!observed || elapsed>=kPacketDurationMs) return {false,0};
+  const int distance=int((elapsed*44U+kPacketDurationMs/2)/kPacketDurationMs);
+  return {true,ch1ToCh2 ? 100+distance : 144-distance};
 }
+inline int packetY(bool ch1ToCh2, bool both) { return both ? (ch1ToCh2 ? 93 : 99) : 96; }
 }

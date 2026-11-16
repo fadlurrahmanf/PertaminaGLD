@@ -78,8 +78,11 @@ function setupEvents() {
       return;
     }
     const profileId = state.status?.model?.activeNullingProfileId;
+    const testWarning = state.status?.model?.testInferenceEnabled === true &&
+      state.status?.model?.productionApproved === false
+      ? "MODEL UJI: belum tervalidasi untuk produksi. Hasil dan alarm dapat dikirim normal. " : "";
     const confirmed = await showConfirm(
-      `Use the latest complete Nulling profile${Number.isFinite(profileId) ? ` #${profileId}` : ""} for the installed model? This saves an explicit NVS binding. A later Nulling run will require this action again.`,
+      `${testWarning}Use the latest complete Nulling profile${Number.isFinite(profileId) ? ` #${profileId}` : ""} for the installed model? This saves an explicit NVS binding. A later Nulling run will require this action again.`,
       "warn",
       "Bind Model to Nulling Profile"
     );

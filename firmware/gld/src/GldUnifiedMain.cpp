@@ -183,6 +183,15 @@ constexpr bool FIELDTEST_MODEL_UNVERIFIED = true;
 constexpr bool FIELDTEST_MODEL_UNVERIFIED = false;
 #endif
 
+// Board 1 backup may run and transmit only as an explicitly selected test image.
+#if defined(PGL_GLD_H2_LPG_TEST_INFERENCE) && PGL_GLD_H2_LPG_TEST_INFERENCE
+constexpr bool TEST_MODEL_INFERENCE_ENABLED = true;
+#else
+constexpr bool TEST_MODEL_INFERENCE_ENABLED = false;
+#endif
+constexpr bool MODEL_INFERENCE_AUTHORIZED = pgl::gld::model::PRODUCTION_APPROVED || TEST_MODEL_INFERENCE_ENABLED;
+
+
 #if !defined(PGL_GLD_SIMULATED_ALARM_GAS_CLASS)
 #define PGL_GLD_SIMULATED_ALARM_GAS_CLASS 2
 #endif
@@ -2055,6 +2064,7 @@ void emitStatusJson() {
     modelStatus["profileId"] = pgl::gld::model::PROFILE_ID;
     modelStatus["scalerProfileId"] = pgl::gld::model::SCALER_PROFILE_ID;
     modelStatus["productionApproved"] = pgl::gld::model::PRODUCTION_APPROVED;
+    modelStatus["testInferenceEnabled"] = TEST_MODEL_INFERENCE_ENABLED;
     modelStatus["boundNullingProfileId"] = modelBindingLoaded ? modelBinding.nullingProfileId : 0;
     modelStatus["activeNullingProfileId"] = nullingProfileId;
     modelStatus["bindingValid"] = modelBindingLoaded;
@@ -3031,7 +3041,7 @@ void onVerifyCleanAirForNulling() {
 // Nulling profile for this exact compiled model/scaler pair. New Nulling runs
 // deliberately invalidate readiness until this action is repeated.
 void onBindModelToActiveNullingProfile() {
-    if (FIELDTEST_MODEL_UNVERIFIED || TFBG_CONTINUOUS_BATTERY || !pgl::gld::model::PRODUCTION_APPROVED) {
+    if (FIELDTEST_MODEL_UNVERIFIED || TFBG_CONTINUOUS_BATTERY || !MODEL_INFERENCE_AUTHORIZED) {
         emitCommandAck("BIND_MODEL_TO_ACTIVE_NULLING_PROFILE", "rejected", "binding is unavailable in a non-production build", false);
         return;
     }
@@ -6657,7 +6667,7 @@ bool modelProfileMatchesActiveNulling() {
     }
     const uint32_t compiledFingerprint = pgl::gld::modelBindingFingerprint(
         pgl::gld::model::PROFILE_ID, pgl::gld::model::SCALER_PROFILE_ID);
-    return pgl::gld::model::PRODUCTION_APPROVED &&
+    return MODEL_INFERENCE_AUTHORIZED &&
            modelBindingLoaded &&
            pgl::gld::isModelBindingValid(modelBinding) &&
            modelBinding.modelFingerprint == compiledFingerprint &&
@@ -8049,7 +8059,7 @@ bool datasetWorkflowPredictionReady() {
     const uint32_t fingerprint = pgl::gld::modelBindingFingerprint(
         pgl::gld::model::PROFILE_ID, pgl::gld::model::SCALER_PROFILE_ID);
     return datasetWifiReady() && mlReady && network != nullptr && network->isInitialized() &&
-           pgl::gld::model::PRODUCTION_APPROVED && !FIELDTEST_MODEL_UNVERIFIED &&
+           MODEL_INFERENCE_AUTHORIZED && !FIELDTEST_MODEL_UNVERIFIED &&
            !SIMULATED_MODEL_OUTPUT && !TFBG_CONTINUOUS_BATTERY &&
            modelBindingLoaded && pgl::gld::isModelBindingValid(modelBinding) &&
            modelBinding.modelFingerprint == fingerprint &&
@@ -8163,6 +8173,9 @@ void beginDatasetWorkflowIfNeeded() {
     workflowModel.classMap = pgl::gld::model::CLASS_MAP;
     workflowModel.outputElements = static_cast<uint8_t>(pgl::gld::model::EXPECTED_OUTPUT_ELEMENTS);
     workflowModel.productionApproved = pgl::gld::model::PRODUCTION_APPROVED;
+#if defined(PGL_GLD_H2_LPG_TEST_INFERENCE) && PGL_GLD_H2_LPG_TEST_INFERENCE
+    workflowModel.testInferenceEnabled = true;
+#endif
 #if defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX
     workflowModel.radioAutoTx = loraAutoTransmit;
 #endif

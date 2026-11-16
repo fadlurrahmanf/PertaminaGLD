@@ -56,6 +56,11 @@ CH2→CH1 sample sequence, reaches full after two seconds and stays full if
 the next sample is late. Packet age still drives the stale-data indicator.
 The physical orientation in the enclosure requires visual confirmation.
 
+Each PDR direction reports `STABIL` with at least 10 samples when RSSI
+range is at most 15 dB and SNR range at most 5 dB. Exceeding either limit
+shows `BERFLUKTUASI`; fewer than 10 samples or a nonfinal result shows
+`DATA KURANG`. This is a practical indication, not an RF certification.
+
 The renderer compares 16×16 tiles of an 8-bit sprite and sends only changed
 tiles; it falls back to a full-screen write if the extra buffer cannot be
 allocated or most tiles change. The display still scans independently, and

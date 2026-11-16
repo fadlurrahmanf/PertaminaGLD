@@ -112,6 +112,7 @@ class WorkflowCollector(WirelessDatasetReplayCollector):
                 model[k] != "" and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.:/()+ -]{0,127}", model[k]) is None
                 for k in ("profile_id", "scaler_profile_id", "runtime_version")) or
                 type(model.get("production_approved")) is not bool or
+                ("test_inference_enabled" in model and type(model["test_inference_enabled"]) is not bool) or
                 type(model.get("output_elements")) is not int or not 0 <= model["output_elements"] <= 255 or
                 not isinstance(model.get("class_map"), list) or len(model["class_map"]) != model["output_elements"] or
                 any(type(x) is not int or not 0 <= x <= 255 for x in model["class_map"])):
@@ -148,7 +149,8 @@ class WorkflowCollector(WirelessDatasetReplayCollector):
             self.terminal_reason = "radio_fault"
         self.model = copy.deepcopy(model)
         self.prediction_available = (caps["prediction"] and message["prediction_ready"] and
-            model["production_approved"] and model["output_elements"] > 0)
+            (model["production_approved"] or (model.get("test_inference_enabled") is True and
+             model["profile_id"] == "cnn-dualbranch-board-1-backup-h2-lpg-v1")) and model["output_elements"] > 0)
         self.paused, self.transition_seq = message["paused"], transition
         if not recovering:
             self.prediction_enabled = message["prediction_enabled"]

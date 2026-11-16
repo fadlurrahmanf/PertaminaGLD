@@ -34,6 +34,9 @@ struct ModelInfo {
     const uint8_t* classMap = nullptr;
     uint8_t outputElements = 0;
     bool productionApproved = false;
+#if defined(PGL_GLD_H2_LPG_TEST_INFERENCE) && PGL_GLD_H2_LPG_TEST_INFERENCE
+    bool testInferenceEnabled = false;
+#endif
 #if defined(PGL_GLD_BOARD_PROFILE_GLD_ATEX) && PGL_GLD_BOARD_PROFILE_GLD_ATEX
     bool radioAutoTx = false;
 #endif

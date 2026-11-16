@@ -130,6 +130,7 @@ uint32_t stopRequestedAt = 0, stopLastAttempt = 0;
 uint32_t shortFlashUntil = 0, longFlashUntil = 0;
 uint32_t simulationStarted = 0;
 uint32_t packetFlashCh1 = 0, packetFlashCh2 = 0;
+bool packetSeenCh1 = false, packetSeenCh2 = false;
 uint32_t resultAnimationAt = 0;
 bool lastPdrValid = false, lastPdrReverseValid = false;
 uint16_t lastPdr = 0, lastPdrReverse = 0;
@@ -171,8 +172,11 @@ void drawRunningAnimation(uint32_t now, uint16_t lineColor, uint16_t ch1Color, u
   frame.drawFastHLine(98,runninganimation::kTrackY,50,lineColor);
   frame.drawLine(98,96,102,93,lineColor); frame.drawLine(98,96,102,99,lineColor);
   frame.drawLine(147,96,143,93,lineColor); frame.drawLine(147,96,143,99,lineColor);
-  const uint32_t phase=now%1000U;
-  frame.fillCircle(runninganimation::packetX(now),96,2,phase<500?ch1Color:ch2Color);
+  const auto forward=runninganimation::packet(now,packetFlashCh1,packetSeenCh1,true);
+  const auto reverse=runninganimation::packet(now,packetFlashCh2,packetSeenCh2,false);
+  const bool both=forward.visible && reverse.visible;
+  if (forward.visible) frame.fillCircle(forward.x,runninganimation::packetY(true,both),2,ch1Color);
+  if (reverse.visible) frame.fillCircle(reverse.x,runninganimation::packetY(false,both),2,ch2Color);
 }
 void chooseLoRaMode() {
   if (uiLoRaSelected == 2) { uiSubmenu=false; uiSelected=0; return; }
@@ -189,7 +193,7 @@ void startUiTest() {
   uiRunning=monitorlink::start(uiRealtime);
   if (uiRunning) {
     uiPage=0; uiStatus=loratester::NowMessage{}; uiStatusReceiptValid=false;
-    packetFlashCh1=packetFlashCh2=0;
+    packetFlashCh1=packetFlashCh2=0; packetSeenCh1=packetSeenCh2=false;
   }
 }
 
@@ -310,14 +314,14 @@ void loop() {
       b.avgRssiDbm10=-790; b.minRssiDbm=-85; b.maxRssiDbm=-72; b.avgSnrDb10=90; b.minSnrDb10=70; b.maxSnrDb10=110;
       b.latestRssiDbm=-79; b.latestSnrDb10=90;
     } else uiLink = monitorlink::snapshot(uiStatus,&uiStatusReceivedAt,&uiStatusReceiptValid);
-    if (uiStatus.session && uiStatus.session!=previousSession) { previousSession=uiStatus.session; previousReport=0; packetFlashCh1=packetFlashCh2=0; }
+    if (uiStatus.session && uiStatus.session!=previousSession) { previousSession=uiStatus.session; previousReport=0; packetFlashCh1=packetFlashCh2=0; packetSeenCh1=packetSeenCh2=false; }
     if (!uiSimulation && uiLink && uiStatus.state==2 && uiStatus.reportSeq!=previousReport) {
       if (uiStatus.phase==5) {
         const uint8_t changes=sampleEvents.update(uiStatus.session,uiStatus.sampleSeqValid,uiStatus.sampleSeqFromCh2,uiStatus.sampleSeqFromCh1);
-        if (changes&1) packetFlashCh2=millis(); if (changes&2) packetFlashCh1=millis();
+        if (changes&1) { packetFlashCh2=millis(); packetSeenCh2=true; } if (changes&2) { packetFlashCh1=millis(); packetSeenCh1=true; }
       } else {
         const uint8_t changes=pdrEvents.update(uiStatus.session,uiStatus.fromCh2.received,uiStatus.fromCh1.received);
-        if (changes&1) packetFlashCh2=millis(); if (changes&2) packetFlashCh1=millis();
+        if (changes&1) { packetFlashCh2=millis(); packetSeenCh2=true; } if (changes&2) { packetFlashCh1=millis(); packetSeenCh1=true; }
       }
       previousReport=uiStatus.reportSeq;
     }
@@ -376,7 +380,7 @@ void loop() {
     frame.drawCircle(circleX,circleY,circleR,dim);
     int ringPercent = !uiTester ? 0 : (!uiLink || uiStatus.sentCh1 > 100 || uiStatus.sentCh2 > 100 ? 0 : min(uiStatus.sentCh1, uiStatus.sentCh2));
     if (uiTester && uiRealtime && uiStatus.state == 2) {
-      ringPercent=uitiming::observedPacketProgress(packetFlashCh2,millis(),packetFlashCh2!=0);
+      ringPercent=uitiming::observedPacketProgress(packetFlashCh2,millis(),packetSeenCh2);
     }
     const uint32_t animationFrame=ringAnimation.next(scene,uiStatus.session,ringPercent>0,uiRealtime?packetFlashCh2:0);
     for (int n = 0; n < ringPercent; ++n) {
@@ -447,7 +451,7 @@ void loop() {
       };
       frame.setTextColor(ch2Color); snprintf(row,sizeof(row),"2>1 %s",stability(uiStatus.fromCh2)); frame.drawString(row,123,149);
       frame.setTextColor(ch1Color); snprintf(row,sizeof(row),"1>2 %s",stability(uiStatus.fromCh1)); frame.drawString(row,123,162);
-      frame.setTextColor(muted); frame.drawString("R 10dB / S 5dB",123,172);
+      frame.setTextColor(muted); frame.drawString("R 15dB / S 5dB",123,172);
     } else {
       frame.setTextColor((stopUnconfirmed || uiStatus.state==4 || uiStatus.state==5)?warning:uiLink?success:muted);
       const char* stateText = retryAfterUnknown && !uiRunning && static_cast<int32_t>(millis()-retryReadyAt)<0 ? "TUNGGU CH2" : stopUnconfirmed ? "STOP BELUM PASTI" : stopPending ? "STOP DIPROSES" : !uiLink ? (uiRunning ? "MENUNGGU CH1" : "BELUM TERHUBUNG") : uiStatus.state == 1 ? "MEMULAI" : uiStatus.state == 2 ? "PENGUJIAN" : uiStatus.state == 3 ? "SELESAI" : uiStatus.state == 4 ? "TIMEOUT" : uiStatus.state == 5 ? "ERROR" : uiStatus.state == 6 ? "MENGHENTIKAN" : uiStatus.state == 7 ? "BERHENTI" : uiRunning ? "MENUNGGU DATA" : sessionInterrupted ? "TES TERPUTUS" : "SIAP";
@@ -457,34 +461,34 @@ void loop() {
       } else frame.drawString(stateText,123,84);
       if (runningAnimation) drawRunningAnimation(millis(),dim,ch1Color,ch2Color);
       frame.setTextColor(white); frame.setTextSize(1);
-      const bool reverse = uiPage == 2;
-      const loratester::DirectionStats &stats = reverse ? uiStatus.fromCh1 : uiStatus.fromCh2;
+      const bool reverse = uinavigation::isCh1ToCh2(uiPage);
+      const loratester::DirectionStats &stats = uinavigation::directionStats(uiStatus,uiPage);
       if (uiRealtime && uiPage == 0) {
-        char row[24]; frame.setTextColor(ch2Color); frame.drawString(millis()-packetFlashCh2<400 && packetFlashCh2 ? "CH2 >> CH1" : "CH2 > CH1",123,runningAnimation?runninganimation::kRtDir1:99);
+        char row[24]; frame.setTextColor(ch2Color); frame.drawString(packetSeenCh2 && millis()-packetFlashCh2<400 ? "CH2 >> CH1" : "CH2 > CH1",123,runningAnimation?runninganimation::kRtDir1:99);
         frame.setTextColor(white); frame.setTextSize(2);
         if (uiStatus.fromCh2.received) snprintf(row,sizeof(row),"%4d %5.1f%s",uiStatus.fromCh2.latestRssiDbm,uiStatus.fromCh2.latestSnrDb10/10.0f,effectiveAgeCh2==sampleage::kUnknown?"?":effectiveAgeCh2>5000?"*":""); else snprintf(row,sizeof(row)," --   --");
-        const int offset2=packetFlashCh2 && millis()-packetFlashCh2<250 ? (250-(millis()-packetFlashCh2))/125 : 0;
+        const int offset2=packetSeenCh2 && millis()-packetFlashCh2<250 ? (250-(millis()-packetFlashCh2))/125 : 0;
         frame.drawString(row,123,(runningAnimation?runninganimation::kRtValue1:115)-offset2); frame.setTextSize(1); frame.setTextColor(muted); frame.drawString("RSSI dBm          SNR dB",123,runningAnimation?runninganimation::kRtUnits1:127);
-        frame.setTextColor(ch1Color); frame.drawString(millis()-packetFlashCh1<400 && packetFlashCh1 ? "CH1 >> CH2" : "CH1 > CH2",123,runningAnimation?runninganimation::kRtDir2:143);
+        frame.setTextColor(ch1Color); frame.drawString(packetSeenCh1 && millis()-packetFlashCh1<400 ? "CH1 >> CH2" : "CH1 > CH2",123,runningAnimation?runninganimation::kRtDir2:143);
         frame.setTextColor(white); frame.setTextSize(2);
         if (uiStatus.fromCh1.received) snprintf(row,sizeof(row),"%4d %5.1f%s",uiStatus.fromCh1.latestRssiDbm,uiStatus.fromCh1.latestSnrDb10/10.0f,effectiveAgeCh1==sampleage::kUnknown?"?":effectiveAgeCh1>5000?"*":""); else snprintf(row,sizeof(row)," --   --");
-        const int offset1=packetFlashCh1 && millis()-packetFlashCh1<250 ? (250-(millis()-packetFlashCh1))/125 : 0;
+        const int offset1=packetSeenCh1 && millis()-packetFlashCh1<250 ? (250-(millis()-packetFlashCh1))/125 : 0;
         frame.drawString(row,123,(runningAnimation?runninganimation::kRtValue2:158)-offset1); frame.setTextSize(1); frame.setTextColor(muted); frame.drawString("RSSI dBm          SNR dB",123,runningAnimation?runninganimation::kRtUnits2:170);
       } else if (uiPage == 0 && uiStatus.state != 3) {
         char row[40];
-        frame.setTextColor(ch2Color); frame.drawString(millis()-packetFlashCh2<400 && packetFlashCh2 ? "CH2 >> CH1" : "CH2 > CH1",123,runningAnimation?108:98);
+        frame.setTextColor(ch2Color); frame.drawString(packetSeenCh2 && millis()-packetFlashCh2<400 ? "CH2 >> CH1" : "CH2 > CH1",123,runningAnimation?108:98);
         if (uiStatus.fromCh2.available) snprintf(row,sizeof(row),"%u / 100%s",uiStatus.fromCh2.received,effectiveAgeCh2==sampleage::kUnknown?" (?)":effectiveAgeCh2>5000?" (LAMA)":""); else snprintf(row,sizeof(row),"MENUNGGU DATA");
         frame.setTextColor(white); frame.drawString(row,123,runningAnimation?119:109);
         if (uiStatus.fromCh2.received) snprintf(row,sizeof(row),"R %d dBm  S %.1f dB",uiStatus.fromCh2.latestRssiDbm,uiStatus.fromCh2.latestSnrDb10 / 10.0f); else snprintf(row,sizeof(row),"R -- dBm  S -- dB");
         frame.drawString(row,123,runningAnimation?130:120);
-        frame.setTextColor(ch1Color); frame.drawString(millis()-packetFlashCh1<400 && packetFlashCh1 ? "CH1 >> CH2" : "CH1 > CH2",123,runningAnimation?141:137);
+        frame.setTextColor(ch1Color); frame.drawString(packetSeenCh1 && millis()-packetFlashCh1<400 ? "CH1 >> CH2" : "CH1 > CH2",123,runningAnimation?141:137);
         if (uiStatus.fromCh1.available) snprintf(row,sizeof(row),"%u / 100%s",uiStatus.fromCh1.received,effectiveAgeCh1==sampleage::kUnknown?" (?)":effectiveAgeCh1>5000?" (LAMA)":""); else snprintf(row,sizeof(row),"MENUNGGU DATA");
         frame.setTextColor(white); frame.drawString(row,123,runningAnimation?152:151);
         if (uiStatus.fromCh1.received) snprintf(row,sizeof(row),"R %d dBm  S %.1f dB",uiStatus.fromCh1.latestRssiDbm,uiStatus.fromCh1.latestSnrDb10 / 10.0f); else snprintf(row,sizeof(row),"R -- dBm  S -- dB");
         frame.drawString(row,123,runningAnimation?163:162);
       } else {
       frame.setTextColor(reverse ? ch1Color : ch2Color);
-      frame.drawString(reverse ? "CH1 -> CH2" : "CH2 -> CH1",123,runningAnimation?107:101);
+      frame.drawString(uinavigation::directionLabel(uiPage),123,runningAnimation?107:101);
       frame.setTextColor(white);
       char row[44];
       if (uiLink && stats.available && stats.received) {

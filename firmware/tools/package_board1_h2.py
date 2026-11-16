@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[2]
 FW = ROOT / 'firmware'
 ENV = 'gld_model_1_h2_dataset_workflow_wifi'
 BUILD = FW / '.pio/build' / ENV
-DEST = ROOT / 'apps/operator-hub/firmware-packages' / ENV / 'latest'
+DEST = ROOT / 'apps/operator-hub/firmware-packages' / ENV / 'candidate-test'
 
 def load(path, name):
     spec = importlib.util.spec_from_file_location(name, path)
@@ -42,8 +42,11 @@ def main():
     binary = (BUILD / 'firmware.bin').read_bytes()
     if digest(blob) != metadata['modelSha256'] or binary.count(blob) != 1 or metadata['profileId'].encode() not in binary:
         raise RuntimeError('Compiled firmware does not contain the expected model and profile')
-    if any(marker not in binary for marker in (b'gld-dataset-wifi/3', b'PAUSE_DATASET', b'ACK_SAMPLES')):
-        raise RuntimeError('Workflow protocol markers missing')
+    if any(marker not in binary for marker in (b'gld-dataset-wifi/3', b'PAUSE_DATASET', b'ACK_SAMPLES',
+                                                b'testInferenceEnabled', b'test_inference_enabled')):
+        raise RuntimeError('Workflow or test-mode markers missing')
+    if 'PRODUCTION_APPROVED = false' not in (model_dir / 'ModelMetadata.h').read_text(encoding='utf-8'):
+        raise RuntimeError('Test package must not claim production approval')
     config = json.loads((FW / '.pio/gld-dataset-workflow-wifi' / ENV / 'credentials.local.json').read_text())
     original = json.loads((FW / '.pio/gld-dataset-workflow-wifi/gld_model_1_dataset_workflow_wifi/credentials.local.json').read_text())
     original_binary = (ROOT / 'apps/operator-hub/firmware-packages/gld_model_1_dataset_workflow_wifi/latest/firmware.bin').read_bytes()
@@ -88,7 +91,7 @@ def main():
     (DEST / 'manifest.sha256').write_text(f'{digest(manifest_path.read_bytes())}  manifest.json\n', encoding='ascii')
     provenance = dict(environment=ENV, profileId=metadata['profileId'], classes=metadata['classes'],
                       sha256=digest(blob), sourceArchiveSha256=metadata['sourceArchiveSha256'],
-                      firmwareSha256=digest(binary), productionApproved=False)
+                      firmwareSha256=digest(binary), productionApproved=False, testInferenceEnabled=True)
     (DEST / 'model-provenance.json').write_text(json.dumps(provenance, indent=2) + '\n', encoding='utf-8')
     preflight._verify_manifest(manifest_path, ENV)
     print('PASS: isolated package, source model, class profile, credentials, validators and NVS layout')

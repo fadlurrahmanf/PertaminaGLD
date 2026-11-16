@@ -41,8 +41,15 @@
       <section class="upload-dialog-box" role="dialog" aria-modal="true" aria-labelledby="firmwareUploadDialogTitle">
         <h2 id="firmwareUploadDialogTitle">Upload Firmware</h2>
         <p id="firmwareUploadPackage" class="hint">No firmware package loaded.</p>
-        <label class="upload-dialog-field">Firmware environment
-          <select id="firmwareUploadEnv" aria-label="Firmware environment"><option value="ch">CH</option><option value="chFieldtest">CH Fieldtest</option></select>
+        <label class="upload-dialog-field">Board dan firmware CH
+          <select id="firmwareUploadEnv" aria-label="Board dan firmware CH">
+            <option value="">Pilih bentuk board CH</option>
+            <option value="ch_small">CH kecil - rectangle</option>
+            <option value="ch_large">CH besar - circle</option>
+            <option value="ch">CH legacy</option>
+            <option value="chFieldtest">CH field test legacy</option>
+            <option value="custom">Paket pilihan manual</option>
+          </select>
         </label>
         <label class="upload-dialog-field">Target COM
           <select id="firmwareUploadPort" aria-label="Target COM for firmware upload"></select>
@@ -411,6 +418,6 @@
     </div>
   </aside>
 
-  <script type="module" src="./js/ch-main.js?v=20260723-upload-lock-1"></script>
+  <script type="module" src="./js/ch-main.js?v=20261116-board-discovery-1"></script>
 </body>
 </html>

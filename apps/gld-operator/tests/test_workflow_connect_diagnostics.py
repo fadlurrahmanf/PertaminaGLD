@@ -152,6 +152,18 @@ class WorkflowConnectDiagnostics(unittest.TestCase):
         self.assertEqual(snapshot["error"], "")
         service.disconnect()
 
+    def test_only_named_test_model_can_advertise_unapproved_prediction(self):
+        for profile, allowed in (("cnn-dualbranch-board-1-backup-h2-lpg-v1", True),
+                                 ("other-unapproved-model", False)):
+            with self.subTest(profile=profile):
+                self.device = Device(self.clock)
+                self.device.model.update(profile_id=profile, production_approved=False,
+                                         test_inference_enabled=True)
+                service = self.service()
+                snapshot = service.connect("1002", PASSWORD)
+                self.assertEqual(snapshot["prediction_available"], allowed)
+                service.disconnect()
+
     def test_recovery_transport_exceptions_remain_retryable_original_types(self):
         for error in (TimeoutError(SECRET), ConnectionRefusedError(SECRET), OSError(errno.EHOSTUNREACH, SECRET)):
             def factory(*_args, **_kwargs): raise error

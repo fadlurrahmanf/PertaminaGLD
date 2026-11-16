@@ -1772,9 +1772,11 @@ void sendConfigRequest() {
         payload, sizeof(payload), frame, sizeof(frame), pgl::protocol::MESH_MAX_PAYLOAD);
     if (enc.status != pgl::protocol::FrameStatus::Ok) return;
     serviceDelay(20 + ((CH_ID & 0x000F) * 30) + (millis() % 40));
-    transmitRadio(meshRadio, MESH_PINS, frame, enc.size, "MESH_CFG_REQ");
-    startMeshReceive("after-cfg-req");
-    logPrintf("CH_CONFIG_REQUEST_TX parentId=0x%04X\n", parentId);
+    // transmitRadio already restores the receive callback and arms MESH RX.
+    // Re-arming here would put the radio back in standby and clear IRQs while
+    // a fast Gateway response may already be arriving.
+    const bool txOk = transmitRadio(meshRadio, MESH_PINS, frame, enc.size, "MESH_CFG_REQ");
+    logPrintf("CH_CONFIG_REQUEST_TX parentId=0x%04X txOk=%u\n", parentId, txOk ? 1 : 0);
 }
 
 void sendConfigResponse(uint16_t requesterId, uint8_t requestSeq) {

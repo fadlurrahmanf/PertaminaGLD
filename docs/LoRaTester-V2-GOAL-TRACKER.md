@@ -1,7 +1,7 @@
 # LoRaTester V2 — Tracker
 
-Last tracker heartbeat: 2026-11-16 21:46:48 WIB
-Last evidence update: 2026-11-16 21:46:48 WIB
+Last tracker heartbeat: 2026-11-16 22:33:26 WIB
+Last evidence update: 2026-11-16 22:33:26 WIB
 
 ## Progress dashboard
 
@@ -37,9 +37,9 @@ Bobot 20% + 30% + 30% + 20%; progress tiap fase adalah rata-rata work item.
 | V2-07 | Solved | Indikator PDR saat koneksi pulih | 91 tes host dan build display lulus |
 | V2-08 | Deferred | Guard reset, timeout dan retry ACK lulus host/build dan review | Uji timing dan RF pada perangkat |
 | V2-09 | Open | 40MHz realtime 63–65 blit/s saat animasi; refresh penuh 26,3ms, 80MHz 17,1ms | Minimum 60 pada semua frame belum tercapai; perlu solusi dan uji lanjut |
-| V2-10 | Deferred | Ambang 10/5 dan ring interval sampel: build serta 110 host lulus | User meminta simpan untuk upload berikutnya; tes fisik tertunda |
-| V2-11 | Open | User klarifikasi animasi terus selama PENGUJIAN, bukan sekadar awal | Pasang inline dua mode, upload dan cek visual |
-| V2-12 | Open | Page0 saat Done duplikat page1 CH2→CH1 | Perbaiki navigasi dan uji |
+| V2-10 | Open | User minta upload ambang 15/5; host batas kedua arah lulus | Backup, upload dan uji fisik |
+| V2-11 | Deferred | Animasi inline terunggah; user melihat versi awal, versi event-driven lulus host dan radio nyata | Visual ritme terakhir belum bisa dilihat dari serial |
+| V2-12 | Solved | User mengonfirmasi urutan; versi akhir serial 4→2→1→3→4 | — |
 
 ### Phase 1 work items
 
@@ -73,7 +73,6 @@ Bobot 20% + 30% + 30% + 20%; progress tiap fase adalah rata-rata work item.
 
 | Worker | Active work | Started at | Elapsed | State |
 |---|---|---|---|---|
-| Coordinator | Backup COM5 dan verifikasi | 2026-11-16 21:39:56 WIB | 0:06:52 | Aktif |
-| Display worker | Perbaiki animasi START | 2026-11-16 21:39:56 WIB | 0:06:52 | Aktif |
+| Coordinator | Backup, upload dan uji COM5 | 2026-11-16 22:33:26 WIB | 00:00:00 | Aktif |
 
-User meminta perbaikan sampai berjalan; COM5 upload diotorisasi. V2 thresholds 10/5 dan perbaikan ring ikut upload berikutnya. V2-09 minimal 60 fps semua frame tetap belum tercapai.
+User mengizinkan upload display. COM5 terdeteksi dan realtime sebelumnya dihentikan terkonfirmasi STOP. Tidak mengakses COM4/6/7, NVS tidak akan dihapus. Pengujian host boundary lulus; pengujian RF nyata belum berarti sampel tepat batas.

@@ -9,18 +9,18 @@
   "configSchemaVersion": "0.1.0",
   "chip": "esp32s3",
   "baud": 921600,
-  "createdAtUtc": "20260913T121257Z",
+  "createdAtUtc": "20261115T082646Z",
   "source": {
-    "gitCommit": "dfba98f237b6b1f83c139f49e0e8a1c2e683e5af",
+    "gitCommit": "642a453c7a0334a026ab3b2d92d0cb9e81cbadd5",
     "gitTreeState": "clean",
     "gitTreeStateScope": "firmware/",
-    "firmwareTreeSnapshotSha256": "ec112f6ceb8c65e44598f4efb620aab0bfbb7ce8466193842bf97586dd4d0fad",
+    "firmwareTreeSnapshotSha256": "bf75199698d826cf2896cefd578cf106b0e3ea32d277083cf7ee6c5bb1782635",
     "platformioCoreVersion": "PlatformIO post-build hook",
-    "platformioIniSha256": "ac628ad20cdbc1b84b301f809065201a37e886e34cc31640f72770bdda76a3d6",
+    "platformioIniSha256": "28433e2b33da0d0ecd7667d64c021489307559e6c6a36dc71fdec432d9de163d",
     "buildCommand": "pio run -e ch_small",
-    "packagedAtUtc": "20260913T121257Z"
+    "packagedAtUtc": "20261115T082646Z"
   },
-  "flashSetSha256": "40d1bf3c30b9625abfcd54889886a2b4187483fa2e80b1ccbfbd4dc4f5a41f64",
+  "flashSetSha256": "38e38544945b7d8e1c6ae38885502a3731024e638ec2ca991c049ad363a49891",
   "flashFiles": [
     {
       "path": "bootloader.bin",
@@ -43,8 +43,8 @@
     {
       "path": "firmware.bin",
       "offset": "0x00010000",
-      "size": 408256,
-      "sha256": "071c8f3107860f4c03440e608e2de06cf1e1bd6d3ef48e19d4bfaa9f39e6a981"
+      "size": 408576,
+      "sha256": "25d2f141bc6391506e582f1c26e0fc27e221d45e9997fea881df6e8059e1e815"
     }
   ],
   "boardShape": "rectangle"

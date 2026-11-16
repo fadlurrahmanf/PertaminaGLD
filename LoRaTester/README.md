@@ -2,6 +2,14 @@
 
 Firmware khusus pengujian; tidak menjalankan fungsi mesh atau alarm CH operasional.
 
+## Versi firmware
+
+- `V1/CH` dan `V1/Display`: salinan checkpoint `5331e482`; lokasi referensi build disesuaikan setelah dipindah ke subfolder.
+- `V2/CH` dan `V2/Display`: pengembangan terpisah untuk kesiapan CH, baterai, dan tampilan baru. Ketiga perangkat harus memakai V2 bersama; protokol V2 tidak kompatibel dengan V1.
+- `CH/` dan `Display/`: direktori sebelumnya tetap disimpan dan tidak diganti oleh versi baru.
+
+V2 telah disiapkan untuk uji perangkat, tetapi pembacaan baterai dinonaktifkan sampai rangkaian dan kalibrasi masing-masing perangkat diverifikasi. Lihat `V2/CH/README.md` dan `V2/Display/README.md` untuk wiring, build, dan batasannya. V2 CH mengirim polling LoRa otomatis ketika idle; belum dibuktikan aman terhadap perangkat produksi di lingkungan nyata. Build tidak melakukan upload.
+
 - `CH/`: firmware CH1 (`lt_ch1`) dan CH2 (`lt_ch2`).
 - `Display/`: monitor ESP32 GC9A01 dan tombol GPIO22.
 - Area casing display: X=123, Y=120, radius=116.

@@ -113,6 +113,7 @@ GLD_FIRMWARE_MODELS = (
     {"value": "model_2_dataset_replay_wifi", "label": "GLD1 Model 2 - Hotspot buffer 5 menit (tahap 2)", "environment": "gld_model_2_dataset_replay_wifi"},
     {"value": "model_3_dataset_replay_wifi", "label": "GLD1 Model 3 - Hotspot buffer 5 menit (tahap 2)", "environment": "gld_model_3_dataset_replay_wifi"},
     {"value": "gld_v2", "label": "GasleakDetector - Board V2", "environment": "gld_v2"},
+    {"value": "model_1_h2_dataset_workflow_wifi", "label": "Model 1 (H2, LPG, Clean Air)", "environment": "gld_model_1_h2_dataset_workflow_wifi"},
     {"value": "model_1_dataset_workflow_wifi", "label": "GLD1 Model 1 - Hotspot Wizard Dataset", "environment": "gld_model_1_dataset_workflow_wifi"},
     {"value": "model_2_dataset_workflow_wifi", "label": "GLD1 Model 2 - Hotspot Wizard Dataset", "environment": "gld_model_2_dataset_workflow_wifi"},
     {"value": "model_3_dataset_workflow_wifi", "label": "GLD1 Model 3 - Hotspot Wizard Dataset", "environment": "gld_model_3_dataset_workflow_wifi"},
@@ -128,7 +129,7 @@ GLD_DATASET_REPLAY_ENVIRONMENTS = frozenset({
 })
 ATEX_WORKFLOW_MODELS = {f"gld_atex_model_{model}_dataset_workflow_wifi": model for model in (1, 2, 3)}
 GLD_DATASET_WORKFLOW_ENVIRONMENTS = (frozenset(f"gld_model_{model}_dataset_workflow_wifi" for model in (1, 2, 3))
-                                     | frozenset(ATEX_WORKFLOW_MODELS))
+                                     | frozenset(ATEX_WORKFLOW_MODELS) | {"gld_model_1_h2_dataset_workflow_wifi"})
 FIRMWARE_ENVIRONMENTS = {
     "ch": {
         "small": "ch_small",

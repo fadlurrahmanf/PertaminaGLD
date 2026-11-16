@@ -14,12 +14,18 @@
 #include "BatteryText.h"
 #include "DebouncedButton.h"
 #include "SampleAge.h"
+#include "DirtyFrame.h"
+#include "FrameStats.h"
+#include <cstdlib>
 
 class LGFX : public lgfx::LGFX_Device {
 public:
   lgfx::Panel_GC9A01 panel;
   lgfx::Bus_SPI bus;
   bool configured = false;
+  int activeSclk=18, activeMosi=23, activeCs=27, activeDc=26, activeRst=25, activeMode=0;
+  long activeFreq=10000000;
+  bool activeInvert=true, activeBgr=false;
 
   bool apply(int sclk, int mosi, int cs, int dc, int rst, long freq, int mode, bool inv, bool bgr) {
     if (configured) bus.release();
@@ -57,11 +63,51 @@ public:
     }
     if (!configured) setPanel(&panel);
     configured = true;
-    return init();
+    const bool ok=init();
+    if (ok) { activeSclk=sclk; activeMosi=mosi; activeCs=cs; activeDc=dc; activeRst=rst; activeFreq=freq; activeMode=mode; activeInvert=inv; activeBgr=bgr; }
+    return ok;
   }
 };
 LGFX lcd;
 lgfx::LGFX_Sprite frame(&lcd);
+uint8_t* previousFrame=nullptr;
+bool previousFrameValid=false, holdOverlayDirty=false;
+FrameStats frameStats;
+uint32_t lastLoopStarted=0;
+
+struct BlitResult { uint32_t pixels=0, elapsedUs=0; bool full=false; };
+BlitResult presentFrame() {
+  BlitResult result{};
+  const uint32_t start=micros();
+  const auto* current=static_cast<const uint8_t*>(frame.getBuffer());
+  if (!current) return result;
+  if (!previousFrame) {
+    frame.pushSprite(0,0); lcd.waitDMA(); result.pixels=240U*240U; result.full=true;
+  } else {
+    const auto plan=dirtyframe::compare(current,previousFrame,previousFrameValid,holdOverlayDirty);
+    if (plan.tiles>150) {
+      frame.pushSprite(0,0); result.pixels=240U*240U; result.full=true;
+    } else {
+      for (int row=0; row<dirtyframe::kRows; ++row) {
+        const uint16_t mask=plan.rows[row];
+        for (int col=0; col<dirtyframe::kColumns;) {
+          if (!(mask & (1U<<col))) { ++col; continue; }
+          int end=col+1; while (end<dirtyframe::kColumns && (mask & (1U<<end))) ++end;
+          const int width=(end-col)*dirtyframe::kTile;
+          lcd.setClipRect(col*dirtyframe::kTile,row*dirtyframe::kTile,width,dirtyframe::kTile);
+          frame.pushSprite(0,0); result.pixels+=uint32_t(width)*dirtyframe::kTile;
+          col=end;
+        }
+      }
+      lcd.clearClipRect();
+    }
+    lcd.waitDMA();
+    std::memcpy(previousFrame,current,dirtyframe::kWidth*dirtyframe::kHeight);
+    previousFrameValid=true; holdOverlayDirty=false;
+  }
+  result.elapsedUs=micros()-start;
+  return result;
+}
 bool calibration = false;
 bool uiTester = false, uiRunning = false;
 bool uiSubmenu = false, uiRealtime = false;
@@ -155,9 +201,18 @@ void setup() {
   if (!spriteOk) Serial.println("Sprite allocation failed");
   Serial.printf("Boot display init=%d\n", ok);
   Serial.printf("ESP-NOW init=%d\n", monitorlink::begin());
+  // Keep headroom for Wi-Fi/ESP-NOW after allocating the shadow; if memory is
+  // tight the verified full-frame path remains available.
+  if (spriteOk && ESP.getFreeHeap() > dirtyframe::kWidth*dirtyframe::kHeight+70000U)
+    previousFrame=static_cast<uint8_t*>(std::malloc(dirtyframe::kWidth*dirtyframe::kHeight));
+  Serial.printf("Dirty buffer=%d free=%u\n", previousFrame!=nullptr,ESP.getFreeHeap());
 }
 
 void loop() {
+  const uint32_t loopStarted=micros();
+  if (lastLoopStarted) frameStats.loop(loopStarted-lastLoopStarted);
+  lastLoopStarted=loopStarted;
+  frameStats.tick(loopStarted);
   static DebouncedButton button;
   const DebouncedButton::Event buttonEvent=button.update(digitalRead(22)==LOW,millis());
   const int stable=button.pressed()?LOW:HIGH;
@@ -257,8 +312,11 @@ void loop() {
   if (scene != previousScene) { previousScene = scene; sceneStarted = millis(); uiDirty = true; }
   // During a hold, avoid repeated full 240x240 SPI transfers; update just
   // the progress strip below. Normal scenes continue to redraw as needed.
-  if (!calibration && (stable!=LOW || longHandled) && millis() - animationAt >= 40) { animationAt = millis(); uiDirty = true; }
+  if (!calibration && (stable!=LOW || longHandled) && millis() - animationAt >= 16) { animationAt = millis(); uiDirty = true; }
   if (uiDirty) {
+    const uint32_t frameStarted=micros();
+    static uint32_t renderedFrameSequence=0;
+    const uint32_t animationFrame=renderedFrameSequence++;
     uiDirty = false;
     const uint16_t bg=0x0000, mint=0x4DFB, muted=0xB5F6, white=0xFFFF, dim=0x49D3, selected=0x2253;
     const uint16_t ch2Color=0x5DFF, ch1Color=0xFD47, header=0x5DFF, warning=0xFD20, success=0x57EC;
@@ -268,6 +326,17 @@ void loop() {
     const auto batteryPct=[](bool fresh,const loratester::NodeHealth &h) -> int {
       return fresh && (h.flags & loratester::kHealthBatteryValid) && h.batteryPct<=100 ? h.batteryPct : -1;
     };
+    static int cachedCircleRadius=-1;
+    static int16_t ringX[100], ringY[100], introX[100], introY[100];
+    if (circleR!=cachedCircleRadius) {
+      cachedCircleRadius=circleR;
+      for (int n=0; n<100; ++n) {
+        const float a=(n*6.2831853f/100.0f)-1.5707963f;
+        const float c=cosf(a), s=sinf(a);
+        ringX[n]=static_cast<int16_t>((circleR-5)*c); ringY[n]=static_cast<int16_t>((circleR-5)*s);
+        introX[n]=static_cast<int16_t>((circleR-13)*c); introY[n]=static_cast<int16_t>((circleR-13)*s);
+      }
+    }
     frame.fillSprite(bg);
     frame.drawCircle(circleX,circleY,circleR,dim);
     int ringPercent = !uiTester ? 0 : (!uiLink || uiStatus.sentCh1 > 100 || uiStatus.sentCh2 > 100 ? 0 : min(uiStatus.sentCh1, uiStatus.sentCh2));
@@ -276,11 +345,8 @@ void loop() {
       ringPercent = min(100UL, age*100UL/2000UL);
     }
     for (int n = 0; n < ringPercent; ++n) {
-      float a = (n * 6.2831853f / 100.0f) - 1.5707963f;
-      int px = circleX + static_cast<int>((circleR - 5) * cosf(a));
-      int py = circleY + static_cast<int>((circleR - 5) * sinf(a));
-      int flash = ringPercent ? (millis()/24) % ringPercent : 0;
-      bool highlight = n >= flash && n < flash + 3;
+      const int px=circleX+ringX[n], py=circleY+ringY[n];
+      bool highlight = uitiming::ringHighlight(ringPercent,animationFrame,n);
       frame.fillCircle(px, py, 2, highlight ? static_cast<uint16_t>(0xA6FF) : ch2Color);
     }
     frame.setTextDatum(lgfx::middle_center);
@@ -298,27 +364,24 @@ void loop() {
       frame.drawFastHLine(circleX-8,circleY,17,static_cast<uint16_t>(TFT_RED));
       frame.drawFastVLine(circleX,circleY-8,17,static_cast<uint16_t>(TFT_RED));
     } else if (uiSubmenu) {
-      static float submenuMarkerY=93;
-      const float submenuTarget = uiLoRaSelected==0 ? 93 : uiLoRaSelected==1 ? 123 : 153;
-      submenuMarkerY+=(submenuTarget-submenuMarkerY)*0.32f;
+      const int submenuMarkerY = uiLoRaSelected==0 ? 93 : uiLoRaSelected==1 ? 123 : 153;
       frame.drawRoundRect(34,76,88,15,3,dim); frame.drawRoundRect(125,76,88,15,3,dim);
       frame.setTextColor(health.ch1Fresh ? ((health.ch1.flags & loratester::kHealthRadioReady)?success:warning) : muted);
       frame.drawString(!health.ch1Fresh ? ((millis()/400)%2 ? "CH1 UNKNOWN." : "CH1 UNKNOWN") : (health.ch1.flags & loratester::kHealthRadioReady) ? "CH1 READY v" : "CH1 NOT READY",78,83);
       frame.setTextColor(health.ch2Fresh ? ((health.ch2.flags & loratester::kHealthRadioReady)?success:warning) : muted);
       frame.drawString(health.conflict ? "CH2 CONFLICT" : !health.ch2Fresh ? ((millis()/400)%2 ? "CH2 UNKNOWN." : "CH2 UNKNOWN") : (health.ch2.flags & loratester::kHealthRadioReady) ? "CH2 READY v" : "CH2 NOT READY",168,83);
       frame.drawRoundRect(34,93,178,26,7,dim); frame.drawRoundRect(34,123,178,26,7,dim); frame.drawRoundRect(44,153,158,20,7,dim);
-      frame.drawRoundRect(35,int(submenuMarkerY),176,uiLoRaSelected==2?20:26,7,ch2Color);
+      frame.drawRoundRect(35,submenuMarkerY,176,uiLoRaSelected==2?20:26,7,ch2Color);
       frame.fillRect(46,105,3,7,ch2Color); frame.fillRect(51,101,3,11,ch2Color); frame.fillRect(56,97,3,15,ch2Color);
       frame.drawLine(45,138,49,138,ch1Color); frame.drawLine(49,138,52,132,ch1Color); frame.drawLine(52,132,55,141,ch1Color); frame.drawLine(55,141,59,135,ch1Color);
       frame.setTextColor(white); frame.setTextSize(2);
       frame.drawString("PDR Test",123,106); frame.setTextSize(1); frame.drawString("Realtime Test",128,136);
       frame.setTextSize(1); frame.drawString("Kembali",123,163);
     } else if (!uiTester) {
-      static float menuMarkerY=94;
-      menuMarkerY+=((uiSelected==0?94.0f:132.0f)-menuMarkerY)*0.32f;
+      const int menuMarkerY=uiSelected==0 ? 94 : 132;
       frame.setTextColor(muted); frame.drawString("MENU UTAMA",123,85);
       frame.drawRoundRect(32,94,182,34,8,dim); frame.drawRoundRect(32,132,182,34,8,dim);
-      frame.drawRoundRect(33,int(menuMarkerY),180,34,8,ch2Color);
+      frame.drawRoundRect(33,menuMarkerY,180,34,8,ch2Color);
       frame.setTextColor(white); frame.setTextSize(2);
       frame.drawString("LoRa Tester",123,105);
       frame.setTextSize(1); frame.setTextColor(muted); frame.drawString("Uji CH1 dan CH2",123,120);
@@ -431,17 +494,18 @@ void loop() {
       frame.fillSprite(bg);
       int introProgress = min(100UL, millis()*100UL/2600UL);
       for (int n=0; n<introProgress; ++n) {
-        float a=(n*6.2831853f/100.0f)-1.5707963f;
-        frame.fillCircle(circleX+static_cast<int>((circleR-13)*cosf(a)),circleY+static_cast<int>((circleR-13)*sinf(a)),2,ch2Color);
+        frame.fillCircle(circleX+introX[n],circleY+introY[n],2,ch2Color);
       }
       frame.setTextDatum(lgfx::middle_center); frame.setTextColor(header); frame.setTextSize(2);
       frame.drawString("DEVICE",123,107); frame.drawString("TESTER",123,132);
       frame.setTextSize(1); frame.setTextColor(muted); frame.drawString("Menyiapkan perangkat",123,153);
     }
-    frame.pushSprite(0,0);
+    const auto blit=presentFrame();
+    frameStats.frame(micros()-frameStarted,blit.elapsedUs,blit.pixels,blit.full);
   }
   static uint32_t holdPaintAt=0;
   if (!calibration && stable==LOW && !longHandled && millis()-holdPaintAt>=12) {
+    const uint32_t holdStarted=micros();
     holdPaintAt=millis();
     const uint32_t held=millis()-pressedAt;
     const int amount=uitiming::holdBarPixels(held);
@@ -449,6 +513,8 @@ void loop() {
     lcd.fillRect(92,202,62,3,0x0000);
     if (amount>0) lcd.fillRect(92,202,amount,3,0x5DFF);
     lcd.drawFastVLine(123,200,7,0xFFFF);
+    holdOverlayDirty=true;
+    frameStats.hold(micros()-holdStarted);
   }
   static String line;
   while (Serial.available()) {
@@ -490,6 +556,26 @@ void loop() {
           Serial.printf("RX raw=%lu accepted=%lu len=%lu fmt=%lu boot=%lu source=%lu old=%lu\n",(unsigned long)monitorlink::rxRaw,(unsigned long)monitorlink::rxAccepted,(unsigned long)monitorlink::rxBadLength,(unsigned long)monitorlink::rxBadFormat,(unsigned long)monitorlink::rxBadBoot,(unsigned long)monitorlink::rxBadSource,(unsigned long)monitorlink::rxOldStatus);
           Serial.printf("SCREEN mode=%s page=%d sim=%d sim_state=%u phase=%u ch2_to_ch1=%u ch1_to_ch2=%u\n", uiTester?"tester":"menu", uiPage, uiSimulation, uiStatus.state, uiStatus.phase, uiStatus.fromCh2.received, uiStatus.fromCh1.received);
           Serial.printf("METRICS 2to1=%d,%d age=%u 1to2=%d,%d age=%u\n", uiStatus.fromCh2.latestRssiDbm, uiStatus.fromCh2.latestSnrDb10, uiStatus.ageCh2Ms, uiStatus.fromCh1.latestRssiDbm, uiStatus.fromCh1.latestSnrDb10, uiStatus.ageCh1Ms);
+        } else if (line == "FPS") {
+          const uint32_t elapsed=frameStats.lastWindowUs;
+          const uint32_t renderMilli=elapsed ? uint64_t(frameStats.lastRenders)*1000000000ULL/elapsed : 0;
+          const uint32_t blitMilli=elapsed ? uint64_t(frameStats.lastBlits)*1000000000ULL/elapsed : 0;
+          Serial.printf("FPS window_us=%lu render_milli=%lu blit_milli=%lu renders=%lu blits=%lu full=%lu pixels=%lu hold_updates=%lu max_hold_us=%lu max_frame_us=%lu max_blit_us=%lu max_loop_us=%lu dirty_buffer=%d spi_hz=%ld\n",
+                        (unsigned long)elapsed,(unsigned long)renderMilli,(unsigned long)blitMilli,
+                        (unsigned long)frameStats.lastRenders,(unsigned long)frameStats.lastBlits,(unsigned long)frameStats.lastFull,
+                        (unsigned long)frameStats.lastPixels,(unsigned long)frameStats.lastHoldUpdates,(unsigned long)frameStats.lastMaxHoldUs,(unsigned long)frameStats.lastMaxFrameUs,
+                        (unsigned long)frameStats.lastMaxBlitUs,(unsigned long)frameStats.lastMaxLoopUs,previousFrame!=nullptr,lcd.activeFreq);
+        } else if (line.startsWith("SPIHZ ")) {
+          long hz=line.substring(6).toInt();
+          if (hz!=10000000 && hz!=20000000 && hz!=40000000) Serial.println("ERR SPIHZ USE 10000000 20000000 OR 40000000");
+          else {
+            const long oldHz=lcd.activeFreq;
+            const bool ok=lcd.apply(lcd.activeSclk,lcd.activeMosi,lcd.activeCs,lcd.activeDc,lcd.activeRst,hz,lcd.activeMode,lcd.activeInvert,lcd.activeBgr);
+            bool restored=true;
+            if (!ok) restored=lcd.apply(lcd.activeSclk,lcd.activeMosi,lcd.activeCs,lcd.activeDc,lcd.activeRst,oldHz,lcd.activeMode,lcd.activeInvert,lcd.activeBgr);
+            previousFrameValid=false; uiDirty=true;
+            Serial.printf("SPIHZ requested=%ld ok=%d restored=%d active=%ld\n",hz,ok,restored,lcd.activeFreq);
+          }
         } else if (line.startsWith("CIRCLE ")) {
           int x, y, r;
           if (sscanf(line.c_str(), "CIRCLE %d %d %d", &x, &y, &r) == 3 && x >= 0 && x <= 239 && y >= 0 && y <= 239 && r >= 1 && r <= 120) {
@@ -509,6 +595,7 @@ void loop() {
           if (n == 9) {
             bool ok = lcd.apply(sclk, mosi, cs, dc, rst, freq, mode, inv, order);
             pattern(0);
+            previousFrameValid=false; uiDirty=true;
             Serial.printf("OK init=%d sclk=%d mosi=%d cs=%d dc=%d rst=%d freq=%ld mode=%d inv=%d bgr=%d\n",
                           ok, sclk, mosi, cs, dc, rst, freq, mode, inv, order);
           } else {
@@ -516,6 +603,7 @@ void loop() {
           }
         } else if (line.startsWith("PAT")) {
           pattern(line.substring(3).toInt());
+          previousFrameValid=false; uiDirty=true;
           Serial.println("OK pat");
         } else {
           Serial.println("ERR unknown");

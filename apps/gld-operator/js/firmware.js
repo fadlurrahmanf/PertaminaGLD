@@ -18,9 +18,10 @@ const GLD_MODEL_SLOTS = {
   model_1_dataset_replay_wifi: { label: "Model 1 Hotspot buffer 5 menit", available: true, environment: "gld_model_1_dataset_replay_wifi", detail: "GLD1 Board 1 — Tahap 2, RAM replay 5 menit. Memerlukan paket replay yang sudah dibuild; pertahankan NVS." },
   model_2_dataset_replay_wifi: { label: "Model 2 Hotspot buffer 5 menit", available: true, environment: "gld_model_2_dataset_replay_wifi", detail: "GLD1 Board 2 — Tahap 2, RAM replay 5 menit. Memerlukan paket replay yang sudah dibuild; pertahankan NVS." },
   model_3_dataset_replay_wifi: { label: "Model 3 Hotspot buffer 5 menit", available: true, environment: "gld_model_3_dataset_replay_wifi", detail: "GLD1 Board 3 — Tahap 2, RAM replay 5 menit. Memerlukan paket replay yang sudah dibuild; pertahankan NVS." },
-  model_1_dataset_workflow_wifi: { label: "Model 1 — Board 1", available: true, environment: "gld_model_1_dataset_workflow_wifi", detail: "Gunakan catu 24 V; pertahankan NVS." },
-  model_2_dataset_workflow_wifi: { label: "Model 2 — Board 2", available: true, environment: "gld_model_2_dataset_workflow_wifi", detail: "Gunakan catu 24 V; pertahankan NVS." },
-  model_3_dataset_workflow_wifi: { label: "Model 3 — Board 3", available: true, environment: "gld_model_3_dataset_workflow_wifi", detail: "Gunakan catu 24 V; pertahankan NVS." },
+  model_1_dataset_workflow_wifi: { label: "Model 1 — Board 1 (LPG, Clean Air)", available: true, environment: "gld_model_1_dataset_workflow_wifi", detail: "Gunakan catu 24 V; pertahankan NVS." },
+  model_2_dataset_workflow_wifi: { label: "Model 2 — Board 2 (LPG, Clean Air)", available: true, environment: "gld_model_2_dataset_workflow_wifi", detail: "Gunakan catu 24 V; pertahankan NVS." },
+  model_3_dataset_workflow_wifi: { label: "Model 3 — Board 3 (LPG, Clean Air)", available: true, environment: "gld_model_3_dataset_workflow_wifi", detail: "Gunakan catu 24 V; pertahankan NVS." },
+  model_1_h2_dataset_workflow_wifi: { label: "Model 1 (H2, LPG, Clean Air)", available: true, environment: "gld_model_1_h2_dataset_workflow_wifi", detail: "Model belum divalidasi pada board; inferensi dinonaktifkan." },
   model_4: { label: "Model 4", available: false, detail: "Artefak dan package Model 4 belum tersedia." }
 };
 
@@ -40,12 +41,12 @@ const isAtexWorkflow = (environment) => /^gld_atex_model_[123]_dataset_workflow_
 function isDatasetWifiEnvironment(environment) {
   return isAtexWorkflow(environment) || ["gld_model_1_dataset_wifi", "gld_model_2_dataset_wifi", "gld_model_3_dataset_wifi",
     "gld_model_1_dataset_replay_wifi", "gld_model_2_dataset_replay_wifi", "gld_model_3_dataset_replay_wifi",
-    "gld_model_1_dataset_workflow_wifi", "gld_model_2_dataset_workflow_wifi", "gld_model_3_dataset_workflow_wifi"].includes(environment);
+    "gld_model_1_dataset_workflow_wifi", "gld_model_2_dataset_workflow_wifi", "gld_model_3_dataset_workflow_wifi", "gld_model_1_h2_dataset_workflow_wifi"].includes(environment);
 }
 
 function hasNativeWorkflowSerial(manifest) {
   return (isAtexWorkflow(manifest?.environment) || ["gld_model_1_dataset_workflow_wifi", "gld_model_2_dataset_workflow_wifi",
-    "gld_model_3_dataset_workflow_wifi"].includes(manifest?.environment))
+    "gld_model_3_dataset_workflow_wifi", "gld_model_1_h2_dataset_workflow_wifi"].includes(manifest?.environment))
     && manifest?.capabilities?.nativeSerial === true;
 }
 

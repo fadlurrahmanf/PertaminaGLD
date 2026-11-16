@@ -11,6 +11,8 @@ from pathlib import Path
 import re
 
 ENVIRONMENTS = frozenset(f"gld_model_{model}_dataset_workflow_wifi" for model in (1, 2, 3))
+BACKUP_ENV = "gld_model_1_h2_dataset_workflow_wifi"
+ENVIRONMENTS = ENVIRONMENTS | {BACKUP_ENV}
 ATEX_CANDIDATES = frozenset(f"gld_atex_model_{model}_workflow_candidate" for model in (1, 2, 3))
 PROTOCOL = "gld-dataset-wifi/3"
 
@@ -34,7 +36,8 @@ def prepare(project: Path, build: Path, name: str) -> Path:
     else:
         if name in ATEX_CANDIDATES:
             raise ValueError("Configure separate ATEX candidate credentials before compiling")
-        previous_name = name.replace("_dataset_workflow_wifi", "_dataset_replay_wifi")
+        previous_name = ("gld_model_1_dataset_replay_wifi" if name == BACKUP_ENV else
+                         name.replace("_dataset_workflow_wifi", "_dataset_replay_wifi"))
         previous = project / ".pio" / "gld-dataset-replay-wifi" / previous_name / "credentials.local.json"
         if not previous.is_file():
             raise ValueError("Configure private workflow credentials or matching replay credentials before compiling")

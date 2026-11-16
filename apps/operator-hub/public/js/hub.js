@@ -120,7 +120,7 @@ function markReadbackVerified() {
 function isPendingHotspotUpload(result) {
   return ["gld_model_1_dataset_wifi", "gld_model_2_dataset_wifi", "gld_model_3_dataset_wifi",
     "gld_model_1_dataset_replay_wifi", "gld_model_2_dataset_replay_wifi", "gld_model_3_dataset_replay_wifi",
-    "gld_model_1_dataset_workflow_wifi", "gld_model_2_dataset_workflow_wifi", "gld_model_3_dataset_workflow_wifi",
+    "gld_model_1_dataset_workflow_wifi", "gld_model_2_dataset_workflow_wifi", "gld_model_3_dataset_workflow_wifi", "gld_model_1_h2_dataset_workflow_wifi",
     "gld_atex_model_1_dataset_workflow_wifi", "gld_atex_model_2_dataset_workflow_wifi", "gld_atex_model_3_dataset_workflow_wifi"].includes(result?.selectedEnvironment)
     && result?.flashToolCompleted === true && result?.deviceVerified === false
     && result?.verificationPending === "hotspot";
@@ -260,15 +260,16 @@ function requestFirmwareUploadOptions({ device, port, initialFirmware = false })
     <label>PAKET FIRMWARE GLD
       <select id="firmwareUploadModel"><option value="">Pilih package GLD</option>${(packageOptions.models || []).filter((option) => !/^gld_model_[123](?:_dataset_(?:replay_)?wifi)?$/.test(option.environment)).map((option) => {
         const item = packageCatalog[option.environment];
-        const detail = item?.available ? `v${item.firmwareVersion}` : "package tidak tersedia";
+        const detail = item?.available ? `v${item.firmwareVersion}${option.environment === "gld_model_1_h2_dataset_workflow_wifi" ? " / inferensi belum aktif" : ""}` : "package tidak tersedia";
         const hotspot = ["gld_model_1_dataset_wifi", "gld_model_2_dataset_wifi", "gld_model_3_dataset_wifi",
           "gld_model_1_dataset_replay_wifi", "gld_model_2_dataset_replay_wifi", "gld_model_3_dataset_replay_wifi",
-    "gld_model_1_dataset_workflow_wifi", "gld_model_2_dataset_workflow_wifi", "gld_model_3_dataset_workflow_wifi",
+    "gld_model_1_dataset_workflow_wifi", "gld_model_2_dataset_workflow_wifi", "gld_model_3_dataset_workflow_wifi", "gld_model_1_h2_dataset_workflow_wifi",
     "gld_atex_model_1_dataset_workflow_wifi", "gld_atex_model_2_dataset_workflow_wifi", "gld_atex_model_3_dataset_workflow_wifi"].includes(option.environment);
         const workflowMatch = /^(gld|gld_atex)_model_([123])_dataset_workflow_wifi$/.exec(option.environment);
-        const disabled = item?.available !== true || (initialFirmware && hotspot && !workflowMatch);
-        const label = workflowMatch ? `${workflowMatch[1] === "gld_atex" ? "GLD ATEX " : ""}Model ${workflowMatch[2]} - Board ${workflowMatch[2]}` : option.label;
-        return `<option value="${option.value}"${disabled ? " disabled" : ""}>${label} — ${detail}${initialFirmware && hotspot && !workflowMatch ? " / memerlukan profil nulling tersimpan" : ""}</option>`;
+        const backupWorkflow = option.environment === "gld_model_1_h2_dataset_workflow_wifi";
+        const disabled = item?.available !== true || (initialFirmware && hotspot && !workflowMatch && !backupWorkflow);
+        const label = workflowMatch ? `${workflowMatch[1] === "gld_atex" ? "GLD ATEX " : ""}Model ${workflowMatch[2]} - Board ${workflowMatch[2]} (LPG, Clean Air)` : option.label;
+        return `<option value="${option.value}"${disabled ? " disabled" : ""}>${label} — ${detail}${initialFirmware && hotspot && !workflowMatch && !backupWorkflow ? " / memerlukan profil nulling tersimpan" : ""}</option>`;
       }).join("")}<option disabled>Model 4 - artefak belum tersedia</option></select>
       <small>Pilih package sesuai board yang akan di-flash.</small>
     </label>` : "";
@@ -387,9 +388,9 @@ function requestFirmwareUploadOptions({ device, port, initialFirmware = false })
       }
       if (["gld_model_1_dataset_wifi", "gld_model_2_dataset_wifi", "gld_model_3_dataset_wifi",
         "gld_model_1_dataset_replay_wifi", "gld_model_2_dataset_replay_wifi", "gld_model_3_dataset_replay_wifi",
-    "gld_model_1_dataset_workflow_wifi", "gld_model_2_dataset_workflow_wifi", "gld_model_3_dataset_workflow_wifi",
+    "gld_model_1_dataset_workflow_wifi", "gld_model_2_dataset_workflow_wifi", "gld_model_3_dataset_workflow_wifi", "gld_model_1_h2_dataset_workflow_wifi",
     "gld_atex_model_1_dataset_workflow_wifi", "gld_atex_model_2_dataset_workflow_wifi", "gld_atex_model_3_dataset_workflow_wifi"].includes(selectedEnvironment) && (initialFirmware || reset.checked) &&
-        !(initialFirmware && /^(?:gld|gld_atex)_model_[123]_dataset_workflow_wifi$/.test(selectedEnvironment))) {
+        !(initialFirmware && (/^(?:gld|gld_atex)_model_[123]_dataset_workflow_wifi$/.test(selectedEnvironment) || selectedEnvironment === "gld_model_1_h2_dataset_workflow_wifi"))) {
         error.textContent = "Hotspot Dataset memerlukan GLD dengan profil nulling tersimpan valid. Gunakan upload biasa dengan Reset NVS OFF; setup/nulling melalui firmware normal terlebih dahulu.";
         error.hidden = false;
         reset.focus();

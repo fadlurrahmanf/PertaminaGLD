@@ -1,13 +1,13 @@
 # LoRaTester V2 — Tracker
 
-Last tracker heartbeat: 2026-11-16 18:45:16 WIB
-Last evidence update: 2026-11-16 18:45:16 WIB
+Last tracker heartbeat: 2026-11-16 21:18:38 WIB
+Last evidence update: 2026-11-16 21:17:36 WIB
 
 ## Progress dashboard
 
 | Scope | Progress | Status | Note |
 |---|---:|---|---|
-| **Overall** | **93%** | Waiting for hardware | Audit dan perbaikan offline lulus; fisik belum diuji. |
+| **Overall** | **93%** | Waiting for hardware calibration | Uji bench utama lulus; ADC dan uji jarak belum. |
 | 1. Baseline V1 dan V2 terpisah | 100% | Done | 28 file diverifikasi; 3 path build dan 1 path tes disesuaikan. |
 | 2. CH1/CH2 V2 | 90% | Waiting for hardware | Transisi diperbaiki; build dan host lulus. |
 | 3. Display V2 | 90% | Waiting for hardware | Build dan 91 host lulus; visual fisik belum. |
@@ -30,12 +30,13 @@ Bobot 20% + 30% + 30% + 20%; progress tiap fase adalah rata-rata work item.
 |---|---|---|---|
 | V2-01 | Open | Jalur ADC dan divider display belum terpasang | Tegangan/kalibrasi tidak boleh dinyatakan terukur |
 | V2-02 | Open | CH2 belum tentu dalam jangkauan 2.4 GHz | Ready via jalur yang benar dan Unknown saat status usang |
-| V2-03 | Deferred | Perangkat belum tersambung sesuai instruksi | Uji fisik setelah firmware siap dan user menyambungkan |
+| V2-03 | Solved | PDR 100/100 dua arah; realtime, STOP, reset display, kedua READY lulus | Uji lapangan terpisah |
 | V2-04 | Solved | Tombol batas 799/800/801ms, ikon direvisi | 91 host lulus dan build display lulus |
 | V2-05 | Deferred | Mitigasi transisi START/STOP dan poll lolos host | Ukur timing dan RF pada perangkat |
 | V2-06 | Solved | Umur efektif memakai timestamp STATUS | Host batas stale, sentinel dan wrap lulus |
 | V2-07 | Solved | Indikator PDR saat koneksi pulih | 91 tes host dan build display lulus |
 | V2-08 | Deferred | Guard reset, timeout dan retry ACK lulus host/build dan review | Uji timing dan RF pada perangkat |
+| V2-09 | Open | COM5: 63–65 render/s menu, animasi PDR 41–44 changed blit/s di 40MHz | Optimasi ring dan ukur ulang; full-screen 60 belum terbukti |
 
 ### Phase 1 work items
 
@@ -67,4 +68,9 @@ Bobot 20% + 30% + 30% + 20%; progress tiap fase adalah rata-rata work item.
 
 ## Current work / agent state
 
-Waiting for external evidence: audit offline selesai; tidak ada temuan konkret yang tersisa dalam cakupan review. CH1, CH2 dan display belum diuji bersama secara fisik. Tidak ada COM, upload atau pemancaran selama audit. Perubahan V2 mencakup guard 24 detik setelah boot CH1, batas timeout radio dan indikator PDR. V1 dibanding checkpoint: 28 file ada, empat hanya disesuaikan path build/test. Host CH empat varian dan 91 host display lulus; tes ACK gagal lalu retry hingga Done lulus. Tes host dan review tidak membuktikan bebas bug atau kondisi RF lapangan.
+| Worker | Active work | Started at | Elapsed | State |
+|---|---|---|---|---|
+| Display worker | Optimasi laju animasi | 2026-11-16 21:17:36 WIB | 0:01:02 | Aktif |
+| Coordinator | Cadangan COM5, uji dan upload | 2026-11-16 21:01:17 WIB | 0:17:21 | Aktif |
+
+User mengotorisasi upload COM5; V1 dan CH tidak diubah. Jaga firmware display yang telah diuji, serta NVS. Target 60 FPS perlu bukti pengukuran perangkat.

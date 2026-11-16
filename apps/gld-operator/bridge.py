@@ -143,7 +143,7 @@ ATEX_KNOWN_BLOCKED_FIRMWARE_SHA256 = frozenset({
     "10391c34a922c7b07026648dbd25749fd1adda8218ef25fedca327a674bb03a0",
 })
 GLD_DATASET_WORKFLOW_ENVIRONMENTS = (frozenset(f"gld_model_{model}_dataset_workflow_wifi" for model in (1, 2, 3))
-                                     | frozenset(ATEX_WORKFLOW_MODELS))
+                                     | frozenset(ATEX_WORKFLOW_MODELS) | {"gld_model_1_h2_dataset_workflow_wifi"})
 AES_KEY_HEX_RE = re.compile(r"^[0-9A-Fa-f]{32}$")
 
 

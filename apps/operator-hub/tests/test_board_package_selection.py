@@ -98,7 +98,8 @@ class FirmwareEnvironmentSelectionTests(unittest.TestCase):
             "gld": {"gld", "gld_model_1", "gld_model_2", "gld_model_3", "gld_v2", "gld_atex",
                     "gld_model_1_dataset_wifi", "gld_model_2_dataset_wifi", "gld_model_3_dataset_wifi",
                     "gld_model_1_dataset_replay_wifi", "gld_model_2_dataset_replay_wifi", "gld_model_3_dataset_replay_wifi",
-                    "gld_model_1_dataset_workflow_wifi", "gld_model_2_dataset_workflow_wifi", "gld_model_3_dataset_workflow_wifi"},
+                    "gld_model_1_dataset_workflow_wifi", "gld_model_2_dataset_workflow_wifi", "gld_model_3_dataset_workflow_wifi",
+                    "gld_model_1_h2_dataset_workflow_wifi"},
             "ch": {"ch_small", "ch_large"},
             "gw": {"gw_small", "gw_large", "gw_small_tls", "gw_large_tls"},
         }
@@ -121,6 +122,10 @@ class FirmwareEnvironmentSelectionTests(unittest.TestCase):
                     manifest_path = HUB_DIR / "firmware-packages" / environment / "latest" / "manifest.json"
                     manifest = __import__("json").loads(manifest_path.read_text(encoding="utf-8"))
                     self.assertEqual(package["firmwareVersion"], manifest["firmwareVersion"])
+
+        backup = next(item for item in catalog["gld"]["models"] if item["value"] == "model_1_h2_dataset_workflow_wifi")
+        self.assertEqual(backup["label"], "Model 1 (H2, LPG, Clean Air)")
+        self.assertEqual(backup["environment"], "gld_model_1_h2_dataset_workflow_wifi")
 
     def test_package_catalog_fails_gracefully_when_manifest_is_missing_or_mismatched(self) -> None:
         with tempfile.TemporaryDirectory() as directory, mock.patch.object(bridge, "HUB_DIR", Path(directory)):

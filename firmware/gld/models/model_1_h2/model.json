@@ -1,0 +1,16 @@
+{
+  "slot": "model_1_h2",
+  "label": "Model 1 (H2, LPG, Clean Air)",
+  "state": "available-unvalidated",
+  "source": "C:\\Users\\MSI\\Downloads\\model\\Board 1 cadangan.zip",
+  "sourceArchiveSha256": "e65f55bdc4dd6726d090ce1e7e72c173ed2a1f0db091bb31259405e9f12937dd",
+  "modelSha256": "1b951a1af98f62fd04fd2b0a15477c222388038f8803f6d9d92185d54cad16aa",
+  "profileId": "cnn-dualbranch-board-1-backup-h2-lpg-v1",
+  "environment": "gld_model_1_h2_dataset_workflow_wifi",
+  "classes": [
+    "Clean_Air",
+    "H2",
+    "LPG"
+  ],
+  "note": "Production inference disabled pending physical board and gas validation."
+}

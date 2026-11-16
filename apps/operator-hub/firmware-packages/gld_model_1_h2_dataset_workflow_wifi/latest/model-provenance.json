@@ -1,0 +1,13 @@
+{
+  "environment": "gld_model_1_h2_dataset_workflow_wifi",
+  "profileId": "cnn-dualbranch-board-1-backup-h2-lpg-v1",
+  "classes": [
+    "Clean_Air",
+    "H2",
+    "LPG"
+  ],
+  "sha256": "1b951a1af98f62fd04fd2b0a15477c222388038f8803f6d9d92185d54cad16aa",
+  "sourceArchiveSha256": "e65f55bdc4dd6726d090ce1e7e72c173ed2a1f0db091bb31259405e9f12937dd",
+  "firmwareSha256": "4eeab2b6df57075c2f0fd5166dcc8cb8be66521b92929a1b2077fa3a79951f35",
+  "productionApproved": false
+}

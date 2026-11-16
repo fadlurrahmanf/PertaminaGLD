@@ -8,6 +8,8 @@
 #include "../src/BatteryText.h"
 #include "../src/DebouncedButton.h"
 #include "../src/SampleAge.h"
+#include "../src/DirtyFrame.h"
+#include "../src/FrameStats.h"
 uint32_t fakeMillis = 1, fakeRandom = 100;
 FakeWiFi WiFi;
 FakeSerial Serial0;
@@ -32,6 +34,18 @@ static NowMessage msg(uint8_t type, uint32_t boot, uint32_t session=0, uint32_t 
 static void receive(const uint8_t* mac,const NowMessage& m) { onReceive(mac,reinterpret_cast<const uint8_t*>(&m),sizeof(m)); }
 static void advance(uint32_t ms) { fakeMillis+=ms; poll(); }
 int main() {
+ std::vector<uint8_t> previous(dirtyframe::kWidth*dirtyframe::kHeight,0), current=previous;
+ auto plan=dirtyframe::compare(current.data(),previous.data(),false,false);check(plan.tiles==225,"invalid frame forces full repaint");
+ plan=dirtyframe::compare(current.data(),previous.data(),true,false);check(plan.tiles==0,"identical sprite sends no pixels");
+ current[17*240+33]=1;plan=dirtyframe::compare(current.data(),previous.data(),true,false);check(plan.tiles==1 && plan.rows[1]==(1U<<2),"one changed pixel marks exact tile");
+ current=previous;current[239*240+239]=1;plan=dirtyframe::compare(current.data(),previous.data(),true,false);check(plan.tiles==1 && plan.rows[14]==(1U<<14),"bottom right pixel stays within last tile");
+ current=previous;plan=dirtyframe::compare(current.data(),previous.data(),true,true);check(plan.tiles==5 && plan.rows[12]==0x3e0,"direct hold overlay forces repaint of its tiles");
+ current=previous;uint32_t randomPixel=1234567;for(int i=0;i<1200;++i){randomPixel=randomPixel*1664525U+1013904223U;current[randomPixel%current.size()]=uint8_t(i%255+1);}
+ plan=dirtyframe::compare(current.data(),previous.data(),true,false);auto reconstructed=previous;
+ for(int y=0;y<dirtyframe::kRows;++y)for(int x=0;x<dirtyframe::kColumns;++x)if(plan.rows[y]&(1U<<x))for(int line=0;line<dirtyframe::kTile;++line){const size_t offset=(y*dirtyframe::kTile+line)*dirtyframe::kWidth+x*dirtyframe::kTile;std::memcpy(reconstructed.data()+offset,current.data()+offset,dirtyframe::kTile);}
+ check(reconstructed==current,"dirty tiles reconstruct deterministic changed full image");
+ FrameStats fps;fps.tick(100);fps.loop(1200);fps.frame(3000,2000,256,false);fps.frame(4000,0,0,false);fps.hold(900);fps.tick(1000100);
+ check(fps.lastWindowUs==1000000 && fps.lastRenders==2 && fps.lastBlits==1 && fps.lastPixels==256 && fps.lastMaxFrameUs==4000 && fps.lastMaxLoopUs==1200 && fps.lastHoldUpdates==1 && fps.lastMaxHoldUs==900,"FPS counters distinguish renders, blits, hold, and worst times");
  check(sampleage::effective(4000,100,1100,true)==5000 && sampleage::effective(4000,100,1101,true)==5001,"sample age crosses 5 seconds since STATUS receipt");
  check(sampleage::effective(65530,100,110,true)==65534 && sampleage::effective(1,100,0xfffffff0U,true)==65534,"known sample age saturates without sentinel collision");
  check(sampleage::effective(sampleage::kUnknown,100,110,true)==sampleage::kUnknown && sampleage::effective(100,0,50,false)==sampleage::kUnknown,"unknown sample or absent STATUS remains unknown");
@@ -47,6 +61,13 @@ int main() {
  battery=formatBattery(true,5001,50);check(!std::strcmp(battery.voltage,"--") && !std::strcmp(battery.percent,"--"),"invalid battery voltage not displayed");
  reset(); fakeRandom=kHealthSession-1; check(start() && sessionId==kHealthSession+1,"test session excludes reserved health session");
  check(uitiming::holdBarPixels(0)==0 && uitiming::holdBarPixels(400)==31 && uitiming::holdBarPixels(799)==61 && uitiming::holdBarPixels(800)==62 && uitiming::holdBarPixels(0xffffffff)==62,"hold bar tracks threshold and saturates safely");
+ bool moving=true;
+ for(int count=2;count<=100;++count) for(uint32_t step=0;step<static_cast<uint32_t>(count);++step) {
+   bool changed=false;int highlighted=0;
+   for(int n=0;n<count;++n) { const bool a=uitiming::ringHighlight(count,step,n),b=uitiming::ringHighlight(count,step+1,n);changed|=a!=b;highlighted+=a; }
+   if(!changed || highlighted!=(count>3?3:1)) moving=false;
+ }
+ check(moving && !uitiming::ringHighlight(0,1,0) && uitiming::ringHighlight(1,0,0)==uitiming::ringHighlight(1,1,0),"ring highlight moves every rendered frame when progress has at least two points");
  SampleEvents events;check(events.update(7,0,0,0)==0 && events.update(7,3,0,255)==3 && events.update(7,3,0,255)==0 && events.update(7,3,1,0)==3 && events.update(8,1,1,0)==1,"sample events require new sequence and reset per session, including wrap");
  PdrPacketEvents pdr;check(pdr.update(7,10,5)==3 && pdr.update(0,0,0)==0 && pdr.update(7,10,5)==0,"PDR stale snapshot and unchanged counts do not replay packets");
  check(pdr.update(7,11,5)==1 && pdr.update(7,11,6)==2,"PDR packet arrow follows only the direction whose count increases");

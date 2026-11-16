@@ -36,8 +36,13 @@ independent MQTT clients, but both use the same broker credentials; only their
 connect actions and statuses are separate.
 For the importable server flow use the PC running Node-RED and its Aedes port
 1883; enter the same credentials configured in the Aedes node. **Use This PC
-IP** fills only the local LAN IP and is appropriate only when Node-RED runs on
-the same PC. It does not detect the broker or supply credentials.
+IP** fills the current LAN IP and, once a local broker connection test has
+succeeded, the previously tested port, username, password, and topic root.
+The saved profile is encrypted with Windows DPAPI for the current Windows user
+under `%LOCALAPPDATA%\PertaminaGLD\aedes-broker.dpapi`; it is not in Git. On a
+different PC, enter the Aedes settings once and use **Test broker from this PC**
+to save that PC's profile. The button does not detect or launch Node-RED; after
+changing Aedes credentials or port, enter and test the new values again.
 
 - It publishes to `{topicRoot}/uplink`, `{topicRoot}/status`, and
   `{topicRoot}/topology` on the site broker.

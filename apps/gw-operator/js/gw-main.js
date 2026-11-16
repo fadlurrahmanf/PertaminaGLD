@@ -54,7 +54,7 @@ async function handleMqttTest() {
   try {
     const result = await testMqtt(config);
     elements.mqttSetupDetail.textContent = result.ok
-      ? `Reachable (${result.latencyMs} ms).`
+      ? `Reachable (${result.latencyMs} ms).${result.localProfileSaved ? " Profil broker lokal tersimpan aman untuk Use This PC IP." : result.localProfileWarning ? " " + result.localProfileWarning : ""}`
       : `Not reachable: ${result.message}`;
   } catch (error) {
     elements.mqttSetupDetail.textContent = `Test failed: ${error.message}`;

@@ -5,6 +5,7 @@
 
 import { elements, state } from "./gw-state.js";
 import { gatewayIdFromRuntime } from "./gw-gateway-id.mjs";
+import { applyLocalBrokerProfile } from "./gw-aedes-autofill.mjs";
 import { setupAccess } from "./gw-setup-flow.mjs";
 import { setBadge, appendLog, showBanner, switchTab } from "./gw-ui.js";
 import { handleStatus, handleUplink, handleTopologyEvent, logCommand } from "./gw-protocol.js";
@@ -556,6 +557,16 @@ export async function useLocalPc() {
     const info = await bridgeFetch("/api/network");
     if (!info.ipv4 || info.ipv4.startsWith("127.")) throw new Error("PC LAN IP unavailable; enter the Node-RED server IP manually");
     elements.mqttHost.value = info.ipv4;
+    try {
+      const profile = await bridgeFetch("/api/aedes-profile");
+      if (applyLocalBrokerProfile(elements, profile)) {
+        elements.mqttSetupDetail.textContent = "IP dan profil broker lokal yang pernah diuji berhasil diisi. Tes kembali sebelum menyimpan ke Gateway.";
+      } else {
+        elements.mqttSetupDetail.textContent = "IP diisi. Masukkan port dan kredensial Aedes sekali, lalu gunakan Test broker from this PC agar tersimpan di PC ini.";
+      }
+    } catch {
+      elements.mqttSetupDetail.textContent = "IP diisi; profil broker lokal tidak dapat dibaca. Masukkan port dan kredensial secara manual.";
+    }
     appendLog(`USE_PC_IP host=${info.ipv4}`, "in");
   } catch (error) {
     showBanner(`PC IP unavailable: ${error.message}`, "error");

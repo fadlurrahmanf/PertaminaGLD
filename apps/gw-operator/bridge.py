@@ -42,6 +42,9 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import aedes_profile
+
 try:
     import serial
     from serial.tools import list_ports
@@ -519,6 +522,23 @@ def local_broker_info() -> dict[str, Any]:
         "password": password,
         "topicRoot": os.environ.get("PGL_OPERATOR_MQTT_TOPIC_ROOT", "gld/gateway"),
     }
+
+
+def remember_tested_local_broker(payload: dict[str, Any], result: dict[str, Any]) -> bool:
+    """Remember credentials supplied in a successful broker test on this PC."""
+    host = str(payload.get("host") or "").strip()
+    username = payload.get("username")
+    password = payload.get("password")
+    if not result.get("ok") or not isinstance(username, str) or not username or not isinstance(password, str) or not password:
+        return False
+    if host not in {"127.0.0.1", "localhost", local_ipv4()}:
+        return False
+    port = int(payload.get("port") or 1883)
+    if not 1 <= port <= 65535:
+        return False
+    topic = str(payload.get("topicRoot") or "gld/gateway")
+    aedes_profile.save_profile({"username": username, "password": password, "port": port, "topicRoot": topic})
+    return True
 
 
 def _netsh_value(output: str, names: set[str]) -> str:
@@ -1173,6 +1193,9 @@ class Handler(SimpleHTTPRequestHandler):
                 )
             if path == "/api/network":
                 return json_response(self, network_info())
+            if path == "/api/aedes-profile":
+                profile = aedes_profile.load_profile()
+                return json_response(self, {"available": profile is not None, **(profile or {})})
             if path == "/api/local-broker":
                 return json_response(self, local_broker_info())
             if path == "/api/wifi/current":
@@ -1238,6 +1261,12 @@ class Handler(SimpleHTTPRequestHandler):
                 result = mqtt_monitor.stop()
             elif path == "/api/mqtt/test":
                 result = mqtt_reachability(payload)
+                try:
+                    result["localProfileSaved"] = remember_tested_local_broker(payload, result)
+                except Exception:
+                    # A profile write must not turn a successful broker test into a failure.
+                    result["localProfileSaved"] = False
+                    result["localProfileWarning"] = "Could not save the local broker profile."
             elif path == "/api/mqtt/publish/pull":
                 result = mqtt_publish_pull(payload)
             elif path == "/api/mqtt/publish/node":
